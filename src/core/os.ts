@@ -9,7 +9,7 @@ import { WebClient } from '../websites/web-client';
 import { NetworkInterface, DNSServer } from './network';
 import { DefaultWebsites, WebsiteEntry } from '../websites/default-websites';
 import { Desktop } from './desktop';
-
+import { StartMenuController } from './start-menu';
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -27,14 +27,17 @@ private fileSystem: FileSystem;
   private networkInterface: NetworkInterface;
   private dnsServer: DNSServer;
   private defaultWebsites: DefaultWebsites;
-  private desktop: Desktop;  constructor() {
+  private desktop: Desktop;  
+  private startMenuController: StartMenuController;
+
+  constructor() {
     this.fileSystem = new FileSystem();
     this.processManager = new ProcessManager();
     this.windowManager = new WindowManager();
     this.systemMonitor = new SystemMonitor(this.processManager);
     this.appManager = new AppManager(this);
     this.commandProcessor = new CommandProcessor(this);
-    
+    this.startMenuController = new StartMenuController(this);
     // Initialize command registry
     this.commandRegistry = CommandRegistry.getInstance(this);
     
