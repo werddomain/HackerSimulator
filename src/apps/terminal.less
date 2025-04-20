@@ -1,0 +1,42 @@
+// Terminal application styles
+.terminal-container {
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  
+  // Terminal-specific styles
+  .xterm {
+    // Custom styling for xterm.js
+    font-family: monospace;
+    font-size: 14px;
+    letter-spacing: 0;
+    line-height: 1.2;
+    
+    .xterm-viewport {
+      // Ensure proper scrolling behavior
+      overflow-y: auto;
+    }
+    
+    // Terminal color theme
+    --terminal-background: #1e1e1e;
+    --terminal-foreground: #f0f0f0;
+    --terminal-cursor: #f0f0f0;
+    --terminal-selection-bg: rgba(255, 255, 255, 0.3);
+    --terminal-black: #1e1e1e;
+    --terminal-red: #ff5555;
+    --terminal-green: #50fa7b;
+    --terminal-yellow: #f1fa8c;
+    --terminal-blue: #bd93f9;
+    --terminal-magenta: #ff79c6;
+    --terminal-cyan: #8be9fd;
+    --terminal-white: #f8f8f2;
+    --terminal-bright-black: #6272a4;
+    --terminal-bright-red: #ff6e6e;
+    --terminal-bright-green: #69ff94;
+    --terminal-bright-yellow: #ffffa5;
+    --terminal-bright-blue: #d6acff;
+    --terminal-bright-magenta: #ff92df;
+    --terminal-bright-cyan: #a4ffff;
+    --terminal-bright-white: #ffffff;
+  }
+}

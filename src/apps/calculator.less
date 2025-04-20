@@ -1,0 +1,122 @@
+// Calculator application styles
+.calculator-app {
+  background-color: #202020;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+  
+  .calculator-display {
+    background-color: #111;
+    color: #fff;
+    padding: 20px;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    
+    .calculator-previous-operand {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
+      height: 20px;
+      margin-bottom: 5px;
+    }
+    
+    .calculator-current-operand {
+      font-size: 36px;
+      min-height: 40px;
+    }
+  }
+  
+  .calculator-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-gap: 1px;
+    flex: 1;
+    
+    .calculator-button {
+      background-color: #333;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      transition: background-color 0.1s;
+      
+      &:hover {
+        background-color: #444;
+      }
+      
+      &:active {
+        background-color: #555;
+      }
+      
+      &.operator {
+        background-color: #f90;
+        
+        &:hover {
+          background-color: #fa0;
+        }
+        
+        &:active {
+          background-color: #fb0;
+        }
+      }
+      
+      &.equals {
+        background-color: #4a90e2;
+        
+        &:hover {
+          background-color: #5a9ff2;
+        }
+        
+        &:active {
+          background-color: #6aafff;
+        }
+      }
+      
+      &.memory-clear, 
+      &.memory-recall, 
+      &.memory-add, 
+      &.memory-subtract, 
+      &.clear, 
+      &.all-clear, 
+      &.sqr, 
+      &.sqrt, 
+      &.percentage, 
+      &.negate {
+        background-color: #555;
+        
+        &:hover {
+          background-color: #666;
+        }
+        
+        &:active {
+          background-color: #777;
+        }
+      }
+    }
+  }
+}
+  
+  .calculator-key {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    border: 1px solid #444;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: #444;
+    }
+    
+    &.operation {
+      background-color: #ff9500;
+      
+      &:hover {
+        background-color: darken(#ff9500, 10%);
+      }
+    }
+  }
+

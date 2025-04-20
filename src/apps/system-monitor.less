@@ -1,0 +1,316 @@
+// System Monitor application styles
+.system-monitor-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  
+  .system-monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+    
+    h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .header-actions {
+      .refresh-btn {
+        background-color: #0078d7;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        
+        &:hover {
+          background-color: #0086f0;
+        }
+      }
+    }
+  }
+  
+  .tabs-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    
+    .tab-buttons {
+      display: flex;
+      background-color: #252526;
+      border-bottom: 1px solid #333;
+      
+      .tab-btn {
+        padding: 8px 16px;
+        background: transparent;
+        border: none;
+        color: #d4d4d4;
+        cursor: pointer;
+        
+        &.active {
+          background-color: #1e1e1e;
+          border-bottom: 2px solid #0078d7;
+        }
+        
+        &:hover:not(.active) {
+          background-color: #2d2d30;
+        }
+      }
+    }
+    
+    .tab-content {
+      flex: 1;
+      padding: 15px;
+      overflow: auto;
+      display: none;
+      
+      &.active {
+        display: block;
+      }
+    }
+  }
+  
+  .resource-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .resource-card {
+    background-color: #252526;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    
+    .resource-title {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #8f8f8f;
+    }
+    
+    .resource-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .resource-bar-container {
+      height: 5px;
+      background-color: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      
+      .resource-bar {
+        height: 100%;
+        background-color: #0078d7;
+        transition: width 0.3s ease-out;
+        
+        &.warning {
+          background-color: #f0ad4e;
+        }
+        
+        &.danger {
+          background-color: #d9534f;
+        }
+      }
+    }
+  }
+  
+  .process-list {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+    
+    th {
+      background-color: #252526;
+      position: sticky;
+      top: 0;
+    }
+    
+    tr:hover {
+      background-color: #2d2d30;
+      cursor: pointer;
+    }
+    
+    .process-row {
+      &.selected {
+        background-color: #37373d;
+      }
+    }
+  }
+  
+  .chart-container {
+    background-color: #252526;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    height: 300px;
+  }
+  
+  .disk-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+  }
+  
+  .disk-card {
+    background-color: #252526;
+    border-radius: 5px;
+    padding: 15px;
+    
+    .disk-title {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    
+    .disk-details {
+      margin-bottom: 15px;
+      
+      .disk-usage {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+    }
+  }
+  
+  .network-info {
+    .network-card {
+      background-color: #252526;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 15px;
+      
+      .network-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+    }
+  }
+}
+
+// // Keep original styles for backward compatibility
+// .system-monitor {
+//   display: flex;
+//   flex-direction: column;
+//   height: 100%;
+//   background-color: #1e1e1e;
+//   color: #d4d4d4;
+  
+//   .monitor-tabs {
+//     display: flex;
+//     background-color: #252526;
+//     border-bottom: 1px solid #333;
+//   }
+  
+//   .monitor-tab {
+//     padding: 8px 16px;
+//     cursor: pointer;
+    
+//     &.active {
+//       background-color: #1e1e1e;
+//       border-bottom: 2px solid #0078d7;
+//     }
+    
+//     &:hover:not(.active) {
+//       background-color: #2d2d30;
+//     }
+//   }
+  
+//   .monitor-content {
+//     flex: 1;
+//     padding: 10px;
+//     overflow: auto;
+//   }
+  
+//   .process-list {
+//     width: 100%;
+//     border-collapse: collapse;
+    
+//     th, td {
+//       padding: 8px;
+//       text-align: left;
+//       border-bottom: 1px solid #333;
+//     }
+    
+//     th {
+//       background-color: #252526;
+//     }
+    
+//     tr:hover {
+//       background-color: #2d2d30;
+//     }
+//   }
+  
+//   .system-stats {
+//     display: grid;
+//     grid-template-columns: repeat(2, 1fr);
+//     gap: 10px;
+//     margin-bottom: 20px;
+//   }
+  
+//   .stat-card {
+//     background-color: #252526;
+//     border-radius: 4px;
+//     padding: 12px;
+//   }
+// }
+    
+    
+//     &:hover:not(.active) {
+//       background-color: #2d2d30;
+//     }
+  
+  
+//   .monitor-content {
+//     flex: 1;
+//     padding: 10px;
+//     overflow: auto;
+//   }
+  
+//   .process-list {
+//     width: 100%;
+//     border-collapse: collapse;
+    
+//     th, td {
+//       padding: 8px;
+//       text-align: left;
+//       border-bottom: 1px solid #333;
+//     }
+    
+//     th {
+//       background-color: #252526;
+//     }
+    
+//     tr:hover {
+//       background-color: #2d2d30;
+//     }
+//   }
+  
+//   .system-stats {
+//     display: grid;
+//     grid-template-columns: repeat(2, 1fr);
+//     gap: 10px;
+//     margin-bottom: 20px;
+//   }
+  
+//   .stat-card {
+//     background-color: #252526;
+//     border-radius: 4px;
+//     padding: 12px;
+//   }
+// }

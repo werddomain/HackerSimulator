@@ -1,0 +1,278 @@
+// File Explorer application styles
+.file-explorer-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  
+  .file-explorer-toolbar {
+    display: flex;
+    padding: 5px;
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+    
+    .navigation-buttons {
+      display: flex;
+      margin-right: 10px;
+    }
+    
+    .navigation-btn {
+      padding: 5px 8px;
+      background-color: #333;
+      border: none;
+      border-radius: 3px;
+      color: #d4d4d4;
+      margin-right: 2px;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: #444;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+    }
+    
+    .path-bar {
+      flex: 1;
+      margin: 0 10px;
+      
+      .path-input {
+        width: 100%;
+        padding: 5px;
+        background-color: #333;
+        border: none;
+        border-radius: 3px;
+        color: #d4d4d4;
+      }
+    }
+    
+    .view-options {
+      display: flex;
+      
+      .view-btn {
+        padding: 5px 8px;
+        background-color: #333;
+        border: none;
+        border-radius: 3px;
+        color: #d4d4d4;
+        margin-left: 2px;
+        cursor: pointer;
+        
+        &:hover {
+          background-color: #444;
+        }
+        
+        &.active {
+          background-color: #007acc;
+        }
+      }
+    }
+  }
+  
+  .file-explorer-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    
+    .file-explorer-sidebar {
+      width: 200px;
+      background-color: #252526;
+      border-right: 1px solid #333;
+      overflow: auto;
+      
+      .sidebar-section {
+        margin-bottom: 10px;
+      }
+      
+      .sidebar-header {
+        padding: 5px 10px;
+        font-weight: bold;
+        color: #8f8f8f;
+      }
+      
+      .sidebar-item {
+        padding: 5px 10px;
+        cursor: pointer;
+        
+        &:hover {
+          background-color: #2d2d2d;
+        }
+        
+        &.active {
+          background-color: #37373d;
+        }
+      }
+    }
+    
+    .file-explorer-content {
+      flex: 1;
+      overflow: auto;
+      padding: 5px;
+      
+      .file-list {
+        &.grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 10px;
+          padding: 10px;
+        }
+        
+        &.list {
+          display: table;
+          width: 100%;
+          
+          .file-item {
+            display: table-row;
+            
+            &:hover {
+              background-color: #2d2d2d;
+            }
+            
+            &.selected {
+              background-color: #37373d;
+            }
+            
+            div {
+              display: table-cell;
+              padding: 5px;
+              border-bottom: 1px solid #333;
+            }
+          }
+          
+          .file-header {
+            display: table-row;
+            font-weight: bold;
+            
+            div {
+              display: table-cell;
+              padding: 5px;
+              border-bottom: 1px solid #444;
+            }
+          }
+        }
+      }
+      
+      .file-item {
+        cursor: pointer;
+        
+        &.grid-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 10px;
+          border-radius: 5px;
+          
+          .file-icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
+          }
+          
+          .file-name {
+            text-align: center;
+            word-break: break-word;
+            font-size: 0.9em;
+          }
+          
+          &:hover {
+            background-color: #2d2d2d;
+          }
+          
+          &.selected {
+            background-color: #37373d;
+          }
+        }
+      }
+      
+      .loading-indicator {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #8f8f8f;
+      }
+    }
+  }
+  
+  .file-explorer-statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px;
+    background-color: #007acc;
+    color: white;
+    font-size: 0.8em;
+  }
+  
+  .context-menu {
+    position: absolute;
+    background-color: #252526;
+    border: 1px solid #333;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    
+    .context-menu-item {
+      padding: 5px 10px;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: #2d2d2d;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+    }
+    
+    .context-menu-separator {
+      height: 1px;
+      background-color: #333;
+      margin: 5px 0;
+    }
+  }
+}
+
+// Keep the original file-tree styles for backwards compatibility
+.file-explorer {
+  display: flex;
+  height: 100%;
+  
+  .file-sidebar {
+    width: 200px;
+    background-color: #252525;
+    border-right: 1px solid #333;
+    overflow: auto;
+  }
+  
+  .file-content {
+    flex: 1;
+    overflow: auto;
+    padding: 5px;
+  }
+}
+
+.file-tree {
+  list-style: none;
+  
+  &-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #ddd;
+    
+    &:hover {
+      background-color: #333;
+    }
+  }
+  
+  &-folder {
+    font-weight: bold;
+  }
+  
+  &-file {
+    padding-left: 20px;
+  }
+}
+
