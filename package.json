@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build:debug": "webpack --env development",
-    "build:prod": "webpack --env production && webpack --env production --output-filename app.min.js",
+    "build:prod": "webpack --env production",
     "dev": "webpack serve --env development",
     "tsc:debug": "tsc --project tsconfig.debug.json",
     "start": "npm run dev"
