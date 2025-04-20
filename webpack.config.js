@@ -37,14 +37,13 @@ module.exports = (env, argv) => {
       }),
     ],
   };
-
   if (isProduction) {
     // Production specific settings
     config.mode = 'production';
     config.devtool = false;
     config.output = {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'app.js',
+      filename: '[name].[contenthash].js',
     };
     config.optimization = {
       minimize: true,
@@ -65,8 +64,15 @@ module.exports = (env, argv) => {
       ],
       splitChunks: {
         chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
       },
-    };  } else {
+    };} else {
     // Debug specific settings
     config.mode = 'development';
     config.devtool = 'eval-source-map';
