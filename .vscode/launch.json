@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {      "name": "Debug HackerGame (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "sourceMaps": true,
+      "url": "http://localhost:9000",      
+      "webRoot": "${workspaceFolder}/dist",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+    
+      "preLaunchTask": "npm: dev",
+      "trace": true,
+      "presentation": {
+        "hidden": false,
+        "group": "main",
+        "order": 1
+      }
+    },
+    {
+      "name": "Debug TS File (Node)",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "runtimeArgs": ["--require", "ts-node/register"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "presentation": {
+        "hidden": false,
+        "group": "util",
+        "order": 1
+      }
+    }
+  ]
+}

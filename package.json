@@ -1,0 +1,34 @@
+{
+  "name": "v1",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build:debug": "webpack --env development",
+    "build:prod": "webpack --env production && webpack --env production --output-filename app.min.js",
+    "dev": "webpack serve --env development",
+    "tsc:debug": "tsc --project tsconfig.debug.json",
+    "start": "npm run dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.5",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.1"
+  },
+  "dependencies": {
+    "idb": "^8.0.2",
+    "monaco-editor": "^0.52.2",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  }
+}

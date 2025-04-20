@@ -1,0 +1,600 @@
+import { openDB, IDBPDatabase } from 'idb';
+import { FileStats } from './file-system-utils';
+
+/**
+ * Interface for file system entries
+ */
+export interface FileSystemEntry {
+  name: string;
+  type: 'file' | 'directory';
+  content?: string;
+  metadata: {
+    created: number;
+    modified: number;
+    size: number;
+    permissions: string;
+    owner: string;
+  };
+  isDirectory: boolean; // Added for backward compatibility
+}
+
+/**
+ * Interface for file system providers (allows for future expansion to server-based storage)
+ */
+export interface IFileSystemProvider {
+  init(): Promise<void>;
+  readDirectory(path: string): Promise<FileSystemEntry[]>;
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+  createDirectory(path: string): Promise<void>;
+  deleteEntry(path: string): Promise<void>;
+  moveEntry(oldPath: string, newPath: string): Promise<void>;
+  exists(path: string): Promise<boolean>;
+  
+  // Add these missing methods
+  copy(sourcePath: string, destPath: string): Promise<void>;
+  move(sourcePath: string, destPath: string): Promise<void>;
+  remove(path: string): Promise<void>;
+  stat(path: string): Promise<FileStats>;
+}
+
+/**
+ * Implementation of file system using IndexedDB
+ */
+export class FileSystem implements IFileSystemProvider {  /**
+   * Delete a file (not directories)
+   * @param path Path to the file to delete
+   * @throws Error if path doesn't exist or is a directory
+   */
+  public async deleteFile(path: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      
+      // Check if path exists
+      const exists = await this.exists(normPath);
+      if (!exists) {
+        throw new Error(`File does not exist: ${path}`);
+      }
+      
+      // Get entry to check if it's a file
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      // Ensure we're only deleting files, not directories
+      if (entry.entry.type !== 'file') {
+        throw new Error(`Not a file: ${path}. Use deleteEntry for directories.`);
+      }
+      
+      // Delete the file
+      await this.db.delete('fs-entries', normPath);
+    } catch (error) {
+      console.error(`Error deleting file: ${path}`, error);
+      throw new Error(`Failed to delete file: ${path}`);
+    }
+  }
+  private db: IDBPDatabase | null = null;
+  private readonly DB_NAME = 'hacker-os-fs';
+  private readonly DB_VERSION = 1;
+  private readonly STORE_NAME = 'fs-entries';
+  public async copy(sourcePath: string, destPath: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normSourcePath = this.normalizePath(sourcePath);
+      const normDestPath = this.normalizePath(destPath);
+      
+      // Check if source exists
+      const sourceExists = await this.exists(normSourcePath);
+      if (!sourceExists) {
+        throw new Error(`Source path does not exist: ${sourcePath}`);
+      }
+      
+      // Check if destination already exists
+      const destExists = await this.exists(normDestPath);
+      if (destExists) {
+        throw new Error(`Destination path already exists: ${destPath}`);
+      }
+      
+      // Get the source entry
+      const sourceEntry = await this.db.get('fs-entries', normSourcePath);
+      
+      // Create new entry with same content but at destination path
+      const destName = normDestPath.split('/').pop() || '';
+      const destParent = normDestPath.substring(0, normDestPath.lastIndexOf('/')) || '/';
+      
+      // Check if parent directory exists
+      const parentExists = await this.exists(destParent);
+      if (!parentExists) {
+        throw new Error(`Parent directory does not exist: ${destParent}`);
+      }
+      
+      // Create a copy with updated metadata
+      const newEntry = {
+        path: normDestPath,
+        parent: destParent,
+        entry: {
+          ...sourceEntry.entry,
+          name: destName,
+          metadata: {
+            ...sourceEntry.entry.metadata,
+            created: Date.now(),
+            modified: Date.now()
+          }
+        }
+      };
+      
+      // Add the new entry
+      await this.db.put('fs-entries', newEntry);
+      
+    } catch (error) {
+      console.error(`Error copying entry: ${sourcePath} -> ${destPath}`, error);
+      throw new Error(`Failed to copy entry: ${sourcePath} -> ${destPath}`);
+    }
+  }
+
+  public async move(sourcePath: string, destPath: string): Promise<void> {
+    // This is essentially the same as moveEntry, so we'll reuse that
+    return this.moveEntry(sourcePath, destPath);
+  }
+
+  public async remove(path: string): Promise<void> {
+    // This is essentially the same as deleteEntry, so we'll reuse that
+    return this.deleteEntry(path);
+  }
+
+  public async stat(path: string): Promise<FileStats> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      
+      // Check if path exists
+      const exists = await this.exists(normPath);
+      if (!exists) {
+        throw new Error(`Path does not exist: ${path}`);
+      }
+      
+      // Get the entry
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      return {
+        isDirectory: entry.entry.type === 'directory',
+        size: entry.entry.metadata.size,
+        createdTime: new Date(entry.entry.metadata.created),
+        modifiedTime: new Date(entry.entry.metadata.modified),
+        permissions: entry.entry.metadata.permissions,
+        owner: entry.entry.metadata.owner
+      };
+    } catch (error) {
+      console.error(`Error getting stats for: ${path}`, error);
+      throw new Error(`Failed to get stats for: ${path}`);
+    }
+  }
+
+  /**
+   * Initialize the file system
+   */
+  public async init(): Promise<void> {
+    try {
+      this.db = await openDB(this.DB_NAME, this.DB_VERSION, {
+        upgrade(db) {
+          // Create object store for file system entries
+          if (!db.objectStoreNames.contains('fs-entries')) {
+            const store = db.createObjectStore('fs-entries', { keyPath: 'path' });
+            store.createIndex('parent', 'parent', { unique: false });
+          }
+        }
+      });
+
+      // Check if root directory exists, if not create the basic Linux directory structure
+      const rootExists = await this.exists('/');
+      if (!rootExists) {
+        await this.setupInitialFileSystem();
+      }
+    } catch (error) {
+      console.error('Failed to initialize filesystem:', error);
+      throw new Error('Failed to initialize filesystem');
+    }
+  }
+
+  /**
+   * Set up the initial file system with basic Linux directory structure
+   */
+  private async setupInitialFileSystem(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    // Create root directory
+    await this.db.put('fs-entries', {
+      path: '/',
+      parent: '',
+      entry: {
+        name: '/',
+        type: 'directory',
+        metadata: {
+          created: Date.now(),
+          modified: Date.now(),
+          size: 0,
+          permissions: 'drwxr-xr-x',
+          owner: 'root'
+        }
+      }
+    });
+
+    // Create basic Linux directory structure
+    const dirs = [
+      '/bin',
+      '/etc',
+      '/home',
+      '/home/user',
+      '/tmp',
+      '/var',
+      '/var/log'
+    ];
+
+    for (const dir of dirs) {
+      const name = dir.split('/').pop();
+      const parent = dir.substring(0, dir.lastIndexOf('/')) || '/';
+      
+      await this.db.put('fs-entries', {
+        path: dir,
+        parent,
+        entry: {
+          name: name || '/',
+          type: 'directory',
+          metadata: {
+            created: Date.now(),
+            modified: Date.now(),
+            size: 0,
+            permissions: dir.startsWith('/home/user') ? 'drwxr-xr-x' : 'drwxr-xr-x',
+            owner: dir.startsWith('/home/user') ? 'user' : 'root'
+          }
+        }
+      });
+    }
+
+    // Create some basic files
+    const files = [
+      { 
+        path: '/etc/hostname', 
+        content: 'hacker-machine',
+        owner: 'root'
+      },
+      { 
+        path: '/etc/passwd', 
+        content: 'root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:HackerOS User:/home/user:/bin/bash',
+        owner: 'root'
+      },
+      { 
+        path: '/home/user/README.txt', 
+        content: 'Welcome to HackerOS!\n\nThis system is designed to simulate a hacking environment. Use the terminal to navigate and execute commands. Launch applications from the desktop or start menu.',
+        owner: 'user'
+      }
+    ];
+
+    for (const file of files) {
+      const name = file.path.split('/').pop() || '';
+      const parent = file.path.substring(0, file.path.lastIndexOf('/'));
+      
+      await this.db.put('fs-entries', {
+        path: file.path,
+        parent,
+        entry: {
+          name,
+          type: 'file',
+          content: file.content,
+          metadata: {
+            created: Date.now(),
+            modified: Date.now(),
+            size: file.content.length,
+            permissions: '-rw-r--r--',
+            owner: file.owner
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Check if a path exists in the file system
+   */
+  public async exists(path: string): Promise<boolean> {
+    if (!this.db) throw new Error('Database not initialized');
+    try {
+      const entry = await this.db.get('fs-entries', this.normalizePath(path));
+      return !!entry;
+    } catch (error) {
+      console.error(`Error checking if path exists: ${path}`, error);
+      return false;
+    }
+  }
+  /**
+   * Read directory contents
+   */
+  public async readDirectory(path: string): Promise<FileSystemEntry[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const entries = await this.db.getAllFromIndex('fs-entries', 'parent', normPath);
+      return entries.map(item => {
+        // Create a new object with the entry properties
+        const entry = {...item.entry};
+        // Set isDirectory property for backward compatibility
+        entry.isDirectory = entry.type === 'directory';
+        return entry;
+      });
+    } catch (error) {
+      console.error(`Error reading directory: ${path}`, error);
+      throw new Error(`Failed to read directory: ${path}`);
+    }
+  }
+
+  /**
+   * List directory contents (alias for readDirectory for backward compatibility)
+   */
+  public async listDirectory(path: string): Promise<FileSystemEntry[]> {
+    return this.readDirectory(path);
+  }
+
+  /**
+   * Read file contents
+   */
+  public async readFile(path: string): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      if (!entry || entry.entry.type !== 'file') {
+        throw new Error(`Not a file: ${path}`);
+      }
+      
+      return entry.entry.content || '';
+    } catch (error) {
+      console.error(`Error reading file: ${path}`, error);
+      throw new Error(`Failed to read file: ${path}`);
+    }
+  }
+
+  /**
+   * Write content to a file
+   */
+  public async writeFile(path: string, content: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const name = normPath.split('/').pop() || '';
+      const parent = normPath.substring(0, normPath.lastIndexOf('/')) || '/';
+      
+      // Check if parent directory exists
+      const parentExists = await this.exists(parent);
+      if (!parentExists) {
+        throw new Error(`Parent directory does not exist: ${parent}`);
+      }
+      
+      // Check if file already exists
+      const exists = await this.exists(normPath);
+      if (exists) {
+        // Update existing file
+        const existingEntry = await this.db.get('fs-entries', normPath);
+        const updatedEntry = {
+          ...existingEntry,
+          entry: {
+            ...existingEntry.entry,
+            content,
+            metadata: {
+              ...existingEntry.entry.metadata,
+              modified: Date.now(),
+              size: content.length
+            }
+          }
+        };
+        
+        await this.db.put('fs-entries', updatedEntry);
+      } else {
+        // Create new file
+        await this.db.put('fs-entries', {
+          path: normPath,
+          parent,
+          entry: {
+            name,
+            type: 'file',
+            content,
+            metadata: {
+              created: Date.now(),
+              modified: Date.now(),
+              size: content.length,
+              permissions: '-rw-r--r--',
+              owner: 'user'
+            }
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error writing file: ${path}`, error);
+      throw new Error(`Failed to write file: ${path}`);
+    }
+  }
+  /**
+   * Create a directory
+   * @param path Path to create directory. If path doesn't start with '/', it's treated as relative to current directory
+   * @param currentDirectory Optional current directory for resolving relative paths
+   */
+  public async createDirectory(path: string, currentDirectory?: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      // Handle relative paths (those not starting with /)
+      let resolvedPath = path;
+      if (!path.startsWith('/') && currentDirectory) {
+        // Join the current directory with the relative path
+        resolvedPath = currentDirectory.endsWith('/') 
+          ? currentDirectory + path 
+          : currentDirectory + '/' + path;
+      }
+      
+      const normPath = this.normalizePath(resolvedPath);
+      const name = normPath.split('/').pop() || '';
+      const parent = normPath.substring(0, normPath.lastIndexOf('/')) || '/';
+      
+      // Check if parent directory exists
+      const parentExists = await this.exists(parent);
+      if (!parentExists) {
+        throw new Error(`Parent directory does not exist: ${parent}`);
+      }
+      
+      // Check if directory already exists
+      const exists = await this.exists(normPath);
+      if (exists) {
+        throw new Error(`Path already exists: ${path}`);
+      }
+      
+      // Create directory
+      await this.db.put('fs-entries', {
+        path: normPath,
+        parent,
+        entry: {
+          name,
+          type: 'directory',
+          metadata: {
+            created: Date.now(),
+            modified: Date.now(),
+            size: 0,
+            permissions: 'drwxr-xr-x',
+            owner: 'user'
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error creating directory: ${path}`, error);
+      throw new Error(`Failed to create directory: ${path}`);
+    }
+  }
+
+  /**
+   * Delete a file or directory
+   */
+  public async deleteEntry(path: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      
+      // Check if path exists
+      const exists = await this.exists(normPath);
+      if (!exists) {
+        throw new Error(`Path does not exist: ${path}`);
+      }
+      
+      // Get entry to check if it's a directory
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      if (entry.entry.type === 'directory') {
+        // Check if directory is empty
+        const children = await this.readDirectory(normPath);
+        if (children.length > 0) {
+          throw new Error(`Directory is not empty: ${path}`);
+        }
+      }
+      
+      // Delete the entry
+      await this.db.delete('fs-entries', normPath);
+    } catch (error) {
+      console.error(`Error deleting entry: ${path}`, error);
+      throw new Error(`Failed to delete entry: ${path}`);
+    }
+  }
+
+  /**
+   * Move a file or directory to a new location
+   */
+  public async moveEntry(oldPath: string, newPath: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normOldPath = this.normalizePath(oldPath);
+      const normNewPath = this.normalizePath(newPath);
+      
+      // Check if source exists
+      const sourceExists = await this.exists(normOldPath);
+      if (!sourceExists) {
+        throw new Error(`Source path does not exist: ${oldPath}`);
+      }
+      
+      // Check if destination already exists
+      const destExists = await this.exists(normNewPath);
+      if (destExists) {
+        throw new Error(`Destination path already exists: ${newPath}`);
+      }
+      
+      // Get the entry
+      const entry = await this.db.get('fs-entries', normOldPath);
+      
+      // Create new entry
+      const newName = normNewPath.split('/').pop() || '';
+      const newParent = normNewPath.substring(0, normNewPath.lastIndexOf('/')) || '/';
+      
+      // Check if parent directory exists
+      const parentExists = await this.exists(newParent);
+      if (!parentExists) {
+        throw new Error(`Parent directory does not exist: ${newParent}`);
+      }
+      
+      // Update the entry
+      const updatedEntry = {
+        path: normNewPath,
+        parent: newParent,
+        entry: {
+          ...entry.entry,
+          name: newName,
+          metadata: {
+            ...entry.entry.metadata,
+            modified: Date.now()
+          }
+        }
+      };
+      
+      // Add new entry and delete old one in a transaction
+      const tx = this.db.transaction('fs-entries', 'readwrite');
+      await tx.store.put(updatedEntry);
+      await tx.store.delete(normOldPath);
+      await tx.done;
+    } catch (error) {
+      console.error(`Error moving entry: ${oldPath} -> ${newPath}`, error);
+      throw new Error(`Failed to move entry: ${oldPath} -> ${newPath}`);
+    }
+  }
+
+  /**
+   * Normalize a path (remove trailing slashes, handle ../, etc.)
+   */
+  private normalizePath(path: string): string {
+    // Ensure path starts with a slash
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+    
+    // Remove trailing slash unless it's the root
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+    
+    // Handle .. and .
+    const parts = path.split('/');
+    const stack: string[] = [];
+    
+    for (const part of parts) {
+      if (part === '' || part === '.') continue;
+      if (part === '..') {
+        stack.pop();
+      } else {
+        stack.push(part);
+      }
+    }
+    
+    return '/' + stack.join('/');
+  }
+}

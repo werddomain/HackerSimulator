@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "dev",
+      "label": "npm: dev",
+      "detail": "webpack serve --env development",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "webpack",
+        "pattern": {
+          "regexp": "^Error:.*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^webpack.*compiled successfully",
+          "endsPattern": "^webpack.*compiled successfully"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+:root {
+  --taskbar-height: 36px;
+  --taskbar-bg: #333;
+  --window-border: #555;
+  --window-header: #444;
+  --desktop-bg: #1a1a1a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Ubuntu Mono', 'Courier New', monospace;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+}
+
+#desktop {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--desktop-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Taskbar styling */
+#taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--taskbar-height);
+  background-color: var(--taskbar-bg);
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  color: white;
+}
+
+#start-menu-button {
+  padding: 0 15px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+#start-menu-button:hover {
+  background-color: #444;
+}
+
+#taskbar-items {
+  flex: 1;
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+}
+
+#system-tray {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+#system-tray > div {
+  margin-left: 15px;
+  font-size: 0.8rem;
+}
+
+/* Desktop icons */
+#desktop-icons {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  margin-bottom: 15px;
+  cursor: pointer;
+}
+
+.desktop-icon-image {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.desktop-icon-name {
+  color: white;
+  text-align: center;
+  font-size: 12px;
+  word-wrap: break-word;
+}
+
+/* Window styling */
+.window {
+  position: absolute;
+  background-color: #222;
+  border: 1px solid var(--window-border);
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  min-height: 200px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.window-header {
+  background-color: var(--window-header);
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  cursor: move;
+}
+
+.window-title {
+  flex: 1;
+  color: white;
+  font-size: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.window-controls {
+  display: flex;
+}
+
+.window-control {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.window-minimize {
+  background-color: #ffbd2e;
+}
+
+.window-maximize {
+  background-color: #28c941;
+}
+
+.window-close {
+  background-color: #ff5f57;
+}
+
+.window-content {
+  flex: 1;
+  overflow: auto;
+  background-color: #2a2a2a;
+  position: relative;
+}
+
+/* Terminal styling */
+.terminal-container {
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+}
+
+/* Editor styling */
+.editor-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* For the file explorer */
+.file-explorer {
+  display: flex;
+  height: 100%;
+}
+
+.file-sidebar {
+  width: 200px;
+  background-color: #252525;
+  border-right: 1px solid #333;
+  overflow: auto;
+}
+
+.file-content {
+  flex: 1;
+  overflow: auto;
+  padding: 5px;
+}
+
+.file-tree {
+  list-style: none;
+}
+
+.file-tree-item {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #ddd;
+}
+
+.file-tree-item:hover {
+  background-color: #333;
+}
+
+.file-tree-folder {
+  font-weight: bold;
+}
+
+.file-tree-file {
+  padding-left: 20px;
+}
+
+/* Browser styling */
+.browser-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.browser-toolbar {
+  display: flex;
+  padding: 8px;
+  background-color: #333;
+  border-bottom: 1px solid #444;
+}
+
+.browser-buttons {
+  display: flex;
+  margin-right: 10px;
+}
+
+.browser-button {
+  width: 24px;
+  height: 24px;
+  background-color: #444;
+  border-radius: 50%;
+  margin-right: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.browser-address-bar {
+  flex: 1;
+  padding: 5px 10px;
+  background-color: #444;
+  border-radius: 5px;
+  color: white;
+}
+
+.browser-content {
+  flex: 1;
+  background-color: white;
+  overflow: auto;
+}
