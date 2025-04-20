@@ -1,4 +1,4 @@
-import './styles.css';
+import './styles/main.less';
 import { OS } from './core/os';
 
 // Initialize the operating system when the page loads

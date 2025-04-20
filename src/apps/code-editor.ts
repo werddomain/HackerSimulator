@@ -323,13 +323,13 @@ export class CodeEditorApp {
           font-size: 12px;
         }
         
-        .terminal-container {
+        .code-editor-app .editor-terminal-panel .terminal-container {
           flex: 1;
           padding: 2px;
           display: none;
         }
         
-        .terminal-container.active {
+        .code-editor-app .editor-terminal-panel .terminal-container.active {
           display: block;
         }
         

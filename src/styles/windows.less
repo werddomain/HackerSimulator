@@ -1,0 +1,97 @@
+// Window styling
+.window {
+  position: absolute;
+  background-color: #222;
+  border: 1px solid @window-border;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  min-height: 200px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.window-header {
+  background-color: @window-header;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  cursor: move;
+}
+
+.window-title {
+  flex: 1;
+  color: white;
+  font-size: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.window-controls {
+  display: flex;
+}
+
+.window-control {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 8px;
+  cursor: pointer;
+  
+  &.window-minimize {
+    background-color: #ffbd2e;
+  }
+  
+  &.window-maximize {
+    background-color: #28c941;
+  }
+  
+  &.window-close {
+    background-color: #ff5f57;
+  }
+}
+
+.window-content {
+  flex: 1;
+  overflow: auto;
+  background-color: #2a2a2a;
+  position: relative;
+}
+
+// Window resize handles
+.window-resize-handle {
+  position: absolute;
+  
+  &.window-resize-n {
+    cursor: ns-resize;
+  }
+  
+  &.window-resize-e {
+    cursor: ew-resize;
+  }
+  
+  &.window-resize-s {
+    cursor: ns-resize;
+  }
+  
+  &.window-resize-w {
+    cursor: ew-resize;
+  }
+  
+  &.window-resize-ne {
+    cursor: nesw-resize;
+  }
+  
+  &.window-resize-se {
+    cursor: nwse-resize;
+  }
+  
+  &.window-resize-sw {
+    cursor: nesw-resize;
+  }
+  
+  &.window-resize-nw {
+    cursor: nwse-resize;
+  }
+}

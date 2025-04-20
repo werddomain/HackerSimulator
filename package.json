@@ -5,6 +5,7 @@
   "scripts": {
     "build:debug": "webpack --env development",
     "build:prod": "webpack --env production",
+    "watch": "webpack --watch --env development",
     "dev": "webpack serve --env development",
     "tsc:debug": "tsc --project tsconfig.debug.json",
     "start": "npm run dev"
@@ -16,6 +17,9 @@
   "devDependencies": {
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.3",
+    "less": "^4.3.0",
+    "less-loader": "^12.2.0",
+    "mini-css-extract-plugin": "^2.9.2",
     "style-loader": "^4.0.0",
     "terser-webpack-plugin": "^5.3.14",
     "ts-loader": "^9.5.2",

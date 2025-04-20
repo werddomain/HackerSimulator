@@ -1,7 +1,7 @@
-// filepath: c:\Users\clefw\HackerGame\v1\webpack.config.js
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 // Configuration factory function that returns webpack config based on environment
 module.exports = (env, argv) => {
@@ -9,7 +9,10 @@ module.exports = (env, argv) => {
   
   // Common configuration for both environments
   const config = {
-    entry: './src/index.ts',
+    entry: {
+      main: './src/index.ts',
+      styles: './src/styles/main.less'
+    },
     module: {
       rules: [
         {
@@ -19,7 +22,18 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.css$/,
-          use: ['style-loader', 'css-loader'],
+          use: [
+            isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
+            'css-loader'
+          ],
+        },
+        {
+          test: /\.less$/,
+          use: [
+            isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
+            'css-loader',
+            'less-loader'
+          ],
         },
         {
           test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -28,7 +42,7 @@ module.exports = (env, argv) => {
       ],
     },
     resolve: {
-      extensions: ['.tsx', '.ts', '.js'],
+      extensions: ['.tsx', '.ts', '.js', '.less', '.css'],
     },
     plugins: [
       new HtmlWebpackPlugin({
@@ -37,6 +51,14 @@ module.exports = (env, argv) => {
       }),
     ],
   };
+
+  // Add MiniCssExtractPlugin for both production and development
+  config.plugins.push(
+    new MiniCssExtractPlugin({
+      filename: isProduction ? 'styles.[contenthash].css' : 'styles.css',
+    })
+  );
+
   if (isProduction) {
     // Production specific settings
     config.mode = 'production';
@@ -72,7 +94,8 @@ module.exports = (env, argv) => {
           },
         },
       },
-    };} else {
+    };
+  } else {
     // Debug specific settings
     config.mode = 'development';
     config.devtool = 'eval-source-map';
@@ -90,6 +113,8 @@ module.exports = (env, argv) => {
       },
       compress: true,
       port: 9000,
+      hot: true, // Enable hot module replacement for fast development
+      watchFiles: ['src/**/*.less'], // Watch LESS files for changes
     };
   }
 

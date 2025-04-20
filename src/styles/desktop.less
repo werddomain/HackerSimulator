@@ -1,0 +1,41 @@
+// Desktop styling
+#desktop {
+  width: 100vw;
+  height: 100vh;
+  background-color: @desktop-bg;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Desktop icons */
+#desktop-icons {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  margin-bottom: 15px;
+  cursor: pointer;
+}
+
+.desktop-icon-image {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.desktop-icon-name {
+  color: white;
+  text-align: center;
+  font-size: 12px;
+  word-wrap: break-word;
+}
