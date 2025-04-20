@@ -1,11 +1,11 @@
 import { OS } from '../core/os';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * Calculator App for the Hacker Game
  * Provides basic arithmetic functions and potentially scientific operations
  */
-export class CalculatorApp {
-  private container: HTMLElement | null = null;
+export class CalculatorApp extends GuiApplication {
   private display: HTMLElement | null = null;
   private currentValue: string = '0';
   private previousValue: string = '';
@@ -13,11 +13,23 @@ export class CalculatorApp {
   private waitingForOperand: boolean = true;
   private memoryValue: number = 0;
 
+  constructor(os: OS) {
+    super(os);
+  }
+
   /**
-   * Initialize the calculator app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'calculator';
+  }
+
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     this.setupEventListeners();
   }

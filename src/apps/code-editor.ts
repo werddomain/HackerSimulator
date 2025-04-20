@@ -1,14 +1,13 @@
 import { OS } from '../core/os';
 import * as monaco from 'monaco-editor';
 import { FileEntryUtils } from '../core/file-entry-utils';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * Code Editor App for the Hacker Game
  * Provides advanced code editing features using Monaco Editor
  */
-export class CodeEditorApp {
-  private os: OS;
-  private container: HTMLElement | null = null;
+export class CodeEditorApp extends GuiApplication {
   private editor: monaco.editor.IStandaloneCodeEditor | null = null;
   private editorContainer: HTMLElement | null = null;
   private currentFilePath: string | null = null;
@@ -20,14 +19,22 @@ export class CodeEditorApp {
   private currentWorkingDirectory: string = '/home/user';
 
   constructor(os: OS) {
-    this.os = os;
+    super(os);
   }
 
   /**
-   * Initialize the code editor app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'code-editor';
+  }
+
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     this.initMonaco();
   }

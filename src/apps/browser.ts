@@ -1,12 +1,11 @@
 import { OS } from '../core/os';
+import { AppEventHandler, GuiApplication } from '../core/gui-application';
 
 /**
  * Browser App for the Hacker Game
  * Provides a simulated web browsing experience
  */
-export class BrowserApp {
-  private os: OS;
-  private container: HTMLElement | null = null;
+export class BrowserApp extends GuiApplication {
   private currentUrl: string = 'https://hackersearch.net';
   private history: string[] = [];
   private historyPosition: number = -1;
@@ -15,7 +14,7 @@ export class BrowserApp {
   private urlInput: HTMLInputElement | null = null;
   
   constructor(os: OS) {
-    this.os = os;
+    super(os);
     
     // Initialize default favorites
     this.favoriteUrls.set('HackerSearch', 'https://hackersearch.net');
@@ -26,10 +25,18 @@ export class BrowserApp {
   }
 
   /**
-   * Initialize the browser app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'browser';
+  }
+  
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     
     // Add initial URL to history

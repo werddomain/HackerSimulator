@@ -8,6 +8,7 @@ import { CommandRegistry } from '../commands/command-registry';
 import { WebClient } from '../websites/web-client';
 import { NetworkInterface, DNSServer } from './network';
 import { DefaultWebsites, WebsiteEntry } from '../websites/default-websites';
+import { Desktop } from './desktop';
 
 /**
  * Main OS class that manages the entire operating system simulation
@@ -20,12 +21,13 @@ private fileSystem: FileSystem;
   private appManager: AppManager;
   private commandProcessor: CommandProcessor;
   private commandRegistry: CommandRegistry;
-  private clockInterval: number | null = null;  private websites: Map<string, WebsiteEntry> = new Map();
+  private clockInterval: number | null = null;  
+  private websites: Map<string, WebsiteEntry> = new Map();
   private webClient: WebClient;
   private networkInterface: NetworkInterface;
   private dnsServer: DNSServer;
   private defaultWebsites: DefaultWebsites;
-   constructor() {
+  private desktop: Desktop;  constructor() {
     this.fileSystem = new FileSystem();
     this.processManager = new ProcessManager();
     this.windowManager = new WindowManager();
@@ -45,8 +47,10 @@ private fileSystem: FileSystem;
     this.defaultWebsites.initDefaultWebsites();
     
     this.webClient = new WebClient(this.websites);
-  }
-  /**
+    
+    // Initialize desktop
+    this.desktop = new Desktop(this);
+  }  /**
    * Initialize the OS
    */
   public async init(): Promise<void> {
@@ -73,8 +77,8 @@ private fileSystem: FileSystem;
     // Initialize clock
     this.initClock();
     
-    // Initialize desktop icons
-    this.initDesktopIcons();
+    // Initialize desktop
+    this.desktop.init();
     
     console.log('HackerOS initialized successfully');
   }
@@ -134,7 +138,13 @@ private fileSystem: FileSystem;
     return this.networkInterface;
   }
 
-public getWebClient(): WebClient {
+  /**
+   * Get the desktop instance
+   */
+  public getDesktop(): Desktop {
+    return this.desktop;
+  }
+  public getWebClient(): WebClient {
     return this.webClient;
 }
 
@@ -157,32 +167,6 @@ public getWebClient(): WebClient {
     this.clockInterval = window.setInterval(updateClock, 60000);
   }
 
-  /**
-   * Initialize desktop icons
-   */
-  private initDesktopIcons(): void {
-    const desktopIconsContainer = document.getElementById('desktop-icons');
-    if (!desktopIconsContainer) return;
-
-    // Get default apps from app manager
-    const defaultApps = this.appManager.getDefaultApps();
-    
-    // Create icons for each app
-    defaultApps.forEach(app => {
-      const iconElement = document.createElement('div');
-      iconElement.className = 'desktop-icon';
-      iconElement.innerHTML = `
-        <div class="desktop-icon-image">${app.icon}</div>
-        <div class="desktop-icon-name">${app.name}</div>
-      `;
-      
-      // Add click event to launch the app
-      iconElement.addEventListener('click', () => {
-        this.appManager.launchApp(app.id);
-      });
-      
-      desktopIconsContainer.appendChild(iconElement);
-    });  }
   /**
    * Register a website in the OS
    * @param websiteOrController Website entry or controller to register

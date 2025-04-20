@@ -1,13 +1,12 @@
 import { OS } from '../core/os';
 import { FileEntryUtils } from '../core/file-entry-utils';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * Text Editor App for the Hacker Game
  * Provides basic text editing capabilities
  */
-export class TextEditorApp {
-  private os: OS;
-  private container: HTMLElement | null = null;
+export class TextEditorApp extends GuiApplication {
   private editor: HTMLTextAreaElement | null = null;
   private currentFilePath: string | null = null;
   private hasUnsavedChanges: boolean = false;
@@ -15,14 +14,22 @@ export class TextEditorApp {
   private toolbar: HTMLElement | null = null;
 
   constructor(os: OS) {
-    this.os = os;
+    super(os);
   }
 
   /**
-   * Initialize the text editor app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'text-editor';
+  }
+
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     this.setupEventListeners();
   }

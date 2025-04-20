@@ -291,7 +291,7 @@ export class AppManager {
     // Lazily load the file explorer app
     import('../apps/file-explorer').then(module => {
       const fileExplorerApp = new module.FileExplorerApp(this.os);
-      fileExplorerApp.init(contentElement.querySelector('.file-explorer')!);
+      fileExplorerApp.init(contentElement.querySelector('.file-explorer')!, windowId);
       
       // Navigate to initial path if provided
       if (args.length > 0) {
@@ -313,7 +313,7 @@ export class AppManager {
     // Lazily load the text editor app
     import('../apps/text-editor').then(module => {
       const textEditorApp = new module.TextEditorApp(this.os);
-      textEditorApp.init(contentElement.querySelector('.text-editor')!);
+      textEditorApp.init(contentElement.querySelector('.text-editor')!, windowId);
       
       // Open file if provided
       if (args.length > 0) {
@@ -335,7 +335,7 @@ export class AppManager {
     // Lazily load the code editor app
     import('../apps/code-editor').then(module => {
       const codeEditorApp = new module.CodeEditorApp(this.os);
-      codeEditorApp.init(contentElement.querySelector('.editor-container')!);
+      codeEditorApp.init(contentElement.querySelector('.editor-container')!, windowId);
       
       // Open file if provided
       if (args.length > 0) {
@@ -357,7 +357,7 @@ export class AppManager {
     // Lazily load the browser app
     import('../apps/browser').then(module => {
       const browserApp = new module.BrowserApp(this.os);
-      browserApp.init(contentElement.querySelector('.browser-container')!);
+      browserApp.init(contentElement.querySelector('.browser-container')!, windowId);
       
       // Navigate to URL if provided
       if (args.length > 0) {
@@ -379,7 +379,7 @@ export class AppManager {
     // Lazily load the system monitor app
     import('../apps/system-monitor').then(module => {
       const systemMonitorApp = new module.SystemMonitorApp(this.os);
-      systemMonitorApp.init(contentElement.querySelector('.system-monitor')!);
+      systemMonitorApp.init(contentElement.querySelector('.system-monitor')!, windowId);
     }).catch(error => {
       console.error('Failed to load system monitor app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load system monitor app.</div>';
@@ -395,8 +395,8 @@ export class AppManager {
     
     // Lazily load the calculator app
     import('../apps/calculator').then(module => {
-      const calculatorApp = new module.CalculatorApp();
-      calculatorApp.init(contentElement.querySelector('.calculator')!);
+      const calculatorApp = new module.CalculatorApp(this.os);
+      calculatorApp.init(contentElement.querySelector('.calculator')!, windowId);
     }).catch(error => {
       console.error('Failed to load calculator app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load calculator app.</div>';

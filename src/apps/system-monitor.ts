@@ -1,13 +1,12 @@
 import { OS } from '../core/os';
 import { Process } from '../core/process';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * System Monitor App for the Hacker Game
  * Provides visualization of system resources and processes
  */
-export class SystemMonitorApp {
-  private os: OS;
-  private container: HTMLElement | null = null;
+export class SystemMonitorApp extends GuiApplication {
   private updateInterval: number | null = null;
   private chartData: {
     cpu: number[];
@@ -28,7 +27,7 @@ export class SystemMonitorApp {
   
   // Track process details view
   private selectedProcessPid: number | null = null;
-    // Maximum data points to keep in memory for the charts
+  // Maximum data points to keep in memory for the charts
   private readonly MAX_DATA_POINTS = 60;
   
   // Simulate network and disk metrics (since they're not in the original system)
@@ -38,14 +37,22 @@ export class SystemMonitorApp {
   private diskFree = 200;  // 200 GB simulated free space
   
   constructor(os: OS) {
-    this.os = os;
+    super(os);
   }
   
   /**
-   * Initialize the System Monitor app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'system-monitor';
+  }
+  
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     
     // Start update interval

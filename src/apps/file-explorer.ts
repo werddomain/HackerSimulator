@@ -2,14 +2,13 @@ import { OS } from '../core/os';
 import { FileEntryUtils } from '../core/file-entry-utils';
 import { FileSystemUtils } from '../core/file-system-utils';
 import { FileSystemEntry } from '../core/filesystem';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * File Explorer App for the Hacker Game
  * Provides a graphical interface to browse and manage the file system
  */
-export class FileExplorerApp {
-  private os: OS;
-  private container: HTMLElement | null = null;
+export class FileExplorerApp extends GuiApplication {
   private currentPath: string = '/home/user';
   private selectedItems: string[] = [];
   private clipboard: { action: 'copy' | 'cut'; paths: string[] } | null = null;
@@ -19,14 +18,22 @@ export class FileExplorerApp {
   private showHidden: boolean = false;
 
   constructor(os: OS) {
-    this.os = os;
+    super(os);
   }
 
   /**
-   * Initialize the file explorer app
+   * Get application name for process registration
    */
-  public init(container: HTMLElement): void {
-    this.container = container;
+  protected getApplicationName(): string {
+    return 'file-explorer';
+  }
+
+  /**
+   * Application-specific initialization
+   */
+  protected initApplication(): void {
+    if (!this.container) return;
+    
     this.render();
     this.navigateTo('/home/user');
     
