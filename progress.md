@@ -38,11 +38,20 @@
   - [x] Web Browser (basic implementation)
   - [x] System Monitor
   - [x] Calculator
+  - [ ] App Market place
+  - [ ] Hacker tools
+- [ ] Start Menu
+  - [x] Create the start menu interface
+  - [ ] Link Pinned apps to open the corresponding app
+  - [ ] List all apps in the 'All apps' section and handle click on it to load the correct app.
+  - [ ] Implement the Documents and images to open the file edirot to a specific folder
+  - [ ] Create a settings app and link it to the side menu item
+  - [ ] Implement startup and login screen then link power and user buttons to the actions
 
 ## To Do
 - [ ] Add more simulated Linux commands
 - [ ] Implement remaining applications:
-  - [ ] Complete File Explorer implementation
+  - [x] Complete File Explorer implementation
   - [ ] Text Editor enhancements
   - [ ] Code Editor execution capabilities
   - [ ] System Monitor with process/resource visualization
@@ -56,7 +65,7 @@
   - [ ] Add more target company websites
   - [ ] Social media
 - [ ] Implement hack mechanics:
-  - [x] Basic SQL injection vulnerability
+  - [ ] Basic SQL injection vulnerability
   - [ ] Advanced SQL injection challenges
   - [ ] XSS vulnerability simulation
   - [ ] Password cracking mini-games
