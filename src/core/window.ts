@@ -430,27 +430,65 @@ export class WindowManager {
     // Clear active window ID
     this.activeWindowId = null;
   }
-
   /**
-   * Minimize a window
+   * Minimize a window with animation
    */
   public minimizeWindow(id: string): void {
     const windowElement = this.windowElements.get(id);
     if (!windowElement) return;
     
-    // Hide the window
-    windowElement.classList.add('window-minimized');
+    // Get the taskbar item for the window
+    const taskbarItem = document.querySelector(`.taskbar-item[data-window-id="${id}"]`);
+    if (!taskbarItem) {
+      // If taskbar item not found, just hide without animation
+      windowElement.classList.add('window-minimized');
+      return;
+    }
+    
+    // Get the positions of the window and taskbar item
+    const windowRect = windowElement.getBoundingClientRect();
+    const taskbarRect = taskbarItem.getBoundingClientRect();
+    
+    // Calculate the target position for the animation
+    const translateX = taskbarRect.left + (taskbarRect.width / 2) - (windowRect.left + (windowRect.width / 2));
+    const translateY = taskbarRect.top + (taskbarRect.height / 2) - (windowRect.top + (windowRect.height / 2));
+    
+    // Create animation class for this specific window
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes minimizeAnimation${id} {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(${translateX}px, ${translateY}px) scale(0.1);
+          opacity: 0.3;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Apply the animation
+    windowElement.style.animation = `minimizeAnimation${id} 0.3s forwards ease-in-out`;
     
     // Update taskbar
-    const taskbarItem = document.querySelector(`.taskbar-item[data-window-id="${id}"]`);
-    if (taskbarItem) {
-      taskbarItem.classList.remove('taskbar-item-active');
-    }
+    taskbarItem.classList.remove('taskbar-item-active');
+    
+    // After animation completes, hide the window
+    setTimeout(() => {
+      windowElement.classList.add('window-minimized');
+      windowElement.style.animation = '';
+      document.head.removeChild(style); // Clean up the style
+    }, 300);
     
     // Clear active window ID if this window was active
     if (this.activeWindowId === id) {
       this.activeWindowId = null;
     }
+    
+    // Emit minimize event
+    this.emitWindowEvent('minimize', id);
   }
 
   /**
