@@ -386,7 +386,6 @@ export class WindowManager {
       windowElement.appendChild(handle);
     });
   }
-
   /**
    * Activate a window (bring to front)
    */
@@ -409,6 +408,9 @@ export class WindowManager {
     if (taskbarItem) {
       taskbarItem.classList.add('taskbar-item-active');
     }
+    
+    // Emit focus event when window is activated
+    this.emitWindowEvent('focus', id);
   }
 
   /**

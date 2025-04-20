@@ -475,13 +475,27 @@ export class CodeEditorApp {
     
     this.setupEventListeners();
     this.loadFileTree();
-  }
-
-  /**
+  }  /**
    * Initialize Monaco editor
    */
   private initMonaco(): void {
     if (!this.editorContainer) return;
+    
+    // Configure Monaco workers
+    (window as any).MonacoEnvironment = {
+      getWorker: function(_moduleId: string, label: string) {
+        // Use a proxied worker that doesn't rely on specific worker files
+        // This is a workaround when worker files aren't properly bundled
+        const workerContent = `
+          self.MonacoEnvironment = {
+            baseUrl: 'https://unpkg.com/monaco-editor@latest/min/'
+          };
+          importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');
+        `;
+        const blob = new Blob([workerContent], { type: 'application/javascript' });
+        return new Worker(URL.createObjectURL(blob));
+      }
+    };
     
     // Create editor instance
     this.editor = monaco.editor.create(this.editorContainer, {
