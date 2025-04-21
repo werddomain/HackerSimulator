@@ -360,19 +360,26 @@ export class FileExplorerApp extends GuiApplication {
         .selection-count {
           margin-left: 10px;
         }
-        
-        .context-menu {
-          position: absolute;
+          .context-menu {
+          position: fixed;
           background-color: #252526;
           border: 1px solid #3c3c3c;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
           padding: 5px 0;
           z-index: 1000;
+          color: #d4d4d4;
         }
         
         .context-menu-item {
           padding: 5px 20px;
           cursor: pointer;
+          color: #d4d4d4;
+        }
+        
+        .context-menu-item.disabled {
+          opacity: 0.5;
+          cursor: default;
+          pointer-events: none;
         }
         
         .context-menu-item:hover {
@@ -561,11 +568,26 @@ export class FileExplorerApp extends GuiApplication {
         }
       });
     });
-    
-    // Main area right-click (for context menu)
+      // Main area right-click (for context menu)
     const fileListEl = this.container.querySelector('.file-list');
     fileListEl?.addEventListener('contextmenu', (e) => {
-      if ((e.target as HTMLElement).classList.contains('file-list')) {
+      // Show context menu for both the file-list element and empty space in the content area
+      e.preventDefault();
+      
+      // If the click happened on a file item, the file item's own context menu handler will take over
+      // Otherwise, show the empty space context menu
+      const target = e.target as HTMLElement;
+      if (!target.closest('.file-item')) {
+        this.showContextMenu(<MouseEvent>e, null);
+      }
+    });
+    
+    // Add right-click handler for the file-explorer-content area as well
+    const contentEl = this.container.querySelector('.file-explorer-content');
+    contentEl?.addEventListener('contextmenu', (e) => {
+      const target = e.target as HTMLElement;
+      // Only handle if not clicked on a file item and not on the file list
+      if (!target.closest('.file-item') && !target.closest('.file-list')) {
         e.preventDefault();
         this.showContextMenu(<MouseEvent>e, null);
       }
@@ -943,30 +965,117 @@ export class FileExplorerApp extends GuiApplication {
       }
     }
   }
-
-  /**
+/**
    * Show context menu
    */
   private showContextMenu(event: MouseEvent, fileItem: HTMLElement | null): void {
-    const contextMenu = this.container?.querySelector<HTMLElement>('.context-menu');
-    if (!contextMenu) return;
+    // First, remove any existing context menu
+    this.hideContextMenu();
+    
+    // Create a new context menu
+    const contextMenu = document.createElement('div');
+    contextMenu.className = 'context-menu';
+    contextMenu.tabIndex = -1; // Make it focusable for blur events
     
     // Position the menu
     contextMenu.style.left = `${event.clientX}px`;
     contextMenu.style.top = `${event.clientY}px`;
-    contextMenu.style.display = 'block';
     
-    // Configure menu items based on context
-    const pasteItem = contextMenu.querySelector('[data-action="paste"]');
-    if (pasteItem) {
-      pasteItem.classList.toggle('disabled', !this.clipboard);
+    // Determine the context type
+    const isOnEmptySpace = fileItem === null;
+    const isOnDirectory = fileItem?.getAttribute('data-type') === 'directory';
+    const isOnFile = fileItem?.getAttribute('data-type') === 'file';
+    const isZipFile = isOnFile && fileItem?.getAttribute('data-path')?.endsWith('.zip');
+    
+    // Build menu content based on context
+    let menuItems = '';
+    
+    if (isOnEmptySpace) {
+      // In empty space or directory background
+      menuItems += `
+        <div class="context-menu-item" data-action="new-folder">New Folder</div>
+        <div class="context-menu-item" data-action="new-file">New Text File</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item ${!this.clipboard ? 'disabled' : ''}" data-action="paste">Paste</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="refresh">Refresh</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="properties">Properties</div>
+      `;
+    } else if (isOnDirectory) {
+      // On a directory
+      menuItems += `
+        <div class="context-menu-item" data-action="open">Open</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="cut">Cut</div>
+        <div class="context-menu-item" data-action="copy">Copy</div>
+        <div class="context-menu-item ${!this.clipboard ? 'disabled' : ''}" data-action="paste">Paste Into Folder</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="rename">Rename</div>
+        <div class="context-menu-item" data-action="delete">Delete</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="compress">Compress to Zip</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="properties">Properties</div>
+      `;
+    } else if (isOnFile) {
+      // On a file
+      menuItems += `
+        <div class="context-menu-item" data-action="open">Open</div>
+        <div class="context-menu-item" data-action="open-with">Open With...</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="cut">Cut</div>
+        <div class="context-menu-item" data-action="copy">Copy</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="rename">Rename</div>
+        <div class="context-menu-item" data-action="delete">Delete</div>
+      `;
+      
+      // Add extract option if zip file
+      if (isZipFile) {
+        menuItems += `
+          <div class="context-menu-separator"></div>
+          <div class="context-menu-item" data-action="extract">Extract Here</div>
+        `;
+      }
+      
+      menuItems += `
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="properties">Properties</div>
+      `;
     }
+      // Set the menu content
+    contextMenu.innerHTML = menuItems;
+      // Add to the container
+    this.container?.appendChild(contextMenu);
+    
+    // Focus the menu to enable blur event
+    contextMenu.focus();
+    
+    // Create a click handler to detect clicks outside the menu
+    const handleOutsideClick = (e: MouseEvent) => {
+      // Check if the click was outside the context menu
+      if (!contextMenu.contains(e.target as Node)) {
+        this.hideContextMenu();
+        // Remove this event listener
+        document.removeEventListener('mousedown', handleOutsideClick);
+      }
+    };
+    
+    // Add the event listener
+    document.addEventListener('mousedown', handleOutsideClick);
+    
+    // Prevent clicks on the menu from closing it
+    contextMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
     
     // Setup action handlers
     contextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+      if (item.classList.contains('disabled')) return;
+      
       item.addEventListener('click', (e) => {
         e.stopPropagation();
-        
         const action = (item as HTMLElement).getAttribute('data-action');
         if (!action) return;
         
@@ -976,26 +1085,32 @@ export class FileExplorerApp extends GuiApplication {
     });
     
     // Prevent the menu from going off-screen
-    const rect = contextMenu.getBoundingClientRect();
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
+    setTimeout(() => {
+      const rect = contextMenu.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      if (rect.right > windowWidth) {
+        contextMenu.style.left = `${windowWidth - rect.width - 10}px`;
+      }
+      
+      if (rect.bottom > windowHeight) {
+        contextMenu.style.top = `${windowHeight - rect.height - 10}px`;
+      }
+    }, 0);
     
-    if (rect.right > windowWidth) {
-      contextMenu.style.left = `${windowWidth - rect.width - 10}px`;
-    }
-    
-    if (rect.bottom > windowHeight) {
-      contextMenu.style.top = `${windowHeight - rect.height - 10}px`;
-    }
+    // Prevent default browser context menu
+    event.preventDefault();
+    event.stopPropagation();
   }
-
   /**
    * Hide context menu
    */
   private hideContextMenu(): void {
     const contextMenu = this.container?.querySelector<HTMLElement>('.context-menu');
     if (contextMenu) {
-      contextMenu.style.display = 'none';
+      // Remove the menu completely rather than just hiding it
+      contextMenu.remove();
     }
   }
 
@@ -1992,7 +2107,7 @@ export class FileExplorerApp extends GuiApplication {
         });
     });
   }
-/* Show progress dialog
+  /* Show progress dialog
    */
   private showProgressDialog(title: string, message: string, initialProgress: number): void {
  const dialog = document.createElement('div');
@@ -2250,4 +2365,71 @@ export class FileExplorerApp extends GuiApplication {
       }
     }
   }
+  /**
+   * Extract files from a zip file
+   */
+  private extractZipFile(zipFilePath: string, destinationPath: string): void {
+    // Show progress dialog
+    this.showProgressDialog(
+      'Extracting Zip File',
+      `Extracting ${zipFilePath.split('/').pop()}...`,
+      0
+    );
+
+    const progressElement = this.container?.querySelector('.dialog-overlay .progress-value');
+    const progressFill = this.container?.querySelector('.dialog-overlay .progress-fill') as HTMLElement;
+
+    // Read the zip file
+    this.os.getFileSystem().readFile(zipFilePath)
+      .then(content => {
+        if (content.constructor.name !== 'ArrayBuffer') {
+          throw new Error('Invalid zip file content');
+        }
+
+        // Load the zip content using JSZip
+        return JSZip.loadAsync(content);
+      })
+      .then(zip => {
+        const fileNames = Object.keys(zip.files);
+        let processedFiles = 0;
+
+        // Extract each file
+        return Promise.all(fileNames.map(fileName => {
+          const file = zip.files[fileName];
+
+          if (file.dir) {
+            // Create directory
+            return this.os.getFileSystem().createDirectory(`${destinationPath}/${fileName}`);
+          } else {
+            // Extract file content
+            return file.async('uint8array').then(content => {
+              const textContent = new TextDecoder().decode(content);
+              return this.os.getFileSystem().writeFile(`${destinationPath}/${fileName}`, textContent);
+            });
+          }
+        }).map(promise => promise.then(() => {
+          processedFiles++;
+          const percent = Math.round((processedFiles / fileNames.length) * 100);
+
+          // Update progress
+          if (progressElement) {
+            progressElement.textContent = `${percent}%`;
+            if (progressFill) {
+              progressFill.style.width = `${percent}%`;
+            }
+          }
+        })));
+      })
+      .then(() => {
+        // Remove progress dialog
+        this.container?.querySelector('.dialog-overlay')?.remove();
+        this.refresh();
+      })
+      .catch(error => {
+        console.error('Error extracting zip file:', error);
+        this.showErrorDialog('Extraction Error', `Failed to extract zip file: ${error.message}`);
+        this.container?.querySelector('.dialog-overlay')?.remove();
+      });
+  }
 }
+
