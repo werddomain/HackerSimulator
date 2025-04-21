@@ -349,7 +349,6 @@ protected initApplication(): void {
       this.redrawInputLine();
     }
   }
-
   /**
    * Handle Enter key
    */
@@ -367,28 +366,34 @@ protected initApplication(): void {
       this.historyIndex = -1;
     }
     
-    // Process the command
-    const command = this.inputBuffer;
+    // Get the command
+    const commandString = this.inputBuffer;
     this.inputBuffer = '';
     this.cursorPosition = 0;
 
-    // Create a command process as a child of the terminal process
-    const commandParts = command.trim().split(' ');
-    if (commandParts[0]) {
+    // Parse command with proper handling of quoted arguments
+    const commandParts = this.parseCommandArgs(commandString.trim());
+    
+    if (commandParts.length > 0) {
+      const commandName = commandParts[0];
+      const args = commandParts.slice(1);
+      
       // Use the createSubProcess method from the base class
       this.createSubProcess({
-        name: commandParts[0],
-        command: command,
+        name: commandName,
+        command: commandString,
         user: 'user',
         cpuUsage: 0.2,
         memoryUsage: 5
       });
-    }
       
-    // Process command and show output
-    const output = await this.os.getCommandProcessor().processCommand(command, this.commandContext);
-    if (output) {
-      this.terminal.writeln(output);
+      // Process command and show output
+      // We're using the original command string here so the command processor can 
+      // handle parsing itself using our properly parsed arguments
+      const output = await this.os.getCommandProcessor().processCommand(commandString, this.commandContext);
+      if (output) {
+        this.terminal.writeln(output);
+      }
     }
     
     // Show new prompt
@@ -544,5 +549,61 @@ protected initApplication(): void {
    */
   private triggerDirectoryChange(newPath: string): void {
     this.directoryChangeHandlers.forEach(handler => handler(newPath));
+  }
+
+  /**
+   * Parse command arguments, respecting quotes
+   * @param command The command string to parse
+   * @returns Array of parsed arguments
+   */
+  private parseCommandArgs(command: string): string[] {
+    const args: string[] = [];
+    let currentArg = '';
+    let inQuotes = false;
+    let escapeNext = false;
+    
+    // Process each character in the command
+    for (let i = 0; i < command.length; i++) {
+      const char = command[i];
+      
+      // Handle escape character
+      if (escapeNext) {
+        currentArg += char;
+        escapeNext = false;
+        continue;
+      }
+      
+      // Check for escape character
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      // Handle quotes
+      if (char === '"' || char === "'") {
+        inQuotes = !inQuotes;
+        continue;
+      }
+      
+      // Handle spaces
+      if (char === ' ' && !inQuotes) {
+        // If we have a current argument, add it to args and reset
+        if (currentArg) {
+          args.push(currentArg);
+          currentArg = '';
+        }
+        continue;
+      }
+      
+      // Add character to current argument
+      currentArg += char;
+    }
+    
+    // Add any remaining argument
+    if (currentArg) {
+      args.push(currentArg);
+    }
+    
+    return args;
   }
 }

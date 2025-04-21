@@ -183,19 +183,21 @@ export class CommandProcessor {
       return `Error: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
-
   /**
    * Parse a command string into command, args, and options
    */
   private parseCommandString(commandStr: string): { command: string, args: string[], options: Record<string, any> } {
-    const parts = commandStr.split(' ');
-    const command = parts[0];
+    // Parse the command line with respect to quotes
+    const parsedArgs = this.parseCommandArgs(commandStr);
+    
+    // First argument is the command name
+    const command = parsedArgs.length > 0 ? parsedArgs[0] : '';
     const args: string[] = [];
     const options: Record<string, any> = {};
     
-    let i = 1;
-    while (i < parts.length) {
-      const part = parts[i];
+    // Process arguments and options (starting from index 1 to skip the command)
+    for (let i = 1; i < parsedArgs.length; i++) {
+      const part = parsedArgs[i];
       
       // Handle options (starting with -)
       if (part.startsWith('-')) {
@@ -217,8 +219,8 @@ export class CommandProcessor {
           const optionName = part.slice(1);
           
           // Check if next part is a value
-          if (i + 1 < parts.length && !parts[i + 1].startsWith('-')) {
-            options[optionName] = parts[i + 1];
+          if (i + 1 < parsedArgs.length && !parsedArgs[i + 1].startsWith('-')) {
+            options[optionName] = parsedArgs[i + 1];
             i++; // Skip the value
           } else {
             // Boolean option (-o)
@@ -230,11 +232,73 @@ export class CommandProcessor {
       else {
         args.push(part);
       }
-      
-      i++;
     }
     
     return { command, args, options };
+  }
+  
+  /**
+   * Parse command arguments, respecting quotes
+   * @param command The command string to parse
+   * @returns Array of parsed arguments
+   */
+  private parseCommandArgs(command: string): string[] {
+    const args: string[] = [];
+    let currentArg = '';
+    let inQuotes = false;
+    let quoteChar = '';
+    let escapeNext = false;
+    
+    // Process each character in the command
+    for (let i = 0; i < command.length; i++) {
+      const char = command[i];
+      
+      // Handle escape character
+      if (escapeNext) {
+        currentArg += char;
+        escapeNext = false;
+        continue;
+      }
+      
+      // Check for escape character
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      // Handle quotes (both single and double)
+      if ((char === '"' || char === "'") && (!inQuotes || char === quoteChar)) {
+        if (inQuotes) {
+          // Closing quote
+          inQuotes = false;
+        } else {
+          // Opening quote
+          inQuotes = true;
+          quoteChar = char;
+        }
+        continue;
+      }
+      
+      // Handle spaces
+      if (char === ' ' && !inQuotes) {
+        // If we have a current argument, add it to args and reset
+        if (currentArg || currentArg === '0') {
+          args.push(currentArg);
+          currentArg = '';
+        }
+        continue;
+      }
+      
+      // Add character to current argument
+      currentArg += char;
+    }
+    
+    // Add any remaining argument
+    if (currentArg || currentArg === '0') {
+      args.push(currentArg);
+    }
+    
+    return args;
   }
   /**
    * Get all available commands

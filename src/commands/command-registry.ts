@@ -1,3 +1,4 @@
+import { Laugh } from 'lucide';
 import { OS } from '../core/os';
 import { NanoEditor } from './app/nano-editor';
 import { CommandModule } from './command-processor';
@@ -22,6 +23,7 @@ import { PsCommand } from './linux/ps';
 import { PwdCommand } from './linux/pwd';
 import { RmCommand } from './linux/rm';
 import { TouchCommand } from './linux/touch';
+import { LaunchCommand } from './linux/launch';
 
 /**
  * CommandRegistry class for registering and retrieving command modules
@@ -31,11 +33,11 @@ export class CommandRegistry {
   private os: OS;
   private commands: Map<string, CommandModule> = new Map();
   private aliases: Map<string, string> = new Map();
-  
+
   private constructor(os: OS) {
     this.os = os;
   }
-  
+
   /**
    * Get the singleton instance of CommandRegistry
    */
@@ -45,7 +47,7 @@ export class CommandRegistry {
     }
     return CommandRegistry.instance;
   }
-  
+
   /**
    * Register a command module
    */
@@ -53,7 +55,7 @@ export class CommandRegistry {
     this.commands.set(command.name, command);
     this.os.getCommandProcessor().registerCommand(command);
   }
-  
+
   /**
    * Register a command alias
    */
@@ -61,7 +63,7 @@ export class CommandRegistry {
     this.aliases.set(alias, commandName);
     this.os.getCommandProcessor().registerAlias(alias, commandName);
   }
-  
+
   /**
    * Register all built-in commands
    */
@@ -69,7 +71,7 @@ export class CommandRegistry {
     // Register navigation commands
     this.registerCommand(new LsCommand(this.os));
     this.registerCommand(new PwdCommand(this.os));
-    
+
     // Register file operation commands
     this.registerCommand(new CatCommand(this.os));
     this.registerCommand(new CpCommand(this.os));
@@ -78,30 +80,32 @@ export class CommandRegistry {
     this.registerCommand(new MkdirCommand(this.os));
     this.registerCommand(new TouchCommand(this.os));
     this.registerCommand(new CdCommand(this.os));
-    
+
     // Register system commands
     this.registerCommand(new EchoCommand());
     this.registerCommand(new PsCommand(this.os));
     this.registerCommand(new KillCommand(this.os));
     this.registerCommand(new ClearCommand());
-      // Register network commands
+    // Register network commands
     this.registerCommand(new PingCommand(this.os));
-    this.registerCommand(new CurlCommand(this.os));    this.registerCommand(new NmapCommand(this.os));
-    
+    this.registerCommand(new CurlCommand(this.os)); this.registerCommand(new NmapCommand(this.os));
+
     // Register help and utility commands
     this.registerCommand(new HelpCommand(this.os));
     this.registerCommand(new ManCommand(this.os));
     this.registerCommand(new NanoEditor(this.os));
+    this.registerCommand(new LaunchCommand(this.os));
 
-    
     // Register common aliases
     this.registerAlias('dir', 'ls');
     this.registerAlias('ll', 'ls -l');
     this.registerAlias('la', 'ls -la');
     this.registerAlias('cls', 'clear');
     this.registerAlias('?', 'help');
+    this.registerAlias('h', 'help');
+    this.registerAlias("start", "launch");
   }
-  
+
   /**
    * Dynamically load a command from a string
    * This allows creating and loading commands at runtime
@@ -113,10 +117,10 @@ export class CommandRegistry {
         ${code}
         return new ${name}Command(OS);
       `);
-      
+
       // Execute the function to get the command instance
       const command = moduleFunc(this.os, {}, {}) as CommandModule;
-      
+
       // Register the command
       this.registerCommand(command);
       return true;
@@ -125,21 +129,21 @@ export class CommandRegistry {
       return false;
     }
   }
-  
+
   /**
    * Get all registered commands
    */
   public getAllCommands(): CommandModule[] {
     return Array.from(this.commands.values());
   }
-  
+
   /**
    * Get a command by name
    */
   public getCommand(name: string): CommandModule | undefined {
     return this.commands.get(name);
   }
-  
+
   /**
    * Check if a command exists
    */

@@ -75,67 +75,75 @@ export class CalculatorApp extends GuiApplication {
           <button class="calculator-button negate">±</button>
         </div>
       </div>
+       <!-- NOTE: DO NOT ADD STYLES HERE! 
+     All styles for the file explorer should be added to browser.less instead.
+     This ensures proper scoping and prevents conflicts with other components. -->
       <style>
-        .calculator-app {
-          background-color: #202020;
-          border-radius: 8px;
-          width: 100%;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-        }
-        .calculator-display {
-          background-color: #111;
-          color: #fff;
-          padding: 20px;
-          text-align: right;
-          font-family: 'Courier New', monospace;
-        }
-        .calculator-previous-operand {
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 16px;
-          height: 20px;
-          margin-bottom: 5px;
-        }
-        .calculator-current-operand {
-          font-size: 36px;
-          min-height: 40px;
-        }
-        .calculator-buttons {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          grid-gap: 1px;
-          flex: 1;
-        }
-        .calculator-button {
-          background-color: #333;
-          border: none;
-          color: white;
-          font-size: 18px;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-        .calculator-button:hover {
-          background-color: #555;
-        }
-        .calculator-button.operator, .calculator-button.equals {
-          background-color: #ff9500;
-        }
-        .calculator-button.operator:hover, .calculator-button.equals:hover {
-          background-color: #ffb74d;
-        }
-        .calculator-button.clear, .calculator-button.all-clear, 
-        .calculator-button.memory-clear, .calculator-button.memory-recall,
-        .calculator-button.memory-add, .calculator-button.memory-subtract {
-          background-color: #a5a5a5;
-          color: black;
-        }
-        .calculator-button.clear:hover, .calculator-button.all-clear:hover,
-        .calculator-button.memory-clear:hover, .calculator-button.memory-recall:hover,
-        .calculator-button.memory-add:hover, .calculator-button.memory-subtract:hover {
-          background-color: #d4d4d2;
-        }
+ <!-- NOTE: DO NOT ADD STYLES HERE! -->
+      </style>
+      
+      <style>
+
+        // .calculator-app {
+        //   background-color: #202020;
+        //   border-radius: 8px;
+        //   width: 100%;
+        //   height: 100%;
+        //   display: flex;
+        //   flex-direction: column;
+        //   overflow: hidden;
+        // }
+        // .calculator-display {
+        //   background-color: #111;
+        //   color: #fff;
+        //   padding: 20px;
+        //   text-align: right;
+        //   font-family: 'Courier New', monospace;
+        // }
+        // .calculator-previous-operand {
+        //   color: rgba(255, 255, 255, 0.7);
+        //   font-size: 16px;
+        //   height: 20px;
+        //   margin-bottom: 5px;
+        // }
+        // .calculator-current-operand {
+        //   font-size: 36px;
+        //   min-height: 40px;
+        // }
+        // .calculator-buttons {
+        //   display: grid;
+        //   grid-template-columns: repeat(5, 1fr);
+        //   grid-gap: 1px;
+        //   flex: 1;
+        // }
+        // .calculator-button {
+        //   background-color: #333;
+        //   border: none;
+        //   color: white;
+        //   font-size: 18px;
+        //   cursor: pointer;
+        //   transition: background-color 0.2s;
+        // }
+        // .calculator-button:hover {
+        //   background-color: #555;
+        // }
+        // .calculator-button.operator, .calculator-button.equals {
+        //   background-color: #ff9500;
+        // }
+        // .calculator-button.operator:hover, .calculator-button.equals:hover {
+        //   background-color: #ffb74d;
+        // }
+        // .calculator-button.clear, .calculator-button.all-clear, 
+        // .calculator-button.memory-clear, .calculator-button.memory-recall,
+        // .calculator-button.memory-add, .calculator-button.memory-subtract {
+        //   background-color: #a5a5a5;
+        //   color: black;
+        // }
+        // .calculator-button.clear:hover, .calculator-button.all-clear:hover,
+        // .calculator-button.memory-clear:hover, .calculator-button.memory-recall:hover,
+        // .calculator-button.memory-add:hover, .calculator-button.memory-subtract:hover {
+        //   background-color: #d4d4d2;
+        // }
       </style>
     `;
     
