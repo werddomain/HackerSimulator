@@ -1,58 +1,66 @@
 // File Explorer application styles
 .file-explorer-app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: #1e1e1e;
-  color: #d4d4d4;
-  
+   display: flex;
+          flex-direction: column;
+          height: 100%;
+          width: 100%;
+          background-color: #1e1e1e;
+          color: #d4d4d4;
+          font-family: 'Segoe UI', 'Arial', sans-serif;
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow: hidden;
+          
   .file-explorer-toolbar {
-    display: flex;
-    padding: 5px;
-    background-color: #252526;
-    border-bottom: 1px solid #333;
+     display: flex;
+          padding: 5px;
+          background-color: #252526;
+          border-bottom: 1px solid #3c3c3c;
     
     .navigation-buttons {
       display: flex;
-      margin-right: 10px;
+          margin-right: 5px;
     }
     
     .navigation-btn {
-      padding: 5px 8px;
-      background-color: #333;
-      border: none;
-      border-radius: 3px;
-      color: #d4d4d4;
-      margin-right: 2px;
-      cursor: pointer;
+      background: none;
+          border: none;
+          color: #d4d4d4;
+          padding: 5px 10px;
+          cursor: pointer;
+          border-radius: 3px;
+          font-size: 14px;
       
       &:hover {
-        background-color: #444;
+          background-color: #3c3c3c;
       }
       
       &:disabled {
         opacity: 0.5;
-        cursor: default;
+         cursor: not-allowed;
       }
     }
     
     .path-bar {
       flex: 1;
-      margin: 0 10px;
+          padding: 0 5px;
       
       .path-input {
         width: 100%;
-        padding: 5px;
-        background-color: #333;
-        border: none;
-        border-radius: 3px;
-        color: #d4d4d4;
+          background-color: #3c3c3c;
+          border: 1px solid #555;
+          color: #d4d4d4;
+          padding: 5px 10px;
+          border-radius: 3px;
       }
     }
     
     .view-options {
       display: flex;
-      
+       margin-left: 5px;
       .view-btn {
         padding: 5px 8px;
         background-color: #333;
@@ -63,11 +71,11 @@
         cursor: pointer;
         
         &:hover {
-          background-color: #444;
+           background-color: #3c3c3c;
         }
         
         &.active {
-          background-color: #007acc;
+           background-color: #0e639c;
         }
       }
     }
@@ -82,24 +90,30 @@
       width: 200px;
       background-color: #252526;
       border-right: 1px solid #333;
-      overflow: auto;
+      padding: 5px;
+      overflow-y: auto;
       
       .sidebar-section {
         margin-bottom: 10px;
       }
       
       .sidebar-header {
-        padding: 5px 10px;
-        font-weight: bold;
-        color: #8f8f8f;
+         font-weight: bold;
+          padding: 5px;
+          color: #e0e0e0;
+          font-size: 14px;
       }
       
       .sidebar-item {
-        padding: 5px 10px;
-        cursor: pointer;
+       padding: 5px 5px 5px 15px;
+          cursor: pointer;
+          border-radius: 3px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         
         &:hover {
-          background-color: #2d2d2d;
+         background-color: #2a2d2e;
         }
         
         &.active {
@@ -112,13 +126,50 @@
       flex: 1;
       overflow: auto;
       padding: 5px;
-      
+       .file-size {
+          color: #a0a0a0;
+          margin-left: 10px;
+          font-size: 0.9em;
+        }
+        
+        .file-date {
+          color: #a0a0a0;
+          margin-left: 20px;
+          font-size: 0.9em;
+        }
       .file-list {
+         display: flex;
+          flex-direction: column;
+
         &.grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
           gap: 10px;
           padding: 10px;
+          .file-size, .file-date {
+            display: none;
+          }
+          .file-icon {
+          font-size: 32px;
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+        .file-name {
+          width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+          .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100px;
+            height: 100px;
+            margin: 5px;
+            padding: 10px 5px;
+          }
         }
         
         &.list {
@@ -157,7 +208,13 @@
       }
       
       .file-item {
-        cursor: pointer;
+        padding: 5px;
+          margin: 2px;
+          cursor: pointer;
+          border-radius: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         
         &.grid-item {
           display: flex;
@@ -178,11 +235,11 @@
           }
           
           &:hover {
-            background-color: #2d2d2d;
+            background-color: #2a2d2e;
           }
           
           &.selected {
-            background-color: #37373d;
+            background-color: #094771;
           }
         }
       }
@@ -192,47 +249,66 @@
         justify-content: center;
         align-items: center;
         height: 100%;
-        color: #8f8f8f;
+         color: #a0a0a0;
       }
     }
+
   }
   
+
+ .empty-folder {
+          padding: 30px;
+          text-align: center;
+          color: #a0a0a0;
+          font-style: italic;
+        }
+
   .file-explorer-statusbar {
     display: flex;
     justify-content: space-between;
     padding: 5px 10px;
     background-color: #007acc;
     color: white;
-    font-size: 0.8em;
+     font-size: 12px;
   }
-  
+   .selection-count {
+          margin-left: 10px;
+        }
+
   .context-menu {
-    position: absolute;
+   position: fixed;
     background-color: #252526;
-    border: 1px solid #333;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+          border: 1px solid #3c3c3c;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+     padding: 5px 0;
+          z-index: 1000;
+          color: #d4d4d4;
     
     .context-menu-item {
-      padding: 5px 10px;
-      cursor: pointer;
+    padding: 5px 20px;
+          cursor: pointer;
+          color: #d4d4d4;
       
       &:hover {
-        background-color: #2d2d2d;
+       background-color: #2a2d2e;
       }
       
       &:disabled {
-        opacity: 0.5;
-        cursor: default;
+       opacity: 0.5;
+          cursor: default;
+          pointer-events: none;
       }
     }
     
     .context-menu-separator {
-      height: 1px;
-      background-color: #333;
-      margin: 5px 0;
+     height: 1px;
+          background-color: #3c3c3c;
+          margin: 5px 0;
     }
+
   }
+
+
 
   // Upload and download buttons
 .upload-btn, .download-btn {
@@ -270,6 +346,115 @@
   font-weight: bold;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
+
+
+
+/* Dialog styles */
+
+.file-rename-input {
+          background-color: #3c3c3c;
+          border: 1px solid #0e639c;
+          color: #d4d4d4;
+          padding: 2px 5px;
+          margin: 0;
+          width: calc(100% - 10px);
+          box-sizing: border-box;
+        }
+
+.dialog-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+        
+        .dialog {
+          background-color: #252526;
+          border: 1px solid #3c3c3c;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+          width: 400px;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        
+        .dialog-header {
+          background-color: #333;
+          padding: 10px 15px;
+          font-weight: bold;
+          border-bottom: 1px solid #3c3c3c;
+        }
+        
+        .dialog-content {
+          padding: 15px;
+        }
+        
+        .dialog-footer {
+          padding: 10px 15px;
+          text-align: right;
+          border-top: 1px solid #3c3c3c;
+        }
+        
+        .dialog-btn {
+          padding: 5px 15px;
+          margin-left: 10px;
+          background-color: #0e639c;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          cursor: pointer;
+        }
+        
+        .dialog-btn.cancel {
+          background-color: #3c3c3c;
+        }
+        
+        .dialog-btn:hover {
+          background-color: #1177bb;
+        }
+        
+        .dialog-btn.cancel:hover {
+          background-color: #515151;
+        }
+        
+        .dialog-input {
+          width: 100%;
+          padding: 5px 10px;
+          background-color: #3c3c3c;
+          border: 1px solid #555;
+          color: #d4d4d4;
+          box-sizing: border-box;
+          margin: 5px 0;
+        }
+        
+        .dialog-message {
+          margin-bottom: 15px;
+        }
+        
+        /* Properties dialog */
+        .properties-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        
+        .properties-table td {
+          padding: 5px;
+          vertical-align: top;
+        }
+        
+        .properties-table td:first-child {
+          font-weight: bold;
+          width: 100px;
+        }
+
+
+
+
 
 }
 
