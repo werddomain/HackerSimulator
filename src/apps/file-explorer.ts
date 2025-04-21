@@ -595,20 +595,26 @@ export class FileExplorerApp extends GuiApplication {
         selectionCountEl.textContent = '';
       }
     }
-  }
-/**
+  }  /**
    * Show context menu
    */
   private showContextMenu(event: MouseEvent, fileItem: HTMLElement | null): void {
     // First, remove any existing context menu
     this.hideContextMenu();
     
-    // Create a new context menu
-    const contextMenu = document.createElement('div');
-    contextMenu.className = 'context-menu';
-    contextMenu.tabIndex = -1; // Make it focusable for blur events
+    // Get the predefined context menu from the DOM
+    let contextMenu = this.container?.querySelector<HTMLElement>('.context-menu');
+    
+    if (!contextMenu) {
+      console.error('Context menu not found in the DOM');
+      return;
+    }
+    
+    // Make it focusable for blur events
+    contextMenu.tabIndex = -1;
     
     // Position the menu
+    contextMenu.style.display = 'block';
     contextMenu.style.left = `${event.clientX}px`;
     contextMenu.style.top = `${event.clientY}px`;
     
@@ -675,10 +681,9 @@ export class FileExplorerApp extends GuiApplication {
         <div class="context-menu-item" data-action="properties">Properties</div>
       `;
     }
-      // Set the menu content
+    
+    // Set the menu content
     contextMenu.innerHTML = menuItems;
-      // Add to the container
-    this.container?.appendChild(contextMenu);
     
     // Focus the menu to enable blur event
     contextMenu.focus();
@@ -686,7 +691,7 @@ export class FileExplorerApp extends GuiApplication {
     // Create a click handler to detect clicks outside the menu
     const handleOutsideClick = (e: MouseEvent) => {
       // Check if the click was outside the context menu
-      if (!contextMenu.contains(e.target as Node)) {
+      if (!contextMenu?.contains(e.target as Node)) {
         this.hideContextMenu();
         // Remove this event listener
         document.removeEventListener('mousedown', handleOutsideClick);
@@ -717,6 +722,8 @@ export class FileExplorerApp extends GuiApplication {
     
     // Prevent the menu from going off-screen
     setTimeout(() => {
+      if (!contextMenu) return;
+      
       const rect = contextMenu.getBoundingClientRect();
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
@@ -733,15 +740,14 @@ export class FileExplorerApp extends GuiApplication {
     // Prevent default browser context menu
     event.preventDefault();
     event.stopPropagation();
-  }
-  /**
+  }  /**
    * Hide context menu
    */
   private hideContextMenu(): void {
     const contextMenu = this.container?.querySelector<HTMLElement>('.context-menu');
     if (contextMenu) {
-      // Remove the menu completely rather than just hiding it
-      contextMenu.remove();
+      // Hide the menu instead of removing it
+      contextMenu.style.display = 'none';
     }
   }
 

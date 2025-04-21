@@ -46,7 +46,7 @@
   - [x] Terminal
   - [x] file explorer
   - [x] calculator
-  - [ ] code editor
+  - [x] code editor
   - [x] settings
   - [ ] system monitor
   - [ ] Text Editor

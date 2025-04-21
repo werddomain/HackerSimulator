@@ -1,11 +1,11 @@
 /* Editor styling */
 .editor-container {
-    width: 100%;
-    height: 100%;
-  }
+  width: 100%;
+  height: 100%;
 
-  
-.code-editor-app {
+
+
+  .code-editor-app {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -13,7 +13,7 @@
     color: #d4d4d4;
     font-family: 'Segoe UI', 'Arial', sans-serif;
   }
-  
+
   .editor-toolbar {
     display: flex;
     justify-content: space-between;
@@ -22,12 +22,13 @@
     background-color: #252526;
     border-bottom: 1px solid #3c3c3c;
   }
-  
-  .file-actions, .editor-actions {
+
+  .file-actions,
+  .editor-actions {
     display: flex;
     gap: 5px;
   }
-  
+
   .editor-path {
     flex: 1;
     padding: 0 10px;
@@ -36,7 +37,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .toolbar-btn {
     background: none;
     border: none;
@@ -49,16 +50,16 @@
     gap: 5px;
     font-size: 12px;
   }
-  
+
   .toolbar-btn:hover {
     background-color: #3c3c3c;
   }
-  
+
   .toolbar-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .language-selector {
     background-color: #3c3c3c;
     color: #d4d4d4;
@@ -67,13 +68,13 @@
     border-radius: 3px;
     cursor: pointer;
   }
-  
+
   .editor-main {
     display: flex;
     flex: 1;
     overflow: hidden;
   }
-  
+
   .editor-sidebar {
     width: 220px;
     background-color: #252526;
@@ -81,7 +82,7 @@
     display: flex;
     flex-direction: column;
   }
-  
+
   .sidebar-header {
     padding: 10px;
     font-size: 13px;
@@ -91,12 +92,12 @@
     align-items: center;
     border-bottom: 1px solid #3c3c3c;
   }
-  
+
   .sidebar-actions {
     display: flex;
     gap: 5px;
   }
-  
+
   .sidebar-btn {
     background: none;
     border: none;
@@ -106,18 +107,18 @@
     padding: 2px 5px;
     font-size: 12px;
   }
-  
+
   .sidebar-btn:hover {
     background-color: #3c3c3c;
   }
-  
+
   .file-tree {
     flex: 1;
     overflow: auto;
     padding: 5px;
     font-size: 13px;
   }
-  
+
   .tree-item {
     padding: 3px 5px 3px 15px;
     cursor: pointer;
@@ -127,19 +128,19 @@
     text-overflow: ellipsis;
     position: relative;
   }
-  
+
   .tree-item:hover {
     background-color: #2a2d2e;
   }
-  
+
   .tree-item.active {
     background-color: #37373d;
   }
-  
+
   .tree-folder {
     padding-left: 5px;
   }
-  
+
   .tree-folder-header {
     cursor: pointer;
     padding: 3px 5px;
@@ -147,39 +148,39 @@
     display: flex;
     align-items: center;
   }
-  
+
   .tree-folder-header:hover {
     background-color: #2a2d2e;
   }
-  
+
   .tree-folder-content {
     padding-left: 15px;
     display: none;
   }
-  
-  .tree-folder.expanded > .tree-folder-content {
+
+  .tree-folder.expanded>.tree-folder-content {
     display: block;
   }
-  
+
   .tree-folder-toggle {
     margin-right: 5px;
     font-size: 10px;
     width: 10px;
     display: inline-block;
   }
-  
+
   .editor-content-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  
+
   .monaco-container {
     flex: 1;
     position: relative;
   }
-  
+
   .editor-loading {
     position: absolute;
     top: 50%;
@@ -187,7 +188,7 @@
     transform: translate(-50%, -50%);
     color: #888;
   }
-  
+
   .editor-terminal-panel {
     height: 200px;
     border-top: 1px solid #3c3c3c;
@@ -195,26 +196,26 @@
     flex-direction: column;
     overflow: hidden;
   }
-  
+
   .terminal-tabs {
     display: flex;
     background-color: #252526;
     border-bottom: 1px solid #3c3c3c;
   }
-  
+
   .terminal-tab {
     padding: 5px 15px;
     font-size: 12px;
     cursor: pointer;
     border-right: 1px solid #3c3c3c;
   }
-  
+
   .terminal-tab.active {
     background-color: #1e1e1e;
     border-top: 2px solid #007acc;
     padding-top: 4px;
   }
-  
+
   .add-terminal-btn {
     background: none;
     border: none;
@@ -223,17 +224,17 @@
     padding: 5px 10px;
     font-size: 12px;
   }
-  
+
   .code-editor-app .editor-terminal-panel .terminal-container {
     flex: 1;
     padding: 2px;
     display: none;
   }
-  
+
   .code-editor-app .editor-terminal-panel .terminal-container.active {
     display: block;
   }
-  
+
   .editor-statusbar {
     display: flex;
     justify-content: space-between;
@@ -242,11 +243,11 @@
     color: white;
     font-size: 12px;
   }
-  
+
   .file-status {
     margin-left: 10px;
   }
-  
+
   /* Dialog styles */
   .dialog-overlay {
     position: absolute;
@@ -260,7 +261,7 @@
     align-items: center;
     z-index: 1000;
   }
-  
+
   .dialog {
     background-color: #252526;
     border: 1px solid #3c3c3c;
@@ -268,27 +269,28 @@
     width: 550px;
     border-radius: 4px;
     overflow: hidden;
+    color:white;
   }
-  
+
   .dialog-header {
     background-color: #333;
     padding: 10px 15px;
     font-weight: bold;
     border-bottom: 1px solid #3c3c3c;
   }
-  
+
   .dialog-content {
     padding: 15px;
     max-height: 500px;
     overflow: auto;
   }
-  
+
   .dialog-footer {
     padding: 10px 15px;
     text-align: right;
     border-top: 1px solid #3c3c3c;
   }
-  
+
   .dialog-btn {
     padding: 5px 15px;
     margin-left: 10px;
@@ -298,24 +300,24 @@
     border-radius: 3px;
     cursor: pointer;
   }
-  
+
   .dialog-btn.cancel {
     background-color: #3c3c3c;
   }
-  
+
   .dialog-btn:hover {
     background-color: #1177bb;
   }
-  
+
   .dialog-btn.cancel:hover {
     background-color: #515151;
   }
-  
+
   .file-list {
     max-height: 300px;
     overflow-y: auto;
   }
-  
+
   .file-item {
     padding: 5px 10px;
     cursor: pointer;
@@ -323,24 +325,24 @@
     display: flex;
     align-items: center;
   }
-  
+
   .file-item:hover {
     background-color: #2a2d2e;
   }
-  
+
   .file-item.selected {
     background-color: #0e639c;
   }
-  
+
   .file-icon {
     margin-right: 5px;
   }
-  
+
   .path-bar {
     display: flex;
     margin-bottom: 10px;
   }
-  
+
   .path-input {
     flex: 1;
     background-color: #3c3c3c;
@@ -349,7 +351,7 @@
     padding: 5px 10px;
     border-radius: 3px;
   }
-  
+
   .path-go-btn {
     background-color: #0e639c;
     color: white;
@@ -359,8 +361,9 @@
     margin-left: 5px;
     cursor: pointer;
   }
-  
+
   .unsaved-indicator::after {
     content: '*';
     margin-left: 3px;
   }
+}
