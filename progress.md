@@ -38,17 +38,29 @@
   - [x] Web Browser (basic implementation)
   - [x] System Monitor
   - [x] Calculator
+  - [x] Settings app (UI implemented)
   - [ ] App Market place
   - [ ] Hacker tools
+- [ ] we need to pass each GuiApp and take out every style to the less file.
+  - [x] Browser
+  - [x] Terminal
+  - [x] file explorer
+  - [x] calculator
+  - [ ] code editor
+  - [x] settings
+  - [ ] system monitor
+  - [ ] Text Editor
 - [ ] Start Menu
   - [x] Create the start menu interface
   - [ ] Link Pinned apps to open the corresponding app
   - [ ] List all apps in the 'All apps' section and handle click on it to load the correct app.
-  - [ ] Implement the Documents and images to open the file edirot to a specific folder
-  - [ ] Create a settings app and link it to the side menu item
+  - [ ] Implement the Documents and images to open the file editor to a specific folder
+  - [ ] Link the settings app to the side menu item
   - [ ] Implement startup and login screen then link power and user buttons to the actions
 
 ## To Do
+- [ ] Save the command history in the user setting folder
+- [ ] Add a command arg to the Gui app. So we can open a file with a specific application
 - [ ] Add more simulated Linux commands
 - [ ] Implement remaining applications:
   - [x] Complete File Explorer implementation
@@ -84,6 +96,48 @@
 - [ ] Add internationalization (i18n) support
 - [ ] Create user tutorial/onboarding flow
 - [ ] Add system for user-created scripts/tools
+
+## Settings Application Implementation
+- [x] Create Settings GUI application with proper structure
+- [x] Implement appearance settings UI:
+  - [x] Theme selection interface
+  - [x] Accent color selection
+  - [x] Desktop background customization (solid color, gradients, images)
+  - [x] Font size adjustment with preview
+  - [x] Animation toggle
+- [x] Implement display settings UI:
+  - [x] Resolution selection
+  - [x] Display scaling controls
+- [x] Implement sound settings UI:
+  - [x] Volume controls
+  - [x] Sound effects toggle
+- [x] Implement privacy settings UI:
+  - [x] Activity tracking controls
+  - [x] History clearing functionality
+- [x] Implement personalization settings UI:
+  - [x] Start menu layout options
+  - [x] Taskbar position customization
+- [x] Implement search functionality for settings
+- [x] Create settings index for searchability
+- [ ] Integrate settings with actual system functionality:
+  - [ ] Connect theme selection to system-wide theme application
+  - [ ] Apply accent colors to UI elements across the system
+  - [ ] Implement desktop background changes
+  - [ ] Connect font size settings to system-wide font rendering
+  - [ ] Link animation settings to system animations
+  - [ ] Connect display resolution and scaling to actual display
+  - [ ] Implement volume control functionality
+  - [ ] Connect privacy settings to actual data collection mechanisms
+  - [ ] Implement start menu layout changes based on settings
+  - [ ] Connect taskbar position settings to taskbar positioning code
+- [ ] Add settings persistence:
+  - [ ] Ensure settings are properly saved using BaseSettings/UserSettings
+  - [ ] Load saved settings on system startup
+  - [ ] Implement settings change event system
+- [ ] Add settings shortcuts:
+  - [ ] Create quick access to settings from system tray
+  - [ ] Add settings link in start menu
+  - [ ] Create keyboard shortcuts for settings access
 
 ## Technical Debt & Improvements
 - [ ] Update deprecated xterm packages to @xterm/xterm and @xterm/addon-fit

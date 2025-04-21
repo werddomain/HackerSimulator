@@ -285,13 +285,12 @@ protected initApplication(): void {
       this.showPrompt();
       this.inputBuffer = '';
       this.cursorPosition = 0;
-      this.historyIndex = -1;
-    } else if (data === '\t') { // Tab
+      this.historyIndex = -1;    } else if (data === '\t') { // Tab
       // Tab completion (TODO)
     } else if (data === '\x1b[A') { // Up arrow
-      this.navigateHistory(-1);
-    } else if (data === '\x1b[B') { // Down arrow
       this.navigateHistory(1);
+    } else if (data === '\x1b[B') { // Down arrow
+      this.navigateHistory(-1);
     } else if (data === '\x1b[C') { // Right arrow
       this.moveCursor(1);
     } else if (data === '\x1b[D') { // Left arrow

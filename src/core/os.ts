@@ -10,6 +10,8 @@ import { NetworkInterface, DNSServer } from './network';
 import { DefaultWebsites, WebsiteEntry } from '../websites/default-websites';
 import { Desktop } from './desktop';
 import { StartMenuController } from './start-menu';
+import { UserSettings } from './UserSettings';
+import { ComputerSettings } from './ComputerSettings';
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -29,7 +31,8 @@ private fileSystem: FileSystem;
   private defaultWebsites: DefaultWebsites;
   private desktop: Desktop;  
   private startMenuController: StartMenuController;
-
+  private userSettings: UserSettings;
+  private computerSettings: ComputerSettings;
   constructor() {
     this.fileSystem = new FileSystem();
     this.processManager = new ProcessManager();
@@ -48,6 +51,10 @@ private fileSystem: FileSystem;
     // Initialize default websites using the dedicated class
     this.defaultWebsites = new DefaultWebsites(this);
     this.defaultWebsites.initDefaultWebsites();
+    
+    // Initialize settings utilities
+    this.userSettings = new UserSettings(this.fileSystem);
+    this.computerSettings = new ComputerSettings(this.fileSystem);
     
     this.webClient = new WebClient(this.websites);
     
@@ -146,10 +153,25 @@ private fileSystem: FileSystem;
    */
   public getDesktop(): Desktop {
     return this.desktop;
-  }
-  public getWebClient(): WebClient {
+  }  public getWebClient(): WebClient {
     return this.webClient;
-}
+  }
+
+  /**
+   * Get the user settings manager instance
+   * Used for managing user-specific settings stored in the filesystem
+   */
+  public getUserSettings(): UserSettings {
+    return this.userSettings;
+  }
+
+  /**
+   * Get the computer settings manager instance
+   * Used for managing system-wide settings stored in the filesystem
+   */
+  public getComputerSettings(): ComputerSettings {
+    return this.computerSettings;
+  }
 
   /**
    * Initialize the clock in the taskbar

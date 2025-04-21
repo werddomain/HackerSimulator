@@ -124,6 +124,15 @@ export class AppManager {
       launchable: true,
       singleton: true
     });
+
+    this.registerApp({
+      id: 'settings',
+      name: 'Settings',
+      description: 'System Settings',
+      icon: '⚙️',
+      launchable: true,
+      singleton: true
+    });
   }
 
   /**
@@ -256,12 +265,28 @@ export class AppManager {
       case 'calculator':
         this.loadCalculatorUI(contentElement,windowId);
         break;
+      case 'settings':
+        this.loadSettingsUI(contentElement,windowId);
+        break;
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
     }
   }  /**
    * Load Terminal UI
    */
+  loadSettingsUI(contentElement: HTMLElement, windowId: string) {
+    // Create settings container
+    contentElement.innerHTML = '<div class="settings-container"></div>';
+    
+    // Lazily load the settings app
+    import('../apps/settings').then(module => {
+      const settingsApp = new module.SettingsApp(this.os);
+      settingsApp.init(contentElement.querySelector('.settings-container')!, windowId);
+    }).catch(error => {
+      console.error('Failed to load settings app:', error);
+      contentElement.innerHTML = '<div style="padding: 20px;">Failed to load settings app.</div>';
+    });
+  }
   private loadTerminalUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
     // Create terminal container
     contentElement.innerHTML = '<div class="terminal-container"></div>';

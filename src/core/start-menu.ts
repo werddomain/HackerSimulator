@@ -6,7 +6,7 @@ import { createIcons, icons } from 'lucide';
 import { OS } from './os';
 export class StartMenuController {
   private startMenuButton: HTMLElement | null;
-  private startMenu: HTMLElement | null = null;
+private startMenu: HTMLElement | null = null;
   private sidebar: HTMLElement | null = null;
   private menuItem: HTMLElement | null = null;
   private userSubmenu: HTMLElement | null = null;
@@ -14,6 +14,7 @@ export class StartMenuController {
   private userItem: HTMLElement | null = null;
   private powerItem: HTMLElement | null = null;
   private appsItem: HTMLElement | null = null;
+  private settingsItem: HTMLElement | null = null;
   private pinnedAppsView: HTMLElement | null = null;
   private allAppsView: HTMLElement | null = null;
   private appTiles: HTMLElement[] = [];
@@ -224,7 +225,7 @@ export class StartMenuController {
   /**
    * Initialize references to the created DOM elements
    */
-  private initializeElementReferences(): void {
+private initializeElementReferences(): void {
     this.startMenu = document.querySelector('.start-menu');
     this.sidebar = document.querySelector('.start-menu-sidebar');
     this.menuItem = document.getElementById('menu-item');
@@ -233,6 +234,7 @@ export class StartMenuController {
     this.userItem = document.getElementById('user-item');
     this.powerItem = document.getElementById('power-item');
     this.appsItem = document.getElementById('apps-item');
+    this.settingsItem = document.getElementById('settings-item');
     this.pinnedAppsView = document.querySelector('.pinned-apps-view');
     this.allAppsView = document.querySelector('.all-apps-view');
   }/**
@@ -271,9 +273,12 @@ export class StartMenuController {
       this.toggleSubmenu(this.powerSubmenu, this.powerItem);
     });
 
-    // Apps item click
+// Apps item click
     this.appsItem?.addEventListener('click', () => {
       this.toggleAppsView();
+    });    // Settings item click
+    this.settingsItem?.addEventListener('click', () => {
+      this.launchApp('settings');
     });
 
     // App tiles click
@@ -447,7 +452,7 @@ export class StartMenuController {
     console.log(`Launching app: ${appName}`);
     // Here we would integrate with the OS's app manager to launch the actual app
     // For example: this.os.getAppManager().launchApp(appId);
-    
+    this.os.getAppManager().launchApp(appName);
     // Close the start menu after launching an app
     this.hideStartMenu();
   }
