@@ -22,6 +22,8 @@ export class TerminalApp extends GuiApplication {
   // Event handlers for directory changes
   private directoryChangeHandlers: DirectoryChangeHandler[] = [];
 
+  private defaultKeyHandlingPaused: boolean = false;
+
   constructor(os: OS) {
     super(os);
     
@@ -109,6 +111,9 @@ protected initApplication(): void {
     
     return {
       os: this.os,
+      get xTerm(): Terminal {
+        return self.terminal;
+      },
       get cwd(): string {
         return self.currentPath;
       },
@@ -241,9 +246,32 @@ protected initApplication(): void {
   }
 
   /**
+   * Pause the terminal's default key handling
+   * This is used by terminal applications like editors that need full control over key events
+   */
+  public pauseDefaultKeyHandling(): void {
+    this.defaultKeyHandlingPaused = true;
+  }
+
+  /**
+   * Resume the terminal's default key handling
+   * Called when terminal applications exit
+   */
+  public resumeDefaultKeyHandling(): void {
+    this.defaultKeyHandlingPaused = false;
+  }
+
+  /**
    * Handle terminal input
+   * @param data The input data
    */
   private handleTerminalInput(data: string): void {
+    // If key handling is paused, don't process the input
+    if (this.defaultKeyHandlingPaused) {
+      return;
+    }
+
+    // Rest of the existing handleTerminalInput implementation
     // Handle special key sequences
     if (data === '\r') { // Enter
       this.handleEnterKey();

@@ -1,4 +1,5 @@
 import { OS } from '../core/os';
+import { NanoEditor } from './app/nano-editor';
 import { CommandModule } from './command-processor';
 
 // Import all commands
@@ -14,6 +15,7 @@ import { LsCommand } from './linux/ls';
 import { ManCommand } from './linux/man';
 import { MkdirCommand } from './linux/mkdir';
 import { MvCommand } from './linux/mv';
+
 import { NmapCommand } from './linux/nmap';
 import { PingCommand } from './linux/ping';
 import { PsCommand } from './linux/ps';
@@ -82,14 +84,15 @@ export class CommandRegistry {
     this.registerCommand(new PsCommand(this.os));
     this.registerCommand(new KillCommand(this.os));
     this.registerCommand(new ClearCommand());
-    
-    // Register network commands
+      // Register network commands
     this.registerCommand(new PingCommand(this.os));
     this.registerCommand(new CurlCommand(this.os));    this.registerCommand(new NmapCommand(this.os));
     
     // Register help and utility commands
     this.registerCommand(new HelpCommand(this.os));
     this.registerCommand(new ManCommand(this.os));
+    this.registerCommand(new NanoEditor(this.os));
+
     
     // Register common aliases
     this.registerAlias('dir', 'ls');

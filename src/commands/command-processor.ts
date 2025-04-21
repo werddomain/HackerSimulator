@@ -1,5 +1,6 @@
 import { OS } from '../core/os';
 import { TerminalApp } from '../apps/terminal';
+import { Terminal } from 'xterm';
 
 /**
  * Interface for command arguments
@@ -34,7 +35,7 @@ export type DirectoryChangeHandler = (newPath: string) => void;
  */
 export interface CommandContext {
   os: OS;
-  
+  get xTerm(): Terminal
   /**
    * Get the current working directory
    */
