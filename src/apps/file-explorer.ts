@@ -3,6 +3,7 @@ import { FileEntryUtils } from '../core/file-entry-utils';
 import { FileSystemUtils } from '../core/file-system-utils';
 import { FileSystemEntry } from '../core/filesystem';
 import { GuiApplication } from '../core/gui-application';
+import JSZip from 'jszip'; // Add JSZip import
 
 /**
  * File Explorer App for the Hacker Game
@@ -62,6 +63,8 @@ export class FileExplorerApp extends GuiApplication {
             <button class="view-btn ${this.viewMode === 'grid' ? 'active' : ''}" data-view="grid" title="Grid View">□□</button>
             <button class="view-btn ${this.viewMode === 'list' ? 'active' : ''}" data-view="list" title="List View">≡</button>
             <button class="view-btn show-hidden ${this.showHidden ? 'active' : ''}" title="Show Hidden Files">👁️</button>
+            <button class="view-btn upload-btn" title="Upload File">📤</button>
+            <button class="view-btn download-btn" title="Download File">📥</button>
           </div>
         </div>
         <div class="file-explorer-main">
@@ -115,7 +118,8 @@ export class FileExplorerApp extends GuiApplication {
           <div class="context-menu-separator"></div>
           <div class="context-menu-item" data-action="properties">Properties</div>
         </div>
-      </div>      <style>
+      </div>
+      <style>
         .file-explorer-app {
           display: flex;
           flex-direction: column;
@@ -504,6 +508,18 @@ export class FileExplorerApp extends GuiApplication {
     forwardBtn?.addEventListener('click', () => this.navigateForward());
     upBtn?.addEventListener('click', () => this.navigateUp());
     refreshBtn?.addEventListener('click', () => this.refresh());
+    
+    // Upload button
+    const uploadBtn = this.container.querySelector('.upload-btn');
+    uploadBtn?.addEventListener('click', () => this.handleUpload());
+    
+    // Download button
+    const downloadBtn = this.container.querySelector('.download-btn');
+    downloadBtn?.addEventListener('click', () => this.handleDownload());
+    
+    // File upload input change
+    const fileInput = this.container.querySelector<HTMLInputElement>('#file-upload-input');
+    fileInput?.addEventListener('change', (e) => this.processUploadedFiles(e));
     
     // Path input
     const pathInput = this.container.querySelector<HTMLInputElement>('.path-input');
@@ -1040,6 +1056,12 @@ export class FileExplorerApp extends GuiApplication {
       case 'properties':
         if (selectedPath) {
           this.showPropertiesDialog(selectedPath);
+        }
+        break;
+        
+      case 'download':
+        if (selectedPath) {
+          this.downloadFile(selectedPath);
         }
         break;
     }
@@ -1662,5 +1684,570 @@ export class FileExplorerApp extends GuiApplication {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  /**
+   * Handle upload button click
+   */
+  private handleUpload(): void {
+    // Trigger the hidden file input
+    const fileInput = this.container?.querySelector<HTMLInputElement>('#file-upload-input');
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  /**
+   * Process the files selected for upload
+   */
+  private processUploadedFiles(e: Event): void {
+    const fileInput = e.target as HTMLInputElement;
+    const files = fileInput.files;
+    
+    if (!files || files.length === 0) return;
+    
+    // Display progress dialog
+    this.showProgressDialog(
+      'Uploading Files', 
+      `Uploading ${files.length} file(s)...`, 
+      0
+    );
+    
+    const progressDialogElement = this.container?.querySelector('.dialog-overlay .progress-value');
+    
+    // Process each file
+    let completed = 0;
+    const totalFiles = files.length;
+    
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const content = event.target?.result;
+        if (typeof content !== 'string' && !content) return;
+        
+        // Create file in the virtual filesystem
+        const destPath = `${this.currentPath === '/' ? '' : this.currentPath}/${file.name}`;
+        
+        this.os.getFileSystem().writeFile(destPath, <string>content)
+          .then(() => {
+            completed++;
+            
+            // Update progress
+            if (progressDialogElement) {
+              const percent = Math.round((completed / totalFiles) * 100);
+              progressDialogElement.textContent = `${percent}%`;
+              (progressDialogElement.previousElementSibling as HTMLElement).style.width = `${percent}%`;
+            }
+            
+            // If all files are processed, refresh the view and close dialog
+            if (completed === totalFiles) {
+              this.container?.querySelector('.dialog-overlay')?.remove();
+              this.refresh();
+              
+              // Clear the file input for future uploads
+              fileInput.value = '';
+            }
+          })
+          .catch((error: Error) => {
+            console.error(`Error uploading file ${file.name}:`, error);
+            this.showErrorDialog('Upload Error', `Failed to upload ${file.name}: ${error.message}`);
+            
+            completed++;
+            if (completed === totalFiles) {
+              this.container?.querySelector('.dialog-overlay')?.remove();
+              this.refresh();
+              fileInput.value = '';
+            }
+          });
+      };
+      
+      reader.onerror = () => {
+        console.error(`Error reading file ${file.name}`);
+        this.showErrorDialog('Upload Error', `Failed to read ${file.name}`);
+        
+        completed++;
+        if (completed === totalFiles) {
+          this.container?.querySelector('.dialog-overlay')?.remove();
+          this.refresh();
+          fileInput.value = '';
+        }
+      };
+      
+      // Read the file content
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Handle download button click
+   */
+  private handleDownload(): void {
+    if (this.selectedItems.length === 0) {
+      this.showErrorDialog('Download Error', 'No file selected for download');
+      return;
+    }
+    
+    // Support downloading multiple files
+    if (this.selectedItems.length > 1) {
+      this.showConfirmDialog(
+        'Download Multiple Files',
+        `Do you want to download ${this.selectedItems.length} files?`,
+        () => this.downloadMultipleFiles(this.selectedItems)
+      );
+      return;
+    }
+    
+    // Download a single file
+    const filePath = this.selectedItems[0];
+    this.downloadFile(filePath);
+  }
+
+  /**
+   * Download a single file
+   */
+  private downloadFile(filePath: string): void {
+    const fileName = filePath.split('/').pop() || 'download';
+    
+    // Check if it's a directory
+    this.os.getFileSystem().stat(filePath)
+      .then(stats => {
+        if (stats.isDirectory) {
+          // If it's a directory, offer to download as zip
+          this.showConfirmDialog(
+            'Download Folder',
+            `"${fileName}" is a folder. Do you want to download it as a zip file?`,
+            () => this.downloadFolderAsZip(filePath),
+            () => {}
+          );
+          return;
+        }
+        
+        // Read the file
+        return this.os.getFileSystem().readFile(filePath)
+          .then(content => {
+            // Create a blob from the content
+            let blob;
+            
+            if (typeof content === 'string') {
+              // Handle text content
+              blob = new Blob([content], { type: 'application/octet-stream' });
+            } else if (<any>content instanceof ArrayBuffer) {
+              // Handle binary content
+              blob = new Blob([content], { type: 'application/octet-stream' });
+            } else {
+              throw new Error('Unsupported file content type');
+            }
+            
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 100);
+          });
+      })
+      .catch((error: Error) => {
+        console.error('Error downloading file:', error);
+        this.showErrorDialog('Download Error', `Failed to download ${fileName}: ${error.message}`);
+      });
+  }
+
+  /**
+   * Download multiple files
+   */
+  private downloadMultipleFiles(filePaths: string[]): void {
+    // Check if all selected items are files, or if there are directories
+    let hasDirectories = false;
+    let directoryCount = 0;
+    
+    // Show progress dialog for checking selection
+    this.showProgressDialog(
+      'Preparing Download',
+      'Checking selected items...',
+      0
+    );
+    
+    // Use Promise.all to check all paths in parallel
+    Promise.all(filePaths.map(path => 
+      this.os.getFileSystem().stat(path)
+        .then(stats => {
+          if (stats.isDirectory) {
+            hasDirectories = true;
+            directoryCount++;
+          }
+          return { path, isDirectory: stats.isDirectory };
+        })
+    ))
+    .then(results => {
+      // Remove the progress dialog
+      this.container?.querySelector('.dialog-overlay')?.remove();
+      
+      if (hasDirectories) {
+        // If there are directories, offer to download as a single zip
+        this.showConfirmDialog(
+          'Download as Zip',
+          `Your selection includes ${directoryCount} folder(s). Do you want to download everything as a single zip file?`,
+          () => this.downloadMultipleItemsAsZip(filePaths),
+          () => this.downloadFilesOnly(results.filter(item => !item.isDirectory).map(item => item.path))
+        );
+      } else {
+        // If all are files, download them individually
+        this.downloadFilesOnly(filePaths);
+      }
+    })
+    .catch(error => {
+      console.error('Error checking files:', error);
+      this.container?.querySelector('.dialog-overlay')?.remove();
+      this.showErrorDialog('Download Error', `Failed to prepare download: ${error.message}`);
+    });
+  }
+  
+  /**
+   * Download only the files from a selection (skipping directories)
+   */
+  private downloadFilesOnly(filePaths: string[]): void {
+    if (filePaths.length === 0) {
+      this.showErrorDialog('Download Error', 'No files to download');
+      return;
+    }
+    
+    // For now, download each file separately
+    this.showProgressDialog(
+      'Downloading Files', 
+      `Downloading ${filePaths.length} file(s)...`, 
+      0
+    );
+    
+    const progressDialogElement = this.container?.querySelector('.dialog-overlay .progress-value');
+    
+    // Process each file
+    let completed = 0;
+    const totalFiles = filePaths.length;
+    
+    filePaths.forEach(filePath => {
+      const fileName = filePath.split('/').pop() || 'download';
+      
+      // Read the file
+      return this.os.getFileSystem().readFile(filePath)
+        .then(content => {
+          // Create a blob from the content
+          let blob;
+          
+          if (typeof content === 'string') {
+            // Handle text content
+            blob = new Blob([content], { type: 'application/octet-stream' });
+          } else if (<any>content instanceof ArrayBuffer) {
+            // Handle binary content
+            blob = new Blob([content], { type: 'application/octet-stream' });
+          } else {
+            throw new Error('Unsupported file content type');
+          }
+          
+          // Create download link
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
+          
+          completed++;
+          
+          // Update progress
+          if (progressDialogElement) {
+            const percent = Math.round((completed / totalFiles) * 100);
+            progressDialogElement.textContent = `${percent}%`;
+            (progressDialogElement.previousElementSibling as HTMLElement).style.width = `${percent}%`;
+          }
+          
+          // If all files are processed, refresh the view and close dialog
+          if (completed === totalFiles) {
+            this.container?.querySelector('.dialog-overlay')?.remove();
+            this.refresh();
+          }
+        })
+        .catch((error: Error) => {
+          console.error(`Error downloading file ${fileName}:`, error);
+          this.showErrorDialog('Download Error', `Failed to download ${fileName}: ${error.message}`);
+          
+          completed++;
+          if (completed === totalFiles) {
+            this.container?.querySelector('.dialog-overlay')?.remove();
+            this.refresh();
+          }
+        });
+    });
+  }
+/* Show progress dialog
+   */
+  private showProgressDialog(title: string, message: string, initialProgress: number): void {
+ const dialog = document.createElement('div');
+    dialog.className = 'dialog-overlay';
+    dialog.innerHTML = `
+      <div class="dialog">
+        <div class="dialog-header">${title}</div>
+        <div class="dialog-content">
+          <div class="dialog-message">${message}</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${initialProgress}%"></div>
+            <div class="progress-value">${initialProgress}%</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    this.container?.appendChild(dialog);
+ }
+  /**
+   * Download folder as a zip file
+   */
+  private downloadFolderAsZip(folderPath: string): void {
+    const folderName = folderPath.split('/').pop() || 'folder';
+    
+    // Show progress dialog
+    this.showProgressDialog(
+      'Creating Zip Archive',
+      `Preparing ${folderName} for download...`,
+      0
+    );
+    
+    const progressElement = this.container?.querySelector('.dialog-overlay .progress-value');
+    const progressFill = this.container?.querySelector('.dialog-overlay .progress-fill') as HTMLElement;
+    
+    // Create a new JSZip instance
+    const zip = new JSZip();
+    
+    // First, count total files to track progress
+    this.countFilesInFolder(folderPath)
+      .then(totalFiles => {
+        let processedFiles = 0;
+        
+        // Add the folder to the zip
+        return this.addFolderToZip(zip, folderPath, '', () => {
+          processedFiles++;
+          const percent = Math.round((processedFiles / totalFiles) * 100);
+          
+          // Update progress
+          if (progressElement) {
+            progressElement.textContent = `${percent}%`;
+            if (progressFill) {
+              progressFill.style.width = `${percent}%`;
+            }
+          }
+        });
+      })
+      .then(() => {
+        // Update progress to indicate zip generation
+        if (progressElement) {
+          progressElement.textContent = 'Generating zip file...';
+        }
+        
+        // Generate the zip file
+        return zip.generateAsync({ type: 'blob' });
+      })
+      .then(blob => {
+        // Download the zip file
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${folderName}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+        
+        // Remove progress dialog
+        this.container?.querySelector('.dialog-overlay')?.remove();
+      })
+      .catch((error: Error) => {
+        console.error('Error creating zip:', error);
+        this.showErrorDialog('Download Error', `Failed to create zip archive: ${error.message}`);
+        this.container?.querySelector('.dialog-overlay')?.remove();
+      });
+  }
+  
+  /**
+   * Download multiple items (files and folders) as a single zip
+   */
+  private downloadMultipleItemsAsZip(paths: string[]): void {
+    // Show progress dialog
+    this.showProgressDialog(
+      'Creating Zip Archive',
+      `Preparing ${paths.length} items for download...`,
+      0
+    );
+    
+    const progressElement = this.container?.querySelector('.dialog-overlay .progress-value');
+    const progressFill = this.container?.querySelector('.dialog-overlay .progress-fill') as HTMLElement;
+    
+    // Create a new JSZip instance
+    const zip = new JSZip();
+    
+    // Count total files to track progress
+    Promise.all(paths.map(path => 
+      this.os.getFileSystem().stat(path)
+        .then(stats => {
+          if (stats.isDirectory) {
+            return this.countFilesInFolder(path);
+          }
+          return 1; // Count a single file as 1
+        })
+    ))
+    .then(counts => {
+      const totalFiles = counts.reduce((a, b) => a + b, 0);
+      let processedFiles = 0;
+      
+      // Process each path
+      return Promise.all(paths.map(path => {
+        return this.os.getFileSystem().stat(path)
+          .then(stats => {
+            const name = path.split('/').pop() || 'item';
+            
+            if (stats.isDirectory) {
+              // Add directory to zip
+              return this.addFolderToZip(zip, path, name, () => {
+                processedFiles++;
+                const percent = Math.round((processedFiles / totalFiles) * 100);
+                
+                // Update progress
+                if (progressElement) {
+                  progressElement.textContent = `${percent}%`;
+                  if (progressFill) {
+                    progressFill.style.width = `${percent}%`;
+                  }
+                }
+              });
+            } else {
+              // Add file to zip
+              return this.os.getFileSystem().readFile(path)
+                .then(content => {
+                  zip.file(name, content);
+                  
+                  processedFiles++;
+                  const percent = Math.round((processedFiles / totalFiles) * 100);
+                  
+                  // Update progress
+                  if (progressElement) {
+                    progressElement.textContent = `${percent}%`;
+                    if (progressFill) {
+                      progressFill.style.width = `${percent}%`;
+                    }
+                  }
+                });
+            }
+          });
+      }));
+    })
+    .then(() => {
+      // Update progress
+      if (progressElement) {
+        progressElement.textContent = 'Generating zip file...';
+      }
+      
+      // Generate the zip file
+      return zip.generateAsync({ type: 'blob' });
+    })
+    .then(blob => {
+      // Download the zip
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'download.zip';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      // Remove dialog
+      this.container?.querySelector('.dialog-overlay')?.remove();
+    })
+    .catch((error: Error) => {
+      console.error('Error creating zip:', error);
+      this.showErrorDialog('Download Error', `Failed to create zip archive: ${error.message}`);
+      this.container?.querySelector('.dialog-overlay')?.remove();
+    });
+  }
+  
+  /**
+   * Count files in a folder (recursively)
+   */
+  private async countFilesInFolder(folderPath: string): Promise<number> {
+    let count = 0;
+    
+    // Read directory contents
+    const entries = await this.os.getFileSystem().readDirectory(folderPath);
+    
+    // Count each entry
+    for (const entry of entries) {
+      const entryPath = `${folderPath === '/' ? '' : folderPath}/${entry.name}`;
+      
+      if (FileEntryUtils.isDirectory(entry)) {
+        // Recursively count files in subdirectories
+        count += await this.countFilesInFolder(entryPath);
+      } else {
+        // Count files
+        count++;
+      }
+    }
+    
+    return count;
+  }
+  
+  /**
+   * Recursively add folder contents to a zip file
+   */
+  private async addFolderToZip(
+    zip: JSZip, 
+    folderPath: string, 
+    zipPath: string,
+    onFileProcessed?: () => void
+  ): Promise<void> {
+    // Read directory contents
+    const entries = await this.os.getFileSystem().readDirectory(folderPath);
+    
+    // Process each entry
+    for (const entry of entries) {
+      const entryPath = `${folderPath === '/' ? '' : folderPath}/${entry.name}`;
+      const entryZipPath = zipPath ? `${zipPath}/${entry.name}` : entry.name;
+      
+      if (FileEntryUtils.isDirectory(entry)) {
+        // Create folder in zip
+        zip.folder(entryZipPath);
+        
+        // Recursively process subdirectories
+        await this.addFolderToZip(zip, entryPath, entryZipPath, onFileProcessed);
+      } else {
+        // Read and add file to zip
+        const content = await this.os.getFileSystem().readFile(entryPath);
+        zip.file(entryZipPath, content);
+        
+        // Call progress callback
+        if (onFileProcessed) {
+          onFileProcessed();
+        }
+      }
+    }
   }
 }
