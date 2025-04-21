@@ -2,6 +2,8 @@
 
 A simulator game that recreates the experience of being a hacker, featuring multiple applications including a terminal, code editor, and system monitoring tools.
 
+View the current working version [(Here)](https://werddomain.github.io/HackerSimulator/)
+
 ## Project Overview
 
 Hacker Simulator is an interactive web-based application that simulates various hacking scenarios and computer environments. Users can interact with multiple applications including a terminal, text editor, code editor, system monitor, file explorer, and more.
