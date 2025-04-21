@@ -46,8 +46,7 @@
       width: 200px;
       align-items: flex-start;
     }
-  }
-  .sidebar-item {
+  }  .sidebar-item {
     width: 36px;
     height: 36px;
     display: flex;
@@ -70,20 +69,6 @@
       pointer-events: none;
       font-size: 14px;
     }
-  }
-  
-  // Apply styles to sidebar items when sidebar is expanded
-  .start-menu-sidebar.expanded .sidebar-item {
-    width: 180px;
-    justify-content: flex-start;
-    padding-left: 10px;
-    
-    .sidebar-item-label {
-      opacity: 1;
-      position: static;
-      margin-left: 15px;
-    }
-  }
     
     &:hover {
       background-color: rgba(255, 255, 255, 0.1);
@@ -98,6 +83,20 @@
       height: 20px;
       stroke: currentColor;
     }
+  }
+  
+  // Apply styles to sidebar items when sidebar is expanded
+  .start-menu-sidebar.expanded .sidebar-item {
+    width: 180px;
+    justify-content: flex-start;
+    padding-left: 10px;
+    
+    .sidebar-item-label {
+      opacity: 1;
+      position: static;
+      margin-left: 15px;
+    }
+  }
 
 
   // Power button at the bottom
@@ -194,7 +193,6 @@
     padding: 20px;
     color: rgba(255, 255, 255, 0.9);
   }
-
   // Submenu styles
   .submenu {
     position: absolute;
@@ -211,12 +209,21 @@
     z-index: 3000;
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
+    visibility: hidden;
     
     &.visible {
       transform: scale(1);
       opacity: 1;
       pointer-events: all;
+      visibility: visible;
     }
+  }
+  
+  // Hide submenus when start menu is hidden
+  &:not(.visible) .submenu {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
   }
 
   .submenu-item {
@@ -236,25 +243,22 @@
       stroke: currentColor;
     }
   }
-
   // User submenu position
   .user-submenu {
     left: 58px; // Position when sidebar is collapsed
     top: 60px; // Aligned with the user button
-    
-    .start-menu-sidebar.expanded ~ & {
-      left: 208px; // Adjust position when sidebar is expanded
-    }
   }
-
+  
   // Power submenu position
   .power-submenu {
     left: 58px;
     bottom: 60px; // Aligned with the power button
-    
-    .start-menu-sidebar.expanded ~ & {
-      left: 208px; // Adjust position when sidebar is expanded
-    }
+  }
+  
+  // Adjust submenu positions when sidebar is expanded
+  .start-menu-sidebar.expanded ~ .user-submenu,
+  .start-menu-sidebar.expanded ~ .power-submenu {
+    left: 208px; // Adjust position when sidebar is expanded
   }
 
   // App tile colors

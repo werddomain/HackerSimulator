@@ -216,11 +216,10 @@ export class StartMenuController {
       submenuItem.appendChild(label);
       powerSubmenu.appendChild(submenuItem);
     });
-    
-    // Add all elements to the desktop
+      // Add all elements to the desktop
+    startMenu.appendChild(userSubmenu);
+    startMenu.appendChild(powerSubmenu);
     desktop.appendChild(startMenu);
-    desktop.appendChild(userSubmenu);
-    desktop.appendChild(powerSubmenu);
   }
   /**
    * Initialize references to the created DOM elements
@@ -393,29 +392,33 @@ export class StartMenuController {
     this.userItem?.classList.remove('active');
     this.powerItem?.classList.remove('active');
     this.activeSubmenu = null;
-  }
-
-  /**
+  }  /**
    * Position a submenu relative to its triggering button
    * This ensures the submenu is properly aligned with the button that opened it
    */
   private positionSubmenu(submenu: HTMLElement, trigger: HTMLElement): void {
-    if (!submenu || !trigger) return;
+    if (!submenu || !trigger || !this.startMenu) return;
     
     const buttonRect = trigger.getBoundingClientRect();
+    const startMenuRect = this.startMenu.getBoundingClientRect();
     const sidebarExpanded = this.isSidebarExpanded;
+    
+    // Calculate position relative to the start menu
     const leftOffset = sidebarExpanded ? 208 : 58; // Match the CSS values
     
     // For user submenu - align with top of the button
     if (submenu === this.userSubmenu) {
-      submenu.style.top = `${buttonRect.top}px`;
+      // Calculate relative position to start menu
+      const topPosition = buttonRect.top - startMenuRect.top;
+      submenu.style.top = `${topPosition}px`;
       submenu.style.left = `${leftOffset}px`;
     } 
-    // For power submenu - align with bottom of the button
+    // For power submenu - align with bottom of the button, but use fixed positioning
     else if (submenu === this.powerSubmenu) {
-      // Position it aligned with the bottom of the power button
-      const topPosition = buttonRect.top + buttonRect.height - submenu.offsetHeight;
-      submenu.style.top = `${topPosition}px`;
+      // Use a fixed position from the bottom instead of trying to calculate from the top
+      // This ensures the power menu is always at the same position
+      submenu.style.bottom = '5px'; // Fixed position from bottom
+      submenu.style.top = 'auto';    // Remove any top positioning
       submenu.style.left = `${leftOffset}px`;
     }
   }
