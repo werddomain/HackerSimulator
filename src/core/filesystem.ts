@@ -8,6 +8,8 @@ export interface FileSystemEntry {
   name: string;
   type: 'file' | 'directory';
   content?: string;
+  binaryContent?: ArrayBuffer;
+  isBinary?: boolean;
   metadata: {
     created: number;
     modified: number;
@@ -36,6 +38,11 @@ export interface IFileSystemProvider {
   move(sourcePath: string, destPath: string): Promise<void>;
   remove(path: string): Promise<void>;
   stat(path: string): Promise<FileStats>;
+  
+  // Binary file methods
+  readBinaryFile(path: string): Promise<ArrayBuffer>;
+  writeBinaryFile(path: string, content: ArrayBuffer): Promise<void>;
+  isBinaryFile(path: string): Promise<boolean>;
 }
 
 /**
@@ -336,7 +343,6 @@ export class FileSystem implements IFileSystemProvider {  /**
   public async listDirectory(path: string): Promise<FileSystemEntry[]> {
     return this.readDirectory(path);
   }
-
   /**
    * Read file contents
    */
@@ -351,17 +357,153 @@ export class FileSystem implements IFileSystemProvider {  /**
         throw new Error(`Not a file: ${path}`);
       }
       
+      // If the file is binary, convert ArrayBuffer to base64 string
+      if (entry.entry.isBinary && entry.entry.binaryContent) {
+        // Convert ArrayBuffer to string (base64)
+        const binary = new Uint8Array(entry.entry.binaryContent);
+        let binaryString = '';
+        for (let i = 0; i < binary.byteLength; i++) {
+          binaryString += String.fromCharCode(binary[i]);
+        }
+        return btoa(binaryString);
+      }
+      
       return entry.entry.content || '';
     } catch (error) {
       console.error(`Error reading file: ${path}`, error);
       throw new Error(`Failed to read file: ${path}`);
     }
   }
-
   /**
    * Write content to a file
+   * 
+   * @param path File path to write to
+   * @param content String content to write (can be raw text or base64-encoded binary)
+   * @param isBinary Optional flag to force treating content as base64-encoded binary
    */
-  public async writeFile(path: string, content: string): Promise<void> {
+  public async writeFile(path: string, content: string, isBinary?: boolean): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const name = normPath.split('/').pop() || '';
+      const parent = normPath.substring(0, normPath.lastIndexOf('/')) || '/';
+      
+      // Check if parent directory exists
+      const parentExists = await this.exists(parent);
+      if (!parentExists) {
+        throw new Error(`Parent directory does not exist: ${parent}`);
+      }
+      
+      // Determine if content should be treated as binary
+      let binaryContent: ArrayBuffer | undefined = undefined;
+      let finalContent = content;
+      let isContentBinary = isBinary || false;
+      
+      // If isBinary is true or we detect a base64 string, convert to ArrayBuffer
+      if (isBinary || (content.length > 0 && this.isBase64(content))) {
+        try {
+          const binary = atob(content);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          binaryContent = bytes.buffer;
+          finalContent = ''; // Clear text content
+          isContentBinary = true;
+        } catch (e) {
+          console.warn('Failed to convert to binary, treating as text', e);
+          isContentBinary = false;
+        }
+      }
+      
+      // Check if file already exists
+      const exists = await this.exists(normPath);
+      if (exists) {
+        // Update existing file
+        const existingEntry = await this.db.get('fs-entries', normPath);
+        const updatedEntry = {
+          ...existingEntry,
+          entry: {
+            ...existingEntry.entry,
+            content: isContentBinary ? undefined : finalContent,
+            binaryContent: isContentBinary ? binaryContent : undefined,
+            isBinary: isContentBinary,
+            metadata: {
+              ...existingEntry.entry.metadata,
+              modified: Date.now(),
+              size: isContentBinary ? (binaryContent?.byteLength || 0) : finalContent.length
+            }
+          }
+        };
+        
+        await this.db.put('fs-entries', updatedEntry);
+      } else {
+        // Create new file
+        await this.db.put('fs-entries', {
+          path: normPath,
+          parent,
+          entry: {
+            name,
+            type: 'file',
+            content: isContentBinary ? undefined : finalContent,
+            binaryContent: isContentBinary ? binaryContent : undefined,
+            isBinary: isContentBinary,
+            metadata: {
+              created: Date.now(),
+              modified: Date.now(),
+              size: isContentBinary ? (binaryContent?.byteLength || 0) : finalContent.length,
+              permissions: '-rw-r--r--',
+              owner: 'user'
+            }
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error writing file: ${path}`, error);
+      throw new Error(`Failed to write file: ${path}`);
+    }
+  }
+  
+  /**
+   * Helper method to check if a string is likely base64 encoded
+   */
+  private isBase64(str: string): boolean {
+    // Quick check for base64 pattern
+    if (str.length % 4 !== 0) return false;
+    const regex = /^[A-Za-z0-9+/]+={0,2}$/;
+    return regex.test(str) && str.length > 24; // Reasonable length for binary data
+  }
+
+  /**
+   * Read binary file contents
+   */
+  public async readBinaryFile(path: string): Promise<ArrayBuffer> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      if (!entry || entry.entry.type !== 'file') {
+        throw new Error(`Not a file: ${path}`);
+      }
+      
+      if (!entry.entry.isBinary || !entry.entry.binaryContent) {
+        throw new Error(`Not a binary file or no binary content: ${path}`);
+      }
+      
+      return entry.entry.binaryContent;
+    } catch (error) {
+      console.error(`Error reading binary file: ${path}`, error);
+      throw new Error(`Failed to read binary file: ${path}`);
+    }
+  }
+
+  /**
+   * Write binary content to a file
+   */
+  public async writeBinaryFile(path: string, content: ArrayBuffer): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     
     try {
@@ -384,11 +526,13 @@ export class FileSystem implements IFileSystemProvider {  /**
           ...existingEntry,
           entry: {
             ...existingEntry.entry,
-            content,
+            content: undefined, // Clear text content
+            binaryContent: content,
+            isBinary: true,
             metadata: {
               ...existingEntry.entry.metadata,
               modified: Date.now(),
-              size: content.length
+              size: content.byteLength
             }
           }
         };
@@ -402,11 +546,12 @@ export class FileSystem implements IFileSystemProvider {  /**
           entry: {
             name,
             type: 'file',
-            content,
+            binaryContent: content,
+            isBinary: true,
             metadata: {
               created: Date.now(),
               modified: Date.now(),
-              size: content.length,
+              size: content.byteLength,
               permissions: '-rw-r--r--',
               owner: 'user'
             }
@@ -414,8 +559,29 @@ export class FileSystem implements IFileSystemProvider {  /**
         });
       }
     } catch (error) {
-      console.error(`Error writing file: ${path}`, error);
-      throw new Error(`Failed to write file: ${path}`);
+      console.error(`Error writing binary file: ${path}`, error);
+      throw new Error(`Failed to write binary file: ${path}`);
+    }
+  }
+
+  /**
+   * Check if a file is binary
+   */
+  public async isBinaryFile(path: string): Promise<boolean> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      const entry = await this.db.get('fs-entries', normPath);
+      
+      if (!entry || entry.entry.type !== 'file') {
+        throw new Error(`Not a file: ${path}`);
+      }
+      
+      return !!entry.entry.isBinary;
+    } catch (error) {
+      console.error(`Error checking if file is binary: ${path}`, error);
+      throw new Error(`Failed to check if file is binary: ${path}`);
     }
   }
   /**

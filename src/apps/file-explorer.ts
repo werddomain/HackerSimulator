@@ -118,6 +118,8 @@ export class FileExplorerApp extends GuiApplication {
           <div class="context-menu-separator"></div>
           <div class="context-menu-item" data-action="properties">Properties</div>
         </div>
+        <!-- Hidden file input for upload functionality -->
+        <input type="file" id="file-upload-input" style="display: none;" multiple>
       </div>
       <!-- NOTE: DO NOT ADD STYLES HERE! 
      All styles for the file explorer should be added to file-explorer.less instead.
@@ -1370,7 +1372,6 @@ export class FileExplorerApp extends GuiApplication {
       fileInput.click();
     }
   }
-
   /**
    * Process the files selected for upload
    */
@@ -1398,13 +1399,36 @@ export class FileExplorerApp extends GuiApplication {
       
       reader.onload = (event) => {
         const content = event.target?.result;
-        if (typeof content !== 'string' && !content) return;
+        if (!content) {
+          console.error(`Error: No content read from file ${file.name}`);
+          this.showErrorDialog('Upload Error', `Failed to read content from ${file.name}`);
+          return;
+        }
         
         // Create file in the virtual filesystem
         const destPath = `${this.currentPath === '/' ? '' : this.currentPath}/${file.name}`;
         
-        this.os.getFileSystem().writeFile(destPath, <string>content)
-          .then(() => {
+        // Convert content to string or keep as ArrayBuffer based on file type
+        let fileContent: string | ArrayBuffer;
+        if (typeof content === 'string') {
+          fileContent = content;
+        } else if (content instanceof ArrayBuffer) {
+          // For text files, convert ArrayBuffer to string
+          if (this.isTextFile(file.name)) {
+            fileContent = new TextDecoder().decode(new Uint8Array(content));
+          } else {
+            // For binary files, keep as ArrayBuffer
+            fileContent = content;
+          }
+        } else {
+          console.error(`Error: Unsupported content type for file ${file.name}`);
+          this.showErrorDialog('Upload Error', `Failed to process ${file.name}: Unsupported content type`);
+          return;
+        }
+        
+        const writePromise = typeof fileContent === 'string' ? this.os.getFileSystem().writeFile(destPath, fileContent) :this.os.getFileSystem().writeBinaryFile(destPath, fileContent);
+
+          writePromise.then(() => {
             completed++;
             
             // Update progress
@@ -1448,9 +1472,25 @@ export class FileExplorerApp extends GuiApplication {
         }
       };
       
-      // Read the file content
-      reader.readAsArrayBuffer(file);
+      // Use readAsText for text files and readAsArrayBuffer for binary files
+      if (this.isTextFile(file.name)) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
     });
+  }
+  
+  /**
+   * Determine if a file is a text file based on its extension
+   */
+  private isTextFile(fileName: string): boolean {
+    const textExtensions = [
+      'txt', 'md', 'js', 'ts', 'html', 'css', 'json', 'xml', 'csv', 
+      'py', 'c', 'cpp', 'h', 'java', 'rb', 'php', 'sh', 'bat', 'ps1'
+    ];
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    return textExtensions.includes(extension);
   }
 
   /**
