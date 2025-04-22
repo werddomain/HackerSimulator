@@ -373,7 +373,7 @@ export class ErrorHandler {
     }    /**
      * Root folder for storing logs
      */
-    public static readonly LOG_FOLDER_ROOT = '/system/logs';
+    public static readonly LOG_FOLDER_ROOT = '/var/log';
 
     /**
      * Get the folder path for current day's logs
@@ -412,14 +412,17 @@ export class ErrorHandler {
             // Create root logs directory if it doesn't exist
             const rootExists = await this.os.getFileSystem().exists(ErrorHandler.LOG_FOLDER_ROOT);
             if (!rootExists) {
-                await this.os.getFileSystem().createDirectory(ErrorHandler.LOG_FOLDER_ROOT);
+                await this.os.getFileSystem().createDirectory(ErrorHandler.LOG_FOLDER_ROOT, null, true);
             }
             
             // Create current day directory if it doesn't exist
             const dayFolder = this.getCurrentDayFolder();
             const dayFolderExists = await this.os.getFileSystem().exists(dayFolder);
             if (!dayFolderExists) {
-                await this.os.getFileSystem().createDirectory(dayFolder);
+                await this.os.getFileSystem().createDirectory(dayFolder, null, true);
+            }
+            if (!this.os.getFileSystem().exists(this.getLogIndexFile())) {
+                 await this.os.getFileSystem().writeFile(this.getLogIndexFile(), '{}');
             }
         } catch (error) {
             console.error('Failed to create log directories:', error);

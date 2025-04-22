@@ -589,7 +589,7 @@ export class FileSystem implements IFileSystemProvider {  /**
    * @param path Path to create directory. If path doesn't start with '/', it's treated as relative to current directory
    * @param currentDirectory Optional current directory for resolving relative paths
    */
-  public async createDirectory(path: string, currentDirectory?: string): Promise<void> {
+  public async createDirectory(path: string, currentDirectory?: string|null|undefined, createParrentsDirrectories?: boolean): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     
     try {
@@ -609,7 +609,13 @@ export class FileSystem implements IFileSystemProvider {  /**
       // Check if parent directory exists
       const parentExists = await this.exists(parent);
       if (!parentExists) {
-        throw new Error(`Parent directory does not exist: ${parent}`);
+        if (createParrentsDirrectories){
+          // Create parent directories recursively
+          const parentDir = parent.split('/').slice(0, -1).join('/');
+          await this.createDirectory(parentDir, null, createParrentsDirrectories);
+        }
+        else
+          throw new Error(`Parent directory does not exist: ${parent}`);
       }
       
       // Check if directory already exists
