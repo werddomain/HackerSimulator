@@ -4,6 +4,35 @@ import { FileSystemUtils } from '../core/file-system-utils';
 import { FileSystemEntry } from '../core/filesystem';
 import { GuiApplication } from '../core/gui-application';
 import JSZip from 'jszip'; // Add JSZip import
+// import { 
+//   arrowBackOutline, 
+//   arrowForwardOutline, 
+//   arrowUpOutline, 
+//   refreshOutline,
+//   gridOutline,
+//   listOutline,
+//   eyeOutline,
+//   cloudUploadOutline,
+//   cloudDownloadOutline,
+//   folderOutline,
+//   documentOutline,
+//   imageOutline,
+//   musicalNoteOutline,
+//   filmOutline,
+//   codeOutline,
+//   documentTextOutline,
+//   documentLockOutline,
+//   archiveOutline,
+//   settingsOutline,
+//   homeOutline,
+//   desktopOutline,
+//   folderOpenOutline,
+//   logoJavascript,
+//   logoHtml5,
+//   logoCss3,
+//   logoGithub,
+//   arrowUpCircleOutline
+// } from 'ionicons/icons';
 
 /**
  * File Explorer App for the Hacker Game
@@ -31,15 +60,66 @@ export class FileExplorerApp extends GuiApplication {
 
   /**
    * Application-specific initialization
-   */
-  protected initApplication(): void {
+   */  protected initApplication(): void {
     if (!this.container) return;
+    
+    // Initialize Ionic icons
+    this.initializeIonicIcons();
     
     this.render();
     this.navigateTo('/home/user');
     
     // Add history entry for initial path
     this.addToHistory('/home/user');
+  }
+  
+  /**
+   * Initialize Ionic icons
+   */
+  private initializeIonicIcons(): void {
+    // Define the icons we're using
+    // const iconMap = {
+    //   'arrow-back-outline': arrowBackOutline,
+    //   'arrow-forward-outline': arrowForwardOutline,
+    //   'arrow-up-outline': arrowUpOutline,
+    //   'refresh-outline': refreshOutline,
+    //   'grid-outline': gridOutline,
+    //   'list-outline': listOutline,
+    //   'eye-outline': eyeOutline,
+    //   'cloud-upload-outline': cloudUploadOutline,
+    //   'cloud-download-outline': cloudDownloadOutline,
+    //   'folder-outline': folderOutline,
+    //   'document-outline': documentOutline,
+    //   'image-outline': imageOutline,
+    //   'musical-note-outline': musicalNoteOutline,
+    //   'film-outline': filmOutline,
+    //   'code-outline': codeOutline,
+    //   'document-text-outline': documentTextOutline,
+    //   'archive-outline': archiveOutline,
+    //   'settings-outline': settingsOutline,
+    //   'home-outline': homeOutline,
+    //   'desktop-outline': desktopOutline,
+    //   'logo-javascript': logoJavascript,
+    //   'logo-html5': logoHtml5,
+    //   'logo-css3': logoCss3,
+    //   'logo-github': logoGithub
+    // };
+    
+    // Add icons to the registry
+    //addIcons(iconMap);
+    
+    // Load Ionicon web component if not already loaded
+    if (!customElements.get('ion-icon')) {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js';
+      script.type = 'module';
+      document.head.appendChild(script);
+      
+      const scriptNoModule = document.createElement('script');
+      scriptNoModule.src = 'https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js';
+      scriptNoModule.setAttribute('nomodule', '');
+      document.head.appendChild(scriptNoModule);
+    }
   }
 
   /**
@@ -48,27 +128,26 @@ export class FileExplorerApp extends GuiApplication {
   private render(): void {
     if (!this.container) return;
     
-    this.container.innerHTML = `
-      <div class="file-explorer-app">        <div class="file-explorer-toolbar">
+    this.container.innerHTML = `      <div class="file-explorer-app">        <div class="file-explorer-toolbar">
           <div class="navigation-buttons">
-            <button class="navigation-btn back" title="Back">◀</button>
-            <button class="navigation-btn forward" title="Forward">▶</button>
-            <button class="navigation-btn up" title="Up">▲</button>
-            <button class="navigation-btn refresh" title="Refresh">↻</button>
+            <button class="navigation-btn back" title="Back"><ion-icon name="arrow-back-outline"></ion-icon></button>
+            <button class="navigation-btn forward" title="Forward"><ion-icon name="arrow-forward-outline"></ion-icon></button>
+            <button class="navigation-btn up" title="Up"><ion-icon name="arrow-up-outline"></ion-icon></button>
+            <button class="navigation-btn refresh" title="Refresh"><ion-icon name="refresh-outline"></ion-icon></button>
           </div>
           <div class="path-bar">
             <input type="text" class="path-input" value="${this.currentPath}">
           </div>
           <div class="view-options">
-            <button class="view-btn ${this.viewMode === 'grid' ? 'active' : ''}" data-view="grid" title="Grid View">□□</button>
-            <button class="view-btn ${this.viewMode === 'list' ? 'active' : ''}" data-view="list" title="List View">≡</button>
-            <button class="view-btn show-hidden ${this.showHidden ? 'active' : ''}" title="Show Hidden Files">👁️</button>
-            <button class="view-btn upload-btn" title="Upload File">📤</button>
-            <button class="view-btn download-btn" title="Download File">📥</button>
+            <button class="view-btn ${this.viewMode === 'grid' ? 'active' : ''}" data-view="grid" title="Grid View"><ion-icon name="grid-outline"></ion-icon></button>
+            <button class="view-btn ${this.viewMode === 'list' ? 'active' : ''}" data-view="list" title="List View"><ion-icon name="list-outline"></ion-icon></button>
+            <button class="view-btn show-hidden ${this.showHidden ? 'active' : ''}" title="Show Hidden Files"><ion-icon name="eye-outline"></ion-icon></button>
+            <button class="view-btn upload-btn" title="Upload File"><ion-icon name="cloud-upload-outline" aria-label="Uplocad"></ion-icon></button>
+            <button class="view-btn download-btn" title="Download File"><ion-icon name="cloud-download-outline" aria-label="Download"></ion-icon></button>
           </div>
         </div>
         <div class="file-explorer-main">
-          <div class="file-explorer-sidebar">
+          <div class="file-explorer-sidebar">          
             <div class="sidebar-section">
               <div class="sidebar-header">Favorites</div>
               <div class="sidebar-item" data-path="/home/user">🏠 Home</div>
@@ -1272,60 +1351,73 @@ export class FileExplorerApp extends GuiApplication {
 
   /**
    * Get file icon based on name and type
+   */  /**
+   * Get file icon based on name and type using Ionic icons
    */
   private getFileIcon(fileName: string, isDirectory: boolean): string {
     if (isDirectory) {
-      return '📁';
+      return `<ion-icon name="folder-outline"></ion-icon>`;
     }
     
     const extension = fileName.split('.').pop()?.toLowerCase();
     
     // Images
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension || '')) {
-      return '🖼️';
+      return `<ion-icon name="image-outline"></ion-icon>`;
     }
     
     // Audio
     if (['mp3', 'wav', 'ogg', 'flac'].includes(extension || '')) {
-      return '🎵';
+      return `<ion-icon name="musical-note-outline"></ion-icon>`;
     }
     
     // Video
     if (['mp4', 'webm', 'avi', 'mov', 'wmv'].includes(extension || '')) {
-      return '🎬';
+      return `<ion-icon name="film-outline"></ion-icon>`;
     }
     
-    // Code
-    if (['js', 'ts', 'html', 'css', 'py', 'java', 'c', 'cpp', 'php'].includes(extension || '')) {
-      return '📊';
+    // Code files with specific icons
+    if (['js'].includes(extension || '')) {
+      return `<ion-icon name="logo-javascript"></ion-icon>`;
+    }
+    if (['html'].includes(extension || '')) {
+      return `<ion-icon name="logo-html5"></ion-icon>`;
+    }
+    if (['css'].includes(extension || '')) {
+      return `<ion-icon name="logo-css3"></ion-icon>`;
+    }
+    
+    // Other code files
+    if (['ts', 'py', 'java', 'c', 'cpp', 'php'].includes(extension || '')) {
+      return `<ion-icon name="code-outline"></ion-icon>`;
     }
     
     // Documents
     if (['pdf'].includes(extension || '')) {
-      return '📕';
+      return `<ion-icon name="document-text-outline"></ion-icon>`;
     }
-    if (['doc', 'docx'].includes(extension || '')) {
-      return '📘';
+    if (['doc', 'docx', 'txt', 'md'].includes(extension || '')) {
+      return `<ion-icon name="document-outline"></ion-icon>`;
     }
-    if (['xls', 'xlsx'].includes(extension || '')) {
-      return '📗';
+    if (['xls', 'xlsx', 'csv'].includes(extension || '')) {
+      return `<ion-icon name="document-outline"></ion-icon>`;
     }
     if (['ppt', 'pptx'].includes(extension || '')) {
-      return '📙';
+      return `<ion-icon name="document-outline"></ion-icon>`;
     }
     
     // Archives
     if (['zip', 'rar', 'tar', 'gz', '7z'].includes(extension || '')) {
-      return '📦';
+      return `<ion-icon name="archive-outline"></ion-icon>`;
     }
     
     // Executable
     if (['exe', 'bat', 'sh', 'app'].includes(extension || '')) {
-      return '⚙️';
+      return `<ion-icon name="settings-outline"></ion-icon>`;
     }
     
     // Default
-    return '📄';
+    return `<ion-icon name="document-outline"></ion-icon>`;
   }
 
   /**
