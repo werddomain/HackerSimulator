@@ -25,6 +25,11 @@ import { RmCommand } from './linux/rm';
 import { TouchCommand } from './linux/touch';
 import { LaunchCommand } from './linux/launch';
 
+// Import path alias management commands
+import { AliasCommand } from './linux/alias';
+import { AddAliasCommand } from './linux/addalias';
+import { RmAliasCommand } from './linux/rmalias';
+
 /**
  * CommandRegistry class for registering and retrieving command modules
  */
@@ -88,13 +93,16 @@ export class CommandRegistry {
     this.registerCommand(new ClearCommand());
     // Register network commands
     this.registerCommand(new PingCommand(this.os));
-    this.registerCommand(new CurlCommand(this.os)); this.registerCommand(new NmapCommand(this.os));
-
-    // Register help and utility commands
+    this.registerCommand(new CurlCommand(this.os)); this.registerCommand(new NmapCommand(this.os));    // Register help and utility commands
     this.registerCommand(new HelpCommand(this.os));
     this.registerCommand(new ManCommand(this.os));
     this.registerCommand(new NanoEditor(this.os));
     this.registerCommand(new LaunchCommand(this.os));
+    
+    // Register path alias management commands
+    this.registerCommand(new AliasCommand(this.os));
+    this.registerCommand(new AddAliasCommand(this.os));
+    this.registerCommand(new RmAliasCommand(this.os));
 
     // Register common aliases
     this.registerAlias('dir', 'ls');

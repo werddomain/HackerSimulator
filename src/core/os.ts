@@ -34,7 +34,7 @@ private fileSystem: FileSystem;
   private userSettings: UserSettings;
   private computerSettings: ComputerSettings;
   constructor() {
-    this.fileSystem = new FileSystem();
+    this.fileSystem = new FileSystem(this);
     this.processManager = new ProcessManager();
     this.windowManager = new WindowManager();
     this.systemMonitor = new SystemMonitor(this.processManager);
@@ -93,6 +93,9 @@ private fileSystem: FileSystem;
     console.log('HackerOS initialized successfully');
   }
 
+  public get currentUserName(): string {
+    return "user"; // Placeholder for the current user name
+  }
   /**
    * Get file system instance
    */

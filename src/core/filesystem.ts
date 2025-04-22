@@ -1,5 +1,75 @@
 import { openDB, IDBPDatabase } from 'idb';
 import { FileStats } from './file-system-utils';
+import { OS } from './os';
+
+/**
+ * Base class for path aliases in the filesystem
+ */
+export abstract class PathAlias {
+  constructor(public readonly alias: string) {}
+  
+  /**
+   * Resolves the alias to a real path
+   * @param remainingPath The rest of the path after the alias
+   * @returns The resolved full path
+   */
+  abstract resolve(remainingPath: string): string;
+  
+  /**
+   * Checks if this alias can be used for the given path
+   */
+  matches(path: string): boolean {
+    return path === this.alias || path.startsWith(this.alias + '/');
+  }
+  
+  /**
+   * Extracts the part of the path after the alias
+   */
+  extractRemainingPath(path: string): string {
+    if (path === this.alias) return '';
+    // Add a slash after the alias if not already present
+    return path.substring(this.alias.length);
+  }
+}
+
+/**
+ * A fixed alias that maps to a specific filesystem path
+ */
+export class FixedPathAlias extends PathAlias {
+  constructor(alias: string, private readonly targetPath: string) {
+    super(alias);
+  }
+  
+  resolve(remainingPath: string): string {
+    if (!remainingPath) return this.targetPath;
+    // Add a slash between target path and remaining path if needed
+    return this.targetPath + (remainingPath.startsWith('/') ? '' : '/') + remainingPath;
+  }
+}
+
+/**
+ * A dynamic alias that uses a function to resolve paths
+ */
+export class DynamicPathAlias extends PathAlias {
+  constructor(
+    alias: string, 
+    private readonly resolveFunction: (remainingPath: string) => string
+  ) {
+    super(alias);
+  }
+  
+  resolve(remainingPath: string): string {
+    return this.resolveFunction(remainingPath);
+  }
+}
+
+/**
+ * A symlink alias that points to another location in the filesystem
+ */
+export class SymlinkAlias extends FixedPathAlias {
+  // Uses the same implementation as FixedPathAlias
+  // but conceptually represents a symlink in the filesystem
+}
 
 /**
  * Interface for file system entries
@@ -48,7 +118,55 @@ export interface IFileSystemProvider {
 /**
  * Implementation of file system using IndexedDB
  */
-export class FileSystem implements IFileSystemProvider {  /**
+export class FileSystem implements IFileSystemProvider { 
+  
+  private aliases: PathAlias[] = [];
+  
+  constructor(private readonly os:OS) {
+
+  }
+
+  /**
+   * Register a new path alias
+   * @param alias The alias to register
+   */
+  public registerAlias(alias: PathAlias): void {
+    // Check for duplicate aliases
+    const existingIndex = this.aliases.findIndex(a => a.alias === alias.alias);
+    if (existingIndex >= 0) {
+      this.aliases[existingIndex] = alias; // Replace existing alias
+    } else {
+      this.aliases.push(alias);
+    }
+  }
+  
+  /**
+   * Unregister a path alias
+   * @param aliasName The name of the alias to remove
+   */
+  public unregisterAlias(aliasName: string): void {
+    this.aliases = this.aliases.filter(a => a.alias !== aliasName);
+  }
+  
+  /**
+   * Register a fixed path alias
+   * @param alias The alias name (like ~ or /mnt/cdrom)
+   * @param targetPath The real path this alias points to
+   */
+  public registerFixedAlias(alias: string, targetPath: string): void {
+    this.registerAlias(new FixedPathAlias(alias, targetPath));
+  }
+  
+  /**
+   * Register a symlink
+   * @param linkPath The path where the symlink appears
+   * @param targetPath The real path the symlink points to
+   */
+  public registerSymlink(linkPath: string, targetPath: string): void {
+    this.registerAlias(new SymlinkAlias(linkPath, targetPath));
+  }
+
+  /**
    * Delete a file (not directories)
    * @param path Path to the file to delete
    * @throws Error if path doesn't exist or is a directory
@@ -178,7 +296,6 @@ export class FileSystem implements IFileSystemProvider {  /**
       throw new Error(`Failed to get stats for: ${path}`);
     }
   }
-
   /**
    * Initialize the file system
    */
@@ -199,12 +316,59 @@ export class FileSystem implements IFileSystemProvider {  /**
       if (!rootExists) {
         await this.setupInitialFileSystem();
       }
+      await this.ensureUserDirectoryExists();
+      
+      // Setup default aliases
+      this.setupDefaultAliases();
+
     } catch (error) {
       console.error('Failed to initialize filesystem:', error);
       throw new Error('Failed to initialize filesystem');
     }
   }
+  
+  /**
+   * Setup default filesystem aliases
+   */
+  private setupDefaultAliases(): void {
+    // Home directory alias
+    this.registerFixedAlias('~', this.UserFolder);
+    
+    // Mount points can be dynamically managed
+    this.registerAlias(new DynamicPathAlias('/mnt', (path: string) => {
+      // Here you could check registered mount points and map accordingly
+      // For now we'll just create a basic implementation
+      if (path.startsWith('/cdrom')) {
+        return '/media/cdrom' + path.substring(6);
+      }
+      return '/mnt' + path; // Default to just passing through
+    }));
+    
+    // Convenience aliases for common paths
+    this.registerFixedAlias('/tmp', '/tmp');
+    this.registerSymlink('/home/current', this.UserFolder);
+  }
+  
+  public readonly userDirectories:string[] = ['Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Videos', '.config', '.local', '.cache'];
+  public get UserFolder():string {
+    return `/home/${this.os.currentUserName}`;
+  }
+  private async ensureUserDirectoryExists(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    if (!this.os) throw new Error('OS not initialized');
 
+    const userDir = this.UserFolder;
+    const exists = await this.exists(userDir);
+    
+    if (!exists) {
+      // Create user directory if it doesn't exist
+      // TODO: add a security to prevent this folder to be deleted. Mark them as special folder;
+      await this.createDirectory(userDir);
+      for (const dir of this.userDirectories) {
+        await this.createDirectory(dir, userDir, true);
+      }
+    }
+  }
   /**
    * Set up the initial file system with basic Linux directory structure
    */
@@ -739,11 +903,20 @@ export class FileSystem implements IFileSystemProvider {  /**
       throw new Error(`Failed to move entry: ${oldPath} -> ${newPath}`);
     }
   }
-
   /**
    * Normalize a path (remove trailing slashes, handle ../, etc.)
+   * Now also resolves aliases like ~ and symlinks
    */
   private normalizePath(path: string): string {
+    // Handle aliases first
+    for (const alias of this.aliases) {
+      if (alias.matches(path)) {
+        const remainingPath = alias.extractRemainingPath(path);
+        path = alias.resolve(remainingPath);
+        break; // Only apply the first matching alias
+      }
+    }
+    
     // Ensure path starts with a slash
     if (!path.startsWith('/')) {
       path = '/' + path;
@@ -768,5 +941,13 @@ export class FileSystem implements IFileSystemProvider {  /**
     }
     
     return '/' + stack.join('/');
+  }
+  /**
+   * Get all currently registered path aliases
+   * @returns Array of all registered path aliases
+   */
+  public getAliases(): PathAlias[] {
+    // Return a copy of the aliases array to prevent external modification
+    return [...this.aliases];
   }
 }
