@@ -842,7 +842,7 @@ export class CodeEditorApp extends GuiApplication {
         this.openFile(filePath);
       })
       .catch(error => {
-        ErrorHandler.getInstance().parse(error, 'code-editor.ts', 'CodeEditorApp', {
+        this.ErrorHandler.parse(error, 'code-editor.ts', 'CodeEditorApp', {
           showDialog: true,
           dialogManager: this.dialogManager,
           dialogTitle: 'Error Creating File'

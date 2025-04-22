@@ -1174,7 +1174,7 @@ export class SettingsApp extends GuiApplication {
       'Clear Error Log',
       'Are you sure you want to clear all error logs? This action cannot be undone.',
       () => {
-        const errorHandler = ErrorHandler.getInstance();
+        const errorHandler = this.ErrorHandler;
         errorHandler.clearErrorLog();
         this.showInfoDialog('Success', 'Error log has been cleared');
       }

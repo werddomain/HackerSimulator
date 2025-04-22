@@ -2,6 +2,7 @@ import { OS } from './os';
 import { ProcessManager } from './process';
 import { WindowManager } from './window';
 import { DialogManager } from './dialog';
+import { ErrorHandler } from './error-handler';
 
 // Typings for window and process events
 export type AppEventHandler = () => void;
@@ -41,10 +42,11 @@ export abstract class GuiApplication {
   private onResizeHandlers: AppEventHandler[] = [];
   private onResizedHandlers: AppEventHandler[] = [];
   private onFocusHandlers: AppEventHandler[] = [];
-  
+  protected readonly ErrorHandler: ErrorHandler;
   constructor(os: OS) {
     this.os = os;
     this.dialogManager = new DialogManager(os, this);
+    this.ErrorHandler = ErrorHandler.getInstance(os);
   }
   
   /**

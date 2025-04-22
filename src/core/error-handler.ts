@@ -59,9 +59,10 @@ export class ErrorHandler {
     /**
      * Get the singleton instance of ErrorHandler
      */
-    public static getInstance(): ErrorHandler {
+    public static getInstance(os: OS): ErrorHandler {
         if (!ErrorHandler.instance) {
             ErrorHandler.instance = new ErrorHandler();
+            ErrorHandler.instance.setOS(os);
         }
         return ErrorHandler.instance;
     }

@@ -4,9 +4,10 @@
  */
 import { createIcons, icons } from 'lucide';
 import { OS } from './os';
+import { AppInfo } from './app-manager';
 export class StartMenuController {
   private startMenuButton: HTMLElement | null;
-private startMenu: HTMLElement | null = null;
+  private startMenu: HTMLElement | null = null;
   private sidebar: HTMLElement | null = null;
   private menuItem: HTMLElement | null = null;
   private userSubmenu: HTMLElement | null = null;
@@ -61,16 +62,19 @@ private startMenu: HTMLElement | null = null;
 
   constructor(private os: OS) {
     this.startMenuButton = document.getElementById('start-menu-button');
-    
+
     // Create DOM elements
     this.createStartMenuElements();
-    
+
     // Initialize references to created elements
     this.initializeElementReferences();
-    
+
     // Initialize Lucide icons
     this.initIcons();
-    
+
+    // Populate the All Apps view with applications
+    this.populateAllAppsView();
+
     // Set up event listeners
     this.setupEventListeners();
   }
@@ -88,11 +92,11 @@ private startMenu: HTMLElement | null = null;
     // Create Start Menu
     const startMenu = document.createElement('div');
     startMenu.className = 'start-menu';
-    
+
     // Create sidebar
     const sidebar = document.createElement('div');
     sidebar.className = 'start-menu-sidebar';
-      // Add sidebar items
+    // Add sidebar items
     this.sidebarItems.forEach(item => {
       const sidebarItem = document.createElement('div');
       sidebarItem.className = 'sidebar-item';
@@ -101,123 +105,118 @@ private startMenu: HTMLElement | null = null;
       }
       sidebarItem.id = item.id;
       sidebarItem.title = item.title;
-      
+
       const icon = document.createElement('i');
       icon.setAttribute('data-lucide', item.icon);
-      
+
       // Add a label for each sidebar item
       const label = document.createElement('span');
       label.className = 'sidebar-item-label';
       label.textContent = item.title;
-      
+
       sidebarItem.appendChild(icon);
       sidebarItem.appendChild(label);
       sidebar.appendChild(sidebarItem);
     });
-    
+
     // Create content area
     const content = document.createElement('div');
     content.className = 'start-menu-content';
-    
+
     // Create search bar
     const searchBar = document.createElement('div');
     searchBar.className = 'search-bar';
-    
+
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.placeholder = 'Search...';
-    
+
     searchBar.appendChild(searchInput);
     content.appendChild(searchBar);
-    
+
     // Create pinned apps view
     const pinnedAppsView = document.createElement('div');
     pinnedAppsView.className = 'content-view pinned-apps-view active';
-    
+
     const pinnedApps = document.createElement('div');
     pinnedApps.className = 'pinned-apps';
-    
+
     // Add app tiles
     this.appTileConfig.forEach(app => {
       const tile = document.createElement('div');
       tile.className = `app-tile ${app.className}`;
-      
+
       const icon = document.createElement('i');
       icon.setAttribute('data-lucide', app.icon);
-      
+
       const name = document.createElement('div');
       name.className = 'app-tile-name';
       name.textContent = app.name;
-      
+
       tile.appendChild(icon);
       tile.appendChild(name);
       pinnedApps.appendChild(tile);
       this.appTiles.push(tile);
     });
-    
+
     pinnedAppsView.appendChild(pinnedApps);
     content.appendChild(pinnedAppsView);
-    
+
     // Create all apps view
     const allAppsView = document.createElement('div');
     allAppsView.className = 'content-view all-apps-view';
-    
+
     const allAppsContent = document.createElement('div');
     allAppsContent.className = 'all-apps-content';
-    
-    const allAppsText1 = document.createElement('p');
-    allAppsText1.textContent = 'All applications would be listed here.';
-    
-    const allAppsText2 = document.createElement('p');
-    allAppsText2.textContent = 'This view can be implemented with alphabetic sections as needed.';
-    
-    allAppsContent.appendChild(allAppsText1);
-    allAppsContent.appendChild(allAppsText2);
+
+    // We'll populate this dynamically after initialization
+    // This will be populated with actual apps in populateAllAppsView method
+
     allAppsView.appendChild(allAppsContent);
     content.appendChild(allAppsView);
-    
+
     // Add sidebar and content to start menu
     startMenu.appendChild(sidebar);
     startMenu.appendChild(content);
-    
+
     // Create user submenu
     const userSubmenu = document.createElement('div');
     userSubmenu.className = 'submenu user-submenu';
-    
+
     this.userSubmenuItems.forEach(item => {
       const submenuItem = document.createElement('div');
       submenuItem.className = 'submenu-item';
-      
+
       const icon = document.createElement('i');
       icon.setAttribute('data-lucide', item.icon);
-      
+
       const label = document.createElement('span');
       label.textContent = item.label;
-      
+
       submenuItem.appendChild(icon);
       submenuItem.appendChild(label);
       userSubmenu.appendChild(submenuItem);
     });
-    
+
     // Create power submenu
     const powerSubmenu = document.createElement('div');
     powerSubmenu.className = 'submenu power-submenu';
-    
+
     this.powerSubmenuItems.forEach(item => {
       const submenuItem = document.createElement('div');
       submenuItem.className = 'submenu-item';
-      
+
       const icon = document.createElement('i');
       icon.setAttribute('data-lucide', item.icon);
-      
+
       const label = document.createElement('span');
       label.textContent = item.label;
-      
+
       submenuItem.appendChild(icon);
       submenuItem.appendChild(label);
       powerSubmenu.appendChild(submenuItem);
     });
-      // Add all elements to the desktop
+    // Add all elements to the desktop
     startMenu.appendChild(userSubmenu);
     startMenu.appendChild(powerSubmenu);
     desktop.appendChild(startMenu);
@@ -225,7 +224,7 @@ private startMenu: HTMLElement | null = null;
   /**
    * Initialize references to the created DOM elements
    */
-private initializeElementReferences(): void {
+  private initializeElementReferences(): void {
     this.startMenu = document.querySelector('.start-menu');
     this.sidebar = document.querySelector('.start-menu-sidebar');
     this.menuItem = document.getElementById('menu-item');
@@ -273,7 +272,7 @@ private initializeElementReferences(): void {
       this.toggleSubmenu(this.powerSubmenu, this.powerItem);
     });
 
-// Apps item click
+    // Apps item click
     this.appsItem?.addEventListener('click', () => {
       this.toggleAppsView();
     });    // Settings item click
@@ -302,9 +301,9 @@ private initializeElementReferences(): void {
         const isClickInsidePowerSubmenu = this.powerSubmenu?.contains(target) || false;
         const isClickOnPowerItem = this.powerItem?.contains(target) || false;
 
-        if (!isClickInsideStartMenu && !isClickOnStartButton && 
-            !isClickInsideUserSubmenu && !isClickOnUserItem &&
-            !isClickInsidePowerSubmenu && !isClickOnPowerItem) {
+        if (!isClickInsideStartMenu && !isClickOnStartButton &&
+          !isClickInsideUserSubmenu && !isClickOnUserItem &&
+          !isClickInsidePowerSubmenu && !isClickOnPowerItem) {
           this.hideStartMenu();
         }
       }
@@ -324,7 +323,7 @@ private initializeElementReferences(): void {
    */
   private toggleSidebar(): void {
     this.isSidebarExpanded = !this.isSidebarExpanded;
-    
+
     if (this.isSidebarExpanded) {
       this.sidebar?.classList.add('expanded');
       this.menuItem?.classList.add('active');
@@ -344,11 +343,13 @@ private initializeElementReferences(): void {
       this.showStartMenu();
     }
   }
-
   /**
    * Show the start menu
    */
   private showStartMenu(): void {
+    // Populate the All Apps view with the latest applications
+    this.populateAllAppsView();
+    
     this.startMenu?.classList.add('visible');
     this.isStartMenuVisible = true;
     this.startMenuButton?.classList.add('active');
@@ -374,14 +375,14 @@ private initializeElementReferences(): void {
       submenu.classList.remove('visible');
       trigger.classList.remove('active');
       this.activeSubmenu = null;
-    } 
+    }
     // Otherwise, hide the current submenu (if any) and show this one
     else {
       this.hideAllSubmenus();
-      
+
       // Position the submenu before showing it
       this.positionSubmenu(submenu, trigger);
-      
+
       submenu.classList.add('visible');
       trigger.classList.add('active');
       this.activeSubmenu = submenu;
@@ -403,21 +404,21 @@ private initializeElementReferences(): void {
    */
   private positionSubmenu(submenu: HTMLElement, trigger: HTMLElement): void {
     if (!submenu || !trigger || !this.startMenu) return;
-    
+
     const buttonRect = trigger.getBoundingClientRect();
     const startMenuRect = this.startMenu.getBoundingClientRect();
     const sidebarExpanded = this.isSidebarExpanded;
-    
+
     // Calculate position relative to the start menu
     const leftOffset = sidebarExpanded ? 208 : 58; // Match the CSS values
-    
+
     // For user submenu - align with top of the button
     if (submenu === this.userSubmenu) {
       // Calculate relative position to start menu
       const topPosition = buttonRect.top - startMenuRect.top;
       submenu.style.top = `${topPosition}px`;
       submenu.style.left = `${leftOffset}px`;
-    } 
+    }
     // For power submenu - align with bottom of the button, but use fixed positioning
     else if (submenu === this.powerSubmenu) {
       // Use a fixed position from the bottom instead of trying to calculate from the top
@@ -433,7 +434,7 @@ private initializeElementReferences(): void {
    */
   private toggleAppsView(): void {
     const isPinnedViewActive = this.pinnedAppsView?.classList.contains('active') || false;
-    
+
     if (isPinnedViewActive) {
       this.pinnedAppsView?.classList.remove('active');
       this.allAppsView?.classList.add('active');
@@ -444,15 +445,79 @@ private initializeElementReferences(): void {
       this.appsItem?.classList.remove('active');
     }
   }
+  private getAllAppsApplications(): AppInfo[] {
+    return this.os.getAppManager().getAllApps();
+  }
+
+  /**
+   * Populate the All Apps view with applications from the AppManager
+   */
+  private populateAllAppsView(): void {
+if (!this.startMenu) return;
+
+    const allAppsContent = this.startMenu.querySelector('.all-apps-content');
+    if (!allAppsContent) return;
+
+    // Clear existing content
+    allAppsContent.innerHTML = '';
+    
+    // Get all applications
+    const apps = this.getAllAppsApplications();
+    
+    // Sort apps alphabetically by name
+    apps.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Create app list
+    const appList = document.createElement('div');
+    appList.className = 'app-list';
+    
+    // Add apps to the list
+    apps.forEach(app => {
+      const appItem = document.createElement('div');
+      appItem.className = 'app-list-item';
+      appItem.setAttribute('data-app-id', app.id);
+      
+      // Create app icon
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'app-icon';
+      
+      // display the icon using the OS's app manager
+      this.os.getAppManager().displayIcon(app, iconContainer);
+      
+      // Create app name
+      const nameElement = document.createElement('div');
+      nameElement.className = 'app-name';
+      nameElement.textContent = app.name;
+      
+      // Add elements to app item
+      appItem.appendChild(iconContainer);
+      appItem.appendChild(nameElement);
+      
+      // Add click event
+      appItem.addEventListener('click', () => {
+        this.launchApp(app.id);
+      });
+      
+      appList.appendChild(appItem);
+    });
+    
+    allAppsContent.appendChild(appList);
+    
+    // Initialize Lucide icons for the newly added elements
+    createIcons({
+      icons,
+      nameAttr: 'data-lucide'
+    });
+  }
 
   /**
    * Launch an application
    */
-  private launchApp(appName: string): void {
-    console.log(`Launching app: ${appName}`);
+  private launchApp(appId: string): void {
+    console.log(`Launching app: ${appId}`);
     // Here we would integrate with the OS's app manager to launch the actual app
     // For example: this.os.getAppManager().launchApp(appId);
-    this.os.getAppManager().launchApp(appName);
+    this.os.getAppManager().launchApp(appId);
     // Close the start menu after launching an app
     this.hideStartMenu();
   }

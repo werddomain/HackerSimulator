@@ -50,7 +50,31 @@ export class AppManager {
       this.handleWindowClose(windowId);
     });
   }
-
+  public getIconName(appOrIcon: AppInfo | string): string {
+    if (typeof appOrIcon === 'string') {
+      return appOrIcon;
+    } else {
+      return appOrIcon.icon;
+    }
+  }
+  public displayIcon(appOrIcon: AppInfo | string, htmlElement: HTMLElement): void {
+    const icon = this.getIconName(appOrIcon);
+    // Check if the icon has a prefix
+    if (icon.includes(':')) {
+      if (icon.startsWith('ionicons:')) {
+        const iconName = icon.substring('ionicons:'.length);
+        htmlElement.innerHTML = `<ion-icon name="${iconName}"></ion-icon>`;
+      } else if (icon.startsWith('data:')) {
+        htmlElement.innerHTML = `<img src="${icon}" />`;
+      } else {
+        // Handle other prefixed icons if needed
+        htmlElement.innerText = icon;
+      }
+    } else {
+      // No prefix, just use the icon as text
+      htmlElement.innerText = icon;
+    }
+  }
   /**
    * Register default applications
    */
@@ -130,6 +154,16 @@ export class AppManager {
       name: 'Settings',
       description: 'System Settings',
       icon: '⚙️',
+      launchable: true,
+      singleton: true
+    });
+
+    // Error Log Viewer
+    this.registerApp({
+      id: 'error-log-viewer',
+      name: 'Error Log Viewer',
+      description: 'View and analyze system error logs',
+      icon: '🚨',
       launchable: true,
       singleton: true
     });
@@ -267,6 +301,9 @@ export class AppManager {
         break;
       case 'settings':
         this.loadSettingsUI(contentElement,windowId);
+        break;
+      case 'error-log-viewer':
+        this.loadErrorLogViewerUI(contentElement,windowId);
         break;
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
@@ -425,6 +462,22 @@ export class AppManager {
     }).catch(error => {
       console.error('Failed to load calculator app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load calculator app.</div>';
+    });
+  }
+  /**
+   * Load Error Log Viewer UI
+   */
+  private loadErrorLogViewerUI(contentElement: HTMLElement, windowId: string): void {
+    // Create error log viewer container
+    contentElement.innerHTML = '<div class="error-log-viewer"></div>';
+    
+    // Lazily load the error log viewer app
+    import('../apps/error-log-viewer').then(module => {
+      const errorLogViewerApp = new module.ErrorLogViewerApp(this.os);
+      errorLogViewerApp.init(contentElement.querySelector('.error-log-viewer')!, windowId);
+    }).catch(error => {
+      console.error('Failed to load error log viewer app:', error);
+      contentElement.innerHTML = '<div style="padding: 20px;">Failed to load error log viewer app.</div>';
     });
   }
   /**

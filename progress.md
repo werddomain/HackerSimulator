@@ -53,7 +53,7 @@
 - [ ] Start Menu
   - [x] Create the start menu interface
   - [ ] Link Pinned apps to open the corresponding app
-  - [ ] List all apps in the 'All apps' section and handle click on it to load the correct app.
+  - [x] List all apps in the 'All apps' section and handle click on it to load the correct app.
   - [ ] Implement the Documents and images to open the file editor to a specific folder
   - [ ] Link the settings app to the side menu item
   - [ ] Implement startup and login screen then link power and user buttons to the actions

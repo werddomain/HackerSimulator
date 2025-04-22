@@ -40,7 +40,7 @@ export class ErrorLogViewerApp extends GuiApplication {
 
   constructor(os: OS) {
     super(os);
-    this.errorHandler = ErrorHandler.getInstance();
+    this.errorHandler = ErrorHandler.getInstance(os);
   }
 
   /**
