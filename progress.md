@@ -24,6 +24,7 @@
   - Route registration system for mapping URLs to handlers
 
 ## In Progress
+- [ ] Test the dirrectory.exist in the filesystem. something dont work as expected
 - [x] Basic command implementation:
   - [x] Navigation: ls, pwd (cd handled by shell)
   - [x] File operations: cat, cp, mv, rm, mkdir, touch
