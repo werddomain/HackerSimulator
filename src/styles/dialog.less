@@ -1,0 +1,229 @@
+// Dialog styles for GUI applications
+@import "variables.less";
+
+
+.GuiApplicationDialog {
+
+    // Base dialog styling
+    .dialog-container,
+    &.dialog-container {
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
+        overflow: hidden;
+    }
+
+
+    // Dialog backdrop styles
+    .dialog-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        // Modal version adds a semi-transparent background
+        &.modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    }
+
+    // Embedded dialog styles
+    .embedded-dialog {
+        position: absolute;
+
+        border-radius: 4px;
+        background-color: #252526;
+        border: 1px solid #3c3c3c;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        color: #d4d4d4;
+        overflow: hidden;
+        z-index: 1001;
+
+        .dialog-header {
+
+            background-color: #333;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #3c3c3c;
+            color: #d4d4d4;
+
+
+        }
+    }
+
+    // Message element
+    .dialog-message {
+        margin-bottom: 15px;
+    }
+
+    // File system element
+    .dialog-filesystem {
+        flex: 1;
+        overflow: auto;
+        border: 1px solid #ccc;
+        margin-bottom: 15px;
+        padding: 10px;
+    }
+
+    // Navigation container
+    .dialog-nav-container {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+
+    // Path display
+    .dialog-path-display {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Up button
+    .dialog-up-button {
+        margin-left: 10px;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: #f0f0f0;
+        cursor: pointer;
+
+        &:hover {
+            background-color: #e0e0e0;
+        }
+    }
+
+    // File list
+    .dialog-file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+
+            &.selected {
+                background-color: #e0e0e0;
+            }
+
+            .icon {
+                margin-right: 8px;
+            }
+
+            .name {
+                flex: 1;
+            }
+        }
+    }
+
+    // Error item
+    .dialog-error {
+        padding: 8px;
+        color: #f44336;
+    }
+
+    // Input containers
+    .dialog-input-container {
+        display: flex;
+        margin-bottom: 15px;
+
+        label {
+            margin-right: 10px;
+            align-self: center;
+        }
+
+        input,
+        select {
+            flex: 1;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    }
+
+    // Button container
+    .dialog-button-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 15px;
+    }
+
+    // Buttons
+    .dialog-button {
+        padding: 8px 16px;
+        margin: 5px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        background-color: #e0e0e0;
+        color: #333;
+
+        &:hover {
+            background-color: #d0d0d0;
+        }
+
+        &.dialog-button-primary {
+            background-color: #2196F3;
+            color: white;
+
+            &:hover {
+                background-color: #0b7dda;
+            }
+        }
+    }
+
+    // Message box specific
+    .dialog-message-box {
+        flex: 1;
+        margin-bottom: 15px;
+        overflow: auto;
+        display: flex;
+        align-items: center;
+
+        .dialog-icon {
+            margin-right: 15px;
+            font-size: 24px;
+        }
+
+        .dialog-text {
+            flex: 1;
+        }
+
+        &.error {
+            color: #f44336;
+        }
+
+        &.warning {
+            color: #ff9800;
+        }
+
+        &.information {
+            color: #2196F3;
+        }
+    }
+
+    // Prompt dialog
+    .dialog-input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
+}

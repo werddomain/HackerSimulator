@@ -1109,24 +1109,24 @@ export class FileExplorerApp extends GuiApplication {
         </div>
       </div>
       <style>
-        .app-list {
+        .dialog-content .app-list {
           max-height: 300px;
           overflow-y: auto;
         }
-        .app-item {
+        .dialog-content .app-item {
           padding: 10px;
           cursor: pointer;
           display: flex;
           align-items: center;
           border-radius: 3px;
         }
-        .app-item:hover {
+        .dialog-content .app-item:hover {
           background-color: #2a2d2e;
         }
-        .app-item.selected {
+        .dialog-content .app-item.selected {
           background-color: #0e639c;
         }
-        .app-icon {
+        .dialog-content .app-icon {
           margin-right: 10px;
           font-size: 24px;
         }
@@ -1225,125 +1225,47 @@ export class FileExplorerApp extends GuiApplication {
   /**
    * Show input dialog
    */
-  private showInputDialog(
+  private async showInputDialog(
     title: string, 
     message: string, 
     defaultValue: string,
     onConfirm: (value: string) => void
-  ): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message">${message}</div>
-          <input type="text" class="dialog-input" value="${this.escapeHtml(defaultValue)}">
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn confirm">OK</button>
-        </div>
-      </div>
-    `;
-    
-    this.container?.appendChild(dialog);
-    
-    // Focus input
-    const input = dialog.querySelector<HTMLInputElement>('.dialog-input');
-    input?.focus();
-    input?.select();
-    
-    // Button click handlers
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const confirmBtn = dialog.querySelector('.dialog-btn.confirm');
-    
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
+  ): Promise<void> {
+    // Use the dialogManager from GuiApplication base class
+    const result = await this.dialogManager.Prompt.Show(title, message, {
+      defaultText: defaultValue
     });
     
-    confirmBtn?.addEventListener('click', () => {
-      const value = input?.value || '';
-      dialog.remove();
-      onConfirm(value);
-    });
-    
-    // Handle Enter key
-    input?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const value = input.value || '';
-        dialog.remove();
-        onConfirm(value);
-      }
-    });
+    if (result !== null) {
+      onConfirm(result);
+    }
   }
 
   /**
    * Show confirm dialog
    */
-  private showConfirmDialog(
+  private async showConfirmDialog(
     title: string, 
     message: string, 
     onConfirm: () => void,
     onCancel?: () => void
-  ): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message">${message}</div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn confirm">OK</button>
-        </div>
-      </div>
-    `;
+  ): Promise<void> {
+    // Use the dialogManager from GuiApplication base class
+    const result = await this.dialogManager.Msgbox.Show(title, message, ['yes', 'no']);
     
-    this.container?.appendChild(dialog);
-    
-    // Button click handlers
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const confirmBtn = dialog.querySelector('.dialog-btn.confirm');
-    
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
-      if (onCancel) onCancel();
-    });
-    
-    confirmBtn?.addEventListener('click', () => {
-      dialog.remove();
+    if (result === 'yes') {
       onConfirm();
-    });
+    } else if (onCancel) {
+      onCancel();
+    }
   }
 
   /**
    * Show error dialog
    */
-  private showErrorDialog(title: string, message: string): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message" style="color: #ff6b6b;">${message}</div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn">OK</button>
-        </div>
-      </div>
-    `;
-    
-    this.container?.appendChild(dialog);
-    
-    // Button click handler
-    const okBtn = dialog.querySelector('.dialog-btn');
-    okBtn?.addEventListener('click', () => {
-      dialog.remove();
-    });
+  private async showErrorDialog(title: string, message: string): Promise<void> {
+    // Use the dialogManager from GuiApplication base class
+    await this.dialogManager.Msgbox.Show(title, message, ['ok'], 'error');
   }
 
   /**

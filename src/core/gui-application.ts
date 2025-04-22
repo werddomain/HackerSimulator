@@ -1,6 +1,7 @@
 import { OS } from './os';
 import { ProcessManager } from './process';
 import { WindowManager } from './window';
+import { DialogManager } from './dialog';
 
 // Typings for window and process events
 export type AppEventHandler = () => void;
@@ -26,6 +27,11 @@ export abstract class GuiApplication {
   protected container: HTMLElement | null = null;
   protected processId: number = -1;
   protected windowId: string | null = null;
+  public get WindowId(): string | null {
+    return this.windowId;
+  }
+  // Dialog manager for easy access to dialog functionality
+  protected dialogManager: DialogManager;
   
   // Event handlers
   private onClosingHandlers: AppEventHandler[] = [];
@@ -38,6 +44,7 @@ export abstract class GuiApplication {
   
   constructor(os: OS) {
     this.os = os;
+    this.dialogManager = new DialogManager(os, this);
   }
   
   /**
@@ -276,5 +283,33 @@ export abstract class GuiApplication {
   }
   private triggerOnFocus(): void {
     this.onFocusHandlers.forEach(handler => handler());
+  }
+
+  /**
+   * Access to MessageBox dialog
+   */
+  get Msgbox() {
+    return this.dialogManager.Msgbox;
+  }
+
+  /**
+   * Access to Prompt dialog
+   */
+  get Prompt() {
+    return this.dialogManager.Prompt;
+  }
+
+  /**
+   * Access to FilePicker dialog
+   */
+  get FilePicker() {
+    return this.dialogManager.FilePicker;
+  }
+
+  /**
+   * Access to DirectoryPicker dialog
+   */
+  get DirectoryPicker() {
+    return this.dialogManager.DirectoryPicker;
   }
 }

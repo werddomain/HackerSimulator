@@ -2,6 +2,7 @@ import { OS } from '../core/os';
 import { GuiApplication } from '../core/gui-application';
 import { BaseSettings } from '../core/BaseSettings';
 import { UserSettings } from '../core/UserSettings';
+import { ErrorHandler } from '../core/error-handler';
 
 /**
  * Settings App for the Hacker Game
@@ -140,6 +141,20 @@ export class SettingsApp extends GuiApplication {
       key: 'activityTracking',
       title: 'Activity Tracking',
       description: 'Control whether your system activities are tracked'
+    });
+    
+    this.settingsIndex.set('error-reporting', {
+      section: 'privacy',
+      key: 'errorReporting.enabled',
+      title: 'Error Reporting',
+      description: 'Collect and store error information to help diagnose problems'
+    });
+    
+    this.settingsIndex.set('error-telemetry', {
+      section: 'privacy',
+      key: 'errorReporting.telemetry',
+      title: 'Error Telemetry',
+      description: 'Send anonymous error information to help improve the application'
     });
     
     this.settingsIndex.set('clear-history', {
@@ -382,8 +397,7 @@ export class SettingsApp extends GuiApplication {
             <div class="settings-section ${this.activeSection === 'privacy' ? 'active' : ''}" id="privacy-section">
               <h2>Privacy</h2>
               <p class="section-description">Manage your privacy settings</p>
-              
-              <div class="setting-group">
+                <div class="setting-group">
                 <h3>Activity Tracking</h3>
                 <div class="setting-control toggle-control">
                   <label class="toggle">
@@ -392,6 +406,39 @@ export class SettingsApp extends GuiApplication {
                   </label>
                   <div class="toggle-label">Track activity for personalized suggestions</div>
                 </div>
+              </div>
+              
+              <div class="setting-group">
+                <h3>Error Reporting</h3>
+                <div class="setting-control toggle-control">
+                  <label class="toggle">
+                    <input type="checkbox" id="error-reporting-enabled" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="toggle-label">Enable error reporting</div>
+                </div>
+                <p class="setting-description">Collect and store error information to help diagnose problems</p>
+              </div>
+              
+              <div class="setting-group">
+                <h3>Error Telemetry</h3>
+                <div class="setting-control toggle-control">
+                  <label class="toggle">
+                    <input type="checkbox" id="error-telemetry-enabled">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="toggle-label">Send anonymous error data</div>
+                </div>
+                <p class="setting-description">Send anonymous error information to help improve the application</p>
+              </div>
+              
+              <div class="setting-group">
+                <h3>Error Log</h3>
+                <div class="setting-control">
+                  <button id="view-error-log" class="settings-button">View Error Log</button>
+                  <button id="clear-error-log" class="settings-button">Clear Error Log</button>
+                </div>
+                <p class="setting-description">View or clear stored error information</p>
               </div>
               
               <div class="setting-group">
@@ -649,8 +696,7 @@ export class SettingsApp extends GuiApplication {
         volumeValue.textContent = volumeSlider.value;
       }
     });
-    
-    volumeSlider?.addEventListener('change', () => {
+      volumeSlider?.addEventListener('change', () => {
       this.saveSettingValue('masterVolume', parseInt(volumeSlider.value));
     });
     
@@ -664,6 +710,30 @@ export class SettingsApp extends GuiApplication {
     const activityTrackingToggle = this.container.querySelector<HTMLInputElement>('#activity-tracking');
     activityTrackingToggle?.addEventListener('change', () => {
       this.saveSettingValue('activityTracking', activityTrackingToggle.checked);
+    });
+    
+    // Error reporting toggle
+    const errorReportingToggle = this.container.querySelector<HTMLInputElement>('#error-reporting-enabled');
+    errorReportingToggle?.addEventListener('change', () => {
+      this.saveSettingValue('errorReporting.enabled', errorReportingToggle.checked);
+    });
+    
+    // Error telemetry toggle
+    const errorTelemetryToggle = this.container.querySelector<HTMLInputElement>('#error-telemetry-enabled');
+    errorTelemetryToggle?.addEventListener('change', () => {
+      this.saveSettingValue('errorReporting.telemetry', errorTelemetryToggle.checked);
+    });
+    
+    // View error log button
+    const viewErrorLogBtn = this.container.querySelector('#view-error-log');
+    viewErrorLogBtn?.addEventListener('click', () => {
+      this.openErrorLogViewer();
+    });
+    
+    // Clear error log button
+    const clearErrorLogBtn = this.container.querySelector('#clear-error-log');
+    clearErrorLogBtn?.addEventListener('click', () => {
+      this.clearErrorLog();
     });
     
     // Clear history button
@@ -1082,5 +1152,57 @@ export class SettingsApp extends GuiApplication {
    */
   private capitalizeFirstLetter(string: string): string {
     return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+  /**
+   * Open the Error Log Viewer application
+   */
+  private openErrorLogViewer(): void {
+    // Launch the error log viewer app
+    import('../apps/error-log-viewer').then(module => {
+      this.os.getAppManager().launchApp('error-log-viewer');
+    }).catch(error => {
+      console.error('Failed to load Error Log Viewer:', error);
+      this.showErrorDialog('Error', 'Failed to open Error Log Viewer');
+    });
+  }
+
+  /**
+   * Clear the error log
+   */
+  private clearErrorLog(): void {
+    this.showConfirmDialog(
+      'Clear Error Log',
+      'Are you sure you want to clear all error logs? This action cannot be undone.',
+      () => {
+        const errorHandler = ErrorHandler.getInstance();
+        errorHandler.clearErrorLog();
+        this.showInfoDialog('Success', 'Error log has been cleared');
+      }
+    );
+  }
+
+  /**
+   * Show confirmation dialog
+   */
+  private showConfirmDialog(title: string, message: string, onConfirm: () => void): void {
+    this.dialogManager.Msgbox.Show(title, message, ['yes', 'no'])
+      .then(result => {
+        if (result === 'yes') {
+          onConfirm();
+        }
+      });
+  }
+
+  /**
+   * Show error dialog
+   */
+  private showErrorDialog(title: string, message: string): void {
+    this.dialogManager.Msgbox.Show(title, message, ['ok'], 'error');
+  }
+  /**
+   * Show info dialog
+   */
+  private showInfoDialog(title: string, message: string): void {
+    this.dialogManager.Msgbox.Show(title, message, ['ok']);
   }
 }

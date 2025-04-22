@@ -2,6 +2,7 @@ import { OS } from '../core/os';
 import * as monaco from 'monaco-editor';
 import { FileEntryUtils } from '../core/file-entry-utils';
 import { GuiApplication } from '../core/gui-application';
+import { ErrorHandler, ErrorLevel } from '../core/error-handler';
 
 /**
  * Code Editor App for the Hacker Game
@@ -20,6 +21,7 @@ export class CodeEditorApp extends GuiApplication {
 
   constructor(os: OS) {
     super(os);
+    
   }
 
   /**
@@ -415,157 +417,21 @@ export class CodeEditorApp extends GuiApplication {
       this.showOpenDialog();
     }
   }
-
   /**
    * Show open file dialog
    */
-  private showOpenDialog(): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">Open File</div>
-        <div class="dialog-content">
-          <div class="path-bar">
-            <input type="text" class="path-input" value="${this.currentWorkingDirectory}">
-            <button class="path-go-btn">Go</button>
-          </div>
-          <div class="file-list"></div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn open" disabled>Open</button>
-        </div>
-      </div>
-    `;
-    
-    this.container?.appendChild(dialog);
-    
-    const pathInput = dialog.querySelector<HTMLInputElement>('.path-input');
-    const pathGoBtn = dialog.querySelector('.path-go-btn');
-    const fileList = dialog.querySelector('.file-list');
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const openBtn = dialog.querySelector<HTMLButtonElement>('.dialog-btn.open');
-    
-    let selectedPath: string | null = null;
-    
-    // Load files in the current directory
-    const loadDirectory = (path: string) => {
-      if (!fileList) return;
-      
-      fileList.innerHTML = '<div class="loading">Loading...</div>';
-      
-      this.os.getFileSystem().readDirectory(path)
-        .then(entries => {
-          // Sort entries
-          entries.sort((a, b) => {
-            if (FileEntryUtils.isDirectory(a) && !FileEntryUtils.isDirectory(b)) return -1;
-            if (!FileEntryUtils.isDirectory(a) && FileEntryUtils.isDirectory(b)) return 1;
-            return a.name.localeCompare(b.name);
-          });
-          
-          // Show parent directory option if not at root
-          fileList.innerHTML = '';
-          if (path !== '/') {
-            const parentItem = document.createElement('div');
-            parentItem.className = 'file-item parent-dir';
-            parentItem.innerHTML = `
-              <span class="file-icon">📁</span>
-              <span class="file-name">..</span>
-            `;
-            parentItem.addEventListener('click', () => {
-              const parentPath = path.substring(0, path.lastIndexOf('/')) || '/';
-              if (pathInput) pathInput.value = parentPath;
-              loadDirectory(parentPath);
-            });
-            fileList.appendChild(parentItem);
-          }
-          
-          // Add entries
-          entries.forEach(entry => {
-            const fullPath = `${path === '/' ? '' : path}/${entry.name}`;
-            const item = document.createElement('div');
-            item.className = 'file-item';
-              const icon = FileEntryUtils.isDirectory(entry) ? '📁' : this.getFileIcon(entry.name);
-            
-            item.innerHTML = `
-              <span class="file-icon">${icon}</span>
-              <span class="file-name">${entry.name}</span>
-            `;
-            
-            item.addEventListener('click', () => {
-              // Clear previous selection
-              dialog.querySelectorAll('.file-item.selected').forEach(el => {
-                el.classList.remove('selected');
-              });
-              
-              if (FileEntryUtils.isDirectory(entry)) {
-                // Navigate to directory
-                if (pathInput) pathInput.value = fullPath;
-                loadDirectory(fullPath);
-                
-                if (openBtn) openBtn.disabled = true;
-                selectedPath = null;
-              } else {
-                // Select file
-                item.classList.add('selected');
-                selectedPath = fullPath;
-                
-                if (openBtn) openBtn.disabled = false;
-              }
-            });
-            
-            // Double-click to open
-            item.addEventListener('dblclick', () => {
-              if (FileEntryUtils.isDirectory(entry)) {
-                if (pathInput) pathInput.value = fullPath;
-                loadDirectory(fullPath);
-              } else {
-                dialog.remove();
-                this.openFile(fullPath);
-              }
-            });
-            
-            fileList.appendChild(item);
-          });
-          
-          if (entries.length === 0) {
-            fileList.innerHTML += '<div class="empty-directory">Empty directory</div>';
-          }
-        })
-        .catch(error => {
-          console.error('Error loading directory:', error);
-          fileList.innerHTML = `<div class="error">Error: ${error.message}</div>`;
-        });
+  private async showOpenDialog(): Promise<void> {
+    // Use the FilePicker dialog from DialogManager in the base class
+    const filePickerOptions = {
+      initialDirectory: this.currentWorkingDirectory,
+      message: "Select a file to open"
     };
     
-    // Initial load
-    loadDirectory(this.currentWorkingDirectory);
+    const selectedPath = await this.dialogManager.FilePicker.Show("Open File", filePickerOptions);
     
-    // Path navigation
-    pathGoBtn?.addEventListener('click', () => {
-      if (pathInput) {
-        loadDirectory(pathInput.value);
-      }
-    });
-    
-    pathInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        loadDirectory(pathInput.value);
-      }
-    });
-    
-    // Button handlers
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
-    });
-    
-    openBtn?.addEventListener('click', () => {
-      if (selectedPath) {
-        dialog.remove();
-        this.openFile(selectedPath);
-      }
-    });
+    if (selectedPath) {
+      this.openFile(selectedPath);
+    }
   }
 
   /**
@@ -647,174 +513,51 @@ export class CodeEditorApp extends GuiApplication {
         this.showErrorDialog('Error', `Failed to save file: ${error.message}`);
       });
   }
-
   /**
    * Save file as
    */
-  private saveFileAs(): void {
+  private async saveFileAs(): Promise<void> {
     if (!this.editor) return;
     
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">Save As</div>
-        <div class="dialog-content">
-          <div class="path-bar">
-            <input type="text" class="path-input" value="${this.currentWorkingDirectory}">
-            <button class="path-go-btn">Go</button>
-          </div>
-          <div class="file-list"></div>
-          <div class="filename-row" style="margin-top: 10px;">
-            <label for="filename">File name:</label>
-            <input type="text" id="filename" class="path-input filename-input" value="${this.currentFilePath ? this.currentFilePath.split('/').pop() || '' : 'untitled.js'}">
-          </div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn save">Save</button>
-        </div>
-      </div>
-    `;
+    // Get initial file name from current file path if available
+    const initialFileName = this.currentFilePath ? 
+      this.currentFilePath.split('/').pop() || 'untitled.js' : 'untitled.js';
     
-    this.container?.appendChild(dialog);
-    
-    const pathInput = dialog.querySelector<HTMLInputElement>('.path-input');
-    const pathGoBtn = dialog.querySelector('.path-go-btn');
-    const fileList = dialog.querySelector('.file-list');
-    const fileNameInput = dialog.querySelector<HTMLInputElement>('.filename-input');
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const saveBtn = dialog.querySelector('.dialog-btn.save');
-    
-    // Load files in the directory
-    const loadDirectory = (path: string) => {
-      if (!fileList) return;
-      
-      fileList.innerHTML = '<div class="loading">Loading...</div>';
-      
-      this.os.getFileSystem().readDirectory(path)
-        .then(entries => {
-          // Sort entries
-          entries.sort((a, b) => {
-            if (FileEntryUtils.isDirectory(a) && !FileEntryUtils.isDirectory(b)) return -1;
-            if (!FileEntryUtils.isDirectory(a) && FileEntryUtils.isDirectory(b)) return 1;
-            return a.name.localeCompare(b.name);
-          });
-          
-          // Show parent directory option if not at root
-          fileList.innerHTML = '';
-          if (path !== '/') {
-            const parentItem = document.createElement('div');
-            parentItem.className = 'file-item parent-dir';
-            parentItem.innerHTML = `
-              <span class="file-icon">📁</span>
-              <span class="file-name">..</span>
-            `;
-            parentItem.addEventListener('click', () => {
-              const parentPath = path.substring(0, path.lastIndexOf('/')) || '/';
-              if (pathInput) pathInput.value = parentPath;
-              loadDirectory(parentPath);
-            });
-            fileList.appendChild(parentItem);
-          }
-          
-          // Add entries
-          entries.forEach(entry => {
-            const fullPath = `${path === '/' ? '' : path}/${entry.name}`;
-            const item = document.createElement('div');
-            item.className = 'file-item';
-            
-            const icon = FileEntryUtils.isDirectory(entry) ? '📁' : this.getFileIcon(entry.name);
-            
-            item.innerHTML = `
-              <span class="file-icon">${icon}</span>
-              <span class="file-name">${entry.name}</span>
-            `;
-            
-            item.addEventListener('click', () => {
-              if (FileEntryUtils.isDirectory(entry)) {
-                // Navigate to directory
-                if (pathInput) pathInput.value = fullPath;
-                loadDirectory(fullPath);
-              } else {
-                // Set filename
-                if (fileNameInput) {
-                  fileNameInput.value = entry.name;
-                }
-              }
-            });
-            
-            fileList.appendChild(item);
-          });
-          
-          if (entries.length === 0) {
-            fileList.innerHTML += '<div class="empty-directory">Empty directory</div>';
-          }
-        })
-        .catch(error => {
-          console.error('Error loading directory:', error);
-          fileList.innerHTML = `<div class="error">Error: ${error.message}</div>`;
-        });
+    // Configure file picker for save mode
+    const filePickerOptions = {
+      initialDirectory: this.currentWorkingDirectory,
+      initialFileName: initialFileName,
+      message: "Choose location to save file",
+      saveMode: true
     };
     
-    // Initial load
-    loadDirectory(this.currentWorkingDirectory);
+    // Show file picker dialog using the base class dialog manager
+    const filePath = await this.dialogManager.FilePicker.Show("Save As", filePickerOptions);
     
-    // Path navigation
-    pathGoBtn?.addEventListener('click', () => {
-      if (pathInput) {
-        loadDirectory(pathInput.value);
-      }
-    });
-    
-    pathInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        loadDirectory(pathInput.value);
-      }
-    });
-    
-    // Button handlers
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
-    });
-    
-    saveBtn?.addEventListener('click', () => {
-      if (!pathInput || !fileNameInput) return;
-      
-      const directoryPath = pathInput.value;
-      const fileName = fileNameInput.value.trim();
-      
-      if (!fileName) {
-        this.showErrorDialog('Error', 'Please enter a file name');
-        return;
-      }
-      
-      const filePath = `${directoryPath === '/' ? '' : directoryPath}/${fileName}`;
-      
+    if (filePath) {
       // Check if file exists
-      this.os.getFileSystem().exists(filePath)
-        .then(exists => {
-          if (exists) {
-            this.showConfirmDialog(
-              'Overwrite File',
-              `File "${fileName}" already exists. Do you want to overwrite it?`,
-              () => this.saveToPath(filePath, dialog)
-            );
-          } else {
-            this.saveToPath(filePath, dialog);
-          }
-        })
-        .catch(error => {
-          console.error('Error checking file existence:', error);
-          this.showErrorDialog('Error', `Failed to check if file exists: ${error.message}`);
-        });
-    });
+      const exists = await this.os.getFileSystem().exists(filePath);
+      
+      if (exists) {
+        // Ask for confirmation before overwriting
+        const result = await this.dialogManager.Msgbox.Show(
+          'Overwrite File',
+          `File "${filePath.split('/').pop()}" already exists. Do you want to overwrite it?`,
+          ['yes', 'no']
+        );
+        
+        if (result === 'yes') {
+          this.saveToPath(filePath);
+        }
+      } else {
+        this.saveToPath(filePath);
+      }
+    }
   }
-
   /**
    * Save content to specified path
    */
-  private saveToPath(filePath: string, dialogToRemove?: HTMLElement): void {
+  private saveToPath(filePath: string): void {
     if (!this.editor) return;
     
     const content = this.editor.getValue();
@@ -831,15 +574,10 @@ export class CodeEditorApp extends GuiApplication {
         
         // Refresh file tree
         this.loadFileTree();
-        
-        // Remove dialog if provided
-        if (dialogToRemove) {
-          dialogToRemove.remove();
-        }
       })
       .catch(error => {
         console.error('Error saving file:', error);
-        this.showErrorDialog('Error', `Failed to save file: ${error.message}`);
+        this.dialogManager.Msgbox.Show('Error', `Failed to save file: ${error.message}`, ['ok'], 'error');
       });
   }
 
@@ -1045,39 +783,50 @@ export class CodeEditorApp extends GuiApplication {
     });
     document.dispatchEvent(event);
   }
-
   /**
    * Show new file dialog in the current directory
    */
-  private showNewFileDialog(): void {
-    this.showInputDialog(
+  private async showNewFileDialog(): Promise<void> {
+    // Show a prompt dialog to get the file name
+    const fileName = await this.dialogManager.Prompt.Show(
       'New File',
       'Enter file name:',
-      'untitled.js',
-      (fileName) => {
-        if (!fileName.trim()) return;
-        
-        const filePath = `${this.currentWorkingDirectory === '/' ? '' : this.currentWorkingDirectory}/${fileName}`;
-        
-        // Check if file exists
-        this.os.getFileSystem().exists(filePath)
-          .then(exists => {
-            if (exists) {
-              this.showConfirmDialog(
-                'File Exists',
-                `File "${fileName}" already exists. Do you want to overwrite it?`,
-                () => this.createNewFileAtPath(filePath)
-              );
-            } else {
-              this.createNewFileAtPath(filePath);
-            }
-          })
-          .catch(error => {
-            console.error('Error checking file existence:', error);
-            this.showErrorDialog('Error', `Failed to check if file exists: ${error.message}`);
-          });
-      }
+      { defaultText: 'untitled.js' }
     );
+    
+    if (!fileName || !fileName.trim()) return;
+    
+    const filePath = `${this.currentWorkingDirectory === '/' ? '' : this.currentWorkingDirectory}/${fileName}`;
+    
+    try {
+      // Check if file exists
+      const exists = await this.os.getFileSystem().exists(filePath);
+      
+      if (exists) {
+        // Show confirmation dialog if file exists
+        const result = await this.dialogManager.Msgbox.Show(
+          'File Exists',
+          `File "${fileName}" already exists. Do you want to overwrite it?`,
+          ['yes', 'no']
+        );
+        
+        if (result === 'yes') {
+          this.createNewFileAtPath(filePath);
+        }
+      } else {
+        this.createNewFileAtPath(filePath);
+      }
+    } catch (error) {
+      // var errorMessage = ErrorHandler.getErrorMessage(error);
+      // console.error('Error checking file existence:', error);
+      // this.dialogManager.Msgbox.Show(
+      //   'Error', 
+      //   `Failed to check if file exists: ${error.message}`, 
+      //   ['ok'], 
+      //   'error'
+      // );
+    
+    }
   }
 
   /**
@@ -1085,7 +834,7 @@ export class CodeEditorApp extends GuiApplication {
    */
   private createNewFileAtPath(filePath: string): void {
     this.os.getFileSystem().writeFile(filePath, '')
-      .then(() => {
+.then(() => {
         // Refresh file tree
         this.loadFileTree();
         
@@ -1093,133 +842,55 @@ export class CodeEditorApp extends GuiApplication {
         this.openFile(filePath);
       })
       .catch(error => {
-        console.error('Error creating file:', error);
-        this.showErrorDialog('Error', `Failed to create file: ${error.message}`);
+        ErrorHandler.getInstance().parse(error, 'code-editor.ts', 'CodeEditorApp', {
+          showDialog: true,
+          dialogManager: this.dialogManager,
+          dialogTitle: 'Error Creating File'
+        });
       });
   }
-
   /**
    * Show input dialog
    */
-  private showInputDialog(
+  private async showInputDialog(
     title: string, 
     message: string, 
     defaultValue: string,
     onConfirm: (value: string) => void
-  ): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message">${message}</div>
-          <input type="text" class="path-input dialog-input" value="${this.escapeHtml(defaultValue)}">
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn confirm">OK</button>
-        </div>
-      </div>
-    `;
-    
-    this.container?.appendChild(dialog);
-    
-    // Focus input
-    const input = dialog.querySelector<HTMLInputElement>('.dialog-input');
-    input?.focus();
-    input?.select();
-    
-    // Button handlers
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const confirmBtn = dialog.querySelector('.dialog-btn.confirm');
-    
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
+  ): Promise<void> {
+    // Use the dialogManager from GuiApplication base class
+    const result = await this.dialogManager.Prompt.Show(title, message, {
+      defaultText: defaultValue
     });
     
-    confirmBtn?.addEventListener('click', () => {
-      if (input) {
-        onConfirm(input.value);
-      }
-      dialog.remove();
-    });
-    
-    // Handle enter key
-    input?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        onConfirm(input.value);
-        dialog.remove();
-      }
-    });
+    if (result !== null) {
+      onConfirm(result);
+    }
   }
-
   /**
    * Show confirmation dialog
    */
-  private showConfirmDialog(
+  private async showConfirmDialog(
     title: string, 
     message: string, 
     onConfirm: () => void,
     onCancel?: () => void
-  ): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message">${message}</div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn confirm">OK</button>
-        </div>
-      </div>
-    `;
+  ): Promise<void> {
+    // Use the dialogManager from GuiApplication base class
+    const result = await this.dialogManager.Msgbox.Show(title, message, ['yes', 'no']);
     
-    this.container?.appendChild(dialog);
-    
-    // Button handlers
-    const cancelBtn = dialog.querySelector('.dialog-btn.cancel');
-    const confirmBtn = dialog.querySelector('.dialog-btn.confirm');
-    
-    cancelBtn?.addEventListener('click', () => {
-      dialog.remove();
-      if (onCancel) onCancel();
-    });
-    
-    confirmBtn?.addEventListener('click', () => {
-      dialog.remove();
+    if (result === 'yes') {
       onConfirm();
-    });
+    } else if (onCancel) {
+      onCancel();
+    }
   }
-
   /**
    * Show error dialog
    */
-  private showErrorDialog(title: string, message: string): void {
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog-overlay';
-    dialog.innerHTML = `
-      <div class="dialog">
-        <div class="dialog-header">${title}</div>
-        <div class="dialog-content">
-          <div class="dialog-message" style="color: #ff6b6b;">${message}</div>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-btn confirm">OK</button>
-        </div>
-      </div>
-    `;
-    
-    this.container?.appendChild(dialog);
-    
-    // Button handler
-    const confirmBtn = dialog.querySelector('.dialog-btn.confirm');
-    confirmBtn?.addEventListener('click', () => {
-      dialog.remove();
-    });
+  private async showErrorDialog(title: string, message: string): Promise<void> {
+    // Use the dialogManager from GuiApplication base class to show an error message box
+    await this.dialogManager.Msgbox.Show(title, message, ['ok'], 'error');
   }
 
   /**
