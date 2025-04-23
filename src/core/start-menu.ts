@@ -33,17 +33,16 @@ export class StartMenuController {
     { id: 'apps-item', icon: 'layout-list', title: 'All Apps' },
     { id: 'power-item', icon: 'power', title: 'Power', className: 'power-item' }
   ];
-
   // Configuration for app tiles
   private appTileConfig = [
-    { name: 'Terminal', icon: 'terminal', className: 'app-tile-terminal' },
-    { name: 'Browser', icon: 'globe', className: 'app-tile-browser' },
-    { name: 'Code Editor', icon: 'code', className: 'app-tile-code' },
-    { name: 'File Explorer', icon: 'folder-open', className: 'app-tile-files' },
-    { name: 'System Monitor', icon: 'activity', className: 'app-tile-monitor' },
-    { name: 'Mail', icon: 'mail', className: 'app-tile-mail' },
-    { name: 'Shop', icon: 'shopping-cart', className: 'app-tile-shop' },
-    { name: 'Hack Tools', icon: 'terminal-square', className: 'app-tile-hack' }
+    { name: 'Terminal', icon: 'terminal', className: 'app-tile-terminal', id: 'terminal' },
+    { name: 'Browser', icon: 'globe', className: 'app-tile-browser', id: 'browser' },
+    { name: 'Code Editor', icon: 'code', className: 'app-tile-code', id: 'code-editor' },
+    { name: 'File Explorer', icon: 'folder-open', className: 'app-tile-files', id: 'file-explorer' },
+    { name: 'System Monitor', icon: 'activity', className: 'app-tile-monitor', id: 'system-monitor' },
+    { name: 'Mail', icon: 'mail', className: 'app-tile-mail', id: 'mail' },
+    { name: 'Shop', icon: 'shopping-cart', className: 'app-tile-shop', id: 'shop' },
+    { name: 'Hack Tools', icon: 'terminal-square', className: 'app-tile-hack', id: 'hack-tools' }
   ];
 
   // Configuration for user submenu items
@@ -139,12 +138,11 @@ export class StartMenuController {
     pinnedAppsView.className = 'content-view pinned-apps-view active';
 
     const pinnedApps = document.createElement('div');
-    pinnedApps.className = 'pinned-apps';
-
-    // Add app tiles
+    pinnedApps.className = 'pinned-apps';    // Add app tiles
     this.appTileConfig.forEach(app => {
       const tile = document.createElement('div');
       tile.className = `app-tile ${app.className}`;
+      tile.setAttribute('data-app-id', app.id); // Store the app ID as a data attribute
 
       const icon = document.createElement('i');
       icon.setAttribute('data-lucide', app.icon);
@@ -278,14 +276,12 @@ export class StartMenuController {
     });    // Settings item click
     this.settingsItem?.addEventListener('click', () => {
       this.launchApp('settings');
-    });
-
-    // App tiles click
+    });    // App tiles click
     this.appTiles.forEach(tile => {
       tile.addEventListener('click', () => {
-        const appName = tile.querySelector('.app-tile-name')?.textContent;
-        if (appName) {
-          this.launchApp(appName);
+        const appId = tile.getAttribute('data-app-id');
+        if (appId) {
+          this.launchApp(appId);
         }
       });
     });
