@@ -6,23 +6,30 @@ import { CommandModule } from './command-processor';
 // Import all commands
 import { CatCommand } from './linux/cat';
 import { CdCommand } from './linux/cd';
+import { ChmodCommand } from './linux/chmod';
 import { ClearCommand } from './linux/clear';
 import { CpCommand } from './linux/cp';
 import { CurlCommand } from './linux/curl';
+import { DiffCommand } from './linux/diff';
 import { EchoCommand } from './linux/echo';
+import { FindCommand } from './linux/find';
+import { GrepCommand } from './linux/grep';
+import { HeadCommand } from './linux/head';
 import { HelpCommand } from './linux/help';
 import { KillCommand } from './linux/kill';
 import { LsCommand } from './linux/ls';
 import { ManCommand } from './linux/man';
 import { MkdirCommand } from './linux/mkdir';
 import { MvCommand } from './linux/mv';
-
 import { NmapCommand } from './linux/nmap';
 import { PingCommand } from './linux/ping';
 import { PsCommand } from './linux/ps';
 import { PwdCommand } from './linux/pwd';
 import { RmCommand } from './linux/rm';
+import { SortCommand } from './linux/sort';
+import { TailCommand } from './linux/tail';
 import { TouchCommand } from './linux/touch';
+import { WcCommand } from './linux/wc';
 import { LaunchCommand } from './linux/launch';
 
 // Import path alias management commands
@@ -87,13 +94,26 @@ export class CommandRegistry {
     this.registerCommand(new CdCommand(this.os));
 
     // Register system commands
-    this.registerCommand(new EchoCommand());
-    this.registerCommand(new PsCommand(this.os));
+    this.registerCommand(new EchoCommand());    this.registerCommand(new PsCommand(this.os));
     this.registerCommand(new KillCommand(this.os));
     this.registerCommand(new ClearCommand());
+    this.registerCommand(new ChmodCommand(this.os));
+    
     // Register network commands
     this.registerCommand(new PingCommand(this.os));
-    this.registerCommand(new CurlCommand(this.os)); this.registerCommand(new NmapCommand(this.os));    // Register help and utility commands
+    this.registerCommand(new CurlCommand(this.os)); 
+    this.registerCommand(new NmapCommand(this.os));
+    
+    // Register text processing commands
+    this.registerCommand(new GrepCommand(this.os));
+    this.registerCommand(new SortCommand(this.os));
+    this.registerCommand(new HeadCommand(this.os));
+    this.registerCommand(new TailCommand(this.os));
+    this.registerCommand(new WcCommand(this.os));
+    this.registerCommand(new DiffCommand(this.os));
+    this.registerCommand(new FindCommand(this.os));
+    
+    // Register help and utility commands
     this.registerCommand(new HelpCommand(this.os));
     this.registerCommand(new ManCommand(this.os));
     this.registerCommand(new NanoEditor(this.os));

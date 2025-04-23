@@ -62,7 +62,7 @@
   - [x] Link Pinned apps to open the corresponding app
   - [x] List all apps in the 'All apps' section and handle click on it to load the correct app.
   - [ ] Store pinned app, in order with UserSettings. In 'All Apps', a right click open a context menu where we have the option to pin in to the start menu. In the pined app, we can remove it with the same context menu.
-  - [ ] Implement the Documents and images to open the file editor to a specific folder
+  - [x] Implement the Documents and images to open the file editor to a specific folder
   - [x] Link the settings app to the side menu item
   - [ ] Implement startup and login screen then link power and user buttons to the actions
 

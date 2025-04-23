@@ -8,14 +8,15 @@ import { AppInfo } from './app-manager';
 export class StartMenuController {
   private startMenuButton: HTMLElement | null;
   private startMenu: HTMLElement | null = null;
-  private sidebar: HTMLElement | null = null;
-  private menuItem: HTMLElement | null = null;
+  private sidebar: HTMLElement | null = null;  private menuItem: HTMLElement | null = null;
   private userSubmenu: HTMLElement | null = null;
   private powerSubmenu: HTMLElement | null = null;
   private userItem: HTMLElement | null = null;
   private powerItem: HTMLElement | null = null;
   private appsItem: HTMLElement | null = null;
   private settingsItem: HTMLElement | null = null;
+  private documentsItem: HTMLElement | null = null;
+  private imagesItem: HTMLElement | null = null;
   private pinnedAppsView: HTMLElement | null = null;
   private allAppsView: HTMLElement | null = null;
   private appTiles: HTMLElement[] = [];
@@ -227,11 +228,12 @@ export class StartMenuController {
     this.sidebar = document.querySelector('.start-menu-sidebar');
     this.menuItem = document.getElementById('menu-item');
     this.userSubmenu = document.querySelector('.user-submenu');
-    this.powerSubmenu = document.querySelector('.power-submenu');
-    this.userItem = document.getElementById('user-item');
+    this.powerSubmenu = document.querySelector('.power-submenu');    this.userItem = document.getElementById('user-item');
     this.powerItem = document.getElementById('power-item');
     this.appsItem = document.getElementById('apps-item');
     this.settingsItem = document.getElementById('settings-item');
+    this.documentsItem = document.getElementById('documents-item');
+    this.imagesItem = document.getElementById('images-item');
     this.pinnedAppsView = document.querySelector('.pinned-apps-view');
     this.allAppsView = document.querySelector('.all-apps-view');
   }/**
@@ -276,7 +278,19 @@ export class StartMenuController {
     });    // Settings item click
     this.settingsItem?.addEventListener('click', () => {
       this.launchApp('settings');
-    });    // App tiles click
+    });
+    
+    // Documents item click
+    this.documentsItem?.addEventListener('click', () => {
+      this.openFileExplorerWithPath(this.os.getFileSystem().SpecialFolders.documents);
+    });
+    
+    // Images item click
+    this.imagesItem?.addEventListener('click', () => {
+      this.openFileExplorerWithPath(this.os.getFileSystem().SpecialFolders.pictures);
+    });
+    
+    // App tiles click
     this.appTiles.forEach(tile => {
       tile.addEventListener('click', () => {
         const appId = tile.getAttribute('data-app-id');
@@ -505,7 +519,6 @@ if (!this.startMenu) return;
       nameAttr: 'data-lucide'
     });
   }
-
   /**
    * Launch an application
    */
@@ -515,6 +528,17 @@ if (!this.startMenu) return;
     // For example: this.os.getAppManager().launchApp(appId);
     this.os.getAppManager().launchApp(appId);
     // Close the start menu after launching an app
+    this.hideStartMenu();
+  }
+  /**
+   * Open file explorer with a specific path
+   * @param path The path to open in the file explorer
+   */
+  private openFileExplorerWithPath(path: string): void {
+    console.log(`Opening file explorer with path: ${path}`);
+    // Launch file explorer with the specified path
+    this.os.getAppManager().launchApp('file-explorer', [path]);
+    // Close the start menu after launching
     this.hideStartMenu();
   }
 }

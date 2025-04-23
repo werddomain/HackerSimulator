@@ -381,6 +381,20 @@ export class FileSystem implements IFileSystemProvider {
   public get UserFolder():string {
     return `/home/${this.os.currentUserName}`;
   }
+  public get SpecialFolders() {
+    return {
+      home: this.UserFolder,
+      desktop: `${this.UserFolder}/Desktop`,
+      documents: `${this.UserFolder}/Documents`,
+      downloads: `${this.UserFolder}/Downloads`,
+      music: `${this.UserFolder}/Music`,
+      pictures: `${this.UserFolder}/Pictures`,
+      videos: `${this.UserFolder}/Videos`,
+      config: `${this.UserFolder}/.config`,
+      local: `${this.UserFolder}/.local`,
+      cache: `${this.UserFolder}/.cache`
+    };
+  }
   private async ensureUserDirectoryExists(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     if (!this.os) throw new Error('OS not initialized');
@@ -425,7 +439,6 @@ export class FileSystem implements IFileSystemProvider {
       '/bin',
       '/etc',
       '/home',
-      '/home/user',
       '/tmp',
       '/var',
       '/var/log'
@@ -705,7 +718,7 @@ public canIWrite(path: string): Promise<boolean> {
     entry.entry.metadata.modified = Date.now();
     // Save the updated entry
     await this.db.put('fs-entries', entry);
-    
+
   }
   /**
    * Helper method to check if a string is likely base64 encoded
