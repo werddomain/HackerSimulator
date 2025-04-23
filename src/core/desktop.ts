@@ -1,5 +1,6 @@
 import { OS } from './os';
 import { AppInfo } from './app-manager';
+import { createIcons, icons } from 'lucide';
 
 /**
  * Desktop class for managing the desktop UI and icons
@@ -12,6 +13,15 @@ export class Desktop {
     this.os = os;
   }
 
+/**
+   * Initialize Lucide icons
+   */
+  private initIcons(): void {
+    createIcons({
+      icons,
+      nameAttr: 'data-lucide'
+    });
+  }
   /**
    * Initialize the desktop
    */
@@ -42,6 +52,7 @@ export class Desktop {
     defaultApps.forEach(app => {
       this.createDesktopIcon(app);
     });
+    this.initIcons();
   }
 
   /**
@@ -52,11 +63,21 @@ export class Desktop {
 
     const iconElement = document.createElement('div');
     iconElement.className = 'desktop-icon';
-    iconElement.innerHTML = `
-      <div class="desktop-icon-image">${app.icon}</div>
-      <div class="desktop-icon-name">${app.name}</div>
-    `;
     
+    const image = document.createElement('div');
+    image.className = 'desktop-icon-image';
+    
+    const i = document.createElement('i');
+    this.os.getAppManager().displayIcon(app, i);
+    image.appendChild(i);
+   
+    const name = document.createElement('div');
+    name.className = 'desktop-icon-name';
+    name.textContent = app.name;
+
+    iconElement.appendChild(image);
+    iconElement.appendChild(name);
+
     // Add click event to launch the app
     iconElement.addEventListener('click', () => {
       this.os.getAppManager().launchApp(app.id);

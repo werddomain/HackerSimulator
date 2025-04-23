@@ -12,6 +12,8 @@ import { Desktop } from './desktop';
 import { StartMenuController } from './start-menu';
 import { UserSettings } from './UserSettings';
 import { ComputerSettings } from './ComputerSettings';
+import { createIcons, icons } from 'lucide';
+
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -22,8 +24,7 @@ private fileSystem: FileSystem;
   private systemMonitor: SystemMonitor;
   private appManager: AppManager;
   private commandProcessor: CommandProcessor;
-  private commandRegistry: CommandRegistry;
-  private clockInterval: number | null = null;  
+  private commandRegistry: CommandRegistry;  private clockInterval: number | null = null;  
   private websites: Map<string, WebsiteEntry> = new Map();
   private webClient: WebClient;
   private networkInterface: NetworkInterface;
@@ -33,7 +34,10 @@ private fileSystem: FileSystem;
   private startMenuController: StartMenuController;
   private userSettings: UserSettings;
   private computerSettings: ComputerSettings;
+  private isReady: boolean = false;
+  private readyCallbacks: Array<() => void> = [];
   constructor() {
+    this.initIcons(); // Initialize icons using lucide
     this.fileSystem = new FileSystem(this);
     this.processManager = new ProcessManager();
     this.windowManager = new WindowManager();
@@ -63,6 +67,14 @@ private fileSystem: FileSystem;
   }  /**
    * Initialize the OS
    */
+
+  private initIcons(): void {
+    createIcons({
+      icons,
+      nameAttr: 'data-lucide'
+    });
+  }
+
   public async init(): Promise<void> {
     console.log('Initializing HackerOS...');
     
@@ -84,13 +96,34 @@ private fileSystem: FileSystem;
     // Register all built-in commands
     this.commandRegistry.registerBuiltInCommands();
     
+
+
     // Initialize clock
     this.initClock();
-    
-    // Initialize desktop
+      // Initialize desktop
     this.desktop.init();
     
     console.log('HackerOS initialized successfully');
+    
+    // Mark the OS as ready and execute any ready callbacks
+    this.isReady = true;
+    this.readyCallbacks.forEach(callback => callback());
+    this.readyCallbacks = []; // Clear the callbacks after executing them
+  }
+
+  /**
+   * Register a callback to be executed when the OS is fully initialized
+   * If the OS is already initialized, the callback will be executed immediately
+   * @param callback The function to call when the OS is ready
+   */
+  public Ready(callback: () => void): void {
+    if (this.isReady) {
+      // If OS is already ready, execute callback immediately
+      callback();
+    } else {
+      // Otherwise, store the callback to be executed when the OS is ready
+      this.readyCallbacks.push(callback);
+    }
   }
 
   public get currentUserName(): string {
@@ -165,7 +198,10 @@ private fileSystem: FileSystem;
    * Used for managing user-specific settings stored in the filesystem
    */
   public getUserSettings(): UserSettings {
-    return this.userSettings;
+    if (!this.userSettings) {
+      this.userSettings = new UserSettings(this.fileSystem);
+    }
+    return this.userSettings ;
   }
 
   /**

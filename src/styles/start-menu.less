@@ -1,5 +1,36 @@
 // Start Menu - Modern UI with blur effect
 @import "variables.less";
+.start-menu-context-menu {
+  position: fixed;
+  background-color: rgba(40, 40, 40, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 6px;
+  padding: 5px 0;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  min-width: 180px;
+  z-index: 3000;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+
+  .context-menu-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
+.context-menu-option:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-option svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  stroke: currentColor;
+}
+}
+
 
 .start-menu {
   position: fixed;
@@ -28,6 +59,11 @@
     opacity: 1;
     visibility: visible;
   }
+
+
+/* Context Menu Styles */
+
+
 
   // Sidebar
   .start-menu-sidebar {
@@ -312,4 +348,102 @@
   .app-tile-hack { background-color: #7F8C8D; }
   .app-tile-settings { background-color: #F39C12; }
 
+  // Context menu styling
+  .start-menu-context-menu {
+    position: fixed;
+    background-color: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 6px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 3000;
+    overflow: hidden;
+    min-width: 180px;
+    
+    .context-menu-option {
+      display: flex;
+      align-items: center;
+      padding: 10px 15px;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      svg {
+        width: 16px;
+        height: 16px;
+        margin-right: 10px;
+        stroke: currentColor;
+      }
+      
+      span {
+        flex: 1;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+    }
+  }
+  
+  // Save button styling for pinned apps
+  .save-pinned-apps-button {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: @accent-color;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 100;
+    
+    &.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    &:hover {
+      background-color: lighten(@accent-color, 5%);
+    }
+    
+    svg {
+      width: 20px;
+      height: 20px;
+      stroke: white;
+    }
+  }
+  
+  // Reordering mode styles
+  .pinned-apps-view.reorder-mode {
+    .app-tile {
+      cursor: grab;
+      position: relative;
+      
+      &:after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+        border-radius: 6px;
+        pointer-events: none;
+      }
+      
+      &.dragging {
+        opacity: 0.6;
+        cursor: grabbing;
+      }
+    }
+  }
 }

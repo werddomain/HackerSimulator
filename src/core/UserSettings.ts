@@ -97,4 +97,23 @@ export class UserSettings extends BaseSettings {
     const appConfigPath = PathUtils.join(appName, configName);
     return this.set(appConfigPath, key, value);
   }
+  
+  /**
+   * Get the list of pinned apps for the Start Menu
+   * @returns Array of app IDs in order
+   */
+  public async getStartMenuPinnedApps(): Promise<string[]> {
+    const pinnedAppsStr = await this.getAppSetting("StartMenu", "PinnedApps");
+    console.log("Pinned Apps String:", pinnedAppsStr); // Debugging line
+    return pinnedAppsStr ? pinnedAppsStr.split(',') : [];
+  }
+  
+  /**
+   * Set the pinned apps for the Start Menu
+   * @param appIds Array of app IDs in order
+   */
+  public async setStartMenuPinnedApps(appIds: string[]): Promise<void> {
+    return this.setAppSetting("StartMenu", "PinnedApps", appIds.join(','));
+   
+  }
 }

@@ -66,6 +66,9 @@ export class AppManager {
         htmlElement.innerHTML = `<ion-icon name="${iconName}"></ion-icon>`;
       } else if (icon.startsWith('data:')) {
         htmlElement.innerHTML = `<img src="${icon}" />`;
+      } if (icon.startsWith('lucide:')) {
+        const iconName = icon.substring('lucide:'.length);
+        htmlElement.setAttribute('data-lucide', iconName);
       } else {
         // Handle other prefixed icons if needed
         htmlElement.innerText = icon;
@@ -84,7 +87,7 @@ export class AppManager {
       id: 'terminal',
       name: 'Terminal',
       description: 'Command line interface',
-      icon: '📺',
+      icon: 'lucide:terminal-square', //'📺',
       launchable: true,
       singleton: false
     });
@@ -114,7 +117,7 @@ export class AppManager {
       id: 'code-editor',
       name: 'Code Editor',
       description: 'Edit and run code',
-      icon: '💻',
+      icon: 'lucide:code', //'💻',
       launchable: true,
       singleton: false
     });
