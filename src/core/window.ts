@@ -554,6 +554,9 @@ export class WindowManager {
     const windowElement = this.windowElements.get(id);
     if (!windowElement) return;
     
+    // Get window options to check for processId
+    const windowOptions = this.windows.get(id);
+    
     // Remove window element
     windowElement.remove();
     
@@ -561,6 +564,18 @@ export class WindowManager {
     const taskbarItem = document.querySelector(`.taskbar-item[data-window-id="${id}"]`);
     if (taskbarItem) {
       taskbarItem.remove();
+    }
+    
+    // Terminate the associated process if it exists
+    if (windowOptions && windowOptions.processId !== undefined) {
+      // Get process manager from global OS
+      const processManager = (window as any).os?.getProcessManager();
+      if (processManager) {
+        // Use setTimeout to avoid recursion issues in case the process's onKill tries to close this window
+        setTimeout(() => {
+          processManager.killProcess(windowOptions.processId);
+        }, 0);
+      }
     }
     
     // Remove window from maps
