@@ -28,6 +28,7 @@ export abstract class GuiApplication {
   protected container: HTMLElement | null = null;
   protected processId: number = -1;
   protected windowId: string | null = null;
+  protected commandArgs: string[] = []; // Command line arguments passed to the application
   public get WindowId(): string | null {
     return this.windowId;
   }
@@ -53,10 +54,12 @@ export abstract class GuiApplication {
    * Initialize the application
    * @param container Container element
    * @param windowId Window ID
+   * @param args Command line arguments
    */
-  public init(container: HTMLElement, windowId?: string): void {
+  public init(container: HTMLElement, windowId?: string, args: string[] = []): void {
     this.container = container;
     this.windowId = windowId || null;
+    this.commandArgs = args;
     
     // Register the application process
     this.registerProcess();
@@ -285,6 +288,13 @@ export abstract class GuiApplication {
   }
   private triggerOnFocus(): void {
     this.onFocusHandlers.forEach(handler => handler());
+  }
+
+  /**
+   * Get command line arguments passed to the application
+   */
+  public getCommandArgs(): string[] {
+    return [...this.commandArgs];
   }
 
   /**

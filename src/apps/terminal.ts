@@ -4,6 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { CommandContext, DirectoryChangeHandler } from '../commands/command-processor';
 import { GuiApplication, SubProcessOptions } from '../core/gui-application';
+import { FileEntryUtils } from '../core/file-entry-utils';
 
 /**
  * Terminal Application
@@ -77,8 +78,7 @@ export class TerminalApp extends GuiApplication {
   protected getApplicationName(): string {
     return 'terminal';
   }
-  
-  /**
+    /**
    * Application-specific initialization
    */
 protected initApplication(): void {
@@ -95,8 +95,30 @@ protected initApplication(): void {
     this.terminal.writeln('Type "help" for a list of commands');
     this.terminal.writeln('');
     
-    // Initial prompt
-    this.showPrompt();
+    // Check if a directory path was passed as an argument
+    if (this.commandArgs.length > 0) {
+      this.os.getFileSystem().stat(this.commandArgs[0])
+        .then(stat => {
+          if (FileEntryUtils.isDirectory(stat)) {
+            // If it's a directory, change to it
+            this.currentPath = this.commandArgs[0];
+            
+            // Update the command context with the new path
+            if (this.commandContext) {
+              this.commandContext.cwd = this.currentPath;
+            }
+          }
+          // Initial prompt with updated path
+          this.showPrompt();
+        })
+        .catch(() => {
+          // Show prompt with default path if there's an error
+          this.showPrompt();
+        });
+    } else {
+      // Initial prompt with default path
+      this.showPrompt();
+    }
     
     // Set up terminal input
     this.terminal.onData(this.handleTerminalInput.bind(this));

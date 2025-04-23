@@ -63,12 +63,12 @@
   - [x] List all apps in the 'All apps' section and handle click on it to load the correct app.
   - [ ] Store pinned app, in order with UserSettings. In 'All Apps', a right click open a context menu where we have the option to pin in to the start menu. In the pined app, we can remove it with the same context menu.
   - [ ] Implement the Documents and images to open the file editor to a specific folder
-  - [ ] Link the settings app to the side menu item
+  - [x] Link the settings app to the side menu item
   - [ ] Implement startup and login screen then link power and user buttons to the actions
 
 ## To Do
 - [ ] Save the command history in the user setting folder
-- [ ] Add a command arg to the Gui app. So we can open a file with a specific application
+- [x] Add a command arg to the Gui app. So we can open a file with a specific application
 - [ ] Add more simulated Linux commands
 - [ ] Implement remaining applications:
   - [x] Complete File Explorer implementation

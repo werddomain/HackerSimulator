@@ -3,6 +3,7 @@ import { FileEntryUtils } from '../core/file-entry-utils';
 import { FileSystemUtils } from '../core/file-system-utils';
 import { FileSystemEntry } from '../core/filesystem';
 import { GuiApplication } from '../core/gui-application';
+import { FileTypeRegistry } from '../core/file-type-registry';
 import JSZip from 'jszip'; // Add JSZip import
 // import { 
 //   arrowBackOutline, 
@@ -57,7 +58,6 @@ export class FileExplorerApp extends GuiApplication {
   protected getApplicationName(): string {
     return 'file-explorer';
   }
-
   /**
    * Application-specific initialization
    */  protected initApplication(): void {
@@ -67,10 +67,33 @@ export class FileExplorerApp extends GuiApplication {
     this.initializeIonicIcons();
     
     this.render();
-    this.navigateTo('/home/user');
     
-    // Add history entry for initial path
-    this.addToHistory('/home/user');
+    // Check if a directory path was passed as an argument
+    if (this.commandArgs.length > 0) {
+      this.os.getFileSystem().stat(this.commandArgs[0])
+        .then(stat => {
+          if (FileEntryUtils.isDirectory(stat)) {
+            // If it's a directory, navigate to it
+            this.navigateTo(this.commandArgs[0]);
+            // Add history entry for the path
+            this.addToHistory(this.commandArgs[0]);
+          } else {
+            // Default path if the argument isn't a directory
+            this.navigateTo('/home/user');
+            this.addToHistory('/home/user');
+          }
+        })
+        .catch(() => {
+          // Default path if there's an error
+          this.navigateTo('/home/user');
+          this.addToHistory('/home/user');
+        });
+    } else {
+      // No arguments provided, use default path
+      this.navigateTo('/home/user');
+      // Add history entry for initial path
+      this.addToHistory('/home/user');
+    }
   }
   
   /**
@@ -1162,31 +1185,47 @@ export class FileExplorerApp extends GuiApplication {
         }
       });
   }
-
   /**
    * Show "Open With" dialog
    */
   private showOpenWithDialog(path: string): void {
+    const filename = path.split('/').pop() || '';
+    const fileTypeRegistry = FileTypeRegistry.getInstance();
+    
+    // Create the dialog
     const dialog = document.createElement('div');
     dialog.className = 'dialog-overlay';
+    
+    // Get all available apps from the file type registry
+    const apps = this.getAvailableApps(filename);
+    
+    // Build app list HTML
+    let appListHtml = '';
+    apps.forEach(app => {
+      appListHtml += `
+        <div class="app-item" data-app="${app.id}">
+          <span class="app-icon">${app.icon || '📄'}</span>
+          <span class="app-name">${app.name}</span>
+        </div>
+      `;
+    });
+    
+    // If no apps are available, show a message
+    if (apps.length === 0) {
+      appListHtml = '<div class="no-apps-message">No applications available to open this file type.</div>';
+    }
+    
     dialog.innerHTML = `
       <div class="dialog">
         <div class="dialog-header">Open With</div>
         <div class="dialog-content">
           <div class="app-list">
-            <div class="app-item" data-app="text-editor">
-              <span class="app-icon">📝</span>
-              <span class="app-name">Text Editor</span>
-            </div>
-            <div class="app-item" data-app="code-editor">
-              <span class="app-icon">💻</span>
-              <span class="app-name">Code Editor</span>
-            </div>
+            ${appListHtml}
           </div>
         </div>
         <div class="dialog-footer">
           <button class="dialog-btn cancel">Cancel</button>
-          <button class="dialog-btn open" disabled>Open</button>
+          <button class="dialog-btn open" ${apps.length === 0 ? 'disabled' : ''}>Open</button>
         </div>
       </div>
       <style>
@@ -1210,6 +1249,11 @@ export class FileExplorerApp extends GuiApplication {
         .dialog-content .app-icon {
           margin-right: 10px;
           font-size: 24px;
+        }
+        .dialog-content .no-apps-message {
+          padding: 15px;
+          text-align: center;
+          color: #888;
         }
       </style>
     `;
@@ -1267,40 +1311,26 @@ export class FileExplorerApp extends GuiApplication {
    * Open file with specified app
    */
   private openFileWithApp(filePath: string, appId: string): void {
-    // Create a custom event to request app launch
-    const event = new CustomEvent('app-launch-request', {
-      detail: {
-        appId: appId,
-        args: [filePath]
-      }
-    });
-    
-    document.dispatchEvent(event);
-  }
-
-  /**
+    this.os.getAppManager().launchApp(appId, [filePath]);
+  }  /**
    * Open file based on type
    */
   private openFile(path: string): void {
-    const extension = path.split('.').pop()?.toLowerCase() || '';
+    const filename = path.split('/').pop() || '';
+    const fileTypeRegistry = FileTypeRegistry.getInstance();
     
-    // Determine appropriate app based on file extension
-    let appId = 'text-editor'; // Default to text editor
+    // Check if the file extension is registered in the file type registry
+    const fileInfo = fileTypeRegistry.getInfo(filename);
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
     
-    if (['js', 'ts', 'html', 'css', 'json', 'py', 'c', 'cpp', 'h', 'php'].includes(extension)) {
-      appId = 'code-editor';
-    } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(extension)) {
-      appId = 'image-viewer';
-    } else if (['mp3', 'wav', 'ogg'].includes(extension)) {
-      appId = 'audio-player';
-    } else if (['mp4', 'webm', 'avi'].includes(extension)) {
-      appId = 'video-player';
-    } else if (['pdf'].includes(extension)) {
-      appId = 'pdf-viewer';
+    // Check if this is a known file type (explicitly registered in the registry)
+    if (extension && fileTypeRegistry['fileTypes'].has(extension)) {
+      // If the file type is registered, open with its default app
+      this.openFileWithApp(path, fileInfo.defaultAppId);
+    } else {
+      // If the file type is not registered, show the Open With dialog
+      this.showOpenWithDialog(path);
     }
-    
-    // Launch the appropriate app
-    this.openFileWithApp(path, appId);
   }
 
   /**
@@ -2121,6 +2151,43 @@ export class FileExplorerApp extends GuiApplication {
         this.showErrorDialog('Extraction Error', `Failed to extract zip file: ${error.message}`);
         this.container?.querySelector('.dialog-overlay')?.remove();
       });
+  }
+
+  /**
+   * Get available applications for opening a file
+   * For an app to be listed, it must have at most one entry in the type registry
+   */
+  private getAvailableApps(filename: string): Array<{ id: string; name: string; icon?: string }> {
+    const fileTypeRegistry = FileTypeRegistry.getInstance();
+    const availableApps: Array<{ id: string; name: string; icon?: string }> = [];
+    const appOccurrences: Record<string, number> = {};
+    
+    // Count occurrences of each app ID in the registry
+    const fileTypes = (fileTypeRegistry as any).fileTypes;
+    if (fileTypes && fileTypes instanceof Map) {
+      fileTypes.forEach((info) => {
+        const appId = info.defaultAppId;
+        appOccurrences[appId] = (appOccurrences[appId] || 0) + 1;
+      });
+    }
+    // Default apps to show in the Open With dialog
+    const defaultApps = [
+      { id: 'text-editor', name: 'Text Editor', icon: '📝' },
+      { id: 'code-editor', name: 'Code Editor', icon: '💻' },
+      { id: 'image-viewer', name: 'Image Viewer', icon: '🖼️' },
+      { id: 'media-player', name: 'Media Player', icon: '🎬' },
+      { id: 'pdf-viewer', name: 'PDF Viewer', icon: '📑' }
+    ];
+    
+    // Add apps with at most one registry entry
+    for (const app of defaultApps) {
+      // If app has no entry or only one entry in the registry, add it to the list
+      if (!appOccurrences[app.id] || appOccurrences[app.id] <= 1) {
+        availableApps.push(app);
+      }
+    }
+    
+    return availableApps;
   }
 }
 

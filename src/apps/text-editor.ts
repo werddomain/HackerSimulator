@@ -23,7 +23,6 @@ export class TextEditorApp extends GuiApplication {
   protected getApplicationName(): string {
     return 'text-editor';
   }
-
   /**
    * Application-specific initialization
    */
@@ -32,6 +31,11 @@ export class TextEditorApp extends GuiApplication {
     
     this.render();
     this.setupEventListeners();
+    
+    // Check if we have a file path argument and open it
+    if (this.commandArgs.length > 0) {
+      this.openFile(this.commandArgs[0]);
+    }
   }
 
   /**

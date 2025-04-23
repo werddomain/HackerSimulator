@@ -33,12 +33,30 @@ export class CodeEditorApp extends GuiApplication {
 
   /**
    * Application-specific initialization
-   */
-  protected initApplication(): void {
+   */  protected initApplication(): void {
     if (!this.container) return;
     
     this.render();
     this.initMonaco();
+    
+    // Check if we have arguments to process after Monaco is initialized
+    if (this.commandArgs.length > 0) {
+      // First check if it's a directory
+      this.os.getFileSystem().stat(this.commandArgs[0])
+        .then(stat => {
+          if (FileEntryUtils.isDirectory(stat)) {
+            // If it's a directory, set it as the working directory
+            this.setWorkingDirectory(this.commandArgs[0]);
+          } else {
+            // Otherwise open the file
+            this.openFile(this.commandArgs[0]);
+          }
+        })
+        .catch(error => {
+          this.ErrorHandler.parse(error, "code-editor.ts", "code-editor App", { level: ErrorLevel.WARNING} );
+          // this.ErrorHandler.handleError(ErrorLevel.WARNING, `Failed to open ${this.commandArgs[0]}: ${error.message}`, "code-editor.ts");
+        });
+    }
   }
 
   /**
@@ -49,13 +67,15 @@ export class CodeEditorApp extends GuiApplication {
     
     this.container.innerHTML = `
       <div class="code-editor-app">
-        <div class="editor-toolbar">
-          <div class="file-actions">
+        <div class="editor-toolbar">          <div class="file-actions">
             <button class="toolbar-btn new-file" title="New File">
               <span class="icon">📄</span> New
             </button>
             <button class="toolbar-btn open-file" title="Open File">
-              <span class="icon">📂</span> Open
+              <span class="icon">📂</span> Open File
+            </button>
+            <button class="toolbar-btn open-folder" title="Open Folder">
+              <span class="icon">📁</span> Open Folder
             </button>
             <button class="toolbar-btn save-file" title="Save File">
               <span class="icon">💾</span> Save
@@ -201,10 +221,10 @@ export class CodeEditorApp extends GuiApplication {
    */
   private setupEventListeners(): void {
     if (!this.container) return;
-    
-    // File operations
+      // File operations
     const newFileBtn = this.container.querySelector('.toolbar-btn.new-file');
     const openFileBtn = this.container.querySelector('.toolbar-btn.open-file');
+    const openFolderBtn = this.container.querySelector('.toolbar-btn.open-folder');
     const saveFileBtn = this.container.querySelector('.toolbar-btn.save-file');
     const saveAsBtn = this.container.querySelector('.toolbar-btn.save-as');
     const runCodeBtn = this.container.querySelector('.toolbar-btn.run-code');
@@ -219,10 +239,10 @@ export class CodeEditorApp extends GuiApplication {
     
     // Language selector
     const languageSelector = this.container.querySelector<HTMLSelectElement>('.language-selector');
-    
-    // File operations
+      // File operations
     newFileBtn?.addEventListener('click', () => this.newFile());
     openFileBtn?.addEventListener('click', () => this.openFileDialog());
+    openFolderBtn?.addEventListener('click', () => this.openFolderDialog());
     saveFileBtn?.addEventListener('click', () => this.saveFile());
     saveAsBtn?.addEventListener('click', () => this.saveFileAs());
     runCodeBtn?.addEventListener('click', () => this.runCode());
@@ -903,5 +923,83 @@ export class CodeEditorApp extends GuiApplication {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  /**
+   * Set the working directory for the code editor
+   * This allows users to open a folder and work with files within it
+   */
+  private setWorkingDirectory(directoryPath: string): void {
+    if (!directoryPath) return;
+    
+    // Check if the directory exists
+    this.os.getFileSystem().stat(directoryPath)
+      .then(stat => {
+        if (FileEntryUtils.isDirectory(stat)) {
+          // Update the working directory
+          this.currentWorkingDirectory = directoryPath;
+          
+          // Update the UI to show we're in a folder mode
+          const editorPathEl = this.container?.querySelector('.editor-path');
+          if (editorPathEl) {
+            editorPathEl.textContent = `Folder: ${directoryPath}`;
+          }
+          
+          // Update window title
+          const title = `${directoryPath.split('/').pop()} - Code Editor`;
+          const event = new CustomEvent('app-title-change', {
+            detail: {
+              title: title
+            }
+          });
+          document.dispatchEvent(event);
+          
+          // Refresh the file tree to show the new directory contents
+          this.loadFileTree();
+        } else {
+          this.showErrorDialog('Error', `"${directoryPath}" is not a directory.`);
+        }
+      })
+      .catch(error => {
+        this.ErrorHandler.parse(error, 'code-editor.ts', 'setWorkingDirectory', { 
+          level: ErrorLevel.WARNING,
+          showDialog: true, 
+          dialogManager: this.dialogManager,
+          dialogTitle: 'Error Opening Directory'
+        });
+      });
+  }
+
+  /**
+   * Open a folder dialog for selecting a directory
+   */
+  private openFolderDialog(): void {
+    if (this.hasUnsavedChanges) {
+      this.showConfirmDialog(
+        'Unsaved Changes',
+        'You have unsaved changes. Do you want to continue?',
+        () => this.showOpenFolderDialog()
+      );
+    } else {
+      this.showOpenFolderDialog();
+    }
+  }
+
+  /**
+   * Show open folder dialog
+   */
+  private async showOpenFolderDialog(): Promise<void> {
+    // Use the FilePicker dialog from DialogManager in the base class
+    const filePickerOptions = {
+      initialDirectory: this.currentWorkingDirectory,
+      message: "Select a folder to open",
+      directoryMode: true
+    };
+    
+    const selectedPath = await this.dialogManager.FilePicker.Show("Open Folder", filePickerOptions);
+    
+    if (selectedPath) {
+      this.setWorkingDirectory(selectedPath);
+    }
   }
 }

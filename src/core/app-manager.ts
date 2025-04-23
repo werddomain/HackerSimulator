@@ -294,16 +294,16 @@ export class AppManager {
         this.loadBrowserUI(contentElement,windowId, args);
         break;
       case 'system-monitor':
-        this.loadSystemMonitorUI(contentElement,windowId);
+        this.loadSystemMonitorUI(contentElement,windowId, args);
         break;
       case 'calculator':
-        this.loadCalculatorUI(contentElement,windowId);
+        this.loadCalculatorUI(contentElement,windowId, args);
         break;
       case 'settings':
-        this.loadSettingsUI(contentElement,windowId);
+        this.loadSettingsUI(contentElement,windowId, args);
         break;
       case 'error-log-viewer':
-        this.loadErrorLogViewerUI(contentElement,windowId);
+        this.loadErrorLogViewerUI(contentElement,windowId, args);
         break;
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
@@ -311,27 +311,27 @@ export class AppManager {
   }  /**
    * Load Terminal UI
    */
-  loadSettingsUI(contentElement: HTMLElement, windowId: string) {
+  loadSettingsUI(contentElement: HTMLElement, windowId: string, args: string[] = []) {
     // Create settings container
     contentElement.innerHTML = '<div class="settings-container"></div>';
     
     // Lazily load the settings app
     import('../apps/settings').then(module => {
       const settingsApp = new module.SettingsApp(this.os);
-      settingsApp.init(contentElement.querySelector('.settings-container')!, windowId);
+      settingsApp.init(contentElement.querySelector('.settings-container')!, windowId, args);
     }).catch(error => {
       console.error('Failed to load settings app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load settings app.</div>';
     });
   }
-  private loadTerminalUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
+  private loadTerminalUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create terminal container
     contentElement.innerHTML = '<div class="terminal-container"></div>';
     
     // Lazily load the terminal app
     import('../apps/terminal').then(module => {
       const terminalApp = new module.TerminalApp(this.os);
-      terminalApp.init(contentElement.querySelector('.terminal-container')!, windowId);
+      terminalApp.init(contentElement.querySelector('.terminal-container')!, windowId, args);
       
       // Execute initial command if provided
       if (args.length > 0) {
@@ -346,14 +346,14 @@ export class AppManager {
   /**
    * Load File Explorer UI
    */
-  private loadFileExplorerUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
+  private loadFileExplorerUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create file explorer container
     contentElement.innerHTML = '<div class="file-explorer"></div>';
     
     // Lazily load the file explorer app
     import('../apps/file-explorer').then(module => {
       const fileExplorerApp = new module.FileExplorerApp(this.os);
-      fileExplorerApp.init(contentElement.querySelector('.file-explorer')!, windowId);
+      fileExplorerApp.init(contentElement.querySelector('.file-explorer')!, windowId, args);
       
       // Navigate to initial path if provided
       if (args.length > 0) {
@@ -368,14 +368,14 @@ export class AppManager {
   /**
    * Load Text Editor UI
    */
-  private loadTextEditorUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
+  private loadTextEditorUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create text editor container
     contentElement.innerHTML = '<div class="text-editor"></div>';
     
     // Lazily load the text editor app
     import('../apps/text-editor').then(module => {
       const textEditorApp = new module.TextEditorApp(this.os);
-      textEditorApp.init(contentElement.querySelector('.text-editor')!, windowId);
+      textEditorApp.init(contentElement.querySelector('.text-editor')!, windowId, args);
       
       // Open file if provided
       if (args.length > 0) {
@@ -390,14 +390,14 @@ export class AppManager {
   /**
    * Load Code Editor UI
    */
-  private loadCodeEditorUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
+  private loadCodeEditorUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create code editor container
     contentElement.innerHTML = '<div class="editor-container"></div>';
     
     // Lazily load the code editor app
     import('../apps/code-editor').then(module => {
       const codeEditorApp = new module.CodeEditorApp(this.os);
-      codeEditorApp.init(contentElement.querySelector('.editor-container')!, windowId);
+      codeEditorApp.init(contentElement.querySelector('.editor-container')!, windowId, args);
       
       // Open file if provided
       if (args.length > 0) {
@@ -412,14 +412,14 @@ export class AppManager {
   /**
    * Load Browser UI
    */
-  private loadBrowserUI(contentElement: HTMLElement,windowId: string, args: string[]): void {
+  private loadBrowserUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create browser container
     contentElement.innerHTML = '<div class="browser-container"></div>';
     
     // Lazily load the browser app
     import('../apps/browser').then(module => {
       const browserApp = new module.BrowserApp(this.os);
-      browserApp.init(contentElement.querySelector('.browser-container')!, windowId);
+      browserApp.init(contentElement.querySelector('.browser-container')!, windowId, args);
       
       // Navigate to URL if provided
       if (args.length > 0) {
@@ -434,14 +434,14 @@ export class AppManager {
   /**
    * Load System Monitor UI
    */
-  private loadSystemMonitorUI(contentElement: HTMLElement,windowId: string): void {
+  private loadSystemMonitorUI(contentElement: HTMLElement, windowId: string, args: string[] = []): void {
     // Create system monitor container
     contentElement.innerHTML = '<div class="system-monitor"></div>';
     
     // Lazily load the system monitor app
     import('../apps/system-monitor').then(module => {
       const systemMonitorApp = new module.SystemMonitorApp(this.os);
-      systemMonitorApp.init(contentElement.querySelector('.system-monitor')!, windowId);
+      systemMonitorApp.init(contentElement.querySelector('.system-monitor')!, windowId, args);
     }).catch(error => {
       console.error('Failed to load system monitor app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load system monitor app.</div>';
@@ -451,14 +451,14 @@ export class AppManager {
   /**
    * Load Calculator UI
    */
-  private loadCalculatorUI(contentElement: HTMLElement,windowId: string): void {
+  private loadCalculatorUI(contentElement: HTMLElement, windowId: string, args: string[] = []): void {
     // Create calculator container
     contentElement.innerHTML = '<div class="calculator"></div>';
     
     // Lazily load the calculator app
     import('../apps/calculator').then(module => {
       const calculatorApp = new module.CalculatorApp(this.os);
-      calculatorApp.init(contentElement.querySelector('.calculator')!, windowId);
+      calculatorApp.init(contentElement.querySelector('.calculator')!, windowId, args);
     }).catch(error => {
       console.error('Failed to load calculator app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load calculator app.</div>';
@@ -467,14 +467,14 @@ export class AppManager {
   /**
    * Load Error Log Viewer UI
    */
-  private loadErrorLogViewerUI(contentElement: HTMLElement, windowId: string): void {
+  private loadErrorLogViewerUI(contentElement: HTMLElement, windowId: string, args: string[] = []): void {
     // Create error log viewer container
     contentElement.innerHTML = '<div class="error-log-viewer"></div>';
     
     // Lazily load the error log viewer app
     import('../apps/error-log-viewer').then(module => {
       const errorLogViewerApp = new module.ErrorLogViewerApp(this.os);
-      errorLogViewerApp.init(contentElement.querySelector('.error-log-viewer')!, windowId);
+      errorLogViewerApp.init(contentElement.querySelector('.error-log-viewer')!, windowId, args);
     }).catch(error => {
       console.error('Failed to load error log viewer app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load error log viewer app.</div>';
