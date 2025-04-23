@@ -11,7 +11,7 @@ import { GuiApplication, SubProcessOptions } from '../core/gui-application';
 export class TerminalApp extends GuiApplication {
   private terminal: Terminal;
   private fitAddon: FitAddon;
-  private currentPath: string = '/home/user';
+  private currentPath: string = '~';
   private commandHistory: string[] = [];
   private historyIndex: number = -1;
   private inputBuffer: string = '';
@@ -119,6 +119,7 @@ protected initApplication(): void {
       },
       set cwd(newPath: string) {
         if (self.currentPath !== newPath) {
+          newPath = this.os.getFileSystem().formatWithAlias(newPath);
           // Update terminal's internal path
           self.currentPath = newPath;
           
@@ -212,8 +213,8 @@ protected initApplication(): void {
         }
       },
       env: {
-        'USER': 'user',
-        'HOME': '/home/user',
+        'USER': this.os.currentUserName,
+        'HOME': this.os.getFileSystem().UserFolder,
         'PATH': '/bin:/usr/bin',
         'PWD': this.currentPath,
         'TERM': 'xterm-256color',
@@ -240,7 +241,7 @@ protected initApplication(): void {
    * Show terminal prompt
    */
   private showPrompt(): void {
-    const prompt = `user@hacker-machine:${this.currentPath}$ `;
+    const prompt = `${this.os.currentUserName}@hacker-machine:${this.currentPath}$ `;
     this.terminal.write(prompt);
     this.promptLength = prompt.length;
   }

@@ -9,6 +9,29 @@ export class PathUtils {
   public static isAbsolute(path: string): boolean {
     return path.startsWith('/');
   }
+  
+  /**
+   * Check if a path is a recognized alias
+   * @param path The path to check
+   * @param aliases Optional array of alias names to check against
+   */
+  public static isAlias(path: string, aliases?: string[]): boolean {
+    // Check against common aliases
+    if (path === '~' || path.startsWith('~/')) {
+      return true;
+    }
+    
+    // If additional aliases were provided, check against those too
+    if (aliases && aliases.length > 0) {
+      for (const alias of aliases) {
+        if (path === alias || path.startsWith(alias + '/')) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
 
   /**
    * Join path segments

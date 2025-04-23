@@ -1,6 +1,7 @@
 import { openDB, IDBPDatabase } from 'idb';
 import { FileStats } from './file-system-utils';
 import { OS } from './os';
+import { PathUtils } from './path-utils';
 
 /**
  * Base class for path aliases in the filesystem
@@ -19,7 +20,7 @@ export abstract class PathAlias {
    * Checks if this alias can be used for the given path
    */
   matches(path: string): boolean {
-    return path === this.alias || path.startsWith(this.alias + '/');
+    return path === this.alias || path.startsWith(this.alias);
   }
   
   /**
@@ -118,7 +119,34 @@ export interface IFileSystemProvider {
 /**
  * Implementation of file system using IndexedDB
  */
-export class FileSystem implements IFileSystemProvider { 
+export class FileSystem implements IFileSystemProvider {
+  
+  /**
+   * Input a path and return a path with alias if an alias exist for this path start
+   * @param newPath 
+   * @returns 
+   */
+  public formatWithAlias(newPath: string): string {
+  // Try to replace the path with an alias if possible
+  // Sort aliases by the length of their resolved paths (longest first)
+  // This ensures we match the most specific alias first
+  const sortedAliases = [...this.aliases].sort((a, b) => {
+    const pathA = a.resolve('');
+    const pathB = b.resolve('');
+    return pathB.length - pathA.length; // Sort in descending order
+  });
+
+  // Try to replace the path with an alias if possible
+  for (const alias of sortedAliases) {
+    const aliasRootPath = alias.resolve('');
+    
+    if (newPath === aliasRootPath || newPath.startsWith(aliasRootPath + '/')) {
+      const relativePath = newPath.substring(aliasRootPath.length);
+      return alias.alias + relativePath;
+    }
+  }
+    return newPath; // No alias matched, return original path
+  } 
   
   private aliases: PathAlias[] = [];
   
@@ -902,18 +930,26 @@ export class FileSystem implements IFileSystemProvider {
       console.error(`Error moving entry: ${oldPath} -> ${newPath}`, error);
       throw new Error(`Failed to move entry: ${oldPath} -> ${newPath}`);
     }
-  }
-  /**
+  }  /**
    * Normalize a path (remove trailing slashes, handle ../, etc.)
    * Now also resolves aliases like ~ and symlinks
    */
   private normalizePath(path: string): string {
-    // Handle aliases first
-    for (const alias of this.aliases) {
-      if (alias.matches(path)) {
-        const remainingPath = alias.extractRemainingPath(path);
-        path = alias.resolve(remainingPath);
-        break; // Only apply the first matching alias
+    // Special handling for the tilde (~) alias
+    if (path === '~' || path.startsWith('~/')) {
+      const homeAlias = this.aliases.find(a => a.alias === '~');
+      if (homeAlias) {
+        const remainingPath = path === '~' ? '' : path.substring(1);
+        path = homeAlias.resolve(remainingPath);
+      }
+    } else {
+      // Handle other aliases 
+      for (const alias of this.aliases) {
+        if (alias.matches(path)) {
+          const remainingPath = alias.extractRemainingPath(path);
+          path = alias.resolve(remainingPath);
+          break; // Only apply the first matching alias
+        }
       }
     }
     
@@ -926,15 +962,17 @@ export class FileSystem implements IFileSystemProvider {
     if (path.length > 1 && path.endsWith('/')) {
       path = path.slice(0, -1);
     }
-    
-    // Handle .. and .
+      // Handle .. and .
     const parts = path.split('/');
     const stack: string[] = [];
     
     for (const part of parts) {
       if (part === '' || part === '.') continue;
       if (part === '..') {
-        stack.pop();
+        if (stack.length > 0) {
+          stack.pop();
+        }
+        // Don't go beyond root directory
       } else {
         stack.push(part);
       }
@@ -949,5 +987,22 @@ export class FileSystem implements IFileSystemProvider {
   public getAliases(): PathAlias[] {
     // Return a copy of the aliases array to prevent external modification
     return [...this.aliases];
+  }
+
+  /**
+   * Parse a path and resolve any aliases
+   * This is a public method that can be used to transform any path with aliases into a normalized path
+   * @param path The path to parse, which may contain aliases
+   * @param currentDirectory Optional current directory for resolving relative paths
+   * @returns The normalized path with all aliases resolved
+   */
+  public parsePath(path: string, currentDirectory?: string): string {
+
+    // Handle relative paths if a current directory is provided
+    if (!PathUtils.isAbsolute(path) && !PathUtils.isAlias(path, this.aliases.map(a => a.alias)) && currentDirectory) {
+      path = PathUtils.join(currentDirectory, path);
+    }
+    
+    return this.normalizePath(path);
   }
 }
