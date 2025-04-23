@@ -20,9 +20,14 @@ export class LsCommand implements CommandModule, EnhancedCommandModule {
   public get description(): string {
     return 'List directory contents';
   }
-  
-  public get usage(): string {
-    return 'ls [options] [path]';
+    public get usage(): string {
+    return 'ls [OPTION]... [FILE]...\n' +
+           'List information about the FILEs (the current directory by default).\n\n' +
+           'Options:\n' +
+           '  -a, --all       do not ignore entries starting with .\n' +
+           '  -l              use a long listing format\n' +
+           '  -h              with -l, print sizes in human readable format (e.g., 1K 234M 2G)\n\n' +
+           'If no path is specified, the contents of the current working directory are displayed.';
   }
    
   /**

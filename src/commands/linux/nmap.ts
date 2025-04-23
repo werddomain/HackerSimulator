@@ -18,9 +18,32 @@ export class NmapCommand implements CommandModule {
   public get description(): string {
     return 'Network exploration tool and security / port scanner';
   }
-  
-  public get usage(): string {
-    return 'nmap [options] target';
+    public get usage(): string {
+    return `Usage: nmap [options] target
+
+Network exploration tool and security / port scanner.
+
+Options:
+  -p, --ports <range>   Specify port range to scan (default: 1-1000)
+                        Examples: -p 22; -p 1-65535; -p 80,443,8080
+  -s<C|T|U>             Scan type:
+                         -sS: TCP SYN scan (default, stealthy)
+                         -sT: TCP connect scan (more detectable)
+                         -sU: UDP scan
+  -T<0-5>               Set timing template (higher is faster)
+                         -T0: Paranoid; -T5: Insane
+  -O                    Enable OS detection
+  -sV                   Probe open ports to determine service/version info
+  -sC                   Perform script scanning (default scripts)
+  -v                    Increase verbosity level
+
+Examples:
+  nmap localhost               # Scan localhost with default options
+  nmap -p 80,443 example.com   # Scan specific ports of a domain
+  nmap -sS -T4 192.168.1.1     # Fast SYN scan of an IP address
+  nmap -sV -O 10.0.0.1         # Detect OS and service versions
+
+Target can be hostname, IP address, network range, or CIDR notation.`;
   }
   public execute(args: CommandArgs, context: CommandContext): Promise<number>{
     return ExecuteMigrator.execute(this, args, context);

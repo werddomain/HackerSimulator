@@ -10,16 +10,24 @@ export class MkdirCommand implements CommandModule {
   constructor(os: OS) {
     this.os = os;
   }
-  
-  public get name(): string {
+    public get name(): string {
     return 'mkdir';
   }
   
   public get description(): string {
     return 'Create directories';
   }
-    public get usage(): string {
-    return 'mkdir [options] directory...';
+  
+  public get usage(): string {
+    return 'mkdir [OPTION]... DIRECTORY...\n' +
+           'Create the DIRECTORY(ies), if they do not already exist.\n\n' +
+           'Options:\n' +
+           '  -p, --parents     create parent directories as needed, no error if existing\n\n' +
+           'Examples:\n' +
+           '  mkdir dir1 dir2     Create two directories dir1 and dir2 in the current directory\n' +
+           '  mkdir -p a/b/c      Create directory c and any parent directories that do not exist\n' +
+           '  mkdir /tmp/new      Create directory new in the /tmp directory\n\n' +
+           'Each created directory will have permission mode according to the system default.';
   }
   
   public async execute(args: CommandArgs, context: CommandContext): Promise<number> {

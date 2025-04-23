@@ -18,9 +18,23 @@ export class AliasCommand implements CommandModule {
   public get description(): string {
     return 'List all filesystem path aliases';
   }
-  
-  public get usage(): string {
-    return 'alias';
+    public get usage(): string {
+    return `Usage: alias [options]
+
+Display all defined filesystem path aliases.
+
+Description:
+  The 'alias' command lists all path aliases in the filesystem, showing the
+  alias name and its target path. Different types of aliases are indicated:
+  - fixed: A permanent alias that points to a specific path
+  - symlink: A symbolic link to another location in the filesystem
+  - dynamic: A programmatically determined path
+
+Options:
+  None currently supported.
+
+Examples:
+  alias              # List all defined path aliases`;
   }
   
   async execute(args: CommandArgs, context: CommandContext): Promise<number> {

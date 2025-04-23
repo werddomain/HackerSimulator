@@ -646,7 +646,7 @@ export class FileSystem implements IFileSystemProvider {
               modified: Date.now(),
               size: isContentBinary ? (binaryContent?.byteLength || 0) : finalContent.length,
               permissions: '-rw-r--r--',
-              owner: 'user'
+              owner: this.os.currentUserName || 'user'
             }
           }
         });
@@ -656,7 +656,57 @@ export class FileSystem implements IFileSystemProvider {
       throw new Error(`Failed to write file: ${path}`);
     }
   }
-  
+
+
+public canIWrite(path: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.stat(path).then((stats) => {
+        const permissions = stats.permissions;
+        if (!permissions) {
+          resolve(false); // No permissions found
+          return;
+          }
+        // Check if the user has write permission (assuming 'user' is the current user)
+        const sameUser = stats.owner?.toLocaleLowerCase() === this.os.currentUserName.toLocaleLowerCase();
+        if (sameUser) {
+          // Check user permissions (rw-)
+          const userPermissions = permissions.substring(1, 4);
+          const canWrite = userPermissions[1] === 'w';
+          resolve(canWrite);
+          return;
+        }
+        const canWrite = permissions[2] === 'w' || permissions[5] === 'w';
+        resolve(canWrite);
+      }).catch((error) => {
+        console.error(`Error checking write permission for: ${path}`, error);
+        reject(error);
+      });
+    });
+}
+
+  public async chmod(path: string, mode: string): Promise<void> {
+    const canWrite = await this.canIWrite(path);
+    if (!canWrite) {
+      return Promise.reject(Error(`Permission denied: Cannot change permissions for ${path}`));
+    }
+    if (!this.db) throw new Error('Database not initialized');
+    // Check if the path exists
+    const exists = await this.exists(path);
+    if (!exists) {
+      return Promise.reject(Error(`Path does not exist: ${path}`));
+    }
+    // Get the entry
+    const entry = await this.db.get('fs-entries', path);
+    if (!entry) {
+      return Promise.reject(Error(`Entry not found: ${path}`));
+    }
+    // Update the permissions
+    entry.entry.metadata.permissions = mode;
+    entry.entry.metadata.modified = Date.now();
+    // Save the updated entry
+    await this.db.put('fs-entries', entry);
+    
+  }
   /**
    * Helper method to check if a string is likely base64 encoded
    */

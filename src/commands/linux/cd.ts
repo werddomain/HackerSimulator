@@ -20,9 +20,28 @@ export class CdCommand implements CommandModule {
   public get description(): string {
     return 'Change the current working directory';
   }
-  
-  public get usage(): string {
-    return 'cd [directory]';
+    public get usage(): string {
+    return `Usage: cd [directory]
+
+Change the current working directory.
+
+Arguments:
+  directory    Directory to change into. If not specified, changes to the user's home directory.
+
+Special paths:
+  ..           Navigate to the parent directory
+  /            Navigate to the root directory
+  ~            Navigate to the user's home directory
+
+Examples:
+  cd           # Change to home directory
+  cd /         # Change to root directory
+  cd ..        # Move up one directory
+  cd Documents # Change to Documents directory in current path
+  cd /usr/bin  # Change to /usr/bin (absolute path)
+
+Exit status:
+  Returns 0 if directory changed successfully, non-zero otherwise.`;
   }
   
   /**

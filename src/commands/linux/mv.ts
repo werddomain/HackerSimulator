@@ -20,9 +20,25 @@ export class MvCommand implements CommandModule {
   public get description(): string {
     return 'Move (rename) files';
   }
-  
-  public get usage(): string {
-    return 'mv [options] source... destination';
+    public get usage(): string {
+    return `Usage: mv [options] source... destination
+
+Move (rename) files and directories from source to destination.
+
+Options:
+  -f, --force     Force overwrite without confirmation
+  -v, --verbose   Explain what is being done
+
+Examples:
+  mv file.txt newname.txt      # Rename a file
+  mv file.txt /path/to/dir/    # Move a file to directory
+  mv dir1 dir2                 # Move or rename directories
+  mv file1 file2 dir3          # Move multiple files to directory
+
+Notes:
+  - If destination is a directory, source files are moved inside it
+  - If destination doesn't exist and moving a single source, creates destination
+  - If multiple sources provided, destination must be a directory`;
   }
   
   public async execute(args: CommandArgs, context: CommandContext): Promise<number> {

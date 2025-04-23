@@ -19,9 +19,18 @@ export class PsCommand implements CommandModule {
   public get description(): string {
     return 'Report a snapshot of the current processes';
   }
+    public get usage(): string {
+    return `ps [options]
+    
+Options:
+  -a, -e, -A    show all processes
+  -f            full format listing
+  -u            include user-oriented format
   
-  public get usage(): string {
-    return 'ps [options]';
+Examples:
+  ps            show basic process list for current user
+  ps -a         show all processes in simple format
+  ps -af        show all processes with full details`;
   }
   public execute(args: CommandArgs, context: CommandContext): Promise<number>{
     return ExecuteMigrator.execute(this, args, context);

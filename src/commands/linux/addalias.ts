@@ -19,9 +19,33 @@ export class AddAliasCommand implements CommandModule {
   public get description(): string {
     return 'Add a new filesystem path alias';
   }
+    public get usage(): string {
+    return `Usage: addalias [--symlink] <alias> <targetPath>
+
+Create a new filesystem path alias that points to an existing target path.
+
+Description:
+  The 'addalias' command creates a path alias in the filesystem, providing
+  a shortcut to access a specific directory. There are two types of aliases:
+  - Standard alias (default): A permanent reference to a fixed path
+  - Symlink alias: A symbolic link that follows changes to the target path
+
+Options:
+  --symlink    Create a symbolic link alias instead of a fixed path alias
+
+Arguments:
+  alias        The name of the new alias to create (without slashes)
+  targetPath   The existing path that the alias should point to
+
+Examples:
+  addalias projects /home/user/Documents/projects
+    Creates a fixed path alias 'projects' pointing to '/home/user/Documents/projects'
   
-  public get usage(): string {
-    return 'addalias [--symlink] <alias> <targetPath>';
+  addalias --symlink myproject /home/user/projects/current
+    Creates a symbolic link 'myproject' that points to '/home/user/projects/current'
+
+Note:
+  The target path must already exist in the filesystem before creating an alias.`;
   }
   
   async execute(args: CommandArgs, context: CommandContext): Promise<number> {

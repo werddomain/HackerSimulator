@@ -18,9 +18,13 @@ export class KillCommand implements CommandModule {
   public get description(): string {
     return 'Terminate processes by PID';
   }
-  
-  public get usage(): string {
-    return 'kill [options] pid...';
+    public get usage(): string {
+    return 'kill [OPTION]... PID...\n' +
+           'Terminate processes by process ID (PID).\n\n' +
+           'Options:\n' +
+           '  -s SIGNAL    specify the signal to send (default: TERM)\n\n' +
+           'PIDs must be positive integer process IDs.\n' +
+           'If no processes are found matching the specified PIDs, an error message is displayed.';
   }
   public execute(args: CommandArgs, context: CommandContext): Promise<number>{
     return ExecuteMigrator.execute(this, args, context);

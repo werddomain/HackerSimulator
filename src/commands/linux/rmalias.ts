@@ -18,9 +18,21 @@ export class RmAliasCommand implements CommandModule {
   public get description(): string {
     return 'Remove a filesystem path alias';
   }
-  
-  public get usage(): string {
-    return 'rmalias <alias>';
+    public get usage(): string {
+    return `Usage: rmalias <alias>
+
+Remove a filesystem path alias.
+
+Arguments:
+  <alias>    Name of the alias to remove
+
+Notes:
+  - System aliases like '~' cannot be removed
+  - Only one alias can be removed at a time
+
+Examples:
+  rmalias projects    Remove the 'projects' alias
+  rmalias temp        Remove the 'temp' alias`;
   }
   
   async execute(args: CommandArgs, context: CommandContext): Promise<number> {

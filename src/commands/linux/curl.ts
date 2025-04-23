@@ -20,9 +20,24 @@ export class CurlCommand implements CommandModule {
   public get description(): string {
     return 'Transfer data from or to a server';
   }
-  
-  public get usage(): string {
-    return 'curl [options] [URL...]';
+    public get usage(): string {
+    return `Usage: curl [options] [URL...]
+
+Options:
+  -o, --output <file>      Write output to <file> instead of stdout
+  -i, --include            Include protocol response headers in the output
+  -s, --silent             Silent mode, don't output progress or error messages
+  -X, --request <method>   Specify request method to use (GET, POST, PUT, etc.)
+  -H, --header <header>    Pass custom header to server (can be used multiple times)
+  -d, --data <data>        HTTP POST data (sets method to POST if not specified)
+  --help                   Display this help message
+
+Examples:
+  curl https://example.com                     # Simple GET request
+  curl -o output.html https://example.com      # Save response to file
+  curl -i https://example.com                  # Include response headers
+  curl -X POST -d "name=value" https://api.com # POST with data
+  curl -H "User-Agent: MyApp" https://api.com  # Set custom header`;
   }
   
   public async exec(args: CommandArgs): Promise<string> {

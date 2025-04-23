@@ -19,9 +19,21 @@ export class RmCommand implements CommandModule {
   public get description(): string {
     return 'Remove files or directories';
   }
-  
-  public get usage(): string {
-    return 'rm [options] file...';
+    public get usage(): string {
+    return `Usage: rm [OPTION]... [FILE]...
+Remove (unlink) the FILE(s).
+
+Options:
+  -f, --force           ignore nonexistent files and arguments, never prompt
+  -r, -R, --recursive   remove directories and their contents recursively
+  -v, --verbose         explain what is being done
+  -i                    prompt before every removal
+  -I                    prompt once before removing multiple files
+  -d, --dir             remove empty directories
+      --help            display this help and exit
+
+By default, rm does not remove directories. Use the --recursive (-r or -R)
+option to remove each listed directory, too, along with all of its contents.`;
   }
   
   /**

@@ -11,14 +11,11 @@ export class EchoCommand implements CommandModule {
   public get description(): string {
     return 'Display a line of text';
   }
-  
-  public get usage(): string {
+    public get usage(): string {
     return 'echo [options] [string...]';
   }
-  public execute(args: CommandArgs, context: CommandContext): Promise<number>{
-    return ExecuteMigrator.execute(this, args, context);
-    }
-  public async exec(args: CommandArgs): Promise<string> {
+  
+  public async execute(args: CommandArgs, context: CommandContext): Promise<number> {
     // Parse options
     const noNewline = args.n || false; // -n do not output trailing newline
     const escapeBackslash = args.e || false; // -e enable interpretation of backslash escapes
@@ -35,11 +32,13 @@ export class EchoCommand implements CommandModule {
         .replace(/\\\\/, '\\');  // backslash
     }
     
-    // Remove trailing newline if -n is set
+    // Write output to stdout without adding a newline if -n is set
     if (noNewline) {
-      return output;
+      context.stdout.write(output);
     } else {
-      return output;
+      context.stdout.writeLine(output);
     }
+    
+    return 0; // Return success exit code
   }
 }

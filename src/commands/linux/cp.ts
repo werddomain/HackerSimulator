@@ -21,9 +21,19 @@ export class CpCommand implements CommandModule {
   public get description(): string {
     return 'Copy files and directories';
   }
-  
-  public get usage(): string {
-    return 'cp [options] source... destination';
+    public get usage(): string {
+    return `Usage: cp [options] source... destination
+
+Options:
+  -r, -R, --recursive    Copy directories recursively
+  -v, --verbose          Explain what is being done
+
+Examples:
+  cp file1.txt file2.txt             # Copy file1.txt to file2.txt
+  cp file.txt dir/                   # Copy file.txt into directory dir/
+  cp -r dir1/ dir2/                  # Copy directory dir1/ recursively to dir2/
+  cp -v *.txt backups/               # Verbosely copy all .txt files to backups/ directory
+  cp file1.txt file2.txt dir/        # Copy multiple files to directory dir/`;
   }
   
   public async exec(args: CommandArgs): Promise<string> {

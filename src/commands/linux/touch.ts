@@ -15,13 +15,25 @@ export class TouchCommand implements CommandModule {
   public get name(): string {
     return 'touch';
   }
-  
-  public get description(): string {
+    public get description(): string {
     return 'Update the access and modification times of each FILE to the current time, or create empty files';
   }
   
   public get usage(): string {
-    return 'touch [options] file...';
+    return `Usage: touch [options] file...
+
+Update timestamps of existing files or create empty files if they don't exist.
+
+Arguments:
+  file...           One or more file paths to touch
+
+Examples:
+  touch file.txt          Create file.txt if it doesn't exist, or update its timestamp
+  touch file1 file2       Create or update multiple files
+  touch dir/newfile       Create a file in a subdirectory (directory must exist)
+  
+Note: This implementation updates the modified timestamp of files to the current time.
+      No additional options are currently supported.`;
   }
   
   /**
