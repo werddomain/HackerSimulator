@@ -3,24 +3,27 @@ import { GuiApplication } from '../core/gui-application';
 import { BaseSettings } from '../core/BaseSettings';
 import { UserSettings } from '../core/UserSettings';
 import { ErrorHandler } from '../core/error-handler';
+import { ThemeManager } from '../core/ThemeManager';
+import { Theme } from '../core/theme';
+import { AppManager } from '../core/app-manager';
 
 /**
  * Settings App for the Hacker Game
  * Provides a graphical interface to customize user preferences and system appearance
  */
-export class SettingsApp extends GuiApplication {
-  private userSettings: UserSettings;
+export class SettingsApp extends GuiApplication {  private userSettings: UserSettings;
+  private themeManager: ThemeManager;
   private activeSection: string = 'appearance';
   private searchQuery: string = '';
   private settingsIndex: Map<string, { section: string, key: string, title: string, description: string }> = new Map();
   
-  // Theme options
-  private themes = [
-    { id: 'dark', name: 'Dark Theme', preview: '#1e1e1e' },
-    { id: 'light', name: 'Light Theme', preview: '#f5f5f5' },
-    { id: 'blue', name: 'Blue Theme', preview: '#1a2733' },
-    { id: 'green', name: 'Green Theme', preview: '#1e3323' },
-    { id: 'purple', name: 'Purple Theme', preview: '#2d1a33' }
+  // Accent color options
+  private accentColors = [
+    { id: 'blue', name: 'Blue', color: '#0078d7' },
+    { id: 'green', name: 'Green', color: '#107c10' },
+    { id: 'red', name: 'Red', color: '#e81123' },
+    { id: 'orange', name: 'Orange', color: '#ff8c00' },
+    { id: 'purple', name: 'Purple', color: '#5c2d91' }
   ];
   
   // Desktop background options
@@ -30,20 +33,10 @@ export class SettingsApp extends GuiApplication {
     { id: 'image', name: 'Image' }
   ];
   
-  // Accent color options
-  private accentColors = [
-    { id: 'blue', name: 'Blue', color: '#0078d7' },
-    { id: 'green', name: 'Green', color: '#107c10' },
-    { id: 'red', name: 'Red', color: '#e81123' },
-    { id: 'orange', name: 'Orange', color: '#ff8c00' },
-    { id: 'purple', name: 'Purple', color: '#5c2d91' },
-    { id: 'pink', name: 'Pink', color: '#e3008c' },
-    { id: 'teal', name: 'Teal', color: '#00b294' }
-  ];
-
   constructor(os: OS) {
     super(os);
     this.userSettings = os.getUserSettings();
+    this.themeManager = ThemeManager.getInstance(os.getFileSystem(), this.userSettings);
     this.buildSettingsIndex();
   }
 
@@ -231,17 +224,19 @@ export class SettingsApp extends GuiApplication {
             <!-- Appearance Section -->
             <div class="settings-section ${this.activeSection === 'appearance' ? 'active' : ''}" id="appearance-section">
               <h2>Appearance</h2>
-              <p class="section-description">Customize the look and feel of your system</p>
-              
-              <div class="setting-group">
+              <p class="section-description">Customize the look and feel of your system</p>              <div class="setting-group">
                 <h3>Theme</h3>
                 <div class="setting-control theme-selector">
-                  ${this.themes.map(theme => `
+                  ${Array.from(this.themeManager.getAllThemes().values()).map((theme: Theme) => `
                     <div class="theme-option" data-theme="${theme.id}">
-                      <div class="theme-preview" style="background-color: ${theme.preview}"></div>
+                      <div class="theme-preview" style="background-color: ${theme.primaryColor}"></div>
                       <div class="theme-name">${theme.name}</div>
                     </div>
                   `).join('')}
+                  <div class="theme-option open-theme-editor">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #ff8a00, #e52e71)">+</div>
+                    <div class="theme-name">Custom Theme</div>
+                  </div>
                 </div>
               </div>
               
@@ -560,17 +555,24 @@ export class SettingsApp extends GuiApplication {
         clearSearch.setAttribute('style', 'display: none;');
       }
     });
-    
-    // Theme selection
-    const themeOptions = this.container.querySelectorAll('.theme-option');
+      // Theme selection
+    const themeOptions = this.container.querySelectorAll('.theme-option:not(.open-theme-editor)');
     themeOptions.forEach(option => {
       option.addEventListener('click', () => {
         const theme = option.getAttribute('data-theme');
         if (theme) {
-          this.saveSettingValue('theme', theme);
+          this.themeManager.applyThemeById(theme).catch(error => {
+            console.error('Error applying theme:', error);
+          });
           this.updateThemeSelection(theme);
         }
       });
+    });
+    
+    // Open Theme Editor option
+    const openThemeEditorOption = this.container.querySelector('.open-theme-editor');
+    openThemeEditorOption?.addEventListener('click', () => {
+      this.os.getAppManager().launchApp('theme-editor');
     });
     
     // Accent color selection

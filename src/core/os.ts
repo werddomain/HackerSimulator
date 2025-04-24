@@ -13,7 +13,7 @@ import { StartMenuController } from './start-menu';
 import { UserSettings } from './UserSettings';
 import { ComputerSettings } from './ComputerSettings';
 import { createIcons, icons } from 'lucide';
-
+import { ThemeSystem } from './theme-system';
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -36,6 +36,7 @@ private fileSystem: FileSystem;
   private computerSettings: ComputerSettings;
   private isReady: boolean = false;
   private readyCallbacks: Array<() => void> = [];
+  themeSystem: ThemeSystem;
   constructor() {
     this.initIcons(); // Initialize icons using lucide
     this.fileSystem = new FileSystem(this);
@@ -64,6 +65,8 @@ private fileSystem: FileSystem;
     
     // Initialize desktop
     this.desktop = new Desktop(this);
+
+    this.themeSystem = new ThemeSystem(this);
   }  /**
    * Initialize the OS
    */
@@ -103,6 +106,8 @@ private fileSystem: FileSystem;
       // Initialize desktop
     this.desktop.init();
     
+    await this.themeSystem.initialize();
+
     console.log('HackerOS initialized successfully');
     
     // Mark the OS as ready and execute any ready callbacks

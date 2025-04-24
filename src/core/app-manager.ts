@@ -170,6 +170,16 @@ export class AppManager {
       launchable: true,
       singleton: true
     });
+
+    // Register theme editor app
+    this.registerApp({
+      id: 'theme-editor',
+      name: 'Theme Editor',
+      description: 'Create and customize system themes',
+      icon: '🎨',
+      launchable: true,
+      singleton: true
+    });
   }
 
   /**
@@ -308,12 +318,27 @@ export class AppManager {
       case 'error-log-viewer':
         this.loadErrorLogViewerUI(contentElement,windowId, args);
         break;
+      case 'theme-editor':
+        this.loadThemeEditorUI(contentElement,windowId, args);
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
     }
   }  /**
    * Load Terminal UI
    */
+  loadThemeEditorUI(contentElement: HTMLElement, windowId: string, args: string[]) {
+    // Create theme editor container
+    contentElement.innerHTML = '<div class="theme-editor"></div>';
+    
+    // Lazily load the theme editor app
+    import('../apps/theme-editor').then(module => {
+      const themeEditorApp = new module.ThemeEditorApp(this.os);
+      themeEditorApp.init(contentElement.querySelector('.theme-editor')!, windowId, args);
+    }).catch(error => {
+      console.error('Failed to load theme editor app:', error);
+      contentElement.innerHTML = '<div style="padding: 20px;">Failed to load theme editor app.</div>';
+    });
+  }
   loadSettingsUI(contentElement: HTMLElement, windowId: string, args: string[] = []) {
     // Create settings container
     contentElement.innerHTML = '<div class="settings-container"></div>';

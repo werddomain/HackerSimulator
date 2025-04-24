@@ -99,7 +99,11 @@ export abstract class GuiApplication {
       }
     );
   }
-  
+  protected get ContainerElement(): HTMLElement | null 
+  {
+    if (!this.windowId) return null;
+    return this.os.getWindowManager().getWindowContentElement(this.windowId);
+  }
   /**
    * Get application name for process registration
    */

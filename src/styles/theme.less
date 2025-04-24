@@ -1,20 +1,258 @@
 // Theme variables for HackerSimulator
 // This file contains theme-related variables that can be used throughout the application
 
-// Main accent colors
-@accent-color: #0078d7; // Primary accent color (blue)
-@accent-color-light: #0091ff; // Lighter version of accent color
-@accent-color-dark: #005a9e; // Darker version of accent color
+// Define CSS custom properties on :root for theme variables
+:root {
+  // Main accent colors
+  --accent-color: #0078d7;
+  --accent-color-light: #0091ff;
+  --accent-color-dark: #005a9e;
+
+  // Theme colors
+  --primary-color: #1a1a1a;
+  --secondary-color: #2c2c2c;
+  --tertiary-color: #444;
+
+  // Text colors
+  --text-color-primary: rgba(255, 255, 255, 0.9);
+  --text-color-secondary: rgba(255, 255, 255, 0.7);
+  --text-color-disabled: rgba(255, 255, 255, 0.4);
+
+  // Status colors
+  --success-color: #27AE60;
+  --warning-color: #F39C12;
+  --error-color: #E74C3C;
+  --info-color: #3498DB;
+  
+  // App tile colors
+  --terminal-color: #2C3E50;
+  --browser-color: #16A085;
+  --code-editor-color: #8E44AD;
+  --file-explorer-color: #2980B9;
+  --system-monitor-color: #C0392B;
+  --mail-color: #D35400;
+  --shop-color: #27AE60;
+  --hack-tools-color: #7F8C8D;
+  --settings-color: #F39C12;
+  
+  // UI component colors
+  --window-border-color: #555;
+  --window-header-color: #444;
+  --desktop-bg-color: #1a1a1a;
+  --dialog-bg-color: rgba(40, 40, 40, 0.85);
+  --dialog-border-color: rgba(255, 255, 255, 0.1);
+  
+  // Taskbar colors
+  --taskbar-bg-start: #2c2c2c;
+  --taskbar-bg-end: #1a1a1a;
+  --taskbar-border-top-color: #3a3a3a;
+  --taskbar-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+  --taskbar-item-bg: rgba(255, 255, 255, 0.04);
+  --taskbar-item-hover-bg: rgba(255, 255, 255, 0.08);
+  --taskbar-item-active-bg: rgba(255, 255, 255, 0.15);
+  --taskbar-item-active-border: 2px solid var(--accent-color);
+  --system-tray-bg: rgba(0, 0, 0, 0.2);
+  
+  // Start button colors
+  --start-button-bg-start: var(--accent-color);
+  --start-button-bg-end: var(--accent-color-dark);
+  --start-button-hover-bg-start: var(--accent-color-light);
+  --start-button-hover-bg-end: var(--accent-color);
+  --start-button-active-bg-start: var(--accent-color-dark);
+  --start-button-active-bg-end: var(--accent-color-dark);
+  
+  // Font variables
+  --system-font: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --monospace-font: 'Ubuntu Mono', 'Courier New', monospace;
+  --header-font: var(--system-font);
+  
+  // Animation speed
+  --animation-speed: 1;
+  
+  // UI element sizes
+  --border-radius: 4px;
+  --button-height: 32px;
+  --input-height: 32px;
+}
+
+// Main accent colors - LESS variables that map to CSS custom properties
+@accent-color: var(--accent-color); // Primary accent color (blue)
+@accent-color-light: var(--accent-color-light); // Lighter version of accent color
+@accent-color-dark: var(--accent-color-dark); // Darker version of accent color
 
 // Theme colors
-@primary-color: #1a1a1a; // The primary background color
-@secondary-color: #2c2c2c; // Secondary background color (e.g., panels, headers)
-@tertiary-color: #444; // Tertiary background color (e.g., inputs, cards)
+@primary-color: var(--primary-color); // The primary background color
+@secondary-color: var(--secondary-color); // Secondary background color (e.g., panels, headers)
+@tertiary-color: var(--tertiary-color); // Tertiary background color (e.g., inputs, cards)
 
 // Text colors
-@text-color-primary: rgba(255, 255, 255, 0.9); // Primary text color
-@text-color-secondary: rgba(255, 255, 255, 0.7); // Secondary text color
-@text-color-disabled: rgba(255, 255, 255, 0.4); // Disabled text color
+@text-color-primary: var(--text-color-primary); // Primary text color
+@text-color-secondary: var(--text-color-secondary); // Secondary text color
+@text-color-disabled: var(--text-color-disabled); // Disabled text color
+
+// Status colors
+@success-color: var(--success-color);
+@warning-color: var(--warning-color);
+@error-color: var(--error-color);
+@info-color: var(--info-color);
+
+// App tile colors
+@terminal-color: var(--terminal-color);
+@browser-color: var(--browser-color);
+@code-editor-color: var(--code-editor-color);
+@file-explorer-color: var(--file-explorer-color);
+@system-monitor-color: var(--system-monitor-color);
+@mail-color: var(--mail-color);
+@shop-color: var(--shop-color);
+@hack-tools-color: var(--hack-tools-color);
+@settings-color: var(--settings-color);
+
+// Specific UI component colors
+@window-border-color: var(--window-border-color);
+@window-header-color: var(--window-header-color);
+@desktop-bg-color: var(--desktop-bg-color);
+@dialog-bg-color: var(--dialog-bg-color);
+@dialog-border-color: var(--dialog-border-color);
+
+// Taskbar colors
+@taskbar-bg-start: var(--taskbar-bg-start);
+@taskbar-bg-end: var(--taskbar-bg-end);
+@taskbar-border-top-color: var(--taskbar-border-top-color);
+@taskbar-shadow: var(--taskbar-shadow);
+@taskbar-item-bg: var(--taskbar-item-bg);
+@taskbar-item-hover-bg: var(--taskbar-item-hover-bg);
+@taskbar-item-active-bg: var(--taskbar-item-active-bg);
+@taskbar-item-active-border: var(--taskbar-item-active-border);
+@system-tray-bg: var(--system-tray-bg);
+
+// Start button colors
+@start-button-bg-start: var(--start-button-bg-start);
+@start-button-bg-end: var(--start-button-bg-end);
+@start-button-hover-bg-start: var(--start-button-hover-bg-start);
+@start-button-hover-bg-end: var(--start-button-hover-bg-end);
+@start-button-active-bg-start: var(--start-button-active-bg-start);
+@start-button-active-bg-end: var(--start-button-active-bg-end);
+
+// Define mixins for theme-related styling
+
+// Mixin for primary button styling
+.themed-button() {
+  background: linear-gradient(to bottom, @accent-color, @accent-color-dark);
+  color: white;
+  border: 1px solid @accent-color-dark;
+  border-radius: var(--border-radius);
+  height: var(--button-height);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: linear-gradient(to bottom, @accent-color-light, @accent-color);
+  }
+  
+  &:active {
+    background: @accent-color-dark;
+  }
+  
+  &:disabled {
+    background: @tertiary-color;
+    color: @text-color-disabled;
+    border-color: @tertiary-color;
+  }
+}
+
+// Mixin for input styling
+.themed-input() {
+  background-color: @tertiary-color;
+  color: @text-color-primary;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius);
+  height: var(--input-height);
+  
+  &:focus {
+    border-color: @accent-color;
+  }
+  
+  &:disabled {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: @text-color-disabled;
+  }
+}
+
+// Mixin for card/panel styling
+.themed-panel() {
+  background-color: @secondary-color;
+  color: @text-color-primary;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius);
+}
+
+// Mixin for window styling
+.themed-window() {
+  background-color: @primary-color;
+  color: @text-color-primary;
+  border: 1px solid @window-border-color;
+  border-radius: var(--border-radius);
+  
+  .window-header {
+    background-color: @window-header-color;
+    color: @text-color-primary;
+  }
+}
+
+// Mixin for scrollbar styling
+.themed-scrollbar() {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: @primary-color;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: @tertiary-color;
+    border-radius: 4px;
+    
+    &:hover {
+      background-color: @accent-color;
+    }
+  }
+}
+
+// Animation settings with customizable speed
+.themed-animation(@name, @duration: 0.3s, @timing-function: ease, @delay: 0s) {
+  animation-name: @name;
+  animation-duration: calc(@duration / var(--animation-speed));
+  animation-timing-function: @timing-function;
+  animation-delay: @delay;
+  animation-fill-mode: both;
+}
+
+// Mixin for status indicators
+.themed-status(@color) {
+  color: @color;
+  
+  &::before {
+    background-color: @color;
+  }
+}
+
+// Status indicator mixins
+.status-success() {
+  .themed-status(@success-color);
+}
+
+.status-warning() {
+  .themed-status(@warning-color);
+}
+
+.status-error() {
+  .themed-status(@error-color);
+}
+
+.status-info() {
+  .themed-status(@info-color);
+}
 
 // Status colors
 @success-color: #27AE60; // Success status color
