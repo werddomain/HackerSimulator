@@ -8,6 +8,29 @@ import { createWindows98Theme } from './themes/windows98';
 import { createMacOSTheme } from './themes/macos';
 import { createUbuntuTheme } from './themes/ubuntu';
 
+export interface PlatformSpecificThemeOverrides {
+    // Platform-specific overrides for any theme properties
+    // These will be merged with the base theme when applied
+    window?: {
+        background?: string;
+        foreground?: string;
+        border?: boolean;
+        borderColor?: string;
+        titleBar?: {
+            activeBackground?: string;
+            activeForeground?: string;
+            inactiveBackground?: string;
+            inactiveForeground?: string;
+            border?: boolean;
+            activeBorderColor?: string;
+            inactiveBorderColor?: string;
+            buttonBackground?: string;
+            buttonForeground?: string;
+        }
+    };
+    // Add other theme property overrides as needed
+}
+
 export interface Theme {
     // Theme metadata
     id: string;
@@ -16,6 +39,12 @@ export interface Theme {
     author?: string;
     version?: string;
     thumbnailPath?: string;
+    
+    // Platform-specific theme variants
+    platformVariants?: {
+        mobile?: PlatformSpecificThemeOverrides;
+        desktop?: PlatformSpecificThemeOverrides;
+    };
     
     // Window styling properties
     window?: {

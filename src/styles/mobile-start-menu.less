@@ -1,0 +1,256 @@
+// Mobile Start Menu Styles
+// These styles define the appearance of the mobile start menu interface
+
+// Main start menu container
+.mobile-start-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &.visible {
+    transform: translateY(0);
+  }
+}
+
+// Start menu header
+.mobile-start-header {
+  padding: var(--spacing-medium);
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+// User info section
+.mobile-start-user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-medium);
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: var(--accent-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--spacing-medium);
+    
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  .user-name {
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    color: var(--text-color-primary);
+  }
+}
+
+// Search input
+.mobile-start-search {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-small);
+  
+  .search-icon {
+    margin-right: var(--spacing-small);
+    color: var(--text-color-secondary);
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  
+  .search-input {
+    background: none;
+    border: none;
+    flex: 1;
+    color: var(--text-color-primary);
+    font-size: var(--font-size-medium);
+    padding: var(--spacing-small) 0;
+    
+    &:focus {
+      outline: none;
+    }
+    
+    &::placeholder {
+      color: var(--text-color-secondary);
+    }
+  }
+}
+
+// Start menu content
+.mobile-start-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-medium);
+  
+  // Hide scrollbar
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Section
+.mobile-start-section {
+  margin-bottom: var(--spacing-large);
+  
+  h2 {
+    font-size: var(--font-size-medium);
+    font-weight: 500;
+    color: var(--text-color-primary);
+    margin-bottom: var(--spacing-medium);
+  }
+}
+
+// App grid
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-large);
+  
+  // Feature grid (larger icons)
+  &.featured-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  // Recent grid (scrollable row)
+  &.recent-grid {
+    grid-template-columns: repeat(8, 1fr);
+    overflow-x: auto;
+    padding-bottom: var(--spacing-small);
+    grid-gap: var(--spacing-medium);
+    
+    // Hide scrollbar
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+// App item
+.mobile-start-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  
+  // App icon
+  .app-icon {
+    width: 60px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    margin-bottom: var(--spacing-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+  
+  // Featured apps (pinned) have larger icons
+  &.pinned .app-icon {
+    width: 70px;
+    height: 70px;
+    
+    svg {
+      width: 38px;
+      height: 38px;
+    }
+  }
+  
+  // App name
+  .app-name {
+    font-size: var(--font-size-small);
+    color: var(--text-color-primary);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  // Active state
+  &:active {
+    .app-icon {
+      transform: scale(0.95);
+      transition: transform 0.1s ease-out;
+    }
+  }
+}
+
+// Search results
+.mobile-start-search-results {
+  .no-results {
+    text-align: center;
+    color: var(--text-color-secondary);
+    padding: var(--spacing-large) 0;
+  }
+}
+
+// Pull handle
+.mobile-start-pull-handle {
+  width: 36px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin: var(--spacing-medium) auto;
+}
+
+// Responsive adjustments
+@media (max-width: 320px) {
+  .app-grid {
+    grid-template-columns: repeat(3, 1fr);
+    
+    &.featured-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+}
+
+// Landscape orientation adjustments
+@media (orientation: landscape) {
+  .mobile-start-header {
+    flex-direction: row;
+    align-items: center;
+    
+    .mobile-start-user-info {
+      margin-bottom: 0;
+      margin-right: var(--spacing-medium);
+    }
+    
+    .mobile-start-search {
+      flex: 1;
+    }
+  }
+  
+  .app-grid {
+    grid-template-columns: repeat(6, 1fr);
+    
+    &.featured-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+}

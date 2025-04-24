@@ -1,0 +1,96 @@
+/**
+ * Responsive design variables
+ * This file contains CSS variables that adapt to different screen sizes and platforms
+ */
+
+:root {
+  /* Base spacing units for responsive design */
+  --spacing-unit: 4px;
+  --spacing-small: calc(var(--spacing-unit) * 1);
+  --spacing-medium: calc(var(--spacing-unit) * 2);
+  --spacing-large: calc(var(--spacing-unit) * 4);
+  --spacing-xlarge: calc(var(--spacing-unit) * 6);
+  
+  /* Base font sizes */
+  --font-size-small: 0.875rem;
+  --font-size-normal: 1rem;
+  --font-size-large: 1.25rem;
+  --font-size-xlarge: 1.5rem;
+  
+  /* Touch target sizes (default, desktop-friendly) */
+  --touch-target-size: 32px;
+  --touch-target-padding: var(--spacing-small);
+  
+  /* Window dimensions */
+  --window-min-width: 320px;
+  --window-min-height: 200px;
+  --window-border-radius: 4px;
+  --window-header-height: 32px;
+  
+  /* Control sizes */
+  --control-height: 28px;
+  --icon-size: 18px;
+  
+  /* Taskbar dimensions */
+  --taskbar-height: 36px;
+  --taskbar-icon-size: 24px;
+  
+  /* Start menu dimensions */
+  --start-menu-width: 320px;
+  --start-menu-max-height: calc(100vh - var(--taskbar-height) - 20px);
+}
+
+/* Mobile-specific variables (apply when platformDetector sets mobile class) */
+.mobile {
+  /* Increased touch targets for mobile */
+  --touch-target-size: 44px;
+  --touch-target-padding: var(--spacing-medium);
+  
+  /* Adjusted font sizes for readability on small screens */
+  --font-size-small: 1rem;
+  --font-size-normal: 1.125rem;
+  --font-size-large: 1.375rem;
+  --font-size-xlarge: 1.625rem;
+  
+  /* Window adjustments for mobile screens */
+  --window-min-width: 280px;
+  --window-header-height: 44px;
+  
+  /* Larger controls for touch */
+  --control-height: 44px;
+  --icon-size: 24px;
+  
+  /* Taskbar/navigation adjustments */
+  --taskbar-height: 48px;
+  --taskbar-icon-size: 28px;
+  
+  /* Full-width start menu on mobile */
+  --start-menu-width: 100%;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  :root {
+    /* Apply mobile-friendly values at small screen sizes regardless of platform detection */
+    --touch-target-size: 44px;
+    --touch-target-padding: var(--spacing-medium);
+    --taskbar-height: 48px;
+    --window-header-height: 44px;
+  }
+}
+
+/* High density displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  :root {
+    /* Adjust sizes for high-density displays if needed */
+    --icon-size: 20px; /* Slightly larger icons for better visibility */
+  }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile {
+    --taskbar-height: 40px; /* Slightly smaller taskbar in landscape to save space */
+    --window-header-height: 40px;
+  }
+}

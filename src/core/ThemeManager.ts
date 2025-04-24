@@ -1,7 +1,8 @@
 import { FileSystem } from './filesystem';
 import { PathUtils } from './path-utils';
 import { UserSettings } from './UserSettings';
-import { Theme, DEFAULT_THEME, THEME_PRESETS } from './theme';
+import { Theme, DEFAULT_THEME, THEME_PRESETS, PlatformSpecificThemeOverrides } from './theme';
+import { PlatformType, platformDetector } from './platform-detector';
 
 /**
  * Event fired when theme changes
@@ -108,18 +109,31 @@ export class ThemeManager {
     // Dispatch theme changed event
     window.dispatchEvent(new ThemeChangedEvent(theme));
   }
-  
-  /**
+    /**
    * Apply CSS variables to the document root element
    * @param theme The theme to apply
    */
   private applyCssVariables(theme: Theme): void {
     const root = document.documentElement;
+      // Get the current platform type
+    const platformType = platformDetector.getPlatformInfo().type;
+    
+    // Create a merged theme by applying platform-specific overrides
+    let mergedTheme = { ...theme };
+    
+    // Apply platform-specific overrides if available
+    if (theme.platformVariants) {
+      const platformOverrides = theme.platformVariants[platformType];
+      if (platformOverrides) {
+        // Deep merge the overrides with the base theme
+        mergedTheme = this.deepMergeTheme(mergedTheme, platformOverrides);
+      }
+    }
     
     // Main accent colors
-    root.style.setProperty('--accent-color', theme.accentColor);
-    root.style.setProperty('--accent-color-light', theme.accentColorLight);
-    root.style.setProperty('--accent-color-dark', theme.accentColorDark);
+    root.style.setProperty('--accent-color', mergedTheme.accentColor);
+    root.style.setProperty('--accent-color-light', mergedTheme.accentColorLight);
+    root.style.setProperty('--accent-color-dark', mergedTheme.accentColorDark);
     
     // Theme colors
     root.style.setProperty('--primary-color', theme.primaryColor);
@@ -473,5 +487,44 @@ export class ThemeManager {
       console.error('Error loading saved theme:', error);
       await this.applyTheme(DEFAULT_THEME);
     }
+  }
+    /**
+   * Deep merge a theme with platform-specific overrides
+   * @param baseTheme The base theme to merge with
+   * @param overrides The platform-specific overrides to apply
+   * @returns The merged theme
+   */
+  private deepMergeTheme(baseTheme: Theme, overrides: PlatformSpecificThemeOverrides): Theme {
+    // Create a copy of the base theme to avoid modifying the original
+    const mergedTheme = { ...baseTheme };
+    
+    // Helper function to recursively merge objects
+    const mergeObjects = (target: any, source: any) => {
+      // Loop through each property in the source object
+      for (const key in source) {
+        // Skip inherited properties
+        if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+        
+        // If property is an object and not null, merge it recursively
+        if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          // If target doesn't have the property or it's not an object, create it
+          if (!target[key] || typeof target[key] !== 'object') {
+            target[key] = {};
+          }
+          
+          // Recursively merge the nested objects
+          mergeObjects(target[key], source[key]);
+        } 
+        // For arrays and primitive values, just overwrite the target property
+        else {
+          target[key] = source[key];
+        }
+      }
+      
+      return target;
+    };
+    
+    // Apply the overrides to the merged theme
+    return mergeObjects(mergedTheme, overrides);
   }
 }

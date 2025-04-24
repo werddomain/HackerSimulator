@@ -1,0 +1,459 @@
+// Mobile window styles
+// These styles define the appearance of windows in the mobile interface
+
+// Mobile windows container
+.mobile-windows-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--taskbar-height);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  overflow: hidden;
+}
+
+// Individual mobile window
+.mobile-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--dialog-bg-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: translateZ(0); // Force hardware acceleration for smooth animations
+  will-change: transform;
+  
+  &.active {
+    z-index: 60;
+  }
+  
+  &.minimized {
+    display: none;
+  }
+  
+  &.fullscreen {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+// Mobile window header
+.mobile-window-header {
+  display: flex;
+  align-items: center;
+  height: var(--window-header-height);
+  background-color: var(--window-header-color);
+  padding: 0 var(--spacing-medium);
+  user-select: none;
+  touch-action: none;
+  border-bottom: 1px solid var(--window-border-color);
+  
+  // Back button
+  .mobile-window-back-button {
+    background: none;
+    border: none;
+    color: var(--text-color-primary);
+    padding: var(--touch-target-padding);
+    margin-right: var(--spacing-small);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+    cursor: pointer;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    svg {
+      width: var(--icon-size);
+      height: var(--icon-size);
+    }
+  }
+}
+
+// Mobile window title
+.mobile-window-title {
+  flex: 1;
+  font-size: var(--font-size-large);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color-primary);
+  text-align: center;
+}
+
+// Mobile window controls
+.mobile-window-controls {
+  display: flex;
+  align-items: center;
+    button {
+    background: none;
+    border: none;
+    color: var(--text-color-primary);
+    padding: var(--touch-target-padding);
+    margin-left: var(--spacing-small);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+    cursor: pointer;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    svg {
+      width: var(--icon-size);
+      height: var(--icon-size);
+    }
+  }
+  
+  .mobile-window-close-button {
+    &:hover {
+      background-color: rgba(255, 0, 0, 0.2);
+    }
+  }
+}
+
+// Mobile window content
+.mobile-window-content {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
+  overscroll-behavior: contain; // Prevent pull-to-refresh behavior
+  position: relative;
+  background-color: var(--dialog-bg-color);
+}
+
+// Mobile navbar
+.mobile-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--taskbar-height);
+  background: linear-gradient(to bottom, var(--taskbar-bg-start), var(--taskbar-bg-end));
+  border-top: 1px solid var(--taskbar-border-top-color);
+  box-shadow: var(--taskbar-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-medium);
+  z-index: 100;
+  
+  // Navbar title
+  .mobile-navbar-title {
+    flex: 1;
+    font-size: var(--font-size-large);
+    text-align: center;
+    color: var(--text-color-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  // Navbar buttons
+  button {
+    background: none;
+    border: none;
+    color: var(--text-color-primary);
+    padding: var(--touch-target-padding);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+    cursor: pointer;
+    
+    &:hover {
+      background-color: var(--taskbar-item-hover-bg);
+    }
+    
+    svg {
+      width: var(--icon-size);
+      height: var(--icon-size);
+    }
+  }
+}
+
+// App switcher
+.mobile-app-switcher {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--taskbar-height);
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  overflow-y: auto;
+  padding: var(--spacing-large);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+  
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// App switcher cards
+.app-switcher-card {
+  width: 90%;
+  background-color: var(--dialog-bg-color);
+  border-radius: var(--border-radius);
+  margin: var(--spacing-medium) 0;
+  padding: var(--spacing-large);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease-out;
+  position: relative;
+  
+  &:hover, &:active {
+    transform: scale(1.02);
+  }
+  
+  // App icon
+  .app-card-icon {
+    width: 48px;
+    height: 48px;
+    margin-right: var(--spacing-large);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+  
+  // App title
+  .app-card-title {
+    flex: 1;
+    font-size: var(--font-size-large);
+    color: var(--text-color-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  // Close button
+  .app-card-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-color-primary);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:hover {
+      background-color: rgba(255, 0, 0, 0.2);
+    }
+  }
+}
+
+// Window transition animations
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideOutToBottom {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+// Animation classes
+.slide-in-right {
+  animation: slideInFromRight 0.3s ease-out forwards;
+}
+
+.slide-out-left {
+  animation: slideOutToLeft 0.3s ease-out forwards;
+}
+
+.slide-in-bottom {
+  animation: slideInFromBottom 0.3s ease-out forwards;
+}
+
+.slide-out-bottom {
+  animation: slideOutToBottom 0.3s ease-out forwards;
+}
+
+// Media query for landscape orientation
+@media (orientation: landscape) {
+  .app-switcher-card {
+    width: 70%;
+    max-width: 600px;
+  }
+}
+
+// Enhanced mobile touch targets for controls
+.mobile-touch-friendly-controls() {
+  // Increase physical size
+  min-width: calc(var(--touch-target-size) * 1.2);
+  min-height: calc(var(--touch-target-size) * 1.2);
+  
+  // Add invisible extended touch area
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    z-index: -1;
+  }
+  
+  // Enlarge icons for better visibility
+  svg {
+    width: calc(var(--icon-size) * 1.25);
+    height: calc(var(--icon-size) * 1.25);
+  }
+  
+  // Enhanced feedback states
+  &:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease-out;
+  }
+}
+
+// Apply enhanced touch targets to all mobile control buttons
+.mobile-window-header .mobile-window-back-button {
+  .mobile-touch-friendly-controls();
+  margin-right: var(--spacing-medium);
+}
+
+.mobile-window-controls button {
+  .mobile-touch-friendly-controls();
+  margin-left: var(--spacing-medium);
+}
+
+.mobile-navbar button {
+  .mobile-touch-friendly-controls();
+}
+
+// Enhanced window content scrolling
+.mobile-window-content {  // Enhanced smooth scrolling
+  scroll-behavior: smooth;
+  
+  // Momentum-based scrolling for all browsers
+  -webkit-overflow-scrolling: touch;
+  // overflow-scrolling is non-standard, using only the webkit version is sufficient
+  
+  // Scrollbar styling for better touch interaction
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+  
+  // Snap points for better content positioning
+  scroll-snap-type: y proximity;
+  
+  // Add padding to ensure content is easily reachable
+  padding: var(--spacing-medium);
+}
+
+// Add scroll snap points to common content elements
+.mobile-window-content {
+  > section, > div, > header, > footer {
+    scroll-snap-align: start;
+  }
+}
+
+// Accordion-style expandable sections for complex UIs
+.mobile-accordion-section {
+  margin-bottom: var(--spacing-medium);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.05);
+  
+  .accordion-header {
+    padding: var(--spacing-medium);
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    
+    &::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      transition: transform 0.3s ease;
+    }
+    
+    &.expanded::after {
+      transform: rotate(-135deg);
+    }
+  }
+  
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    
+    &.expanded {
+      max-height: 1000px; // Large enough to fit most content
+      padding: var(--spacing-medium);
+    }
+  }
+}

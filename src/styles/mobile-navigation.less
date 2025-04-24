@@ -1,0 +1,386 @@
+// Mobile Navigation Styles
+// These styles define the appearance of mobile navigation components
+
+// Mobile navigation bar (bottom bar)
+.mobile-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-nav-height, 60px);
+  background: linear-gradient(to bottom, var(--taskbar-bg-start), var(--taskbar-bg-end));
+  border-top: 1px solid var(--taskbar-border-top-color);
+  box-shadow: var(--taskbar-shadow);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+// Quick launch bar
+.mobile-quick-launch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 60px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--taskbar-border-top-color);
+  padding: 0 var(--spacing-small);
+  
+  // Quick launch item
+  .quick-launch-item {
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 8px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color-primary);
+    padding: var(--spacing-small);
+    margin: 0 var(--spacing-small);
+    
+    &:active {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(0.95);
+    }
+    
+    svg {
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+// Primary navigation items
+.mobile-primary-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex: 1;
+  
+  // Nav item
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    padding: var(--spacing-small);
+    position: relative;
+    flex: 1;
+    
+    // Active state
+    &.active {
+      color: var(--accent-color);
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 25%;
+        width: 50%;
+        height: 3px;
+        background-color: var(--accent-color);
+        border-radius: 3px 3px 0 0;
+      }
+    }
+    
+    // Hover/press effects
+    &:hover {
+      color: var(--text-color-primary);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+    
+    // Icon container
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+    
+    // Label text
+    .nav-label {
+      font-size: var(--font-size-small);
+      white-space: nowrap;
+    }
+    
+    // Badge for notifications
+    .nav-badge {
+      position: absolute;
+      top: 4px;
+      right: 25%;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      background-color: var(--error-color);
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+  }
+}
+
+// Bottom sheet
+.mobile-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85vh;
+  background-color: var(--dialog-bg-color);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  padding: var(--spacing-medium);
+  
+  // When expanded
+  &.expanded {
+    transform: translateY(0);
+  }
+  
+  // Pull indicator
+  .bottom-sheet-pull-indicator {
+    width: 36px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    margin: 0 auto var(--spacing-medium);
+    cursor: pointer;
+  }
+}
+
+// Search bar
+.mobile-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-small);
+  margin-bottom: var(--spacing-large);
+  
+  .search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--spacing-small);
+    color: var(--text-color-secondary);
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  
+  .search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-color-primary);
+    font-size: var(--font-size-medium);
+    padding: var(--spacing-small) 0;
+    
+    &:focus {
+      outline: none;
+    }
+    
+    &::placeholder {
+      color: var(--text-color-secondary);
+    }
+  }
+}
+
+// Recent apps section
+.mobile-recent-apps {
+  margin-bottom: var(--spacing-large);
+  
+  h3 {
+    font-size: var(--font-size-medium);
+    margin-bottom: var(--spacing-medium);
+    color: var(--text-color-primary);
+    font-weight: 500;
+  }
+  
+  .recent-apps-grid {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: var(--spacing-small);
+    scrollbar-width: none; // Hide scrollbar for Firefox
+    
+    &::-webkit-scrollbar {
+      display: none; // Hide scrollbar for Chrome/Safari
+    }
+  }
+  
+  .mobile-recent-app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    margin-right: var(--spacing-medium);
+    
+    .app-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      background-color: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--spacing-small);
+      
+      svg {
+        width: 32px;
+        height: 32px;
+      }
+    }
+    
+    .app-label {
+      font-size: var(--font-size-small);
+      color: var(--text-color-primary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+    }
+    
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+// App grid
+.mobile-app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-large);
+  padding-bottom: var(--spacing-large);
+  
+  // App item
+  .mobile-app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+    .app-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      background-color: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--spacing-small);
+      
+      svg {
+        width: 32px;
+        height: 32px;
+      }
+    }
+    
+    .app-label {
+      font-size: var(--font-size-small);
+      color: var(--text-color-primary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+    }
+    
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Context menu for long press
+.mobile-context-menu {
+  position: absolute;
+  background-color: var(--dialog-bg-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 1050;
+  min-width: 180px;
+  overflow: hidden;
+  animation: fade-in 0.2s ease-out;
+  
+  .context-menu-header {
+    padding: var(--spacing-medium);
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-color-primary);
+  }
+  
+  .context-menu-item {
+    padding: var(--spacing-medium);
+    color: var(--text-color-primary);
+    cursor: pointer;
+    
+    &:hover, &:active {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+// Animation for fade in
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// Media queries for different devices
+@media (max-height: 700px) {
+  .mobile-app-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 320px) {
+  .mobile-app-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .mobile-nav-item .nav-label {
+    font-size: 10px;
+  }
+}
+
+// Landscape orientation adjustments
+@media (orientation: landscape) {
+  .mobile-bottom-sheet {
+    height: 90vh;
+  }
+  
+  .mobile-app-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .mobile-quick-launch-bar {
+    justify-content: center;
+    
+    .quick-launch-item {
+      margin: 0 var(--spacing-medium);
+    }
+  }
+}

@@ -1,0 +1,240 @@
+// Mobile Task Switcher Styles
+// These styles define the appearance of the mobile task switcher interface
+
+// Main task switcher container
+.mobile-task-switcher {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 990;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-large);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+  
+  // Visible state
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  // Close button
+  .task-switcher-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-color-primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    
+    &:hover, &:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+// Task cards container
+.task-cards-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-medium) 0;
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-medium);
+  
+  // Remove scrollbar
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Individual task card
+.task-card {
+  width: 90%;
+  max-width: 500px;
+  background-color: var(--dialog-bg-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  transform-origin: center;
+  transition: transform 0.2s ease-out;
+  position: relative;
+  will-change: transform;
+  
+  // Hover and active states
+  &:hover {
+    transform: scale(1.02);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+  
+  // Animation for card being removed
+  &.closing {
+    animation: slide-out 0.3s ease-out forwards;
+    pointer-events: none;
+  }
+  
+  // Task card header
+  .task-card-header {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-medium);
+    background-color: rgba(0, 0, 0, 0.2);
+    
+    // App icon
+    .task-card-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: var(--spacing-medium);
+      
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+    
+    // App title
+    .task-card-title {
+      flex: 1;
+      font-size: var(--font-size-medium);
+      font-weight: 500;
+      color: var(--text-color-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    // Close button
+    .task-card-close {
+      background: none;
+      border: none;
+      color: var(--text-color-secondary);
+      font-size: 22px;
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      
+      &:hover, &:active {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color-primary);
+      }
+    }
+  }
+  
+  // Card preview/screenshot area
+  .task-card-preview {
+    width: 100%;
+    height: 200px;
+    background-color: var(--app-bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    
+    // Screenshot
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    // Placeholder when no screenshot
+    .task-card-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-color-secondary);
+      opacity: 0.5;
+      
+      svg {
+        width: 64px;
+        height: 64px;
+      }
+    }
+  }
+}
+
+// Empty state when no apps are running
+.task-switcher-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-large);
+  margin-top: 60px;
+  text-align: center;
+  
+  .empty-icon {
+    color: var(--text-color-secondary);
+    opacity: 0.5;
+    margin-bottom: var(--spacing-medium);
+  }
+  
+  h3 {
+    color: var(--text-color-primary);
+    font-size: var(--font-size-large);
+    margin-bottom: var(--spacing-small);
+  }
+  
+  p {
+    color: var(--text-color-secondary);
+    font-size: var(--font-size-medium);
+  }
+}
+
+// Animations
+@keyframes slide-out {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 0; }
+}
+
+// Responsive adjustments
+@media (max-height: 600px) {
+  .task-card .task-card-preview {
+    height: 150px;
+  }
+}
+
+@media (orientation: landscape) {
+  .task-cards-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+  }
+  
+  .task-card {
+    width: 45%;
+  }
+}

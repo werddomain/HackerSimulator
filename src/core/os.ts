@@ -15,6 +15,9 @@ import { ComputerSettings } from './ComputerSettings';
 import { createIcons, icons } from 'lucide';
 import { ThemeSystem } from './theme-system';
 import { InitComponents } from './components/init';
+import { PlatformDetector, platformDetector } from './platform-detector';
+import { WindowManagerFactory } from './window-manager-factory';
+import { IWindowManager } from './window-manager-interface';
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -22,6 +25,7 @@ export class OS {
   private fileSystem: FileSystem;
   private processManager: ProcessManager;
   private windowManager: WindowManager;
+  private windowManagerFactory: WindowManagerFactory = WindowManagerFactory.getInstance();
   private systemMonitor: SystemMonitor;
   private appManager: AppManager;
   private commandProcessor: CommandProcessor;
@@ -34,15 +38,13 @@ export class OS {
   private desktop: Desktop;
   private startMenuController: StartMenuController;
   private userSettings: UserSettings;
-  private computerSettings: ComputerSettings;
-  private isReady: boolean = false;
-  private readyCallbacks: Array<() => void> = [];
+  private computerSettings: ComputerSettings;  private isReady: boolean = false;  private readyCallbacks: Array<() => void> = [];
   themeSystem: ThemeSystem;
-  constructor() {
+  platformDetector: PlatformDetector = platformDetector; // Initialize with the singleton instance  constructor() {
     this.initIcons(); // Initialize icons using lucide
     this.fileSystem = new FileSystem(this);
     this.processManager = new ProcessManager();
-    this.windowManager = new WindowManager();
+    this.windowManager = this.windowManagerFactory.getDesktopWindowManager(); // Use factory to get desktop manager
     this.systemMonitor = new SystemMonitor(this.processManager);
     this.appManager = new AppManager(this);
     this.commandProcessor = new CommandProcessor(this);
