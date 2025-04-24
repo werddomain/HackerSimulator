@@ -80,34 +80,97 @@ export function createMacOSTheme(): Theme {
       #windows-container .window-header .window-title{
         color: black !important;
         margin-left: 25px !important;
+        font-weight: 500;
+        font-size: 13px;
       } 
         #windows-container .window {
-            border-radius: 16px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        #windows-container .window.active {
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
         }
         #windows-container .window-header .window-controls{
             flex-direction: row-reverse;
         }
+            #windows-container .window {
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            }
             #windows-container .window-header {
             border-radius: 16px 16px 0 0;
         }
-            #windows-container .window-content, #windows-container .window-content > div {
-                border-radius: 0 0 16px 16px;
+            #windows-container .window-content, 
+            #windows-container .window-content > div {
+
+                border-radius: 0 0 10px 10px;
+}
+            /* Style for code editor window content */
+            .app-code-editor #windows-container .window-content {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
             }
-             #windows-container .window-header .window-controls .window-control{
+            /* Style for terminal window content */
+            .app-terminal #windows-container .window-content {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+            }
+            /* General content style for native macOS appearance */
+            #windows-container .window-content,
+            #windows-container .window {
+                background-color: #f5f5f7;
+            }
+             #windows-container .window-header .window-controls .window-control {
             border-radius: 50%;
-             }
+            /*width: 12px;
+            height: 12px;*/
+            margin: 0 4px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.15);
+            transition: all 0.1s ease-in-out;
+        }
+        #windows-container .window-header .window-controls {
+            margin-left: 8px;
+            display: flex;
+            gap: 3px;
+        }
         #windows-container .window-header {
             flex-direction: row-reverse;
         }
-            .window-control.close {
-          background-color: #ff5f57;
+        .window-control.close {
+            background-color: #ff5f57;
         }
         .window-control.minimize {
-          background-color: #ffbd2e;
+            background-color: #ffbd2e;
         }
         .window-control.maximize {
-          background-color: #28c940;
+            background-color: #28c940;
+        }
+        .window:not(.active) .window-control {
+            opacity: 0.7;
+        }
+        .window-control.close:hover {
+            background-color: #ff5f57;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M3 3L7 7M7 3L3 7' stroke='%23750b0b' stroke-width='1.2' stroke-linecap='round'/></svg>");
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .window-control.minimize:hover {
+            background-color: #ffbd2e;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2.5 5H7.5' stroke='%23995700' stroke-width='1.2' stroke-linecap='round'/></svg>");
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .window-control.maximize:hover {
+            background-color: #28c940;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M3.5 3.5L6.5 6.5M3.5 6.5L6.5 3.5' stroke='%23006500' stroke-width='1.2' stroke-linecap='round'/></svg>");
+            background-position: center;
+            background-repeat: no-repeat;
         }
       `
     },
