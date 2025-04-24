@@ -171,6 +171,21 @@ export class SettingsApp extends GuiApplication {  private userSettings: UserSet
       title: 'Taskbar Position',
       description: 'Change the position of the taskbar'
     });
+    
+    // Start Menu settings
+    this.settingsIndex.set('start-menu-app-colors', {
+      section: 'startMenu',
+      key: 'appTileColors',
+      title: 'App Tile Colors',
+      description: 'Customize colors for app tiles in the Start Menu'
+    });
+    
+    this.settingsIndex.set('disable-custom-app-colors', {
+      section: 'startMenu',
+      key: 'disableCustomAppTileColors',
+      title: 'Use Theme Colors Only',
+      description: 'When enabled, app tiles will use colors from the current theme instead of custom colors'
+    });
   }
 
   /**
@@ -208,10 +223,13 @@ export class SettingsApp extends GuiApplication {  private userSettings: UserSet
               <div class="nav-item ${this.activeSection === 'privacy' ? 'active' : ''}" data-section="privacy">
                 <span class="nav-icon">🔒</span>
                 <span class="nav-text">Privacy</span>
-              </div>
-              <div class="nav-item ${this.activeSection === 'personalization' ? 'active' : ''}" data-section="personalization">
+              </div>              <div class="nav-item ${this.activeSection === 'personalization' ? 'active' : ''}" data-section="personalization">
                 <span class="nav-icon">👤</span>
                 <span class="nav-text">Personalization</span>
+              </div>
+              <div class="nav-item ${this.activeSection === 'startMenu' ? 'active' : ''}" data-section="startMenu">
+                <span class="nav-icon">🔲</span>
+                <span class="nav-text">Start Menu</span>
               </div>
               <div class="nav-item ${this.activeSection === 'about' ? 'active' : ''}" data-section="about">
                 <span class="nav-icon">ℹ️</span>
@@ -470,6 +488,33 @@ export class SettingsApp extends GuiApplication {  private userSettings: UserSet
                     <option value="left">Left</option>
                     <option value="right">Right</option>
                   </select>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Start Menu Section -->
+            <div class="settings-section ${this.activeSection === 'startMenu' ? 'active' : ''}" id="startMenu-section">
+              <h2>Start Menu</h2>
+              <p class="section-description">Customize the Start Menu appearance and behavior</p>
+              
+              <div class="setting-group">
+                <h3>App Tile Colors</h3>
+                <div class="setting-control toggle-control">
+                  <label class="toggle">
+                    <input type="checkbox" id="disable-custom-app-colors">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="toggle-label">Use theme colors only (disable custom app colors)</div>
+                </div>
+                <p class="setting-description">When enabled, app tiles will use colors from the current theme instead of custom colors.</p>
+              </div>
+              
+              <div class="setting-group app-tile-colors" id="app-tile-colors-container">
+                <h3>Custom App Tile Colors</h3>
+                <p class="setting-description">Customize the color of each app tile in the Start Menu.</p>
+                <div class="app-tile-color-list">
+                  <!-- This will be populated with the pinned apps and their color options -->
+                  <div class="loading-message">Loading pinned apps...</div>
                 </div>
               </div>
             </div>
@@ -1206,5 +1251,120 @@ export class SettingsApp extends GuiApplication {  private userSettings: UserSet
    */
   private showInfoDialog(title: string, message: string): void {
     this.dialogManager.Msgbox.Show(title, message, ['ok']);
+  }
+  /**
+   * Populate the app tile color customization UI with pinned apps
+   */
+  private async populateAppTileColorUI(): Promise<void> {
+    const container = this.container?.querySelector('#app-tile-colors-container .app-tile-color-list');
+    if (!container) return;
+    
+    // Clear loading message
+    container.innerHTML = '';
+    
+    // Get current theme to see if custom colors are disabled
+    const currentTheme = this.themeManager.getCurrentTheme();
+    const disableCustomColors = currentTheme.disableCustomAppTileColors || false;
+    
+    // Update the toggle checkbox
+    const toggleCheckbox = this.container?.querySelector('#disable-custom-app-colors') as HTMLInputElement;
+    if (toggleCheckbox) {
+      toggleCheckbox.checked = disableCustomColors;
+      
+      // Show/hide the app tile color list based on the toggle state
+      const appTileColorsContainer = this.container?.querySelector('.app-tile-colors');
+      if (appTileColorsContainer) {
+        appTileColorsContainer.classList.toggle('disabled', disableCustomColors);
+      }
+    }
+    
+    // Get pinned apps and their color assignments
+    const os = (window as any).os; // Access the global OS object
+    const startMenuController = os.getStartMenuController();
+    const pinnedApps = startMenuController.getPinnedApps();
+    const appManager = os.getAppManager();
+    const userSettings = this.userSettings;
+    const colorAssignments = await userSettings.getAppTileColorAssignments();
+    
+    // Available color options (A through I)
+    const colorOptions = [
+      { value: 'A', label: 'Navy', color: 'var(--terminal-color, #2C3E50)' },
+      { value: 'B', label: 'Teal', color: 'var(--browser-color, #16A085)' },
+      { value: 'C', label: 'Purple', color: 'var(--code-editor-color, #8E44AD)' },
+      { value: 'D', label: 'Blue', color: 'var(--file-explorer-color, #2980B9)' },
+      { value: 'E', label: 'Red', color: 'var(--system-monitor-color, #C0392B)' },
+      { value: 'F', label: 'Orange', color: 'var(--mail-color, #D35400)' },
+      { value: 'G', label: 'Green', color: 'var(--shop-color, #27AE60)' },
+      { value: 'H', label: 'Gray', color: 'var(--hack-tools-color, #7F8C8D)' },
+      { value: 'I', label: 'Yellow', color: 'var(--settings-color, #F39C12)' }
+    ];
+    
+    // For each pinned app, create a UI control to select its color
+    for (const appId of pinnedApps) {
+      const app = appManager.getAppInfo(appId);
+      if (!app) continue;
+      
+      const appColorRow = document.createElement('div');
+      appColorRow.className = 'app-color-row';
+      
+      // App icon and name
+      const appInfoElement = document.createElement('div');
+      appInfoElement.className = 'app-info';
+      
+      const appIcon = document.createElement('i');
+      os.getAppManager().displayIcon(app.icon || 'app', appIcon);
+      
+      const appName = document.createElement('div');
+      appName.className = 'app-name';
+      appName.textContent = app.name;
+      
+      appInfoElement.appendChild(appIcon);
+      appInfoElement.appendChild(appName);
+      
+      // Color selector
+      const colorSelector = document.createElement('div');
+      colorSelector.className = 'color-selector';
+      
+      // Get current color assignment for this app
+      const currentColorClass = colorAssignments.get(appId) || 'A';
+      
+      // Create color options
+      colorOptions.forEach(option => {
+        const colorOption = document.createElement('div');
+        colorOption.className = `color-option ${option.value === currentColorClass ? 'selected' : ''}`;
+        colorOption.setAttribute('data-color', option.value);
+        colorOption.style.backgroundColor = option.color;
+        colorOption.title = option.label;
+        
+        // Add click event to select this color
+        colorOption.addEventListener('click', async () => {
+          // Update visual selection
+          colorSelector.querySelectorAll('.color-option').forEach(el => {
+            el.classList.remove('selected');
+          });
+          colorOption.classList.add('selected');
+          
+          // Save the color assignment
+          await userSettings.setAppTileColorAssignment(appId, option.value);
+          
+          // Refresh the start menu to show the new color
+          startMenuController.refreshStartMenu();
+        });
+        
+        colorSelector.appendChild(colorOption);
+      });
+      
+      appColorRow.appendChild(appInfoElement);
+      appColorRow.appendChild(colorSelector);
+      container.appendChild(appColorRow);
+    }
+    
+    // If no pinned apps, show a message
+    if (pinnedApps.length === 0) {
+      const noAppsMessage = document.createElement('div');
+      noAppsMessage.className = 'no-apps-message';
+      noAppsMessage.textContent = 'No pinned apps found. Pin apps to the Start Menu to customize their colors.';
+      container.appendChild(noAppsMessage);
+    }
   }
 }

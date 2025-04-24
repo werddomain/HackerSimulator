@@ -14,23 +14,24 @@ import { UserSettings } from './UserSettings';
 import { ComputerSettings } from './ComputerSettings';
 import { createIcons, icons } from 'lucide';
 import { ThemeSystem } from './theme-system';
+import { InitComponents } from './components/init';
 /**
  * Main OS class that manages the entire operating system simulation
  */
 export class OS {
-private fileSystem: FileSystem;
+  private fileSystem: FileSystem;
   private processManager: ProcessManager;
   private windowManager: WindowManager;
   private systemMonitor: SystemMonitor;
   private appManager: AppManager;
   private commandProcessor: CommandProcessor;
-  private commandRegistry: CommandRegistry;  private clockInterval: number | null = null;  
+  private commandRegistry: CommandRegistry; private clockInterval: number | null = null;
   private websites: Map<string, WebsiteEntry> = new Map();
   private webClient: WebClient;
   private networkInterface: NetworkInterface;
   private dnsServer: DNSServer;
   private defaultWebsites: DefaultWebsites;
-  private desktop: Desktop;  
+  private desktop: Desktop;
   private startMenuController: StartMenuController;
   private userSettings: UserSettings;
   private computerSettings: ComputerSettings;
@@ -48,21 +49,21 @@ private fileSystem: FileSystem;
     this.startMenuController = new StartMenuController(this);
     // Initialize command registry
     this.commandRegistry = CommandRegistry.getInstance(this);
-    
+
     // Initialize network infrastructure
     this.dnsServer = new DNSServer();
     this.networkInterface = new NetworkInterface();
-    
+
     // Initialize default websites using the dedicated class
     this.defaultWebsites = new DefaultWebsites(this);
     this.defaultWebsites.initDefaultWebsites();
-    
+
     // Initialize settings utilities
     this.userSettings = new UserSettings(this.fileSystem);
     this.computerSettings = new ComputerSettings(this.fileSystem);
-    
+
     this.webClient = new WebClient(this.websites);
-    
+
     // Initialize desktop
     this.desktop = new Desktop(this);
 
@@ -80,36 +81,37 @@ private fileSystem: FileSystem;
 
   public async init(): Promise<void> {
     console.log('Initializing HackerOS...');
-    
+
     // Initialize filesystem
     await this.fileSystem.init();
-    
+
     // Initialize process manager
     this.processManager.init();
-    
+
     // Initialize window manager
     this.windowManager.init();
-    
+
     // Initialize system monitor
     this.systemMonitor.init();
-    
+
     // Initialize app manager and register default apps
     this.appManager.init();
-    
+
     // Register all built-in commands
     this.commandRegistry.registerBuiltInCommands();
-    
+
 
 
     // Initialize clock
     this.initClock();
-      // Initialize desktop
+    // Initialize desktop
     this.desktop.init();
-    
+
     await this.themeSystem.initialize();
+    await InitComponents(this);
 
     console.log('HackerOS initialized successfully');
-    
+
     // Mark the OS as ready and execute any ready callbacks
     this.isReady = true;
     this.readyCallbacks.forEach(callback => callback());
@@ -174,14 +176,14 @@ private fileSystem: FileSystem;
   public getCommandProcessor(): CommandProcessor {
     return this.commandProcessor;
   }
-  
+
   /**
    * Get the DNS server instance
    */
   public getDNSServer(): DNSServer {
     return this.dnsServer;
   }
-  
+
   /**
    * Get the network interface instance
    */
@@ -194,7 +196,7 @@ private fileSystem: FileSystem;
    */
   public getDesktop(): Desktop {
     return this.desktop;
-  }  public getWebClient(): WebClient {
+  } public getWebClient(): WebClient {
     return this.webClient;
   }
 
@@ -206,7 +208,7 @@ private fileSystem: FileSystem;
     if (!this.userSettings) {
       this.userSettings = new UserSettings(this.fileSystem);
     }
-    return this.userSettings ;
+    return this.userSettings;
   }
 
   /**
@@ -264,8 +266,8 @@ private fileSystem: FileSystem;
    * @returns Promise resolving to HTML content
    */
   public getWebsite(
-    domain: string, 
-    path: string, 
+    domain: string,
+    path: string,
     method: string = 'GET',
     requestData: {
       query?: Record<string, string>,
@@ -281,12 +283,12 @@ private fileSystem: FileSystem;
     return new Promise((resolve, reject) => {
       // Look up the website in our registry
       const website = this.websites.get(domain);
-      
+
       if (!website) {
         reject(new Error(`Website not found: ${domain}`));
         return;
       }
-      
+
       // Check if this website has a controller
       if (website.controller) {
         // Prepare the request object for the controller
@@ -298,7 +300,7 @@ private fileSystem: FileSystem;
           body: requestData.body || {},
           cookies: requestData.cookies || {}
         };
-        
+
         // Process the request through the controller
         website.controller.processRequest(request)
           .then((response: any) => {
@@ -308,9 +310,9 @@ private fileSystem: FileSystem;
               if (redirectUrl.hostname === domain) {
                 // Internal redirect, update path and reprocess
                 return this.getWebsite(
-                  domain, 
-                  redirectUrl.pathname, 
-                  'GET', 
+                  domain,
+                  redirectUrl.pathname,
+                  'GET',
                   {
                     query: Object.fromEntries(redirectUrl.searchParams.entries()),
                     headers: request.headers,
@@ -340,10 +342,10 @@ private fileSystem: FileSystem;
             }
           })
           .catch((error: Error) => reject(error));
-        
+
         return;
       }
-      
+
       // Check if there's a dynamic handler for this website
       if (website.dynamicHandler) {
         website.dynamicHandler(path)
@@ -351,11 +353,11 @@ private fileSystem: FileSystem;
           .catch(error => reject(error));
         return;
       }
-      
+
       // Check if there's a static content for this path
       if (website.content[path]) {
         const content = website.content[path];
-        
+
         if (typeof content === 'function') {
           // Execute function to get dynamic content
           try {
@@ -374,11 +376,11 @@ private fileSystem: FileSystem;
           const paths = Object.keys(website.content)
             .filter(p => p !== '/' && path.startsWith(p))
             .sort((a, b) => b.length - a.length); // Sort by length descending
-          
+
           if (paths.length > 0) {
             const bestMatch = paths[0];
             const content = website.content[bestMatch];
-            
+
             if (typeof content === 'function') {
               try {
                 resolve(content());
@@ -390,7 +392,7 @@ private fileSystem: FileSystem;
             }
             return;
           }
-          
+
           // If no matching paths, return a 404 page
           resolve(`
             <html>
@@ -416,17 +418,17 @@ private fileSystem: FileSystem;
    */
   public shutdown(): void {
     console.log('Shutting down HackerOS...');
-    
+
     // Clear the clock interval
     if (this.clockInterval !== null) {
       clearInterval(this.clockInterval);
       this.clockInterval = null;
     }
-    
+
     // Perform any necessary cleanup
     this.processManager.killAllProcesses();
     this.windowManager.closeAllWindows();
-    
+
     console.log('HackerOS shutdown complete');
   }
   /**
@@ -440,7 +442,7 @@ private fileSystem: FileSystem;
           const domain = url.hostname;
           const path = url.pathname || '/';
           const method = options.method.toUpperCase();
-          
+
           // Check if the domain exists
           const website = this.websites.get(domain);
           if (!website) {
@@ -464,7 +466,7 @@ private fileSystem: FileSystem;
 
             // Process the request through the controller
             const response = await website.controller.processRequest(webRequest);
-            
+
             return {
               body: response.content || '',
               statusCode: response.code,
@@ -472,19 +474,19 @@ private fileSystem: FileSystem;
               headers: response.headers || {}
             };
           }
-          
+
           // For simple content websites
           let content: string | (() => string) | undefined = website.content[path];
-          
+
           // If content is a function, execute it to get the dynamic content
           if (typeof content === 'function') {
             content = content();
-          } 
+          }
           // If no content exists but there's a dynamic handler, use it
           else if (!content && website.dynamicHandler) {
             content = await website.dynamicHandler(path);
           }
-          
+
           if (!content) {
             return {
               body: `<html><body><h1>404 Not Found</h1><p>The requested URL ${path} was not found on this server.</p></body></html>`,
@@ -493,7 +495,7 @@ private fileSystem: FileSystem;
               headers: { 'Content-Type': 'text/html' }
             };
           }
-          
+
           return {
             body: content,
             statusCode: 200,
@@ -506,7 +508,7 @@ private fileSystem: FileSystem;
       }
     };
   }
-  
+
   /**
    * Get HTTP status text from status code
    */
@@ -522,7 +524,7 @@ private fileSystem: FileSystem;
       404: 'Not Found',
       500: 'Internal Server Error'
     };
-    
+
     return statusTexts[code] || 'Unknown';
   }
 }

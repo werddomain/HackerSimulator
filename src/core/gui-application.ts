@@ -101,8 +101,8 @@ export abstract class GuiApplication {
   }
   protected get ContainerElement(): HTMLElement | null 
   {
-    if (!this.windowId) return null;
-    return this.os.getWindowManager().getWindowContentElement(this.windowId);
+    if (!this.container) return null;
+    return this.container;
   }
   /**
    * Get application name for process registration

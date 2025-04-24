@@ -485,3 +485,73 @@
     }
   }
 }
+
+/* App Tile Color Customization Styles */
+.app-tile-colors {
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  
+  .app-tile-color-list {
+    margin-top: 15px;
+    
+    .loading-message {
+      color: #999;
+      font-style: italic;
+    }
+    
+    .no-apps-message {
+      color: #999;
+      font-style: italic;
+      margin: 10px 0;
+    }
+    
+    .app-color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .app-info {
+        display: flex;
+        align-items: center;
+        
+        i {
+          margin-right: 10px;
+          font-size: 20px;
+        }
+        
+        .app-name {
+          font-size: 14px;
+        }
+      }
+      
+      .color-selector {
+        display: flex;
+        gap: 8px;
+        
+        .color-option {
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+          
+          &:hover {
+            transform: scale(1.1);
+          }
+          
+          &.selected {
+            box-shadow: 0 0 0 2px white;
+          }
+        }
+      }
+    }
+  }
+}

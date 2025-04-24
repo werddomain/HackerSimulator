@@ -116,4 +116,76 @@ export class UserSettings extends BaseSettings {
     return this.setAppSetting("StartMenu", "PinnedApps", appIds.join(','));
    
   }
+  
+  /**
+   * Get app tile color assignments
+   * Format: "appId;colorClass" (e.g., "terminal;A,browser;B,calculator;G")
+   * @returns Map of app IDs to color class letters
+   */
+  public async getAppTileColorAssignments(): Promise<Map<string, string>> {
+    const colorAssignmentsStr = await this.getAppSetting("StartMenu", "AppTileColors");
+    const result = new Map<string, string>();
+    
+    if (colorAssignmentsStr) {
+      // Split the string by commas to get individual assignments
+      const assignments = colorAssignmentsStr.split(',');
+      
+      for (const assignment of assignments) {
+        // Split each assignment by semicolon to get appId and colorClass
+        const parts = assignment.trim().split(';');
+        if (parts.length === 2) {
+          const [appId, colorClass] = parts;
+          result.set(appId, colorClass);
+        }
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Set app tile color assignments
+   * @param colorAssignments Map of app IDs to color class letters
+   */
+  public async setAppTileColorAssignments(colorAssignments: Map<string, string>): Promise<void> {
+    // Convert the map to a string in the format "appId;colorClass,appId;colorClass,..."
+    const assignments: string[] = [];
+    
+    for (const [appId, colorClass] of colorAssignments.entries()) {
+      assignments.push(`${appId};${colorClass}`);
+    }
+    
+    await this.setAppSetting("StartMenu", "AppTileColors", assignments.join(','));
+  }
+  
+  /**
+   * Set a single app tile color assignment
+   * @param appId The app ID
+   * @param colorClass The color class letter (A-I)
+   */
+  public async setAppTileColorAssignment(appId: string, colorClass: string): Promise<void> {
+    const colorAssignments = await this.getAppTileColorAssignments();
+    colorAssignments.set(appId, colorClass);
+    await this.setAppTileColorAssignments(colorAssignments);
+  }
+  
+  /**
+   * Get a single app tile color assignment
+   * @param appId The app ID
+   * @returns The color class letter, or undefined if not assigned
+   */
+  public async getAppTileColorAssignment(appId: string): Promise<string | undefined> {
+    const colorAssignments = await this.getAppTileColorAssignments();
+    return colorAssignments.get(appId);
+  }
+  
+  /**
+   * Clear an app tile color assignment
+   * @param appId The app ID
+   */
+  public async clearAppTileColorAssignment(appId: string): Promise<void> {
+    const colorAssignments = await this.getAppTileColorAssignments();
+    colorAssignments.delete(appId);
+    await this.setAppTileColorAssignments(colorAssignments);
+  }
 }

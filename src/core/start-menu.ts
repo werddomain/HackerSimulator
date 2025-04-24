@@ -278,15 +278,24 @@ export class StartMenuController {
     startMenu.appendChild(userSubmenu);
     startMenu.appendChild(powerSubmenu);
     desktop.appendChild(startMenu);
-  }
-  buildPinedApps() {
+  }  async buildPinedApps() {
     if (!this.pinnedAppsEl) return;
     this.pinnedAppsEl.innerHTML = ''; // Clear existing pinned apps
 
-    this.appTileConfig.forEach(app => {
+    // Get current color assignments
+    const userSettings = this.os.getUserSettings();
+    const colorAssignments = await userSettings.getAppTileColorAssignments();
+
+    for (const app of this.appTileConfig) {
       const tile = document.createElement('div');
-      tile.className = `app-tile ${app.className}`;
+      
+      // Get the color class for this app (from user settings or assign a new one)
+      const colorClass = await this.getAppTileColorClass(app.id);
+      
+      // Set the app tile class with both the app-specific class and the color class
+      tile.className = `app-tile ${app.className} app-tile-${colorClass}`;
       tile.setAttribute('data-app-id', app.id); // Store the app ID as a data attribute
+      tile.setAttribute('data-color-class', colorClass); // Store the color class
 
       const icon = document.createElement('i');
       this.os.getAppManager().displayIcon(app.icon, icon);
@@ -304,7 +313,7 @@ export class StartMenuController {
 
       // Add click and context menu event listeners to the tile
       this.setupAppTileEvents(tile);
-    });
+    }
   }
   /**
    * Initialize references to the created DOM elements
@@ -800,11 +809,10 @@ export class StartMenuController {
         tile.removeEventListener('dragend', this.handleDragEnd);
       });
     }
-  }
-  /**
+  }  /**
  * Refresh the pinned apps view with current configuration
  */
-  private refreshPinnedAppsView(): void {
+  private async refreshPinnedAppsView(): Promise<void> {
     // Clear existing pinned apps
     if (!this.pinnedAppsView) return;
 
@@ -813,11 +821,19 @@ export class StartMenuController {
 
     // Clear existing tiles
     pinnedApps.innerHTML = '';
-    this.appTiles = [];    // Add app tiles based on current configuration
-    this.appTileConfig.forEach(app => {
+    this.appTiles = [];
+    
+    // Add app tiles based on current configuration
+    for (const app of this.appTileConfig) {
       const tile = document.createElement('div');
-      tile.className = `app-tile ${app.className}`;
+      
+      // Get the color class for this app
+      const colorClass = await this.getAppTileColorClass(app.id);
+      
+      // Set the app tile class with both the app-specific class and the color class
+      tile.className = `app-tile ${app.className} app-tile-${colorClass}`;
       tile.setAttribute('data-app-id', app.id);
+      tile.setAttribute('data-color-class', colorClass); // Store the color class
 
       const icon = document.createElement('i');
       this.os.getAppManager().displayIcon(app.icon, icon);
@@ -833,7 +849,7 @@ export class StartMenuController {
 
       // Add click and contextmenu event listeners
       this.setupAppTileEvents(tile);
-    });
+    }
 
     // Re-initialize Lucide icons
     createIcons({
@@ -938,13 +954,13 @@ export class StartMenuController {
         if (draggedIndex !== -1 && targetIndex !== -1) {
           // Reorder the app tile config
           const [draggedApp] = this.appTileConfig.splice(draggedIndex, 1);
-          this.appTileConfig.splice(targetIndex, 0, draggedApp);
-
-          // Mark as changed
+          this.appTileConfig.splice(targetIndex, 0, draggedApp);          // Mark as changed
           this.pinnedAppsChanged = true;
 
           // Refresh the pinned apps view
-          this.refreshPinnedAppsView();
+          this.refreshPinnedAppsView().catch(error => {
+            console.error('Error refreshing pinned apps view:', error);
+          });
         }
       }
     }
@@ -1023,7 +1039,7 @@ export class StartMenuController {
   }  /**
  * Pin an app to the start menu
  */
-  private pinApp(appId: string): void {
+  private async pinApp(appId: string): Promise<void> {
     // Check if the app is already pinned
     const isPinned = this.appTileConfig.some(app => app.id === appId);
     if (isPinned) return;
@@ -1045,16 +1061,20 @@ export class StartMenuController {
     // Add to pinned apps
     this.appTileConfig.push(newAppTile);
     
+    // Assign a color class for this app (from user settings or assign a random one)
+    const colorClass = await this.getAppTileColorClass(appId);
+    const userSettings = this.os.getUserSettings();
+    await userSettings.setAppTileColorAssignment(appId, colorClass);
+    
     // Save changes immediately instead of showing the save button
     this.savePinnedApps();
 
     // Refresh the view
     this.refreshPinnedAppsView();
-  }
-  /**
+  }  /**
    * Unpin an app from the start menu
    */
-  private unpinApp(appId: string): void {
+  private async unpinApp(appId: string): Promise<void> {
     const index = this.appTileConfig.findIndex(app => app.id === appId);
     if (index === -1) return;
 
@@ -1065,6 +1085,61 @@ export class StartMenuController {
     this.savePinnedApps();
 
     // Refresh the view
-    this.refreshPinnedAppsView();
+    await this.refreshPinnedAppsView().catch(error => {
+      console.error('Error refreshing pinned apps view:', error);
+    });
+    
+    // Clear the color assignment for the unpinned app
+    const userSettings = this.os.getUserSettings();
+    await userSettings.clearAppTileColorAssignment(appId).catch(error => {
+      console.error('Error clearing app tile color assignment:', error);
+    });
+  }/**
+   * Get color class for an app tile based on user settings or assign a random one if not set
+   * @param appId The app ID
+   * @returns A color class letter (A-I)
+   */
+  private async getAppTileColorClass(appId: string): Promise<string> {
+    // First, check if the theme has disabled custom app tile colors
+    const themeManager = this.os.themeSystem.getThemeManager();
+    const theme = themeManager.getCurrentTheme();
+    if (theme.disableCustomAppTileColors) {
+      // When custom colors are disabled, use predetermined mappings
+      const appColorMap: Record<string, string> = {
+        'terminal': 'A',
+        'browser': 'B',
+        'code-editor': 'C',
+        'file-explorer': 'D',
+        'system-monitor': 'E',
+        'mail': 'F',
+        'shop': 'G',
+        'hack-tools': 'H',
+        'settings': 'I'
+      };
+      return appColorMap[appId] || this.getRandomColorClass();
+    }
+    
+    // Check if user has a color preference for this app
+    const userSettings = this.os.getUserSettings();
+    const colorClass = await userSettings.getAppTileColorAssignment(appId);
+    
+    if (colorClass) {
+      return colorClass;
+    }
+    
+    // If no color preference, assign a random one
+    const randomClass = this.getRandomColorClass();
+    await userSettings.setAppTileColorAssignment(appId, randomClass);
+    return randomClass;
+  }
+  
+  /**
+   * Get a random color class letter (A-I)
+   * @returns A random color class letter
+   */
+  private getRandomColorClass(): string {
+    const colorClasses = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    const randomIndex = Math.floor(Math.random() * colorClasses.length);
+    return colorClasses[randomIndex];
   }
 }

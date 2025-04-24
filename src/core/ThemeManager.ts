@@ -26,6 +26,7 @@ export class ThemeManager {
   private customThemes: Map<string, Theme> = new Map();
   private themesDirectory = '/etc/themes';
   private readonly themeChangedEvent = new CustomEvent('themechanged');
+    THEME_PRESETS!: Record<string, Theme>;
   
   /**
    * Create a new ThemeManager instance
@@ -54,6 +55,9 @@ export class ThemeManager {
    * This creates the themes directory if it doesn't exist and loads the saved theme
    */
   public async initialize(): Promise<void> {
+
+    this.THEME_PRESETS = THEME_PRESETS();
+
     // Make sure the themes directory exists
     await this.ensureThemesDirectory();
     
@@ -74,8 +78,8 @@ export class ThemeManager {
    */
   public async applyThemeById(themeId: string): Promise<boolean> {
     // Check preset themes
-    if (THEME_PRESETS[themeId]) {
-      await this.applyTheme(THEME_PRESETS[themeId]);
+    if (this.THEME_PRESETS[themeId]) {
+      await this.applyTheme(this.THEME_PRESETS[themeId]);
       return true;
     }
     
@@ -132,8 +136,7 @@ export class ThemeManager {
     root.style.setProperty('--warning-color', theme.warningColor);
     root.style.setProperty('--error-color', theme.errorColor);
     root.style.setProperty('--info-color', theme.infoColor);
-    
-    // App tile colors
+      // App tile colors
     root.style.setProperty('--terminal-color', theme.terminalColor);
     root.style.setProperty('--browser-color', theme.browserColor);
     root.style.setProperty('--code-editor-color', theme.codeEditorColor);
@@ -143,6 +146,20 @@ export class ThemeManager {
     root.style.setProperty('--shop-color', theme.shopColor);
     root.style.setProperty('--hack-tools-color', theme.hackToolsColor);
     root.style.setProperty('--settings-color', theme.settingsColor);
+    
+    // App tile customization options
+    root.style.setProperty('--disable-custom-app-tile-colors', theme.disableCustomAppTileColors ? 'true' : 'false');
+    
+    // Add app tile foreground colors (for text contrast)
+    if (theme.appTileForegroundColors && theme.appTileForegroundColors.length > 0) {
+      // Set each foreground color as a separate CSS variable
+      theme.appTileForegroundColors.forEach((color, index) => {
+        root.style.setProperty(`--app-tile-fg-color-${index + 1}`, color);
+      });
+      
+      // Set the count of available foreground colors
+      root.style.setProperty('--app-tile-fg-color-count', theme.appTileForegroundColors.length.toString());
+    }
     
     // UI component colors
     root.style.setProperty('--window-border-color', theme.windowBorderColor);
@@ -198,6 +215,44 @@ export class ThemeManager {
         root.style.setProperty('--input-height', theme.uiElementSizes.inputHeight);
       }
     }
+    
+    // Apply custom CSS for components if available
+    this.applyCustomComponentCSS(theme);
+  }
+  
+  /**
+   * Apply custom CSS for specific components from the theme
+   * @param theme The theme to apply custom CSS from
+   */
+  private applyCustomComponentCSS(theme: Theme): void {
+    // Check and apply custom CSS for various components
+    const styleId = 'theme-custom-component-styles';
+    let styleEl = document.getElementById(styleId);
+    
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    
+    let customCSS = '';
+    
+    // Apply start menu custom CSS if available
+    if (theme.startMenu?.customCss) {
+      customCSS += theme.startMenu.customCss;
+    }
+    
+    // Apply taskbar custom CSS if available
+    if (theme.taskbar?.customCss) {
+      customCSS += theme.taskbar.customCss;
+    }
+    
+    // Apply title bar custom CSS if available
+    if (theme.titleBar?.customCss) {
+      customCSS += theme.titleBar.customCss;
+    }
+    
+    styleEl.textContent = customCSS;
   }
   
   /**
@@ -207,8 +262,7 @@ export class ThemeManager {
   public getCurrentTheme(): Theme {
     return this.currentTheme;
   }
-  
-  /**
+    /**
    * Get all available themes (preset and custom)
    * @returns Map of theme IDs to themes
    */
@@ -216,7 +270,7 @@ export class ThemeManager {
     const allThemes = new Map<string, Theme>();
     
     // Add preset themes
-    Object.entries(THEME_PRESETS).forEach(([id, theme]) => {
+    Object.entries(this.THEME_PRESETS || THEME_PRESETS()).forEach(([id, theme]) => {
       allThemes.set(id, theme);
     });
     
@@ -258,7 +312,7 @@ export class ThemeManager {
    */
   public async deleteTheme(themeId: string): Promise<boolean> {
     // Can't delete preset themes
-    if (THEME_PRESETS[themeId]) {
+    if (this.THEME_PRESETS[themeId]) {
       return false;
     }
     
@@ -291,8 +345,8 @@ export class ThemeManager {
     let theme: Theme | undefined;
     
     // Check preset themes
-    if (THEME_PRESETS[themeId]) {
-      theme = THEME_PRESETS[themeId];
+    if (this.THEME_PRESETS[themeId]) {
+      theme = this.THEME_PRESETS[themeId];
     } else if (this.customThemes.has(themeId)) {
       theme = this.customThemes.get(themeId);
     }
@@ -320,7 +374,7 @@ export class ThemeManager {
       // Make sure the theme has a unique ID
       if (!theme.id) {
         theme.id = `imported-theme-${Date.now()}`;
-      } else if (THEME_PRESETS[theme.id] || this.customThemes.has(theme.id)) {
+      } else if (this.THEME_PRESETS[theme.id] || this.customThemes.has(theme.id)) {
         // If ID already exists, generate a new one
         theme.id = `${theme.id}-${Date.now()}`;
       }

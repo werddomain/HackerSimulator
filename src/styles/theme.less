@@ -1,17 +1,25 @@
 // Theme variables for HackerSimulator
 // This file contains theme-related variables that can be used throughout the application
 
+// Define LESS variables for use in LESS functions
+@accent-color: #0078d7;
+@accent-color-light: #0091ff;
+@accent-color-dark: #005a9e;
+@primary-color: #1a1a1a;
+@secondary-color: #2c2c2c;
+@tertiary-color: #444;
+
 // Define CSS custom properties on :root for theme variables
 :root {
   // Main accent colors
-  --accent-color: #0078d7;
-  --accent-color-light: #0091ff;
-  --accent-color-dark: #005a9e;
+  --accent-color: @accent-color;
+  --accent-color-light: @accent-color-light;
+  --accent-color-dark: @accent-color-dark;
 
   // Theme colors
-  --primary-color: #1a1a1a;
-  --secondary-color: #2c2c2c;
-  --tertiary-color: #444;
+  --primary-color: @primary-color;
+  --secondary-color: @secondary-color;
+  --tertiary-color: @tertiary-color;
 
   // Text colors
   --text-color-primary: rgba(255, 255, 255, 0.9);
@@ -76,14 +84,15 @@
 }
 
 // Main accent colors - LESS variables that map to CSS custom properties
-@accent-color: var(--accent-color); // Primary accent color (blue)
-@accent-color-light: var(--accent-color-light); // Lighter version of accent color
-@accent-color-dark: var(--accent-color-dark); // Darker version of accent color
+// @accent-color is already defined at the top of the file - do not redefine
+// @accent-color: var(--accent-color); // Primary accent color (blue)
+// @accent-color-light: var(--accent-color-light); // Lighter version of accent color
+// @accent-color-dark: var(--accent-color-dark); // Darker version of accent color
 
-// Theme colors
-@primary-color: var(--primary-color); // The primary background color
-@secondary-color: var(--secondary-color); // Secondary background color (e.g., panels, headers)
-@tertiary-color: var(--tertiary-color); // Tertiary background color (e.g., inputs, cards)
+// Theme colors - these are already defined at the top, don't redefine
+// @primary-color: var(--primary-color); // The primary background color
+// @secondary-color: var(--secondary-color); // Secondary background color (e.g., panels, headers)
+// @tertiary-color: var(--tertiary-color); // Tertiary background color (e.g., inputs, cards)
 
 // Text colors
 @text-color-primary: var(--text-color-primary); // Primary text color

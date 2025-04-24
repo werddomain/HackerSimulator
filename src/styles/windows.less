@@ -2,7 +2,7 @@
 .window {
   position: absolute;
   background-color: #222;
-  border: 1px solid @window-border-color;
+  border: 1px solid var(--window-border-color);
   display: flex;
   flex-direction: column;
   min-width: 300px;
@@ -11,7 +11,7 @@
 }
 
 .window-header {
-  background-color: @window-header-color;
+  background-color: var(--window-header-color);
   height: 30px;
   display: flex;
   align-items: center;
@@ -55,7 +55,7 @@
 .window-content {
   flex: 1;
   overflow: auto;
-  background-color: #2a2a2a;
+  background-color: var(--dialog-bg-color);
   position: relative;
 }
 

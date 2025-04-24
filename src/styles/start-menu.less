@@ -38,20 +38,20 @@
   left: 0;
   width: 510px;
   height: 600px;
-  background-color: rgba(40, 40, 40, 0.85);
-  backdrop-filter: blur(10px);
+  background-color: var(--start-menu-bg-color, rgba(40, 40, 40, 0.85));
+  backdrop-filter: var(--start-menu-backdrop-filter, blur(10px));
   display: flex;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.5);
+  border-radius: var(--start-menu-border-radius, 8px 8px 0 0);
+  border: var(--start-menu-border, none);
+  box-shadow: var(--start-menu-shadow, 0 -5px 25px rgba(0, 0, 0, 0.5));
   z-index: 2000;
   transform: translateY(100%);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
-  font-family: @font-family-primary;
-  overflow: hidden;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom: none;
+  font-family: var(--system-font, @font-family-primary);
+  overflow: hidden;  color: var(--start-menu-text-color, white);
+  border: var(--start-menu-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-bottom: var(--start-menu-border-bottom, none);
   visibility: hidden;
   
   &.visible {
@@ -59,10 +59,20 @@
     opacity: 1;
     visibility: visible;
   }
+  
+  // Windows 98 specific styling
+  body[data-theme-id="windows-98"] & {
+    background-color: #d4d0c8 !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
+    color: black !important;
+    border: 2px solid !important;
+    border-color: #ffffff #404040 #404040 #ffffff !important;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5) !important;
+  }
 
 
 /* Context Menu Styles */
-
 
 
   // Sidebar
@@ -82,6 +92,32 @@
       width: 200px;
       align-items: flex-start;
     }
+    
+    // Windows 98 specific styling
+    body[data-theme-id="windows-98"] & {
+      width: 35px !important;
+      background-color: #000080 !important; // Classic Windows 98 blue
+      border-right: 1px solid #404040 !important;
+      padding: 0 !important;
+      
+      // Windows 98 logo vertical text
+      &:before {
+        content: "Windows 98";
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        color: white;
+        font-weight: bold;
+        font-size: 20px;
+        margin-bottom: 20px;
+        margin-top: auto;
+        letter-spacing: 1px;
+        font-family: 'MS Sans Serif', Arial, sans-serif;
+      }
+      
+      &.expanded {
+        width: 160px !important;
+      }
+    }
   }  .sidebar-item {
     width: 36px;
     height: 36px;
@@ -96,8 +132,40 @@
     margin-left: 7px;
     position: relative;
     
-    .sidebar-item-label {
+    // Windows 98 specific styling
+    body[data-theme-id="windows-98"] & {
+      border-radius: 0 !important;
+      margin-left: 0 !important;
+      width: 100% !important;
+      height: 30px !important;
+      justify-content: flex-start !important;
+      color: black !important;
+      margin-bottom: 0 !important;
+      padding-left: 28px !important;
+      
+      &:hover {
+        background-color: #000080 !important;
+        color: white !important;
+      }
+      
+      img, svg {
+        width: 16px !important;
+        height: 16px !important;
+        margin-right: 8px !important;
+      }
+    }
+      .sidebar-item-label {
       position: absolute;
+      
+      // Windows 98 specific styling
+      body[data-theme-id="windows-98"] & {
+        position: static !important;
+        opacity: 1 !important;
+        transform: none !important;
+        font-family: 'MS Sans Serif', Arial, sans-serif !important;
+        font-size: 11px !important;
+        margin-left: 4px !important;
+      }
       left: 45px;
       white-space: nowrap;
       opacity: 0;
@@ -330,23 +398,50 @@
     left: 58px;
     bottom: 60px; // Aligned with the power button
   }
-  
-  // Adjust submenu positions when sidebar is expanded
+    // Adjust submenu positions when sidebar is expanded
   .start-menu-sidebar.expanded ~ .user-submenu,
   .start-menu-sidebar.expanded ~ .power-submenu {
     left: 208px; // Adjust position when sidebar is expanded
   }
 
-  // App tile colors
-  .app-tile-terminal { background-color: #2C3E50; }
-  .app-tile-browser { background-color: #16A085; }
-  .app-tile-code { background-color: #8E44AD; }
-  .app-tile-files { background-color: #2980B9; }
-  .app-tile-monitor { background-color: #C0392B; }
-  .app-tile-mail { background-color: #D35400; }
-  .app-tile-shop { background-color: #27AE60; }
-  .app-tile-hack { background-color: #7F8C8D; }
-  .app-tile-settings { background-color: #F39C12; }
+  // App tile colors - Using theme CSS variables
+  // When custom colors are enabled (default)
+  .app-tile-A { background-color: var(--terminal-color, #2C3E50); }
+  .app-tile-B { background-color: var(--browser-color, #16A085); }
+  .app-tile-C { background-color: var(--code-editor-color, #8E44AD); }
+  .app-tile-D { background-color: var(--file-explorer-color, #2980B9); }
+  .app-tile-E { background-color: var(--system-monitor-color, #C0392B); }
+  .app-tile-F { background-color: var(--mail-color, #D35400); }
+  .app-tile-G { background-color: var(--shop-color, #27AE60); }
+  .app-tile-H { background-color: var(--hack-tools-color, #7F8C8D); }
+  .app-tile-I { background-color: var(--settings-color, #F39C12); }
+  
+  // Direct app type mappings (for when custom colors are disabled)
+  .app-tile-terminal { background-color: var(--terminal-color, #2C3E50); }
+  .app-tile-browser { background-color: var(--browser-color, #16A085); }
+  .app-tile-code { background-color: var(--code-editor-color, #8E44AD); }
+  .app-tile-files { background-color: var(--file-explorer-color, #2980B9); }
+  .app-tile-monitor { background-color: var(--system-monitor-color, #C0392B); }
+  .app-tile-mail { background-color: var(--mail-color, #D35400); }
+  .app-tile-shop { background-color: var(--shop-color, #27AE60); }
+  .app-tile-hack { background-color: var(--hack-tools-color, #7F8C8D); }
+  .app-tile-settings { background-color: var(--settings-color, #F39C12); }
+  
+  // App tile foreground colors for text contrast
+  .app-tile {
+    color: white; // Default text color
+    
+    // Apply foreground colors based on the theme
+    &.app-tile-A, &.app-tile-terminal { color: var(--app-tile-fg-color-1, white); }
+    &.app-tile-B, &.app-tile-browser { color: var(--app-tile-fg-color-2, white); }
+    &.app-tile-C, &.app-tile-code { color: var(--app-tile-fg-color-3, white); }
+    &.app-tile-D, &.app-tile-files { color: var(--app-tile-fg-color-4, white); }
+    &.app-tile-E, &.app-tile-monitor { color: var(--app-tile-fg-color-5, white); }
+    &.app-tile-F, &.app-tile-mail { color: var(--app-tile-fg-color-6, white); }
+    &.app-tile-G, &.app-tile-shop { color: var(--app-tile-fg-color-7, white); }
+    &.app-tile-H, &.app-tile-hack { color: var(--app-tile-fg-color-8, white); }
+    &.app-tile-I, &.app-tile-settings { color: var(--app-tile-fg-color-9, white); }
+  }
 
   // Context menu styling
   .start-menu-context-menu {

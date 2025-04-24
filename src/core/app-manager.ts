@@ -320,6 +320,7 @@ export class AppManager {
         break;
       case 'theme-editor':
         this.loadThemeEditorUI(contentElement,windowId, args);
+        break;
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
     }

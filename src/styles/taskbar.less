@@ -7,13 +7,13 @@
   left: 0;
   right: 0;
   height: @taskbar-height;
-  background: linear-gradient(to bottom, @taskbar-bg-start, @taskbar-bg-end);
+  background: linear-gradient(to bottom, var(--taskbar-bg-start), var(--taskbar-bg-end));
   display: flex;
   align-items: center;
   z-index: 1000;
   color: white;
-  border-top: 1px solid @taskbar-border-top-color;
-  box-shadow: @taskbar-shadow;
+  border-top: 1px solid var(--taskbar-border-top-color);
+  box-shadow: var(--taskbar-shadow);
   backdrop-filter: blur(10px);
   font-family: 'Segoe UI', Arial, sans-serif;
 }
@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: linear-gradient(to bottom, @start-button-bg-start, @start-button-bg-end);
+  background: linear-gradient(to bottom, var(--start-button-bg-start), var(--start-button-bg-end));
   border-radius: 4px;
   font-weight: 500;
   letter-spacing: 0.3px;
@@ -40,14 +40,13 @@
     margin-right: 8px;
     font-size: 16px;
   }
-  
-  &:hover {
-    background: linear-gradient(to bottom, @start-button-hover-bg-start, @start-button-hover-bg-end);
+    &:hover {
+    background: linear-gradient(to bottom, var(--start-button-hover-bg-start), var(--start-button-hover-bg-end));
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   }
   
   &:active {
-    background: linear-gradient(to bottom, @start-button-active-bg-start, @start-button-active-bg-end);
+    background: linear-gradient(to bottom, var(--start-button-active-bg-start), var(--start-button-active-bg-end));
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     transform: translateY(1px);
   }
@@ -74,7 +73,7 @@
   margin: 0 4px;
   display: flex;
   align-items: center;
-  background: @taskbar-item-bg;
+  background: var(--taskbar-item-bg);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -86,9 +85,8 @@
   text-overflow: ellipsis;
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  
-  &:hover {
-    background: @taskbar-item-hover-bg;
+    &:hover {
+    background: var(--taskbar-item-hover-bg);
   }
   
   &:before {
@@ -116,8 +114,8 @@
 }
 
 .taskbar-item-active {
-  background: @taskbar-item-active-bg;
-  border-bottom: @taskbar-item-active-border;
+  background: var(--taskbar-item-active-bg);
+  border-bottom: var(--taskbar-item-active-border);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -127,7 +125,7 @@
   align-items: center;
   padding: 0 12px;
   height: 100%;
-  background: @system-tray-bg;
+  background: var(--system-tray-bg);
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   
   > div {
@@ -175,9 +173,9 @@
 
 /* Add a glow effect to the taskbar */
 @keyframes subtle-glow {
-  0% { box-shadow: @taskbar-shadow; }
+  0% { box-shadow: var(--taskbar-shadow); }
   50% { box-shadow: 0 -2px 15px rgba(0, 120, 215, 0.3); }
-  100% { box-shadow: @taskbar-shadow; }
+  100% { box-shadow: var(--taskbar-shadow); }
 }
 
 #taskbar:hover {

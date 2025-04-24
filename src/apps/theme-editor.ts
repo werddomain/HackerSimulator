@@ -8,6 +8,7 @@ import { ThemeManager } from '../core/ThemeManager';
 import { OS } from '../core/os';
 import { FileSystem } from '../core/filesystem';
 import { UserSettings } from '../core/UserSettings';
+import { notification } from '../core/components/notification';
 
 export class ThemeEditorApp extends GuiApplication {
     protected initApplication(): void {
@@ -53,7 +54,7 @@ export class ThemeEditorApp extends GuiApplication {
      */
     private createLayout(): void {
         const content = this.container;
-if (!content) return;
+        if (!content) return;
         // Create main container
         const mainContainer = document.createElement('div');
         mainContainer.className = 'theme-editor-container';
@@ -330,14 +331,17 @@ if (!content) return;
                 this.updatePreview();
             });
         });
-    }
-
-    /**
+    }    /**
      * Set up event listeners
      */
     private setupEventListeners(): void {
         // Theme selection
         const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+        if (!themeSelect) {
+            console.warn('Theme select element not found in the DOM');
+            return;
+        }
+
         themeSelect.addEventListener('change', () => {
             const selectedThemeId = themeSelect.value;
 
@@ -405,7 +409,7 @@ if (!content) return;
     private updatePreview(): void {
         // Apply current theme to preview container
         const previewTheme = this.currentTheme;
-if (!this.previewContainer) return;
+        if (!this.previewContainer) return;
         // Create preview elements
         this.previewContainer.innerHTML = `
       <div class="preview-window" style="background-color: ${previewTheme.primaryColor}; border: 1px solid ${previewTheme.windowBorderColor};">
@@ -680,27 +684,17 @@ if (!this.previewContainer) return;
 
             reader.readAsText(file);
         });
-    }
-
-    /**
+    }    /**
      * Show a notification
      * @param message The message to show
      * @param type The notification type
      */
     private showNotification(message: string, type: 'success' | 'error' = 'success'): void {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-
-        // Add to UI
-        const content = this.ContainerElement;
-        if (!content) return;
-        content.appendChild(notification);
-
-        // Remove after delay
-        setTimeout(() => {
-            content.removeChild(notification);
-        }, 3000);
+        // Use the reusable notification component
+        if (type === 'success') {
+            notification.success(message);
+        } else {
+            notification.error(message);
+        }
     }
 }
