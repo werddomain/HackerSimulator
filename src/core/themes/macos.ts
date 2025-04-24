@@ -5,6 +5,8 @@ import { Theme } from '../theme';
  * This avoids circular dependencies with the DEFAULT_THEME
  */
 export function createMacOSTheme(): Theme {
+    const windowBorderRadius = 10;
+
   return {
     id: "macos",
     name: "macOS",
@@ -79,12 +81,12 @@ export function createMacOSTheme(): Theme {
       customCss: `
       #windows-container .window-header .window-title{
         color: black !important;
-        margin-left: 25px !important;
+        margin-left: 11px !important;
         font-weight: 500;
         font-size: 13px;
       } 
         #windows-container .window {
-            border-radius: 10px;
+            border-radius: ${windowBorderRadius}px;
             box-shadow: 0 5px 30px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(0, 0, 0, 0.2);
             overflow: hidden;
@@ -97,18 +99,19 @@ export function createMacOSTheme(): Theme {
             flex-direction: row-reverse;
         }
             #windows-container .window {
-            border-radius: 16px;
+            border-radius: ${windowBorderRadius}px;
             border: 1px solid rgba(0, 0, 0, 0.15);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
             overflow: hidden;
             }
             #windows-container .window-header {
-            border-radius: 16px 16px 0 0;
+            border-radius: ${windowBorderRadius}px ${windowBorderRadius}px 0 0;
+            padding: 0 ${windowBorderRadius-8}px;
         }
             #windows-container .window-content, 
             #windows-container .window-content > div {
 
-                border-radius: 0 0 10px 10px;
+                border-radius: 0 0 ${windowBorderRadius}px ${windowBorderRadius}px;
 }
             /* Style for code editor window content */
             .app-code-editor #windows-container .window-content {
