@@ -16,6 +16,37 @@ export interface Theme {
     author?: string;
     version?: string;
     thumbnailPath?: string;
+    
+    // Window styling properties
+    window?: {
+        background?: string;
+        foreground?: string;
+        border?: boolean;
+        borderColor?: string;
+        titleBar?: {
+            activeBackground?: string;
+            activeForeground?: string;
+            inactiveBackground?: string;
+            inactiveForeground?: string;
+            border?: boolean;
+            activeBorderColor?: string;
+            inactiveBorderColor?: string;
+            buttonBackground?: string;
+            buttonForeground?: string;
+        }
+    };
+    
+    // Dialog styling properties
+    dialog?: {
+        background?: string;
+        foreground?: string;
+        titleBarBackground?: string;
+        titleBarForeground?: string;
+        buttonBackground?: string;
+        buttonForeground?: string;
+        primaryButtonBackground?: string;
+        primaryButtonForeground?: string;
+    };
 
     // Main accent colors
     accentColor: string;

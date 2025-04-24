@@ -9,6 +9,9 @@ import { OS } from '../core/os';
 import { FileSystem } from '../core/filesystem';
 import { UserSettings } from '../core/UserSettings';
 import { notification } from '../core/components/notification';
+import { ThemeCssEditor } from './theme-editor-css';
+import { getPropertyHelp } from './theme-editor-help';
+import { ThemePreviewEnhancer } from './theme-preview-enhancer';
 
 export class ThemeEditorApp extends GuiApplication {
     protected initApplication(): void {
@@ -36,6 +39,8 @@ export class ThemeEditorApp extends GuiApplication {
     private originalTheme: Theme;
     private previewContainer?: HTMLElement;
     private colorPickers: Map<keyof Theme, HTMLInputElement> = new Map();
+    private cssEditor: ThemeCssEditor;
+    private previewEnhancer?: ThemePreviewEnhancer;
 
     constructor(
         os: OS) {
@@ -43,8 +48,7 @@ export class ThemeEditorApp extends GuiApplication {
         this.themeManager = ThemeManager.getInstance(os.getFileSystem(), os.getUserSettings());
         this.currentTheme = JSON.parse(JSON.stringify(this.themeManager.getCurrentTheme()));
         this.originalTheme = this.themeManager.getCurrentTheme();
-
-
+        this.cssEditor = new ThemeCssEditor(os);
     }
 
 
@@ -166,6 +170,460 @@ export class ThemeEditorApp extends GuiApplication {
         statusColorsSection.appendChild(this.createColorPicker('warningColor', 'Warning'));
         statusColorsSection.appendChild(this.createColorPicker('errorColor', 'Error'));
         statusColorsSection.appendChild(this.createColorPicker('infoColor', 'Info'));
+
+        // Custom Fonts section
+        const customFontsSection = document.createElement('div');
+        customFontsSection.className = 'section fonts-section';
+        leftPanel.appendChild(customFontsSection);
+
+        const customFontsTitle = document.createElement('h2');
+        customFontsTitle.textContent = 'Custom Fonts';
+        customFontsSection.appendChild(customFontsTitle);
+
+        // System font input
+        const systemFontInput = document.createElement('input');
+        systemFontInput.type = 'text';
+        systemFontInput.id = 'system-font';
+        systemFontInput.placeholder = 'Arial, Helvetica, sans-serif';
+        systemFontInput.value = this.currentTheme.customFonts?.systemFont || '';
+        customFontsSection.appendChild(this.createFormGroup('System Font', systemFontInput));
+
+        // Monospace font input
+        const monospaceFontInput = document.createElement('input');
+        monospaceFontInput.type = 'text';
+        monospaceFontInput.id = 'monospace-font';
+        monospaceFontInput.placeholder = 'Monaco, Consolas, monospace';
+        monospaceFontInput.value = this.currentTheme.customFonts?.monospaceFont || '';
+        customFontsSection.appendChild(this.createFormGroup('Monospace Font', monospaceFontInput));
+
+        // Header font input
+        const headerFontInput = document.createElement('input');
+        headerFontInput.type = 'text';
+        headerFontInput.id = 'header-font';
+        headerFontInput.placeholder = 'Impact, Arial Black, sans-serif';
+        headerFontInput.value = this.currentTheme.customFonts?.headerFont || '';
+        customFontsSection.appendChild(this.createFormGroup('Header Font', headerFontInput));
+
+        // UI Element Sizes section
+        const uiElementSizesSection = document.createElement('div');
+        uiElementSizesSection.className = 'section sizes-section';
+        leftPanel.appendChild(uiElementSizesSection);
+
+        const uiElementSizesTitle = document.createElement('h2');
+        uiElementSizesTitle.textContent = 'UI Element Sizes';
+        uiElementSizesSection.appendChild(uiElementSizesTitle);
+
+        // Border radius input
+        const borderRadiusInput = document.createElement('input');
+        borderRadiusInput.type = 'text';
+        borderRadiusInput.id = 'border-radius';
+        borderRadiusInput.placeholder = '4px';
+        borderRadiusInput.value = this.currentTheme.uiElementSizes?.borderRadius || '';
+        uiElementSizesSection.appendChild(this.createFormGroup('Border Radius', borderRadiusInput));
+
+        // Button height input
+        const buttonHeightInput = document.createElement('input');
+        buttonHeightInput.type = 'text';
+        buttonHeightInput.id = 'button-height';
+        buttonHeightInput.placeholder = '32px';
+        buttonHeightInput.value = this.currentTheme.uiElementSizes?.buttonHeight || '';
+        uiElementSizesSection.appendChild(this.createFormGroup('Button Height', buttonHeightInput));
+
+        // Input height input
+        const inputHeightInput = document.createElement('input');
+        inputHeightInput.type = 'text';
+        inputHeightInput.id = 'input-height';
+        inputHeightInput.placeholder = '28px';
+        inputHeightInput.value = this.currentTheme.uiElementSizes?.inputHeight || '';
+        uiElementSizesSection.appendChild(this.createFormGroup('Input Height', inputHeightInput));
+
+        // Animation Speed section
+        const animationSpeedSection = document.createElement('div');
+        animationSpeedSection.className = 'section animation-section';
+        leftPanel.appendChild(animationSpeedSection);
+
+        const animationSpeedTitle = document.createElement('h2');
+        animationSpeedTitle.textContent = 'Animation';
+        animationSpeedSection.appendChild(animationSpeedTitle);
+
+        // Animation speed input with slider
+        const animationSpeedContainer = document.createElement('div');
+        animationSpeedContainer.className = 'slider-container';
+        
+        const animationSpeedLabel = document.createElement('label');
+        animationSpeedLabel.htmlFor = 'animation-speed';
+        animationSpeedLabel.textContent = 'Animation Speed';
+        
+        const animationSpeedValue = document.createElement('span');
+        animationSpeedValue.className = 'slider-value';
+        animationSpeedValue.textContent = String(this.currentTheme.animationSpeed || 1);
+        
+        const animationSpeedInput = document.createElement('input');
+        animationSpeedInput.type = 'range';
+        animationSpeedInput.id = 'animation-speed';
+        animationSpeedInput.min = '0.1';
+        animationSpeedInput.max = '2';
+        animationSpeedInput.step = '0.1';
+        animationSpeedInput.value = String(this.currentTheme.animationSpeed || 1);
+        
+        animationSpeedInput.addEventListener('input', () => {
+            animationSpeedValue.textContent = animationSpeedInput.value;
+        });
+        
+        animationSpeedContainer.appendChild(animationSpeedLabel);
+        animationSpeedContainer.appendChild(animationSpeedInput);
+        animationSpeedContainer.appendChild(animationSpeedValue);
+        
+        animationSpeedSection.appendChild(animationSpeedContainer);
+
+        // Title Bar Configuration section
+        const titleBarSection = document.createElement('div');
+        titleBarSection.className = 'section titlebar-section';
+        leftPanel.appendChild(titleBarSection);
+
+        const titleBarTitle = document.createElement('h2');
+        titleBarTitle.textContent = 'Title Bar Configuration';
+        titleBarSection.appendChild(titleBarTitle);
+
+        // Initialize titleBar if it doesn't exist
+        if (!this.currentTheme.titleBar) {
+            this.currentTheme.titleBar = {
+                buttonPlacement: 'right',
+                useGradient: false,
+                showIcon: true,
+            };
+        }
+
+        // Button Placement
+        const buttonPlacementGroup = document.createElement('div');
+        buttonPlacementGroup.className = 'form-group';
+        
+        const buttonPlacementLabel = document.createElement('label');
+        buttonPlacementLabel.textContent = 'Button Placement';
+        buttonPlacementLabel.htmlFor = 'button-placement';
+        
+        const buttonPlacementSelect = document.createElement('select');
+        buttonPlacementSelect.id = 'button-placement';
+        
+        const leftOption = document.createElement('option');
+        leftOption.value = 'left';
+        leftOption.textContent = 'Left (Windows style)';
+        leftOption.selected = this.currentTheme.titleBar.buttonPlacement === 'left';
+        
+        const rightOption = document.createElement('option');
+        rightOption.value = 'right';
+        rightOption.textContent = 'Right (macOS style)';
+        rightOption.selected = this.currentTheme.titleBar.buttonPlacement === 'right';
+        
+        buttonPlacementSelect.appendChild(leftOption);
+        buttonPlacementSelect.appendChild(rightOption);
+        
+        buttonPlacementGroup.appendChild(buttonPlacementLabel);
+        buttonPlacementGroup.appendChild(buttonPlacementSelect);
+        titleBarSection.appendChild(buttonPlacementGroup);
+
+        // Use Gradient checkbox
+        const useGradientGroup = document.createElement('div');
+        useGradientGroup.className = 'form-group checkbox-group';
+        
+        const useGradientInput = document.createElement('input');
+        useGradientInput.type = 'checkbox';
+        useGradientInput.id = 'use-gradient';
+        useGradientInput.checked = !!this.currentTheme.titleBar.useGradient;
+        
+        const useGradientLabel = document.createElement('label');
+        useGradientLabel.textContent = 'Use Gradient (Windows 98 style)';
+        useGradientLabel.htmlFor = 'use-gradient';
+        
+        useGradientGroup.appendChild(useGradientInput);
+        useGradientGroup.appendChild(useGradientLabel);
+        titleBarSection.appendChild(useGradientGroup);
+
+        // Show Icon checkbox
+        const showIconGroup = document.createElement('div');
+        showIconGroup.className = 'form-group checkbox-group';
+        
+        const showIconInput = document.createElement('input');
+        showIconInput.type = 'checkbox';
+        showIconInput.id = 'show-icon';
+        showIconInput.checked = !!this.currentTheme.titleBar.showIcon;
+        
+        const showIconLabel = document.createElement('label');
+        showIconLabel.textContent = 'Show Window Icon';
+        showIconLabel.htmlFor = 'show-icon';
+        
+        showIconGroup.appendChild(showIconInput);
+        showIconGroup.appendChild(showIconLabel);
+        titleBarSection.appendChild(showIconGroup);
+
+        // Button Style
+        const buttonStyleGroup = document.createElement('div');
+        buttonStyleGroup.className = 'form-group';
+        
+        const buttonStyleLabel = document.createElement('label');
+        buttonStyleLabel.textContent = 'Button Style';
+        buttonStyleLabel.htmlFor = 'button-style';
+        
+        const buttonStyleSelect = document.createElement('select');
+        buttonStyleSelect.id = 'button-style';
+        
+        const squareOption = document.createElement('option');
+        squareOption.value = 'square';
+        squareOption.textContent = 'Square';
+        squareOption.selected = this.currentTheme.titleBar.buttonStyle === 'square';
+        
+        const circleOption = document.createElement('option');
+        circleOption.value = 'circle';
+        circleOption.textContent = 'Circle (macOS style)';
+        circleOption.selected = this.currentTheme.titleBar.buttonStyle === 'circle';
+        
+        const pillOption = document.createElement('option');
+        pillOption.value = 'pill';
+        pillOption.textContent = 'Pill';
+        pillOption.selected = this.currentTheme.titleBar.buttonStyle === 'pill';
+        
+        buttonStyleSelect.appendChild(squareOption);
+        buttonStyleSelect.appendChild(circleOption);
+        buttonStyleSelect.appendChild(pillOption);
+        
+        buttonStyleGroup.appendChild(buttonStyleLabel);
+        buttonStyleGroup.appendChild(buttonStyleSelect);
+        titleBarSection.appendChild(buttonStyleGroup);
+
+        // Text Alignment
+        const textAlignmentGroup = document.createElement('div');
+        textAlignmentGroup.className = 'form-group';
+        
+        const textAlignmentLabel = document.createElement('label');
+        textAlignmentLabel.textContent = 'Text Alignment';
+        textAlignmentLabel.htmlFor = 'text-alignment';
+        
+        const textAlignmentSelect = document.createElement('select');
+        textAlignmentSelect.id = 'text-alignment';
+        
+        const leftAlignOption = document.createElement('option');
+        leftAlignOption.value = 'left';
+        leftAlignOption.textContent = 'Left';
+        leftAlignOption.selected = this.currentTheme.titleBar.textAlignment === 'left';
+        
+        const centerAlignOption = document.createElement('option');
+        centerAlignOption.value = 'center';
+        centerAlignOption.textContent = 'Center';
+        centerAlignOption.selected = this.currentTheme.titleBar.textAlignment === 'center';
+        
+        const rightAlignOption = document.createElement('option');
+        rightAlignOption.value = 'right';
+        rightAlignOption.textContent = 'Right';
+        rightAlignOption.selected = this.currentTheme.titleBar.textAlignment === 'right';
+        
+        textAlignmentSelect.appendChild(leftAlignOption);
+        textAlignmentSelect.appendChild(centerAlignOption);
+        textAlignmentSelect.appendChild(rightAlignOption);
+        
+        textAlignmentGroup.appendChild(textAlignmentLabel);
+        textAlignmentGroup.appendChild(textAlignmentSelect);
+        titleBarSection.appendChild(textAlignmentGroup);
+
+        // Title Bar Height
+        const titleBarHeightGroup = document.createElement('div');
+        titleBarHeightGroup.className = 'form-group';
+        
+        const titleBarHeightLabel = document.createElement('label');
+        titleBarHeightLabel.textContent = 'Title Bar Height';
+        titleBarHeightLabel.htmlFor = 'titlebar-height';
+        
+        const titleBarHeightInput = document.createElement('input');
+        titleBarHeightInput.type = 'text';
+        titleBarHeightInput.id = 'titlebar-height';
+        titleBarHeightInput.placeholder = '28px';
+        titleBarHeightInput.value = this.currentTheme.titleBar.height || '';
+        
+        titleBarHeightGroup.appendChild(titleBarHeightLabel);
+        titleBarHeightGroup.appendChild(titleBarHeightInput);
+        titleBarSection.appendChild(titleBarHeightGroup);
+
+        // Custom CSS Button
+        const titleBarCssGroup = document.createElement('div');
+        titleBarCssGroup.className = 'form-group';
+        
+        const titleBarCssButton = document.createElement('button');
+        titleBarCssButton.id = 'edit-titlebar-css';
+        titleBarCssButton.textContent = 'Edit Custom CSS';
+        titleBarCssButton.className = 'secondary-button';
+        
+        titleBarCssGroup.appendChild(titleBarCssButton);
+        titleBarSection.appendChild(titleBarCssGroup);
+
+        // Taskbar Configuration section
+        const taskbarSection = document.createElement('div');
+        taskbarSection.className = 'section taskbar-section';
+        leftPanel.appendChild(taskbarSection);
+
+        const taskbarTitle = document.createElement('h2');
+        taskbarTitle.textContent = 'Taskbar Configuration';
+        taskbarSection.appendChild(taskbarTitle);
+
+        // Initialize taskbar if it doesn't exist
+        if (!this.currentTheme.taskbar) {
+            this.currentTheme.taskbar = {
+                position: 'bottom'
+            };
+        }
+
+        // Taskbar Position
+        const taskbarPositionGroup = document.createElement('div');
+        taskbarPositionGroup.className = 'form-group';
+        
+        const taskbarPositionLabel = document.createElement('label');
+        taskbarPositionLabel.textContent = 'Position';
+        taskbarPositionLabel.htmlFor = 'taskbar-position';
+        
+        const taskbarPositionSelect = document.createElement('select');
+        taskbarPositionSelect.id = 'taskbar-position';
+        
+        const positionOptions = [
+            { value: 'top', text: 'Top' },
+            { value: 'bottom', text: 'Bottom' },
+            { value: 'left', text: 'Left' },
+            { value: 'right', text: 'Right' }
+        ];
+        
+        positionOptions.forEach(option => {
+            const optionEl = document.createElement('option');
+            optionEl.value = option.value;
+            optionEl.textContent = option.text;
+            optionEl.selected = this.currentTheme.taskbar?.position === option.value;
+            taskbarPositionSelect.appendChild(optionEl);
+        });
+        
+        taskbarPositionGroup.appendChild(taskbarPositionLabel);
+        taskbarPositionGroup.appendChild(taskbarPositionSelect);
+        taskbarSection.appendChild(taskbarPositionGroup);
+
+        // Taskbar Size
+        const taskbarSizeGroup = document.createElement('div');
+        taskbarSizeGroup.className = 'form-group';
+        
+        const taskbarSizeLabel = document.createElement('label');
+        taskbarSizeLabel.textContent = 'Size';
+        taskbarSizeLabel.htmlFor = 'taskbar-size';
+        
+        const taskbarSizeInput = document.createElement('input');
+        taskbarSizeInput.type = 'text';
+        taskbarSizeInput.id = 'taskbar-size';
+        taskbarSizeInput.placeholder = '40px';
+        taskbarSizeInput.value = this.currentTheme.taskbar?.size || '';
+        
+        taskbarSizeGroup.appendChild(taskbarSizeLabel);
+        taskbarSizeGroup.appendChild(taskbarSizeInput);
+        taskbarSection.appendChild(taskbarSizeGroup);
+
+        // Taskbar Transparency
+        const taskbarTransparencyGroup = document.createElement('div');
+        taskbarTransparencyGroup.className = 'form-group';
+        
+        const taskbarTransparencyLabel = document.createElement('label');
+        taskbarTransparencyLabel.textContent = 'Transparency';
+        taskbarTransparencyLabel.htmlFor = 'taskbar-transparency';
+        
+        const taskbarTransparencyContainer = document.createElement('div');
+        taskbarTransparencyContainer.className = 'slider-container';
+        
+        const taskbarTransparencyValue = document.createElement('span');
+        taskbarTransparencyValue.className = 'slider-value';
+        taskbarTransparencyValue.textContent = String(this.currentTheme.taskbar?.transparency || 0);
+        
+        const taskbarTransparencyInput = document.createElement('input');
+        taskbarTransparencyInput.type = 'range';
+        taskbarTransparencyInput.id = 'taskbar-transparency';
+        taskbarTransparencyInput.min = '0';
+        taskbarTransparencyInput.max = '1';
+        taskbarTransparencyInput.step = '0.1';
+        taskbarTransparencyInput.value = String(this.currentTheme.taskbar?.transparency || 0);
+        
+        taskbarTransparencyInput.addEventListener('input', () => {
+            taskbarTransparencyValue.textContent = taskbarTransparencyInput.value;
+        });
+        
+        taskbarTransparencyContainer.appendChild(taskbarTransparencyInput);
+        taskbarTransparencyContainer.appendChild(taskbarTransparencyValue);
+        
+        taskbarTransparencyGroup.appendChild(taskbarTransparencyLabel);
+        taskbarTransparencyGroup.appendChild(taskbarTransparencyContainer);
+        taskbarSection.appendChild(taskbarTransparencyGroup);
+
+        // Taskbar Blur
+        const taskbarBlurGroup = document.createElement('div');
+        taskbarBlurGroup.className = 'form-group checkbox-group';
+        
+        const taskbarBlurInput = document.createElement('input');
+        taskbarBlurInput.type = 'checkbox';
+        taskbarBlurInput.id = 'taskbar-blur';
+        taskbarBlurInput.checked = !!this.currentTheme.taskbar?.blur;
+        
+        const taskbarBlurLabel = document.createElement('label');
+        taskbarBlurLabel.textContent = 'Apply Blur Effect';
+        taskbarBlurLabel.htmlFor = 'taskbar-blur';
+        
+        taskbarBlurGroup.appendChild(taskbarBlurInput);
+        taskbarBlurGroup.appendChild(taskbarBlurLabel);
+        taskbarSection.appendChild(taskbarBlurGroup);
+
+        // Taskbar Item Spacing
+        const taskbarItemSpacingGroup = document.createElement('div');
+        taskbarItemSpacingGroup.className = 'form-group';
+        
+        const taskbarItemSpacingLabel = document.createElement('label');
+        taskbarItemSpacingLabel.textContent = 'Item Spacing';
+        taskbarItemSpacingLabel.htmlFor = 'taskbar-item-spacing';
+        
+        const taskbarItemSpacingInput = document.createElement('input');
+        taskbarItemSpacingInput.type = 'text';
+        taskbarItemSpacingInput.id = 'taskbar-item-spacing';
+        taskbarItemSpacingInput.placeholder = '4px';
+        taskbarItemSpacingInput.value = this.currentTheme.taskbar?.itemSpacing || '';
+        
+        taskbarItemSpacingGroup.appendChild(taskbarItemSpacingLabel);
+        taskbarItemSpacingGroup.appendChild(taskbarItemSpacingInput);
+        taskbarSection.appendChild(taskbarItemSpacingGroup);
+
+        // Custom CSS Button for Taskbar
+        const taskbarCssGroup = document.createElement('div');
+        taskbarCssGroup.className = 'form-group';
+        
+        const taskbarCssButton = document.createElement('button');
+        taskbarCssButton.id = 'edit-taskbar-css';
+        taskbarCssButton.textContent = 'Edit Custom CSS';
+        taskbarCssButton.className = 'secondary-button';
+        
+        taskbarCssGroup.appendChild(taskbarCssButton);
+        taskbarSection.appendChild(taskbarCssGroup);
+
+        // Start Menu Configuration section
+        const startMenuSection = document.createElement('div');
+        startMenuSection.className = 'section startmenu-section';
+        leftPanel.appendChild(startMenuSection);
+
+        const startMenuTitle = document.createElement('h2');
+        startMenuTitle.textContent = 'Start Menu Configuration';
+        startMenuSection.appendChild(startMenuTitle);
+
+        // Initialize startMenu if it doesn't exist
+        if (!this.currentTheme.startMenu) {
+            this.currentTheme.startMenu = {};
+        }
+
+        // Custom CSS Button for Start Menu
+        const startMenuCssGroup = document.createElement('div');
+        startMenuCssGroup.className = 'form-group';
+        
+        const startMenuCssButton = document.createElement('button');
+        startMenuCssButton.id = 'edit-startmenu-css';
+        startMenuCssButton.textContent = 'Edit Custom CSS';
+        startMenuCssButton.className = 'secondary-button';
+        
+        startMenuCssGroup.appendChild(startMenuCssButton);
+        startMenuSection.appendChild(startMenuCssGroup);
 
         // Create preview section
         const previewTitle = document.createElement('h2');
@@ -372,6 +830,160 @@ export class ThemeEditorApp extends GuiApplication {
             this.currentTheme.author = authorInput.value;
         });
 
+        // Custom Fonts event listeners
+        const systemFontInput = document.getElementById('system-font') as HTMLInputElement;
+        systemFontInput.addEventListener('input', () => {
+            if (!this.currentTheme.customFonts) {
+                this.currentTheme.customFonts = {};
+            }
+            this.currentTheme.customFonts.systemFont = systemFontInput.value;
+        });
+
+        const monospaceFontInput = document.getElementById('monospace-font') as HTMLInputElement;
+        monospaceFontInput.addEventListener('input', () => {
+            if (!this.currentTheme.customFonts) {
+                this.currentTheme.customFonts = {};
+            }
+            this.currentTheme.customFonts.monospaceFont = monospaceFontInput.value;
+        });
+
+        const headerFontInput = document.getElementById('header-font') as HTMLInputElement;
+        headerFontInput.addEventListener('input', () => {
+            if (!this.currentTheme.customFonts) {
+                this.currentTheme.customFonts = {};
+            }
+            this.currentTheme.customFonts.headerFont = headerFontInput.value;
+        });
+
+        // UI Element Sizes event listeners
+        const borderRadiusInput = document.getElementById('border-radius') as HTMLInputElement;
+        borderRadiusInput.addEventListener('input', () => {
+            if (!this.currentTheme.uiElementSizes) {
+                this.currentTheme.uiElementSizes = {};
+            }
+            this.currentTheme.uiElementSizes.borderRadius = borderRadiusInput.value;
+        });
+
+        const buttonHeightInput = document.getElementById('button-height') as HTMLInputElement;
+        buttonHeightInput.addEventListener('input', () => {
+            if (!this.currentTheme.uiElementSizes) {
+                this.currentTheme.uiElementSizes = {};
+            }
+            this.currentTheme.uiElementSizes.buttonHeight = buttonHeightInput.value;
+        });
+
+        const inputHeightInput = document.getElementById('input-height') as HTMLInputElement;
+        inputHeightInput.addEventListener('input', () => {
+            if (!this.currentTheme.uiElementSizes) {
+                this.currentTheme.uiElementSizes = {};
+            }
+            this.currentTheme.uiElementSizes.inputHeight = inputHeightInput.value;
+        });
+
+        // Animation Speed event listener
+        const animationSpeedInput = document.getElementById('animation-speed') as HTMLInputElement;
+        animationSpeedInput.addEventListener('input', () => {
+            this.currentTheme.animationSpeed = parseFloat(animationSpeedInput.value);
+        });
+
+        // Title Bar configuration event listeners
+        if (!this.currentTheme.titleBar) {
+            this.currentTheme.titleBar = {
+                buttonPlacement: 'right',
+                useGradient: false,
+                showIcon: true
+            };
+        }
+
+        const buttonPlacementSelect = document.getElementById('button-placement') as HTMLSelectElement;
+        buttonPlacementSelect.addEventListener('change', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.buttonPlacement = buttonPlacementSelect.value as 'left' | 'right';
+        });
+
+        const useGradientInput = document.getElementById('use-gradient') as HTMLInputElement;
+        useGradientInput.addEventListener('change', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.useGradient = useGradientInput.checked;
+        });
+
+        const showIconInput = document.getElementById('show-icon') as HTMLInputElement;
+        showIconInput.addEventListener('change', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.showIcon = showIconInput.checked;
+        });
+
+        const buttonStyleSelect = document.getElementById('button-style') as HTMLSelectElement;
+        buttonStyleSelect.addEventListener('change', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.buttonStyle = buttonStyleSelect.value as 'square' | 'circle' | 'pill';
+        });
+
+        const textAlignmentSelect = document.getElementById('text-alignment') as HTMLSelectElement;
+        textAlignmentSelect.addEventListener('change', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.textAlignment = textAlignmentSelect.value as 'left' | 'center' | 'right';
+        });
+
+        const titleBarHeightInput = document.getElementById('titlebar-height') as HTMLInputElement;
+        titleBarHeightInput.addEventListener('input', () => {
+            if (!this.currentTheme.titleBar) this.currentTheme.titleBar = { buttonPlacement: 'right', useGradient: false, showIcon: true };
+            this.currentTheme.titleBar.height = titleBarHeightInput.value;
+        });
+
+        // Taskbar configuration event listeners
+        if (!this.currentTheme.taskbar) {
+            this.currentTheme.taskbar = {
+                position: 'bottom'
+            };
+        }
+
+        const taskbarPositionSelect = document.getElementById('taskbar-position') as HTMLSelectElement;
+        taskbarPositionSelect.addEventListener('change', () => {
+            if (!this.currentTheme.taskbar) this.currentTheme.taskbar = { position: 'bottom' };
+            this.currentTheme.taskbar.position = taskbarPositionSelect.value as 'top' | 'bottom' | 'left' | 'right';
+        });
+
+        const taskbarSizeInput = document.getElementById('taskbar-size') as HTMLInputElement;
+        taskbarSizeInput.addEventListener('input', () => {
+            if (!this.currentTheme.taskbar) this.currentTheme.taskbar = { position: 'bottom' };
+            this.currentTheme.taskbar.size = taskbarSizeInput.value;
+        });
+
+        const taskbarTransparencyInput = document.getElementById('taskbar-transparency') as HTMLInputElement;
+        taskbarTransparencyInput.addEventListener('input', () => {
+            if (!this.currentTheme.taskbar) this.currentTheme.taskbar = { position: 'bottom' };
+            this.currentTheme.taskbar.transparency = parseFloat(taskbarTransparencyInput.value);
+        });
+
+        const taskbarBlurInput = document.getElementById('taskbar-blur') as HTMLInputElement;
+        taskbarBlurInput.addEventListener('change', () => {
+            if (!this.currentTheme.taskbar) this.currentTheme.taskbar = { position: 'bottom' };
+            this.currentTheme.taskbar.blur = taskbarBlurInput.checked;
+        });
+
+        const taskbarItemSpacingInput = document.getElementById('taskbar-item-spacing') as HTMLInputElement;
+        taskbarItemSpacingInput.addEventListener('input', () => {
+            if (!this.currentTheme.taskbar) this.currentTheme.taskbar = { position: 'bottom' };
+            this.currentTheme.taskbar.itemSpacing = taskbarItemSpacingInput.value;
+        });
+
+        // CSS editor button event listeners
+        const titleBarCssButton = document.getElementById('edit-titlebar-css') as HTMLButtonElement;
+        titleBarCssButton.addEventListener('click', () => {
+            this.openCssEditor('titleBar');
+        });
+
+        const taskbarCssButton = document.getElementById('edit-taskbar-css') as HTMLButtonElement;
+        taskbarCssButton.addEventListener('click', () => {
+            this.openCssEditor('taskbar');
+        });
+
+        const startMenuCssButton = document.getElementById('edit-startmenu-css') as HTMLButtonElement;
+        startMenuCssButton.addEventListener('click', () => {
+            this.openCssEditor('startMenu');
+        });
+
         // Save button
         const saveButton = document.getElementById('save-theme') as HTMLButtonElement;
         saveButton.addEventListener('click', async () => {
@@ -401,64 +1013,208 @@ export class ThemeEditorApp extends GuiApplication {
         importButton.addEventListener('click', () => {
             this.importTheme();
         });
-    }
-
-    /**
+    }    /**
      * Update preview with current theme
      */
     private updatePreview(): void {
         // Apply current theme to preview container
         const previewTheme = this.currentTheme;
         if (!this.previewContainer) return;
-        // Create preview elements
-        this.previewContainer.innerHTML = `
-      <div class="preview-window" style="background-color: ${previewTheme.primaryColor}; border: 1px solid ${previewTheme.windowBorderColor};">
-        <div class="preview-window-header" style="background-color: ${previewTheme.windowHeaderColor}; color: ${previewTheme.textColorPrimary};">
-          Window Title
-        </div>
-        <div class="preview-window-content" style="color: ${previewTheme.textColorPrimary};">
-          <div class="preview-section">
-            <h3 style="color: ${previewTheme.textColorPrimary};">Text Colors</h3>
-            <p style="color: ${previewTheme.textColorPrimary};">Primary Text</p>
-            <p style="color: ${previewTheme.textColorSecondary};">Secondary Text</p>
-            <p style="color: ${previewTheme.textColorDisabled};">Disabled Text</p>
-          </div>
-          
-          <div class="preview-section">
-            <h3 style="color: ${previewTheme.textColorPrimary};">UI Elements</h3>
-            <button class="preview-button" style="background: linear-gradient(to bottom, ${previewTheme.accentColor}, ${previewTheme.accentColorDark}); color: white;">
-              Primary Button
-            </button>
-            <button class="preview-button secondary">
-              Secondary Button
-            </button>
-            <div class="preview-input-group">
-              <input type="text" placeholder="Input field" style="background-color: ${previewTheme.tertiaryColor}; color: ${previewTheme.textColorPrimary}; border: 1px solid rgba(255,255,255,0.1);" />
+        
+        // Create custom style blocks for theme properties
+        let customStyles = '';
+        
+        // Add custom fonts styling if defined
+        if (previewTheme.customFonts) {
+            if (previewTheme.customFonts.systemFont) {
+                customStyles += `.preview-system-font { font-family: ${previewTheme.customFonts.systemFont}; }\n`;
+            }
+            if (previewTheme.customFonts.monospaceFont) {
+                customStyles += `.preview-monospace-font { font-family: ${previewTheme.customFonts.monospaceFont}; }\n`;
+            }
+            if (previewTheme.customFonts.headerFont) {
+                customStyles += `.preview-header-font { font-family: ${previewTheme.customFonts.headerFont}; }\n`;
+            }
+        }
+        
+        // Add UI element sizes styling if defined
+        if (previewTheme.uiElementSizes) {
+            if (previewTheme.uiElementSizes.borderRadius) {
+                customStyles += `.preview-border-radius { border-radius: ${previewTheme.uiElementSizes.borderRadius}; }\n`;
+            }
+            if (previewTheme.uiElementSizes.buttonHeight) {
+                customStyles += `.preview-button-height { height: ${previewTheme.uiElementSizes.buttonHeight}; }\n`;
+            }
+            if (previewTheme.uiElementSizes.inputHeight) {
+                customStyles += `.preview-input-height { height: ${previewTheme.uiElementSizes.inputHeight}; }\n`;
+            }
+        }
+        
+        // Add title bar custom styles if defined
+        if (previewTheme.titleBar?.customCss) {
+            customStyles += `/* Title Bar Custom CSS */\n${previewTheme.titleBar.customCss}\n`;
+        }
+        
+        // Add taskbar custom styles if defined
+        if (previewTheme.taskbar?.customCss) {
+            customStyles += `/* Taskbar Custom CSS */\n${previewTheme.taskbar.customCss}\n`;
+        }
+        
+        // Add start menu custom styles if defined
+        if (previewTheme.startMenu?.customCss) {
+            customStyles += `/* Start Menu Custom CSS */\n${previewTheme.startMenu.customCss}\n`;
+        }
+        
+        // Create animation speed styles
+        const animSpeed = previewTheme.animationSpeed || 1;
+        customStyles += `.preview-animated { transition: all ${animSpeed}s ease; }\n`;
+        
+        // Create the style element
+        const styleElement = `<style>${customStyles}</style>`;
+        
+        // Create the tabbed preview interface
+        const previewHTML = `
+            ${styleElement}
+            <div class="preview-tabs">
+                <div class="preview-tab active" data-tab="window">Window</div>
+                <div class="preview-tab" data-tab="taskbar">Taskbar</div>
+                <div class="preview-tab" data-tab="fonts">Fonts & Sizes</div>
+                <div class="preview-tab" data-tab="animation">Animation</div>
             </div>
-          </div>
-          
-          <div class="preview-section">
-            <h3 style="color: ${previewTheme.textColorPrimary};">Status Colors</h3>
-            <div class="preview-status" style="color: ${previewTheme.successColor};">Success Status</div>
-            <div class="preview-status" style="color: ${previewTheme.warningColor};">Warning Status</div>
-            <div class="preview-status" style="color: ${previewTheme.errorColor};">Error Status</div>
-            <div class="preview-status" style="color: ${previewTheme.infoColor};">Info Status</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="preview-taskbar" style="background: linear-gradient(to bottom, ${previewTheme.taskbarBgStart}, ${previewTheme.taskbarBgEnd}); border-top: 1px solid ${previewTheme.taskbarBorderTopColor};">
-        <button class="preview-start-button" style="background: linear-gradient(to bottom, ${previewTheme.startButtonBgStart}, ${previewTheme.startButtonBgEnd}); color: white;">
-          Start
-        </button>
-        <div class="preview-taskbar-item" style="background-color: ${previewTheme.taskbarItemBg};">
-          App 1
-        </div>
-        <div class="preview-taskbar-item active" style="background-color: ${previewTheme.taskbarItemActiveBg}; border-bottom: ${previewTheme.taskbarItemActiveBorder};">
-          App 2
-        </div>
-      </div>
-    `;
+            
+            <div class="preview-content">
+                <!-- Window Preview -->
+                <div class="preview-pane active" data-tab="window">
+                    <div class="preview-window" style="background-color: ${previewTheme.primaryColor}; border: 1px solid ${previewTheme.windowBorderColor};">
+                        <div class="preview-window-header" style="background-color: ${previewTheme.windowHeaderColor}; color: ${previewTheme.textColorPrimary};">
+                            ${previewTheme.titleBar?.showIcon ? '<span class="window-icon">🔹</span>' : ''}
+                            <span class="window-title">Window Title</span>
+                            <div class="window-controls" style="display: flex; ${previewTheme.titleBar?.buttonPlacement === 'left' ? 'order: -1;' : ''}">
+                                <button class="window-button">−</button>
+                                <button class="window-button">□</button>
+                                <button class="window-button">×</button>
+                            </div>
+                        </div>
+                        <div class="preview-window-content" style="color: ${previewTheme.textColorPrimary}; padding: 10px;">
+                            <h3 style="color: ${previewTheme.textColorPrimary};">Text Colors</h3>
+                            <p style="color: ${previewTheme.textColorPrimary};">Primary Text</p>
+                            <p style="color: ${previewTheme.textColorSecondary};">Secondary Text</p>
+                            <p style="color: ${previewTheme.textColorDisabled};">Disabled Text</p>
+                            
+                            <h3 style="color: ${previewTheme.textColorPrimary};">Status Colors</h3>
+                            <div style="color: ${previewTheme.successColor};">Success Status</div>
+                            <div style="color: ${previewTheme.warningColor};">Warning Status</div>
+                            <div style="color: ${previewTheme.errorColor};">Error Status</div>
+                            <div style="color: ${previewTheme.infoColor};">Info Status</div>
+                            
+                            <h3 style="color: ${previewTheme.textColorPrimary};">UI Elements</h3>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button class="preview-border-radius preview-button-height" 
+                                    style="background: linear-gradient(to bottom, ${previewTheme.accentColor}, ${previewTheme.accentColorDark}); color: white; border: none; padding: 0 15px;">
+                                    Primary Button
+                                </button>
+                                <input type="text" class="preview-border-radius preview-input-height"
+                                    placeholder="Input field" 
+                                    style="background-color: ${previewTheme.tertiaryColor}; color: ${previewTheme.textColorPrimary}; border: 1px solid rgba(255,255,255,0.1); padding: 0 10px;" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Taskbar Preview -->
+                <div class="preview-pane" data-tab="taskbar">
+                    <div class="preview-taskbar" style="background: linear-gradient(to bottom, ${previewTheme.taskbarBgStart}, ${previewTheme.taskbarBgEnd}); border-top: 1px solid ${previewTheme.taskbarBorderTopColor}; padding: 5px; display: flex; gap: 5px;">
+                        <button class="preview-start-button" style="background: linear-gradient(to bottom, ${previewTheme.startButtonBgStart}, ${previewTheme.startButtonBgEnd}); color: white; border: none; padding: 5px 10px;">
+                            Start
+                        </button>
+                        <div style="background-color: ${previewTheme.taskbarItemBg}; padding: 5px 10px;">
+                            App 1
+                        </div>
+                        <div style="background-color: ${previewTheme.taskbarItemActiveBg}; border-bottom: ${previewTheme.taskbarItemActiveBorder}; padding: 5px 10px;">
+                            App 2
+                        </div>
+                    </div>
+                    <div class="taskbar-info" style="margin-top: 20px; background-color: ${previewTheme.primaryColor}; padding: 10px; color: ${previewTheme.textColorPrimary};">
+                        <h3>Taskbar Configuration</h3>
+                        <p>Position: ${previewTheme.taskbar?.position || 'bottom'}</p>
+                        <p>Size: ${previewTheme.taskbar?.size || 'default'}</p>
+                        <p>Transparency: ${previewTheme.taskbar?.transparency || '0'}</p>
+                        <p>Blur Effect: ${previewTheme.taskbar?.blur ? 'Enabled' : 'Disabled'}</p>
+                    </div>
+                </div>
+                
+                <!-- Fonts & Sizes Preview -->
+                <div class="preview-pane" data-tab="fonts">
+                    <div style="background-color: ${previewTheme.primaryColor}; padding: 15px; color: ${previewTheme.textColorPrimary};">
+                        <h3>Custom Fonts</h3>
+                        <p class="preview-system-font">System Font: ${previewTheme.customFonts?.systemFont || 'Default'}</p>
+                        <p class="preview-monospace-font">Monospace Font: ${previewTheme.customFonts?.monospaceFont || 'Default'}</p>
+                        <p class="preview-header-font">Header Font: ${previewTheme.customFonts?.headerFont || 'Default'}</p>
+                        
+                        <h3>UI Element Sizes</h3>
+                        <p>Border Radius: ${previewTheme.uiElementSizes?.borderRadius || 'Default'}</p>
+                        <p>Button Height: ${previewTheme.uiElementSizes?.buttonHeight || 'Default'}</p>
+                        <p>Input Height: ${previewTheme.uiElementSizes?.inputHeight || 'Default'}</p>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="preview-border-radius preview-button-height" 
+                                style="background: linear-gradient(to bottom, ${previewTheme.accentColor}, ${previewTheme.accentColorDark}); color: white; border: none; padding: 0 15px;">
+                                Button with Custom Height
+                            </button>
+                            <input type="text" class="preview-border-radius preview-input-height"
+                                placeholder="Input with Custom Height" 
+                                style="background-color: ${previewTheme.tertiaryColor}; color: ${previewTheme.textColorPrimary}; border: 1px solid rgba(255,255,255,0.1); padding: 0 10px;" />
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Animation Preview -->
+                <div class="preview-pane" data-tab="animation">
+                    <div style="background-color: ${previewTheme.primaryColor}; padding: 15px; color: ${previewTheme.textColorPrimary};">
+                        <h3>Animation Speed: ${previewTheme.animationSpeed || '1'}</h3>
+                        <p>Hover over elements below to see animation:</p>
+                        
+                        <div style="display: flex; gap: 20px; margin-top: 20px;">
+                            <button class="preview-animated" 
+                                style="background-color: ${previewTheme.accentColor}; color: white; border: none; padding: 10px 20px; border-radius: 4px;"
+                                onmouseover="this.style.transform='scale(1.1)'" 
+                                onmouseout="this.style.transform='scale(1)'">
+                                Hover Me
+                            </button>
+                            
+                            <div class="preview-animated" 
+                                style="width: 50px; height: 50px; background-color: ${previewTheme.accentColor}; border-radius: 4px;"
+                                onmouseover="this.style.transform='rotate(45deg)'" 
+                                onmouseout="this.style.transform='rotate(0deg)'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Update the container
+        this.previewContainer.innerHTML = previewHTML;
+        
+        // Add tab switching functionality
+        const tabs = this.previewContainer.querySelectorAll('.preview-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update active pane
+                const tabId = tab.getAttribute('data-tab');
+                const panes = this.previewContainer?.querySelectorAll('.preview-pane');
+                panes?.forEach(pane => {
+                    pane.classList.remove('active');
+                    if (pane.getAttribute('data-tab') === tabId) {
+                        pane.classList.add('active');
+                    }
+                });
+            });
+        });
     }
 
     /**
@@ -696,5 +1452,59 @@ export class ThemeEditorApp extends GuiApplication {
         } else {
             notification.error(message);
         }
+    }    /**
+     * Open CSS Editor for customCss properties
+     * This launches the code-editor app to edit customCss
+     * @param property The property containing customCss ('titleBar', 'taskbar', or 'startMenu')
+     */
+    private async openCssEditor(property: 'titleBar' | 'taskbar' | 'startMenu'): Promise<void> {
+        // Get the current CSS content or create empty content
+        let cssContent = '';
+        if (this.currentTheme[property] && this.currentTheme[property]?.customCss) {
+            cssContent = this.currentTheme[property]?.customCss || '';
+        }
+
+        // Create CSS file for editing
+        const filePath = await this.cssEditor.createCssFile(property, cssContent);
+        if (!filePath) {
+            this.showNotification('Failed to create CSS file', 'error');
+            return;
+        }
+
+        // Launch editor and handle callback
+        await this.cssEditor.launchEditor(filePath, (updatedCss) => {
+            if (updatedCss !== null) {
+                // Update the theme object
+                if (!this.currentTheme[property]) {
+                    // Initialize the object if it doesn't exist
+                    if (property === 'titleBar') {
+                        this.currentTheme.titleBar = {
+                            buttonPlacement: 'right',
+                            useGradient: false,
+                            showIcon: true,
+                            customCss: updatedCss
+                        };
+                    } else if (property === 'taskbar') {
+                        this.currentTheme.taskbar = {
+                            position: 'bottom',
+                            customCss: updatedCss
+                        };
+                    } else if (property === 'startMenu') {
+                        this.currentTheme.startMenu = {
+                            customCss: updatedCss
+                        };
+                    }
+                } else {
+                    // Just update the customCss property
+                    this.currentTheme[property]!.customCss = updatedCss;
+                }
+                
+                // Update preview
+                this.updatePreview();
+                
+                // Show success notification
+                this.showNotification('CSS updated successfully');
+            }
+        });
     }
 }

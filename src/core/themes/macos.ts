@@ -94,9 +94,8 @@ export function createMacOSTheme(): Theme {
         #windows-container .window.active {
             border: 1px solid rgba(0, 0, 0, 0.3);
             box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-        }
-        #windows-container .window-header .window-controls{
-            flex-direction: row-reverse;
+        }        #windows-container .window-header .window-controls{
+            flex-direction: row;
         }
             #windows-container .window {
             border-radius: ${windowBorderRadius}px;
@@ -144,15 +143,18 @@ export function createMacOSTheme(): Theme {
         }
         #windows-container .window-header {
             flex-direction: row-reverse;
-        }
-        .window-control.close {
+        }        
+        .window-control.window-close {
             background-color: #ff5f57;
+            order: -3;
         }
-        .window-control.minimize {
+        .window-control.window-minimize {
             background-color: #ffbd2e;
+            order: -2;
         }
-        .window-control.maximize {
+        .window-control.window-maximize {
             background-color: #28c940;
+            order: -1;
         }
         .window:not(.active) .window-control {
             opacity: 0.7;

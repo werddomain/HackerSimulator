@@ -1,0 +1,358 @@
+/* Theme Documentation Styles */
+.theme-documentation {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  max-width: 900px;
+  background-color: #252526;
+  color: #e0e0e0;
+  border-radius: 5px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Header */
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #007acc;
+  color: white;
+}
+
+.doc-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.doc-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.doc-close-btn:hover {
+  opacity: 0.8;
+}
+
+/* Content Layout */
+.doc-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Navigation */
+.doc-navigation {
+  width: 250px;
+  background-color: #1e1e1e;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.doc-search {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.doc-search-input {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.doc-search-input:focus {
+  outline: 1px solid #007acc;
+}
+
+.doc-category-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+/* Category */
+.doc-category {
+  margin-bottom: 2px;
+}
+
+.doc-category-header {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2d2d2d;
+  cursor: pointer;
+  user-select: none;
+}
+
+.doc-category-header:hover {
+  background-color: #3e3e3e;
+}
+
+.doc-category-header.selected {
+  background-color: #04395e;
+}
+
+.doc-category-name {
+  font-weight: 500;
+}
+
+.doc-category-toggle {
+  font-weight: bold;
+  color: #cccccc;
+}
+
+.doc-property-list {
+  background-color: #252526;
+}
+
+.doc-property {
+  padding: 6px 10px 6px 20px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.doc-property:hover {
+  background-color: #2a2d2e;
+}
+
+.doc-property.selected {
+  background-color: #04395e;
+}
+
+/* Details Panel */
+.doc-details {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.doc-welcome {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.doc-welcome h3 {
+  color: #e0e0e0;
+  margin-bottom: 20px;
+}
+
+.doc-welcome p {
+  color: #cccccc;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Property Details */
+.doc-property-details, 
+.doc-category-details {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.doc-property-name, 
+.doc-category-name {
+  color: #e0e0e0;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #454545;
+}
+
+.doc-property-description, 
+.doc-category-description {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  color: #cccccc;
+}
+
+.doc-property-examples, 
+.doc-css-property, 
+.doc-css-example, 
+.doc-related-properties {
+  margin-bottom: 20px;
+}
+
+.doc-property-examples h4, 
+.doc-css-property h4, 
+.doc-css-example h4, 
+.doc-related-properties h4, 
+.doc-category-properties h4 {
+  font-size: 14px;
+  color: #e0e0e0;
+  margin-bottom: 10px;
+}
+
+.doc-example-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doc-example-value {
+  padding: 2px 8px;
+  background-color: #2d2d2d;
+  border: 1px solid #454545;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.doc-css-property code {
+  display: inline-block;
+  padding: 8px 12px;
+  background-color: #1e1e1e;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  color: #ce9178;
+}
+
+.doc-css-example pre {
+  margin: 0;
+  padding: 12px;
+  background-color: #1e1e1e;
+  border-radius: 3px;
+  overflow-x: auto;
+}
+
+.doc-css-example code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #d4d4d4;
+}
+
+.doc-related-properties ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.doc-related-properties li {
+  margin-bottom: 5px;
+}
+
+.doc-related-link {
+  color: #3794ff;
+  text-decoration: none;
+}
+
+.doc-related-link:hover {
+  text-decoration: underline;
+}
+
+/* Category Properties */
+.doc-category-property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.doc-category-property-card {
+  background-color: #2d2d2d;
+  border-radius: 5px;
+  padding: 15px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-property-card-name {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.doc-property-card-description {
+  margin: 0 0 15px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #cccccc;
+  flex: 1;
+}
+
+.doc-property-card-button {
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  align-self: flex-start;
+}
+
+.doc-property-card-button:hover {
+  background-color: #1177bb;
+}
+
+/* Tooltip */
+.theme-property-tooltip {
+  max-width: 300px;
+  background-color: #252526;
+  color: #e0e0e0;
+  border: 1px solid #454545;
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+/* Help button */
+.theme-property-help-btn {
+  background: none;
+  border: none;
+  color: #787878;
+  font-size: 14px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.theme-property-help-btn:hover {
+  background-color: #3c3c3c;
+  color: #e0e0e0;
+}
+
+/* Quick Reference */
+.quick-reference-link {
+  color: #3794ff;
+  text-decoration: none;
+  font-size: 13px;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.quick-reference-link:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,404 @@
+/* Theme Preview Integrator Styles */
+.theme-preview-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Preview Tabs */
+.preview-tabs {
+  display: flex;
+  background-color: #252526;
+  border-bottom: 1px solid #454545;
+}
+
+.preview-tab-btn {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #d4d4d4;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+}
+
+.preview-tab-btn:hover {
+  background-color: #2a2d2e;
+}
+
+.preview-tab-btn.active {
+  background-color: #37373d;
+  border-bottom: 2px solid #0e639c;
+}
+
+/* Preview Content */
+.preview-content {
+  flex: 1;
+  overflow: auto;
+  padding: 15px;
+}
+
+.preview-tab-content {
+  height: 100%;
+}
+
+.preview-section {
+  margin-bottom: 20px;
+}
+
+.preview-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #e0e0e0;
+  font-size: 16px;
+}
+
+.preview-description {
+  font-size: 13px;
+  color: #cccccc;
+  margin-top: 15px;
+  line-height: 1.4;
+}
+
+/* Taskbar Preview */
+.taskbar-preview {
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.taskbar-container {
+  height: 40px;
+  background-color: #333;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.start-button {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  height: 32px;
+  background-color: #444;
+  margin-right: 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.start-icon {
+  margin-right: 5px;
+}
+
+.taskbar-items {
+  display: flex;
+  flex: 1;
+}
+
+.taskbar-item {
+  width: 40px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 5px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.taskbar-item.active {
+  background-color: #555;
+}
+
+.taskbar-tray {
+  display: flex;
+  align-items: center;
+}
+
+.tray-icon {
+  margin-right: 10px;
+}
+
+.clock {
+  font-size: 12px;
+}
+
+/* Start Menu Preview */
+.start-menu-preview {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.start-menu-container {
+  width: 300px;
+  background-color: #333;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background-color: #555;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.user-name {
+  font-weight: bold;
+}
+
+.apps-section {
+  padding: 15px;
+}
+
+.recently-used h4,
+.all-apps h4 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.app-item {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.app-icon {
+  margin-right: 10px;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+/* Animation Preview */
+.animation-preview {
+  background-color: #1e1e1e;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.animation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.demo-button {
+  padding: 6px 12px;
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.demo-button:hover {
+  background-color: #1177bb;
+}
+
+.animation-demo-area {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #333;
+  border-radius: 3px;
+}
+
+.demo-window {
+  width: 70%;
+  height: 70%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #252526;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.demo-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background-color: #333;
+  user-select: none;
+}
+
+.demo-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.demo-control {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.demo-content {
+  padding: 15px;
+}
+
+/* Animation states */
+.demo-window.opening {
+  animation: window-open var(--theme-animation-speed, 1s) ease-out;
+}
+
+.demo-window.closing {
+  animation: window-close var(--theme-animation-speed, 1s) ease-in;
+}
+
+.demo-window.minimizing {
+  animation: window-minimize var(--theme-animation-speed, 1s) ease-in;
+}
+
+.demo-window.maximized {
+  width: 95%;
+  height: 95%;
+}
+
+.demo-window.maximizing {
+  animation: window-maximize var(--theme-animation-speed, 1s) ease-out;
+}
+
+.demo-window.restoring {
+  animation: window-restore var(--theme-animation-speed, 1s) ease-out;
+}
+
+/* Animation keyframes */
+@keyframes window-open {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes window-close {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+}
+
+@keyframes window-minimize {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, 300%) scale(0.5, 0.1); opacity: 0; }
+}
+
+@keyframes window-maximize {
+  0% { width: 70%; height: 70%; }
+  100% { width: 95%; height: 95%; }
+}
+
+@keyframes window-restore {
+  0% { width: 95%; height: 95%; }
+  100% { width: 70%; height: 70%; }
+}
+
+/* Font Preview */
+.fonts-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.font-sample {
+  background-color: #252526;
+  border-radius: 5px;
+  padding: 15px;
+}
+
+.font-sample h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.font-preview {
+  font-size: 16px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #1e1e1e;
+  border-radius: 3px;
+}
+
+.font-info {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.ui-elements-sample {
+  background-color: #252526;
+  border-radius: 5px;
+  padding: 15px;
+}
+
+.elements-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background-color: #1e1e1e;
+  border-radius: 3px;
+}
+
+.sample-button, 
+.sample-input, 
+.sample-select {
+  padding: 6px 12px;
+  border-radius: 3px;
+}
+
+.sample-button {
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.sample-input, 
+.sample-select {
+  background-color: #3c3c3c;
+  color: #d4d4d4;
+  border: 1px solid #555;
+}
+
+.sample-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .preview-tab-btn {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+}
