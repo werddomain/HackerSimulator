@@ -1,0 +1,462 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\apps\mobile-system-monitor.less */
+.mobile-system-monitor-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  touch-action: pan-y;
+  overflow: hidden;
+  user-select: none;
+  width: 100%;
+  background-color: var(--app-background);
+  color: var(--text-color);
+  
+  .mobile-system-monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--header-background, rgba(50, 50, 50, 0.8));
+    border-bottom: 1px solid var(--border-color);
+    
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    
+    .mobile-refresh-btn {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 50%;
+      background-color: var(--button-background);
+      color: var(--button-text-color);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      
+      &:active {
+        background-color: var(--button-active-background);
+      }
+    }
+  }
+  
+  .mobile-tabs-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 0;
+    
+    .tab-indicator-dots {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      
+      .tab-dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background-color: var(--dot-inactive-color, rgba(200, 200, 200, 0.4));
+        transition: background-color 0.2s, transform 0.2s;
+        
+        &.active {
+          background-color: var(--dot-active-color, rgb(100, 160, 255));
+          transform: scale(1.3);
+        }
+      }
+    }
+    
+    .tab-name {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+  
+  .mobile-tab-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    
+    .mobile-tab-content {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-out, opacity 0.2s;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      
+      &.active {
+        opacity: 1;
+        transform: translateX(0);
+        z-index: 1;
+      }
+    }
+  }
+  
+  /* Overview Tab Styles */
+  .mobile-resource-overview {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1.5rem;
+    
+    .mobile-resource-card {
+      background-color: var(--card-background, rgba(40, 40, 40, 0.6));
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      
+      .resource-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--card-title-color, rgba(255, 255, 255, 0.9));
+      }
+      
+      .resource-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.75rem;
+      }
+      
+      .resource-bar-container {
+        height: 0.5rem;
+        background-color: var(--bar-background, rgba(60, 60, 60, 0.6));
+        border-radius: 0.25rem;
+        overflow: hidden;
+        
+        .resource-bar {
+          height: 100%;
+          transition: width 0.3s ease-out;
+          border-radius: 0.25rem;
+          
+          &#mobile-cpu-bar {
+            background-color: var(--cpu-color, rgb(255, 100, 100));
+          }
+          
+          &#mobile-ram-bar {
+            background-color: var(--ram-color, rgb(100, 100, 255));
+          }
+          
+          &#mobile-disk-bar {
+            background-color: var(--disk-color, rgb(100, 180, 100));
+          }
+          
+          &#mobile-network-bar {
+            background-color: var(--network-color, rgb(255, 180, 60));
+          }
+        }
+      }
+    }
+  }
+  
+  /* Processes Tab Styles */
+  .mobile-process-list-header {
+    display: grid;
+    grid-template-columns: 1fr 0.4fr 0.4fr;
+    padding: 0.75rem 1rem;
+    background-color: var(--header-background, rgba(50, 50, 50, 0.8));
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+    font-size: 0.9rem;
+    
+    .process-name {
+      text-align: left;
+    }
+    
+    .process-cpu, .process-ram {
+      text-align: right;
+    }
+  }
+  
+  .mobile-process-list {
+    .mobile-process-item {
+      display: grid;
+      grid-template-columns: 1fr 0.4fr 0.4fr;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color, rgba(80, 80, 80, 0.3));
+      transition: background-color 0.2s;
+      
+      &:active {
+        background-color: var(--item-active-background, rgba(100, 160, 255, 0.2));
+      }
+      
+      &.selected {
+        background-color: var(--item-selected-background, rgba(100, 160, 255, 0.15));
+      }
+      
+      .process-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .process-cpu, .process-ram {
+        text-align: right;
+      }
+    }
+  }
+  
+  /* Performance Tab Styles */
+  .mobile-performance-chart-container {
+    height: 60vh;
+    padding: 1rem;
+    position: relative;
+    
+    .chart-zoom-info {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    
+    .mobile-performance-chart {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.1s ease-out;
+      transform-origin: center center;
+    }
+  }
+  
+  .mobile-chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      
+      .legend-color {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 0.25rem;
+        margin-right: 0.5rem;
+        
+        &.cpu-color {
+          background-color: var(--cpu-color, rgb(255, 100, 100));
+        }
+        
+        &.ram-color {
+          background-color: var(--ram-color, rgb(100, 100, 255));
+        }
+      }
+    }
+  }
+  
+  /* Disk Tab Styles */
+  .mobile-disk-usage-card {
+    margin: 1rem;
+    background-color: var(--card-background, rgba(40, 40, 40, 0.6));
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    .disk-usage-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .disk-usage-chart {
+      height: 40vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      
+      .pie-chart {
+        position: relative;
+        width: 60vw;
+        height: 60vw;
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 50%;
+        background-color: var(--disk-free-color, rgb(80, 80, 80));
+        
+        .pie-slice {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          clip: rect(0, 100px, 200px, 0);
+          background-color: var(--disk-used-color, rgb(100, 180, 100));
+          transform: rotate(0deg);
+          transform-origin: center;
+          clip-path: polygon(50% 50%, 50% 0%, calc(50% + 50% * sin(var(--percentage) * 3.6deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 90deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 90deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 180deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 180deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 270deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 270deg)), 50% 0%);
+        }
+        
+        .pie-center {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 1.5rem;
+          font-weight: bold;
+        }
+      }
+    }
+    
+    .disk-usage-details {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      text-align: center;
+      
+      .disk-detail {
+        display: flex;
+        flex-direction: column;
+        
+        .detail-label {
+          font-size: 0.9rem;
+          opacity: 0.8;
+          margin-bottom: 0.25rem;
+        }
+        
+        .detail-value {
+          font-weight: bold;
+        }
+      }
+    }
+  }
+  
+  /* Network Tab Styles */
+  .mobile-network-chart-container {
+    height: 40vh;
+    padding: 1rem;
+  }
+  
+  .mobile-network-stats {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    
+    .network-stat {
+      background-color: var(--card-background, rgba(40, 40, 40, 0.6));
+      padding: 1rem;
+      border-radius: 0.5rem;
+      
+      .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-bottom: 0.25rem;
+        display: block;
+      }
+      
+      .stat-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+    }
+  }
+  
+  /* Process Details Modal Styles */
+  .mobile-modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    .mobile-process-details-modal {
+      width: 90%;
+      max-width: 400px;
+      background-color: var(--modal-background, rgb(50, 50, 50));
+      border-radius: 0.75rem;
+      overflow: hidden;
+      
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background-color: var(--header-background, rgba(70, 70, 70, 0.8));
+        border-bottom: 1px solid var(--border-color);
+        
+        h3 {
+          margin: 0;
+          font-size: 1.1rem;
+        }
+        
+        .close-modal-btn {
+          background: none;
+          border: none;
+          color: var(--text-color);
+          font-size: 1.5rem;
+          padding: 0;
+          width: 2rem;
+          height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          
+          &:active {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+      
+      .modal-content {
+        padding: 1rem;
+        
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.75rem 0;
+          border-bottom: 1px solid var(--border-color, rgba(80, 80, 80, 0.3));
+          
+          &:last-of-type {
+            border-bottom: none;
+          }
+          
+          .detail-label {
+            opacity: 0.8;
+          }
+          
+          .detail-value {
+            font-weight: bold;
+          }
+        }
+        
+        .process-actions {
+          margin-top: 1.5rem;
+          display: flex;
+          justify-content: center;
+          
+          .process-action-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.25rem;
+            border: none;
+            font-weight: bold;
+            
+            &.end-process-btn {
+              background-color: var(--danger-color, rgb(220, 60, 60));
+              color: white;
+              
+              &:active {
+                background-color: var(--danger-active-color, rgb(180, 50, 50));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { OS } from './os';
 import { WindowManager } from './window';
 import { ProcessManager } from './process';
+// Terminal factory will be imported dynamically
 
 /**
  * Interface for application metadata
@@ -60,6 +61,7 @@ export class AppManager {
   public displayIcon(appOrIcon: AppInfo | string, htmlElement: HTMLElement): void {
     const icon = this.getIconName(appOrIcon);
     // Check if the icon has a prefix
+    //// avaliable prefix: 'ionicons:', 'data:' (data encoded image), 'lucide:', 'fa:', 'fa-solid:', 'fa-regular:', 'fa-brands:'
     if (icon.includes(':')) {
       if (icon.startsWith('ionicons:')) {
         const iconName = icon.substring('ionicons:'.length);
@@ -352,14 +354,17 @@ export class AppManager {
       console.error('Failed to load settings app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load settings app.</div>';
     });
-  }
-  private loadTerminalUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
+  }  private loadTerminalUI(contentElement: HTMLElement, windowId: string, args: string[]): void {
     // Create terminal container
     contentElement.innerHTML = '<div class="terminal-container"></div>';
     
-    // Lazily load the terminal app
-    import('../apps/terminal').then(module => {
-      const terminalApp = new module.TerminalApp(this.os);
+    // Lazily load the terminal factory and create the appropriate terminal
+    import('../apps/terminal-factory').then(factoryModule => {
+      // Create appropriate terminal for current platform
+      const terminalFactory = factoryModule.TerminalFactory.getInstance();
+      const terminalApp = terminalFactory.createTerminal(this.os);
+      
+      // Initialize the terminal
       terminalApp.init(contentElement.querySelector('.terminal-container')!, windowId, args);
       
       // Execute initial command if provided

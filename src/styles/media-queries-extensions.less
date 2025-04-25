@@ -1,0 +1,121 @@
+/* 
+ * Platform-Specific Media Queries for HackerSimulator
+ * Extension to the base media-queries.less file
+ */
+
+/* Orientation Media Queries */
+/* Portrait Mode */
+.media-portrait() {
+  @media (orientation: portrait) {
+    @{block}
+  }
+}
+
+/* Landscape Mode */
+.media-landscape() {
+  @media (orientation: landscape) {
+    @{block}
+  }
+}
+
+/* Touch/Non-Touch Devices Feature Queries */
+/* For touch devices with coarse pointer and no hover */
+.media-touch() {
+  @media (hover: none) and (pointer: coarse) {
+    @{block}
+  }
+}
+
+/* For non-touch devices with fine pointer and hover capability */
+.media-non-touch() {
+  @media (hover: hover) and (pointer: fine) {
+    @{block}
+  }
+}
+
+/* Print Media Query */
+.media-print() {
+  @media print {
+    @{block}
+  }
+}
+
+/* High DPI / Retina Display Media Query */
+.media-high-dpi(@ratio: 1.5) {
+  @media 
+    only screen and (-webkit-min-device-pixel-ratio: @ratio),
+    only screen and (min-resolution: (@ratio * 96dpi)) {
+    @{block}
+  }
+}
+
+/* Combined Queries for Common Use Cases */
+
+/* Mobile Only (Portrait and Touch) */
+.media-mobile-portrait() {
+  @media (orientation: portrait) and (hover: none) and (pointer: coarse) and (max-width: @breakpoint-sm) {
+    @{block}
+  }
+}
+
+/* Mobile Only (Landscape and Touch) */
+.media-mobile-landscape() {
+  @media (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-width: @breakpoint-md) {
+    @{block}
+  }
+}
+
+/* Utility Classes for Responsive Display */
+.hide-on-portrait {
+  @media (orientation: portrait) {
+    display: none !important;
+  }
+}
+
+.hide-on-landscape {
+  @media (orientation: landscape) {
+    display: none !important;
+  }
+}
+
+.hide-on-touch {
+  @media (hover: none) and (pointer: coarse) {
+    display: none !important;
+  }
+}
+
+.hide-on-non-touch {
+  @media (hover: hover) and (pointer: fine) {
+    display: none !important;
+  }
+}
+
+.hide-on-print {
+  @media print {
+    display: none !important;
+  }
+}
+
+/* Usage Examples:
+ *
+ * .element {
+ *   width: 100%;
+ *   
+ *   .media-portrait({
+ *     flex-direction: column;
+ *   });
+ *   
+ *   .media-landscape({
+ *     flex-direction: row;
+ *   });
+ *   
+ *   .media-touch({
+ *     padding: 1rem; // Larger hit area for touch
+ *   });
+ *   
+ *   .media-print({
+ *     background-color: white;
+ *     color: black;
+ *   });
+ * }
+ */

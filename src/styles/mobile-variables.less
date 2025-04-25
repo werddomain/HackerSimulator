@@ -1,0 +1,171 @@
+/**
+ * Mobile-specific Variables and Mixins
+ * A centralized location for mobile styling constants and reusable patterns
+ */
+
+// Import base variables to extend them
+@import "variables.less";
+
+/* Mobile-specific spacing variables */
+@mobile-spacing-xs: 0.25rem;  // 4px
+@mobile-spacing-sm: 0.5rem;   // 8px
+@mobile-spacing-md: 1rem;     // 16px
+@mobile-spacing-lg: 1.5rem;   // 24px
+@mobile-spacing-xl: 2rem;     // 32px
+
+/* Touch target sizes - following accessibility guidelines */
+@touch-target-min: 2.75rem;   // 44px - minimum recommended touch target size
+@touch-target-lg: 3.5rem;     // 56px - larger touch target for primary actions
+@touch-target-spacing: 0.5rem; // 8px - minimum space between touch targets
+
+/* Mobile-specific font sizes */
+@mobile-font-size-xs: 0.75rem; // 12px
+@mobile-font-size-sm: 0.875rem; // 14px 
+@mobile-font-size-md: 1rem;    // 16px
+@mobile-font-size-lg: 1.25rem; // 20px
+@mobile-font-size-xl: 1.5rem;  // 24px
+@mobile-font-size-xxl: 2rem;   // 32px
+
+/* Mobile UI element dimensions */
+@mobile-header-height: 3.5rem; // 56px
+@mobile-nav-height: 3.75rem;   // 60px
+@mobile-icon-size-sm: 1.5rem;  // 24px
+@mobile-icon-size-md: 2rem;    // 32px
+@mobile-icon-size-lg: 2.5rem;  // 40px
+
+/* Mobile-specific border-radius values */
+@mobile-border-radius-sm: 0.5rem;  // 8px
+@mobile-border-radius-md: 0.75rem; // 12px
+@mobile-border-radius-lg: 1rem;    // 16px
+@mobile-border-radius-xl: 1.5rem;  // 24px
+
+/* Mobile-specific shadows */
+@mobile-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2); // subtle shadow
+@mobile-shadow-md: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.25);   // medium shadow
+@mobile-shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);       // prominent shadow
+@mobile-shadow-xl: 0 1rem 2rem rgba(0, 0, 0, 0.4);         // dramatic shadow
+
+/* Mobile-specific animation timings */
+@mobile-animation-speed-fast: 150ms;
+@mobile-animation-speed-medium: 250ms;
+@mobile-animation-speed-slow: 350ms;
+
+/* Mobile theme colors - can be overridden by theme system */
+:root {
+  --mobile-primary-color: var(--primary-color, #3498db);
+  --mobile-secondary-color: var(--secondary-color, #2ecc71);
+  --mobile-accent-color: var(--accent-color, #e74c3c);
+  --mobile-background-color: var(--bg-dark, #121212);
+  --mobile-surface-color: var(--bg-medium, #222222);
+  --mobile-text-color: var(--text-color-primary, #ffffff);
+  --mobile-divider-color: var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+/* 
+ * Mobile Mixins 
+ * Reusable patterns for mobile components
+ */
+
+/* Standard touch target mixin */
+.mobile-touch-target() {
+  min-width: @touch-target-min;
+  min-height: @touch-target-min;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile card styling mixin */
+.mobile-card() {
+  background-color: var(--mobile-surface-color);
+  border-radius: @mobile-border-radius-md;
+  padding: @mobile-spacing-md;
+  margin-bottom: @mobile-spacing-md;
+  box-shadow: @mobile-shadow-sm;
+}
+
+/* Mobile header styling mixin */
+.mobile-header() {
+  display: flex;
+  align-items: center;
+  height: @mobile-header-height;
+  padding: 0 @mobile-spacing-md;
+  background-color: var(--mobile-surface-color);
+  border-bottom: 0.0625rem solid var(--mobile-divider-color);
+  
+  h1 {
+    font-size: @mobile-font-size-lg;
+    font-weight: 500;
+    margin: 0;
+    flex: 1;
+  }
+}
+
+/* Mobile button styling mixin */
+.mobile-button() {
+  .mobile-touch-target();
+  background-color: var(--mobile-primary-color);
+  color: var(--mobile-text-color);
+  border: none;
+  border-radius: @mobile-border-radius-sm;
+  padding: @mobile-spacing-sm @mobile-spacing-md;
+  font-size: @mobile-font-size-md;
+  font-weight: 500;
+  transition: background-color @mobile-animation-speed-fast ease;
+  
+  &:active {
+    background-color: darken(var(--mobile-primary-color), 10%);
+  }
+}
+
+/* Mobile list item styling mixin */
+.mobile-list-item() {
+  display: flex;
+  align-items: center;
+  min-height: @touch-target-min;
+  padding: @mobile-spacing-sm @mobile-spacing-md;
+  border-bottom: 0.0625rem solid var(--mobile-divider-color);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Mobile active state feedback mixin */
+.mobile-active-state() {
+  position: relative;
+  overflow: hidden;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: opacity @mobile-animation-speed-fast ease;
+  }
+  
+  &:active:after {
+    opacity: 1;
+  }
+}
+
+/* Mobile input styling mixin */
+.mobile-input() {
+  height: @touch-target-min;
+  width: 100%;
+  border-radius: @mobile-border-radius-sm;
+  border: 0.0625rem solid var(--mobile-divider-color);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--mobile-text-color);
+  padding: 0 @mobile-spacing-md;
+  font-size: @mobile-font-size-md;
+  
+  &:focus {
+    border-color: var(--mobile-primary-color);
+    outline: none;
+  }
+}

@@ -1,0 +1,275 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\responsive-main.less */
+/**
+ * Main Responsive Design System for HackerSimulator
+ * Integrates all responsive components into a cohesive system
+ */
+
+/* Import core responsive components */
+@import './media-queries.less';
+@import './responsive-layout.less';
+@import './responsive-utilities.less';
+
+/* 
+ * This file serves as the entry point for the responsive design system.
+ * It ensures all responsive components are properly loaded and configured.
+ */
+
+/* Define root font size for rem units */
+html {
+  /* Base 16px font size */
+  font-size: 16px;
+  
+  /* Scale down slightly on very small screens */
+  .media-breakpoint-down(xs, {
+    font-size: 14px;
+  });
+  
+  /* Scale up on very large screens */
+  .media-breakpoint-up(xl, {
+    font-size: 18px;
+  });
+  
+  /* Account for mobile device orientation */
+  .media-orientation(landscape, {
+    /* Adjust for smaller height in landscape mobile */
+    &.mobile {
+      font-size: 15px;
+    }
+  });
+}
+
+/*
+ * Define platform-specific root styles
+ * These will be applied when the PlatformDetector sets the appropriate class
+ */
+html {
+  &.mobile {
+    /* Mobile-specific adjustments */
+    --touch-target-size: 44px; /* Minimum 44px touch targets for mobile */
+    --spacing-unit: 8px; /* Slightly larger spacing unit for touch interfaces */
+    --window-border-radius: 8px; /* Larger border radius for mobile */
+    --control-height: 44px; /* Taller controls for touch */
+    
+    /* Disable hover effects on touch devices */
+    .hover-effect {
+      &:hover {
+        /* Cancel hover effects on mobile */
+        transform: none !important;
+        box-shadow: none !important;
+      }
+    }
+    
+    /* Enhance active states for touch feedback */
+    .touch-feedback {
+      &:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+      }
+    }
+  }
+  
+  &.desktop {
+    /* Desktop-specific adjustments */
+    --touch-target-size: 32px; /* Standard size for desktop */
+    --window-min-width: 320px; /* Minimum window width */
+    --window-min-height: 200px; /* Minimum window height */
+    
+    /* Enable hover effects on desktop */
+    .hover-effect {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}
+
+/*
+ * Responsive typography system
+ */
+h1, .h1 { 
+  font-size: 2rem; 
+  .media-breakpoint-up(md, { font-size: 2.5rem; });
+}
+h2, .h2 { 
+  font-size: 1.75rem; 
+  .media-breakpoint-up(md, { font-size: 2rem; });
+}
+h3, .h3 { 
+  font-size: 1.5rem; 
+  .media-breakpoint-up(md, { font-size: 1.75rem; });
+}
+h4, .h4 { 
+  font-size: 1.25rem; 
+  .media-breakpoint-up(md, { font-size: 1.5rem; });
+}
+h5, .h5 { 
+  font-size: 1.125rem; 
+  .media-breakpoint-up(md, { font-size: 1.25rem; });
+}
+h6, .h6 { 
+  font-size: 1rem; 
+  .media-breakpoint-up(md, { font-size: 1.125rem; });
+}
+
+.display-1 {
+  font-size: 3rem;
+  .media-breakpoint-up(md, { font-size: 4rem; });
+  .media-breakpoint-up(lg, { font-size: 5rem; });
+}
+
+.display-2 {
+  font-size: 2.5rem;
+  .media-breakpoint-up(md, { font-size: 3.5rem; });
+  .media-breakpoint-up(lg, { font-size: 4.5rem; });
+}
+
+/* 
+ * Universal touch target sizing for interactive elements
+ * Ensures all clickable elements are at least 44px on mobile
+ */
+button, 
+.button, 
+input[type="button"], 
+input[type="submit"],
+input[type="reset"],
+a.btn,
+.nav-item,
+.clickable {
+  min-height: var(--touch-target-size);
+  min-width: var(--touch-target-size);
+  
+  /* Ensure text remains properly sized */
+  line-height: 1.5;
+  padding: 0.5rem 1rem;
+  
+  /* Add touch feedback on mobile */
+  html.mobile & {
+    &:active {
+      opacity: 0.7;
+      transform: scale(0.98);
+    }
+  }
+}
+
+/* 
+ * Ensure form controls have appropriate sizing for touch
+ */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea {
+  min-height: var(--touch-target-size);
+  padding: 0.5rem;
+  width: 100%;
+  
+  html.mobile & {
+    font-size: 1rem; /* Prevent auto-zoom on mobile by keeping font size at least 16px */
+  }
+}
+
+/* 
+ * Create spacing between interactive elements for mobile
+ */
+html.mobile {
+  button + button,
+  .button + .button,
+  input[type="button"] + input[type="button"],
+  a.btn + a.btn {
+    margin-left: var(--spacing-medium);
+  }
+  
+  .touch-stack {
+    display: flex;
+    flex-direction: column;
+    
+    button,
+    .button,
+    input[type="button"],
+    a.btn {
+      margin-left: 0 !important;
+      margin-top: var(--spacing-medium);
+      
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+  }
+}
+
+/*
+ * Enhanced visibility utilities based on platform
+ */
+.mobile-only {
+  display: none !important;
+  
+  html.mobile & {
+    display: block !important;
+  }
+}
+
+.desktop-only {
+  display: block !important;
+  
+  html.mobile & {
+    display: none !important;
+  }
+}
+
+/* Display variations for mobile only elements */
+.mobile-only-flex {
+  display: none !important;
+  
+  html.mobile & {
+    display: flex !important;
+  }
+}
+
+.mobile-only-inline {
+  display: none !important;
+  
+  html.mobile & {
+    display: inline !important;
+  }
+}
+
+.mobile-only-inline-block {
+  display: none !important;
+  
+  html.mobile & {
+    display: inline-block !important;
+  }
+}
+
+/* Adjust padding for windows in mobile mode */
+html.mobile {
+  .window {
+    padding: var(--spacing-medium);
+  }
+  
+  .window-content {
+    padding: var(--spacing-medium);
+  }
+  
+  .window-header {
+    padding: var(--spacing-medium);
+    height: auto;
+    min-height: var(--touch-target-size);
+  }
+}
+
+/* Ensure proper spacing between elements */
+html.mobile {
+  .nav-item + .nav-item,
+  .form-group + .form-group,
+  .card + .card {
+    margin-top: var(--spacing-large);
+  }
+}

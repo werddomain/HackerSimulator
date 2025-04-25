@@ -9,7 +9,7 @@
     &.dialog-container {
         display: flex;
         flex-direction: column;
-        padding: 15px;
+        padding: @spacing-md; // 15px → 1rem
         overflow: hidden;
     }
 
@@ -36,10 +36,10 @@
     .embedded-dialog {
         position: absolute;
 
-        border-radius: 4px;
+        border-radius: 0.25rem; // 4px
         background-color: #252526;
-        border: 1px solid #3c3c3c;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        border: 0.0625rem solid #3c3c3c; // 1px
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5); // 0 4px 12px
         color: #d4d4d4;
         overflow: hidden;
         z-index: 1001;
@@ -47,7 +47,7 @@
         .dialog-header {
 
             background-color: #333;
-            padding: 10px 15px;
+            padding: 0.625rem 0.9375rem; // 10px 15px
             font-weight: bold;
             border-bottom: 1px solid #3c3c3c;
             color: #d4d4d4;

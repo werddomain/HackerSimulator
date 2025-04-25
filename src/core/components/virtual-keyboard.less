@@ -1,0 +1,182 @@
+// Virtual Keyboard styles
+// Provides mobile-friendly touch keyboard UI
+
+.virtual-keyboard {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--dialog-bg-color);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  z-index: 9999;
+  transition: transform 0.3s ease-in-out;
+  touch-action: none;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+// Predictive text bar
+.predictive-text-bar {
+  display: flex;
+  overflow-x: auto;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  scrollbar-width: none; // Hide scrollbar for Firefox
+  
+  &::-webkit-scrollbar {
+    display: none; // Hide scrollbar for Chrome/Safari
+  }
+  
+  .prediction-item {
+    flex-shrink: 0;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-right: var(--spacing-xs);
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color-primary);
+    font-size: 14px;
+    white-space: nowrap;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+    
+    &:active {
+      background-color: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Keyboard keys container
+.keyboard-keys {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-xs);
+  
+  .keyboard-row {
+    display: flex;
+    margin-bottom: var(--spacing-xs);
+    justify-content: center;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .keyboard-key {
+    flex: 1;
+    height: 45px;
+    min-width: 30px;
+    margin-right: var(--spacing-xs);
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color-primary);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    touch-action: manipulation;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+    
+    // Active state for pressed keys
+    &:active {
+      background-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(1px);
+    }
+    
+    // Active state for toggled modifier keys
+    &.active {
+      background-color: rgba(255, 255, 255, 0.25);
+      color: var(--text-color-highlight);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    // Function keys styles
+    &.key-function {
+      font-size: 15px;
+      background-color: rgba(30, 30, 30, 0.9);
+    }
+    
+    // Modifier keys styles
+    &.key-modifier {
+      font-size: 15px;
+      background-color: rgba(60, 60, 60, 0.9);
+    }
+  }
+}
+
+// Keyboard state adjustments
+body.keyboard-visible {
+  // Add padding to body when keyboard is shown
+  padding-bottom: 260px; // Approximate height of keyboard
+  
+  // Adjust windows and app containers when keyboard is visible
+  .mobile-window {
+    max-height: calc(100% - 260px);
+    transition: max-height 0.3s ease-in-out;
+  }
+  
+  // Hide bottom navigation when keyboard is visible
+  .mobile-navigation-bar {
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+  }
+}
+
+// Responsive adjustments
+@media (orientation: landscape) {
+  .virtual-keyboard {
+    height: 40vh; // Take up less space in landscape
+    
+    .keyboard-keys {
+      .keyboard-row {
+        .keyboard-key {
+          height: 36px; // Smaller keys in landscape
+          font-size: 16px;
+        }
+      }
+    }
+  }
+  
+  body.keyboard-visible {
+    padding-bottom: 40vh;
+    
+    .mobile-window {
+      max-height: calc(100% - 40vh);
+    }
+  }
+}
+
+// Smaller screens adjustments
+@media (max-width: 360px) {
+  .virtual-keyboard {
+    .keyboard-keys {
+      padding: 4px;
+      
+      .keyboard-row {
+        margin-bottom: 4px;
+        
+        .keyboard-key {
+          height: 40px;
+          margin-right: 4px;
+          font-size: 16px;
+        }
+      }
+    }
+  }
+}

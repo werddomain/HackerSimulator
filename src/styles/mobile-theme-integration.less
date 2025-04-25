@@ -1,0 +1,141 @@
+/**
+ * Mobile Theme Integration
+ * Provides mobile-specific theme variables and styling
+ * that integrates with the existing theme system
+ */
+
+@import "mobile-variables.less";
+
+/* 
+ * Mobile Theme Integration
+ * These theme overrides provide mobile-specific styling for different themes
+ */
+
+/* Base Dark Theme - Mobile Optimizations */
+.theme-dark {
+  /* Color adjustments for better contrast on small screens */
+  --mobile-background-color: var(--bg-dark, #121212);
+  --mobile-surface-color: var(--bg-medium, #222222);
+  --mobile-primary-color: var(--primary-color, #3498db);
+  --mobile-secondary-color: var(--secondary-color, #2ecc71);
+  --mobile-accent-color: var(--accent-color, #e74c3c);
+  --mobile-text-color: var(--text-color-primary, #ffffff);
+  --mobile-text-secondary-color: var(--text-color-secondary, #aaaaaa);
+  --mobile-divider-color: var(--border-color, rgba(255, 255, 255, 0.1));
+  
+  /* Status colors */
+  --mobile-success-color: var(--success-color, #2ecc71);
+  --mobile-warning-color: var(--warning-color, #f39c12);
+  --mobile-error-color: var(--error-color, #e74c3c);
+  --mobile-info-color: var(--info-color, #3498db);
+  
+  /* Special UI element colors */
+  --mobile-card-bg: var(--dialog-bg-color, #2a2a2a);
+  --mobile-input-bg: var(--input-bg-color, #333333);
+  --mobile-nav-bg: var(--taskbar-bg-end, #1a1a1a);
+}
+
+/* Light Theme - Mobile Optimizations */
+.theme-light {
+  /* Color adjustments for better contrast on small screens */
+  --mobile-background-color: var(--bg-light, #f5f5f5);
+  --mobile-surface-color: var(--bg-medium, #ffffff);
+  --mobile-primary-color: var(--primary-color, #2980b9);
+  --mobile-secondary-color: var(--secondary-color, #27ae60);
+  --mobile-accent-color: var(--accent-color, #c0392b);
+  --mobile-text-color: var(--text-color-primary, #333333);
+  --mobile-text-secondary-color: var(--text-color-secondary, #666666);
+  --mobile-divider-color: var(--border-color, rgba(0, 0, 0, 0.1));
+  
+  /* Status colors */
+  --mobile-success-color: var(--success-color, #27ae60);
+  --mobile-warning-color: var(--warning-color, #e67e22);
+  --mobile-error-color: var(--error-color, #c0392b);
+  --mobile-info-color: var(--info-color, #2980b9);
+  
+  /* Special UI element colors */
+  --mobile-card-bg: var(--dialog-bg-color, #ffffff);
+  --mobile-input-bg: var(--input-bg-color, #f0f0f0);
+  --mobile-nav-bg: var(--taskbar-bg-end, #e0e0e0);
+}
+
+/* Hacker Theme - Mobile Optimizations */
+.theme-hacker {
+  /* Color adjustments for better contrast on small screens */
+  --mobile-background-color: var(--bg-dark, #0a0a0a);
+  --mobile-surface-color: var(--bg-medium, #1a1a1a);
+  --mobile-primary-color: var(--primary-color, #00ff00);
+  --mobile-secondary-color: var(--secondary-color, #00cc00);
+  --mobile-accent-color: var(--accent-color, #ff3333);
+  --mobile-text-color: var(--text-color-primary, #00ff00);
+  --mobile-text-secondary-color: var(--text-color-secondary, #00cc00);
+  --mobile-divider-color: var(--border-color, rgba(0, 255, 0, 0.2));
+  
+  /* Status colors */
+  --mobile-success-color: var(--success-color, #00ff00);
+  --mobile-warning-color: var(--warning-color, #ffff00);
+  --mobile-error-color: var(--error-color, #ff0000);
+  --mobile-info-color: var(--info-color, #00ffff);
+  
+  /* Special UI element colors */
+  --mobile-card-bg: var(--dialog-bg-color, #0f1f0f);
+  --mobile-input-bg: var(--input-bg-color, #1a1a1a);
+  --mobile-nav-bg: var(--taskbar-bg-end, #0a0a0a);
+}
+
+/* Theme-based component styling */
+.mobile-theme-aware {
+  /* Base styling */
+  color: var(--mobile-text-color);
+  background-color: var(--mobile-background-color);
+  
+  /* Common components with theme awareness */
+  .mobile-card {
+    background-color: var(--mobile-card-bg);
+    border: 0.0625rem solid var(--mobile-divider-color);
+  }
+  
+  .mobile-input {
+    background-color: var(--mobile-input-bg);
+    border-color: var(--mobile-divider-color);
+    color: var(--mobile-text-color);
+    
+    &:focus {
+      border-color: var(--mobile-primary-color);
+    }
+  }
+  
+  .mobile-button {
+    &.primary {
+      background-color: var(--mobile-primary-color);
+      color: var(--mobile-background-color);
+    }
+    
+    &.secondary {
+      background-color: var(--mobile-secondary-color);
+      color: var(--mobile-background-color);
+    }
+    
+    &.accent {
+      background-color: var(--mobile-accent-color);
+      color: var(--mobile-background-color);
+    }
+  }
+  
+  /* Status colors */
+  .status-success {
+    color: var(--mobile-success-color);
+  }
+  
+  .status-warning {
+    color: var(--mobile-warning-color);
+  }
+  
+  .status-error {
+    color: var(--mobile-error-color);
+  }
+  
+  .status-info {
+    color: var(--mobile-info-color);
+  }
+}

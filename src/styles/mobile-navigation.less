@@ -7,14 +7,23 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--mobile-nav-height, 60px);
+  height: var(--mobile-nav-height, 3.75rem); // 60px to rem
   background: linear-gradient(to bottom, var(--taskbar-bg-start), var(--taskbar-bg-end));
-  border-top: 1px solid var(--taskbar-border-top-color);
+  border-top: 0.0625rem solid var(--taskbar-border-top-color); // 1px to rem
   box-shadow: var(--taskbar-shadow);
   display: flex;
   flex-direction: column;
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  
+  @media (orientation: landscape) {
+    height: var(--mobile-nav-height-landscape, 3rem); // Smaller in landscape
+    flex-direction: row;
+  }
+  
+  @media print {
+    display: none; // Hide navigation when printing
+  }
 }
 
 // Quick launch bar
@@ -22,22 +31,65 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  height: 60px;
+  height: 3.75rem; // 60px to rem
   background-color: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid var(--taskbar-border-top-color);
+  border-bottom: 0.0625rem solid var(--taskbar-border-top-color); // 1px to rem
   padding: 0 var(--spacing-small);
   
+  @media (orientation: landscape) {
+    height: 3rem; // Smaller in landscape
+    width: 70%; // Take up only part of the width in landscape
+  }
+  
+  @media (hover: none) and (pointer: coarse) {
+    // Additional spacing for touch devices
+    > * {
+      margin: 0 0.5rem; // Add space between items for easier touch
+    }
+  }
   // Quick launch item
   .quick-launch-item {
-    min-width: 48px;
-    min-height: 48px;
-    border-radius: 8px;
+    min-width: 3rem; // 48px to rem
+    min-height: 3rem; // 48px to rem
+    border-radius: 0.5rem; // 8px to rem
     background: none;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-color-primary);
+    transition: background-color 0.2s ease;
+    
+    // Apply touch-friendly styling
+    .touch-target();
+    .touch-feedback();
+    
+    @media (hover: none) and (pointer: coarse) {
+      // Larger touch targets for mobile
+      min-width: 3.5rem; // 56px
+      min-height: 3.5rem; // 56px
+    }
+    
+    @media (orientation: landscape) {
+      // Adjust size in landscape mode
+      min-width: 2.75rem; // 44px
+      min-height: 2.75rem; // 44px
+    }
+    
+    @media print {
+      // Hide decorative elements when printing
+      background: none !important;
+      color: black !important;
+    }
+    
+    // For high-resolution displays
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      // Use higher quality icons if available
+      .quick-launch-icon {
+        background-size: contain;
+      }
+    }
     padding: var(--spacing-small);
     margin: 0 var(--spacing-small);
     

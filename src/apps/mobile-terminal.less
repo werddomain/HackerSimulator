@@ -1,0 +1,222 @@
+// Mobile Terminal Styles
+// These styles define the touch-friendly mobile terminal interface
+
+// Mobile terminal container
+.mobile-window {
+  &.terminal-app {
+    .window-content {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+  }
+}
+
+// Terminal elements inside mobile window
+.mobile-terminal-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--dialog-bg-color);
+  border-top: 1px solid var(--window-border-color);
+  z-index: 10;
+}
+
+// Touch toolbar with common terminal actions
+.terminal-touch-toolbar {
+  display: flex;
+  overflow-x: auto;
+  padding: var(--spacing-small);
+  background-color: rgba(0, 0, 0, 0.2);
+  scrollbar-width: none; // Hide scrollbar for Firefox
+  
+  &::-webkit-scrollbar {
+    display: none; // Hide scrollbar for Chrome/Safari
+  }
+  
+  // Toolbar buttons
+  .toolbar-button {
+    min-width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--text-color-primary);
+    font-size: 14px;
+    margin-right: var(--spacing-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spacing-small);
+    flex-shrink: 0;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+    
+    &:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Command suggestions bar
+.terminal-command-suggestions {
+  display: flex;
+  overflow-x: auto;
+  padding: var(--spacing-small);
+  background-color: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  scrollbar-width: none; // Hide scrollbar for Firefox
+  
+  &::-webkit-scrollbar {
+    display: none; // Hide scrollbar for Chrome/Safari
+  }
+  
+  // Suggestion buttons
+  .command-suggestion {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--text-color-primary);
+    font-size: 14px;
+    padding: var(--spacing-small) var(--spacing-medium);
+    margin-right: var(--spacing-small);
+    white-space: nowrap;
+    flex-shrink: 0;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+    
+    &:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Virtual keyboard
+.terminal-virtual-keyboard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-small);
+  background-color: rgba(0, 0, 0, 0.9);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  
+  // Keyboard row
+  .keyboard-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--spacing-small);
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  // Keyboard keys
+  .keyboard-key {
+    flex: 1;
+    min-width: 30px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--text-color-primary);
+    font-size: 16px;
+    margin-right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+    
+    &:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+    
+    // Special key styles
+    &.key-space {
+      flex: 3;
+    }
+    
+    &.key-tab, &.key-control {
+      flex: 1.5;
+      font-size: 14px;
+    }
+    
+    &.key-arrow {
+      flex: 1;
+    }
+  }
+}
+
+// Adjust terminal font size for better touch experience
+.mobile-window .xterm {
+  // Make sure text is legible on small screens
+  .xterm-viewport {
+    // Improved scrolling on touch
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  // Make selection easier on touch
+  .xterm-selection {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  // Adjust cursor for better visibility
+  .xterm-cursor-layer {
+    .xterm-cursor {
+      border-width: 2px;
+    }
+  }
+}
+
+// Enhance touch focus and selection
+.mobile-window .terminal-app {
+  .xterm:focus {
+    outline: none;
+  }
+  
+  // Touch selection handles
+  ::selection {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+// Media queries for different screen sizes
+@media (max-height: 500px) {
+  // Compact layout for landscape
+  .terminal-virtual-keyboard {
+    .keyboard-key {
+      height: 36px;
+      font-size: 14px;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  // Smaller keys for narrow screens
+  .terminal-virtual-keyboard {
+    .keyboard-key {
+      min-width: 24px;
+      margin-right: 4px;
+      font-size: 14px;
+    }
+  }
+  
+  // Smaller toolbar buttons
+  .terminal-touch-toolbar {
+    .toolbar-button {
+      min-width: 36px;
+      height: 36px;
+    }
+  }
+}

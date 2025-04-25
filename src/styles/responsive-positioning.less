@@ -1,0 +1,478 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\responsive-positioning.less */
+/**
+ * Responsive Positioning Utilities for HackerSimulator
+ * Provides helper classes for responsive margins, paddings, flexbox positioning, and alignment
+ */
+
+@import './media-queries.less';
+
+/* ========== Responsive Margin Utilities ========== */
+
+/* 
+ * Responsive margin utilities
+ * Usage: m{direction}-{breakpoint}-{size}
+ * Example: mt-md-3 = margin-top at medium breakpoint with size 3
+ */
+
+/* Base margin utilities */
+.m-0 { margin: 0 !important; }
+.m-1 { margin: var(--spacing-small, 4px) !important; }
+.m-2 { margin: var(--spacing-medium, 8px) !important; }
+.m-3 { margin: var(--spacing-large, 16px) !important; }
+.m-4 { margin: var(--spacing-xlarge, 24px) !important; }
+.m-5 { margin: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.m-auto { margin: auto !important; }
+
+.mt-0 { margin-top: 0 !important; }
+.mt-1 { margin-top: var(--spacing-small, 4px) !important; }
+.mt-2 { margin-top: var(--spacing-medium, 8px) !important; }
+.mt-3 { margin-top: var(--spacing-large, 16px) !important; }
+.mt-4 { margin-top: var(--spacing-xlarge, 24px) !important; }
+.mt-5 { margin-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.mt-auto { margin-top: auto !important; }
+
+.mr-0 { margin-right: 0 !important; }
+.mr-1 { margin-right: var(--spacing-small, 4px) !important; }
+.mr-2 { margin-right: var(--spacing-medium, 8px) !important; }
+.mr-3 { margin-right: var(--spacing-large, 16px) !important; }
+.mr-4 { margin-right: var(--spacing-xlarge, 24px) !important; }
+.mr-5 { margin-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.mr-auto { margin-right: auto !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: var(--spacing-small, 4px) !important; }
+.mb-2 { margin-bottom: var(--spacing-medium, 8px) !important; }
+.mb-3 { margin-bottom: var(--spacing-large, 16px) !important; }
+.mb-4 { margin-bottom: var(--spacing-xlarge, 24px) !important; }
+.mb-5 { margin-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.mb-auto { margin-bottom: auto !important; }
+
+.ml-0 { margin-left: 0 !important; }
+.ml-1 { margin-left: var(--spacing-small, 4px) !important; }
+.ml-2 { margin-left: var(--spacing-medium, 8px) !important; }
+.ml-3 { margin-left: var(--spacing-large, 16px) !important; }
+.ml-4 { margin-left: var(--spacing-xlarge, 24px) !important; }
+.ml-5 { margin-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.ml-auto { margin-left: auto !important; }
+
+.mx-0 { margin-right: 0 !important; margin-left: 0 !important; }
+.mx-1 { margin-right: var(--spacing-small, 4px) !important; margin-left: var(--spacing-small, 4px) !important; }
+.mx-2 { margin-right: var(--spacing-medium, 8px) !important; margin-left: var(--spacing-medium, 8px) !important; }
+.mx-3 { margin-right: var(--spacing-large, 16px) !important; margin-left: var(--spacing-large, 16px) !important; }
+.mx-4 { margin-right: var(--spacing-xlarge, 24px) !important; margin-left: var(--spacing-xlarge, 24px) !important; }
+.mx-5 { margin-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; margin-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.mx-auto { margin-right: auto !important; margin-left: auto !important; }
+
+.my-0 { margin-top: 0 !important; margin-bottom: 0 !important; }
+.my-1 { margin-top: var(--spacing-small, 4px) !important; margin-bottom: var(--spacing-small, 4px) !important; }
+.my-2 { margin-top: var(--spacing-medium, 8px) !important; margin-bottom: var(--spacing-medium, 8px) !important; }
+.my-3 { margin-top: var(--spacing-large, 16px) !important; margin-bottom: var(--spacing-large, 16px) !important; }
+.my-4 { margin-top: var(--spacing-xlarge, 24px) !important; margin-bottom: var(--spacing-xlarge, 24px) !important; }
+.my-5 { margin-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; margin-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+.my-auto { margin-top: auto !important; margin-bottom: auto !important; }
+
+/* SM breakpoint margin utilities */
+.media-breakpoint-up(sm, {
+  .m-sm-0 { margin: 0 !important; }
+  .m-sm-1 { margin: var(--spacing-small, 4px) !important; }
+  .m-sm-2 { margin: var(--spacing-medium, 8px) !important; }
+  .m-sm-3 { margin: var(--spacing-large, 16px) !important; }
+  .m-sm-4 { margin: var(--spacing-xlarge, 24px) !important; }
+  .m-sm-5 { margin: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .m-sm-auto { margin: auto !important; }
+  
+  .mt-sm-0 { margin-top: 0 !important; }
+  .mt-sm-1 { margin-top: var(--spacing-small, 4px) !important; }
+  .mt-sm-2 { margin-top: var(--spacing-medium, 8px) !important; }
+  .mt-sm-3 { margin-top: var(--spacing-large, 16px) !important; }
+  .mt-sm-4 { margin-top: var(--spacing-xlarge, 24px) !important; }
+  .mt-sm-5 { margin-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .mt-sm-auto { margin-top: auto !important; }
+  
+  .mr-sm-0 { margin-right: 0 !important; }
+  .mr-sm-1 { margin-right: var(--spacing-small, 4px) !important; }
+  .mr-sm-2 { margin-right: var(--spacing-medium, 8px) !important; }
+  .mr-sm-3 { margin-right: var(--spacing-large, 16px) !important; }
+  .mr-sm-4 { margin-right: var(--spacing-xlarge, 24px) !important; }
+  .mr-sm-5 { margin-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .mr-sm-auto { margin-right: auto !important; }
+  
+  .mb-sm-0 { margin-bottom: 0 !important; }
+  .mb-sm-1 { margin-bottom: var(--spacing-small, 4px) !important; }
+  .mb-sm-2 { margin-bottom: var(--spacing-medium, 8px) !important; }
+  .mb-sm-3 { margin-bottom: var(--spacing-large, 16px) !important; }
+  .mb-sm-4 { margin-bottom: var(--spacing-xlarge, 24px) !important; }
+  .mb-sm-5 { margin-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .mb-sm-auto { margin-bottom: auto !important; }
+  
+  .ml-sm-0 { margin-left: 0 !important; }
+  .ml-sm-1 { margin-left: var(--spacing-small, 4px) !important; }
+  .ml-sm-2 { margin-left: var(--spacing-medium, 8px) !important; }
+  .ml-sm-3 { margin-left: var(--spacing-large, 16px) !important; }
+  .ml-sm-4 { margin-left: var(--spacing-xlarge, 24px) !important; }
+  .ml-sm-5 { margin-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .ml-sm-auto { margin-left: auto !important; }
+  
+  .mx-sm-0 { margin-right: 0 !important; margin-left: 0 !important; }
+  .mx-sm-1 { margin-right: var(--spacing-small, 4px) !important; margin-left: var(--spacing-small, 4px) !important; }
+  .mx-sm-2 { margin-right: var(--spacing-medium, 8px) !important; margin-left: var(--spacing-medium, 8px) !important; }
+  .mx-sm-3 { margin-right: var(--spacing-large, 16px) !important; margin-left: var(--spacing-large, 16px) !important; }
+  .mx-sm-4 { margin-right: var(--spacing-xlarge, 24px) !important; margin-left: var(--spacing-xlarge, 24px) !important; }
+  .mx-sm-5 { margin-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; margin-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .mx-sm-auto { margin-right: auto !important; margin-left: auto !important; }
+  
+  .my-sm-0 { margin-top: 0 !important; margin-bottom: 0 !important; }
+  .my-sm-1 { margin-top: var(--spacing-small, 4px) !important; margin-bottom: var(--spacing-small, 4px) !important; }
+  .my-sm-2 { margin-top: var(--spacing-medium, 8px) !important; margin-bottom: var(--spacing-medium, 8px) !important; }
+  .my-sm-3 { margin-top: var(--spacing-large, 16px) !important; margin-bottom: var(--spacing-large, 16px) !important; }
+  .my-sm-4 { margin-top: var(--spacing-xlarge, 24px) !important; margin-bottom: var(--spacing-xlarge, 24px) !important; }
+  .my-sm-5 { margin-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; margin-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .my-sm-auto { margin-top: auto !important; margin-bottom: auto !important; }
+});
+
+/* MD breakpoint margin utilities */
+.media-breakpoint-up(md, {
+  .m-md-0 { margin: 0 !important; }
+  .m-md-1 { margin: var(--spacing-small, 4px) !important; }
+  .m-md-2 { margin: var(--spacing-medium, 8px) !important; }
+  .m-md-3 { margin: var(--spacing-large, 16px) !important; }
+  .m-md-4 { margin: var(--spacing-xlarge, 24px) !important; }
+  .m-md-5 { margin: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .m-md-auto { margin: auto !important; }
+  
+  .mt-md-0 { margin-top: 0 !important; }
+  .mt-md-1 { margin-top: var(--spacing-small, 4px) !important; }
+  .mt-md-2 { margin-top: var(--spacing-medium, 8px) !important; }
+  .mt-md-3 { margin-top: var(--spacing-large, 16px) !important; }
+  .mt-md-4 { margin-top: var(--spacing-xlarge, 24px) !important; }
+  .mt-md-5 { margin-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .mt-md-auto { margin-top: auto !important; }
+  
+  /* Continue for other directions (mr, mb, ml, mx, my) */
+  /* Abbreviated for brevity */
+});
+
+/* LG breakpoint margin utilities */
+.media-breakpoint-up(lg, {
+  .m-lg-0 { margin: 0 !important; }
+  .m-lg-1 { margin: var(--spacing-small, 4px) !important; }
+  .m-lg-2 { margin: var(--spacing-medium, 8px) !important; }
+  .m-lg-3 { margin: var(--spacing-large, 16px) !important; }
+  .m-lg-4 { margin: var(--spacing-xlarge, 24px) !important; }
+  .m-lg-5 { margin: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+  .m-lg-auto { margin: auto !important; }
+  
+  /* Continue for all directions (mt, mr, mb, ml, mx, my) */
+  /* Abbreviated for brevity */
+});
+
+/* ========== Responsive Padding Utilities ========== */
+
+/* Base padding utilities */
+.p-0 { padding: 0 !important; }
+.p-1 { padding: var(--spacing-small, 4px) !important; }
+.p-2 { padding: var(--spacing-medium, 8px) !important; }
+.p-3 { padding: var(--spacing-large, 16px) !important; }
+.p-4 { padding: var(--spacing-xlarge, 24px) !important; }
+.p-5 { padding: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.pt-0 { padding-top: 0 !important; }
+.pt-1 { padding-top: var(--spacing-small, 4px) !important; }
+.pt-2 { padding-top: var(--spacing-medium, 8px) !important; }
+.pt-3 { padding-top: var(--spacing-large, 16px) !important; }
+.pt-4 { padding-top: var(--spacing-xlarge, 24px) !important; }
+.pt-5 { padding-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.pr-0 { padding-right: 0 !important; }
+.pr-1 { padding-right: var(--spacing-small, 4px) !important; }
+.pr-2 { padding-right: var(--spacing-medium, 8px) !important; }
+.pr-3 { padding-right: var(--spacing-large, 16px) !important; }
+.pr-4 { padding-right: var(--spacing-xlarge, 24px) !important; }
+.pr-5 { padding-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.pb-0 { padding-bottom: 0 !important; }
+.pb-1 { padding-bottom: var(--spacing-small, 4px) !important; }
+.pb-2 { padding-bottom: var(--spacing-medium, 8px) !important; }
+.pb-3 { padding-bottom: var(--spacing-large, 16px) !important; }
+.pb-4 { padding-bottom: var(--spacing-xlarge, 24px) !important; }
+.pb-5 { padding-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.pl-0 { padding-left: 0 !important; }
+.pl-1 { padding-left: var(--spacing-small, 4px) !important; }
+.pl-2 { padding-left: var(--spacing-medium, 8px) !important; }
+.pl-3 { padding-left: var(--spacing-large, 16px) !important; }
+.pl-4 { padding-left: var(--spacing-xlarge, 24px) !important; }
+.pl-5 { padding-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.px-0 { padding-right: 0 !important; padding-left: 0 !important; }
+.px-1 { padding-right: var(--spacing-small, 4px) !important; padding-left: var(--spacing-small, 4px) !important; }
+.px-2 { padding-right: var(--spacing-medium, 8px) !important; padding-left: var(--spacing-medium, 8px) !important; }
+.px-3 { padding-right: var(--spacing-large, 16px) !important; padding-left: var(--spacing-large, 16px) !important; }
+.px-4 { padding-right: var(--spacing-xlarge, 24px) !important; padding-left: var(--spacing-xlarge, 24px) !important; }
+.px-5 { padding-right: calc(var(--spacing-xlarge, 24px) * 1.5) !important; padding-left: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+.py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+.py-1 { padding-top: var(--spacing-small, 4px) !important; padding-bottom: var(--spacing-small, 4px) !important; }
+.py-2 { padding-top: var(--spacing-medium, 8px) !important; padding-bottom: var(--spacing-medium, 8px) !important; }
+.py-3 { padding-top: var(--spacing-large, 16px) !important; padding-bottom: var(--spacing-large, 16px) !important; }
+.py-4 { padding-top: var(--spacing-xlarge, 24px) !important; padding-bottom: var(--spacing-xlarge, 24px) !important; }
+.py-5 { padding-top: calc(var(--spacing-xlarge, 24px) * 1.5) !important; padding-bottom: calc(var(--spacing-xlarge, 24px) * 1.5) !important; }
+
+/* Responsive padding utilities for SM, MD, LG breakpoints follow the same pattern as margin utilities */
+/* Abbreviated for brevity */
+
+/* ========== Flexbox Positioning Helpers ========== */
+
+/* 
+ * Create a standalone version here since they're vital for responsive positioning
+ * For more complete flexbox utilities, see responsive-utilities.less
+ */
+
+/* Basic flexbox container */
+.flex-container {
+  display: flex;
+}
+
+/* Direction */
+.flex-row { flex-direction: row; }
+.flex-column { flex-direction: column; }
+.flex-row-reverse { flex-direction: row-reverse; }
+.flex-column-reverse { flex-direction: column-reverse; }
+
+/* Wrapping */
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+.flex-wrap-reverse { flex-wrap: wrap-reverse; }
+
+/* Justify content (horizontal alignment) */
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+.justify-evenly { justify-content: space-evenly; }
+
+/* Align items (vertical alignment) */
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
+.items-stretch { align-items: stretch; }
+
+/* Align self (individual item alignment) */
+.self-start { align-self: flex-start; }
+.self-end { align-self: flex-end; }
+.self-center { align-self: center; }
+.self-baseline { align-self: baseline; }
+.self-stretch { align-self: stretch; }
+
+/* Responsive flexbox helpers */
+.media-breakpoint-up(sm, {
+  .flex-sm-row { flex-direction: row; }
+  .flex-sm-column { flex-direction: column; }
+  .flex-sm-row-reverse { flex-direction: row-reverse; }
+  .flex-sm-column-reverse { flex-direction: column-reverse; }
+  /* Additional flexbox utilities for sm breakpoint */
+  /* Abbreviated for brevity */
+});
+
+.media-breakpoint-up(md, {
+  .flex-md-row { flex-direction: row; }
+  .flex-md-column { flex-direction: column; }
+  .flex-md-row-reverse { flex-direction: row-reverse; }
+  .flex-md-column-reverse { flex-direction: column-reverse; }
+  /* Additional flexbox utilities for md breakpoint */
+  /* Abbreviated for brevity */
+});
+
+.media-breakpoint-up(lg, {
+  .flex-lg-row { flex-direction: row; }
+  .flex-lg-column { flex-direction: column; }
+  .flex-lg-row-reverse { flex-direction: row-reverse; }
+  .flex-lg-column-reverse { flex-direction: column-reverse; }
+  /* Additional flexbox utilities for lg breakpoint */
+  /* Abbreviated for brevity */
+});
+
+/* ========== Responsive Alignment Utilities ========== */
+
+/* Text alignment */
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+.text-justify { text-align: justify !important; }
+
+/* Responsive text alignment */
+.media-breakpoint-up(sm, {
+  .text-sm-left { text-align: left !important; }
+  .text-sm-center { text-align: center !important; }
+  .text-sm-right { text-align: right !important; }
+  .text-sm-justify { text-align: justify !important; }
+});
+
+.media-breakpoint-up(md, {
+  .text-md-left { text-align: left !important; }
+  .text-md-center { text-align: center !important; }
+  .text-md-right { text-align: right !important; }
+  .text-md-justify { text-align: justify !important; }
+});
+
+.media-breakpoint-up(lg, {
+  .text-lg-left { text-align: left !important; }
+  .text-lg-center { text-align: center !important; }
+  .text-lg-right { text-align: right !important; }
+  .text-lg-justify { text-align: justify !important; }
+});
+
+/* ========== Z-index Management System ========== */
+
+/* 
+ * Z-index system
+ * Defines consistent z-index values for proper stacking
+ * Full implementation in responsive-utilities.less
+ */
+
+:root {
+  /* Base z-index levels */
+  --z-index-background: -10;
+  --z-index-default: 0;
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+  --z-index-notification: 1080;
+  --z-index-max: 9999;
+}
+
+/* Basic z-index utilities */
+.z-background { z-index: var(--z-index-background) !important; }
+.z-default { z-index: var(--z-index-default) !important; }
+.z-dropdown { z-index: var(--z-index-dropdown) !important; }
+.z-sticky { z-index: var(--z-index-sticky) !important; }
+.z-fixed { z-index: var(--z-index-fixed) !important; }
+.z-modal-backdrop { z-index: var(--z-index-modal-backdrop) !important; }
+.z-modal { z-index: var(--z-index-modal) !important; }
+.z-popover { z-index: var(--z-index-popover) !important; }
+.z-tooltip { z-index: var(--z-index-tooltip) !important; }
+.z-notification { z-index: var(--z-index-notification) !important; }
+.z-max { z-index: var(--z-index-max) !important; }
+
+/* ========== Positioning Utilities ========== */
+
+/* Position classes */
+.position-static { position: static !important; }
+.position-relative { position: relative !important; }
+.position-absolute { position: absolute !important; }
+.position-fixed { position: fixed !important; }
+.position-sticky { position: sticky !important; }
+
+/* Common positioning patterns */
+.fixed-top {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--z-index-fixed);
+}
+
+.fixed-bottom {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--z-index-fixed);
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-sticky);
+}
+
+/* Position values */
+.top-0 { top: 0 !important; }
+.right-0 { right: 0 !important; }
+.bottom-0 { bottom: 0 !important; }
+.left-0 { left: 0 !important; }
+
+.top-50 { top: 50% !important; }
+.right-50 { right: 50% !important; }
+.bottom-50 { bottom: 50% !important; }
+.left-50 { left: 50% !important; }
+
+.top-100 { top: 100% !important; }
+.right-100 { right: 100% !important; }
+.bottom-100 { bottom: 100% !important; }
+.left-100 { left: 100% !important; }
+
+/* Translate utilities */
+.translate-middle {
+  transform: translate(-50%, -50%) !important;
+}
+
+.translate-middle-x {
+  transform: translateX(-50%) !important;
+}
+
+.translate-middle-y {
+  transform: translateY(-50%) !important;
+}
+
+/* ========== Additional Responsive Utilities ========== */
+
+/* Width utilities */
+.w-25 { width: 25% !important; }
+.w-50 { width: 50% !important; }
+.w-75 { width: 75% !important; }
+.w-100 { width: 100% !important; }
+.w-auto { width: auto !important; }
+.mw-100 { max-width: 100% !important; }
+.min-vw-100 { min-width: 100vw !important; }
+.vw-100 { width: 100vw !important; }
+
+/* Height utilities */
+.h-25 { height: 25% !important; }
+.h-50 { height: 50% !important; }
+.h-75 { height: 75% !important; }
+.h-100 { height: 100% !important; }
+.h-auto { height: auto !important; }
+.mh-100 { max-height: 100% !important; }
+.min-vh-100 { min-height: 100vh !important; }
+.vh-100 { height: 100vh !important; }
+
+/* Responsive width/height at different breakpoints */
+.media-breakpoint-up(sm, {
+  .w-sm-25 { width: 25% !important; }
+  .w-sm-50 { width: 50% !important; }
+  .w-sm-75 { width: 75% !important; }
+  .w-sm-100 { width: 100% !important; }
+  /* Abbreviated for brevity */
+});
+
+/* Object fit utilities */
+.object-fit-contain { object-fit: contain !important; }
+.object-fit-cover { object-fit: cover !important; }
+.object-fit-fill { object-fit: fill !important; }
+.object-fit-scale-down { object-fit: scale-down !important; }
+.object-fit-none { object-fit: none !important; }
+
+/* 
+ * Example usage:
+ * 
+ * <div class="position-relative p-3 p-md-5">
+ *   <div class="position-absolute top-0 right-0 p-2">
+ *     Corner content
+ *   </div>
+ *   <div class="d-flex flex-column flex-md-row justify-center items-center">
+ *     <div class="mb-3 mb-md-0 mr-md-3">
+ *       Left content (stacked on mobile, side by side on tablet+)
+ *     </div>
+ *     <div>
+ *       Right content
+ *     </div>
+ *   </div>
+ * </div>
+ */

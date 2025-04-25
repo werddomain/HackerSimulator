@@ -1,0 +1,208 @@
+/**
+ * Mobile-First Base Styles
+ * Implements a mobile-first approach with progressive enhancement
+ */
+
+@import "mobile-variables.less";
+@import "media-queries-extensions.less";
+
+/* 
+ * Base Mobile-First Styles 
+ * These styles start with mobile as the default and enhance for larger screens
+ */
+
+/* === Layout & Container Styles === */
+
+.container {
+  width: 100%;
+  padding: @mobile-spacing-md;
+  margin: 0 auto;
+  
+  @media (min-width: @breakpoint-sm) {
+    max-width: 90%;
+  }
+  
+  @media (min-width: @breakpoint-md) {
+    max-width: 85%;
+  }
+  
+  @media (min-width: @breakpoint-lg) {
+    max-width: 80%;
+  }
+}
+
+.responsive-container {
+  display: flex;
+  flex-direction: column;
+  
+  @media (min-width: @breakpoint-md) {
+    flex-direction: row;
+  }
+}
+
+/* === Typography === */
+
+body {
+  font-size: @mobile-font-size-md;
+  line-height: 1.5;
+  
+  @media (min-width: @breakpoint-md) {
+    font-size: @font-size-md;
+  }
+}
+
+h1 {
+  font-size: @mobile-font-size-xl;
+  margin-bottom: @mobile-spacing-md;
+  
+  @media (min-width: @breakpoint-md) {
+    font-size: 2rem;
+  }
+}
+
+h2 {
+  font-size: @mobile-font-size-lg;
+  margin-bottom: @mobile-spacing-sm;
+  
+  @media (min-width: @breakpoint-md) {
+    font-size: 1.75rem;
+  }
+}
+
+h3 {
+  font-size: @mobile-font-size-md;
+  margin-bottom: @mobile-spacing-sm;
+  
+  @media (min-width: @breakpoint-md) {
+    font-size: 1.5rem;
+  }
+}
+
+/* === Form Elements === */
+
+input, 
+select,
+textarea,
+button {
+  font-size: @mobile-font-size-md;
+  
+  @media (min-width: @breakpoint-md) {
+    font-size: @font-size-md;
+  }
+}
+
+.form-control {
+  .mobile-input();
+  margin-bottom: @mobile-spacing-md;
+  
+  @media (min-width: @breakpoint-md) {
+    height: 2.5rem;
+  }
+}
+
+.button {
+  .mobile-button();
+  
+  @media (min-width: @breakpoint-md) {
+    min-height: 2.5rem;
+    min-width: auto;
+  }
+}
+
+/* === Navigation & Lists === */
+
+.nav-item {
+  .mobile-touch-target();
+  
+  @media (min-width: @breakpoint-md) {
+    min-height: 2.5rem;
+  }
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-item {
+  .mobile-list-item();
+  
+  @media (min-width: @breakpoint-md) {
+    min-height: 3rem;
+  }
+}
+
+/* === Cards & Containers === */
+
+.card {
+  .mobile-card();
+  
+  @media (min-width: @breakpoint-md) {
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+  }
+}
+
+/* === Grid System === */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: @mobile-spacing-md;
+  
+  @media (min-width: @breakpoint-sm) {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  
+  @media (min-width: @breakpoint-md) {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
+/* === Utilities === */
+
+.hide-on-mobile {
+  display: none;
+  
+  @media (min-width: @breakpoint-md) {
+    display: block;
+  }
+}
+
+.show-on-mobile {
+  display: block;
+  
+  @media (min-width: @breakpoint-md) {
+    display: none;
+  }
+}
+
+/* Touch feedback for interactive elements */
+.touch-feedback {
+  .mobile-active-state();
+}
+
+/* === Theme Integration === */
+
+/* Apply theme colors to mobile components */
+.theme-compatible {
+  color: var(--mobile-text-color);
+  background-color: var(--mobile-background-color);
+  border-color: var(--mobile-divider-color);
+}
+
+.primary-bg {
+  background-color: var(--mobile-primary-color);
+  color: white;
+}
+
+.secondary-bg {
+  background-color: var(--mobile-secondary-color);
+  color: white;
+}
+
+.accent-bg {
+  background-color: var(--mobile-accent-color);
+  color: white;
+}

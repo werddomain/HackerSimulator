@@ -1,0 +1,321 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\media-queries.less */
+/**
+ * Standardized Media Query Mixins for HackerSimulator
+ * Provides consistent breakpoints and media query patterns for responsive design
+ */
+
+/* Base font size for em calculations (should match :root font-size) */
+@base-font-size: 16px;
+
+/* Standard breakpoints converted to em units */
+@breakpoint-xs: 30em;    /* 480px / 16px = 30em - Extra small devices (phones) */
+@breakpoint-sm: 48em;    /* 768px / 16px = 48em - Small devices (tablets) */
+@breakpoint-md: 62em;    /* 992px / 16px = 62em - Medium devices (small laptops) */
+@breakpoint-lg: 75em;    /* 1200px / 16px = 75em - Large devices (desktops) */
+@breakpoint-xl: 100em;   /* 1600px / 16px = 100em - Extra large devices (large desktops) */
+
+/*
+ * Media query mixins for min-width (mobile-first approach)
+ * Usage:
+ * .my-element {
+ *   color: red; // Mobile style
+ *   
+ *   .media-breakpoint-up(md, {
+ *     color: blue; // Style for medium screens and up
+ *   });
+ * }
+ */
+.media-breakpoint-up(@breakpoint, @content) when (@breakpoint = xs) {
+  @media (min-width: @breakpoint-xs) { @content(); }
+}
+.media-breakpoint-up(@breakpoint, @content) when (@breakpoint = sm) {
+  @media (min-width: @breakpoint-sm) { @content(); }
+}
+.media-breakpoint-up(@breakpoint, @content) when (@breakpoint = md) {
+  @media (min-width: @breakpoint-md) { @content(); }
+}
+.media-breakpoint-up(@breakpoint, @content) when (@breakpoint = lg) {
+  @media (min-width: @breakpoint-lg) { @content(); }
+}
+.media-breakpoint-up(@breakpoint, @content) when (@breakpoint = xl) {
+  @media (min-width: @breakpoint-xl) { @content(); }
+}
+
+/*
+ * Media query mixins for max-width (desktop-first approach)
+ * Usage:
+ * .my-element {
+ *   color: blue; // Desktop style
+ *   
+ *   .media-breakpoint-down(md, {
+ *     color: red; // Style for medium screens and down
+ *   });
+ * }
+ */
+.media-breakpoint-down(@breakpoint, @content) when (@breakpoint = xs) {
+  @media (max-width: (@breakpoint-xs - 1px)) { @content(); }
+}
+.media-breakpoint-down(@breakpoint, @content) when (@breakpoint = sm) {
+  @media (max-width: (@breakpoint-sm - 1px)) { @content(); }
+}
+.media-breakpoint-down(@breakpoint, @content) when (@breakpoint = md) {
+  @media (max-width: (@breakpoint-md - 1px)) { @content(); }
+}
+.media-breakpoint-down(@breakpoint, @content) when (@breakpoint = lg) {
+  @media (max-width: (@breakpoint-lg - 1px)) { @content(); }
+}
+.media-breakpoint-down(@breakpoint, @content) when (@breakpoint = xl) {
+  @media (max-width: (@breakpoint-xl - 1px)) { @content(); }
+}
+
+/*
+ * Media query mixins for specific breakpoint range
+ * Usage:
+ * .my-element {
+ *   .media-breakpoint-between(sm, lg, {
+ *     color: green; // Style only for sm, md, and lg screens
+ *   });
+ * }
+ */
+.media-breakpoint-between(@lower, @upper, @content) {
+  @lower-val: @breakpoint-xs;
+  @upper-val: @breakpoint-xl;
+  
+  & when (@lower = xs) { @lower-val: @breakpoint-xs; }
+  & when (@lower = sm) { @lower-val: @breakpoint-sm; }
+  & when (@lower = md) { @lower-val: @breakpoint-md; }
+  & when (@lower = lg) { @lower-val: @breakpoint-lg; }
+  
+  & when (@upper = sm) { @upper-val: (@breakpoint-sm - 0.0625em); }
+  & when (@upper = md) { @upper-val: (@breakpoint-md - 0.0625em); }
+  & when (@upper = lg) { @upper-val: (@breakpoint-lg - 0.0625em); }
+  & when (@upper = xl) { @upper-val: (@breakpoint-xl - 0.0625em); }
+  
+  @media (min-width: @lower-val) and (max-width: @upper-val) { @content(); }
+}
+
+/* 
+ * Orientation-specific media queries
+ * Usage:
+ * .my-element {
+ *   .media-orientation-portrait({
+ *     flex-direction: column; // Styles for portrait orientation
+ *   });
+ * }
+ */
+.media-orientation-portrait(@content) {
+  @media (orientation: portrait) { @content(); }
+}
+
+.media-orientation-landscape(@content) {
+  @media (orientation: landscape) { @content(); }
+}
+
+/* 
+ * Feature query mixins for touch vs non-touch devices
+ * Usage:
+ * .my-element {
+ *   .media-touch({
+ *     padding: 1rem; // Larger padding for touch devices
+ *   });
+ * }
+ */
+.media-touch(@content) {
+  @media (hover: none) and (pointer: coarse) { @content(); }
+}
+
+.media-non-touch(@content) {
+  @media (hover: hover) and (pointer: fine) { @content(); }
+}
+
+/* 
+ * Print media query for document printing support
+ * Usage:
+ * .my-element {
+ *   .media-print({
+ *     background-color: white; // Print-specific styles
+ *     color: black;
+ *   });
+ * }
+ */
+.media-print(@content) {
+  @media print { @content(); }
+}
+ *     flex-direction: column; // Styles for portrait orientation
+ *   });
+ * }
+ */
+.media-orientation(@orientation, @content) when (@orientation = portrait) {
+  @media (orientation: portrait) { @content(); }
+}
+.media-orientation(@orientation, @content) when (@orientation = landscape) {
+  @media (orientation: landscape) { @content(); }
+}
+
+/*
+ * Feature query mixins for touch vs non-touch devices
+ * Usage:
+ * .my-element {
+ *   .media-feature-touch({
+ *     padding: 1rem; // Larger padding for touch devices
+ *   });
+ * }
+ */
+.media-feature-touch(@content) {
+  @media (hover: none) and (pointer: coarse) { @content(); }
+}
+
+.media-feature-non-touch(@content) {
+  @media (hover: hover) and (pointer: fine) { @content(); }
+}
+
+/*
+ * Print media query for document printing support
+ * Usage:
+ * .my-element {
+ *   .media-print({
+ *     background-color: white; // Print-specific styles
+ *     color: black;
+ *   });
+ * }
+ */
+.media-print(@content) {
+  @media print { @content(); }
+}
+ *     flex-direction: column;
+ *   });
+ *   
+ *   .media-orientation(landscape, {
+ *     flex-direction: row;
+ *   });
+ * }
+ */
+.media-orientation(@orientation, @content) when (@orientation = portrait) {
+  @media (orientation: portrait) { @content(); }
+}
+.media-orientation(@orientation, @content) when (@orientation = landscape) {
+  @media (orientation: landscape) { @content(); }
+}
+
+/*
+ * Device capability detection
+ * Usage:
+ * .my-element {
+ *   .media-touch-device({
+ *     padding: 1rem; // Larger padding for touch devices
+ *   });
+ * }
+ */
+.media-touch-device(@content) {
+  @media (hover: none) and (pointer: coarse) { @content(); }
+}
+
+.media-non-touch-device(@content) {
+  @media (hover: hover) and (pointer: fine) { @content(); }
+}
+
+/*
+ * High-resolution (retina) display detection
+ * Usage:
+ * .my-element {
+ *   background-image: url('image.png');
+ *   
+ *   .media-high-dpi(2, {
+ *     background-image: url('image@2x.png');
+ *   });
+ * }
+ */
+.media-high-dpi(@ratio: 1.5, @content) {
+  @media only screen and (-webkit-min-device-pixel-ratio: @ratio),
+         only screen and (min-resolution: (@ratio * 96dpi)) {
+    @content();
+  }
+}
+
+/*
+ * Print media query
+ * Usage:
+ * .my-element {
+ *   color: blue;
+ *   
+ *   .media-print({
+ *     color: black; // Print in black for better readability
+ *   });
+ * }
+ */
+.media-print(@content) {
+  @media print { @content(); }
+}
+
+/*
+ * Dark mode detection
+ * Usage:
+ * .my-element {
+ *   background-color: white;
+ *   color: black;
+ *   
+ *   .media-prefers-dark-mode({
+ *     background-color: #222;
+ *     color: white;
+ *   });
+ * }
+ */
+.media-prefers-dark-mode(@content) {
+  @media (prefers-color-scheme: dark) { @content(); }
+}
+
+/*
+ * Reduced motion preference detection (accessibility)
+ * Usage:
+ * .my-element {
+ *   transition: transform 0.3s;
+ *   
+ *   .media-prefers-reduced-motion({
+ *     transition: none;
+ *   });
+ * }
+ */
+.media-prefers-reduced-motion(@content) {
+  @media (prefers-reduced-motion: reduce) { @content(); }
+}
+
+/* 
+ * Example usage in component styles:
+ *
+ * .component {
+ *   // Default mobile styling
+ *   display: flex;
+ *   flex-direction: column;
+ *   padding: 1rem;
+ *
+ *   // Tablet and above
+ *   .media-breakpoint-up(sm, {
+ *     flex-direction: row;
+ *     padding: 1.5rem;
+ *   });
+ *
+ *   // Only on large desktop screens
+ *   .media-breakpoint-up(lg, {
+ *     max-width: 1140px;
+ *     margin: 0 auto;
+ *   });
+ *
+ *   // Different layout based on orientation
+ *   .media-orientation(landscape, {
+ *     height: 90vh;
+ *   });
+ *
+ *   // Touch-specific adjustments
+ *   .media-touch-device({
+ *     .button {
+ *       min-height: 44px;
+ *     }
+ *   });
+ *
+ *   // Print styles
+ *   .media-print({
+ *     background: none;
+ *     color: black;
+ *   });
+ * }
+ */

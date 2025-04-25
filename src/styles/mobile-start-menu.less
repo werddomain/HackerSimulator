@@ -37,18 +37,19 @@
   margin-bottom: var(--spacing-medium);
   
   .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 20px;
+    width: 2.75rem; // 44px - minimum touch target size
+    height: 2.75rem; // 44px - minimum touch target size
+    border-radius: 1.375rem; // 22px - half of width/height
     background-color: var(--accent-color);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: var(--spacing-medium);
+    .touch-feedback(); // Add touch feedback
     
     svg {
-      width: 24px;
+      width: 1.5rem; // 24px
       height: 24px;
     }
   }
@@ -67,14 +68,21 @@
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--border-radius);
   padding: var(--spacing-small);
+  min-height: @touch-target-min; // Ensure minimum touch target height
   
   .search-icon {
     margin-right: var(--spacing-small);
     color: var(--text-color-secondary);
+    padding: 0.5rem; // Add padding for larger touch area
+    min-width: 2.75rem; // Minimum touch target width
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    .touch-feedback(); // Add touch feedback
     
     svg {
-      width: 20px;
-      height: 20px;
+      width: 1.25rem; // 20px
+      height: 1.25rem; // 20px
     }
   }
   
@@ -85,6 +93,7 @@
     color: var(--text-color-primary);
     font-size: var(--font-size-medium);
     padding: var(--spacing-small) 0;
+    min-height: 2.75rem; // Minimum touch target height
     
     &:focus {
       outline: none;
@@ -140,6 +149,55 @@
     grid-gap: var(--spacing-medium);
     
     // Hide scrollbar
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  
+  // App item
+  .app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    .touch-target-large(); // Apply larger touch target (56px)
+    .touch-feedback(); // Add touch feedback
+    
+    .app-icon {
+      width: 3rem; // 48px
+      height: 3rem; // 48px
+      border-radius: 0.75rem; // 12px
+      background-color: var(--app-icon-bg, rgba(255, 255, 255, 0.1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.5rem; // 8px
+      
+      svg {
+        width: 1.75rem; // 28px
+        height: 1.75rem; // 28px
+        color: var(--app-icon-color, white);
+      }
+    }
+    
+    .app-name {
+      font-size: 0.75rem; // 12px
+      color: var(--text-color-primary);
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;

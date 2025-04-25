@@ -1,0 +1,204 @@
+// Gesture visualization and feedback styles
+.gesture-visualizer {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  margin-left: -25px;
+  margin-top: -25px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9999;
+  border-radius: 50%;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  
+  &.visible {
+    opacity: 0.6;
+  }
+  
+  // Tap gesture visualization
+  &.tap-gesture {
+    background-color: rgba(95, 169, 255, 0.4);
+    border: 2px solid rgba(95, 169, 255, 0.8);
+    animation: tap-pulse 0.4s ease-out;
+  }
+  
+  // Double tap gesture visualization
+  &.double-tap-gesture {
+    background-color: rgba(78, 217, 255, 0.4);
+    border: 2px solid rgba(78, 217, 255, 0.8);
+    animation: double-tap-pulse 0.4s ease-out;
+  }
+  
+  // Long press gesture visualization
+  &.long-press-gesture {
+    background-color: rgba(255, 193, 7, 0.4);
+    border: 2px solid rgba(255, 193, 7, 0.8);
+    animation: long-press-pulse 0.8s ease-out;
+  }
+  
+  // Swipe gesture visualization
+  &.swipe-gesture {
+    width: 60px;
+    height: 30px;
+    margin-left: -30px;
+    margin-top: -15px;
+    background-color: rgba(76, 175, 80, 0.4);
+    border: 2px solid rgba(76, 175, 80, 0.8);
+    border-radius: 15px;
+    
+    // Swipe direction indicators
+    &.swipe-left::before {
+      content: '←';
+      font-size: 20px;
+      color: rgba(76, 175, 80, 1);
+    }
+    
+    &.swipe-right::before {
+      content: '→';
+      font-size: 20px;
+      color: rgba(76, 175, 80, 1);
+    }
+    
+    &.swipe-up::before {
+      content: '↑';
+      font-size: 20px;
+      color: rgba(76, 175, 80, 1);
+    }
+    
+    &.swipe-down::before {
+      content: '↓';
+      font-size: 20px;
+      color: rgba(76, 175, 80, 1);
+    }
+  }
+  
+  // Pinch gesture visualization
+  &.pinch-gesture {
+    background-color: rgba(156, 39, 176, 0.3);
+    border: 2px solid rgba(156, 39, 176, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &::before {
+      content: '⤧';
+      font-size: 24px;
+      color: rgba(156, 39, 176, 1);
+    }
+  }
+  
+  // Rotate gesture visualization
+  &.rotate-gesture {
+    background-color: rgba(255, 87, 34, 0.3);
+    border: 2px solid rgba(255, 87, 34, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &::before {
+      content: '↻';
+      font-size: 24px;
+      color: rgba(255, 87, 34, 1);
+    }
+  }
+  
+  // Pan gesture visualization
+  &.pan-gesture {
+    background-color: rgba(3, 169, 244, 0.3);
+    border: 2px solid rgba(3, 169, 244, 0.8);
+    width: 40px;
+    height: 40px;
+    margin-left: -20px;
+    margin-top: -20px;
+    
+    &::before {
+      content: '⇄';
+      font-size: 20px;
+      color: rgba(3, 169, 244, 1);
+    }
+  }
+}
+
+// Animations for gesture feedback
+@keyframes tap-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes double-tap-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  33% {
+    transform: scale(1.2);
+    opacity: 0.5;
+  }
+  66% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes long-press-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+// Touch feedback for interactive elements
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform .5s, opacity 1s;
+  }
+  
+  &:active::after {
+    transform: scale(0, 0);
+    opacity: 0.2;
+    transition: 0s;
+  }
+}
+
+// Apply touch feedback to common interactive elements
+.btn, 
+button:not(.keyboard-key),
+.clickable,
+.nav-item,
+.list-item {
+  @extend .touch-feedback;
+}

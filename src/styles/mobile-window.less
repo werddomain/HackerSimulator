@@ -53,29 +53,29 @@
   user-select: none;
   touch-action: none;
   border-bottom: 1px solid var(--window-border-color);
-  
-  // Back button
+    // Back button
   .mobile-window-back-button {
     background: none;
     border: none;
     color: var(--text-color-primary);
-    padding: var(--touch-target-padding);
+    padding: 0;
     margin-right: var(--spacing-small);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--touch-target-size);
-    min-height: var(--touch-target-size);
+    min-width: @touch-target-min; // 44px minimum size
+    min-height: @touch-target-min; // 44px minimum size
     cursor: pointer;
+    .touch-feedback(); // Add touch feedback
     
     &:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
     
     svg {
-      width: var(--icon-size);
-      height: var(--icon-size);
+      width: 1.5rem; // 24px icon size
+      height: 1.5rem; // 24px icon size
     }
   }
 }
@@ -95,10 +95,28 @@
 .mobile-window-controls {
   display: flex;
   align-items: center;
-    button {
+    
+  button {
     background: none;
     border: none;
     color: var(--text-color-primary);
+    padding: 0;
+    margin-left: var(--spacing-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: @touch-target-min; // 44px minimum touch target
+    min-height: @touch-target-min; // 44px minimum touch target
+    border-radius: 50%;
+    cursor: pointer;
+    .touch-feedback(); // Add touch feedback
+    
+    svg {
+      width: 1.5rem; // 24px icon
+      height: 1.5rem; // 24px icon
+    }
+  }
+}
     padding: var(--touch-target-padding);
     margin-left: var(--spacing-small);
     border-radius: 50%;

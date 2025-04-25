@@ -1,0 +1,172 @@
+/**
+ * Mobile Component Overrides
+ * Specific overrides for desktop components to enhance mobile usability
+ */
+
+@import "mobile-variables.less";
+
+/* Button Overrides */
+.button,
+button.action-button,
+.action-button {
+  /* Apply mobile button styles */
+  .mobile-touch-target();
+  border-radius: @mobile-border-radius-sm;
+  padding: @mobile-spacing-sm @mobile-spacing-md;
+  transition: background-color @mobile-animation-speed-fast ease;
+  
+  /* Active state feedback */
+  .mobile-active-state();
+  
+  /* Ensure proper touch target size */
+  &.small {
+    min-height: @touch-target-min; // Override small size to ensure touch accessibility
+  }
+  
+  /* Primary button styles */
+  &.primary {
+    background-color: var(--mobile-primary-color);
+  }
+  
+  /* Secondary button styles */
+  &.secondary {
+    background-color: var(--mobile-secondary-color);
+  }
+  
+  /* Danger/Delete button styles */
+  &.danger {
+    background-color: var(--mobile-accent-color);
+  }
+}
+
+/* Form Input Overrides */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+  /* Apply mobile input styles */
+  .mobile-input();
+  margin-bottom: @mobile-spacing-md;
+  
+  /* Ensure touch target height */
+  &.small {
+    height: @touch-target-min;
+  }
+}
+
+/* Form Label Overrides */
+label {
+  display: block;
+  margin-bottom: @mobile-spacing-xs;
+  font-size: @mobile-font-size-sm;
+  font-weight: 500;
+}
+
+/* Checkbox & Radio Overrides */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: @mobile-spacing-sm;
+}
+
+/* Toggle Switch Overrides */
+.toggle-switch {
+  min-width: 3rem;
+  height: 1.75rem;
+  
+  .toggle-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* List and Menu Overrides */
+.menu-item,
+.dropdown-item,
+.list-item {
+  .mobile-list-item();
+  
+  /* Icon spacing */
+  .icon {
+    margin-right: @mobile-spacing-md;
+  }
+}
+
+/* Card Overrides */
+.card,
+.panel,
+.window-content {
+  border-radius: @mobile-border-radius-md;
+  overflow: hidden;
+  
+  .card-header,
+  .panel-header {
+    padding: @mobile-spacing-md;
+    min-height: @touch-target-min;
+  }
+  
+  .card-content,
+  .panel-content {
+    padding: @mobile-spacing-md;
+  }
+  
+  .card-footer,
+  .panel-footer {
+    padding: @mobile-spacing-md;
+    min-height: @touch-target-min;
+  }
+}
+
+/* Tab Navigation Overrides */
+.tabs {
+  .tab {
+    min-height: @touch-target-min;
+    padding: @mobile-spacing-sm @mobile-spacing-md;
+  }
+}
+
+/* Dialog Overrides */
+.dialog {
+  border-radius: @mobile-border-radius-lg;
+  overflow: hidden;
+  
+  .dialog-header {
+    min-height: @touch-target-min;
+    padding: @mobile-spacing-md;
+  }
+  
+  .dialog-content {
+    padding: @mobile-spacing-md;
+  }
+  
+  .dialog-footer {
+    min-height: @touch-target-min;
+    padding: @mobile-spacing-md;
+    
+    button {
+      margin-left: @mobile-spacing-sm;
+    }
+  }
+}
+
+/* Icon Overrides */
+.icon-button {
+  .mobile-touch-target();
+  border-radius: 50%;
+  
+  .icon {
+    font-size: @mobile-icon-size-md;
+  }
+  
+  &.small .icon {
+    font-size: @mobile-icon-size-sm;
+  }
+  
+  &.large .icon {
+    font-size: @mobile-icon-size-lg;
+  }
+}

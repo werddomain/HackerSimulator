@@ -1,0 +1,360 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\grid-system.less */
+/**
+ * Grid System for HackerSimulator
+ * A comprehensive 12-column grid system with responsive capabilities
+ */
+
+@import './media-queries.less';
+
+/*
+ * Grid variables
+ */
+@grid-columns: 12;
+@grid-gutter-width: var(--spacing-medium, 8px);
+
+/*
+ * Grid container
+ * Provides a consistent wrapper for grid rows
+ */
+.grid-container {
+  width: 100%;
+  padding-right: var(--spacing-medium, 8px);
+  padding-left: var(--spacing-medium, 8px);
+  margin-right: auto;
+  margin-left: auto;
+  
+  /* Container widths at different breakpoints */
+  .media-breakpoint-up(sm, {
+    max-width: 720px;
+  });
+  
+  .media-breakpoint-up(md, {
+    max-width: 960px;
+  });
+  
+  .media-breakpoint-up(lg, {
+    max-width: 1140px;
+  });
+  
+  .media-breakpoint-up(xl, {
+    max-width: 1320px;
+  });
+  
+  &.grid-container-fluid {
+    max-width: 100%;
+  }
+}
+
+/*
+ * Grid row
+ * Contains grid columns and handles negative margins
+ */
+.grid-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -@grid-gutter-width;
+  margin-left: -@grid-gutter-width;
+  
+  /* No gutters option */
+  &.no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+    
+    > .grid-col,
+    > [class*="grid-col-"] {
+      padding-right: 0;
+      padding-left: 0;
+    }
+  }
+  
+  /* Grid alignment utilities */
+  &.grid-row-start {
+    justify-content: flex-start;
+  }
+  
+  &.grid-row-center {
+    justify-content: center;
+  }
+  
+  &.grid-row-end {
+    justify-content: flex-end;
+  }
+  
+  &.grid-row-between {
+    justify-content: space-between;
+  }
+  
+  &.grid-row-around {
+    justify-content: space-around;
+  }
+  
+  &.grid-row-top {
+    align-items: flex-start;
+  }
+  
+  &.grid-row-middle {
+    align-items: center;
+  }
+  
+  &.grid-row-bottom {
+    align-items: flex-end;
+  }
+}
+
+/*
+ * Grid column generation mixin
+ */
+.make-grid-columns(@breakpoint: ~'') {
+  .grid-col@{breakpoint} {
+    position: relative;
+    width: 100%;
+    padding-right: @grid-gutter-width;
+    padding-left: @grid-gutter-width;
+    flex-basis: 0;
+    flex-grow: 1;
+    max-width: 100%;
+  }
+  
+  .grid-col@{breakpoint}-auto {
+    position: relative;
+    padding-right: @grid-gutter-width;
+    padding-left: @grid-gutter-width;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+  }
+  
+  .loop-grid-columns(@i) when (@i > 0) {
+    .grid-col@{breakpoint}-@{i} {
+      position: relative;
+      padding-right: @grid-gutter-width;
+      padding-left: @grid-gutter-width;
+      flex: 0 0 percentage(@i / @grid-columns);
+      max-width: percentage(@i / @grid-columns);
+    }
+    
+    .loop-grid-columns(@i - 1);
+  }
+  
+  .loop-grid-columns(@grid-columns);
+  
+  /* Offset columns */
+  .loop-grid-offsets(@i) when (@i > 0) {
+    .grid-offset@{breakpoint}-@{i} {
+      margin-left: percentage(@i / @grid-columns);
+    }
+    
+    .loop-grid-offsets(@i - 1);
+  }
+  
+  .loop-grid-offsets(@grid-columns);
+  
+  /* Order utilities */
+  .grid-order@{breakpoint}-first {
+    order: -1;
+  }
+  
+  .grid-order@{breakpoint}-last {
+    order: @grid-columns + 1;
+  }
+  
+  .loop-grid-order(@i) when (@i >= 0) {
+    .grid-order@{breakpoint}-@{i} {
+      order: @i;
+    }
+    
+    .loop-grid-order(@i - 1);
+  }
+  
+  .loop-grid-order(@grid-columns);
+}
+
+/* 
+ * Generate the grid for all breakpoints
+ * Base class (no breakpoint)
+ */
+.make-grid-columns();
+
+/* Small breakpoint */
+.media-breakpoint-up(sm, {
+  .make-grid-columns(-sm);
+});
+
+/* Medium breakpoint */
+.media-breakpoint-up(md, {
+  .make-grid-columns(-md);
+});
+
+/* Large breakpoint */
+.media-breakpoint-up(lg, {
+  .make-grid-columns(-lg);
+});
+
+/* Extra Large breakpoint */
+.media-breakpoint-up(xl, {
+  .make-grid-columns(-xl);
+});
+
+/*
+ * Auto layout grid
+ * Automatically adjusts number of columns based on space
+ */
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-gap: var(--spacing-medium, 8px);
+  
+  &.auto-grid-sm {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  &.auto-grid-md {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  
+  &.auto-grid-lg {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
+/*
+ * Equal height grid items
+ */
+.grid-equal-height {
+  .grid-col,
+  [class*="grid-col-"] {
+    display: flex;
+    flex-direction: column;
+    
+    > * {
+      flex: 1 0 auto;
+    }
+  }
+}
+
+/*
+ * Grid for masonry-like layouts
+ */
+.grid-masonry {
+  column-count: 1;
+  column-gap: var(--spacing-medium, 8px);
+  
+  .media-breakpoint-up(sm, {
+    column-count: 2;
+  });
+  
+  .media-breakpoint-up(md, {
+    column-count: 3;
+  });
+  
+  .media-breakpoint-up(lg, {
+    column-count: 4;
+  });
+  
+  > * {
+    break-inside: avoid;
+    margin-bottom: var(--spacing-medium, 8px);
+  }
+}
+
+/*
+ * Responsive orientation grid
+ * Changes based on device orientation
+ */
+.orientation-grid {
+  display: grid;
+  grid-gap: var(--spacing-medium, 8px);
+  
+  .media-orientation(portrait, {
+    grid-template-columns: repeat(2, 1fr);
+  });
+  
+  .media-orientation(landscape, {
+    grid-template-columns: repeat(4, 1fr);
+  });
+}
+
+/*
+ * Utility classes for grid adjustment
+ */
+.grid-stretch {
+  align-items: stretch;
+}
+
+.grid-center {
+  justify-content: center;
+  align-items: center;
+}
+
+/*
+ * Responsive grid margin/padding utilities
+ */
+.grid-gap-0 {
+  margin: 0;
+  
+  > .grid-col,
+  > [class*="grid-col-"] {
+    padding: 0;
+  }
+}
+
+.grid-gap-1 {
+  margin: -1 * (var(--spacing-small, 4px));
+  
+  > .grid-col,
+  > [class*="grid-col-"] {
+    padding: var(--spacing-small, 4px);
+  }
+}
+
+.grid-gap-2 {
+  margin: -1 * (var(--spacing-medium, 8px));
+  
+  > .grid-col,
+  > [class*="grid-col-"] {
+    padding: var(--spacing-medium, 8px);
+  }
+}
+
+.grid-gap-3 {
+  margin: -1 * (var(--spacing-large, 16px));
+  
+  > .grid-col,
+  > [class*="grid-col-"] {
+    padding: var(--spacing-large, 16px);
+  }
+}
+
+/*
+ * Example usage:
+ * 
+ * <div class="grid-container">
+ *   <div class="grid-row">
+ *     <div class="grid-col-12 grid-col-md-6 grid-col-lg-4">
+ *       Column 1 (full width on mobile, half on tablet, third on desktop)
+ *     </div>
+ *     <div class="grid-col-12 grid-col-md-6 grid-col-lg-4">
+ *       Column 2
+ *     </div>
+ *     <div class="grid-col-12 grid-col-md-12 grid-col-lg-4">
+ *       Column 3
+ *     </div>
+ *   </div>
+ * </div>
+ * 
+ * Auto Grid:
+ * <div class="auto-grid auto-grid-md">
+ *   <div>Item 1</div>
+ *   <div>Item 2</div>
+ *   <div>Item 3</div>
+ *   ...
+ * </div>
+ * 
+ * Orientation-responsive grid:
+ * <div class="orientation-grid">
+ *   <div>Item 1</div>
+ *   <div>Item 2</div>
+ *   <div>Item 3</div>
+ *   <div>Item 4</div>
+ * </div>
+ */

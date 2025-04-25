@@ -38,9 +38,12 @@ export class OS {
   private desktop: Desktop;
   private startMenuController: StartMenuController;
   private userSettings: UserSettings;
-  private computerSettings: ComputerSettings;  private isReady: boolean = false;  private readyCallbacks: Array<() => void> = [];
+  private computerSettings: ComputerSettings;  
+  private isReady: boolean = false;  
+  private readyCallbacks: Array<() => void> = [];
   themeSystem: ThemeSystem;
   platformDetector: PlatformDetector = platformDetector; // Initialize with the singleton instance  constructor() {
+  constructor() {
     this.initIcons(); // Initialize icons using lucide
     this.fileSystem = new FileSystem(this);
     this.processManager = new ProcessManager();
@@ -70,6 +73,7 @@ export class OS {
     this.desktop = new Desktop(this);
 
     this.themeSystem = new ThemeSystem(this);
+    
   }  /**
    * Initialize the OS
    */

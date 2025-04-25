@@ -1,0 +1,201 @@
+/* 
+ * Mobile Performance Styles
+ * Provides styling for performance monitoring UI components
+ */
+
+.performance-card {
+  background-color: #2d2d2d;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.performance-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  flex: 1;
+  min-width: 230px;
+  background-color: #2d2d2d;
+  border-radius: 5px;
+  padding: 15px;
+  transition: transform 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.metric-title {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #a0a0a0;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #d7d7d7;
+}
+
+.metric-bar-container {
+  width: 100%;
+  height: 10px;
+  background-color: #333;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.metric-bar {
+  height: 100%;
+  background-color: #0e639c;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.metric-description {
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+.metric-good {
+  color: #3eb83e;
+}
+
+.metric-warning {
+  color: #e6a23c;
+}
+
+.metric-critical {
+  color: #cc4444;
+}
+
+.performance-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.chart-card {
+  flex: 1 1 45%;
+  min-width: 300px;
+  background-color: #2d2d2d;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.chart-title {
+  font-size: 14px;
+  margin-bottom: 15px;
+  color: #a0a0a0;
+}
+
+.suggestions-container {
+  background-color: #2d2d2d;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.suggestions-title {
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.suggestions-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.suggestions-list li {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #37373d;
+  border-radius: 3px;
+  border-left: 3px solid #0e639c;
+}
+
+.suggestions-list li.no-suggestions {
+  color: #3eb83e;
+  border-left-color: #3eb83e;
+}
+
+.suggestions-list li.warning {
+  border-left-color: #e6a23c;
+}
+
+.suggestions-list li.critical {
+  border-left-color: #cc4444;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.details-table td {
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+.details-table .info-label {
+  font-weight: bold;
+  width: 150px;
+  color: #a0a0a0;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .metric-card {
+    min-width: 100%;
+  }
+
+  .chart-card {
+    min-width: 100%;
+  }
+}
+
+/* Optimized CSS for mobile */
+@media (max-width: 480px) {
+  .performance-metrics {
+    gap: 10px;
+  }
+  
+  .metric-card {
+    padding: 10px;
+  }
+  
+  .metric-value {
+    font-size: 20px;
+  }
+  
+  .chart-card {
+    padding: 10px;
+  }
+  
+  .suggestions-container {
+    padding: 10px;
+  }
+}
+
+/* Hardware-accelerated animations */
+.metric-card {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.metric-bar {
+  will-change: width, background-color;
+  transform: translateZ(0);
+}

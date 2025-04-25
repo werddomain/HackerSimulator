@@ -1,6 +1,7 @@
 import { OS } from '../core/os';
 import { Process } from '../core/process';
 import { GuiApplication } from '../core/gui-application';
+import { PerformanceMonitor, PerformanceMetrics } from '../core/performance-monitor';
 
 /**
  * System Monitor App for the Hacker Game
@@ -13,17 +14,21 @@ export class SystemMonitorApp extends GuiApplication {
     ram: number[];
     network: number[];
     disk: number[];
+    fps: number[];
+    frameTime: number[];
     timestamps: number[];
   } = {
     cpu: [],
     ram: [],
     network: [],
     disk: [],
+    fps: [],
+    frameTime: [],
     timestamps: []
   };
   
   // Track active tab
-  private activeTab: 'overview' | 'processes' | 'performance' | 'disk' | 'network' = 'overview';
+  private activeTab: 'overview' | 'processes' | 'performance' | 'disk' | 'network' | 'rendering' = 'overview';
   
   // Track process details view
   private selectedProcessPid: number | null = null;
@@ -36,6 +41,18 @@ export class SystemMonitorApp extends GuiApplication {
   private diskTotal = 500; // 500 GB simulated capacity
   private diskFree = 200;  // 200 GB simulated free space
   
+  // Performance monitoring
+  private performanceMonitor: PerformanceMonitor | null = null;
+  private performanceMetrics: PerformanceMetrics = {
+    fps: 0,
+    frameTime: 0,
+    averageFrameTime: 0,
+    minFrameTime: 0,
+    maxFrameTime: 0,
+    jank: 0,
+    lastUpdate: 0
+  };
+  
   constructor(os: OS) {
     super(os);
   }
@@ -46,12 +63,41 @@ export class SystemMonitorApp extends GuiApplication {
   protected getApplicationName(): string {
     return 'system-monitor';
   }
-  
-  /**
+    /**
    * Application-specific initialization
    */
   protected initApplication(): void {
     if (!this.container) return;
+    
+    // Initialize performance monitoring
+    this.performanceMonitor = new PerformanceMonitor({
+      targetFps: 60,
+      sampleSize: this.MAX_DATA_POINTS,
+      criticalFrameTime: 16.67 // 60fps = 16.67ms per frame
+    });
+    
+    // Set up metrics update callback
+    this.performanceMonitor.onUpdate((metrics) => {
+      this.performanceMetrics = metrics;
+      
+      // Add metrics to chart data
+      this.chartData.fps.push(metrics.fps);
+      this.chartData.frameTime.push(metrics.frameTime);
+      
+      // Keep only the last MAX_DATA_POINTS
+      if (this.chartData.fps.length > this.MAX_DATA_POINTS) {
+        this.chartData.fps.shift();
+        this.chartData.frameTime.shift();
+      }
+      
+      // Update rendering tab if active
+      if (this.activeTab === 'rendering') {
+        this.updateRenderingTab();
+      }
+    });
+    
+    // Start performance monitoring
+    this.performanceMonitor.start();
     
     this.render();
     

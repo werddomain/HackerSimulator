@@ -2,6 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 @import "variables.less";
 @import "responsive.less"; // Responsive variables and utilities
+@import "media-queries-extensions.less"; // Platform-specific media queries
+@import "mobile-variables.less"; // Mobile-specific variables and mixins
+@import "mobile-first.less"; // Mobile-first approach styles
 @import "base.less";
 @import "taskbar.less";
 @import "windows.less";
@@ -9,8 +12,15 @@
 @import "mobile-navigation.less"; // Mobile navigation styles
 @import "mobile-task-switcher.less"; // Mobile task switcher styles
 @import "mobile-start-menu.less"; // Mobile start menu styles
+@import "mobile-component-overrides.less"; // Mobile component overrides
+@import "mobile-theme-integration.less"; // Mobile theme integration
+@import "touch-friendly.less"; // Touch-friendly styling
 @import "desktop.less";
 @import "apps.less";
 @import "start-menu.less"; // Start Menu component
 @import "dialog.less"; // Dialog component
 @import "../core/components/notification.less"; // Notification component
+
+@import "../core/components/virtual-keyboard.less"; // Virtual keyboard styles
+@import "../core/components/gesture-feedback.less"; // Gesture visualization styles
+@import "../core/components/touch-context-menu.less"; // Touch context menu styles

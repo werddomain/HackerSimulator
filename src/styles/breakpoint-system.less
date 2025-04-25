@@ -1,0 +1,426 @@
+/* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\breakpoint-system.less */
+/**
+ * Breakpoint System for HackerSimulator
+ * Standardizes viewport breakpoints and provides tools for adapting UI at different screen sizes
+ */
+
+/* Import base media query mixins */
+@import './media-queries.less';
+
+/*
+ * Breakpoint constants
+ * These should be used consistently throughout the application
+ */
+:root {
+  /* Breakpoint values (read-only) */
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 768px;
+  --breakpoint-md: 992px;
+  --breakpoint-lg: 1200px;
+  --breakpoint-xl: 1600px;
+  
+  /* Current breakpoint (will be updated by JS) */
+  --current-breakpoint: 'xs';
+}
+
+/* 
+ * Breakpoint detector - This adds classes to the body element
+ * that can be used for CSS targeting and JavaScript detection
+ */
+body {
+  &:before {
+    display: none;
+    content: "xs";
+  }
+  
+  .media-breakpoint-up(xs, {
+    &:before {
+      content: "xs";
+    }
+  });
+  
+  .media-breakpoint-up(sm, {
+    &:before {
+      content: "sm";
+    }
+  });
+  
+  .media-breakpoint-up(md, {
+    &:before {
+      content: "md";
+    }
+  });
+  
+  .media-breakpoint-up(lg, {
+    &:before {
+      content: "lg";
+    }
+  });
+  
+  .media-breakpoint-up(xl, {
+    &:before {
+      content: "xl";
+    }
+  });
+}
+
+/* 
+ * Responsive display utilities 
+ * Controls visibility of elements at different breakpoints
+ */
+
+/* Hide at specific breakpoint ranges */
+.hide-xs {
+  .media-breakpoint-down(xs, { display: none !important; });
+}
+
+.hide-sm {
+  .media-breakpoint-between(sm, sm, { display: none !important; });
+}
+
+.hide-md {
+  .media-breakpoint-between(md, md, { display: none !important; });
+}
+
+.hide-lg {
+  .media-breakpoint-between(lg, lg, { display: none !important; });
+}
+
+.hide-xl {
+  .media-breakpoint-up(xl, { display: none !important; });
+}
+
+/* Show only at specific breakpoint ranges */
+.show-xs-only {
+  display: none !important;
+  .media-breakpoint-down(xs, { display: block !important; });
+}
+
+.show-sm-only {
+  display: none !important;
+  .media-breakpoint-between(sm, sm, { display: block !important; });
+}
+
+.show-md-only {
+  display: none !important;
+  .media-breakpoint-between(md, md, { display: block !important; });
+}
+
+.show-lg-only {
+  display: none !important;
+  .media-breakpoint-between(lg, lg, { display: block !important; });
+}
+
+.show-xl-only {
+  display: none !important;
+  .media-breakpoint-up(xl, { display: block !important; });
+}
+
+/* Show from a specific breakpoint and up */
+.show-xs-up {
+  display: block !important;
+}
+
+.show-sm-up {
+  display: none !important;
+  .media-breakpoint-up(sm, { display: block !important; });
+}
+
+.show-md-up {
+  display: none !important;
+  .media-breakpoint-up(md, { display: block !important; });
+}
+
+.show-lg-up {
+  display: none !important;
+  .media-breakpoint-up(lg, { display: block !important; });
+}
+
+.show-xl-up {
+  display: none !important;
+  .media-breakpoint-up(xl, { display: block !important; });
+}
+
+/* Show from a specific breakpoint and down */
+.show-xs-down {
+  .media-breakpoint-down(xs, { display: block !important; });
+}
+
+.show-sm-down {
+  .media-breakpoint-down(sm, { display: block !important; });
+}
+
+.show-md-down {
+  .media-breakpoint-down(md, { display: block !important; });
+}
+
+.show-lg-down {
+  .media-breakpoint-down(lg, { display: block !important; });
+}
+
+.show-xl-down {
+  display: block !important;
+}
+
+/* Display variations (flex, inline, etc.) */
+.show-flex-xs-only {
+  display: none !important;
+  .media-breakpoint-down(xs, { display: flex !important; });
+}
+
+.show-flex-sm-only {
+  display: none !important;
+  .media-breakpoint-between(sm, sm, { display: flex !important; });
+}
+
+.show-flex-md-only {
+  display: none !important;
+  .media-breakpoint-between(md, md, { display: flex !important; });
+}
+
+.show-flex-lg-only {
+  display: none !important;
+  .media-breakpoint-between(lg, lg, { display: flex !important; });
+}
+
+.show-flex-xl-only {
+  display: none !important;
+  .media-breakpoint-up(xl, { display: flex !important; });
+}
+
+/* Inline display variations */
+.show-inline-xs-up {
+  display: inline !important;
+}
+
+.show-inline-sm-up {
+  display: none !important;
+  .media-breakpoint-up(sm, { display: inline !important; });
+}
+
+.show-inline-md-up {
+  display: none !important;
+  .media-breakpoint-up(md, { display: inline !important; });
+}
+
+.show-inline-lg-up {
+  display: none !important;
+  .media-breakpoint-up(lg, { display: inline !important; });
+}
+
+.show-inline-xl-up {
+  display: none !important;
+  .media-breakpoint-up(xl, { display: inline !important; });
+}
+
+/*
+ * Responsive typography system
+ * Scales text sizes responsively across different viewport sizes
+ */
+.responsive-text-xs {
+  font-size: 0.75rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 0.875rem;
+  });
+}
+
+.responsive-text-sm {
+  font-size: 0.875rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 1rem;
+  });
+}
+
+.responsive-text-md {
+  font-size: 1rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 1.125rem;
+  });
+}
+
+.responsive-text-lg {
+  font-size: 1.125rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 1.25rem;
+  });
+}
+
+.responsive-text-xl {
+  font-size: 1.25rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 1.5rem;
+  });
+}
+
+.responsive-text-xxl {
+  font-size: 1.5rem;
+  
+  .media-breakpoint-up(md, {
+    font-size: 1.75rem;
+  });
+  
+  .media-breakpoint-up(lg, {
+    font-size: 2rem;
+  });
+}
+
+/* Fluid typography (scales smoothly with viewport) */
+.fluid-text-sm {
+  font-size: calc(0.875rem + 0.25vw);
+}
+
+.fluid-text-md {
+  font-size: calc(1rem + 0.5vw);
+}
+
+.fluid-text-lg {
+  font-size: calc(1.125rem + 0.75vw);
+}
+
+.fluid-text-xl {
+  font-size: calc(1.25rem + 1vw);
+}
+
+.fluid-text-xxl {
+  font-size: calc(1.5rem + 1.5vw);
+}
+
+/* 
+ * Breakpoint-specific styling classes
+ * These can be used to apply specific styles at different breakpoints
+ */
+.xs-border {
+  .media-breakpoint-down(xs, {
+    border: 1px solid var(--border-color, #ccc);
+  });
+}
+
+.sm-border {
+  .media-breakpoint-between(sm, sm, {
+    border: 1px solid var(--border-color, #ccc);
+  });
+}
+
+.md-border {
+  .media-breakpoint-between(md, md, {
+    border: 1px solid var(--border-color, #ccc);
+  });
+}
+
+.lg-border {
+  .media-breakpoint-between(lg, lg, {
+    border: 1px solid var(--border-color, #ccc);
+  });
+}
+
+.xl-border {
+  .media-breakpoint-up(xl, {
+    border: 1px solid var(--border-color, #ccc);
+  });
+}
+
+/* Spacing variations by breakpoint */
+.xs-p-0 {
+  .media-breakpoint-down(xs, {
+    padding: 0 !important;
+  });
+}
+
+.sm-p-0 {
+  .media-breakpoint-between(sm, sm, {
+    padding: 0 !important;
+  });
+}
+
+.md-p-1 {
+  .media-breakpoint-between(md, md, {
+    padding: var(--spacing-small, 4px) !important;
+  });
+}
+
+.lg-p-2 {
+  .media-breakpoint-between(lg, lg, {
+    padding: var(--spacing-medium, 8px) !important;
+  });
+}
+
+.xl-p-3 {
+  .media-breakpoint-up(xl, {
+    padding: var(--spacing-large, 16px) !important;
+  });
+}
+
+/*
+ * JavaScript integration support
+ * These styles help with the integration between CSS breakpoints and JavaScript detection
+ */
+
+/* Hidden element for JS to read current breakpoint */
+#breakpoint-detector {
+  position: absolute;
+  top: -999px;
+  left: -999px;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  
+  &:before {
+    content: "xs";
+    display: none;
+  }
+  
+  .media-breakpoint-up(xs, {
+    &:before {
+      content: "xs";
+    }
+  });
+  
+  .media-breakpoint-up(sm, {
+    &:before {
+      content: "sm";
+    }
+  });
+  
+  .media-breakpoint-up(md, {
+    &:before {
+      content: "md";
+    }
+  });
+  
+  .media-breakpoint-up(lg, {
+    &:before {
+      content: "lg";
+    }
+  });
+  
+  .media-breakpoint-up(xl, {
+    &:before {
+      content: "xl";
+    }
+  });
+}
+
+/* 
+ * Example usage:
+ * 
+ * <div class="show-md-up hide-xl">
+ *   <!-- Visible on medium and large screens only -->
+ * </div>
+ * 
+ * <div class="show-xs-only">
+ *   <!-- Only visible on extra small screens (mobile) -->
+ * </div>
+ * 
+ * <p class="responsive-text-md">
+ *   This text will be 1rem on mobile and 1.125rem on desktop
+ * </p>
+ * 
+ * <h1 class="fluid-text-xxl">
+ *   This heading will scale smoothly with the viewport
+ * </h1>
+ */
