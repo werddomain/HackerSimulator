@@ -660,4 +660,65 @@ export class WindowManager {
       listeners.forEach(callback => callback(id));
     }
   }
+
+  /**
+   * Show a confirmation dialog
+   * @param title The dialog title
+   * @param message The confirmation message
+   * @param callback Function to call with the user's response (true for confirm, false for cancel)
+   */
+  public showConfirm(title: string, message: string, callback: (confirmed: boolean) => void): void {
+    // Create confirmation dialog container
+    const dialogContainer = document.createElement('div');
+    dialogContainer.className = 'dialog-container';
+    
+    // Create dialog content
+    const dialogContent = document.createElement('div');
+    dialogContent.className = 'dialog-content confirmation-dialog';
+    
+    // Create dialog header
+    const dialogHeader = document.createElement('div');
+    dialogHeader.className = 'dialog-header';
+    dialogHeader.textContent = title;
+    
+    // Create dialog message
+    const dialogMessage = document.createElement('div');
+    dialogMessage.className = 'dialog-message';
+    dialogMessage.textContent = message;
+    
+    // Create dialog buttons
+    const dialogButtons = document.createElement('div');
+    dialogButtons.className = 'dialog-buttons';
+    
+    // Create cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'dialog-button cancel-button';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => {
+      document.body.removeChild(dialogContainer);
+      callback(false);
+    });
+    
+    // Create confirm button
+    const confirmButton = document.createElement('button');
+    confirmButton.className = 'dialog-button confirm-button';
+    confirmButton.textContent = 'Confirm';
+    confirmButton.addEventListener('click', () => {
+      document.body.removeChild(dialogContainer);
+      callback(true);
+    });
+    
+    // Assemble dialog
+    dialogButtons.appendChild(cancelButton);
+    dialogButtons.appendChild(confirmButton);
+    
+    dialogContent.appendChild(dialogHeader);
+    dialogContent.appendChild(dialogMessage);
+    dialogContent.appendChild(dialogButtons);
+    
+    dialogContainer.appendChild(dialogContent);
+    
+    // Add to document body
+    document.body.appendChild(dialogContainer);
+  }
 }

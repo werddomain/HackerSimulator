@@ -1,7 +1,7 @@
 import { OS } from '../core/os';
 import { Process } from '../core/process';
 import { GuiApplication } from '../core/gui-application';
-import { PerformanceMonitor, PerformanceMetrics } from '../core/performance-monitor';
+import { PerformanceMonitor, PerformanceMetric } from '../core/performance-monitor';
 
 /**
  * System Monitor App for the Hacker Game
@@ -40,10 +40,17 @@ export class SystemMonitorApp extends GuiApplication {
   private diskUsage = 60; // Start at 60% usage
   private diskTotal = 500; // 500 GB simulated capacity
   private diskFree = 200;  // 200 GB simulated free space
-  
-  // Performance monitoring
+    // Performance monitoring
   private performanceMonitor: PerformanceMonitor | null = null;
-  private performanceMetrics: PerformanceMetrics = {
+  private performanceMetrics: {
+    fps: number;
+    frameTime: number;
+    averageFrameTime: number;
+    minFrameTime: number;
+    maxFrameTime: number;
+    jank: number;
+    lastUpdate: number;
+  } = {
     fps: 0,
     frameTime: 0,
     averageFrameTime: 0,
@@ -66,38 +73,35 @@ export class SystemMonitorApp extends GuiApplication {
     /**
    * Application-specific initialization
    */
-  protected initApplication(): void {
-    if (!this.container) return;
+  protected initApplication(): void {    if (!this.container) return;
     
-    // Initialize performance monitoring
-    this.performanceMonitor = new PerformanceMonitor({
-      targetFps: 60,
-      sampleSize: this.MAX_DATA_POINTS,
-      criticalFrameTime: 16.67 // 60fps = 16.67ms per frame
-    });
+    // Initialize performance monitoring using the singleton pattern
+    this.performanceMonitor = PerformanceMonitor.getInstance();
     
     // Set up metrics update callback
-    this.performanceMonitor.onUpdate((metrics) => {
-      this.performanceMetrics = metrics;
+    if (this.performanceMonitor) {
+      this.performanceMonitor.onUpdate((metrics) => {
+        this.performanceMetrics = metrics;
+        
+        // Add metrics to chart data
+        this.chartData.fps.push(metrics.fps);
+        this.chartData.frameTime.push(metrics.frameTime);
+        
+        // Keep only the last MAX_DATA_POINTS
+        if (this.chartData.fps.length > this.MAX_DATA_POINTS) {
+          this.chartData.fps.shift();
+          this.chartData.frameTime.shift();
+        }
+        
+        // Update rendering tab if active
+        if (this.activeTab === 'rendering') {
+          this.updateRenderingTab();
+        }
+      });
       
-      // Add metrics to chart data
-      this.chartData.fps.push(metrics.fps);
-      this.chartData.frameTime.push(metrics.frameTime);
-      
-      // Keep only the last MAX_DATA_POINTS
-      if (this.chartData.fps.length > this.MAX_DATA_POINTS) {
-        this.chartData.fps.shift();
-        this.chartData.frameTime.shift();
-      }
-      
-      // Update rendering tab if active
-      if (this.activeTab === 'rendering') {
-        this.updateRenderingTab();
-      }
-    });
-    
-    // Start performance monitoring
-    this.performanceMonitor.start();
+      // Start performance monitoring
+      this.performanceMonitor.start();
+    }
     
     this.render();
     
@@ -1330,300 +1334,105 @@ export class SystemMonitorApp extends GuiApplication {
   }
   
   /**
-   * Format system uptime as HH:MM:SS
+   * Update rendering tab with performance metrics
    */
-  private formatSystemUptime(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+  private updateRenderingTab(): void {
+    if (!this.container || !this.performanceMonitor) return;
     
-    const hoursStr = String(hours % 24).padStart(2, '0');
-    const minutesStr = String(minutes % 60).padStart(2, '0');
-    const secondsStr = String(seconds % 60).padStart(2, '0');
+    const metrics = this.performanceMetrics;
     
-    if (days > 0) {
-      return `${days}d ${hoursStr}:${minutesStr}:${secondsStr}`;
-    } else {
-      return `${hoursStr}:${minutesStr}:${secondsStr}`;
-    }
-  }
-
-  /**
-   * Format uptime duration
-   */
-  private formatUptime(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
+    // Update FPS chart
+    const fpsChart = this.container.querySelector('#fps-chart') as HTMLCanvasElement;
+    const frameTimeChart = this.container.querySelector('#frame-time-chart') as HTMLCanvasElement;
     
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-  
-  /**
-   * Update process list
-   */
-  private updateProcessList(): void {
-    if (!this.container) return;
+    if (fpsChart) this.drawChart(fpsChart, this.chartData.fps, '#0e639c');
+    if (frameTimeChart) this.drawChart(frameTimeChart, this.chartData.frameTime, '#e6a23c');
     
-    const processManager = this.os.getProcessManager();
-    const processes = processManager.getAllProcesses();
-    const processList = this.container.querySelector('#process-list');
+    // Update FPS and frame time values
+    const fpsValue = this.container.querySelector('#fps-value');
+    const fpsBar = this.container.querySelector('#fps-bar');
+    const frameTimeValue = this.container.querySelector('#frame-time-value');
+    const frameTimeBar = this.container.querySelector('#frame-time-bar');
+    const jankValue = this.container.querySelector('#jank-value');
+    const jankBar = this.container.querySelector('#jank-bar');
     
-    if (!processList) return;
-    
-    // Store selected processes before updating
-    const selectedProcesses = new Set<number>();
-    this.container.querySelectorAll('.process-row.selected-process').forEach(row => {
-      const pid = row.getAttribute('data-pid');
-      if (pid) selectedProcesses.add(parseInt(pid));
-    });
-    
-    // Get filter value
-    const filterInput = this.container.querySelector('.process-filter') as HTMLInputElement;
-    const filterValue = filterInput?.value.toLowerCase() || '';
-    
-    // Clear current list
-    processList.innerHTML = '';
-    
-    // Add processes to the list
-    processes
-      .filter(process => {
-        if (!filterValue) return true;
-        return process.name.toLowerCase().includes(filterValue) || 
-               process.user.toLowerCase().includes(filterValue) || 
-               process.pid.toString().includes(filterValue);
-      })
-      .sort((a, b) => b.cpuUsage - a.cpuUsage) // Sort by CPU usage (descending)
-      .forEach(process => {
-        const row = document.createElement('tr');
-        row.className = 'process-row';
-        row.setAttribute('data-pid', process.pid.toString());
-        
-        // Restore selection state
-        if (selectedProcesses.has(process.pid)) {
-          row.classList.add('selected-process');
-        }
-        
-        // Format uptime
-        const uptime = this.formatUptime(Date.now() - process.startTime);
-        
-        // Status class
-        const statusClass = `process-status-${process.status}`;
-        
-        row.innerHTML = `
-          <td><input type="checkbox" class="process-checkbox" ${selectedProcesses.has(process.pid) ? 'checked' : ''}></td>
-          <td>${process.pid}</td>
-          <td>${process.name}</td>
-          <td>${process.user}</td>
-          <td>${(process.cpuUsage * 100).toFixed(1)}%</td>
-          <td>${process.memoryUsage.toFixed(1)}%</td>
-          <td class="${statusClass}">${process.status}</td>
-          <td>${uptime}</td>
-        `;
-        
-        // Add event listeners
-        row.addEventListener('click', (e) => {
-          // Don't toggle if clicking on the checkbox
-          if ((e.target as HTMLElement).closest('.process-checkbox')) return;
-          this.toggleProcessSelection(row);
-        });
-        
-        const checkbox = row.querySelector('.process-checkbox');
-        checkbox?.addEventListener('change', (e) => {
-          const target = e.target as HTMLInputElement;
-          if (target.checked) {
-            row.classList.add('selected-process');
-          } else {
-            row.classList.remove('selected-process');
-          }
-          this.updateSelectAllCheckbox();
-        });
-        
-        processList.appendChild(row);
-      });
-  }
-
-  /**
-   * Draw a simple line chart on a canvas
-   */
-  private drawChart(canvas: HTMLCanvasElement, data: number[], color: string): void {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const width = canvas.width;
-    const height = canvas.height;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-    
-    // No data to display
-    if (data.length === 0) return;
-    
-    // Find min and max values
-    const max = 100; // Fixed scale to 100%
-    const min = 0;
-    
-    // Draw background grid
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 0.5;
-    
-    // Draw horizontal grid lines
-    for (let i = 0; i <= 4; i++) {
-      const y = height - (i * height / 4);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
+    if (fpsValue) fpsValue.textContent = `${Math.round(metrics.fps)} FPS`;
+    if (fpsBar) {
+      const element = fpsBar as HTMLElement;
+      const fpsPercentage = Math.min(100, (metrics.fps / 60) * 100);
+      element.style.width = `${fpsPercentage}%`;
     }
     
-    // Draw the line
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    // Calculate point coordinates
-    const points = data.map((value, index) => {
-      const x = (index / (data.length - 1)) * width;
-      const y = height - ((value - min) / (max - min)) * height;
-      return { x, y };
-    });
-    
-    // Draw path
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.stroke();
-    
-    // Fill area under the line
-    ctx.fillStyle = `${color}33`; // Add transparency
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, height);
-    for (let i = 0; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.lineTo(points[points.length - 1].x, height);
-    ctx.closePath();
-    ctx.fill();
-  }
-  
-  /**
-   * Toggle process selection
-   */
-  private toggleProcessSelection(row: HTMLElement): void {
-    row.classList.toggle('selected-process');
-    
-    // Update checkbox
-    const checkbox = row.querySelector('.process-checkbox') as HTMLInputElement;
-    if (checkbox) {
-      checkbox.checked = row.classList.contains('selected-process');
+    if (frameTimeValue) frameTimeValue.textContent = `${metrics.averageFrameTime.toFixed(2)} ms`;
+    if (frameTimeBar) {
+      const element = frameTimeBar as HTMLElement;
+      const frameTimePercentage = Math.min(100, (metrics.averageFrameTime / 33.33) * 100);
+      element.style.width = `${frameTimePercentage}%`;
     }
     
-    // Update select all checkbox
-    this.updateSelectAllCheckbox();
-  }
-  
-  /**
-   * Select all processes
-   */
-  private selectAllProcesses(selected: boolean): void {
-    if (!this.container) return;
+    if (jankValue) jankValue.textContent = `${metrics.jank.toFixed(1)}%`;
+    if (jankBar) {
+      const element = jankBar as HTMLElement;
+      const jankPercentage = Math.min(100, metrics.jank * 3);
+      element.style.width = `${jankPercentage}%`;
+    }
     
-    const rows = this.container.querySelectorAll('.process-row');
-    rows.forEach(row => {
-      if (selected) {
-        row.classList.add('selected-process');
-      } else {
-        row.classList.remove('selected-process');
-      }
+    // Update detailed metrics
+    const detailedMetrics = this.container.querySelector('#detailed-metrics');
+    if (detailedMetrics) {
+      detailedMetrics.innerHTML = `
+        <tr>
+          <td class="info-label">Min Frame Time:</td>
+          <td class="info-value">${metrics.minFrameTime.toFixed(2)} ms</td>
+        </tr>
+        <tr>
+          <td class="info-label">Max Frame Time:</td>
+          <td class="info-value">${metrics.maxFrameTime.toFixed(2)} ms</td>
+        </tr>
+        <tr>
+          <td class="info-label">Frame Time Variance:</td>
+          <td class="info-value">${(metrics.maxFrameTime - metrics.minFrameTime).toFixed(2)} ms</td>
+        </tr>
+        <tr>
+          <td class="info-label">Last Updated:</td>
+          <td class="info-value">${new Date(metrics.lastUpdate || Date.now()).toLocaleTimeString()}</td>
+        </tr>
+      `;
+    }
+    
+    // Update suggestions list
+    const suggestionsList = this.container.querySelector('#optimization-suggestions');
+    if (suggestionsList && this.performanceMonitor) {
+      const suggestions = this.performanceMonitor.getOptimizationSuggestions();
       
-      // Update checkbox
-      const checkbox = row.querySelector('.process-checkbox') as HTMLInputElement;
-      if (checkbox) {
-        checkbox.checked = selected;
+      if (suggestions.length === 0) {
+        suggestionsList.innerHTML = '<li class="no-suggestions">Performance looks good! No issues detected.</li>';
+      } else {
+        suggestionsList.innerHTML = suggestions.map(suggestion => {
+          // Determine suggestion severity for styling
+          let severity = 'warning';
+          if (suggestion.toLowerCase().includes('high jank') || 
+              suggestion.toLowerCase().includes('below target') ||
+              suggestion.toLowerCase().includes('exceeds')) {
+            severity = 'critical';
+          }
+          
+          return `<li class="${severity}">${suggestion}</li>`;
+        }).join('');
       }
-    });
-  }
-  
-  /**
-   * Update select all checkbox state
-   */
-  private updateSelectAllCheckbox(): void {
-    if (!this.container) return;
-    
-    const selectAllCheckbox = this.container.querySelector('#select-all-processes') as HTMLInputElement;
-    if (!selectAllCheckbox) return;
-    
-    const totalRows = this.container.querySelectorAll('.process-row').length;
-    const selectedRows = this.container.querySelectorAll('.process-row.selected-process').length;
-    
-    if (selectedRows === 0) {
-      selectAllCheckbox.checked = false;
-      selectAllCheckbox.indeterminate = false;
-    } else if (selectedRows === totalRows) {
-      selectAllCheckbox.checked = true;
-      selectAllCheckbox.indeterminate = false;
-    } else {
-      selectAllCheckbox.checked = false;
-      selectAllCheckbox.indeterminate = true;
     }
   }
-  
-  /**
-   * End selected processes
-   */
-  private endSelectedProcesses(): void {
-    if (!this.container) return;
-    
-    const processManager = this.os.getProcessManager();
-    const selectedRows = this.container.querySelectorAll('.process-row.selected-process');
-    
-    selectedRows.forEach(row => {
-      const pid = parseInt(row.getAttribute('data-pid') || '0');
-      if (pid > 0) {
-        // Don't kill system processes (pid < 10)
-        if (pid >= 10) {
-          processManager.killProcess(pid);
-        } else {
-          // Show error for system processes
-          alert('Cannot terminate system process');
-        }
-      }
-    });
-    
-    // Update process list
-    this.updateProcessList();
-  }
-  
-  /**
-   * Filter processes
-   */
-  private filterProcesses(filter: string): void {
-    // This triggers a re-render of the process list with filtering
-    this.updateProcessList();
-  }
-  
-  /**
-   * Refresh data
-   */
-  private refresh(): void {
-    this.updateData();
-  }
-  
-  /**
-   * Clean up resources
-   */
-  public dispose(): void {
-    if (this.updateInterval !== null) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
-  }
+}
+
+/**
+ * Performance metrics for system monitoring
+ */
+interface PerformanceMetrics {
+  fps: number;
+  frameTime: number;
+  averageFrameTime: number;
+  minFrameTime: number;
+  maxFrameTime: number;
+  jank: number;
+  lastUpdate?: number;
 }

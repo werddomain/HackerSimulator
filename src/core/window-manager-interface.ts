@@ -100,7 +100,27 @@ export interface IWindowManager {
   /**
    * Update window title
    * @param windowId Window ID
-   * @param title New title
+   * @param title New window title
    */
   updateWindowTitle(windowId: string, title: string): void;
+  
+  /**
+   * Show a notification to the user
+   * @param options Notification options
+   */
+  showNotification(options: { title: string; message: string; type?: 'info' | 'success' | 'warning' | 'error' }): void;
+  
+  /**
+   * Show a prompt dialog to get user input
+   * @param options Prompt options
+   * @param callback Function to call with the user's input
+   */
+  showPrompt(options: { title: string; message: string; defaultValue?: string; placeholder?: string }, callback: (value: string | null) => void): void;
+  
+  /**
+   * Show a confirmation dialog to get user approval
+   * @param options Confirmation dialog options
+   * @param callback Function to call with the user's decision
+   */
+  showConfirm(options: { title: string; message: string; okText?: string; cancelText?: string }, callback: (confirmed: boolean) => void): void;
 }

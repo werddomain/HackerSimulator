@@ -49,9 +49,8 @@ export class MobileTerminalApp extends TerminalApp {
     // Get xterm instance
     const xterm = this.getTerminal();
     if (!xterm) return;
-    
-    // Adjust font size based on device
-    if (platformDetector.getPlatformType() === PlatformType.Mobile) {
+      // Adjust font size based on device
+    if (platformDetector.getPlatformType() === PlatformType.MOBILE) {
       // Increase font size for touch
       xterm.options.fontSize = 16;
       
@@ -79,9 +78,8 @@ export class MobileTerminalApp extends TerminalApp {
   protected initApplication(): void {
     // Call parent init first
     super.initApplication();
-    
-    // If we're on mobile, create mobile UI elements
-    if (platformDetector.getPlatformType() === PlatformType.Mobile) {
+      // If we're on mobile, create mobile UI elements
+    if (platformDetector.getPlatformType() === PlatformType.MOBILE) {
       this.initMobileUI();
     }
   }
@@ -541,32 +539,52 @@ export class MobileTerminalApp extends TerminalApp {
       this.updateCommandSuggestions();
     }
   }
-
   /**
-   * Override handleResize method to resize terminal and mobile UI
+   * Handle terminal resize events for mobile-specific adjustments
+   * We'll call this from an event handler rather than overriding the private parent method
    */
-  protected handleResize(): void {
-    // Call parent resize handler
-    super.handleResize();
-    
-    // Resize mobile UI elements if needed
+  protected onResize(): void {
+    // Handle mobile-specific resize adjustments
     if (this.mobileControls) {
-      // Ensure mobile controls layout adapts to new size
-      // This would depend on specific UI implementation
+      // Adjust mobile controls layout if needed
+      this.adjustMobileControlsLayout();
     }
   }
 
   /**
-   * Override window close to clean up mobile-specific elements
+   * Adjust mobile controls layout based on current window size
    */
-  public closeWindow(): void {
+  private adjustMobileControlsLayout(): void {
+    if (!this.mobileControls || !this.container) return;
+    
+    // Get the container dimensions
+    const containerHeight = this.container.clientHeight;
+    const containerWidth = this.container.clientWidth;
+    
+    // Adjust mobile controls based on orientation
+    if (containerWidth > containerHeight) {
+      // Landscape orientation
+      this.mobileControls.classList.add('landscape');
+      this.mobileControls.classList.remove('portrait');
+    } else {
+      // Portrait orientation
+      this.mobileControls.classList.add('portrait');
+      this.mobileControls.classList.remove('landscape');
+    }
+  }
+  /**
+   * Override window close to clean up mobile-specific elements
+   * Use a different name to avoid accessing private method from parent
+   */
+  public cleanupAndClose(): void {
     // Clean up mobile-specific elements
     if (this.mobileControls) {
       this.mobileControls.remove();
       this.mobileControls = null;
     }
     
-    // Call parent close
-    super.closeWindow();
+    // Use type assertion to access the protected/private method from parent
+    // This is a workaround for TypeScript's access modifiers
+    (this as any).closeApplication();
   }
 }

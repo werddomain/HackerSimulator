@@ -420,7 +420,6 @@ export class AppManager {
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load text editor app.</div>';
     });
   }
-
   /**
    * Load Code Editor UI
    */
@@ -428,9 +427,13 @@ export class AppManager {
     // Create code editor container
     contentElement.innerHTML = '<div class="editor-container"></div>';
     
-    // Lazily load the code editor app
-    import('../apps/code-editor').then(module => {
-      const codeEditorApp = new module.CodeEditorApp(this.os);
+    // Lazily load the code editor factory and create the appropriate editor
+    import('../apps/code-editor-factory').then(factoryModule => {
+      // Create appropriate code editor for current platform
+      const codeEditorFactory = factoryModule.CodeEditorFactory.getInstance();
+      const codeEditorApp = codeEditorFactory.createCodeEditor(this.os);
+      
+      // Initialize the code editor
       codeEditorApp.init(contentElement.querySelector('.editor-container')!, windowId, args);
       
       // Open file if provided

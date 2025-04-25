@@ -110,6 +110,15 @@ export interface IFileSystemProvider {
   remove(path: string): Promise<void>;
   stat(path: string): Promise<FileStats>;
   
+  // Add rename method
+  rename(oldPath: string, newPath: string): Promise<void>;
+  
+  // Add rmdir method
+  rmdir(path: string, recursive?: boolean): Promise<void>;
+  
+  // Add unlink method
+  unlink(path: string): Promise<void>;
+  
   // Binary file methods
   readBinaryFile(path: string): Promise<ArrayBuffer>;
   writeBinaryFile(path: string, content: ArrayBuffer): Promise<void>;
@@ -1067,5 +1076,189 @@ public canIWrite(path: string): Promise<boolean> {
     }
     
     return this.normalizePath(path);
+  }
+
+  /**
+   * Rename a file or directory
+   * @param oldPath The original path
+   * @param newPath The new path
+   * @returns Promise that resolves when the operation completes
+   */
+  public async rename(oldPath: string, newPath: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normOldPath = this.normalizePath(oldPath);
+      const normNewPath = this.normalizePath(newPath);
+      
+      // Check if old path exists
+      const oldExists = await this.exists(normOldPath);
+      if (!oldExists) {
+        throw new Error(`Source path does not exist: ${oldPath}`);
+      }
+      
+      // Check if new path already exists
+      const newExists = await this.exists(normNewPath);
+      if (newExists) {
+        throw new Error(`Destination path already exists: ${newPath}`);
+      }
+      
+      // Get the entry to be renamed
+      const entry = await this.db.get('fs-entries', normOldPath);
+      
+      // Create new entry with the same content but updated path
+      const newEntry = {
+        path: normNewPath,
+        parent: normNewPath.substring(0, normNewPath.lastIndexOf('/')) || '/',
+        entry: {
+          ...entry.entry,
+          name: normNewPath.split('/').pop() || '',
+          metadata: {
+            ...entry.entry.metadata,
+            modified: Date.now()
+          }
+        }
+      };
+      
+      // Start a transaction to perform both operations
+      const tx = this.db.transaction('fs-entries', 'readwrite');
+      const store = tx.objectStore('fs-entries');
+      
+      // Add new entry first
+      await store.put(newEntry);
+      
+      // Then delete the old entry
+      await store.delete(normOldPath);
+      
+      // If it's a directory, recursively update all children
+      if (entry.entry.type === 'directory') {
+        // Get all entries under the old path
+        const children = await this.getAllEntriesUnderPath(normOldPath);
+        
+        // Update each child's path
+        for (const child of children) {
+          const childRelativePath = child.path.substring(normOldPath.length);
+          const newChildPath = normNewPath + childRelativePath;
+          
+          const newChildEntry = {
+            path: newChildPath,
+            parent: newChildPath.substring(0, newChildPath.lastIndexOf('/')) || '/',
+            entry: {
+              ...child.entry,
+              metadata: {
+                ...child.entry.metadata,
+                modified: Date.now()
+              }
+            }
+          };
+          
+          // Store the new entry and delete the old one
+          await store.put(newChildEntry);
+          await store.delete(child.path);
+        }
+      }
+      
+      // Commit the transaction
+      await tx.done;
+    } catch (error: any) {
+      console.error(`Failed to rename ${oldPath} to ${newPath}:`, error);
+      throw new Error(`Failed to rename: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Helper method to get all entries under a specific path
+   * @param basePath The base path to search under
+   */
+  private async getAllEntriesUnderPath(basePath: string): Promise<Array<{path: string, parent: string, entry: any}>> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    // Make sure the path ends with a slash for prefix matching
+    const searchPath = basePath.endsWith('/') ? basePath : basePath + '/';
+    
+    // Use the IDBKeyRange to get all keys that start with the base path
+    const tx = this.db.transaction('fs-entries', 'readonly');
+    const store = tx.objectStore('fs-entries');
+    const entries = await store.getAll(IDBKeyRange.bound(searchPath, searchPath + '\uffff', true, true));
+    
+    return entries;
+  }
+  
+  /**
+   * Remove a directory
+   * @param path The path to the directory
+   * @param recursive Whether to recursively remove contents
+   * @returns Promise that resolves when the operation completes
+   */
+  public async rmdir(path: string, recursive: boolean = false): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      
+      // Check if it's a directory
+      const stat = await this.stat(normPath);
+      if (!stat.isDirectory) {
+        throw new Error('Not a directory');
+      }
+        // Check if directory is empty if not recursive
+      if (!recursive) {
+        const children = await this.readDirectory(normPath);
+        if (children.length > 0) {
+          throw new Error('Directory not empty');
+        }
+      }
+      
+      if (recursive) {
+        // Get all entries under this path
+        const children = await this.getAllEntriesUnderPath(normPath);
+        
+        // Start a transaction
+        const tx = this.db.transaction('fs-entries', 'readwrite');
+        const store = tx.objectStore('fs-entries');
+        
+        // Delete all children in reverse order (to handle nested directories)
+        for (let i = children.length - 1; i >= 0; i--) {
+          await store.delete(children[i].path);
+        }
+        
+        // Delete the directory itself
+        await store.delete(normPath);
+        
+        // Commit the transaction
+        await tx.done;
+      } else {
+        // Simple case - just delete the empty directory
+        await this.db.delete('fs-entries', normPath);
+      }
+    } catch (error: any) {
+      console.error(`Failed to remove directory ${path}:`, error);
+      throw new Error(`Failed to remove directory: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Delete a file
+   * @param path The path to the file
+   * @returns Promise that resolves when the operation completes
+   */
+  public async unlink(path: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      const normPath = this.normalizePath(path);
+      
+      // Check if it's a file
+      const stat = await this.stat(normPath);
+      if (stat.isDirectory) {
+        throw new Error('Cannot unlink a directory, use rmdir instead');
+      }
+      
+      // Remove the file from the database
+      await this.db.delete('fs-entries', normPath);
+    } catch (error: any) {
+      console.error(`Failed to unlink file ${path}:`, error);
+      throw new Error(`Failed to unlink file: ${error.message}`);
+    }
   }
 }

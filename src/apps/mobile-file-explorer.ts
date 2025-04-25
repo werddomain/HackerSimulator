@@ -30,11 +30,68 @@ export class MobileFileExplorerApp extends FileExplorerApp {
   private lastTouchY: number = 0;
   private refreshDistance: number = 60; // pixels to pull for refresh
   private isRefreshing: boolean = false;
+  // Keep track of current path for mobile implementation
+  private mobilePath: string = '/home/user';
+  // Track selected items for mobile implementation
+  private mobileSelectedItems: string[] = [];
 
   constructor(os: OS) {
     super(os);
     this.mobileInputHandler = MobileInputHandler.getInstance();
-    this.isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+    this.isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
+  }
+
+  /**
+   * Get the current directory path
+   * @returns The current directory path
+   */
+  public getCurrentPath(): string {
+    return this.mobilePath;
+  }
+
+  /**
+   * Get the list of selected file/directory paths
+   * @returns Array of selected item paths
+   */
+  public getSelectedItems(): string[] {
+    return this.mobileSelectedItems;
+  }
+
+  /**
+   * Add a path to the selection
+   * @param path Path to add to selection
+   */
+  private addToSelection(path: string): void {
+    if (!this.mobileSelectedItems.includes(path)) {
+      this.mobileSelectedItems.push(path);
+    }
+  }
+
+  /**
+   * Remove a path from the selection
+   * @param path Path to remove from selection
+   */
+  private removeFromSelection(path: string): void {
+    const index = this.mobileSelectedItems.indexOf(path);
+    if (index !== -1) {
+      this.mobileSelectedItems.splice(index, 1);
+    }
+  }
+
+  /**
+   * Clear all selected items
+   */
+  private clearSelection(): void {
+    this.mobileSelectedItems = [];
+  }
+
+  /**
+   * Sets the current path in the mobile file explorer
+   * This is used to keep the mobile path in sync
+   * @param path The path to set as current
+   */
+  private setCurrentPath(path: string): void {
+    this.mobilePath = path;
   }
 
   /**
@@ -1104,12 +1161,11 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     const name = path.split('/').pop() || '';
     
     // Show prompt for new name
-    if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showPrompt(
+    if (this.os.getWindowManager()) {      this.os.getWindowManager().showPrompt(
         'Rename',
         'Enter new name:',
         name,
-        async (newName) => {
+        async (newName: string) => {
           if (newName && newName.trim() && newName !== name) {
             try {
               const parentPath = path.substring(0, path.lastIndexOf('/'));
@@ -1147,11 +1203,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     const name = path.split('/').pop() || '';
     
     // Show confirmation dialog
-    if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showConfirm(
+    if (this.os.getWindowManager()) {      this.os.getWindowManager().showConfirm(
         'Delete',
         `Are you sure you want to delete "${name}"?`,
-        async (confirmed) => {
+        async (confirmed: boolean) => {
           if (confirmed) {
             try {
               // Check if it's a directory or file
@@ -1237,11 +1292,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     }
     
     // Show confirmation dialog
-    if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showConfirm(
+    if (this.os.getWindowManager()) {      this.os.getWindowManager().showConfirm(
         'Delete',
         `Are you sure you want to delete ${selectedItems.length} selected item(s)?`,
-        async (confirmed) => {
+        async (confirmed: boolean) => {
           if (confirmed) {
             let successCount = 0;
             

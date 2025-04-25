@@ -390,8 +390,7 @@ export class MobileSettingsApp extends GuiApplication {
               <div class="setting-description">${setting.description}</div>
             </div>
             <div class="setting-control accent-color-picker">
-              ${this.accentColors.map(color => `
-                <button class="color-option ${this.userSettings.get('accentColor') === color.id ? 'active' : ''}" 
+              ${this.accentColors.map(color => `                <button class="color-option ${this.userSettings.get('user-preferences', 'accentColor', '') === color.id ? 'active' : ''}" 
                   data-color="${color.id}" 
                   style="background-color: ${color.color};"
                   aria-label="${color.name}">
@@ -412,8 +411,7 @@ export class MobileSettingsApp extends GuiApplication {
             </div>
             <div class="setting-control">
               <select class="mobile-select" id="setting-background">
-                ${this.backgroundOptions.map(option => `
-                  <option value="${option.id}" ${this.userSettings.get('background') === option.id ? 'selected' : ''}>
+                ${this.backgroundOptions.map(option => `                  <option value="${option.id}" ${this.userSettings.get('user-preferences', 'background', '') === option.id ? 'selected' : ''}>
                     ${option.name}
                   </option>
                 `).join('')}
@@ -426,9 +424,8 @@ export class MobileSettingsApp extends GuiApplication {
       case 'fontSize':
       case 'brightness':
       case 'contrast':
-      case 'scaling':
-        // Slider control for numeric values
-        const value = this.userSettings.get(setting.key) || 100;
+      case 'scaling':        // Slider control for numeric values
+        const value = this.userSettings.get('user-preferences', setting.key, 100);
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -451,9 +448,8 @@ export class MobileSettingsApp extends GuiApplication {
       case 'screenReader':
       case 'reducedMotion':
       case 'tracking':
-      case 'dataCollection':
-        // Toggle switch for boolean values
-        const checked = this.userSettings.get(setting.key) ? 'checked' : '';
+      case 'dataCollection':        // Toggle switch for boolean values
+        const checked = this.userSettings.get('user-preferences', setting.key, false) ? 'checked' : '';
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -471,9 +467,8 @@ export class MobileSettingsApp extends GuiApplication {
         `;
         break;
         
-      case 'performance':
-        // Radio buttons/segmented control for performance mode
-        const performanceMode = this.userSettings.get('performance') || 'balanced';
+      case 'performance':        // Radio buttons/segmented control for performance mode
+        const performanceMode = this.userSettings.get('user-preferences', 'performance', 'balanced');
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -515,9 +510,8 @@ export class MobileSettingsApp extends GuiApplication {
         break;
         
       case 'username':
-      case 'avatar':
-        // Text input
-        const textValue = this.userSettings.get(setting.key) || '';
+      case 'avatar':        // Text input
+        const textValue = this.userSettings.get('user-preferences', setting.key, '');
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -593,12 +587,14 @@ export class MobileSettingsApp extends GuiApplication {
   
   /**
    * Helper method to get theme options
-   */
-  private getThemeOptions(): string {
-    const themes = this.themeManager.getAvailableThemes();
-    const currentTheme = this.userSettings.get('themeName') || 'default';
+   */  private getThemeOptions(): string {
+    const themesMap = this.themeManager.getAllThemes();
+    // Use synchronous get with default for rendering
+    const currentTheme = this.userSettings.get('user-preferences', 'themeName', 'default');
     
-    return themes.map(theme => `
+    // Convert Map to Array for mapping
+    const themes = Array.from(themesMap.values());
+    return themes.map((theme: Theme) => `
       <option value="${theme.id}" ${currentTheme === theme.id ? 'selected' : ''}>
         ${theme.name}
       </option>
@@ -632,13 +628,12 @@ export class MobileSettingsApp extends GuiApplication {
     
     // Search input
     const searchInput = this.container.querySelector('.mobile-search-input');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
+    if (searchInput) {      searchInput.addEventListener('input', (e) => {
         this.searchQuery = (e.target as HTMLInputElement).value;
         this.updateSearchResults();
         
         // Show/hide clear button
-        const clearBtn = this.container.querySelector('.clear-search-btn');
+        const clearBtn = this.container?.querySelector('.clear-search-btn');
         if (clearBtn) {
           if (this.searchQuery) {
             clearBtn.classList.add('visible');
@@ -657,10 +652,9 @@ export class MobileSettingsApp extends GuiApplication {
     
     // Clear search button
     const clearSearchBtn = this.container.querySelector('.clear-search-btn');
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener('click', () => {
+    if (clearSearchBtn) {      clearSearchBtn.addEventListener('click', () => {
         this.searchQuery = '';
-        const searchInput = this.container.querySelector('.mobile-search-input') as HTMLInputElement;
+        const searchInput = this.container?.querySelector('.mobile-search-input') as HTMLInputElement | null;
         if (searchInput) {
           searchInput.value = '';
           searchInput.focus();
@@ -702,16 +696,16 @@ export class MobileSettingsApp extends GuiApplication {
     if (!this.container) return;
     
     const contentArea = this.container.querySelector('.mobile-settings-content');
-    if (!contentArea) return;
-    
-    contentArea.addEventListener('touchstart', (e) => {
-      this.touchStartX = e.touches[0].clientX;
-      this.touchStartY = e.touches[0].clientY;
+    if (!contentArea) return;    contentArea.addEventListener('touchstart', (e) => {
+      const touchEvent = e as unknown as TouchEvent;
+      this.touchStartX = touchEvent.touches[0].clientX;
+      this.touchStartY = touchEvent.touches[0].clientY;
     });
     
     contentArea.addEventListener('touchmove', (e) => {
-      const xDiff = this.touchStartX - e.touches[0].clientX;
-      const yDiff = Math.abs(this.touchStartY - e.touches[0].clientY);
+      const touchEvent = e as unknown as TouchEvent;
+      const xDiff = this.touchStartX - touchEvent.touches[0].clientX;
+      const yDiff = Math.abs(this.touchStartY - touchEvent.touches[0].clientY);
       
       // Only handle horizontal swipes (if vertical movement is less significant)
       if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > yDiff) {
@@ -720,9 +714,10 @@ export class MobileSettingsApp extends GuiApplication {
     });
     
     contentArea.addEventListener('touchend', (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
+      const touchEvent = e as unknown as TouchEvent;
+      const touchEndX = touchEvent.changedTouches[0].clientX;
       const xDiff = this.touchStartX - touchEndX;
-      const yDiff = Math.abs(this.touchStartY - e.changedTouches[0].clientY);
+      const yDiff = Math.abs(this.touchStartY - touchEvent.changedTouches[0].clientY);
       
       // Only trigger if horizontal swipe is dominant motion
       if (Math.abs(xDiff) > 100 && Math.abs(xDiff) > yDiff) {
@@ -843,13 +838,12 @@ export class MobileSettingsApp extends GuiApplication {
       });
     });
   }
-  
-  /**
+    /**
    * Update a setting in UserSettings
    */
   private updateSetting(key: string, value: any): void {
     try {
-      this.userSettings.set(key, value);
+      this.userSettings.set('user-preferences', key, value);
       
       // Apply certain settings immediately
       if (key === 'themeName') {

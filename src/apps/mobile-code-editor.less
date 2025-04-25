@@ -1,0 +1,246 @@
+/* Mobile Code Editor Styles */
+.mobile-code-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  
+  .editor-header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: var(--window-titlebar-background);
+    color: var(--window-titlebar-text);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 2;
+    height: 3rem;
+    
+    .file-name {
+      flex: 1;
+      font-size: 1rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-left: 0.5rem;
+    }
+    
+    .file-actions {
+      display: flex;
+      gap: 0.75rem;
+      
+      button {
+        background: none;
+        border: none;
+        color: var(--window-titlebar-text);
+        font-size: 1.25rem;
+        padding: 0.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        
+        &:active {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+  }
+  
+  .editor-toolbar {
+    display: flex;
+    padding: 0.5rem;
+    background-color: var(--app-background);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    
+    button {
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.25rem;
+      margin-right: 0.5rem;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      
+      &:active {
+        background-color: var(--button-active-background);
+      }
+    }
+  }
+  
+  .editor-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .editor-tabs {
+    display: flex;
+    background-color: var(--app-background);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    white-space: nowrap;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    .tab {
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      border-right: 1px solid var(--border-color);
+      white-space: nowrap;
+      max-width: 10rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      
+      &.active {
+        background-color: var(--window-active-tab-background);
+        color: var(--window-active-tab-text);
+      }
+    }
+  }
+  
+  .file-tree-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80%;
+    height: 100%;
+    background-color: var(--app-background);
+    z-index: 10;
+    border-right: 1px solid var(--border-color);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    
+    &.visible {
+      transform: translateX(0);
+    }
+    
+    .file-tree-header {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      
+      h3 {
+        flex: 1;
+        margin: 0;
+        font-size: 1rem;
+      }
+      
+      button {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 1.25rem;
+        padding: 0.5rem;
+      }
+    }
+    
+    .file-tree {
+      padding: 0.5rem;
+    }
+  }
+  
+  .keyboard-toolbar {
+    display: flex;
+    background-color: var(--app-background);
+    border-top: 1px solid var(--border-color);
+    padding: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    
+    button {
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      font-size: 0.875rem;
+      padding: 0.5rem;
+      margin-right: 0.25rem;
+      min-width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.25rem;
+      
+      &:active {
+        background-color: var(--button-active-background);
+      }
+    }
+  }
+  
+  // Custom scrollbar for touch
+  ::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 0.25rem;
+  }
+}
+
+// Monaco editor adaptations for mobile
+.monaco-editor {
+  .editor-widget {
+    // Increase size of suggestions dropdown
+    &.suggest-widget {
+      font-size: 1rem;
+      
+      .monaco-list-row {
+        padding: 0.5rem 0.75rem;
+        min-height: 2.5rem;
+      }
+    }
+    
+    // Increase size of parameter hints
+    &.parameter-hints-widget {
+      font-size: 1rem;
+      
+      .parameter {
+        padding: 0.5rem;
+      }
+    }
+  }
+  
+  // Larger context menu
+  .context-view {
+    .monaco-menu {
+      .action-item {
+        padding: 0.5rem 0.75rem;
+        min-height: 2.5rem;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Mobile virtual keyboard enhancements
+.mobile-virtual-keyboard.code-editor-keyboard {
+  .code-symbols-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    
+    button {
+      min-width: 2.5rem;
+      height: 2.5rem;
+      margin-right: 0.25rem;
+      font-family: monospace;
+      font-size: 1rem;
+    }
+  }
+}

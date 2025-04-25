@@ -92,6 +92,39 @@ export class PlatformDetector {
   }
   
   /**
+   * Gets the current platform mode (desktop or mobile)
+   * Returns the user preference if set, otherwise returns the detected platform type
+   * @returns The current platform mode as a string ('desktop' or 'mobile')
+   */
+  public getCurrentMode(): string {
+    return this.userPreference || this.currentPlatform.type;
+  }
+  
+  /**
+   * Sets the current platform mode
+   * @param mode The platform mode to set ('desktop' or 'mobile')
+   */
+  public setMode(mode: string): void {
+    if (mode === PlatformType.DESKTOP || mode === PlatformType.MOBILE) {
+      this.setUserPreference(mode as PlatformType);
+    }
+  }
+  
+  /**
+   * Get the current platform type
+   * @returns The current platform type (DESKTOP or MOBILE)
+   */
+  public getPlatformType(): PlatformType {
+    // If user has set a platform preference, use that
+    if (this.userPreference !== null) {
+      return this.userPreference;
+    }
+    
+    // Otherwise return the detected platform type
+    return this.currentPlatform.type;
+  }
+  
+  /**
    * Add a listener for platform change events
    * @param listener Function to call when platform changes
    */

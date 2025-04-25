@@ -603,5 +603,37 @@ export class ErrorHandler {
                 timestamp: errorEntry.timestamp
             });
         }
+    }    /**
+     * Handle an error by logging it and optionally reporting it
+     * @param error The error to handle
+     */
+    public static handleError(error: Error): void {
+        console.error('Error handled by ErrorHandler:', error);
+        
+        // Since we can't get the instance without an OS object in the static context,
+        // we'll just log the error to the console
+        console.error(`[ErrorHandler] ${error.message}`, error);
+        
+        // If the instance is already created, we can use it directly
+        if (ErrorHandler.instance) {
+            // Create an error log entry
+            const entry: ErrorLogEntry = {
+                id: `error-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                timestamp: Date.now(),
+                level: ErrorLevel.ERROR,
+                message: error.message,
+                fileName: '',
+                stack: error.stack,
+                handled: true
+            };
+            
+            // Add to log
+            ErrorHandler.instance.errorLog.push(entry);
+            
+            // Trim log if it exceeds max size
+            if (ErrorHandler.instance.errorLog.length > ErrorHandler.instance.settings.maxStoredErrors) {
+                ErrorHandler.instance.errorLog = ErrorHandler.instance.errorLog.slice(-ErrorHandler.instance.settings.maxStoredErrors);
+            }
+        }
     }
 }

@@ -100,6 +100,327 @@ export function debounce<T extends (...args: any[]) => any>(
     if (timeout !== null) {
       clearTimeout(timeout);
     }
+    
+    timeout = window.setTimeout(() => {
+      fn.apply(this, args);
+      timeout = null;
+    }, delay);
+  };
+}
+
+/**
+ * Create a virtualized list view for large data sets
+ * Only renders the visible items and a small buffer
+ * @param container - Container element for the list
+ * @param items - Array of items to render
+ * @param renderItem - Function to render a single item
+ * @param itemHeight - Height of each item (fixed height required)
+ * @param bufferItems - Number of buffer items to render outside viewport
+ */
+export function createVirtualizedList<T>(
+  container: HTMLElement,
+  items: T[],
+  renderItem: (item: T, index: number) => HTMLElement,
+  itemHeight: number,
+  bufferItems: number = 5
+): {
+  refresh: () => void;
+  scrollTo: (index: number) => void;
+} {
+  if (!container) return { refresh: () => {}, scrollTo: () => {} };
+  
+  // Create inner container that will have the full height
+  const innerContainer = document.createElement('div');
+  innerContainer.style.position = 'relative';
+  innerContainer.style.width = '100%';
+  innerContainer.style.height = `${items.length * itemHeight}px`;
+  
+  // Create container for visible items
+  const visibleItemsContainer = document.createElement('div');
+  visibleItemsContainer.style.position = 'absolute';
+  visibleItemsContainer.style.width = '100%';
+  visibleItemsContainer.style.left = '0';
+  
+  innerContainer.appendChild(visibleItemsContainer);
+  container.appendChild(innerContainer);
+  
+  // Set container style for scrolling
+  container.style.overflowY = 'auto';
+  container.style.position = 'relative';
+  
+  // Keep track of rendered items
+  const renderedItems: Map<number, HTMLElement> = new Map();
+  let visibleStartIndex = 0;
+  let visibleEndIndex = 0;
+  
+  // Render visible items
+  const renderVisibleItems = () => {
+    const scrollTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    
+    // Calculate visible range
+    const newVisibleStartIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - bufferItems);
+    const newVisibleEndIndex = Math.min(
+      items.length - 1,
+      Math.ceil((scrollTop + containerHeight) / itemHeight) + bufferItems
+    );
+    
+    // Remove items that are no longer visible
+    for (const [index, element] of renderedItems.entries()) {
+      if (index < newVisibleStartIndex || index > newVisibleEndIndex) {
+        element.remove();
+        renderedItems.delete(index);
+      }
+    }
+    
+    // Add newly visible items
+    for (let i = newVisibleStartIndex; i <= newVisibleEndIndex; i++) {
+      if (!renderedItems.has(i) && i >= 0 && i < items.length) {
+        const item = items[i];
+        const element = renderItem(item, i);
+        element.style.position = 'absolute';
+        element.style.top = `${i * itemHeight}px`;
+        element.style.width = '100%';
+        element.style.height = `${itemHeight}px`;
+        visibleItemsContainer.appendChild(element);
+        renderedItems.set(i, element);
+      }
+    }
+    
+    visibleStartIndex = newVisibleStartIndex;
+    visibleEndIndex = newVisibleEndIndex;
+  };
+  
+  // Initial render
+  renderVisibleItems();
+  
+  // Add scroll handler with throttling
+  const throttledRenderVisibleItems = throttle(renderVisibleItems, 16);
+  container.addEventListener('scroll', throttledRenderVisibleItems);
+  
+  // Handle window resize
+  window.addEventListener('resize', throttledRenderVisibleItems);
+  
+  return {
+    refresh: renderVisibleItems,
+    scrollTo: (index: number) => {
+      if (index >= 0 && index < items.length) {
+        container.scrollTop = index * itemHeight;
+      }
+    }
+  };
+}
+
+/**
+ * Create a skeleton loading screen for content that's loading
+ * @param container - Container to add the skeleton to
+ * @param template - Template for the skeleton layout (HTML string or element)
+ * @returns Object with show and hide methods
+ */
+export function createSkeletonScreen(
+  container: HTMLElement,
+  template: string | HTMLElement
+): { show: () => void; hide: () => void } {
+  // Create skeleton container
+  const skeletonContainer = document.createElement('div');
+  skeletonContainer.className = 'skeleton-container';
+  skeletonContainer.style.width = '100%';
+  skeletonContainer.style.height = '100%';
+  
+  // Add pulse animation
+  const style = document.createElement('style');
+  style.textContent = `
+    .skeleton-container .skeleton-item {
+      background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.06) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-pulse 1.5s ease-in-out infinite;
+      border-radius: 4px;
+    }
+    
+    @keyframes skeleton-pulse {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+  `;
+  
+  document.head.appendChild(style);
+  
+  // Add template content
+  if (typeof template === 'string') {
+    skeletonContainer.innerHTML = template;
+  } else {
+    skeletonContainer.appendChild(template.cloneNode(true));
+  }
+  
+  // Find all elements to apply skeleton style
+  const elements = skeletonContainer.querySelectorAll('.skeleton-item');
+  elements.forEach(el => {
+    if (el instanceof HTMLElement) {
+      el.style.minHeight = '1em';
+    }
+  });
+  
+  return {
+    show: () => {
+      container.appendChild(skeletonContainer);
+    },
+    hide: () => {
+      skeletonContainer.remove();
+    }
+  };
+}
+
+/**
+ * Optimize layout for mobile by deferring non-critical rendering
+ * @param priorityElements - Array of critical elements to render immediately
+ * @param deferredElements - Array of non-critical elements to defer
+ * @param delay - Milliseconds to defer rendering (0 = requestIdleCallback)
+ */
+export function optimizeMobileLayout(
+  priorityElements: HTMLElement[],
+  deferredElements: HTMLElement[],
+  delay: number = 0
+): void {
+  // Immediately display priority elements
+  priorityElements.forEach(element => {
+    element.style.visibility = 'visible';
+  });
+  
+  // Hide deferred elements initially
+  deferredElements.forEach(element => {
+    element.style.visibility = 'hidden';
+  });
+  
+  const renderDeferred = () => {
+    // Render non-critical elements
+    deferredElements.forEach(element => {
+      element.style.visibility = 'visible';
+    });
+  };
+  
+  if (delay === 0 && 'requestIdleCallback' in window) {
+    // Use requestIdleCallback when browser is idle
+    (window as any).requestIdleCallback(renderDeferred);
+  } else {
+    // Fallback to setTimeout
+    setTimeout(renderDeferred, delay || 100);
+  }
+}
+
+/**
+ * Optimize animations for mobile performance by reducing complexity
+ * @param elements - Elements with animations to optimize
+ * @param reduceMotion - Whether to apply reduced motion
+ */
+export function optimizeMobileAnimations(elements: HTMLElement[], reduceMotion: boolean = false): void {
+  elements.forEach(element => {
+    // Promote to GPU layer
+    optimizeForAnimation(element);
+    
+    if (reduceMotion) {
+      // Apply reduced motion
+      element.style.animationDuration = '0.001s';
+      element.style.transitionDuration = '0.001s';
+    } else {
+      // Optimize existing animations
+      element.style.animationTimingFunction = 'cubic-bezier(0.1, 0.7, 1.0, 0.1)';
+      element.style.transitionTimingFunction = 'cubic-bezier(0.1, 0.7, 1.0, 0.1)';
+    }
+  });
+}
+
+/**
+ * Detect and suggest optimizations for DOM elements
+ * @param container - Container to scan for optimization opportunities
+ * @returns Array of optimization suggestions
+ */
+export function detectOptimizationOpportunities(container: HTMLElement): Array<{
+  element: HTMLElement;
+  issue: string;
+  suggestion: string;
+}> {
+  const suggestions: Array<{
+    element: HTMLElement;
+    issue: string;
+    suggestion: string;
+  }> = [];
+  
+  // Find elements that might cause layout thrashing
+  const potentialIssues = container.querySelectorAll('*');
+  
+  potentialIssues.forEach(element => {
+    if (!(element instanceof HTMLElement)) return;
+    
+    const style = window.getComputedStyle(element);
+    
+    // Check for expensive box-shadow on animated elements
+    if (style.boxShadow !== 'none' && 
+        (style.transition.includes('transform') || style.animation !== 'none')) {
+      suggestions.push({
+        element,
+        issue: 'Box shadow with animation',
+        suggestion: 'Remove box-shadow from animated elements or use optimizeForAnimation'
+      });
+    }
+    
+    // Check for expensive filters
+    if (style.filter && style.filter !== 'none') {
+      suggestions.push({
+        element,
+        issue: 'Expensive filter property',
+        suggestion: 'Replace with optimized CSS or pre-rendered images'
+      });
+    }
+    
+    // Check for large images without dimensions
+    if (element instanceof HTMLImageElement && 
+        (!element.width || !element.height)) {
+      suggestions.push({
+        element,
+        issue: 'Image without explicit dimensions',
+        suggestion: 'Add width and height attributes to prevent layout shifts'
+      });
+    }
+    
+    // Check for expensive text-shadow on large text blocks
+    if (style.textShadow !== 'none' && 
+        element.textContent && 
+        element.textContent.length > 100) {
+      suggestions.push({
+        element,
+        issue: 'Text shadow on large text block',
+        suggestion: 'Remove text-shadow or split into smaller elements'
+      });
+    }
+  });
+  
+  return suggestions;
+}
+
+/**
+ * Clear memory leaks from DOM elements
+ * @param elements - Elements to clean up
+ */
+export function cleanupDOMElements(elements: HTMLElement[]): void {
+  elements.forEach(element => {
+    // Remove event listeners using cloneNode trick
+    const clone = element.cloneNode(false) as HTMLElement;
+    if (element.parentNode) {
+      element.parentNode.replaceChild(clone, element);
+    }
+    
+    // Clear internal properties
+    for (const prop in element) {
+      if ((element as any)[prop] instanceof Object) {
+        (element as any)[prop] = null;
+      }
+    }
+  });
+}
     timeout = window.setTimeout(() => fn.apply(this, args), delay);
   };
 }
