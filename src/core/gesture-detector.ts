@@ -11,6 +11,8 @@ export enum GestureType {
   DoubleTap = 'double-tap',
   LongPress = 'long-press',
   Swipe = 'swipe',
+  SWIPE_LEFT = 'swipe-left',
+  SWIPE_RIGHT = 'swipe-right',
   Pinch = 'pinch',
   Rotate = 'rotate',
   Pan = 'pan'
@@ -50,7 +52,7 @@ export interface TapEventData extends GestureEventData {
  * Swipe gesture event data
  */
 export interface SwipeEventData extends GestureEventData {
-  type: GestureType.Swipe;
+  type: GestureType.Swipe | GestureType.SWIPE_LEFT | GestureType.SWIPE_RIGHT;
   direction: SwipeDirection;
   distance: number;
   velocity: number; // pixels per millisecond
@@ -129,6 +131,8 @@ export interface GestureOptions {
   enableDoubleTap?: boolean;
   enableLongPress?: boolean;
   enableSwipe?: boolean;
+  enableSwipeLeft?: boolean;
+  enableSwipeRight?: boolean;
   enablePinch?: boolean;
   enableRotate?: boolean;
   enablePan?: boolean;
@@ -158,6 +162,8 @@ const DEFAULT_GESTURE_OPTIONS: GestureOptions = {
   enableDoubleTap: true,
   enableLongPress: true,
   enableSwipe: true,
+  enableSwipeLeft: true,
+  enableSwipeRight: true,
   enablePinch: true,
   enableRotate: true,
   enablePan: true
@@ -693,8 +699,7 @@ export class GestureDetector {
     
     // Calculate swipe duration
     const duration = Date.now() - this.touchTracker.startTime;
-    
-    // Check if swipe meets minimum distance and maximum time requirements
+      // Check if swipe meets minimum distance and maximum time requirements
     if (
       distance >= (this.options.swipeMinDistance || DEFAULT_GESTURE_OPTIONS.swipeMinDistance!) &&
       duration <= (this.options.swipeMaxTime || DEFAULT_GESTURE_OPTIONS.swipeMaxTime!)
@@ -727,9 +732,23 @@ export class GestureDetector {
       
       // Show visual feedback
       this.showFeedback(GestureType.Swipe, endPosition, direction);
-      
-      // Trigger handlers
+        // Trigger handlers for the general swipe event
       this.triggerHandlers(GestureType.Swipe, swipeEvent);
+      
+      // Also trigger the direction-specific swipe events
+      if (direction === SwipeDirection.Left && this.options.enableSwipeLeft) {
+        const leftSwipeEvent: SwipeEventData = {
+          ...swipeEvent,
+          type: GestureType.SWIPE_LEFT
+        };
+        this.triggerHandlers(GestureType.SWIPE_LEFT, leftSwipeEvent);
+      } else if (direction === SwipeDirection.Right && this.options.enableSwipeRight) {
+        const rightSwipeEvent: SwipeEventData = {
+          ...swipeEvent,
+          type: GestureType.SWIPE_RIGHT
+        };
+        this.triggerHandlers(GestureType.SWIPE_RIGHT, rightSwipeEvent);
+      }
     }
   }
   

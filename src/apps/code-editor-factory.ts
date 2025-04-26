@@ -5,6 +5,7 @@ import { OS } from '../core/os';
 import { CodeEditorApp } from './code-editor';
 import { MobileCodeEditorApp } from './mobile-code-editor';
 import { PlatformType, platformDetector } from '../core/platform-detector';
+import { GuiApplication } from '../core/gui-application';
 
 /**
  * Code Editor Factory
@@ -28,11 +29,11 @@ export class CodeEditorFactory {
    * @param os Operating system instance
    * @returns Code editor application instance
    */
-  public createCodeEditor(os: OS): CodeEditorApp {
+  public createCodeEditor(os: OS): GuiApplication {
     // Check platform type
     const platformType = platformDetector.getPlatformType();
     
-    if (platformType === PlatformType.Mobile) {
+    if (platformType === PlatformType.MOBILE) {
       // Create mobile code editor for mobile platforms
       return new MobileCodeEditorApp(os);
     } else {

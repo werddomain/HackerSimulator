@@ -3,12 +3,12 @@
  * Provides a touch-friendly interface to browse and manage files on mobile devices
  */
 
-import { OS } from '../core/os';
 import { FileExplorerApp } from './file-explorer';
+import { OS } from '../core/os';
 import { FileEntryUtils } from '../core/file-entry-utils';
 import { FileSystemEntry } from '../core/filesystem';
-import { platformDetector, PlatformType } from '../core/platform-detector';
 import { MobileInputHandler } from '../core/mobile-input-handler';
+import { PlatformType, platformDetector } from '../core/platform-detector';
 import { TouchContextMenu, ContextMenuItem } from '../core/touch-context-menu';
 import { GestureType, SwipeDirection } from '../core/gesture-detector';
 
@@ -34,11 +34,35 @@ export class MobileFileExplorerApp extends FileExplorerApp {
   private mobilePath: string = '/home/user';
   // Track selected items for mobile implementation
   private mobileSelectedItems: string[] = [];
+  // Add missing properties from parent class
+  private isShowHidden: () => boolean;
+  private toggleShowHidden: () => void;
+  private getViewMode: () => 'grid' | 'list';
+  private toggleViewMode: () => void;
+  private hasClipboardItems: () => boolean;
+  private setClipboard: (action: 'copy' | 'cut', paths: string[]) => void;
 
   constructor(os: OS) {
     super(os);
     this.mobileInputHandler = MobileInputHandler.getInstance();
     this.isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
+    
+    // Initialize missing methods from parent class
+    this.isShowHidden = () => this.showHidden;
+    this.toggleShowHidden = () => {
+      this.showHidden = !this.showHidden;
+    };
+    this.getViewMode = () => this.viewMode;
+    this.toggleViewMode = () => {
+      this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
+    };
+    this.hasClipboardItems = () => !!(this.clipboard && this.clipboard.paths.length > 0);
+    this.setClipboard = (action, paths) => {
+      this.clipboard = {
+        action,
+        paths
+      };
+    };
   }
 
   /**
@@ -220,11 +244,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     // Setup event listeners
     this.setupEventListeners();
   }
-
   /**
    * Setup event listeners for mobile UI elements
    */
-  private setupEventListeners(): void {
+  protected setupEventListeners(): void {
     if (!this.container) return;
     
     // Back button
@@ -347,16 +370,19 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     if (!contentContainer) return;
     
     // Track touch start position
-    contentContainer.addEventListener('touchstart', (e) => {
-      if (this.contentElement && this.contentElement.scrollTop === 0) {
-        this.lastTouchY = e.touches[0].clientY;
+    contentContainer.addEventListener('touchstart', (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (this.contentElement && this.contentElement.scrollTop === 0 && touchEvent.touches && touchEvent.touches.length > 0) {
+        this.lastTouchY = touchEvent.touches[0].clientY;
       }
     });
     
     // Track touch move for pull distance
-    contentContainer.addEventListener('touchmove', (e) => {
-      if (this.contentElement && this.contentElement.scrollTop === 0 && !this.isRefreshing) {
-        const currentY = e.touches[0].clientY;
+    contentContainer.addEventListener('touchmove', (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (this.contentElement && this.contentElement.scrollTop === 0 && !this.isRefreshing 
+          && touchEvent.touches && touchEvent.touches.length > 0) {
+        const currentY = touchEvent.touches[0].clientY;
         const pullDistance = currentY - this.lastTouchY;
         
         if (pullDistance > 0) {
@@ -365,7 +391,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
           
           // Update refresh indicator
           const refreshIndicator = this.container!.querySelector('.pull-to-refresh');
-          if (refreshIndicator) {
+          if (refreshIndicator instanceof HTMLElement) {
             refreshIndicator.style.transform = `translateY(${Math.min(pullDistance, this.refreshDistance * 1.5)}px)`;
             
             // Update text when pulled enough
@@ -378,7 +404,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
             
             // Rotate the icon based on pull distance
             const icon = refreshIndicator.querySelector('ion-icon');
-            if (icon) {
+            if (icon instanceof HTMLElement) {
               icon.style.transform = `rotate(${pullDistance * 2}deg)`;
             }
           }
@@ -387,11 +413,11 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     });
     
     // Handle touch end to trigger refresh
-    contentContainer.addEventListener('touchend', (e) => {
+    contentContainer.addEventListener('touchend', (e: Event) => {
       if (this.contentElement && this.contentElement.scrollTop === 0 && !this.isRefreshing) {
         const refreshIndicator = this.container!.querySelector('.pull-to-refresh');
         
-        if (refreshIndicator) {
+        if (refreshIndicator instanceof HTMLElement) {
           const transform = refreshIndicator.style.transform;
           const pullDistance = parseInt(transform.replace(/[^0-9]/g, '')) || 0;
           
@@ -408,7 +434,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
             
             // Animate the icon
             const icon = refreshIndicator.querySelector('ion-icon');
-            if (icon) {
+            if (icon instanceof HTMLElement) {
               icon.classList.add('rotating');
             }
             
@@ -419,7 +445,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
               refreshIndicator.classList.remove('refreshing');
               refreshIndicator.style.transform = 'translateY(0)';
               
-              if (icon) {
+              if (icon instanceof HTMLElement) {
                 icon.classList.remove('rotating');
                 icon.style.transform = '';
               }
@@ -466,16 +492,16 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     
     try {
       // Get files and directories in the current path
-      const entries = await this.os.getFileSystem().readdir(path);
+      const entries = await this.os.getFileSystem().readDirectory(path);
       
       // Filter hidden files unless showing hidden is enabled
       let filteredEntries = entries;
       if (!this.isShowHidden()) {
-        filteredEntries = entries.filter(entry => !entry.name.startsWith('.'));
+        filteredEntries = entries.filter((entry: FileSystemEntry) => !entry.name.startsWith('.'));
       }
       
       // Sort entries: directories first, then files
-      filteredEntries.sort((a, b) => {
+      filteredEntries.sort((a: FileSystemEntry, b: FileSystemEntry) => {
         const aIsDir = FileEntryUtils.isDirectory(a);
         const bIsDir = FileEntryUtils.isDirectory(b);
         
@@ -630,7 +656,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
           this.navigateTo(itemPath);
           this.addToHistory(itemPath);
         } else {
-          this.openFile(entry, itemPath);
+          this.openFileWithEntry(entry, itemPath);
         }
       });
       
@@ -733,7 +759,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
           this.pasteItems();
         }
       },
-      { separator: true },
+      { id: 'separator', label: '', icon: '' },
       {
         id: 'refresh',
         label: 'Refresh',
@@ -808,7 +834,7 @@ export class MobileFileExplorerApp extends FileExplorerApp {
             this.navigateTo(path);
             this.addToHistory(path);
           } else {
-            this.openFile(entry, path);
+            this.openFileWithEntry(entry, path);
           }
         }
       }
@@ -878,9 +904,9 @@ export class MobileFileExplorerApp extends FileExplorerApp {
       // Show action bar with selection controls
       const actionBar = this.container.querySelector('.mobile-file-explorer-action-bar');
       if (actionBar) {
-        const cancelBtn = actionBar.querySelector('.cancel-btn');
-        const selectionCount = actionBar.querySelector('.selection-count');
-        const actionButtons = actionBar.querySelector('.action-buttons');
+        const cancelBtn = actionBar.querySelector('.cancel-btn') as HTMLElement;
+        const selectionCount = actionBar.querySelector('.selection-count') as HTMLElement;
+        const actionButtons = actionBar.querySelector('.action-buttons') as HTMLElement;
         
         if (cancelBtn) cancelBtn.style.display = 'flex';
         if (selectionCount) selectionCount.style.display = 'flex';
@@ -924,9 +950,9 @@ export class MobileFileExplorerApp extends FileExplorerApp {
       // Hide action bar controls
       const actionBar = this.container.querySelector('.mobile-file-explorer-action-bar');
       if (actionBar) {
-        const cancelBtn = actionBar.querySelector('.cancel-btn');
-        const selectionCount = actionBar.querySelector('.selection-count');
-        const actionButtons = actionBar.querySelector('.action-buttons');
+        const cancelBtn = actionBar.querySelector('.cancel-btn') as HTMLElement;
+        const selectionCount = actionBar.querySelector('.selection-count') as HTMLElement;
+        const actionButtons = actionBar.querySelector('.action-buttons') as HTMLElement;
         
         if (cancelBtn) cancelBtn.style.display = 'none';
         if (selectionCount) selectionCount.style.display = 'none';
@@ -998,31 +1024,21 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     // Show prompt for folder name
     if (this.os.getWindowManager()) {
       this.os.getWindowManager().showPrompt(
-        'Create Folder',
-        'Enter name for new folder:',
-        'New Folder',
-        async (folderName) => {
+        {title: 'Create Folder',
+         message: 'Enter name for new folder:',
+        defaultValue: 'New Folder'},
+        async (folderName: string|null) => {
           if (folderName && folderName.trim()) {
             try {
               const path = `${this.getCurrentPath()}/${folderName.trim()}`.replace(/\/+/g, '/');
-              await this.os.getFileSystem().mkdir(path);
+              await this.os.getFileSystem().createDirectory(path);
               
               // Refresh the folder contents
               this.loadFolder(this.getCurrentPath());
               
               // Show success notification
-              this.os.getWindowManager()?.showNotification({
-                title: 'Folder Created',
-                message: `Created folder: ${folderName.trim()}`,
-                type: 'success'
-              });
             } catch (error) {
-              // Show error notification
-              this.os.getWindowManager()?.showNotification({
-                title: 'Error',
-                message: `Failed to create folder: ${error}`,
-                type: 'error'
-              });
+              console.error(`Error creating folder: ${error}`);
             }
           }
         }
@@ -1037,31 +1053,21 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     // Show prompt for file name
     if (this.os.getWindowManager()) {
       this.os.getWindowManager().showPrompt(
-        'Create File',
-        'Enter name for new file:',
-        'New File.txt',
-        async (fileName) => {
+        {title: 'Create File',
+        message: 'Enter name for new file:',
+        defaultValue: 'New File.txt'},
+        async (fileName: string| null) => {
           if (fileName && fileName.trim()) {
             try {
               const path = `${this.getCurrentPath()}/${fileName.trim()}`.replace(/\/+/g, '/');
+              
+              // Create an empty file
               await this.os.getFileSystem().writeFile(path, '');
               
               // Refresh the folder contents
               this.loadFolder(this.getCurrentPath());
-              
-              // Show success notification
-              this.os.getWindowManager()?.showNotification({
-                title: 'File Created',
-                message: `Created file: ${fileName.trim()}`,
-                type: 'success'
-              });
             } catch (error) {
-              // Show error notification
-              this.os.getWindowManager()?.showNotification({
-                title: 'Error',
-                message: `Failed to create file: ${error}`,
-                type: 'error'
-              });
+              console.error(`Error creating file: ${error}`);
             }
           }
         }
@@ -1096,12 +1102,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
         for (let i = 0; i < fileInput.files.length; i++) {
           const file = fileInput.files[i];
           try {
-            // Read file content
-            const content = await this.readFileAsArrayBuffer(file);
-            
-            // Write to filesystem
             const path = `${this.getCurrentPath()}/${file.name}`.replace(/\/+/g, '/');
-            await this.os.getFileSystem().writeFile(path, content);
+            
+            // Process the file upload based on type
+            await this.processFileUpload(file, path);
             successCount++;
           } catch (error) {
             console.error(`Failed to upload file ${file.name}:`, error);
@@ -1133,25 +1137,70 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     
     // Trigger file picker
     fileInput.click();
+  }  /**
+   * Determine if a file is a text file based on its extension
+   */
+  protected isTextFile(fileName: string): boolean {
+    const textExtensions = [
+      'txt', 'md', 'js', 'ts', 'html', 'css', 'json', 'xml', 'csv', 
+      'py', 'c', 'cpp', 'h', 'java', 'rb', 'php', 'sh', 'bat', 'ps1'
+    ];
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    return textExtensions.includes(extension);
   }
-
+  
   /**
    * Read file as ArrayBuffer
    */
   private readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
       reader.onload = () => {
-        resolve(reader.result as ArrayBuffer);
+        if (reader.result instanceof ArrayBuffer) {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read file as ArrayBuffer'));
+        }
       };
-      
-      reader.onerror = () => {
-        reject(reader.error);
-      };
-      
+      reader.onerror = () => reject(new Error('File read error'));
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  /**
+   * Process uploaded files with proper type handling
+   */
+  private async processFileUpload(file: File, destPath: string): Promise<void> {
+    try {
+      // Determine if this is a text file or binary file
+      if (this.isTextFile(file.name)) {
+        // Read text files as text
+        const text = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              resolve(reader.result);
+            } else {
+              reject(new Error('Failed to read file as text'));
+            }
+          };
+          reader.onerror = () => reject(new Error('File read error'));
+          reader.readAsText(file);
+        });
+        
+        // Write text content
+        await this.os.getFileSystem().writeFile(destPath, text);
+      } else {
+        // Read binary files as ArrayBuffer
+        const buffer = await this.readFileAsArrayBuffer(file);
+        
+        // Write binary content
+        await this.os.getFileSystem().writeBinaryFile(destPath, buffer);
+      }
+    } catch (error) {
+      console.error(`Error processing file upload: ${error}`);
+      throw error;
+    }
   }
 
   /**
@@ -1162,10 +1211,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     
     // Show prompt for new name
     if (this.os.getWindowManager()) {      this.os.getWindowManager().showPrompt(
-        'Rename',
-        'Enter new name:',
-        name,
-        async (newName: string) => {
+        {title: 'Rename',
+        message: 'Enter new name:',
+        defaultValue:  name},
+        async (newName: string|null) => {
           if (newName && newName.trim() && newName !== name) {
             try {
               const parentPath = path.substring(0, path.lastIndexOf('/'));
@@ -1203,9 +1252,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     const name = path.split('/').pop() || '';
     
     // Show confirmation dialog
-    if (this.os.getWindowManager()) {      this.os.getWindowManager().showConfirm(
-        'Delete',
-        `Are you sure you want to delete "${name}"?`,
+    if (this.os.getWindowManager()) {      
+      this.os.getWindowManager().showConfirm(
+      { title:  'Delete',
+        message: `Are you sure you want to delete "${name}"?`},
         async (confirmed: boolean) => {
           if (confirmed) {
             try {
@@ -1242,11 +1292,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
       );
     }
   }
-
   /**
    * Download a file
    */
-  private downloadFile(path: string): void {
+  protected downloadFile(path: string): void {
     const fileName = path.split('/').pop() || 'file';
     
     // Read the file content
@@ -1280,11 +1329,10 @@ export class MobileFileExplorerApp extends FileExplorerApp {
         });
       });
   }
-
   /**
    * Delete selected items
    */
-  private deleteSelectedItems(): void {
+  protected deleteSelectedItems(): void {
     const selectedItems = this.getSelectedItems();
     
     if (selectedItems.length === 0) {
@@ -1293,8 +1341,8 @@ export class MobileFileExplorerApp extends FileExplorerApp {
     
     // Show confirmation dialog
     if (this.os.getWindowManager()) {      this.os.getWindowManager().showConfirm(
-        'Delete',
-        `Are you sure you want to delete ${selectedItems.length} selected item(s)?`,
+        {title: 'Delete',
+        message: `Are you sure you want to delete ${selectedItems.length} selected item(s)?`},
         async (confirmed: boolean) => {
           if (confirmed) {
             let successCount = 0;
@@ -1342,6 +1390,20 @@ export class MobileFileExplorerApp extends FileExplorerApp {
           }
         }
       );
+    }
+  }
+
+  /**
+   * Special version of openFile to handle entry objects directly
+   */
+  private openFileWithEntry(entry: FileSystemEntry, path: string): void {
+    // For directories, navigate to them
+    if (FileEntryUtils.isDirectory(entry)) {
+      this.navigateTo(path);
+      this.addToHistory(path);
+    } else {
+      // For files, use the parent's openFile method which takes a path
+      this.openFile(path);
     }
   }
 }

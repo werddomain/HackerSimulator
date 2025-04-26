@@ -6,7 +6,7 @@ import { FileEntryUtils } from '../core/file-entry-utils';
 import { GuiApplication } from '../core/gui-application';
 import { ErrorHandler, ErrorLevel } from '../core/error-handler';
 import { VirtualKeyboard } from '../core/virtual-keyboard';
-import { GestureDetector, GestureType } from '../core/gesture-detector';
+import { GestureDetector, GestureType, PinchEventData } from '../core/gesture-detector';
 
 /**
  * Mobile-friendly Code Editor App
@@ -63,7 +63,7 @@ export class MobileCodeEditorApp extends GuiApplication {
           }
         })
         .catch(error => {
-          ErrorHandler.handleError(ErrorLevel.WARNING, 'Could not process command arguments', error);
+          throw new Error('Could not process command arguments', {cause: error});
         });
     }
   }
@@ -201,6 +201,9 @@ export class MobileCodeEditorApp extends GuiApplication {
     this.editor.onDidChangeModelContent(() => {
       this.hasUnsavedChanges = true;
     });
+    this.on("resize", () => {
+      this.resize();
+    });
   }
 
   /**
@@ -210,17 +213,17 @@ export class MobileCodeEditorApp extends GuiApplication {
     if (!this.container) return;
     
     this.gestureDetector = new GestureDetector(this.container);
-    
-    // Use pinch gesture for zooming text
-    this.gestureDetector.on(GestureType.PINCH, (event) => {
+      // Use pinch gesture for zooming text
+    this.gestureDetector.on(GestureType.Pinch, (event) => {
       if (!this.editor) return;
       
+      const pinchEvent = event as PinchEventData;
       const currentFontSize = this.editor.getOption(monaco.editor.EditorOption.fontSize);
       let newFontSize = currentFontSize;
       
-      if (event.scale > 1.05) {
+      if (pinchEvent.scale > 1.05) {
         newFontSize = Math.min(currentFontSize + 1, 24);
-      } else if (event.scale < 0.95) {
+      } else if (pinchEvent.scale < 0.95) {
         newFontSize = Math.max(currentFontSize - 1, 12);
       }
       
@@ -232,12 +235,11 @@ export class MobileCodeEditorApp extends GuiApplication {
     // Use swipe gestures for navigating tabs
     if (this.tabsContainer) {
       const tabsGestureDetector = new GestureDetector(this.tabsContainer);
-      
-      tabsGestureDetector.on(GestureType.SWIPE_LEFT, () => {
+        tabsGestureDetector.on(GestureType.SWIPE_LEFT, (event) => {
         this.nextTab();
       });
       
-      tabsGestureDetector.on(GestureType.SWIPE_RIGHT, () => {
+      tabsGestureDetector.on(GestureType.SWIPE_RIGHT, (event) => {
         this.previousTab();
       });
     }
@@ -377,49 +379,50 @@ export class MobileCodeEditorApp extends GuiApplication {
    */
   private showVirtualKeyboard(): void {
     if (!this.virtualKeyboard) {
-      this.virtualKeyboard = new VirtualKeyboard();
+      // TODO: Initialize virtual keyboard with touch-friendly layout
+      // this.virtualKeyboard = new VirtualKeyboard();
       
       // Add coding-specific keyboard layout
-      this.virtualKeyboard.addLayout('code', {
-        name: 'Code',
-        rows: [
-          ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-          ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-          ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'],
-          ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '.', 'Backspace'],
-          ['Symbols', 'Space', 'Tab', 'Return']
-        ],
-        symbolsRows: [
-          ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
-          ['{', '}', '[', ']', '<', '>', '=', '+', '-', '_'],
-          ['\\', '|', '/', '?', '\'', '"', ':', ';', ',', '.'],
-          ['Abc', '~', '`', '-', '_', '=', '+', ',', '.', 'Backspace'],
-          ['123', 'Space', 'Tab', 'Return']
-        ],
-        additionalClasses: 'code-editor-keyboard'
-      });
+      // this.virtualKeyboard.registerLayout({
+      //   name: 'Code',
+      //   rows: [
+      //     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+      //     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+      //     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'],
+      //     ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '.', 'Backspace'],
+      //     [{value: 'Symbols', type:'keyboard'}, 'Space', 'Tab', 'Return']
+      //   ],
+      //   symbolsRows: [
+      //     ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
+      //     ['{', '}', '[', ']', '<', '>', '=', '+', '-', '_'],
+      //     ['\\', '|', '/', '?', '\'', '"', ':', ';', ',', '.'],
+      //     ['Abc', '~', '`', '-', '_', '=', '+', ',', '.', 'Backspace'],
+      //     ['123', 'Space', 'Tab', 'Return']
+      //   ],
+      //   additionalClasses: 'code-editor-keyboard'
+      // });
       
-      this.virtualKeyboard.setLayout('code');
-      this.virtualKeyboard.onKeyPress((key) => {
-        if (!this.editor) return;
+      // this.virtualKeyboard?.setLayout('code');
+      // this.virtualKeyboard.onKeyPress((key) => {
+      //   if (!this.editor) return;
         
-        // Handle special keys
-        if (key === 'Return') {
-          this.editor.trigger('keyboard', 'type', { text: '\n' });
-        } else if (key === 'Space') {
-          this.editor.trigger('keyboard', 'type', { text: ' ' });
-        } else if (key === 'Tab') {
-          this.editor.trigger('keyboard', 'tab', {});
-        } else if (key === 'Backspace') {
-          this.editor.trigger('keyboard', 'deleteLeft', {});
-        } else if (key !== 'Shift' && key !== 'Symbols' && key !== 'Abc' && key !== '123') {
-          // Regular key
-          this.editor.trigger('keyboard', 'type', { text: key });
-        }
-      });
+      //   // Handle special keys
+      //   if (key === 'Return') {
+      //     this.editor.trigger('keyboard', 'type', { text: '\n' });
+      //   } else if (key === 'Space') {
+      //     this.editor.trigger('keyboard', 'type', { text: ' ' });
+      //   } else if (key === 'Tab') {
+      //     this.editor.trigger('keyboard', 'tab', {});
+      //   } else if (key === 'Backspace') {
+      //     this.editor.trigger('keyboard', 'deleteLeft', {});
+      //   } else if (key !== 'Shift' && key !== 'Symbols' && key !== 'Abc' && key !== '123') {
+      //     // Regular key
+      //     this.editor.trigger('keyboard', 'type', { text: key });
+      //   }
+      // });
     }
     
-    this.virtualKeyboard.show();
+    this.virtualKeyboard?.show();
   }
 
   /**
@@ -476,7 +479,7 @@ export class MobileCodeEditorApp extends GuiApplication {
     const fileTreeElement = this.fileTreeContainer.querySelector('.file-tree');
     if (!fileTreeElement) return;
     
-    this.os.getFileSystem().readdir(this.currentWorkingDirectory)
+    this.os.getFileSystem().listDirectory(this.currentWorkingDirectory)
       .then(entries => {
         let html = '';
         
@@ -527,7 +530,7 @@ export class MobileCodeEditorApp extends GuiApplication {
         });
       })
       .catch(error => {
-        ErrorHandler.handleError(ErrorLevel.ERROR, `Failed to load directory: ${this.currentWorkingDirectory}`, error);
+        ErrorHandler.handleError(error);
         fileTreeElement.innerHTML = `<div class="error">Error loading files</div>`;
       });
   }
@@ -596,7 +599,8 @@ export class MobileCodeEditorApp extends GuiApplication {
         this.switchToFile(filePath);
       })
       .catch(error => {
-        ErrorHandler.handleError(ErrorLevel.ERROR, `Failed to open file: ${filePath}`, error);
+
+        this.ErrorHandler.parse(error, filePath, "mobile-code-editor", {level: ErrorLevel.ERROR, showDialog: true});
       });
   }
 
@@ -715,7 +719,9 @@ export class MobileCodeEditorApp extends GuiApplication {
         }
       })
       .catch(error => {
-        ErrorHandler.handleError(ErrorLevel.ERROR, `Failed to save file: ${this.currentFilePath}`, error);
+        this.ErrorHandler.parse(error, this.currentFilePath || "", "mobile-code-editor", {level: ErrorLevel.ERROR, showDialog: true});
+
+        //ErrorHandler.handleError(ErrorLevel.ERROR, `Failed to save file: ${this.currentFilePath}`, error);
       });
   }
 
@@ -731,7 +737,8 @@ export class MobileCodeEditorApp extends GuiApplication {
     if (extension === 'js' || extension === 'ts') {
       // For JavaScript/TypeScript files, we might execute them in a simulated environment
       this.saveCurrentFile();
-      this.os.getTerminalManager().runCommand(`execute ${this.currentFilePath}`);
+      //this.os.getTerminalManager().runCommand(`execute ${this.currentFilePath}`);
+      //TODO: wire the run command to the terminal manager
     }
     // Add handlers for other file types as needed
   }
@@ -740,7 +747,7 @@ export class MobileCodeEditorApp extends GuiApplication {
    * Resize handler
    */
   public resize(): void {
-    super.resize();
+    
     
     // Ensure Monaco editor layout is updated
     if (this.editor) {

@@ -10,7 +10,7 @@ import { PlatformType, platformDetector } from '../core/platform-detector';
  */
 export interface VirtualKey {
   value: string;       // The value to input when key is pressed
-  display: string;     // Display text/symbol for the key
+  display?: string;     // Display text/symbol for the key
   width?: number;      // Width of key (1 = standard, 2 = double width, etc.)
   type?: string;       // Key type (character, function, modifier, etc.)
   action?: string;     // Special action for function keys
@@ -21,7 +21,8 @@ export interface VirtualKey {
  */
 export interface KeyboardLayout {
   name: string;        // Layout name (e.g., 'qwerty', 'numeric', 'email')
-  rows: VirtualKey[][]; // Array of key rows
+  // Array of key rows - can contain VirtualKey objects or string shortcuts
+  rows: (VirtualKey | string)[][];
   meta?: any;          // Additional layout metadata
 }
 
@@ -605,7 +606,8 @@ export class VirtualKeyboard {
       rowElement.className = 'keyboard-row';
       
       // Create each key in the row
-      row.forEach(key => {
+      row.forEach(keyOrString => {
+        const key = typeof keyOrString === 'string' ? { value: keyOrString } : keyOrString;
         const keyElement = document.createElement('button');
         keyElement.className = 'keyboard-key';
         keyElement.setAttribute('type', 'button');
@@ -632,7 +634,7 @@ export class VirtualKeyboard {
         }
         
         // Set inner text
-        keyElement.textContent = displayText;
+        keyElement.textContent = displayText ?? key.value;
         
         // Set width if specified
         if (key.width) {
@@ -667,6 +669,10 @@ export class VirtualKeyboard {
         break;
       case 'function':
         this.handleFunctionKey(key.value);
+        break;
+      case 'keyboard':
+        // Handle keyboard key (e.g., letters, numbers)
+        this.setLayout(key.value);
         break;
       default:
         // Regular character input

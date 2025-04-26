@@ -40,13 +40,13 @@ import JSZip from 'jszip'; // Add JSZip import
  * Provides a graphical interface to browse and manage the file system
  */
 export class FileExplorerApp extends GuiApplication {
-  private currentPath: string = '/home/user';
-  private selectedItems: string[] = [];
-  private clipboard: { action: 'copy' | 'cut'; paths: string[] } | null = null;
-  private history: string[] = [];
-  private historyPosition: number = -1;
-  private viewMode: 'grid' | 'list' = 'list';
-  private showHidden: boolean = false;
+  protected currentPath: string = '/home/user';
+  protected selectedItems: string[] = [];
+  protected clipboard: { action: 'copy' | 'cut'; paths: string[] } | null = null;
+  protected history: string[] = [];
+  protected historyPosition: number = -1;
+  protected viewMode: 'grid' | 'list' = 'list';
+  protected showHidden: boolean = false;
 
   constructor(os: OS) {
     super(os);
@@ -95,11 +95,10 @@ export class FileExplorerApp extends GuiApplication {
       this.addToHistory('/home/user');
     }
   }
-  
-  /**
+    /**
    * Initialize Ionic icons
    */
-  private initializeIonicIcons(): void {
+  protected initializeIonicIcons(): void {
     // Define the icons we're using
     // const iconMap = {
     //   'arrow-back-outline': arrowBackOutline,
@@ -233,11 +232,10 @@ export class FileExplorerApp extends GuiApplication {
     
     this.setupEventListeners();
   }
-
   /**
    * Setup event listeners for UI elements
    */
-  private setupEventListeners(): void {
+  protected setupEventListeners(): void {
     if (!this.container) return;
     
     // Navigation buttons
@@ -559,11 +557,10 @@ export class FileExplorerApp extends GuiApplication {
   private refresh(): void {
     this.navigateTo(this.currentPath);
   }
-
   /**
    * Add path to navigation history
    */
-  private addToHistory(path: string): void {
+  protected addToHistory(path: string): void {
     // If we're not at the end of the history, truncate the future history
     if (this.historyPosition < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyPosition + 1);
@@ -578,11 +575,10 @@ export class FileExplorerApp extends GuiApplication {
     // Update navigation buttons
     this.updateNavigationButtonsState();
   }
-
   /**
    * Navigate back in history
    */
-  private navigateBack(): void {
+  protected navigateBack(): void {
     if (this.historyPosition <= 0) return;
     
     this.historyPosition--;
@@ -598,11 +594,10 @@ export class FileExplorerApp extends GuiApplication {
     
     this.updateNavigationButtonsState();
   }
-
   /**
    * Navigate forward in history
    */
-  private navigateForward(): void {
+  protected navigateForward(): void {
     if (this.historyPosition >= this.history.length - 1) return;
     
     this.historyPosition++;
@@ -922,11 +917,10 @@ export class FileExplorerApp extends GuiApplication {
         break;
     }
   }
-
   /**
    * Cut selected items
    */
-  private cutSelectedItems(): void {
+  protected cutSelectedItems(): void {
     if (this.selectedItems.length === 0) return;
     
     this.clipboard = {
@@ -934,22 +928,20 @@ export class FileExplorerApp extends GuiApplication {
       paths: [...this.selectedItems]
     };
   }
-
   /**
    * Copy selected items
    */
-  private copySelectedItems(): void {
+  protected copySelectedItems(): void {
     if (this.selectedItems.length === 0) return;
     
     this.clipboard = {
       action: 'copy',
       paths: [...this.selectedItems]
     };
-  }
-  /**
+  }  /**
    * Paste items from clipboard
    */
-  private pasteItems(): void {
+  protected pasteItems(): void {
     if (!this.clipboard || this.clipboard.paths.length === 0) return;
     
     const action = this.clipboard.action;
@@ -1001,11 +993,10 @@ export class FileExplorerApp extends GuiApplication {
       console.error('Error pasting files:', error);
       this.showErrorDialog('Error', `Failed to paste files: ${error.message}`);
     });
-  }
-  /**
+  }  /**
    * Delete selected items
    */
-  private deleteSelectedItems(): void {
+  protected deleteSelectedItems(): void {
     if (this.selectedItems.length === 0) return;
     
     const message = this.selectedItems.length === 1 
@@ -1315,7 +1306,7 @@ export class FileExplorerApp extends GuiApplication {
   }  /**
    * Open file based on type
    */
-  private openFile(path: string): void {
+  protected openFile(path: string): void {
     const filename = path.split('/').pop() || '';
     const fileTypeRegistry = FileTypeRegistry.getInstance();
     
@@ -1602,11 +1593,10 @@ export class FileExplorerApp extends GuiApplication {
       }
     });
   }
-  
-  /**
+    /**
    * Determine if a file is a text file based on its extension
    */
-  private isTextFile(fileName: string): boolean {
+  protected isTextFile(fileName: string): boolean {
     const textExtensions = [
       'txt', 'md', 'js', 'ts', 'html', 'css', 'json', 'xml', 'csv', 
       'py', 'c', 'cpp', 'h', 'java', 'rb', 'php', 'sh', 'bat', 'ps1'
@@ -1638,11 +1628,10 @@ export class FileExplorerApp extends GuiApplication {
     const filePath = this.selectedItems[0];
     this.downloadFile(filePath);
   }
-
   /**
    * Download a single file
    */
-  private downloadFile(filePath: string): void {
+  protected downloadFile(filePath: string): void {
     const fileName = filePath.split('/').pop() || 'download';
     
     // Check if it's a directory
@@ -2170,7 +2159,7 @@ export class FileExplorerApp extends GuiApplication {
         appOccurrences[appId] = (appOccurrences[appId] || 0) + 1;
       });
     }
-    // Default apps to show in the Open With dialog
+    // Default appsto show in the Open With dialog
     const defaultApps = [
       { id: 'text-editor', name: 'Text Editor', icon: '📝' },
       { id: 'code-editor', name: 'Code Editor', icon: '💻' },
