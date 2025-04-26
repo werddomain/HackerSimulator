@@ -3,7 +3,7 @@
  * Defines common interfaces for window management across platforms
  */
 
-import { WindowOptions } from './window';
+import { WindowOptions } from './window-types';
 
 /**
  * Common interface for window managers across platforms

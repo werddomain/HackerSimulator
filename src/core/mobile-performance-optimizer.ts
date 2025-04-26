@@ -262,9 +262,9 @@ export class MobilePerformanceOptimizer {
   
   /**
    * Initialize performance monitoring
-   */
-  initializePerformanceMonitor(): void {
-    this.performanceMonitor = new PerformanceMonitor({
+   */  initializePerformanceMonitor(): void {
+    this.performanceMonitor = PerformanceMonitor.getInstance();
+    this.performanceMonitor.init({
       targetFps: this.config.thresholds.targetFps,
       criticalFrameTime: this.config.thresholds.criticalFrameTime,
       smoothingFactor: 0.1

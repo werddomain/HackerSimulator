@@ -10,6 +10,14 @@ import { MobileInputHandler } from '../core/mobile-input-handler';
 import { TouchContextMenu, ContextMenuItem } from '../core/touch-context-menu';
 import { GestureType, SwipeDirection } from '../core/gesture-detector';
 
+// Define a type for gesture events since it's missing
+interface GestureEvent {
+  type: GestureType;
+  direction?: SwipeDirection;
+  startX: number;
+  startY: number;
+}
+
 /**
  * Mobile-optimized Browser Application
  * Extends the base BrowserApp with mobile-specific UI and touch interactions
@@ -17,7 +25,7 @@ import { GestureType, SwipeDirection } from '../core/gesture-detector';
 export class MobileBrowserApp extends BrowserApp {
   // Mobile-specific properties
   private isMobile: boolean = false;
-  private contentElement: HTMLElement | null = null;
+  private mobileContentElement: HTMLElement | null = null;
   private mobileInputHandler: MobileInputHandler;
   private tabsElement: HTMLElement | null = null;
   private tabs: Array<{ url: string, title: string, id: string }> = [];
@@ -35,10 +43,32 @@ export class MobileBrowserApp extends BrowserApp {
   private isRefreshing: boolean = false;
   private lastUrl: string = '';
 
+  // Keep track of our favorites and history
+  private favoriteUrlsMap = new Map<string, string>();
+  private mobileHistory: string[] = [];
+
   constructor(os: OS) {
     super(os);
     this.mobileInputHandler = MobileInputHandler.getInstance();
-    this.isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+    this.isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
+
+    // Initialize with parent's favorites if possible
+    // Since we can't directly access parent private properties, 
+    // we'll populate our favorites when needed
+    this.initializeFavorites();
+  }
+
+  /**
+   * Initialize favorites from parent class if possible
+   * This is a workaround since we can't directly access parent's private properties
+   */
+  private initializeFavorites(): void {
+    // Add default favorites
+    this.favoriteUrlsMap.set('HackerSearch', 'https://hackersearch.net');
+    this.favoriteUrlsMap.set('HackMail', 'https://hackmail.com');
+    this.favoriteUrlsMap.set('CryptoBank', 'https://cryptobank.com');
+    this.favoriteUrlsMap.set('DarkNet Market', 'https://darknet.market');
+    this.favoriteUrlsMap.set('Hacker Forum', 'https://hackerz.forum');
   }
 
   /**
@@ -47,7 +77,7 @@ export class MobileBrowserApp extends BrowserApp {
    */
   protected initApplication(): void {
     if (!this.container) return;
-    
+
     if (this.isMobile) {
       // Use mobile-specific rendering and interaction
       this.initMobileUI();
@@ -62,21 +92,67 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private initMobileUI(): void {
     if (!this.container) return;
-    
+
     // Render mobile UI
     this.renderMobileUI();
-    
+
     // Create initial tab
     this.createNewTab(this.getCurrentUrl() || 'https://hackersearch.net');
-    
+
     // Setup gesture detection
     this.setupSwipeNavigation();
-    
+
     // Setup scroll handling for address bar auto-hide
     this.setupScrollHandling();
-    
+
     // Setup pull-to-refresh
     this.setupPullToRefresh();
+  }
+
+  /**
+   * Get the current URL
+   */
+  protected getCurrentUrl(): string {
+    // Find the active tab
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    if (activeTab) {
+      return activeTab.url;
+    } else {
+      // Return default URL if no active tab
+      return 'https://hackersearch.net';
+    }
+  }
+
+  /**
+   * Get all favorite URLs
+   */
+  protected getFavoriteUrls(): Map<string, string> {
+    return this.favoriteUrlsMap;
+  }
+
+  /**
+   * Add a URL to favorites
+   */
+  protected addToFavorites(name: string, url: string): void {
+    this.favoriteUrlsMap.set(name, url);
+    // Update UI if needed
+    this.updateBookmarksList();
+  }
+
+  /**
+   * Remove a bookmark by name
+   */
+  protected removeBookmark(name: string): void {
+    this.favoriteUrlsMap.delete(name);
+    // Update UI if needed
+    this.updateBookmarksList();
+  }
+
+  /**
+   * Get browser history
+   */
+  protected getHistory(): string[] {
+    return this.mobileHistory;
   }
 
   /**
@@ -84,7 +160,7 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private renderMobileUI(): void {
     if (!this.container) return;
-    
+
     this.container.innerHTML = `
       <div class="mobile-browser-app">
         <div class="mobile-browser-address-bar">
@@ -162,23 +238,23 @@ export class MobileBrowserApp extends BrowserApp {
         </div>
       </div>
     `;
-    
+
     // Store references to important elements
-    this.contentElement = this.container.querySelector('.mobile-browser-content');
+    this.mobileContentElement = this.container.querySelector('.mobile-browser-content');
     this.tabsElement = this.container.querySelector('.tabs-list');
     this.addressBar = this.container.querySelector('.mobile-browser-address-bar');
     this.bottomNavBar = this.container.querySelector('.mobile-browser-bottom-bar');
-    
+
     // Set up event listeners
-    this.setupEventListeners();
+    this.setupMobileEventListeners();
   }
 
   /**
    * Set up event listeners for mobile browser UI
    */
-  private setupEventListeners(): void {
+  private setupMobileEventListeners(): void {
     if (!this.container) return;
-    
+
     // Back button
     const backBtn = this.container.querySelector('.back-btn');
     if (backBtn) {
@@ -186,7 +262,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.navigateBack();
       });
     }
-    
+
     // Forward button
     const forwardBtn = this.container.querySelector('.forward-btn');
     if (forwardBtn) {
@@ -194,7 +270,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.navigateForward();
       });
     }
-    
+
     // Address input
     const urlInput = this.container.querySelector('.url-input') as HTMLInputElement;
     if (urlInput) {
@@ -202,11 +278,11 @@ export class MobileBrowserApp extends BrowserApp {
         this.isAddressBarFocused = true;
         urlInput.select();
       });
-      
+
       urlInput.addEventListener('blur', () => {
         this.isAddressBarFocused = false;
       });
-      
+
       urlInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           this.navigate(urlInput.value);
@@ -214,7 +290,7 @@ export class MobileBrowserApp extends BrowserApp {
         }
       });
     }
-    
+
     // Refresh button
     const refreshBtn = this.container.querySelector('.refresh-btn');
     if (refreshBtn) {
@@ -222,7 +298,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.refreshCurrentPage();
       });
     }
-    
+
     // Tabs button
     const tabsBtn = this.container.querySelector('.tabs-btn');
     if (tabsBtn) {
@@ -230,7 +306,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.toggleTabsView();
       });
     }
-    
+
     // Close tabs button
     const closeTabsBtn = this.container.querySelector('.close-tabs-btn');
     if (closeTabsBtn) {
@@ -238,7 +314,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.toggleTabsView();
       });
     }
-    
+
     // New tab button
     const newTabBtn = this.container.querySelector('.new-tab-btn');
     if (newTabBtn) {
@@ -247,7 +323,7 @@ export class MobileBrowserApp extends BrowserApp {
         this.toggleTabsView();
       });
     }
-    
+
     // Bottom nav buttons
     const homeBtn = this.container.querySelector('.home-btn');
     if (homeBtn) {
@@ -255,28 +331,28 @@ export class MobileBrowserApp extends BrowserApp {
         this.navigate('https://hackersearch.net');
       });
     }
-    
+
     const bookmarksBtn = this.container.querySelector('.bookmarks-btn');
     if (bookmarksBtn) {
       bookmarksBtn.addEventListener('click', () => {
         this.toggleBookmarksView();
       });
     }
-    
+
     const closeBookmarksBtn = this.container.querySelector('.close-bookmarks-btn');
     if (closeBookmarksBtn) {
       closeBookmarksBtn.addEventListener('click', () => {
         this.toggleBookmarksView();
       });
     }
-    
+
     const shareBtn = this.container.querySelector('.share-btn');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
         this.showShareMenu();
       });
     }
-    
+
     const menuBtn = this.container.querySelector('.menu-btn');
     if (menuBtn) {
       menuBtn.addEventListener('click', (e) => {
@@ -290,33 +366,36 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private setupSwipeNavigation(): void {
     if (!this.container) return;
-    
+
     const contentContainer = this.container.querySelector('.mobile-browser-content-container');
     if (!contentContainer) return;
-    
+
     // Add swipe handlers for navigation
-    this.mobileInputHandler.addGestureDetection(contentContainer, {
-      onGesture: (gestureEvent) => {
-        // Only handle horizontal swipes that start from the edge
-        if (gestureEvent.type === GestureType.Swipe) {
-          const edgeThreshold = 50; // pixels from edge to consider as edge swipe
-          
-          if (gestureEvent.direction === SwipeDirection.Right && 
+    // Check if the method exists before calling it
+    if (typeof this.mobileInputHandler.addGestureDetection === 'function') {
+      this.mobileInputHandler.addGestureDetection(contentContainer as HTMLElement, {
+        onGesture: (gestureEvent: GestureEvent) => {
+          // Only handle horizontal swipes that start from the edge
+          if (gestureEvent.type === GestureType.Swipe) {
+            const edgeThreshold = 50; // pixels from edge to consider as edge swipe
+
+            if (gestureEvent.direction === SwipeDirection.Right &&
               gestureEvent.startX < edgeThreshold) {
-            // Swipe right from left edge to go back
-            this.navigateBack();
-            return true;
-          } else if (gestureEvent.direction === SwipeDirection.Left &&
-                    gestureEvent.startX > window.innerWidth - edgeThreshold) {
-            // Swipe left from right edge to go forward
-            this.navigateForward();
-            return true;
+              // Swipe right from left edge to go back
+              this.navigateBack();
+              return true;
+            } else if (gestureEvent.direction === SwipeDirection.Left &&
+              gestureEvent.startX > window.innerWidth - edgeThreshold) {
+              // Swipe left from right edge to go forward
+              this.navigateForward();
+              return true;
+            }
           }
+
+          return false;
         }
-        
-        return false;
-      }
-    });
+      });
+    }
   }
 
   /**
@@ -324,28 +403,28 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private setupScrollHandling(): void {
     if (!this.container) return;
-    
+
     const contentContainer = this.container.querySelector('.mobile-browser-content-container');
     if (!contentContainer) return;
-    
+
     contentContainer.addEventListener('scroll', (e) => {
       // Avoid hiding toolbars when address bar is focused
       if (this.isAddressBarFocused) return;
-      
+
       // Get current scroll position
       const currentScrollY = contentContainer.scrollTop;
-      
+
       // Check if scrolled beyond threshold
       if (Math.abs(currentScrollY - this.lastScrollY) > this.scrollThreshold) {
         // Scrolling down - hide toolbars
         if (currentScrollY > this.lastScrollY && currentScrollY > 50) {
           this.hideToolbars();
-        } 
+        }
         // Scrolling up - show toolbars
         else if (currentScrollY < this.lastScrollY) {
           this.showToolbars();
         }
-        
+
         // Update last scroll position
         this.lastScrollY = currentScrollY;
       }
@@ -357,93 +436,96 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private setupPullToRefresh(): void {
     if (!this.container) return;
-    
+
     const contentContainer = this.container.querySelector('.mobile-browser-content-container');
     if (!contentContainer) return;
-    
+
     // Track touch start position
-    contentContainer.addEventListener('touchstart', (e) => {
+    contentContainer.addEventListener('touchstart', (e: Event) => {
+      const touchEvent = e as TouchEvent;
       if (contentContainer.scrollTop === 0) {
-        this.touchStartY = e.touches[0].clientY;
+        this.touchStartY = touchEvent.touches[0].clientY;
       }
     });
-    
+
     // Track touch move for pull distance
-    contentContainer.addEventListener('touchmove', (e) => {
+    contentContainer.addEventListener('touchmove', (e: Event) => {
+      const touchEvent = e as TouchEvent;
       if (contentContainer.scrollTop === 0 && !this.isRefreshing) {
-        const currentY = e.touches[0].clientY;
+        const currentY = touchEvent.touches[0].clientY;
         const pullDistance = currentY - this.touchStartY;
-        
+
         if (pullDistance > 0) {
           // Prevent default scrolling behavior
           e.preventDefault();
-          
+
           // Update refresh indicator
           const refreshIndicator = this.container!.querySelector('.pull-to-refresh');
           if (refreshIndicator) {
-            refreshIndicator.style.transform = `translateY(${Math.min(pullDistance, this.refreshDistance * 1.5)}px)`;
-            
+            (refreshIndicator as HTMLElement).style.transform = `translateY(${Math.min(pullDistance, this.refreshDistance * 1.5)}px)`;
+
             // Update text when pulled enough
             const refreshText = refreshIndicator.querySelector('.refresh-text');
             if (refreshText) {
-              refreshText.textContent = pullDistance > this.refreshDistance 
-                ? 'Release to refresh' 
+              refreshText.textContent = pullDistance > this.refreshDistance
+                ? 'Release to refresh'
                 : 'Pull to refresh';
             }
-            
+
             // Rotate the icon based on pull distance
             const icon = refreshIndicator.querySelector('ion-icon');
             if (icon) {
-              icon.style.transform = `rotate(${pullDistance * 2}deg)`;
+              (icon as HTMLElement).style.transform = `rotate(${pullDistance * 2}deg)`;
             }
           }
         }
       }
     });
-    
+
     // Handle touch end to trigger refresh
-    contentContainer.addEventListener('touchend', (e) => {
+    contentContainer.addEventListener('touchend', (e: Event) => {
       if (contentContainer.scrollTop === 0 && !this.isRefreshing) {
         const refreshIndicator = this.container!.querySelector('.pull-to-refresh');
-        
+
         if (refreshIndicator) {
-          const transform = refreshIndicator.style.transform;
+          const htmlRefreshIndicator = refreshIndicator as HTMLElement;
+          const transform = htmlRefreshIndicator.style.transform;
           const pullDistance = parseInt(transform.replace(/[^0-9]/g, '')) || 0;
-          
+
           if (pullDistance > this.refreshDistance) {
             // Trigger refresh
             this.isRefreshing = true;
-            
+
             // Update UI to show refreshing state
             refreshIndicator.classList.add('refreshing');
             const refreshText = refreshIndicator.querySelector('.refresh-text');
             if (refreshText) {
               refreshText.textContent = 'Refreshing...';
             }
-            
+
             // Animate the icon
             const icon = refreshIndicator.querySelector('ion-icon');
             if (icon) {
               icon.classList.add('rotating');
             }
-            
+
             // Actually refresh the page
             this.refreshCurrentPage().then(() => {
               // Reset refresh state
               setTimeout(() => {
                 this.isRefreshing = false;
                 refreshIndicator.classList.remove('refreshing');
-                refreshIndicator.style.transform = 'translateY(0)';
-                
+                htmlRefreshIndicator.style.transform = 'translateY(0)';
+
                 if (icon) {
                   icon.classList.remove('rotating');
-                  icon.style.transform = '';
+                  (icon as HTMLElement).style.transform = '';
                 }
               }, 500);
             });
           } else {
             // Not pulled far enough, reset
-            refreshIndicator.style.transform = 'translateY(0)';
+            htmlRefreshIndicator.style.transform = 'translateY(0)';
           }
         }
       }
@@ -456,23 +538,23 @@ export class MobileBrowserApp extends BrowserApp {
   private createNewTab(url: string): void {
     // Generate a unique ID for the tab
     const tabId = 'tab-' + Date.now();
-    
+
     // Add to tabs array
     this.tabs.push({
       id: tabId,
       url: url,
       title: 'Loading...'
     });
-    
+
     // Set as active tab
     this.activeTabId = tabId;
-    
+
     // Update tabs count
     this.updateTabsCount();
-    
+
     // Update tabs list UI
     this.updateTabsList();
-    
+
     // Navigate to the URL
     this.navigate(url);
   }
@@ -482,7 +564,7 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private updateTabsCount(): void {
     if (!this.container) return;
-    
+
     const tabsCount = this.container.querySelector('.tabs-count');
     if (tabsCount) {
       tabsCount.textContent = this.tabs.length.toString();
@@ -494,19 +576,19 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private updateTabsList(): void {
     if (!this.tabsElement) return;
-    
+
     // Clear existing tabs
     this.tabsElement.innerHTML = '';
-    
+
     // Add each tab
     this.tabs.forEach(tab => {
       const tabElement = document.createElement('div');
       tabElement.className = `tab-item ${tab.id === this.activeTabId ? 'active' : ''}`;
       tabElement.setAttribute('data-tab-id', tab.id);
-      
+
       // Tab preview (simplified)
       const favicon = this.getFaviconForUrl(tab.url);
-      
+
       tabElement.innerHTML = `
         <div class="tab-preview">
           <img src="${favicon}" class="tab-favicon" alt="">
@@ -519,7 +601,7 @@ export class MobileBrowserApp extends BrowserApp {
           </button>
         </div>
       `;
-      
+
       // Add event listeners
       tabElement.addEventListener('click', (e) => {
         // Check if close button was clicked
@@ -531,10 +613,39 @@ export class MobileBrowserApp extends BrowserApp {
           this.switchToTab(tab.id);
         }
       });
-      
+
       // Add to tabs list
       this.tabsElement!.appendChild(tabElement);
     });
+  }
+
+  /**
+   * Navigate back in history
+   */
+  public navigateBack(): void {
+    // Implement navigation logic
+    if (this.mobileHistory.length > 1) {
+      // Get the previous URL
+      const currentIndex = this.mobileHistory.indexOf(this.getCurrentUrl());
+      if (currentIndex > 0) {
+        const previousUrl = this.mobileHistory[currentIndex - 1];
+        // Navigate to the previous URL
+        this.navigate(previousUrl);
+      }
+    }
+  }
+
+  /**
+   * Navigate forward in history
+   */
+  public navigateForward(): void {
+    // Implement forward navigation logic
+    const currentIndex = this.mobileHistory.indexOf(this.getCurrentUrl());
+    if (currentIndex >= 0 && currentIndex < this.mobileHistory.length - 1) {
+      const nextUrl = this.mobileHistory[currentIndex + 1];
+      // Navigate to the next URL
+      this.navigate(nextUrl);
+    }
   }
 
   /**
@@ -544,16 +655,16 @@ export class MobileBrowserApp extends BrowserApp {
     // Find the tab
     const tab = this.tabs.find(t => t.id === tabId);
     if (!tab) return;
-    
+
     // Set as active tab
     this.activeTabId = tabId;
-    
+
     // Update tabs list UI
     this.updateTabsList();
-    
+
     // Navigate to the tab's URL
     this.navigate(tab.url);
-    
+
     // Hide tabs view
     this.toggleTabsView(false);
   }
@@ -567,17 +678,17 @@ export class MobileBrowserApp extends BrowserApp {
       // Create a new tab before closing this one
       this.createNewTab('https://hackersearch.net');
     }
-    
+
     // Check if closing the active tab
     const isActiveTab = tabId === this.activeTabId;
-    
+
     // Find the tab index
     const tabIndex = this.tabs.findIndex(t => t.id === tabId);
     if (tabIndex === -1) return;
-    
+
     // Remove the tab
     this.tabs.splice(tabIndex, 1);
-    
+
     // If closing active tab, switch to another tab
     if (isActiveTab) {
       // Switch to the next tab or the previous if it was the last
@@ -587,7 +698,7 @@ export class MobileBrowserApp extends BrowserApp {
       // Just update the UI
       this.updateTabsList();
     }
-    
+
     // Update tabs count
     this.updateTabsCount();
   }
@@ -597,17 +708,17 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private toggleTabsView(show?: boolean): void {
     if (!this.container) return;
-    
+
     const tabsContainer = this.container.querySelector('.tabs-container');
     if (!tabsContainer) return;
-    
+
     // If show is specified, set that state, otherwise toggle
-    const newDisplay = show !== undefined 
+    const newDisplay = show !== undefined
       ? (show ? 'block' : 'none')
-      : (tabsContainer.style.display === 'none' ? 'block' : 'none');
-    
-    tabsContainer.style.display = newDisplay;
-    
+      : ((tabsContainer as HTMLElement).style.display === 'none' ? 'block' : 'none');
+
+    (tabsContainer as HTMLElement).style.display = newDisplay;
+
     // Update tabs list if showing
     if (newDisplay === 'block') {
       this.updateTabsList();
@@ -619,17 +730,17 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private toggleBookmarksView(show?: boolean): void {
     if (!this.container) return;
-    
+
     const bookmarksContainer = this.container.querySelector('.bookmarks-container');
     if (!bookmarksContainer) return;
-    
+
     // If show is specified, set that state, otherwise toggle
-    const newDisplay = show !== undefined 
+    const newDisplay = show !== undefined
       ? (show ? 'block' : 'none')
-      : (bookmarksContainer.style.display === 'none' ? 'block' : 'none');
-    
-    bookmarksContainer.style.display = newDisplay;
-    
+      : ((bookmarksContainer as HTMLElement).style.display === 'none' ? 'block' : 'none');
+
+    (bookmarksContainer as HTMLElement).style.display = newDisplay;
+
     // Update bookmarks list if showing
     if (newDisplay === 'block') {
       this.updateBookmarksList();
@@ -641,20 +752,20 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private updateBookmarksList(): void {
     if (!this.container) return;
-    
+
     const bookmarksList = this.container.querySelector('.bookmarks-list');
     if (!bookmarksList) return;
-    
+
     // Clear existing bookmarks
     bookmarksList.innerHTML = '';
-    
+
     // Add each bookmark
-    this.getFavoriteUrls().forEach((url, name) => {
+    this.getFavoriteUrls().forEach((url: string, name: string) => {
       const bookmarkElement = document.createElement('div');
       bookmarkElement.className = 'bookmark-item';
-      
+
       const favicon = this.getFaviconForUrl(url);
-      
+
       bookmarkElement.innerHTML = `
         <div class="bookmark-icon">
           <img src="${favicon}" alt="" class="bookmark-favicon">
@@ -667,7 +778,7 @@ export class MobileBrowserApp extends BrowserApp {
           <ion-icon name="ellipsis-vertical-outline"></ion-icon>
         </button>
       `;
-      
+
       // Add click event to navigate to bookmark
       bookmarkElement.addEventListener('click', (e) => {
         // Check if menu button was clicked
@@ -680,11 +791,11 @@ export class MobileBrowserApp extends BrowserApp {
           this.toggleBookmarksView(false);
         }
       });
-      
+
       // Add to bookmarks list
       bookmarksList.appendChild(bookmarkElement);
     });
-    
+
     // Add "Add bookmark" button
     const addBookmarkElement = document.createElement('div');
     addBookmarkElement.className = 'bookmark-item add-bookmark';
@@ -694,12 +805,12 @@ export class MobileBrowserApp extends BrowserApp {
       </div>
       <div class="bookmark-name">Add Bookmark</div>
     `;
-    
+
     // Add click event to add current page as bookmark
     addBookmarkElement.addEventListener('click', () => {
       this.addCurrentPageToBookmarks();
     });
-    
+
     // Add to bookmarks list
     bookmarksList.appendChild(addBookmarkElement);
   }
@@ -727,7 +838,11 @@ export class MobileBrowserApp extends BrowserApp {
           this.toggleBookmarksView(false);
         }
       },
-      { separator: true },
+      {
+        id: 'separator1',
+        label: '',
+        separator: true
+      },
       {
         id: 'edit',
         label: 'Edit',
@@ -745,7 +860,7 @@ export class MobileBrowserApp extends BrowserApp {
         }
       }
     ];
-    
+
     // Show the context menu
     this.mobileInputHandler.showContextMenu(
       event.clientX,
@@ -761,21 +876,22 @@ export class MobileBrowserApp extends BrowserApp {
     // Find the active tab
     const activeTab = this.tabs.find(t => t.id === this.activeTabId);
     if (!activeTab) return;
-    
+
     // Show prompt for bookmark name
     if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showPrompt(
-        'Add Bookmark',
-        'Enter a name for this bookmark:',
-        activeTab.title,
-        (name) => {
+      this.os.getWindowManager().showPrompt({
+        title: 'Add Bookmark',
+        message: 'Enter a name for this bookmark:',
+        defaultValue: activeTab.title
+      },
+        (name: string | null) => {
           if (name && name.trim()) {
             // Add to favorites
             this.addToFavorites(name.trim(), activeTab.url);
-            
+
             // Update bookmarks list
             this.updateBookmarksList();
-            
+
             // Show success notification
             this.os.getWindowManager()?.showNotification({
               title: 'Bookmark Added',
@@ -794,18 +910,19 @@ export class MobileBrowserApp extends BrowserApp {
   private editBookmark(name: string, url: string): void {
     // Show prompt for new bookmark name
     if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showPrompt(
-        'Edit Bookmark',
-        'Enter a new name for this bookmark:',
-        name,
-        (newName) => {
+      this.os.getWindowManager().showPrompt({
+        title: 'Edit Bookmark',
+        message: 'Enter a new name for this bookmark:',
+        defaultValue: name
+      },
+        (newName: string | null) => {
           if (newName && newName.trim() && newName !== name) {
             // Remove old bookmark
             this.removeBookmark(name);
-            
+
             // Add with new name
             this.addToFavorites(newName.trim(), url);
-            
+
             // Update bookmarks list
             this.updateBookmarksList();
           }
@@ -819,11 +936,11 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private hideToolbars(): void {
     if (!this.addressBar || !this.bottomNavBar) return;
-    
+
     // Only if not already hidden
     if (this.isToolbarsVisible) {
-      this.addressBar.style.transform = 'translateY(-100%)';
-      this.bottomNavBar.style.transform = 'translateY(100%)';
+      (this.addressBar as HTMLElement).style.transform = 'translateY(-100%)';
+      (this.bottomNavBar as HTMLElement).style.transform = 'translateY(100%)';
       this.isToolbarsVisible = false;
     }
   }
@@ -833,11 +950,11 @@ export class MobileBrowserApp extends BrowserApp {
    */
   private showToolbars(): void {
     if (!this.addressBar || !this.bottomNavBar) return;
-    
+
     // Only if not already visible
     if (!this.isToolbarsVisible) {
-      this.addressBar.style.transform = 'translateY(0)';
-      this.bottomNavBar.style.transform = 'translateY(0)';
+      (this.addressBar as HTMLElement).style.transform = 'translateY(0)';
+      (this.bottomNavBar as HTMLElement).style.transform = 'translateY(0)';
       this.isToolbarsVisible = true;
     }
   }
@@ -849,7 +966,7 @@ export class MobileBrowserApp extends BrowserApp {
     // Find the active tab
     const activeTab = this.tabs.find(t => t.id === this.activeTabId);
     if (!activeTab) return;
-    
+
     // Navigate to the same URL to refresh
     return new Promise<void>((resolve) => {
       // Wait a moment to show the refresh animation
@@ -858,84 +975,79 @@ export class MobileBrowserApp extends BrowserApp {
         resolve();
       }, 500);
     });
-  }
-
-  /**
+  }  /**
    * Show share menu
    */
   private showShareMenu(): void {
     // Find the active tab
     const activeTab = this.tabs.find(t => t.id === this.activeTabId);
     if (!activeTab) return;
-    
+
     // Show sharing options in a modal
-    if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showMessage(
-        'Share Page',
-        `
-          <div style="text-align: center;">
-            <p>Share this page:</p>
-            <p style="word-break: break-all;">${activeTab.url}</p>
-            <div style="display: flex; justify-content: center; gap: 16px; margin-top: 16px;">
-              <button class="share-option" data-type="copy">
-                <ion-icon name="copy-outline" style="font-size: 24px;"></ion-icon>
-                <span>Copy Link</span>
-              </button>
-              <button class="share-option" data-type="email">
-                <ion-icon name="mail-outline" style="font-size: 24px;"></ion-icon>
-                <span>Email</span>
-              </button>
-              <button class="share-option" data-type="message">
-                <ion-icon name="chatbubble-outline" style="font-size: 24px;"></ion-icon>
-                <span>Message</span>
-              </button>
-            </div>
+    this.dialogManager.Msgbox.Show(
+      'Share Page',
+      `
+        <div style="text-align: center;">
+          <p>Share this page:</p>
+          <p style="word-break: break-all;">${activeTab.url}</p>
+          <div style="display: flex; justify-content: center; gap: 16px; margin-top: 16px;">
+            <button class="share-option" data-type="copy">
+              <ion-icon name="copy-outline" style="font-size: 24px;"></ion-icon>
+              <span>Copy Link</span>
+            </button>
+            <button class="share-option" data-type="email">
+              <ion-icon name="mail-outline" style="font-size: 24px;"></ion-icon>
+              <span>Email</span>
+            </button>
+            <button class="share-option" data-type="message">
+              <ion-icon name="chatbubble-outline" style="font-size: 24px;"></ion-icon>
+              <span>Message</span>
+            </button>
           </div>
-        `,
-        () => {},
-        ['OK']
-      );
-      
-      // Add click handlers for share options
-      setTimeout(() => {
-        const shareOptions = document.querySelectorAll('.share-option');
-        shareOptions.forEach(option => {
-          option.addEventListener('click', () => {
-            const type = option.getAttribute('data-type');
-            
-            if (type === 'copy') {
-              // Copy link to clipboard
-              navigator.clipboard.writeText(activeTab.url)
-                .then(() => {
-                  this.os.getWindowManager()?.showNotification({
-                    title: 'Link Copied',
-                    message: 'Link copied to clipboard',
-                    type: 'success'
-                  });
-                })
-                .catch(() => {
-                  this.os.getWindowManager()?.showNotification({
-                    title: 'Copy Failed',
-                    message: 'Failed to copy link to clipboard',
-                    type: 'error'
-                  });
+        </div>
+      `,
+      ['OK']
+    );
+
+    // Add click handlers for share options
+    setTimeout(() => {
+      const shareOptions = document.querySelectorAll('.share-option');
+      shareOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          const type = option.getAttribute('data-type');
+
+          if (type === 'copy') {
+            // Copy to clipboard functionality
+            navigator.clipboard.writeText(activeTab.url)
+              .then(() => {
+                this.os.getWindowManager()?.showNotification({
+                  title: 'Copied to Clipboard',
+                  message: 'URL has been copied to clipboard',
+                  type: 'success'
                 });
-            } else {
-              // Simulate other sharing options
-              this.os.getWindowManager()?.showNotification({
-                title: 'Sharing',
-                message: `Sharing via ${type}...`,
-                type: 'info'
+              })
+              .catch(err => {
+                console.error('Could not copy text: ', err);
               });
-            }
-            
-            // Close the dialog
-            document.querySelector('.modal-close-btn')?.dispatchEvent(new Event('click'));
-          });
+          } else if (type === 'email') {
+            // Email share option
+            window.location.href = `mailto:?subject=Check out this page&body=${encodeURIComponent(activeTab.url)}`;
+          } else if (type === 'message') {
+            // Message share option - simulate sharing via messaging app
+            this.os.getWindowManager()?.showNotification({
+              title: 'Shared via Message',
+              message: 'URL has been shared via messaging',
+              type: 'info'
+            });
+          }
+
+          // Close the modal after action is taken
+          document.querySelector('.dialog-close-btn')?.dispatchEvent(new Event('click'));
         });
-      }, 100);
-    }
+      });
+    }, 100);
   }
+
 
   /**
    * Show main menu
@@ -966,7 +1078,11 @@ export class MobileBrowserApp extends BrowserApp {
           this.showHistoryView();
         }
       },
-      { separator: true },
+      {
+        id: 'separator2',
+        label: '',
+        separator: true
+      },
       {
         id: 'find',
         label: 'Find in Page',
@@ -992,29 +1108,33 @@ export class MobileBrowserApp extends BrowserApp {
         }
       }
     ];
-    
+
     // Add bookmark/unbookmark option
     const activeTab = this.tabs.find(t => t.id === this.activeTabId);
     if (activeTab) {
       // Check if current page is bookmarked
       const bookmarkName = this.getBookmarkNameForUrl(activeTab.url);
       if (bookmarkName) {
-        menuItems.unshift({
-          id: 'unbookmark',
+        // Page is bookmarked, add option to remove bookmark
+        menuItems.push({
+          id: 'remove-bookmark',
           label: 'Remove Bookmark',
           icon: 'bookmark-remove-outline',
           action: () => {
             this.removeBookmark(bookmarkName);
+
+            // Show notification
             this.os.getWindowManager()?.showNotification({
               title: 'Bookmark Removed',
               message: `Removed "${bookmarkName}" from bookmarks.`,
-              type: 'success'
+              type: 'info'
             });
           }
         });
       } else {
-        menuItems.unshift({
-          id: 'bookmark',
+        // Page is not bookmarked, add option to add bookmark
+        menuItems.push({
+          id: 'add-bookmark',
           label: 'Add Bookmark',
           icon: 'bookmark-outline',
           action: () => {
@@ -1023,154 +1143,13 @@ export class MobileBrowserApp extends BrowserApp {
         });
       }
     }
-    
+
     // Show the context menu
     this.mobileInputHandler.showContextMenu(
       event.clientX,
       event.clientY,
       menuItems
     );
-  }
-
-  /**
-   * Show history view
-   */
-  private showHistoryView(): void {
-    // Show history in a modal
-    if (this.os.getWindowManager()) {
-      // Get navigation history
-      const history = this.getHistory();
-      
-      // Create HTML for history items
-      let historyHtml = '';
-      if (history.length === 0) {
-        historyHtml = '<p style="text-align: center;">No history yet</p>';
-      } else {
-        historyHtml = '<div class="history-list">';
-        history.forEach(url => {
-          const favicon = this.getFaviconForUrl(url);
-          historyHtml += `
-            <div class="history-item" data-url="${url}">
-              <img src="${favicon}" class="history-favicon" alt="">
-              <div class="history-url">${url}</div>
-            </div>
-          `;
-        });
-        historyHtml += '</div>';
-      }
-      
-      this.os.getWindowManager().showMessage(
-        'History',
-        historyHtml,
-        () => {},
-        ['Close']
-      );
-      
-      // Add click handlers for history items
-      setTimeout(() => {
-        const historyItems = document.querySelectorAll('.history-item');
-        historyItems.forEach(item => {
-          item.addEventListener('click', () => {
-            const url = item.getAttribute('data-url');
-            if (url) {
-              this.navigate(url);
-              
-              // Close the dialog
-              document.querySelector('.modal-close-btn')?.dispatchEvent(new Event('click'));
-            }
-          });
-        });
-      }, 100);
-    }
-  }
-
-  /**
-   * Show find in page dialog
-   */
-  private showFindInPage(): void {
-    // Show find dialog
-    if (this.os.getWindowManager()) {
-      this.os.getWindowManager().showPrompt(
-        'Find in Page',
-        'Enter text to find:',
-        '',
-        (searchText) => {
-          if (searchText && searchText.trim()) {
-            // Simulate find in page
-            this.os.getWindowManager()?.showNotification({
-              title: 'Find in Page',
-              message: `Searching for "${searchText.trim()}"`,
-              type: 'info'
-            });
-          }
-        }
-      );
-    }
-  }
-
-  /**
-   * Toggle desktop site mode
-   */
-  private toggleDesktopSite(): void {
-    // Find the active tab
-    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
-    if (!activeTab) return;
-    
-    // Simulate toggle between mobile and desktop
-    this.os.getWindowManager()?.showNotification({
-      title: 'Desktop Site',
-      message: 'Requested desktop version of site',
-      type: 'info'
-    });
-    
-    // Refresh the page to simulate the change
-    this.refreshCurrentPage();
-  }
-
-  /**
-   * Toggle fullscreen mode
-   */
-  private toggleFullscreen(): void {
-    this.isFullscreen = !this.isFullscreen;
-    
-    if (this.isFullscreen) {
-      // Hide toolbars in fullscreen mode
-      this.hideToolbars();
-      
-      // Show notification about how to exit
-      this.os.getWindowManager()?.showNotification({
-        title: 'Fullscreen Mode',
-        message: 'Swipe down from top to exit fullscreen',
-        type: 'info'
-      });
-    } else {
-      // Show toolbars when exiting fullscreen
-      this.showToolbars();
-    }
-  }
-
-  /**
-   * Get favicon for a URL
-   */
-  private getFaviconForUrl(url: string): string {
-    // Extract domain from URL
-    let domain = url.replace(/https?:\/\//, '').split('/')[0];
-    
-    // Return domain-specific favicon
-    switch (domain) {
-      case 'hackersearch.net':
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzRjYWY1MCIgZD0iTTkuNSwzLkE2LjUsNi41LDAsMCwxLDE2LDkuNUMxNiwxMiwxNCwxNC4xLDEwLjczLDE0LjQ4VjE5LjVIMTYuNVYyMUg5LjVBMS41LDEuNSwwLDAsMSw4LDE5LjVWMTQuNUM4LDE0LjUsOSwxNCw5LjUsMTNTMTAsMTEuNSwxMCwxMS41QTMuNSwzLjUsMCwwLDAsNi41LDhBMy41LDMuNSwwLDAsMCwzLDExLjVBMy41LDMuNSwwLDAsMCw2LjUsMTVIMVYxMy41SDYuNUMyLjUsMTMuNSwxLDExLjUsMSwxMS41QTguNSw4LjUsMCwwLDEsOS41LDNaIiAvPjwvc3ZnPg==';
-      case 'hackmail.com':
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2YwNTkyZCIgZD0iTTIwLDhMOSwxNVYxMC41TDIwLDMuNVY4TS0wLDhMNC41LDExTDksMTRWMTguNUwyLDE0TDAsOFYzLjVMOSwxMFYxNC41TDIsOVY4SDJMLTAsOFoiIC8+PC9zdmc+';
-      case 'cryptobank.com':
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzRBOTBFMiIgZD0iTTEyLDFMMjEsMjFIMFpNMTIsOEEyLDIsMCwwLDAsMTAsMTJIMTRDMTQsMTAuODksMTMuMSw4LDEyLDhaIiAvPjwvc3ZnPg==';
-      case 'darknet.market':
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzVkNGQ4MCIgZD0iTTEyLDJMMTcsMTJMMTIsMjJMNywxMlpNMTIsMTdDMTMuMSwxNywxNCwxNi4xLDE0LDE1QzE0LDEzLjksMTMuMSwxMywxMiwxM0MxMC45LDEzLDEwLDEzLjksMTAsMTVDMTAsMTYuMSwxMC45LDE3LDEyLDE3WiIgLz48L3N2Zz4=';
-      case 'hackerz.forum':
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2U5MTA2MiIgZD0iTTEwLDlWNUw0LDlMMTAsOE05LjEsMTdIMWw4LjI2LDQuNEM5LjEsMjAuMiw5LDE5LDkuMSwxN00xNywyMVY5TDE3LDZoLS4wMzJ2OUMxNSwxNSwxNC4xLDE2LjEsMTMsMTd2NA0KSDEzLjAzMmg0LjI0MkMxNy42LDIxLjEsMTcuMywyMS4zLDE3LDIxTTI0LDdINFY5SDI0VjdaIiAvPjwvc3ZnPg==';
-      default:
-        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzYwN0Q4QiIgZD0iTTEyLDJBMTAsMTAsMCwwLDEsMjIsMTJBMTAsMTAsMCwwLDEsMTIsMjJBMTAsMTAsMCwwLDEsMiwxMkExMCwxMCwwLDAsMSwxMiwyWiIgLz48L3N2Zz4=';
-    }
   }
 
   /**
@@ -1186,28 +1165,172 @@ export class MobileBrowserApp extends BrowserApp {
   }
 
   /**
-   * Override navigate to update tab information
+   * Show history view
+   */
+  private showHistoryView(): void {
+    // Show history in a modal
+    if (this.os.getWindowManager()) {
+      // Get navigation history
+      const history = this.getHistory();
+
+      // Create HTML for history items
+      let historyHtml = '<div class="history-list">';
+      if (history.length === 0) {
+        historyHtml += '<div class="history-empty">No browsing history</div>';
+      } else {
+        history.forEach((url: string) => {
+          const favicon = this.getFaviconForUrl(url);
+          historyHtml += `
+            <div class="history-item" data-url="${url}">
+              <img src="${favicon}" class="history-favicon" alt="">
+              <span class="history-url">${url}</span>
+            </div>
+          `;
+        });
+      }
+      historyHtml += '</div>';
+
+      // Show in a modal
+      this.dialogManager.Msgbox.Show(
+        'History',
+        historyHtml,
+        ['Close']
+      );
+
+      // Add click handlers for history items
+      setTimeout(() => {
+        const historyItems = document.querySelectorAll('.history-item');
+        historyItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const url = item.getAttribute('data-url');
+            if (url) {
+              this.navigate(url);
+              // Close the modal
+              document.querySelector('.dialog-close-btn')?.dispatchEvent(new Event('click'));
+            }
+          });
+        });
+      }, 100);
+    }
+  }
+
+  /**
+   * Show find in page dialog
+   */
+  private showFindInPage(): void {
+    if (this.os.getWindowManager()) {
+      this.os.getWindowManager().showPrompt({
+        title: 'Find in Page',
+        message: 'Enter text to find:',
+      },
+        (searchText: string | null) => {
+          if (searchText && searchText.trim()) {
+            // TODO:  Implement find in page logic           
+          }
+          });
+    }
+  }
+
+
+  /**
+   * Toggle desktop site mode
+   */
+  private toggleDesktopSite(): void {
+  // TODO: Implementation would depend on how you handle the rendering    
+
+}
+
+  /**
+   * Toggle fullscreen mode
+   */
+  private toggleFullscreen(): void {
+  this.isFullscreen = !this.isFullscreen;
+
+  if(this.isFullscreen) {
+  this.hideToolbars();
+  // Additional fullscreen logic
+} else {
+  this.showToolbars();
+}
+
+this.os.getWindowManager()?.showNotification({
+  title: this.isFullscreen ? 'Fullscreen Mode' : 'Exit Fullscreen',
+  message: this.isFullscreen ? 'Entered fullscreen mode' : 'Exited fullscreen mode',
+  type: 'info'
+});
+  }
+
+  /**
+   * Get favicon for a URL
+   * Simple implementation that returns a default icon
+   */
+  private getFaviconForUrl(url: string): string {
+  // In a real implementation, would fetch favicon from the URL
+  // Here we just return a simple placeholder based on domain
+  try {
+    const domain = new URL(url).hostname;
+
+    // Return domain-specific favicons for known sites
+    if (domain.includes('hackersearch')) {
+      return 'assets/icons/search.svg';
+    } else if (domain.includes('mail')) {
+      return 'assets/icons/mail.svg';
+    } else if (domain.includes('bank') || domain.includes('crypto')) {
+      return 'assets/icons/bank.svg';
+    } else if (domain.includes('dark') || domain.includes('market')) {
+      return 'assets/icons/market.svg';
+    } else if (domain.includes('forum') || domain.includes('chat')) {
+      return 'assets/icons/forum.svg';
+    }
+
+    // Default favicon
+    return 'assets/icons/globe.svg';
+  } catch (_) {
+    // Invalid URL, return default
+    return 'assets/icons/globe.svg';
+  }
+  }
+
+  /**
+   * Override navigate to track history in mobile browser
    */
   public override navigate(url: string): void {
-    // Call the parent class implementation
-    super.navigate(url);
-    
-    // Update the active tab's URL
-    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
-    if (activeTab) {
-      activeTab.url = url;
-      
-      // Extract a title from the URL
-      const domain = url.replace(/https?:\/\//, '').split('/')[0];
-      activeTab.title = domain;
-    }
-    
-    // Update the mobile URL input
-    if (this.container) {
-      const urlInput = this.container.querySelector('.url-input') as HTMLInputElement;
-      if (urlInput) {
-        urlInput.value = url;
+  // Call the parent navigate method
+  super.navigate(url);
+
+  // Update active tab URL
+  const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+  if(activeTab) {
+    activeTab.url = url;
+
+    // Try to get a better title
+    // In a real browser, this would come from the page itself
+    try {
+      const domain = new URL(url).hostname;
+      const domainParts = domain.split('.');
+      if (domainParts.length >= 2) {
+        const siteName = domainParts[domainParts.length - 2].charAt(0).toUpperCase() +
+          domainParts[domainParts.length - 2].slice(1);
+        activeTab.title = siteName;
       }
+    } catch (_) {
+      activeTab.title = 'Unknown Page';
     }
+  }
+
+    // Update URL in address bar
+    const urlInput = this.container?.querySelector('.url-input') as HTMLInputElement;
+  if(urlInput) {
+    urlInput.value = url;
+  }
+
+    // Add to history if not already the current URL
+    if(this.lastUrl !== url) {
+  this.mobileHistory.push(url);
+  this.lastUrl = url;
+}
+
+// Update tabs UI
+this.updateTabsList();
   }
 }

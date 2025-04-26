@@ -4,6 +4,7 @@
  */
 
 import * as DOMOptimizer from './dom-optimizer';
+import { forEachWeakMapEntry, registerWeakMapKey, unregisterWeakMapKey } from './weak-map-helpers';
 
 /**
  * Configuration for performance optimizations
@@ -444,13 +445,16 @@ export class DOMPerformanceObserver {
     
     // Use passive listeners for scroll events
     DOMOptimizer.addPassiveEventListener(element, 'scroll', this.handleScroll);
-    
-    // Mark scrollable area for GPU acceleration
-    DOMOptimizer.batchCSSUpdates(element, {
+      // Mark scrollable area for GPU acceleration
+    const cssProperties: Record<string, string> = {
       willChange: 'transform',
-      backfaceVisibility: 'hidden',
-      WebkitOverflowScrolling: 'touch' // For older iOS devices
-    });
+      backfaceVisibility: 'hidden'
+    };
+    
+    // Add vendor-prefixed property separately
+    (cssProperties as any)['-webkit-overflow-scrolling'] = 'touch'; // For older iOS devices
+    
+    DOMOptimizer.batchCSSUpdates(element, cssProperties);
     
     // Optimize children for smoother scrolling
     DOMOptimizer.deferOperation(() => {
@@ -571,10 +575,10 @@ export class DOMPerformanceObserver {
         itemCount: items.length,
         renderBuffer: 5
       });
-      
-      // Store reference to the virtualized list controller
+        // Store reference to the virtualized list controller
       if (virtualizedList) {
         this.virtualizedLists.set(listElement, virtualizedList);
+        registerWeakMapKey(this.virtualizedLists, listElement);
         console.log(`Virtualized list created for ${listElement.tagName}`, listElement);
       }
     } 
@@ -728,20 +732,20 @@ export class DOMPerformanceObserver {
     // Stop observing this element
     observer.unobserve(element);
   }
-  
-  /**
+    /**
    * Refresh optimizations when window is resized
    */
   private refreshOptimizations(): void {
-    // Update virtualized lists
-    for (const [element, controller] of this.virtualizedLists.entries()) {
+    // Update virtualized lists - using compatibility helper
+    forEachWeakMapEntry(this.virtualizedLists, (element, controller) => {
       if (document.contains(element)) {
         controller.refresh();
       } else {
         // Clean up references to removed elements
         this.virtualizedLists.delete(element);
+        unregisterWeakMapKey(this.virtualizedLists, element);
       }
-    }
+    });
     
     // Re-scan for new optimization opportunities
     DOMOptimizer.deferOperation(() => {
@@ -764,11 +768,10 @@ export class DOMPerformanceObserver {
     this.scrollContainers.forEach(container => {
       container.removeEventListener('scroll', this.handleScroll);
     });
-    
-    // Dispose virtualized lists
-    for (const controller of this.virtualizedLists.values()) {
+      // Dispose virtualized lists
+    forEachWeakMapEntry(this.virtualizedLists, (_, controller) => {
       controller.destroy();
-    }
+    });
     
     // Clear data structures
     this.optimizedElements = new WeakSet();

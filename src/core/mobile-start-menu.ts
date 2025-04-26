@@ -7,6 +7,7 @@ import { StartMenuController } from './start-menu';
 import { AppManager } from './app-manager';
 import { UserSettings } from './UserSettings';
 import { OS } from './os';
+import { addTouchEventListener, getTouchCoordinates } from './touch-events';
 
 export class MobileStartMenu {
   private element: HTMLElement | null = null;
@@ -136,8 +137,8 @@ export class MobileStartMenu {
     // Set up search functionality
     const searchInput = searchContainer.querySelector('.search-input') as HTMLInputElement;
     if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        this.handleSearch(searchInput.value);
+      searchInput.addEventListener('input', (e: Event) => {
+        this.handleSearch((e.target as HTMLInputElement).value);
       });
       
       // Focus the input when the start menu is shown
@@ -288,20 +289,20 @@ export class MobileStartMenu {
     // Add long press for context menu
     let longPressTimer: number | null = null;
     
-    appElement.addEventListener('touchstart', () => {
+    addTouchEventListener(appElement, 'touchstart', () => {
       longPressTimer = window.setTimeout(() => {
         this.showAppContextMenu(app, appElement);
       }, 700);
     });
     
-    appElement.addEventListener('touchend', () => {
+    addTouchEventListener(appElement, 'touchend', () => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
     });
     
-    appElement.addEventListener('touchmove', () => {
+    addTouchEventListener(appElement, 'touchmove', () => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
@@ -525,14 +526,16 @@ export class MobileStartMenu {
     // Handle for pull down gesture
     const pullHandle = this.element.querySelector('.mobile-start-pull-handle');
     if (pullHandle) {
-      pullHandle.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
+      addTouchEventListener(pullHandle as HTMLElement, 'touchstart', (e) => {
+        const coords = getTouchCoordinates(e);
+        startY = coords.clientY;
         currentY = startY;
         this.element!.style.transition = '';
       });
       
-      pullHandle.addEventListener('touchmove', (e) => {
-        currentY = e.touches[0].clientY;
+      addTouchEventListener(pullHandle as HTMLElement, 'touchmove', (e) => {
+        const coords = getTouchCoordinates(e);
+        currentY = coords.clientY;
         const deltaY = currentY - startY;
         
         if (deltaY > 0) {
@@ -541,7 +544,7 @@ export class MobileStartMenu {
         }
       });
       
-      pullHandle.addEventListener('touchend', () => {
+      addTouchEventListener(pullHandle as HTMLElement, 'touchend', () => {
         const deltaY = currentY - startY;
         
         if (deltaY > 70) {

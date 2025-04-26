@@ -111,7 +111,7 @@ export function setMobileReductionFactor(factor: number): void {
  * @returns Adjusted animation configuration
  */
 function adjustForMobile(config: AnimationConfig): AnimationConfig {
-  const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+  const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
   const adjusted = { ...config };
   
   // Apply reduced motion globally if set
@@ -349,7 +349,7 @@ export function applyUserMotionPreferences(): void {
   setReducedMotion(prefersReducedMotion);
   
   // Set mobile reduction factor based on platform
-  const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+  const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
   if (isMobile) {
     setMobileReductionFactor(0.7);
   }

@@ -75,10 +75,9 @@ export class ComponentVirtualizer {
   
   /**
    * Private constructor to enforce singleton pattern
-   */
-  private constructor() {
+   */  private constructor() {
     // Check if we're on mobile
-    this.mobileMode = platformDetector.getPlatformType() === PlatformType.Mobile;
+    this.mobileMode = platformDetector.getPlatformType() === PlatformType.MOBILE;
   }
   
   /**

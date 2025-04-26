@@ -146,9 +146,8 @@ export class MemoryOptimizer extends EventEmitter {
    */
   private constructor() {
     super();
-    
-    // Set initial budgets based on platform
-    const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+    const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
+    // Set initial budgets based on platform    const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
     this.optimizationLevel = isMobile ? OptimizationLevel.LOW : OptimizationLevel.NONE;
     this.currentBudgets = { ...this.budgets[this.optimizationLevel] };
     
@@ -173,9 +172,8 @@ export class MemoryOptimizer extends EventEmitter {
       this.checkMemoryUsage();
     } else {
       console.warn('Performance memory API not available, memory optimization will be limited');
-      
-      // Set static optimization level based on platform
-      const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+        // Set static optimization level based on platform
+      const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
       this.setOptimizationLevel(isMobile ? OptimizationLevel.MEDIUM : OptimizationLevel.NONE);
     }
     
@@ -251,10 +249,9 @@ export class MemoryOptimizer extends EventEmitter {
     } else if (stats.usagePercentage > 70) {
       this.setOptimizationLevel(OptimizationLevel.MEDIUM);
     } else if (stats.usagePercentage > 50) {
-      this.setOptimizationLevel(OptimizationLevel.LOW);
-    } else {
+      this.setOptimizationLevel(OptimizationLevel.LOW);    } else {
       // Keep optimization level at LOW on mobile, NONE on desktop
-      const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+      const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
       this.setOptimizationLevel(isMobile ? OptimizationLevel.LOW : OptimizationLevel.NONE);
     }
     

@@ -1,13 +1,20 @@
 /**
- * Mobile Input Handler
- * Central module for managing mobile-specific input handling
- * Integrates virtual keyboard, gesture recognition, and context menus
- */
+   * Mobile Input Handler
+   * Central module for managing mobile-specific input handling
+   * Integrates virtual keyboard, gesture recognition, and context menus
+   */
 
 import { VirtualKeyboard } from './virtual-keyboard';
 import { GestureDetector, GestureType, SwipeDirection } from './gesture-detector';
 import { TouchContextMenu, ContextMenuItem } from './touch-context-menu';
 import { PlatformType, platformDetector } from './platform-detector';
+
+/**
+ * Define a type for gesture callback
+ */
+export interface GestureCallback {
+  onGesture: (event: any) => boolean;
+}
 
 /**
  * Input Handler class
@@ -39,10 +46,9 @@ export class MobileInputHandler {
   
   /**
    * Initialize all input handling components
-   */
-  private initializeComponents(): void {
+   */  private initializeComponents(): void {
     // Only initialize on mobile platforms
-    if (platformDetector.getPlatformType() !== PlatformType.Mobile) {
+    if (platformDetector.getPlatformType() !== PlatformType.MOBILE) {
       console.log('Mobile input handler skipped on desktop platform');
       return;
     }
@@ -69,9 +75,8 @@ export class MobileInputHandler {
       console.log('Haptic feedback not supported on this device');
       return;
     }
-    
-    // Add touch feedback to common interactive elements
-    document.addEventListener('click', (e) => {
+      // Add touch feedback to common interactive elements
+    document.addEventListener('click', (e: MouseEvent) => {
       // Find closest clickable element
       const target = e.target as HTMLElement;
       const clickable = target.closest('button, .btn, .nav-item, [role="button"]');
@@ -81,6 +86,12 @@ export class MobileInputHandler {
         navigator.vibrate(10);
       }
     });
+    
+    // Add specific handler for touch events to improve mobile responsiveness
+    document.addEventListener('touchstart', (e: TouchEvent) => {
+      // Don't do anything here yet, just capturing the touch for potential feedback
+      // This improves touch responsiveness by pre-registering the touch point
+    }, { passive: true }); // Use passive listener for better scroll performance
   }
   
   /**
@@ -89,17 +100,28 @@ export class MobileInputHandler {
   public getKeyboard(): VirtualKeyboard {
     return VirtualKeyboard.getInstance();
   }
-  
-  /**
+    /**
    * Create a gesture detector for an element
-   */
-  public createGestureDetector(
+   */  public createGestureDetector(
     element: HTMLElement,
-    options?: any
+    options?: {
+      swipeThreshold?: number;
+      tapMaxDistance?: number;
+      longPressDelay?: number;
+      doubleTapDelay?: number;
+      preventDefaults?: boolean;
+      enableSwipe?: boolean;
+      enablePan?: boolean;
+      enablePinch?: boolean;
+      enableRotate?: boolean;
+      enableTap?: boolean;
+      enableDoubleTap?: boolean;
+      enableLongPress?: boolean;
+    }
   ): GestureDetector {
     // Create a unique ID for the element if it doesn't have one
     if (!element.id) {
-      element.id = `gesture-element-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      element.id = `gesture-element-${Date.now()}-${Math.floor(Math.random() * 1000)}`; 
     }
     
     // Check if detector already exists for this element
@@ -135,13 +157,74 @@ export class MobileInputHandler {
   }
   
   /**
+   * Add gesture detection to an element
+   * @param element The element to detect gestures on
+   * @param config Configuration object with gesture callbacks
+   * @returns The created detector instance
+   */
+  public addGestureDetection(
+    element: HTMLElement,
+    config: GestureCallback
+  ): GestureDetector {
+    // Create a gesture detector for the element
+    const detector = this.createGestureDetector(element, {
+      enableSwipe: true,
+      enableTap: true,
+      enableDoubleTap: true,
+      enableLongPress: true,
+      enablePan: true,
+      enablePinch: true,
+      enableRotate: true
+    });
+    
+    // Set up handlers for different gesture types
+    detector.on(GestureType.Swipe, (event) => {
+      // Call onGesture callback with the event data
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.Tap, (event) => {
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.DoubleTap, (event) => {
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.LongPress, (event) => {
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.Pan, (event) => {
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.Pinch, (event) => {
+      return config.onGesture(event);
+    });
+    
+    detector.on(GestureType.Rotate, (event) => {
+      return config.onGesture(event);
+    });
+    
+    return detector;
+  }
+  
+  /**
    * Show a context menu
    */
   public showContextMenu(
     x: number,
     y: number,
     items: ContextMenuItem[],
-    options?: any
+    options?: {
+      width?: number;
+      maxHeight?: number;
+      closeOnSelect?: boolean;
+      theme?: 'light' | 'dark' | 'system';
+      position?: 'auto' | 'top' | 'right' | 'bottom' | 'left';
+      onClose?: () => void;
+    }
   ): void {
     TouchContextMenu.getInstance().show(x, y, items, options);
   }

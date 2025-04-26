@@ -199,17 +199,51 @@ export class AppManager {
   }
 
   /**
-   * Get default apps for desktop icons
+   * Get installed applications (all registered apps that can be launched)
+   */
+  public getInstalledApps(): AppInfo[] {
+    return Array.from(this.apps.values()).filter(app => app.launchable);
+  }
+
+  /**
+   * Get information about a specific application
+   * @param appId The ID of the app to get information about
+   * @returns App information or undefined if not found
+   */
+  public getAppInfo(appId: string): AppInfo | undefined {
+    return this.apps.get(appId);
+  }
+
+  /**
+   * Get list of recently used applications
+   * @param limit Maximum number of apps to return
+   * @returns Array of recent app info objects
+   */
+  public getRecentApps(limit: number = 5): AppInfo[] {
+    // Get all app instances sorted by last used time
+    // For now, we'll just return the first few installed apps
+    // This should be enhanced to track actual app usage
+    return this.getInstalledApps().slice(0, limit);
+  }
+
+  /**
+   * Get currently running applications
+   * @returns Array of running app info objects
+   */
+  public getRunningApps(): AppInstance[] {
+    return Array.from(this.instances.values());
+  }
+
+  /**
+   * Get default applications that should appear on the desktop
+   * @returns Array of default app info objects
    */
   public getDefaultApps(): AppInfo[] {
-    // Return subset of apps to show on desktop
-    return [
-      this.apps.get('terminal')!,
-      this.apps.get('file-explorer')!,
-      this.apps.get('browser')!,
-      this.apps.get('code-editor')!,
-      this.apps.get('system-monitor')!
-    ];
+    // Return a subset of installed apps that should be on desktop
+    // For now, we'll just return the first few installed apps as an example
+    return this.getInstalledApps().filter(app => 
+      ['terminal', 'file-explorer', 'browser', 'settings', 'code-editor'].includes(app.id)
+    );
   }
 
   /**

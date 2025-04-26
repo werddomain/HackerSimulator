@@ -17,10 +17,7 @@ export enum PerformanceMetricType {
 export interface PerformanceMetric {
   type: PerformanceMetricType;
   value: number;
-  timestamp: n      isMobile: platformDetector.getPlatformType() === PlatformType.MOBILE,
-      timespan: {
-        start: Math.min(...Object.values(this.metrics).flatMap(m => m.map(x => x.timestamp))) || 0,
-        end: Math.max(...Object.values(this.metrics).flatMap(m => m.map(x => x.timestamp))) || 0r;
+  timestamp: number;
   threshold?: {
     warning: number;
     critical: number;
@@ -93,7 +90,7 @@ const DEFAULT_CONFIG: PerformanceMonitorConfig = {
  * Performance Monitor for tracking application performance
  * Particularly focused on mobile device optimizations
  */
-export class PerformanceMonitor {
+export class PerformanceMonitor extends EventEmitter {
   private static instance: PerformanceMonitor;
   private config: PerformanceMonitorConfig;
   private metrics: Record<PerformanceMetricType, PerformanceMetric[]> = {
@@ -103,11 +100,8 @@ export class PerformanceMonitor {
     [PerformanceMetricType.LOAD_TIME]: [],
     [PerformanceMetricType.INTERACTION_TIME]: []
   };
-  
-  // Collection of callbacks for metrics updates
+    // Collection of callbacks for metrics updates
   private updateCallbacks: Array<(metrics: any) => void> = [];
-  // Event listeners map for custom event emitter implementation
-  private eventListeners: Map<string, Array<(data: any) => void>> = new Map();
 
   private frameCounterStart: number = 0;
   private frameCount: number = 0;
@@ -126,12 +120,10 @@ export class PerformanceMonitor {
       PerformanceMonitor.instance = new PerformanceMonitor();
     }
     return PerformanceMonitor.instance;
-  }
-  
-  /**
+  }  /**
    * Private constructor to enforce singleton pattern
    */
-  private constructor() {
+  protected constructor() {
     super();
     this.config = { ...DEFAULT_CONFIG };
   }
@@ -195,6 +187,8 @@ export class PerformanceMonitor {
       this.layoutShiftObserver.disconnect();
     }
   }
+  
+  
   
   /**
    * Start monitoring FPS (frames per second)
@@ -530,16 +524,28 @@ export class PerformanceMonitor {
    * Start performance monitoring
    */
   public start(): void {
+     // If monitoring is already active, do nothing
+    if (this.intervalId !== null || this.rafId !== null) {
+      return;
+    }
     if (!this.config.enabled) {
       this.config.enabled = true;
       this.init();
     }
   }
-    /**
+  /**
    * Register an update callback to receive performance metrics updates
    * @param callback Function to call when metrics are updated
    */
-  public onUpdate(callback: (metrics: any) => void): void {
+  public onUpdate(callback: (metrics: {
+    fps: number;
+    frameTime: number;
+    averageFrameTime: number;
+    minFrameTime: number;
+    maxFrameTime: number;
+    jank: number;
+    lastUpdate: number;
+  }) => void): void {
     // Store callback for metrics updates
     this.updateCallbacks.push(callback);
   }
@@ -677,8 +683,7 @@ export class PerformanceMonitor {
     
     return suggestions;
   }
-  
-  /**
+    /**
    * Dispose of the performance monitor and clean up resources
    */
   public dispose(): void {
@@ -686,30 +691,22 @@ export class PerformanceMonitor {
     this.stop();
     
     // Clear all event listeners
-    this.removeAllListeners();
+    super.removeAllListeners();
     
     // Clear all update callbacks
     this.updateCallbacks = [];
   }
-  
-  /**
+    /**
    * Emit an event to all registered listeners
+   * Override of the parent emit method to add specialized handling for 'metric' events
    * @param eventName The name of the event to emit
    * @param data The data to pass to the listeners
    */
-  private emit(eventName: string, data: any): void {
-    const listeners = this.eventListeners.get(eventName);
-    if (listeners) {
-      for (const listener of listeners) {
-        try {
-          listener(data);
-        } catch (error) {
-          console.error(`Error in event listener for ${eventName}:`, error);
-        }
-      }
-    }
+  public emit(eventName: string, data?: any): void {
+    // Call the parent class emit method to handle normal event emission
+    super.emit(eventName, data);
     
-    // Also call update callbacks for 'metric' events
+    // Additional specialized handling for 'metric' events
     if (eventName === 'metric') {
       for (const callback of this.updateCallbacks) {
         try {
@@ -719,12 +716,5 @@ export class PerformanceMonitor {
         }
       }
     }
-  }
-  
-  /**
-   * Remove all event listeners
-   */
-  private removeAllListeners(): void {
-    this.eventListeners.clear();
   }
 }

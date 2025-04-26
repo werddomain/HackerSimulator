@@ -1,7 +1,7 @@
 import { OS } from '../core/os';
 import { Process } from '../core/process';
 import { GuiApplication } from '../core/gui-application';
-import { PerformanceMonitor, PerformanceMetric } from '../core/performance-monitor';
+import { PerformanceMonitor, PerformanceMetric, PerformanceMetricType } from '../core/performance-monitor';
 
 /**
  * System Monitor App for the Hacker Game
@@ -39,10 +39,10 @@ export class SystemMonitorApp extends GuiApplication {
   private networkUsage = 0;
   private diskUsage = 60; // Start at 60% usage
   private diskTotal = 500; // 500 GB simulated capacity
-  private diskFree = 200;  // 200 GB simulated free space
-    // Performance monitoring
+  private diskFree = 200;  // 200 GB simulated free space  // Performance monitoring
   private performanceMonitor: PerformanceMonitor | null = null;
-  private performanceMetrics: {
+  // Extended performance metrics for rendering data
+  private performanceMetrics: PerformanceMetric & {
     fps: number;
     frameTime: number;
     averageFrameTime: number;
@@ -51,6 +51,9 @@ export class SystemMonitorApp extends GuiApplication {
     jank: number;
     lastUpdate: number;
   } = {
+    type: PerformanceMetricType.FPS,
+    value: 0,
+    timestamp: 0,
     fps: 0,
     frameTime: 0,
     averageFrameTime: 0,
@@ -59,6 +62,40 @@ export class SystemMonitorApp extends GuiApplication {
     jank: 0,
     lastUpdate: 0
   };
+  
+  /**
+   * Format an uptime given in milliseconds to a human-readable string (HH:MM:SS)
+   * Used for process uptime display
+   * @param ms The uptime in milliseconds
+   * @returns Formatted uptime string
+   */
+  private formatUptime(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+  
+  /**
+   * Format system uptime specifically for the overview tab
+   * @param ms The system uptime in milliseconds
+   * @returns Formatted system uptime string
+   */
+  private formatSystemUptime(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (days > 0) {
+      return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+  }
   
   constructor(os: OS) {
     super(os);
@@ -77,11 +114,16 @@ export class SystemMonitorApp extends GuiApplication {
     
     // Initialize performance monitoring using the singleton pattern
     this.performanceMonitor = PerformanceMonitor.getInstance();
-    
-    // Set up metrics update callback
+      // Set up metrics update callback
     if (this.performanceMonitor) {
       this.performanceMonitor.onUpdate((metrics) => {
-        this.performanceMetrics = metrics;
+        // Ensure all required properties from PerformanceMetric are included
+        this.performanceMetrics = {
+          ...metrics,
+          type: PerformanceMetricType.FPS,
+          value: metrics.fps,
+          timestamp: Date.now()
+        };
         
         // Add metrics to chart data
         this.chartData.fps.push(metrics.fps);
@@ -134,6 +176,7 @@ export class SystemMonitorApp extends GuiApplication {
             <button class="tab-btn ${this.activeTab === 'performance' ? 'active' : ''}" data-tab="performance">Performance</button>
             <button class="tab-btn ${this.activeTab === 'disk' ? 'active' : ''}" data-tab="disk">Disk</button>
             <button class="tab-btn ${this.activeTab === 'network' ? 'active' : ''}" data-tab="network">Network</button>
+            <button class="tab-btn ${this.activeTab === 'rendering' ? 'active' : ''}" data-tab="rendering">Rendering</button>
           </div>
           
           <!-- Overview Tab -->
@@ -377,6 +420,63 @@ export class SystemMonitorApp extends GuiApplication {
                   <!-- Generated dynamically -->
                 </tbody>
               </table>
+            </div>
+          </div>
+          
+          <!-- Rendering Tab -->
+          <div class="tab-content ${this.activeTab === 'rendering' ? 'active' : ''}" id="tab-rendering">
+            <div class="rendering-metrics">
+              <h3>Rendering Metrics</h3>
+              
+              <div class="metrics-group">
+                <div class="metric-card">
+                  <div class="metric-title">FPS</div>
+                  <div class="metric-value" id="fps-counter">0</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-title">Frame Time</div>
+                  <div class="metric-value" id="frame-time">0 ms</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-title">Avg Frame Time</div>
+                  <div class="metric-value" id="avg-frame-time">0 ms</div>
+                </div>
+              </div>
+              
+              <div class="metrics-group">
+                <div class="metric-card">
+                  <div class="metric-title">Min Frame Time</div>
+                  <div class="metric-value" id="min-frame-time">0 ms</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-title">Max Frame Time</div>
+                  <div class="metric-value" id="max-frame-time">0 ms</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-title">Jank Score</div>
+                  <div class="metric-value" id="jank-score">0</div>
+                </div>
+              </div>
+              
+              <div class="last-update">
+                Last updated: <span id="last-update">Never</span>
+              </div>
+            </div>
+            
+            <div class="rendering-charts">
+              <div class="chart-container">
+                <h4>FPS History</h4>
+                <canvas id="fps-chart" width="500" height="200"></canvas>
+              </div>
+              
+              <div class="chart-container">
+                <h4>Frame Time History</h4>
+                <canvas id="frame-time-chart" width="500" height="200"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -877,6 +977,73 @@ export class SystemMonitorApp extends GuiApplication {
         .network-connections-table th {
           background-color: #333;
         }
+        
+        /* Rendering tab styles */
+        .rendering-metrics {
+          background-color: #2d2d2d;
+          border-radius: 5px;
+          padding: 15px;
+          margin-bottom: 20px;
+        }
+        
+        .rendering-metrics h3 {
+          margin-top: 0;
+          margin-bottom: 15px;
+          font-size: 16px;
+        }
+        
+        .metrics-group {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 15px;
+          margin-bottom: 15px;
+        }
+        
+        .metric-card {
+          flex: 1;
+          min-width: 150px;
+          background-color: #333;
+          border-radius: 5px;
+          padding: 12px;
+          text-align: center;
+        }
+        
+        .metric-title {
+          font-size: 12px;
+          margin-bottom: 8px;
+          color: #a0a0a0;
+        }
+        
+        .metric-value {
+          font-size: 20px;
+          font-weight: bold;
+        }
+        
+        .last-update {
+          font-size: 12px;
+          color: #a0a0a0;
+          text-align: right;
+        }
+        
+        .rendering-charts {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+        
+        .chart-container {
+          flex: 1 1 45%;
+          min-width: 300px;
+          background-color: #2d2d2d;
+          border-radius: 5px;
+          padding: 15px;
+        }
+        
+        .chart-container h4 {
+          margin-top: 0;
+          margin-bottom: 15px;
+          font-size: 14px;
+        }
       </style>
     `;
     
@@ -1334,105 +1501,313 @@ export class SystemMonitorApp extends GuiApplication {
   }
   
   /**
-   * Update rendering tab with performance metrics
+   * Update the rendering tab with current performance metrics
    */
   private updateRenderingTab(): void {
-    if (!this.container || !this.performanceMonitor) return;
-    
-    const metrics = this.performanceMetrics;
-    
-    // Update FPS chart
-    const fpsChart = this.container.querySelector('#fps-chart') as HTMLCanvasElement;
-    const frameTimeChart = this.container.querySelector('#frame-time-chart') as HTMLCanvasElement;
-    
-    if (fpsChart) this.drawChart(fpsChart, this.chartData.fps, '#0e639c');
-    if (frameTimeChart) this.drawChart(frameTimeChart, this.chartData.frameTime, '#e6a23c');
-    
-    // Update FPS and frame time values
-    const fpsValue = this.container.querySelector('#fps-value');
-    const fpsBar = this.container.querySelector('#fps-bar');
-    const frameTimeValue = this.container.querySelector('#frame-time-value');
-    const frameTimeBar = this.container.querySelector('#frame-time-bar');
-    const jankValue = this.container.querySelector('#jank-value');
-    const jankBar = this.container.querySelector('#jank-bar');
-    
-    if (fpsValue) fpsValue.textContent = `${Math.round(metrics.fps)} FPS`;
-    if (fpsBar) {
-      const element = fpsBar as HTMLElement;
-      const fpsPercentage = Math.min(100, (metrics.fps / 60) * 100);
-      element.style.width = `${fpsPercentage}%`;
-    }
-    
-    if (frameTimeValue) frameTimeValue.textContent = `${metrics.averageFrameTime.toFixed(2)} ms`;
-    if (frameTimeBar) {
-      const element = frameTimeBar as HTMLElement;
-      const frameTimePercentage = Math.min(100, (metrics.averageFrameTime / 33.33) * 100);
-      element.style.width = `${frameTimePercentage}%`;
-    }
-    
-    if (jankValue) jankValue.textContent = `${metrics.jank.toFixed(1)}%`;
-    if (jankBar) {
-      const element = jankBar as HTMLElement;
-      const jankPercentage = Math.min(100, metrics.jank * 3);
-      element.style.width = `${jankPercentage}%`;
-    }
-    
-    // Update detailed metrics
-    const detailedMetrics = this.container.querySelector('#detailed-metrics');
-    if (detailedMetrics) {
-      detailedMetrics.innerHTML = `
-        <tr>
-          <td class="info-label">Min Frame Time:</td>
-          <td class="info-value">${metrics.minFrameTime.toFixed(2)} ms</td>
-        </tr>
-        <tr>
-          <td class="info-label">Max Frame Time:</td>
-          <td class="info-value">${metrics.maxFrameTime.toFixed(2)} ms</td>
-        </tr>
-        <tr>
-          <td class="info-label">Frame Time Variance:</td>
-          <td class="info-value">${(metrics.maxFrameTime - metrics.minFrameTime).toFixed(2)} ms</td>
-        </tr>
-        <tr>
-          <td class="info-label">Last Updated:</td>
-          <td class="info-value">${new Date(metrics.lastUpdate || Date.now()).toLocaleTimeString()}</td>
-        </tr>
+    // Add null check to prevent errors if container is not available
+    if (!this.container) return;
+
+    // Find the rendering tab content element
+    const renderingTab = this.container.querySelector('#tab-rendering');
+    if (!renderingTab) return; // Exit if rendering tab doesn't exist
+
+    // Create the rendering tab content if it doesn't exist yet
+    if (renderingTab.childElementCount === 0) {
+      renderingTab.innerHTML = `
+        <div class="rendering-metrics">
+          <h3>Rendering Metrics</h3>
+          
+          <div class="metrics-group">
+            <div class="metric-card">
+              <div class="metric-title">FPS</div>
+              <div class="metric-value" id="fps-counter">0</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-title">Frame Time</div>
+              <div class="metric-value" id="frame-time">0 ms</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-title">Avg Frame Time</div>
+              <div class="metric-value" id="avg-frame-time">0 ms</div>
+            </div>
+          </div>
+          
+          <div class="metrics-group">
+            <div class="metric-card">
+              <div class="metric-title">Min Frame Time</div>
+              <div class="metric-value" id="min-frame-time">0 ms</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-title">Max Frame Time</div>
+              <div class="metric-value" id="max-frame-time">0 ms</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-title">Jank Score</div>
+              <div class="metric-value" id="jank-score">0</div>
+            </div>
+          </div>
+          
+          <div class="last-update">
+            Last updated: <span id="last-update">Never</span>
+          </div>
+        </div>
+        
+        <div class="rendering-charts">
+          <div class="chart-container">
+            <h4>FPS History</h4>
+            <canvas id="fps-chart" width="500" height="200"></canvas>
+          </div>
+          
+          <div class="chart-container">
+            <h4>Frame Time History</h4>
+            <canvas id="frame-time-chart" width="500" height="200"></canvas>
+          </div>
+        </div>
       `;
     }
-    
-    // Update suggestions list
-    const suggestionsList = this.container.querySelector('#optimization-suggestions');
-    if (suggestionsList && this.performanceMonitor) {
-      const suggestions = this.performanceMonitor.getOptimizationSuggestions();
-      
-      if (suggestions.length === 0) {
-        suggestionsList.innerHTML = '<li class="no-suggestions">Performance looks good! No issues detected.</li>';
-      } else {
-        suggestionsList.innerHTML = suggestions.map(suggestion => {
-          // Determine suggestion severity for styling
-          let severity = 'warning';
-          if (suggestion.toLowerCase().includes('high jank') || 
-              suggestion.toLowerCase().includes('below target') ||
-              suggestion.toLowerCase().includes('exceeds')) {
-            severity = 'critical';
-          }
-          
-          return `<li class="${severity}">${suggestion}</li>`;
-        }).join('');
+
+    // Now update the values with appropriate null checks
+    if (this.performanceMetrics) {
+      // Update FPS counter
+      const fpsCounter = renderingTab.querySelector('#fps-counter');
+      if (fpsCounter) {
+        fpsCounter.textContent = `${Math.round(this.performanceMetrics.fps)}`;
+      }
+
+      // Update frame time with null check
+      const frameTimeElement = renderingTab.querySelector('#frame-time');
+      if (frameTimeElement) {
+        frameTimeElement.textContent = `${this.performanceMetrics.frameTime.toFixed(2)} ms`;
+      }
+
+      // Update average frame time with null check
+      const avgFrameTimeElement = renderingTab.querySelector('#avg-frame-time');
+      if (avgFrameTimeElement) {
+        avgFrameTimeElement.textContent = `${this.performanceMetrics.averageFrameTime.toFixed(2)} ms`;
+      }
+
+      // Update min/max frame times with null checks
+      const minFrameTimeElement = renderingTab.querySelector('#min-frame-time');
+      if (minFrameTimeElement) {
+        minFrameTimeElement.textContent = `${this.performanceMetrics.minFrameTime.toFixed(2)} ms`;
+      }
+
+      const maxFrameTimeElement = renderingTab.querySelector('#max-frame-time');
+      if (maxFrameTimeElement) {
+        maxFrameTimeElement.textContent = `${this.performanceMetrics.maxFrameTime.toFixed(2)} ms`;
+      }
+
+      // Update jank score with null check
+      const jankScoreElement = renderingTab.querySelector('#jank-score');
+      if (jankScoreElement) {
+        jankScoreElement.textContent = `${this.performanceMetrics.jank.toFixed(2)}`;
+      }
+
+      // Update last update time with null check
+      const lastUpdateElement = renderingTab.querySelector('#last-update');
+      if (lastUpdateElement && this.performanceMetrics.lastUpdate) {
+        const date = new Date(this.performanceMetrics.lastUpdate);
+        lastUpdateElement.textContent = `${date.toLocaleTimeString()}`;
       }
     }
   }
-}
 
-/**
- * Performance metrics for system monitoring
- */
-interface PerformanceMetrics {
-  fps: number;
-  frameTime: number;
-  averageFrameTime: number;
-  minFrameTime: number;
-  maxFrameTime: number;
-  jank: number;
-  lastUpdate?: number;
+  /**
+   * Refresh all data in the app
+   */
+  private refresh(): void {
+    this.updateData();
+  }
+  
+  /**
+   * Draw a chart on a canvas element
+   * @param canvas The canvas element to draw on
+   * @param data The data points to plot
+   * @param color The color to use for the line
+   */
+  private drawChart(canvas: HTMLCanvasElement, data: number[], color: string): void {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // If no data, exit
+    if (data.length === 0) return;
+    
+    // Find min and max values to scale the chart
+    let min = Math.min(...data);
+    let max = Math.max(...data);
+    
+    // Set minimum range
+    if (max - min < 10) {
+      const mid = (max + min) / 2;
+      min = mid - 5;
+      max = mid + 5;
+    }
+    
+    // Add some padding
+    min = Math.max(0, min - 5);
+    max = max + 5;
+    
+    const range = max - min;
+    
+    // Draw grid lines
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    
+    // Horizontal grid lines
+    ctx.beginPath();
+    for (let i = 0; i <= 4; i++) {
+      const y = height - (i / 4) * height;
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+    
+    // Vertical grid lines
+    ctx.beginPath();
+    for (let i = 0; i <= 5; i++) {
+      const x = (i / 5) * width;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    ctx.stroke();
+    
+    // Draw the data line
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    
+    for (let i = 0; i < data.length; i++) {
+      const x = (i / (this.MAX_DATA_POINTS - 1)) * width;
+      const dataPoint = data[i];
+      const scaledValue = range === 0 ? 0.5 : (dataPoint - min) / range;
+      const y = height - scaledValue * height;
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    
+    ctx.stroke();
+    
+    // Draw labels
+    ctx.fillStyle = '#a0a0a0';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(max.toFixed(0), width - 5, 15);
+    ctx.fillText(min.toFixed(0), width - 5, height - 5);
+  }
+  
+  /**
+   * Update the process list in the processes tab
+   */
+  private updateProcessList(): void {
+    if (!this.container) return;
+    
+    const processList = this.container.querySelector('#process-list');
+    if (!processList) return;
+    
+    // Get all processes
+    const processes = this.os.getProcessManager().getAllProcesses();
+    
+    // Clear the list
+    processList.innerHTML = '';
+    
+    // Add each process
+    processes.forEach(process => {
+      const row = document.createElement('tr');
+      row.classList.add('process-row');
+      row.setAttribute('data-pid', process.pid.toString());
+      
+      // Format uptime
+      const uptime = this.formatUptime(Date.now() - process.startTime);
+      
+      // Status class
+      const statusClass = `process-status-${process.status.toLowerCase()}`;
+      
+      row.innerHTML = `
+        <td class="col-select"><input type="checkbox" class="process-checkbox" data-pid="${process.pid}"></td>
+        <td class="col-pid">${process.pid}</td>
+        <td class="col-name">${process.name}</td>
+        <td class="col-user">${process.user}</td>
+        <td class="col-cpu">${(process.cpuUsage * 100).toFixed(1)}%</td>
+        <td class="col-memory">${process.memoryUsage.toFixed(1)}%</td>
+        <td class="col-status"><span class="${statusClass}">${process.status}</span></td>
+        <td class="col-time">${uptime}</td>
+      `;
+      
+      // Add click event to select the row
+      row.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName.toLowerCase() !== 'input') {
+          const checkbox = row.querySelector('.process-checkbox') as HTMLInputElement;
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+          }
+        }
+      });
+      
+      // Add double-click event to view process details
+      row.addEventListener('dblclick', () => {
+        this.showProcessDetails(process.pid);
+      });
+      
+      processList.appendChild(row);
+    });
+  }
+  
+  /**
+   * End all selected processes
+   */
+  private endSelectedProcesses(): void {
+    if (!this.container) return;
+    
+    const checkboxes = this.container.querySelectorAll('.process-checkbox:checked');
+    checkboxes.forEach(checkbox => {
+      const pid = parseInt((checkbox as HTMLInputElement).getAttribute('data-pid') || '0');
+      if (pid > 0) {
+        this.os.getProcessManager().killProcess(pid);
+      }
+    });
+    
+    // Update the process list
+    this.updateProcessList();
+  }
+  
+  /**
+   * Select or deselect all processes
+   */
+  private selectAllProcesses(checked: boolean): void {
+    if (!this.container) return;
+    
+    const checkboxes = this.container.querySelectorAll('.process-checkbox');
+    checkboxes.forEach(checkbox => {
+      (checkbox as HTMLInputElement).checked = checked;
+    });
+  }
+  
+  /**
+   * Filter processes by name
+   */
+  private filterProcesses(filterText: string): void {
+    if (!this.container) return;
+    
+    const rows = this.container.querySelectorAll('.process-row');
+    rows.forEach(row => {
+      const name = row.querySelector('.col-name')?.textContent?.toLowerCase() || '';
+      const matchesFilter = !filterText || name.includes(filterText.toLowerCase());
+      (row as HTMLElement).style.display = matchesFilter ? '' : 'none';
+    });
+  }
 }

@@ -51,7 +51,7 @@ export class VirtualizedList {
   private options: Required<VirtualizedListOptions>;
   private container: HTMLElement;
   private scrollContainer: HTMLElement | Window;
-  private itemContainer: HTMLElement;
+  private itemContainer!: HTMLElement; // Using definite assignment assertion to ensure initialization
   private containerHeight: number = 0;
   private totalHeight: number = 0;
   private scrollPosition: number = 0;
@@ -113,11 +113,11 @@ export class VirtualizedList {
     // Prepare container
     this.container.classList.add(this.options.className);
     
-    if (!this.options.useWindowScroll) {
-      this.container.style.position = 'relative';
+    if (!this.options.useWindowScroll) {      this.container.style.position = 'relative';
       this.container.style.overflow = 'auto';
       this.container.style.willChange = 'transform';
-      this.container.style.WebkitOverflowScrolling = 'touch'; // For iOS momentum scrolling
+      // Use CSS properties with type safety
+      (this.container.style as any)['-webkit-overflow-scrolling'] = 'touch'; // For iOS momentum scrolling
     }
     
     // Get container height
@@ -158,9 +158,13 @@ export class VirtualizedList {
     
     // Set up resize handler
     this.setupResizeHandler();
-    
-    // Set up intersection observer if needed
-    if (this.options.onItemVisible) {
+      // Set up intersection observer if needed
+    // Check if the callback is not the default empty function
+    const hasVisibilityHandler = 
+      this.options.onItemVisible && 
+      this.options.onItemVisible.toString() !== (() => {}).toString();
+      
+    if (hasVisibilityHandler) {
       this.setupIntersectionObserver();
     }
     

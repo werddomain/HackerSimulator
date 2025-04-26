@@ -99,6 +99,26 @@ export class Desktop {
   public clearDesktopIcons(): void {
     if (!this.desktopIconsContainer) return;
     this.desktopIconsContainer.innerHTML = '';
+  }  /**
+   * Show the desktop by minimizing all open windows
+   */
+  public showDesktop(): void {
+    // Get the window manager
+    const windowManager = this.os.getWindowManager();
+    
+    // Minimize all open windows to reveal the desktop
+    if (windowManager) {
+      // Get all window IDs from the window elements map
+      // We need to access the private windowElements map via a cast to any
+      const windowElements = (windowManager as any).windowElements as Map<string, HTMLElement>;
+      
+      // Minimize each window
+      if (windowElements) {
+        for (const [id] of windowElements) {
+          windowManager.minimizeWindow(id);
+        }
+      }
+    }
   }
 
   /**

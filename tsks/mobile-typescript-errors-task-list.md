@@ -60,39 +60,39 @@ This task list addresses TypeScript compilation errors in the mobile implementat
 
 ### 5. SystemMonitor Issues
 
-- [ ] Fix import of `PerformanceMetrics` (should be `PerformanceMetric`)
-- [ ] Fix accessibility of `PerformanceMonitor` constructor
-- [ ] Add null checks for performance monitor operations
-- [ ] Implement missing `onUpdate` method in `PerformanceMonitor` class
-- [ ] Add type definition for `metrics` parameter
-- [ ] Implement missing `updateRenderingTab` method in `SystemMonitorApp` class
-- [ ] Implement missing `start` method in `PerformanceMonitor` class
+- [x] Fix import of `PerformanceMetrics` (should be `PerformanceMetric`)
+- [x] Fix accessibility of `PerformanceMonitor` constructor
+- [x] Add null checks for performance monitor operations
+- [x] Implement missing `onUpdate` method in `PerformanceMonitor` class
+- [x] Add type definition for `metrics` parameter
+- [x] Implement missing `updateRenderingTab` method in `SystemMonitorApp` class
+- [x] Implement missing `start` method in `PerformanceMonitor` class
 
 ### 6. Core Components Issues
 
-- [ ] Fix `EventEmitter` module import issues
-- [ ] Implement missing methods in `PlatformDetector`
-- [ ] Fix DOM element type casting issues in mobile optimizers
-- [ ] Fix missing methods in `AppManager` interface:
-  - [ ] `getInstalledApps`
-  - [ ] `getAppInfo`
-  - [ ] `getRecentApps`
-  - [ ] `getRunningApps`
-- [ ] Fix missing method in `Desktop` class: `showDesktop`
-- [ ] Add type definitions for parameters in mobile navigation and mobile start menu
-- [ ] Fix touch event handling in mobile components
-- [ ] Fix `WeakMap` entries and values access methods compatibility
-- [ ] Fix initialization of `itemContainer` property in `VirtualizedList` class
-- [ ] Fix CSS style declaration issues in virtual components
-- [ ] Correct `WindowManager` implementation according to `IWindowManager` interface
+- [x] Fix `EventEmitter` module import issues
+- [x] Implement missing methods in `PlatformDetector`
+- [x] Fix DOM element type casting issues in mobile optimizers
+- [x] Fix missing methods in `AppManager` interface:
+  - [x] `getInstalledApps`
+  - [x] `getAppInfo`
+  - [x] `getRecentApps`
+  - [x] `getRunningApps`
+- [x] Fix missing method in `Desktop` class: `showDesktop`
+- [x] Add type definitions for parameters in mobile navigation and mobile start menu
+- [x] Fix touch event handling in mobile components
+- [x] Fix `WeakMap` entries and values access methods compatibility
+- [x] Fix initialization of `itemContainer` property in `VirtualizedList` class
+- [x] Fix CSS style declaration issues in virtual components
+- [x] Correct `WindowManager` implementation according to `IWindowManager` interface
 
 ### 7. Special Fixes
 
-- [ ] Fix syntax errors in dom-optimizer.ts (lines 424-426)
-- [ ] Fix constant reassignment in dom-optimizer.ts (line 569)
-- [ ] Fix incorrect event handler type in dom-performance-observer.ts (line 140)
-- [ ] Fix possibly undefined access in dom-performance-observer.ts (lines 202, 513)
-- [ ] Fix private property access in dom-performance-observer.ts (lines 794, 795, 797, 798)
+- [x] Fix syntax errors in dom-optimizer.ts (lines 424-426)
+- [x] Fix constant reassignment in dom-optimizer.ts (line 569)
+- [x] Fix incorrect event handler type in dom-performance-observer.ts (line 140)
+- [x] Fix possibly undefined access in dom-performance-observer.ts (lines 202, 513)
+- [x] Fix private property access in dom-performance-observer.ts (lines 794, 795, 797, 798)
 
 ## Implementation Strategy
 

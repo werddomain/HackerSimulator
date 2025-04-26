@@ -123,10 +123,9 @@ export class VirtualKeyboard {
   
   /**
    * Set up handlers to automatically show keyboard when inputs are focused
-   */
-  private setupAutoShowHandlers(): void {
+   */  private setupAutoShowHandlers(): void {
     // Only add these handlers on mobile
-    if (platformDetector.getPlatformType() !== PlatformType.Mobile) {
+    if (platformDetector.getPlatformType() !== PlatformType.MOBILE) {
       return;
     }
     
@@ -650,7 +649,7 @@ export class VirtualKeyboard {
       });
       
       // Add row to keyboard
-      this.keysContainer.appendChild(rowElement);
+      this.keysContainer!.appendChild(rowElement);
     });
   }
   

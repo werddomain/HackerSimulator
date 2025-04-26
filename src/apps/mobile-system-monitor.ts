@@ -30,6 +30,36 @@ export class MobileSystemMonitorApp extends SystemMonitorApp {
   }
 
   /**
+   * Update tab state
+   * @param tab The tab to switch to
+   */
+  updateTabState(tab: 'overview' | 'processes' | 'performance' | 'disk' | 'network' | 'rendering'): void {
+    // Update active tab property
+    (this as any).activeTab = tab;
+    
+    // Update UI if needed
+    if (this.container) {
+      // Update tab buttons
+      const allTabBtns = this.container.querySelectorAll('.tab-btn');
+      allTabBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-tab') === tab) {
+          btn.classList.add('active');
+        }
+      });
+      
+      // Update tab content
+      const allTabContent = this.container.querySelectorAll('.tab-content');
+      allTabContent.forEach(content => {
+        content.classList.remove('active');
+        if (content.id === `tab-${tab}`) {
+          content.classList.add('active');
+        }
+      });
+    }
+  }
+
+  /**
    * Initialize the application
    * Override to add mobile-specific features
    */

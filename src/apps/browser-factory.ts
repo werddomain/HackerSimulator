@@ -12,9 +12,8 @@ import { platformDetector, PlatformType } from '../core/platform-detector';
  * Factory function to create the appropriate browser instance
  * based on current platform (mobile or desktop)
  */
-export function createBrowser(os: OS): BrowserApp {
-  // Determine if we're on mobile
-  const isMobile = platformDetector.getPlatformType() === PlatformType.Mobile;
+export function createBrowser(os: OS): BrowserApp {  // Determine if we're on mobile
+  const isMobile = platformDetector.getPlatformType() === PlatformType.MOBILE;
   
   // Create the appropriate browser instance
   if (isMobile) {

@@ -862,7 +862,7 @@ export class BrowserApp extends GuiApplication {
   /**
    * Navigate back in history
    */
-  private navigateBack(): void {
+  protected navigateBack(): void {
     if (this.historyPosition <= 0) return;
     
     this.historyPosition--;
@@ -884,7 +884,7 @@ export class BrowserApp extends GuiApplication {
   /**
    * Navigate forward in history
    */
-  private navigateForward(): void {
+  protected navigateForward(): void {
     if (this.historyPosition >= this.history.length - 1) return;
     
     this.historyPosition++;
