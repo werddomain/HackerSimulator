@@ -6,8 +6,8 @@
       "request": "launch",
       "sourceMaps": true,
       "url": "http://localhost:9000",      
-      "webRoot": "${workspaceFolder}/dist",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "webRoot": "${workspaceFolder}",
+      
     
       "preLaunchTask": "npm: dev",
       "trace": true,

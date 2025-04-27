@@ -98,7 +98,7 @@ module.exports = (env, argv) => {
   } else {
     // Debug specific settings
     config.mode = 'development';
-    config.devtool = 'eval-source-map';
+    config.devtool = 'inline-source-map';
     config.output = {
       path: path.resolve(__dirname, 'dist'),
       filename: '[name].js',
