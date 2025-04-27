@@ -18,6 +18,48 @@
           "endsPattern": "^webpack.*compiled successfully"
         }
       }
-    }
+    },
+    {
+			"type": "npm",
+			"script": "dev",
+			"path": "web",
+			"label": "npm: dev - web",
+			"detail": "vite --host",
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": [
+					{
+						"regexp": ".*",
+						"file": 1,
+						"location": 2,
+						"message": 3
+					}
+				],
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "starting dev server",
+					"endsPattern": "ready"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"type": "npm",
+			"script": "build",
+			"path": "web",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "npm: build - web",
+			"detail": "tsc -b && vite build"
+		}
   ]
 }
