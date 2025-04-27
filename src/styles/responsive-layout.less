@@ -1,3 +1,5 @@
+@import "variables.less"; // Import variables for spacing and colors
+@import "media-queries.less"; // Import media queries for breakpoints
 /* filepath: c:\Users\clefw\source\repos\HackerSimulator\src\styles\responsive-layout.less */
 /**
  * Responsive Layout System
@@ -16,39 +18,59 @@
 @breakpoint-xl: 1600px;
 
 /* Define breakpoint mixins for convenience */
-.breakpoint-up(@breakpoint) when (@breakpoint = xs) {
-  @media (min-width: @breakpoint-xs) { @content(); }
+.breakpoint-up(@size, @rules) when (@size = xs) {
+  @media (min-width: @breakpoint-xs) { 
+    @rules();
+  }
 }
-.breakpoint-up(@breakpoint) when (@breakpoint = sm) {
-  @media (min-width: @breakpoint-sm) { @content(); }
+.breakpoint-up(@size, @rules) when (@size = sm) {
+  @media (min-width: @breakpoint-sm) { 
+    @rules();
+  }
 }
-.breakpoint-up(@breakpoint) when (@breakpoint = md) {
-  @media (min-width: @breakpoint-md) { @content(); }
+.breakpoint-up(@size, @rules) when (@size = md) {
+  @media (min-width: @breakpoint-md) { 
+    @rules();
+  }
 }
-.breakpoint-up(@breakpoint) when (@breakpoint = lg) {
-  @media (min-width: @breakpoint-lg) { @content(); }
+.breakpoint-up(@size, @rules) when (@size = lg) {
+  @media (min-width: @breakpoint-lg) { 
+    @rules();
+  }
 }
-.breakpoint-up(@breakpoint) when (@breakpoint = xl) {
-  @media (min-width: @breakpoint-xl) { @content(); }
-}
-
-.breakpoint-down(@breakpoint) when (@breakpoint = xs) {
-  @media (max-width: @breakpoint-xs - 1) { @content(); }
-}
-.breakpoint-down(@breakpoint) when (@breakpoint = sm) {
-  @media (max-width: @breakpoint-sm - 1) { @content(); }
-}
-.breakpoint-down(@breakpoint) when (@breakpoint = md) {
-  @media (max-width: @breakpoint-md - 1) { @content(); }
-}
-.breakpoint-down(@breakpoint) when (@breakpoint = lg) {
-  @media (max-width: @breakpoint-lg - 1) { @content(); }
-}
-.breakpoint-down(@breakpoint) when (@breakpoint = xl) {
-  @media (max-width: @breakpoint-xl - 1) { @content(); }
+.breakpoint-up(@size, @rules) when (@size = xl) {
+  @media (min-width: @breakpoint-xl) { 
+    @rules();
+  }
 }
 
-.breakpoint-between(@lower, @upper) {
+.breakpoint-down(@size, @rules) when (@size = xs) {
+  @media (max-width: (@breakpoint-xs - 1)) { 
+    @rules(); 
+  }
+}
+.breakpoint-down(@size, @rules) when (@size = sm) {
+  @media (max-width: (@breakpoint-sm - 1)) { 
+    @rules(); 
+  }
+}
+.breakpoint-down(@size, @rules) when (@size = md) {
+  @media (max-width: (@breakpoint-md - 1)) { 
+    @rules(); 
+  }
+}
+.breakpoint-down(@size, @rules) when (@size = lg) {
+  @media (max-width: (@breakpoint-lg - 1)) { 
+    @rules(); 
+  }
+}
+.breakpoint-down(@size, @rules) when (@size = xl) {
+  @media (max-width: (@breakpoint-xl - 1)) { 
+    @rules(); 
+  }
+}
+
+.breakpoint-between(@lower, @upper, @rules) {
   @lower-val: @breakpoint-xs;
   @upper-val: @breakpoint-xl;
   
@@ -62,38 +84,50 @@
   & when (@upper = lg) { @upper-val: @breakpoint-lg - 1; }
   & when (@upper = xl) { @upper-val: @breakpoint-xl - 1; }
   
-  @media (min-width: @lower-val) and (max-width: @upper-val) { @content(); }
+  @media (min-width: @lower-val) and (max-width: @upper-val) { 
+    @rules(); 
+  }
 }
 
 /* Orientation-specific media queries */
-.orientation(@orientation) when (@orientation = portrait) {
-  @media (orientation: portrait) { @content(); }
+.orientation(@orient, @rules) when (@orient = portrait) {
+  @media (orientation: portrait) { 
+    @rules(); 
+  }
 }
-.orientation(@orientation) when (@orientation = landscape) {
-  @media (orientation: landscape) { @content(); }
+.orientation(@orient, @rules) when (@orient = landscape) {
+  @media (orientation: landscape) { 
+    @rules(); 
+  }
 }
 
 /* High-DPI (retina) displays */
-.high-dpi(@ratio: 1.5) {
+.high-dpi(@ratio: 1.5, @rules) {
   @media only screen and (-webkit-min-device-pixel-ratio: @ratio),
          only screen and (min-resolution: (@ratio * 96dpi)) {
-    @content();
+    @rules();
   }
 }
 
 /* Touch device detection */
-.touch-device {
-  @media (hover: none) and (pointer: coarse) { @content(); }
+.touch-device(@rules) {
+  @media (hover: none) and (pointer: coarse) { 
+    @rules(); 
+  }
 }
 
 /* Non-touch device detection */
-.non-touch-device {
-  @media (hover: hover) and (pointer: fine) { @content(); }
+.non-touch-device(@rules) {
+  @media (hover: hover) and (pointer: fine) { 
+    @rules(); 
+  }
 }
 
 /* Print media query */
-.print-media {
-  @media print { @content(); }
+.print-media(@rules) {
+  @media print { 
+    @rules(); 
+  }
 }
 
 /* ========== Responsive Container System ========== */

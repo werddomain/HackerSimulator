@@ -100,7 +100,7 @@
     background: none;
     border: none;
     color: var(--text-color-primary);
-    padding: 0;
+    padding: var(--touch-target-padding);
     margin-left: var(--spacing-small);
     display: flex;
     align-items: center;
@@ -115,21 +115,15 @@
       width: 1.5rem; // 24px icon
       height: 1.5rem; // 24px icon
     }
-  }
-}
-    padding: var(--touch-target-padding);
-    margin-left: var(--spacing-small);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: var(--touch-target-size);
-    min-height: var(--touch-target-size);
-    cursor: pointer;
     
     &:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
+  }
+  
+  .control-button {
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
     
     svg {
       width: var(--icon-size);

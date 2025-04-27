@@ -112,6 +112,26 @@
 }
 
 /* 
+ * Orientation-specific media queries with parameter
+ * Usage example:
+ * .my-element {
+ *   .media-orientation(portrait, {
+ *     flex-direction: column; // Styles for portrait orientation
+ *   });
+ *   
+ *   .media-orientation(landscape, {
+ *     flex-direction: row;
+ *   });
+ * }
+ */
+.media-orientation(@orientation, @content) when (@orientation = portrait) {
+  @media (orientation: portrait) { @content(); }
+}
+.media-orientation(@orientation, @content) when (@orientation = landscape) {
+  @media (orientation: landscape) { @content(); }
+}
+
+/* 
  * Feature query mixins for touch vs non-touch devices
  * Usage:
  * .my-element {
@@ -128,32 +148,8 @@
   @media (hover: hover) and (pointer: fine) { @content(); }
 }
 
-/* 
- * Print media query for document printing support
- * Usage:
- * .my-element {
- *   .media-print({
- *     background-color: white; // Print-specific styles
- *     color: black;
- *   });
- * }
- */
-.media-print(@content) {
-  @media print { @content(); }
-}
- *     flex-direction: column; // Styles for portrait orientation
- *   });
- * }
- */
-.media-orientation(@orientation, @content) when (@orientation = portrait) {
-  @media (orientation: portrait) { @content(); }
-}
-.media-orientation(@orientation, @content) when (@orientation = landscape) {
-  @media (orientation: landscape) { @content(); }
-}
-
 /*
- * Feature query mixins for touch vs non-touch devices
+ * Feature query mixins for touch vs non-touch devices (alternative names)
  * Usage:
  * .my-element {
  *   .media-feature-touch({
@@ -167,34 +163,6 @@
 
 .media-feature-non-touch(@content) {
   @media (hover: hover) and (pointer: fine) { @content(); }
-}
-
-/*
- * Print media query for document printing support
- * Usage:
- * .my-element {
- *   .media-print({
- *     background-color: white; // Print-specific styles
- *     color: black;
- *   });
- * }
- */
-.media-print(@content) {
-  @media print { @content(); }
-}
- *     flex-direction: column;
- *   });
- *   
- *   .media-orientation(landscape, {
- *     flex-direction: row;
- *   });
- * }
- */
-.media-orientation(@orientation, @content) when (@orientation = portrait) {
-  @media (orientation: portrait) { @content(); }
-}
-.media-orientation(@orientation, @content) when (@orientation = landscape) {
-  @media (orientation: landscape) { @content(); }
 }
 
 /*
@@ -278,44 +246,3 @@
 .media-prefers-reduced-motion(@content) {
   @media (prefers-reduced-motion: reduce) { @content(); }
 }
-
-/* 
- * Example usage in component styles:
- *
- * .component {
- *   // Default mobile styling
- *   display: flex;
- *   flex-direction: column;
- *   padding: 1rem;
- *
- *   // Tablet and above
- *   .media-breakpoint-up(sm, {
- *     flex-direction: row;
- *     padding: 1.5rem;
- *   });
- *
- *   // Only on large desktop screens
- *   .media-breakpoint-up(lg, {
- *     max-width: 1140px;
- *     margin: 0 auto;
- *   });
- *
- *   // Different layout based on orientation
- *   .media-orientation(landscape, {
- *     height: 90vh;
- *   });
- *
- *   // Touch-specific adjustments
- *   .media-touch-device({
- *     .button {
- *       min-height: 44px;
- *     }
- *   });
- *
- *   // Print styles
- *   .media-print({
- *     background: none;
- *     color: black;
- *   });
- * }
- */

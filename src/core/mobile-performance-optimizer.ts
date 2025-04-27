@@ -7,7 +7,7 @@
 import * as DOMOptimizer from './dom-optimizer';
 import { initDOMPerformanceOptimization, getDOMPerformanceObserver } from './dom-performance-observer';
 import * as CSSOptimizer from './mobile-css-optimizer';
-import { PerformanceMonitor } from './performance-monitor';
+import { PerformanceMonitor, PerformanceMetricType } from './performance-monitor';
 
 /**
  * Configuration for DOM optimizations
@@ -265,9 +265,21 @@ export class MobilePerformanceOptimizer {
    */  initializePerformanceMonitor(): void {
     this.performanceMonitor = PerformanceMonitor.getInstance();
     this.performanceMonitor.init({
-      targetFps: this.config.thresholds.targetFps,
-      criticalFrameTime: this.config.thresholds.criticalFrameTime,
-      smoothingFactor: 0.1
+      enabled: true,
+      sampleInterval: 1000,
+      maxSamples: 120,
+      autoOptimize: true,
+      thresholds: {
+        [PerformanceMetricType.FPS]: {
+          warning: this.config.thresholds.targetFps * 0.75, // Warning at 75% of target FPS
+          critical: this.config.thresholds.targetFps * 0.5  // Critical at 50% of target FPS
+        },
+        [PerformanceMetricType.RENDER_TIME]: {
+          warning: this.config.thresholds.criticalFrameTime * 0.8,
+          critical: this.config.thresholds.criticalFrameTime
+        }
+      },
+      logWarnings: this.config.showMetrics
     });
     
     // Set up metrics update callback if performance metrics UI is enabled
@@ -298,6 +310,7 @@ export class MobilePerformanceOptimizer {
    */
   handlePerformanceIssue(metrics: any): void {
     // Only react to sustained performance issues
+    if (!this.performanceMonitor) return;
     if (metrics.fps < this.config.thresholds.targetFps * 0.7 && 
         metrics.jank > this.config.thresholds.jankThreshold) {
       

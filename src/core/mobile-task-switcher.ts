@@ -166,11 +166,12 @@ export class MobileTaskSwitcher {
     const runningApps = this.appManager.getRunningApps();
     
     return runningApps.map(app => {
+      var appDef = this.appManager.getAppInfo(app.id);
       return {
         id: `window-${app.id}`,
-        title: app.name,
+        title: appDef?.name || 'Unknown',
         appId: app.id,
-        icon: app.icon || '',
+        icon: appDef?.icon || '',
         screenshot: null // In a real implementation, we might have screenshots
       };
     });
@@ -273,8 +274,9 @@ export class MobileTaskSwitcher {
     let activeCard: HTMLElement | null = null;
     
     taskCardsContainer.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
+      const ee = e as TouchEvent;
+      startX = ee.touches[0].clientX;
+      startY = ee.touches[0].clientY;
       currentX = startX;
       currentY = startY;
       
@@ -287,9 +289,10 @@ export class MobileTaskSwitcher {
     
     taskCardsContainer.addEventListener('touchmove', (e) => {
       if (!activeCard) return;
+      const ee = e as TouchEvent;
       
-      currentX = e.touches[0].clientX;
-      currentY = e.touches[0].clientY;
+      currentX = ee.touches[0].clientX;
+      currentY = ee.touches[0].clientY;
       
       const deltaX = currentX - startX;
       const deltaY = currentY - startY;

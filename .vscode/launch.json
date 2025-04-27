@@ -17,20 +17,30 @@
         "order": 1
       }
     },
-    {
-      "name": "Debug TS File (Node)",
-      "type": "node",
-      "request": "launch",
-      "program": "${file}",
-      "runtimeArgs": ["--require", "ts-node/register"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "console": "integratedTerminal",
+     {
+      "type": "chrome",
+      "request": "attach",
+      "name": "Attach to chrome",
+      "port": 9222,
+      "urlFilter": "http://localhost:8080/*",
+      "address": "localhost",
+      "timeout": 1000,
+      "webRoot": "${workspaceFolder}/dist",
       "sourceMaps": true,
-      "presentation": {
-        "hidden": false,
-        "group": "util",
-        "order": 1
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/*",
       }
+    },
+    {
+      "type":"chrome",
+      "request":"launch",
+      "name":"Launch Chrome against localhost",
+      "url":"http://localhost:8080",
+      "webRoot":"${workspaceFolder}/dist",
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "npm run dev",
+      "trace": true,
     }
   ]
 }

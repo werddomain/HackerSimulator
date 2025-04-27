@@ -35,6 +35,216 @@ export class MobileWindowManager implements IWindowManager {
   constructor() {
     this.platformDetector = platformDetector;
   }
+  /**
+   * Show a notification to the user
+   * @param options Notification options
+   */
+  showNotification(options: { title: string; message: string; type?: 'info' | 'success' | 'warning' | 'error'; }): void {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `mobile-notification ${options.type || 'info'}`;
+    
+    // Set notification content
+    notification.innerHTML = `
+      <div class="notification-title">${options.title}</div>
+      <div class="notification-message">${options.message}</div>
+    `;
+    
+    // Add appropriate icon based on type
+    const iconElement = document.createElement('div');
+    iconElement.className = 'notification-icon';
+    
+    switch(options.type) {
+      case 'success':
+        iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        break;
+      case 'warning':
+        iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+        break;
+      case 'error':
+        iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+        break;
+      default: // info
+        iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+    }
+    
+    notification.prepend(iconElement);
+    
+    // Add to document body
+    document.body.appendChild(notification);
+    
+    // Animate notification
+    setTimeout(() => notification.classList.add('visible'), 10);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      notification.classList.remove('visible');
+      
+      // Remove from DOM after animation completes
+      setTimeout(() => {
+        notification.remove();
+      }, 300); // Match CSS transition duration
+    }, 3000);
+  }
+  
+  /**
+   * Show a prompt dialog to get user input
+   * @param options Prompt options
+   * @param callback Function to call with the user's input
+   */
+  showPrompt(options: { title: string; message: string; defaultValue?: string; placeholder?: string; }, callback: (value: string | null) => void): void {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-dialog-overlay';
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'mobile-dialog prompt-dialog';
+    
+    // Create dialog content
+    dialog.innerHTML = `
+      <div class="dialog-header">
+        <h2>${options.title}</h2>
+      </div>
+      <div class="dialog-body">
+        <p>${options.message}</p>
+        <input type="text" id="prompt-input" class="dialog-input" 
+          value="${options.defaultValue || ''}" 
+          placeholder="${options.placeholder || ''}" />
+      </div>
+      <div class="dialog-footer">
+        <button class="dialog-button cancel-button">Cancel</button>
+        <button class="dialog-button ok-button">OK</button>
+      </div>
+    `;
+    
+    // Add to document body
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Focus the input field
+    setTimeout(() => {
+      const input = document.getElementById('prompt-input') as HTMLInputElement;
+      if (input) input.focus();
+    }, 300);
+    
+    // Show the dialog with animation
+    setTimeout(() => {
+      overlay.classList.add('visible');
+      dialog.classList.add('visible');
+    }, 10);
+    
+    // Set up event handlers
+    const handleOk = () => {
+      const input = document.getElementById('prompt-input') as HTMLInputElement;
+      const value = input ? input.value : '';
+      
+      closeDialog();
+      callback(value);
+    };
+    
+    const handleCancel = () => {
+      closeDialog();
+      callback(null);
+    };
+    
+    const closeDialog = () => {
+      overlay.classList.remove('visible');
+      dialog.classList.remove('visible');
+      
+      // Remove from DOM after animation completes
+      setTimeout(() => {
+        overlay.remove();
+      }, 300);
+    };
+    
+    // Add click handlers
+    const okButton = dialog.querySelector('.ok-button');
+    if (okButton) okButton.addEventListener('click', handleOk);
+    
+    const cancelButton = dialog.querySelector('.cancel-button');
+    if (cancelButton) cancelButton.addEventListener('click', handleCancel);
+    
+    // Handle Enter key
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleOk();
+      if (e.key === 'Escape') handleCancel();
+    });
+  }
+  
+  /**
+   * Show a confirmation dialog to get user approval
+   * @param options Confirmation dialog options
+   * @param callback Function to call with the user's decision
+   */
+  showConfirm(options: { title: string; message: string; okText?: string; cancelText?: string; }, callback: (confirmed: boolean) => void): void {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-dialog-overlay';
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'mobile-dialog confirm-dialog';
+    
+    // Create dialog content
+    dialog.innerHTML = `
+      <div class="dialog-header">
+        <h2>${options.title}</h2>
+      </div>
+      <div class="dialog-body">
+        <p>${options.message}</p>
+      </div>
+      <div class="dialog-footer">
+        <button class="dialog-button cancel-button">${options.cancelText || 'Cancel'}</button>
+        <button class="dialog-button ok-button">${options.okText || 'OK'}</button>
+      </div>
+    `;
+    
+    // Add to document body
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Show the dialog with animation
+    setTimeout(() => {
+      overlay.classList.add('visible');
+      dialog.classList.add('visible');
+    }, 10);
+    
+    // Set up event handlers
+    const handleOk = () => {
+      closeDialog();
+      callback(true);
+    };
+    
+    const handleCancel = () => {
+      closeDialog();
+      callback(false);
+    };
+    
+    const closeDialog = () => {
+      overlay.classList.remove('visible');
+      dialog.classList.remove('visible');
+      
+      // Remove from DOM after animation completes
+      setTimeout(() => {
+        overlay.remove();
+      }, 300);
+    };
+    
+    // Add click handlers
+    const okButton = dialog.querySelector('.ok-button');
+    if (okButton) okButton.addEventListener('click', handleOk);
+    
+    const cancelButton = dialog.querySelector('.cancel-button');
+    if (cancelButton) cancelButton.addEventListener('click', handleCancel);
+    
+    // Handle Enter/Escape keys
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleOk();
+      if (e.key === 'Escape') handleCancel();
+    });
+  }
+
   
   /**
    * Initialize the mobile window manager

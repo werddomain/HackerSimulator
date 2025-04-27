@@ -357,12 +357,12 @@ export class MobileSettingsApp extends GuiApplication {
   /**
    * Render the appropriate control for a setting
    */
-  private renderSettingControl(setting: any): string {
+  private async renderSettingControl(setting: any): Promise<string> {
     let controlHtml = '';
     
     // Icon for the setting
     const iconHtml = `<i class="fa ${setting.icon || 'fa-cog'} setting-icon"></i>`;
-    
+    const accentColor = await this.userSettings.get('user-preferences', 'accentColor', '');
     switch(setting.key) {
       case 'theme':
         controlHtml = `
@@ -390,7 +390,7 @@ export class MobileSettingsApp extends GuiApplication {
               <div class="setting-description">${setting.description}</div>
             </div>
             <div class="setting-control accent-color-picker">
-              ${this.accentColors.map(color => `                <button class="color-option ${this.userSettings.get('user-preferences', 'accentColor', '') === color.id ? 'active' : ''}" 
+              ${this.accentColors.map(color => `                <button class="color-option ${accentColor === color.id ? 'active' : ''}" 
                   data-color="${color.id}" 
                   style="background-color: ${color.color};"
                   aria-label="${color.name}">
@@ -411,7 +411,7 @@ export class MobileSettingsApp extends GuiApplication {
             </div>
             <div class="setting-control">
               <select class="mobile-select" id="setting-background">
-                ${this.backgroundOptions.map(option => `                  <option value="${option.id}" ${this.userSettings.get('user-preferences', 'background', '') === option.id ? 'selected' : ''}>
+                ${this.backgroundOptions.map(async option => `                  <option value="${option.id}" ${(await this.userSettings.get('user-preferences', 'background', '')) === option.id ? 'selected' : ''}>
                     ${option.name}
                   </option>
                 `).join('')}
@@ -442,14 +442,13 @@ export class MobileSettingsApp extends GuiApplication {
           </div>
         `;
         break;
-        
-      case 'animationsEnabled':
+          case 'animationsEnabled':
       case 'highContrast':
       case 'screenReader':
       case 'reducedMotion':
       case 'tracking':
       case 'dataCollection':        // Toggle switch for boolean values
-        const checked = this.userSettings.get('user-preferences', setting.key, false) ? 'checked' : '';
+        const checked = await this.userSettings.get('user-preferences', setting.key, false) ? 'checked' : '';
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -466,9 +465,8 @@ export class MobileSettingsApp extends GuiApplication {
           </div>
         `;
         break;
-        
-      case 'performance':        // Radio buttons/segmented control for performance mode
-        const performanceMode = this.userSettings.get('user-preferences', 'performance', 'balanced');
+          case 'performance':        // Radio buttons/segmented control for performance mode
+        const performanceMode = await this.userSettings.get('user-preferences', 'performance', 'balanced');
         controlHtml = `
           <div class="mobile-setting-item" data-setting="${setting.key}">
             ${iconHtml}
@@ -587,10 +585,10 @@ export class MobileSettingsApp extends GuiApplication {
   
   /**
    * Helper method to get theme options
-   */  private getThemeOptions(): string {
+   */  private async getThemeOptions(): Promise<string> {
     const themesMap = this.themeManager.getAllThemes();
     // Use synchronous get with default for rendering
-    const currentTheme = this.userSettings.get('user-preferences', 'themeName', 'default');
+    const currentTheme = await this.userSettings.get('user-preferences', 'themeName', 'default');
     
     // Convert Map to Array for mapping
     const themes = Array.from(themesMap.values());

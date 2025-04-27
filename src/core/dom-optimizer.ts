@@ -418,12 +418,10 @@ export function cleanupDOMElements(elements: HTMLElement[]): void {
       if ((element as any)[prop] instanceof Object) {
         (element as any)[prop] = null;
       }
-    }
-  });
+    }  });
 }
-    timeout = window.setTimeout(() => fn.apply(this, args), delay);
-  };
-}
+
+
 
 /**
  * Apply CSS properties in batch to minimize reflows
@@ -475,9 +473,11 @@ export function createVirtualizedContainer(config: VirtualizedContainerConfig): 
     container,       // Container element
     itemHeight,      // Height of each item in pixels
     itemTemplate,    // Function to create item elements
-    itemCount,       // Total number of items
     renderBuffer = 5 // Number of items to render outside visible area
   } = config;
+  
+  // Extract itemCount separately so we can update it
+  let itemCount = config.itemCount;
   
   if (!container || !itemHeight || !itemTemplate) {
     console.error('Missing required configuration for virtualized container');
@@ -564,8 +564,8 @@ export function createVirtualizedContainer(config: VirtualizedContainerConfig): 
     },
     scrollToIndex(index: number) {
       container.scrollTop = index * itemHeight;
-    },
-    updateItemCount(newCount: number) {
+    },    updateItemCount(newCount: number) {
+      // Update the mutable itemCount variable
       itemCount = newCount;
       spacer.style.height = `${itemCount * itemHeight}px`;
       renderItems();

@@ -5,63 +5,63 @@
 
 /* Orientation Media Queries */
 /* Portrait Mode */
-.media-portrait() {
+.media-portrait(@rules) {
   @media (orientation: portrait) {
-    @{block}
+    @rules();
   }
 }
 
 /* Landscape Mode */
-.media-landscape() {
+.media-landscape(@rules) {
   @media (orientation: landscape) {
-    @{block}
+    @rules();
   }
 }
 
 /* Touch/Non-Touch Devices Feature Queries */
 /* For touch devices with coarse pointer and no hover */
-.media-touch() {
+.media-touch(@rules) {
   @media (hover: none) and (pointer: coarse) {
-    @{block}
+    @rules();
   }
 }
 
 /* For non-touch devices with fine pointer and hover capability */
-.media-non-touch() {
+.media-non-touch(@rules) {
   @media (hover: hover) and (pointer: fine) {
-    @{block}
+    @rules();
   }
 }
 
 /* Print Media Query */
-.media-print() {
+.media-print(@rules) {
   @media print {
-    @{block}
+    @rules();
   }
 }
 
 /* High DPI / Retina Display Media Query */
-.media-high-dpi(@ratio: 1.5) {
+.media-high-dpi(@rules, @ratio: 1.5) {
   @media 
     only screen and (-webkit-min-device-pixel-ratio: @ratio),
     only screen and (min-resolution: (@ratio * 96dpi)) {
-    @{block}
+    @rules();
   }
 }
 
 /* Combined Queries for Common Use Cases */
 
 /* Mobile Only (Portrait and Touch) */
-.media-mobile-portrait() {
+.media-mobile-portrait(@rules) {
   @media (orientation: portrait) and (hover: none) and (pointer: coarse) and (max-width: @breakpoint-sm) {
-    @{block}
+    @rules();
   }
 }
 
 /* Mobile Only (Landscape and Touch) */
-.media-mobile-landscape() {
+.media-mobile-landscape(@rules) {
   @media (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-width: @breakpoint-md) {
-    @{block}
+    @rules();
   }
 }
 

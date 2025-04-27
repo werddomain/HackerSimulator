@@ -1,6 +1,8 @@
 // Mobile Start Menu Styles
 // These styles define the appearance of the mobile start menu interface
 
+@import './responsive-utilities.less'; // Import responsive utilities for touch targets
+
 // Main start menu container
 .mobile-start-menu {
   position: fixed;
@@ -140,8 +142,7 @@
   &.featured-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  
-  // Recent grid (scrollable row)
+    // Recent grid (scrollable row)
   &.recent-grid {
     grid-template-columns: repeat(8, 1fr);
     overflow-x: auto;
@@ -155,53 +156,41 @@
     }
   }
 }
-    scrollbar-width: none;
-    &::-webkit-scrollbar {
-      display: none;
+
+// App item
+.app-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  .touch-target-large(); // Apply larger touch target (56px)
+  .touch-feedback(); // Add touch feedback
+  
+  .app-icon {
+    width: 3rem; // 48px
+    height: 3rem; // 48px
+    border-radius: 0.75rem; // 12px
+    background-color: var(--app-icon-bg, rgba(255, 255, 255, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem; // 8px
+    
+    svg {
+      width: 1.75rem; // 28px
+      height: 1.75rem; // 28px
+      color: var(--app-icon-color, white);
     }
   }
   
-  // App item
-  .app-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    .touch-target-large(); // Apply larger touch target (56px)
-    .touch-feedback(); // Add touch feedback
-    
-    .app-icon {
-      width: 3rem; // 48px
-      height: 3rem; // 48px
-      border-radius: 0.75rem; // 12px
-      background-color: var(--app-icon-bg, rgba(255, 255, 255, 0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 0.5rem; // 8px
-      
-      svg {
-        width: 1.75rem; // 28px
-        height: 1.75rem; // 28px
-        color: var(--app-icon-color, white);
-      }
-    }
-    
-    .app-name {
-      font-size: 0.75rem; // 12px
-      color: var(--text-color-primary);
-      text-align: center;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-}
-    scrollbar-width: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
+  .app-name {
+    font-size: 0.75rem; // 12px
+    color: var(--text-color-primary);
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

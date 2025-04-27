@@ -251,10 +251,9 @@ export function generateCriticalCSS(rules: CSSRule[], rootElement: HTMLElement =
       try {
         // Check if any elements match this rule
         const matchedElements = rootElement.querySelectorAll(styleRule.selectorText);
-        
-        if (matchedElements.length > 0) {
+          if (matchedElements.length > 0) {
           // Check if matched elements are in the viewport
-          const inViewport = Array.from(matchedElements).some(el => isElementInViewport(el));
+          const inViewport = Array.from(matchedElements).some(el => isElementInViewport(el as HTMLElement));
           
           if (inViewport) {
             criticalCSS.push(styleRule.cssText);

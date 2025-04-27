@@ -7,6 +7,49 @@
 /* Import variables and breakpoints */
 @import './responsive-layout.less';
 
+/* ========== Touch Target Utilities ========== */
+
+/* 
+ * Touch target mixins
+ * Ensure interactive elements are appropriately sized for touch interactions
+ * - Standard target (44px): .touch-target()
+ * - Large target (56px): .touch-target-large()
+ */
+
+/* Define standard touch target size (based on WCAG recommendations) */
+@touch-target-size: 2.75rem;      /* 44px - minimum recommended touch target size */
+@touch-target-large-size: 3.5rem; /* 56px - larger touch target for primary actions */
+@touch-target-spacing: 0.5rem;    /* 8px - minimum space between touch targets */
+
+/* Standard touch target mixin */
+.touch-target() {
+  min-width: @touch-target-size;
+  min-height: @touch-target-size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Large touch target mixin for primary actions */
+.touch-target-large() {
+  min-width: @touch-target-large-size;
+  min-height: @touch-target-large-size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Touch feedback mixin */
+.touch-feedback() {
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  
+  &:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+}
+
 /* ========== Flexbox Positioning Helpers ========== */
 
 /* Basic flexbox utilities */

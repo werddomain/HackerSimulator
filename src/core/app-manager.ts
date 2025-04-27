@@ -469,10 +469,9 @@ export class AppManager {
       
       // Initialize the code editor
       codeEditorApp.init(contentElement.querySelector('.editor-container')!, windowId, args);
-      
-      // Open file if provided
-      if (args.length > 0) {
-        codeEditorApp.openFile(args[0]);
+        // Open file if provided
+      if (args.length > 0 && typeof (codeEditorApp as any).openFile === 'function') {
+        (codeEditorApp as any).openFile(args[0]);
       }
     }).catch(error => {
       console.error('Failed to load code editor app:', error);

@@ -98,7 +98,7 @@ const DEFAULT_CONFIG: Required<PerformanceObserverConfig> = {
  * Class that observes DOM changes and optimizes elements for mobile performance
  */
 export class DOMPerformanceObserver {
-  private config: Required<PerformanceObserverConfig>;
+  config: Required<PerformanceObserverConfig>; // Changed from private to public to allow access from utility functions
   private optimizedElements: WeakSet<Element>;
   private updateFrequency: Map<Element, number>;
   private scrollContainers: Set<HTMLElement>;
@@ -136,9 +136,15 @@ export class DOMPerformanceObserver {
     
     // Create intersection observer for lazy loading
     this.lazyLoadObserver = DOMOptimizer.createLazyLoadObserver(this.handleIntersection.bind(this));
+      // Bind handlers to instance
+    this.handleScroll = (event: Event) => {
+      DOMOptimizer.throttle(() => {
+        if (event.target instanceof HTMLElement) {
+          this.optimizeScrollContainer(event.target);
+        }
+      }, 200)();
+    };
     
-    // Bind handlers to instance
-    this.handleScroll = DOMOptimizer.throttle(this.optimizeScrollContainer.bind(this), 200);
     this.handleResize = DOMOptimizer.debounce(this.refreshOptimizations.bind(this), 250);
     
     // Initialize
@@ -198,15 +204,16 @@ export class DOMPerformanceObserver {
   /**
    * Handle DOM mutations
    * @param mutations - List of DOM mutations
-   */
-  private handleMutations(mutations: MutationRecord[]): void {
-    if (mutations.length < this.config.thresholds.minMutations) return;
+   */  private handleMutations(mutations: MutationRecord[]): void {
+    if (!this.config.thresholds.minMutations) return;
+    if (!mutations || mutations.length < this.config.thresholds.minMutations) return;
     
     // Find added nodes that need optimization
     const addedNodes = new Set<Element>();
     
     // Process mutations
     mutations.forEach(mutation => {
+      if (!mutation) return;
       // Handle added nodes
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(node => {
@@ -497,7 +504,7 @@ export class DOMPerformanceObserver {
    */
   private isLargeList(element: HTMLElement): boolean {
     if (!element) return false;
-    
+    if (!this.config.thresholds.largeListThreshold) return false;
     // Identify element's children (list items, rows, etc.)
     let items: NodeListOf<Element> | Element[];
     
@@ -536,9 +543,9 @@ export class DOMPerformanceObserver {
     // Check if all items have roughly the same height (good candidate for virtualization)
     const sampleSize = Math.min(5, items.length);
     const heights: number[] = [];
-    
-    for (let i = 0; i < sampleSize; i++) {
-      heights.push(items[i].offsetHeight);
+      for (let i = 0; i < sampleSize; i++) {
+      const item = items[i] as HTMLElement; // Cast to HTMLElement to access offsetHeight
+      heights.push(item.offsetHeight);
     }
     
     // Calculate average height and deviation
@@ -735,7 +742,7 @@ export class DOMPerformanceObserver {
     /**
    * Refresh optimizations when window is resized
    */
-  private refreshOptimizations(): void {
+  public refreshOptimizations(): void {
     // Update virtualized lists - using compatibility helper
     forEachWeakMapEntry(this.virtualizedLists, (element, controller) => {
       if (document.contains(element)) {
@@ -793,12 +800,16 @@ export function initDOMPerformanceOptimization(config: PerformanceObserverConfig
   if (!observerInstance) {
     observerInstance = new DOMPerformanceObserver(config);
   } else {
-    // Update config if instance already exists
+    // Update config if instance already exists - config is now public
+    const currentConfig = observerInstance.config || {} as Required<PerformanceObserverConfig>;
+    const currentTargets = currentConfig.targets || {};
+    const currentThresholds = currentConfig.thresholds || {};
+    
     observerInstance.config = {
-      ...observerInstance.config,
+      ...currentConfig,
       ...config,
-      targets: { ...observerInstance.config.targets, ...(config.targets || {}) },
-      thresholds: { ...observerInstance.config.thresholds, ...(config.thresholds || {}) }
+      targets: { ...currentTargets, ...(config.targets || {}) },
+      thresholds: { ...currentThresholds, ...(config.thresholds || {}) }
     } as Required<PerformanceObserverConfig>;
   }
   

@@ -1401,6 +1401,19 @@ export class SystemMonitorApp extends GuiApplication {
     if (diskFreeEl) diskFreeEl.textContent = `${Math.round(this.diskFree)} GB`;
     if (diskTotalEl) diskTotalEl.textContent = `${this.diskTotal} GB`;
     
+    // Dispatch an event for the mobile UI to update the pie chart
+    if (this.container) {
+      const updateEvent = new CustomEvent('update-disk', { 
+        bubbles: true,
+        detail: { 
+          diskUsage: this.diskUsage,
+          diskFree: this.diskFree,
+          diskTotal: this.diskTotal
+        }
+      });
+      this.container.dispatchEvent(updateEvent);
+    }
+    
     // Update disk activity table with simulated data
     const diskActivityList = this.container.querySelector('#disk-activity-list');
     if (diskActivityList) {

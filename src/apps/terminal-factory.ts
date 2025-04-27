@@ -34,7 +34,7 @@ export class TerminalFactory {
     // Check platform type
     const platformType = platformDetector.getPlatformType();
     
-    if (platformType === PlatformType.Mobile) {
+    if (platformType === PlatformType.MOBILE) {
       // Create mobile terminal for mobile platforms
       return new MobileTerminalApp(os);
     } else {

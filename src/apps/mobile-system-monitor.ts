@@ -62,15 +62,55 @@ export class MobileSystemMonitorApp extends SystemMonitorApp {
   /**
    * Initialize the application
    * Override to add mobile-specific features
-   */
-  protected initApplication(): void {
+   */  protected initApplication(): void {
     // Call the parent implementation first
     super.initApplication();
     
     // Then add mobile-specific enhancements
     if (this.container) {
       this.initMobilePerformanceMonitoring(this.container);
+      this.initMobileDiskChart(this.container);
     }
+  }
+  
+  /**
+   * Initialize the mobile disk usage pie chart
+   * @param container The container element
+   */
+  private initMobileDiskChart(container: HTMLElement): void {
+    // Get disk usage data from the parent class
+    const diskUsage = (this as any).diskUsage || 60; // Default to 60% if not available
+    
+    // Find the pie chart element and pie slice
+    const pieChart = container.querySelector('.pie-chart');
+    const pieSlice = container.querySelector('.pie-slice');
+    
+    if (pieChart && pieSlice) {
+      // Update the pie slice to show the correct percentage
+      const rotationDeg = (diskUsage / 100) * 360; // Convert percentage to degrees
+      
+      // Apply a conic gradient to create the pie chart effect
+      (pieSlice as HTMLElement).style.background = 
+        `conic-gradient(var(--disk-used-color, rgb(100, 180, 100)) 0deg ${rotationDeg}deg, transparent ${rotationDeg}deg 360deg)`;
+    }
+    
+    // Set up the disk usage update logic
+    this.container?.addEventListener('update-disk', () => {
+      const pieSlice = container.querySelector('.pie-slice');
+      const diskUsage = (this as any).diskUsage || 60;
+      
+      if (pieSlice) {
+        const rotationDeg = (diskUsage / 100) * 360;
+        (pieSlice as HTMLElement).style.background = 
+          `conic-gradient(var(--disk-used-color, rgb(100, 180, 100)) 0deg ${rotationDeg}deg, transparent ${rotationDeg}deg 360deg)`;
+        
+        // Update the center text percentage
+        const pieCenter = container.querySelector('.pie-center');
+        if (pieCenter) {
+          pieCenter.textContent = `${Math.round(diskUsage)}%`;
+        }
+      }
+    });
   }
 
   /**

@@ -253,7 +253,7 @@ export class ViewFactoryRegistry {
     }
     
     // Get the factory for the specified platform
-    const factory = this.factories.get(platformType);
+    const factory = this.factories.get(platformType || PlatformType.DESKTOP);
     if (!factory) {
       console.error(`No view factory registered for platform type: ${platformType}`);
       

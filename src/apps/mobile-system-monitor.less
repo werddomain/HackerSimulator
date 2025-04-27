@@ -274,8 +274,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      
-      .pie-chart {
+        .pie-chart {
         position: relative;
         width: 60vw;
         height: 60vw;
@@ -283,17 +282,14 @@
         max-height: 200px;
         border-radius: 50%;
         background-color: var(--disk-free-color, rgb(80, 80, 80));
+        overflow: hidden;
         
         .pie-slice {
           position: absolute;
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          clip: rect(0, 100px, 200px, 0);
-          background-color: var(--disk-used-color, rgb(100, 180, 100));
-          transform: rotate(0deg);
-          transform-origin: center;
-          clip-path: polygon(50% 50%, 50% 0%, calc(50% + 50% * sin(var(--percentage) * 3.6deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 90deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 90deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 180deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 180deg)), calc(50% + 50% * sin(var(--percentage) * 3.6deg + 270deg)) calc(50% - 50% * cos(var(--percentage) * 3.6deg + 270deg)), 50% 0%);
+          background: conic-gradient(var(--disk-used-color, rgb(100, 180, 100)) 0deg, transparent 0deg);
         }
         
         .pie-center {
@@ -303,6 +299,7 @@
           transform: translate(-50%, -50%);
           font-size: 1.5rem;
           font-weight: bold;
+          z-index: 1;
         }
       }
     }

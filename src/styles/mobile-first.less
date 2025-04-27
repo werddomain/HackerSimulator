@@ -1,10 +1,18 @@
+@import "variables.less"; // Import variables for spacing and colors
+@import "media-queries.less"; // Import media queries for breakpoints
+@import "mobile-variables.less"; // Import mobile-specific variables
+@import "media-queries-extensions.less"; // Import media queries extensions
 /**
  * Mobile-First Base Styles
  * Implements a mobile-first approach with progressive enhancement
  */
 
-@import "mobile-variables.less";
-@import "media-queries-extensions.less";
+/* 
+ * Note: The following variables should be imported in main.less before this file:
+ * - media-queries.less (for @breakpoint-* variables)
+ * - mobile-variables.less (for mobile-specific variables)
+ * - media-queries-extensions.less (for additional media queries)
+ */
 
 /* 
  * Base Mobile-First Styles 
