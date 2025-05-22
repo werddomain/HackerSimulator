@@ -1,6 +1,7 @@
 @page "/file-explorer"
 @inject FileSystemService FS
 @using System.Linq
+@using System.IO
 
 <h1>File Explorer</h1>
 
@@ -19,18 +20,20 @@
     private string newFolder = string.Empty;
     private IEnumerable<string> items = Enumerable.Empty<string>();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        items = FS.List(path);
+        var dir = await FS.ReadDirectory(path);
+        items = dir.Select(d => d.Name);
     }
 
-    private void Create()
+    private async Task Create()
     {
         if (!string.IsNullOrWhiteSpace(newFolder))
         {
-            FS.CreateDirectory(path, newFolder);
+            await FS.CreateDirectory(System.IO.Path.Combine(path.TrimEnd('/'), newFolder));
             newFolder = string.Empty;
-            items = FS.List(path);
+            var dir = await FS.ReadDirectory(path);
+            items = dir.Select(d => d.Name);
         }
     }
 }

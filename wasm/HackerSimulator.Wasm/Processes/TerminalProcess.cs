@@ -14,7 +14,9 @@ namespace HackerSimulator.Wasm.Processes
         {
             // In a real implementation this would start an interactive terminal
             System.Console.WriteLine("Terminal started");
-            return Task.CompletedTask;
+            var tcs = new TaskCompletionSource();
+            token.Register(() => tcs.SetResult());
+            return tcs.Task;
         }
     }
 }
