@@ -1,0 +1,36 @@
+@page "/file-explorer"
+@inject FileSystemService FS
+@using System.Linq
+
+<h1>File Explorer</h1>
+
+<ul>
+@foreach (var item in items)
+{
+    <li>@item</li>
+}
+</ul>
+
+<input @bind="newFolder" placeholder="New folder name" />
+<button @onclick="Create">Create Folder</button>
+
+@code {
+    private string path = "/";
+    private string newFolder = string.Empty;
+    private IEnumerable<string> items = Enumerable.Empty<string>();
+
+    protected override void OnInitialized()
+    {
+        items = FS.List(path);
+    }
+
+    private void Create()
+    {
+        if (!string.IsNullOrWhiteSpace(newFolder))
+        {
+            FS.CreateDirectory(path, newFolder);
+            newFolder = string.Empty;
+            items = FS.List(path);
+        }
+    }
+}

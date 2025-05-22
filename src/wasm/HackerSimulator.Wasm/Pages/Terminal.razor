@@ -1,0 +1,13 @@
+@page "/terminal"
+@using System
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+
+<h1>Terminal</h1>
+<button @onclick="RunTerminal">Run Terminal Process</button>
+
+@code {
+    private async Task RunTerminal()
+    {
+        await Shell.Run("terminal", Array.Empty<string>());
+    }
+}
