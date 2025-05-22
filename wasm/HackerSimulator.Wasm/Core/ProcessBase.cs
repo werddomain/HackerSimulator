@@ -12,12 +12,27 @@ namespace HackerSimulator.Wasm.Core
         public string Name { get; }
         public ProcessState State { get; private set; } = ProcessState.Created;
 
-        public async Task StartAsync(string[] args, CancellationToken token = default)
+        private Task? _runningTask;
+
+        public Task StartAsync(string[] args, CancellationToken token = default)
         {
             State = ProcessState.Running;
-            await RunAsync(args, token);
-            State = ProcessState.Exited;
+            _runningTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await RunAsync(args, token);
+                }
+                finally
+                {
+                    State = ProcessState.Exited;
+                }
+            }, token);
+
+            return _runningTask;
         }
+
+        public Task? RunningTask => _runningTask;
 
         protected abstract Task RunAsync(string[] args, CancellationToken token);
     }

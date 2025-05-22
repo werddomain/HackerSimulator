@@ -17,6 +17,7 @@ namespace HackerSimulator.Wasm.Processes
 
         protected override async Task RunAsync(string[] args, CancellationToken token)
         {
+
             Console.WriteLine("Terminal started");
 
             if (args.Length > 0)
@@ -51,6 +52,7 @@ namespace HackerSimulator.Wasm.Processes
 
                 await _shell.ExecuteCommand(line, context);
             }
+
         }
     }
 }
