@@ -1,0 +1,31 @@
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="hs-window @(IsActive ? "active" : "")" style="@Style" @onmousedown="HandleClick" @onmousemove="OnMouseMove" @onmouseup="StopDrag">
+    <div class="hs-window-header" @ondblclick="ToggleMaximize" @onmousedown="StartDrag">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <img class="hs-window-icon" src="@Icon" />
+        }
+        <span class="hs-window-title">@Title</span>
+        <div class="hs-window-buttons">
+            <button @onclick="Minimize">_</button>
+            <button @onclick="ToggleMaximize">@((State==WindowState.Maximized?"🗗":"🗖"))</button>
+            <button @onclick="Close">x</button>
+        </div>
+    </div>
+    <div class="hs-window-content">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </div>
+</div>
+
+<style>
+.hs-window { position:absolute; background:#222; color:#eee; border:1px solid #444; }
+.hs-window-header { background:#333; padding:4px; display:flex; align-items:center; cursor:move; user-select:none; }
+.hs-window-icon { width:16px; height:16px; }
+.hs-window-title { flex:1; margin-left:4px; }
+.hs-window-buttons button { margin-left:4px; }
+.hs-window-content { overflow:auto; height:calc(100% - 30px); padding:4px; }
+.hs-window.active { border-color:#66f; }
+</style>

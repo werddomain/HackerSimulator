@@ -19,6 +19,7 @@ namespace HackerSimulator.Wasm
 
             builder.Services.AddSingleton<NetworkService>();
             builder.Services.AddSingleton<DnsService>();
+            builder.Services.AddSingleton<Windows.WindowManagerService>();
 
 
             await builder.Build().RunAsync();
