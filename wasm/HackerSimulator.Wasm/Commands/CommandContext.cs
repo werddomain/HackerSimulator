@@ -8,6 +8,6 @@ namespace HackerSimulator.Wasm.Commands
         public TextReader Stdin { get; set; } = TextReader.Null;
         public TextWriter Stdout { get; set; } = TextWriter.Null;
         public TextWriter Stderr { get; set; } = TextWriter.Null;
-        public Dictionary<string, string> Env { get; } = new();
+        public Dictionary<string, string> Env { get; set; } = new();
     }
 }
