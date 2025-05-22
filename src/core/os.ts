@@ -15,6 +15,7 @@ import { ComputerSettings } from './ComputerSettings';
 import { createIcons, icons } from 'lucide';
 import { ThemeSystem } from './theme-system';
 import { InitComponents } from './components/init';
+import { MultiMonitorManager } from './multi-monitor';
 /**
  * Main OS class that manages the entire operating system simulation
  */
@@ -37,12 +38,14 @@ export class OS {
   private computerSettings: ComputerSettings;
   private isReady: boolean = false;
   private readyCallbacks: Array<() => void> = [];
+  private multiMonitor: MultiMonitorManager;
   themeSystem: ThemeSystem;
   constructor() {
     this.initIcons(); // Initialize icons using lucide
     this.fileSystem = new FileSystem(this);
     this.processManager = new ProcessManager();
-    this.windowManager = new WindowManager();
+    this.multiMonitor = new MultiMonitorManager();
+    this.windowManager = new WindowManager(this.multiMonitor);
     this.systemMonitor = new SystemMonitor(this.processManager);
     this.appManager = new AppManager(this);
     this.commandProcessor = new CommandProcessor(this);
@@ -196,8 +199,14 @@ export class OS {
    */
   public getDesktop(): Desktop {
     return this.desktop;
-  } public getWebClient(): WebClient {
+  }
+
+  public getWebClient(): WebClient {
     return this.webClient;
+  }
+
+  public getMultiMonitorManager(): MultiMonitorManager {
+    return this.multiMonitor;
   }
 
   /**
