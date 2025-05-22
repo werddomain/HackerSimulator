@@ -1,10 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
 
 namespace HackerSimulator.Wasm.Core
 {
-    public abstract class ProcessBase
+    public abstract class ProcessBase : ComponentBase
     {
         protected ProcessBase(string name) => Name = name;
 
