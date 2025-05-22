@@ -1,0 +1,37 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+
+<div class="terminal-wrapper" @onclick="FocusInput">
+    <pre class="terminal-output">@_display</pre>
+    <div class="terminal-input">
+        <span class="prompt">@Prompt</span>
+        <input @ref="_inputRef" @bind="_input" @bind:event="oninput" @onkeydown="HandleInputKey" class="input-field" />
+    </div>
+</div>
+
+<style>
+.terminal-wrapper {
+    height:100%;
+    width:100%;
+    font-family: monospace;
+    background: #1e1e1e;
+    color: #f0f0f0;
+    padding:4px;
+    box-sizing:border-box;
+    overflow-y:auto;
+}
+.terminal-output {
+    white-space: pre-wrap;
+}
+.input-field {
+    background: transparent;
+    color: inherit;
+    border: none;
+    outline: none;
+    width: calc(100% - 10px);
+}
+.prompt {
+    color: #50fa7b;
+}
+</style>
