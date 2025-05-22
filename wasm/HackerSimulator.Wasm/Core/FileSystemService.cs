@@ -300,7 +300,7 @@ namespace HackerSimulator.Wasm.Core
             return Task.FromResult(_entries.TryGetValue(path, out var rec) && rec.Entry.IsBinary);
         }
 
-        private class FileStats
+        public class FileStats
         {
             public bool IsDirectory { get; set; }
             public long? Size { get; set; }

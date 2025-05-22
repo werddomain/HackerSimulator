@@ -1,5 +1,4 @@
-@inherits HackerSimulator.Wasm.Windows.WindowBase
-
+@inherits HackerSimulator.Wasm.Core.ProcessBase
 <div class="hs-window @(IsActive ? "active" : "")" style="@Style" @onmousedown="HandleClick" @onmousemove="OnMouseMove" @onmouseup="StopDrag">
     <div class="hs-window-header" @ondblclick="ToggleMaximize" @onmousedown="StartDrag">
         @if (!string.IsNullOrEmpty(Icon))

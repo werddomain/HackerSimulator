@@ -2,12 +2,19 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using System;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
+using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Windows
 {
-    public partial class WindowBase : ProcessBase, IDisposable
+    public partial class WindowBase : IDisposable
     {
         [Inject] private WindowManagerService Manager { get; set; } = default!;
+
+        public WindowBase() : base("window")
+        {
+        }
 
         [Parameter] public RenderFragment? ChildContent { get; set; }
         [Parameter] public string Title { get; set; } = "Window";
@@ -127,6 +134,12 @@ namespace HackerSimulator.Wasm.Windows
         public void Dispose()
         {
             Manager.Unregister(this);
+        }
+
+        protected override Task RunAsync(string[] args, CancellationToken token)
+        {
+            // Windows have no background execution logic by default
+            return Task.CompletedTask;
         }
     }
 }
