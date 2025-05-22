@@ -1,22 +1,58 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using HackerSimulator.Wasm.Core;
+using HackerSimulator.Wasm.Commands;
 
 namespace HackerSimulator.Wasm.Processes
 {
     public class TerminalProcess : ProcessBase
     {
-        public TerminalProcess() : base("terminal")
+        private readonly ShellService _shell;
+
+        public TerminalProcess(ShellService shell) : base("terminal")
         {
+            _shell = shell;
         }
 
-        protected override Task RunAsync(string[] args, CancellationToken token)
+        protected override async Task RunAsync(string[] args, CancellationToken token)
         {
-            // In a real implementation this would start an interactive terminal
-            System.Console.WriteLine("Terminal started");
-            var tcs = new TaskCompletionSource();
-            token.Register(() => tcs.SetResult());
-            return tcs.Task;
+
+            Console.WriteLine("Terminal started");
+
+            if (args.Length > 0)
+            {
+                var line = string.Join(" ", args);
+                var ctx = new CommandContext
+                {
+                    Stdin = Console.In,
+                    Stdout = Console.Out,
+                    Stderr = Console.Error
+                };
+
+                await _shell.ExecuteCommand(line, ctx);
+                return;
+            }
+
+            while (!token.IsCancellationRequested)
+            {
+                Console.Write("> ");
+                var line = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+                if (line.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                var context = new CommandContext
+                {
+                    Stdin = Console.In,
+                    Stdout = Console.Out,
+                    Stderr = Console.Error
+                };
+
+                await _shell.ExecuteCommand(line, context);
+            }
+
         }
     }
 }

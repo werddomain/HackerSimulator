@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using HackerSimulator.Wasm.Commands;
 
 namespace HackerSimulator.Wasm.Core
 {
@@ -12,12 +13,14 @@ namespace HackerSimulator.Wasm.Core
         private readonly IServiceProvider _provider;
         private readonly KernelService _kernel;
         private readonly Dictionary<string, Type> _processes = new();
+        private readonly CommandProcessor _processor = new();
 
         public ShellService(IServiceProvider provider, KernelService kernel)
         {
             _provider = provider;
             _kernel = kernel;
             DiscoverProcesses();
+            RegisterBuiltInCommands();
         }
 
         private void DiscoverProcesses()
@@ -32,11 +35,36 @@ namespace HackerSimulator.Wasm.Core
             }
         }
 
-        public async Task Run(string name, string[] args)
+        private void RegisterBuiltInCommands()
+        {
+            RegisterCommand(new EchoCommand(this));
+            RegisterCommand(new UpperCommand(this));
+        }
+
+        public void RegisterCommand(ICommandModule command)
+        {
+            _processor.RegisterCommand(command);
+        }
+
+        public Task<int> ExecuteCommand(string commandLine, CommandContext context)
+        {
+            return _processor.Execute(commandLine, context);
+        }
+
+        public async Task Run(string name, string[] args, ProcessBase? sender = null)
         {
             if (!_processes.TryGetValue(name.ToLowerInvariant(), out var type))
             {
                 Console.WriteLine($"Process '{name}' not found.");
+                return;
+            }
+
+            // If the target process is an Executable and sender isn't a terminal,
+            // launch it inside a new terminal instance.
+            if (typeof(Executable).IsAssignableFrom(type) && sender is not Processes.TerminalProcess)
+            {
+                var terminalArgs = new string[] { name }.Concat(args).ToArray();
+                await Run("terminal", terminalArgs, sender);
                 return;
             }
 
