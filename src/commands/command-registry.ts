@@ -31,6 +31,7 @@ import { TailCommand } from './linux/tail';
 import { TouchCommand } from './linux/touch';
 import { WcCommand } from './linux/wc';
 import { LaunchCommand } from './linux/launch';
+import { OpenScreenCommand } from './linux/openscreen';
 
 // Import path alias management commands
 import { AliasCommand } from './linux/alias';
@@ -118,6 +119,7 @@ export class CommandRegistry {
     this.registerCommand(new ManCommand(this.os));
     this.registerCommand(new NanoEditor(this.os));
     this.registerCommand(new LaunchCommand(this.os));
+    this.registerCommand(new OpenScreenCommand(this.os));
     
     // Register path alias management commands
     this.registerCommand(new AliasCommand(this.os));

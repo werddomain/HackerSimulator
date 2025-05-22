@@ -13,20 +13,32 @@ export interface MonitorMessage<T = any> {
  * Manager class for handling additional monitor windows and
  * communication between them using BroadcastChannel.
  */
-export class MultiMonitorManager {
+export class MultiMonitorManager extends EventTarget {
   private channel: BroadcastChannel;
   private monitors: Map<number, Window> = new Map();
   private connected: Set<number> = new Set();
   private channelName: string;
+  public isSecondary: boolean = false;
 
   constructor(channelName: string = 'multi-monitor') {
+    super();
     this.channelName = channelName;
     this.channel = new BroadcastChannel(this.channelName);
     this.channel.addEventListener('message', (e) => this.handleMessage(e));
 
     const params = new URLSearchParams(window.location.search);
-    const monitorId = params.get('monitorId');
+    const monitorId = params.get('monitor');
     if (monitorId !== null) {
+      const id = parseInt(monitorId, 10);
+      this.channel.postMessage({ type: 'handshake', id } as MonitorMessage);
+    }
+  }
+
+  public connectAsSecondary(): void {
+    this.isSecondary = true;
+    const params = new URLSearchParams(window.location.search);
+    const monitorId = params.get('monitor');
+    if (monitorId) {
       const id = parseInt(monitorId, 10);
       this.channel.postMessage({ type: 'handshake', id } as MonitorMessage);
     }
@@ -51,6 +63,9 @@ export class MultiMonitorManager {
           this.monitors.delete(msg.id);
         }
         break;
+      case 'message':
+        this.dispatchEvent(new CustomEvent('message', { detail: msg }));
+        break;
     }
   }
 
@@ -59,7 +74,7 @@ export class MultiMonitorManager {
    */
   public openMonitor(id: number, url: string = window.location.href): void {
     const monitorUrl = new URL(url, window.location.href);
-    monitorUrl.searchParams.set('monitorId', id.toString());
+    monitorUrl.searchParams.set('monitor', id.toString());
     const win = window.open(monitorUrl.toString(), `monitor-${id}`);
     if (win) {
       this.monitors.set(id, win);
