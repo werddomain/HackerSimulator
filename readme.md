@@ -65,3 +65,8 @@ Please read our [contribution guidelines](CONTRIBUTING.md) before submitting pul
 
 This project is licensed under the terms found in [LICENSE.md](LICENSE.md).
 
+
+## Blazor WebAssembly Version
+
+A new Blazor WebAssembly implementation targeting .NET 9 is located in [`src/wasm`](src/wasm). This version aims to recreate the JavaScript functionality of the original project purely in C#.
+Core services such as a simple kernel, shell, and in-memory file system are implemented to manage processes and applications without any JavaScript.
