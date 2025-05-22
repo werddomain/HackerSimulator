@@ -1,0 +1,15 @@
+@inject HackerSimulator.Wasm.Core.FileSystemService FS
+
+<h3>File Explorer</h3>
+<div>
+    <ul>
+        @foreach (var item in FS.List(_currentPath))
+        {
+            <li>@item.Name @(item.IsDirectory ? "(dir)" : "")</li>
+        }
+    </ul>
+</div>
+
+@code {
+    private string _currentPath = "/";
+}

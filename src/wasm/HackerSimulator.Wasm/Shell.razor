@@ -1,0 +1,28 @@
+@inject HackerSimulator.Wasm.Core.WindowManager Windows
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+
+<div>
+    <button @onclick='() => Shell.Run("terminal", System.Array.Empty<string>())'>Open Terminal</button>
+    <button @onclick='() => Shell.Run("calculator", System.Array.Empty<string>())'>Open Calculator</button>
+    <button @onclick='() => Shell.Run("explorer", System.Array.Empty<string>())'>Open Explorer</button>
+</div>
+
+@foreach (var win in Windows.Windows)
+{
+    <div style="border:1px solid gray;padding:4px;margin:4px;">
+        <h4>@win.Title <button @onclick="() => Close(win.Id)">X</button></h4>
+        <DynamicComponent Type="win.ComponentType" />
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Windows.WindowsChanged += StateHasChanged;
+    }
+
+    void Close(Guid id)
+    {
+        Windows.CloseWindow(id);
+    }
+}

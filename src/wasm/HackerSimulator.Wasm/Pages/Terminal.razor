@@ -1,0 +1,29 @@
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+
+<h3>Terminal</h3>
+<div style="background:black;color:lime;padding:5px;font-family:monospace;min-height:200px;">
+    @foreach (var line in _output)
+    {
+        <div>@line</div>
+    }
+    <div>
+        <span>&gt;</span>
+        <input @bind="_current" @bind:event="oninput" @onkeydown="HandleKey" style="background:black;color:lime;border:none;outline:none;width:90%;" />
+    </div>
+</div>
+
+@code {
+    private List<string> _output = new();
+    private string _current = string.Empty;
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            var cmd = _current;
+            _output.Add($"> {cmd}");
+            _current = string.Empty;
+            var parts = cmd.Split(" "); await Shell.Run(parts[0], parts.Skip(1).ToArray());
+        }
+    }
+}

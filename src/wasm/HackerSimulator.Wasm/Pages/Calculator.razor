@@ -1,0 +1,21 @@
+<h3>Calculator</h3>
+<input @bind="_expr" @bind:event="oninput" />
+<button @onclick="Evaluate">=</button>
+<p>Result: @_result</p>
+
+@code {
+    private string _expr = string.Empty;
+    private string _result = string.Empty;
+
+    void Evaluate()
+    {
+        try
+        {
+            _result = new System.Data.DataTable().Compute(_expr, null)?.ToString() ?? "";
+        }
+        catch
+        {
+            _result = "error";
+        }
+    }
+}
