@@ -30,6 +30,9 @@ namespace HackerSimulator.Wasm.Core
             _started = true;
             var fs = _services.GetRequiredService<FileSystemService>();
             await fs.InitAsync();
+ var ft = _services.GetRequiredService<FileTypeService>();
+            ft.RegisterFromAttributes();
+          
 
             _auth = _services.GetRequiredService<AuthService>();
             await _auth.InitAsync();
@@ -40,6 +43,7 @@ namespace HackerSimulator.Wasm.Core
         {
             // Placeholder for tasks after user login
             return Task.CompletedTask;
+
         }
     }
 }

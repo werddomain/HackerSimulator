@@ -1,6 +1,10 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using BlazorMonaco.Languages
+
 <div class="code-editor-layout">
     <div class="activity-bar">
         <button class="activity-btn">📁</button>
@@ -27,13 +31,14 @@
             </div>
             @if (_activeTab != null)
             {
-                <MonacoEditor class="editor"
+                <StandaloneCodeEditor class="editor"
                               @ref="_editor"
-                              Value="_activeTab.Content"
+                              ConstructionOptions="_editorOptions"
+                              
+                              Value=""
                               Language="_activeTab.Language"
                               Theme="vs-dark"
-                              OnDidChangeModelContent="EditorChanged"
-                              Options="_editorOptions" />
+                              OnDidChangeModelContent="EditorChanged" />
             }
             else
             {

@@ -7,13 +7,16 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
+using HackerSimulator.Wasm.Core;
 using HackerSimulator.Wasm.Shared;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:folder")]
     public partial class FileExplorerApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;
+        [Inject] private FileTypeService FileTypes { get; set; } = default!;
 
         private string _path = "/home/user";
         private List<FileSystemService.FileSystemEntry> _entries = new();
@@ -114,7 +117,7 @@ namespace HackerSimulator.Wasm.Apps
             if (_shortcuts.TryGetValue(path, out var sc) && !string.IsNullOrEmpty(sc.Icon))
                 return sc.Icon!;
             if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase)) return "🔗";
-            return "📄";
+            return FileTypes.GetIcon(path);
         }
 
         private void Select(FileSystemService.FileSystemEntry entry)
@@ -154,7 +157,7 @@ namespace HackerSimulator.Wasm.Apps
             }
             else
             {
-                await Shell.Run("texteditorapp", new[] { path });
+                await Shell.OpenFile(path);
             }
         }
 

@@ -4,6 +4,7 @@ using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:triangle-exclamation")]
     public partial class ErrorLogViewerApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;

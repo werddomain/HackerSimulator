@@ -5,9 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using HackerSimulator.Wasm.Core;
 using BlazorMonaco;
+using BlazorMonaco.Editor;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [OpenFileType("js", "ts", "cs", "json", "html", "css")]
+    [AppIcon("fa:code")]
     public partial class CodeEditorApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;
@@ -22,11 +25,19 @@ namespace HackerSimulator.Wasm.Apps
 
         private readonly List<EditorTab> _tabs = new();
         private EditorTab? _activeTab;
-        private MonacoEditor? _editor;
-        private readonly StandaloneEditorConstructionOptions _editorOptions = new()
-        {
-            AutomaticLayout = true
-        };
+        private CodeEditor? _editor;
+
+        private StandaloneEditorConstructionOptions _editorOptions(StandaloneCodeEditor editor) { 
+            return new()
+            {
+                AutomaticLayout = true,
+                Language = _activeTab?.Language ?? "text",
+                Theme = "vs-dark",
+                ReadOnly = false,
+                Value = _activeTab?.Content ?? string.Empty
+            };
+        }
+        
 
         protected override void OnInitialized()
         {
