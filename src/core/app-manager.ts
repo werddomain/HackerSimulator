@@ -180,6 +180,16 @@ export class AppManager {
       launchable: true,
       singleton: true
     });
+
+    // HackPaint image editor
+    this.registerApp({
+      id: 'hack-paint',
+      name: 'HackPaint',
+      description: 'Simple image editor',
+      icon: '🖌️',
+      launchable: true,
+      singleton: true
+    });
   }
 
   /**
@@ -320,6 +330,9 @@ export class AppManager {
         break;
       case 'theme-editor':
         this.loadThemeEditorUI(contentElement,windowId, args);
+        break;
+      case 'hack-paint':
+        this.loadHackPaintUI(contentElement,windowId, args);
         break;
       default:
         contentElement.innerHTML = `<div style="padding: 20px;">App '${appId}' UI not implemented yet.</div>`;
@@ -507,6 +520,18 @@ export class AppManager {
     }).catch(error => {
       console.error('Failed to load error log viewer app:', error);
       contentElement.innerHTML = '<div style="padding: 20px;">Failed to load error log viewer app.</div>';
+    });
+  }
+
+  private loadHackPaintUI(contentElement: HTMLElement, windowId: string, args: string[] = []): void {
+    contentElement.innerHTML = '<div class="hack-paint"></div>';
+
+    import('../apps/hack-paint').then(module => {
+      const hackPaintApp = new module.HackPaintApp(this.os);
+      hackPaintApp.init(contentElement.querySelector('.hack-paint')!, windowId, args);
+    }).catch(error => {
+      console.error('Failed to load HackPaint app:', error);
+      contentElement.innerHTML = '<div style="padding: 20px;">Failed to load HackPaint app.</div>';
     });
   }
   /**
