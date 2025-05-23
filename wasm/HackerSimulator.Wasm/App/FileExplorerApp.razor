@@ -1,6 +1,7 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 @inject HackerSimulator.Wasm.Core.ShellService Shell
+@using HackerSimulator.Wasm.Shared
 
 <div class="file-explorer-app" @onclick="HideMenu">
     <div class="file-explorer-toolbar">
@@ -14,8 +15,8 @@
             <input class="path-input" @bind="_path" @bind:event="oninput" @onkeydown="OnPathKeyDown" />
         </div>
         <div class="view-options">
-            <button class="view-btn @(ViewMode == ViewModes.Grid ? "active" : null)" @onclick="() => SetView(ViewModes.Grid)">Grid</button>
-            <button class="view-btn @(ViewMode == ViewModes.List ? "active" : null)" @onclick="() => SetView(ViewModes.List)">List</button>
+            <button class="view-btn @(ViewMode == FileListViewMode.Grid ? "active" : null)" @onclick="() => SetView(FileListViewMode.Grid)">Grid</button>
+            <button class="view-btn @(ViewMode == FileListViewMode.List ? "active" : null)" @onclick="() => SetView(FileListViewMode.List)">List</button>
             <button class="view-btn show-hidden @(ShowHidden ? "active" : null)" @onclick="ToggleHidden">Hidden</button>
         </div>
     </div>
@@ -35,23 +36,14 @@
             </div>
         </div>
         <div class="file-explorer-content" @oncontextmenu="ShowBackgroundMenu">
-            <div class="file-list @(ViewMode == ViewModes.Grid ? "grid" : "list")">
-                @if (_entries.Count == 0)
-                {
-                    <div class="empty-folder">This folder is empty</div>
-                }
-                else
-                {
-                    @foreach (var entry in _entries)
-                    {
-                        var path = EntryPath(entry);
-                        <div class="file-item @(Selected.Contains(path) ? "selected" : null)" @onclick="() => Select(entry)" @ondblclick="() => Open(entry)" @oncontextmenu="e => ShowContextMenu(e, entry)">
-                            <span class="file-icon">@(entry.IsDirectory ? "📁" : "📄")</span>
-                            <span class="file-name">@entry.Name</span>
-                        </div>
-                    }
-                }
-            </div>
+            <FileList Entries="_entries"
+                      Selected="Selected"
+                      ViewMode="ViewMode"
+                      EntryPath="EntryPath"
+                      IconProvider="GetIcon"
+                      OnSelect="Select"
+                      OnOpen="Open"
+                      OnContextMenu="OnListContextMenu" />
         </div>
     </div>
 
