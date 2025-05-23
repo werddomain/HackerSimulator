@@ -21,6 +21,7 @@ namespace HackerSimulator.Wasm.Core
             _kernel = kernel;
             DiscoverProcesses();
             RegisterBuiltInCommands();
+            DiscoverCommands();
         }
 
         private void DiscoverProcesses()
@@ -39,6 +40,21 @@ namespace HackerSimulator.Wasm.Core
         {
             RegisterCommand(new EchoCommand(this, _kernel));
             RegisterCommand(new UpperCommand(this, _kernel));
+        }
+
+        private void DiscoverCommands()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            foreach (var type in assembly.GetTypes())
+            {
+                if (typeof(ICommandModule).IsAssignableFrom(type) && !type.IsAbstract)
+                {
+                    if (ActivatorUtilities.CreateInstance(_provider, type) is ICommandModule cmd)
+                    {
+                        RegisterCommand(cmd);
+                    }
+                }
+            }
         }
 
         public void RegisterCommand(ICommandModule command)
@@ -71,5 +87,8 @@ namespace HackerSimulator.Wasm.Core
             var process = (ProcessBase)ActivatorUtilities.CreateInstance(_provider, type);
             await process.StartAsync(args);
         }
+
+        public IEnumerable<ICommandModule> GetCommands() => _processor.GetCommands();
+        public ICommandModule? GetCommand(string name) => _processor.GetCommand(name);
     }
 }

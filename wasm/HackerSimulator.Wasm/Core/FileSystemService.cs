@@ -15,11 +15,13 @@ namespace HackerSimulator.Wasm.Core
     {
         private const string StorageKey = "hacker-os-fs";
         private readonly IJSRuntime _js;
+        private readonly AliasService _aliases;
         private Dictionary<string, EntryRecord> _entries = new();
 
-        public FileSystemService(IJSRuntime js)
+        public FileSystemService(IJSRuntime js, AliasService aliases)
         {
             _js = js;
+            _aliases = aliases;
         }
 
         #region Entry definitions
@@ -86,6 +88,11 @@ namespace HackerSimulator.Wasm.Core
         {
             var json = JsonSerializer.Serialize(_entries);
             await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
+        }
+
+        public string ResolvePath(string path, string? cwd = null)
+        {
+            return _aliases.Resolve(path, cwd);
         }
 
         private static string Normalize(string path)

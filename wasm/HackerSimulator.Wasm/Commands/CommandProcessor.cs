@@ -96,5 +96,12 @@ namespace HackerSimulator.Wasm.Commands
             if (current.Length > 0)
                 yield return current;
         }
+
+        public IEnumerable<ICommandModule> GetCommands() => _commands.Values;
+        public ICommandModule? GetCommand(string name)
+        {
+            _commands.TryGetValue(name.ToLowerInvariant(), out var cmd);
+            return cmd;
+        }
     }
 }
