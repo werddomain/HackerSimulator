@@ -8,7 +8,7 @@ using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Windows
 {
-    public partial class WindowBase : IDisposable
+    public partial class WindowBase : ProcessBase
     {
         [Inject] private WindowManagerService Manager { get; set; } = default!;
 
