@@ -22,6 +22,9 @@ namespace HackerSimulator.Wasm
             // Register application discovery service
             builder.Services.AddSingleton<ApplicationService>();
 
+            builder.Services.AddSingleton<AuthService>();
+            builder.Services.AddSingleton<EncryptionService>();
+
             builder.Services.AddSingleton<AutoRunService>();
 
             builder.Services.AddSingleton<NetworkService>();

@@ -1,0 +1,15 @@
+.welcome-form {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    margin-top: 1rem;
+}
+
+.welcome-form input {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+}
+
+.welcome-form button {
+    padding: 0.5rem;
+}

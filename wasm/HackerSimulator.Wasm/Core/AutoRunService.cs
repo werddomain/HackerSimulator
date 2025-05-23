@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using static HackerSimulator.Wasm.Core.AuthService;
 
 namespace HackerSimulator.Wasm.Core
 {
@@ -11,6 +12,7 @@ namespace HackerSimulator.Wasm.Core
     {
         private readonly IServiceProvider _services;
         private bool _started;
+        private AuthService? _auth;
 
         public AutoRunService(IServiceProvider services)
         {
@@ -28,9 +30,20 @@ namespace HackerSimulator.Wasm.Core
             _started = true;
             var fs = _services.GetRequiredService<FileSystemService>();
             await fs.InitAsync();
-
-            var ft = _services.GetRequiredService<FileTypeService>();
+ var ft = _services.GetRequiredService<FileTypeService>();
             ft.RegisterFromAttributes();
+          
+
+            _auth = _services.GetRequiredService<AuthService>();
+            await _auth.InitAsync();
+            _auth.OnUserLogin += OnUserLogin;
+        }
+
+        private Task OnUserLogin(AuthService.UserRecord user)
+        {
+            // Placeholder for tasks after user login
+            return Task.CompletedTask;
+
         }
     }
 }
