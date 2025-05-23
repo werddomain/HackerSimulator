@@ -312,6 +312,67 @@ namespace HackerSimulator.Wasm.Core
             return Task.FromResult(_entries.TryGetValue(path, out var rec) && rec.Entry.IsBinary);
         }
 
+        public async Task<byte[]> ReadFileBytes(string path)
+        {
+            path = Normalize(path);
+            if (!_entries.TryGetValue(path, out var rec) || rec.Entry.Type != "file")
+                throw new Exception($"Not a file: {path}");
+            if (rec.Entry.IsBinary && rec.Entry.BinaryContent != null)
+                return Convert.FromBase64String(rec.Entry.BinaryContent);
+            return System.Text.Encoding.UTF8.GetBytes(rec.Entry.Content ?? string.Empty);
+        }
+
+        public async Task<byte[]> ZipEntry(string path)
+        {
+            path = Normalize(path);
+            if (!_entries.TryGetValue(path, out var rec))
+                throw new Exception($"Path does not exist: {path}");
+            using var ms = new System.IO.MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+            {
+                await AddEntryToArchive(path, rec.Entry.Name, archive);
+            }
+            return ms.ToArray();
+        }
+
+        public async Task<byte[]> ZipEntries(IEnumerable<string> paths)
+        {
+            using var ms = new System.IO.MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+            {
+                foreach (var p in paths)
+                {
+                    var norm = Normalize(p);
+                    if (_entries.TryGetValue(norm, out var rec))
+                        await AddEntryToArchive(norm, rec.Entry.Name, archive);
+                }
+            }
+            return ms.ToArray();
+        }
+
+        private async Task AddEntryToArchive(string path, string zipPath, System.IO.Compression.ZipArchive archive)
+        {
+            if (!_entries.TryGetValue(path, out var rec)) return;
+            if (rec.Entry.IsDirectory)
+            {
+                foreach (var child in _entries.Values.Where(e => e.Parent == path))
+                {
+                    var childPath = child.Path;
+                    var childZip = string.IsNullOrEmpty(zipPath) ? child.Entry.Name : $"{zipPath}/{child.Entry.Name}";
+                    await AddEntryToArchive(childPath, childZip, archive);
+                }
+            }
+            else
+            {
+                var entry = archive.CreateEntry(zipPath);
+                using var stream = entry.Open();
+                byte[] data = rec.Entry.IsBinary && rec.Entry.BinaryContent != null
+                    ? Convert.FromBase64String(rec.Entry.BinaryContent)
+                    : System.Text.Encoding.UTF8.GetBytes(rec.Entry.Content ?? string.Empty);
+                await stream.WriteAsync(data, 0, data.Length);
+            }
+        }
+
         /// <summary>
         /// Search for files and directories containing the given term.
         /// Returns full paths for all matches.
