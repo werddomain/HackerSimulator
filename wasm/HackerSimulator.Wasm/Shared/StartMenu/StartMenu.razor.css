@@ -1,0 +1,62 @@
+.start-menu {
+    position: absolute;
+    bottom: 40px;
+    left: 4px;
+    width: 260px;
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+}
+.start-menu.visible {
+    display: flex;
+}
+.start-search {
+    width: 100%;
+    margin-bottom: 6px;
+}
+.pinned-apps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.app-btn {
+    width: 60px;
+    height: 60px;
+    background: #333;
+    border: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+.app-icon {
+    font-size: 20px;
+}
+.all-apps-list, .search-results {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow: auto;
+}
+.all-apps-list li, .search-results li {
+    padding: 4px;
+    cursor: pointer;
+}
+.all-apps-list li:hover, .search-results li:hover {
+    background: #2a2d2e;
+}
+.result-icon {
+    margin-right: 6px;
+}
+.toggle-all {
+    margin-bottom: 6px;
+}

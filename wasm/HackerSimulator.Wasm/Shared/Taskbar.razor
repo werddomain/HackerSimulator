@@ -1,8 +1,10 @@
 @implements IDisposable
 @inject WindowManagerService WindowManager
+@using HackerSimulator.Wasm.Shared.StartMenu
 
 <div class="taskbar">
-    <button class="start-button">Start</button>
+    <button class="start-button" @onclick="ToggleMenu">Start</button>
+    <StartMenu.StartMenu Visible="_menuVisible" VisibleChanged="OnMenuVisibleChanged" />
     @foreach (var win in _windows)
     {
         <button class="task-button @(win == _active ? "active" : "")" @onclick="() => Activate(win)">
@@ -18,6 +20,7 @@
 @code {
     private readonly List<WindowBase> _windows = new();
     private WindowBase? _active;
+    private bool _menuVisible;
 
     protected override void OnInitialized()
     {
@@ -54,6 +57,16 @@
             win.Restore();
         }
         win.Activate();
+    }
+
+    private void ToggleMenu()
+    {
+        _menuVisible = !_menuVisible;
+    }
+
+    private void OnMenuVisibleChanged(bool visible)
+    {
+        _menuVisible = visible;
     }
 
     public void Dispose()

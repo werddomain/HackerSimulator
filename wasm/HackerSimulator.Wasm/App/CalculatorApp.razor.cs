@@ -1,7 +1,9 @@
 using System;
+using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:calculator")]
     public partial class CalculatorApp : Windows.WindowBase
     {
         private readonly string[][] _layout = new[]

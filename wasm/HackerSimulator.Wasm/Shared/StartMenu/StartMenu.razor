@@ -1,0 +1,109 @@
+@implements IDisposable
+@inject ApplicationService AppService
+@inject FileSystemService FS
+@inject ShellService Shell
+@using HackerSimulator.Wasm.Core
+
+<div class="start-menu @(Visible ? "visible" : null)">
+    <input class="start-search" placeholder="Search" @bind="_search" @bind:event="oninput" />
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <ul class="search-results">
+            @foreach (var app in _appResults)
+            {
+                <li @onclick="() => Launch(app.Command)">@((MarkupString)Icon.Parse(app.Icon).ToHtml(new { @class="result-icon" }))<span>@app.Name</span></li>
+            }
+            @foreach (var file in _fileResults)
+            {
+                <li @onclick="() => OpenFile(file)"><span class="result-icon">📄</span><span>@System.IO.Path.GetFileName(file)</span></li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="pinned-apps">
+            @foreach (var app in PinnedApps)
+            {
+                <button class="app-btn" @onclick="() => Launch(app.Command)">@((MarkupString)Icon.Parse(app.Icon).ToHtml(new { @class="app-icon" }))<span>@app.Name</span></button>
+            }
+        </div>
+        <div class="all-apps">
+            <button class="toggle-all" @onclick="ToggleAll">@(_showAll ? "Hide" : "All Apps")</button>
+            @if (_showAll)
+            {
+                <ul class="all-apps-list">
+                    @foreach (var app in _allApps)
+                    {
+                        <li @onclick="() => Launch(app.Command)">@((MarkupString)Icon.Parse(app.Icon).ToHtml(new { @class="result-icon" }))<span>@app.Name</span></li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    private string _search = string.Empty;
+    private List<ApplicationService.AppInfo> _allApps = new();
+    private List<ApplicationService.AppInfo> _pinned = new() { "terminalapp", "fileexplorerapp", "settingsapp" }
+        .Select(c => AppService.GetApp(c)!)
+        .Where(a => a != null).ToList();
+    private List<ApplicationService.AppInfo> _appResults = new();
+    private List<string> _fileResults = new();
+    private bool _showAll;
+
+    private IEnumerable<ApplicationService.AppInfo> PinnedApps => _pinned;
+
+    protected override void OnInitialized()
+    {
+        _allApps = AppService.GetApps().ToList();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateSearch();
+    }
+
+    private async Task UpdateSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_search))
+        {
+            _appResults.Clear();
+            _fileResults.Clear();
+            return;
+        }
+
+        _appResults = _allApps.Where(a => a.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+        _fileResults = (await FS.Search(_search)).Take(20).ToList();
+    }
+
+    private void ToggleAll()
+    {
+        _showAll = !_showAll;
+    }
+
+    private async Task Launch(string command)
+    {
+        await Shell.Run(command, Array.Empty<string>());
+        await Close();
+    }
+
+    private async Task OpenFile(string path)
+    {
+        await Shell.OpenFile(path);
+        await Close();
+    }
+
+    public async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    public void Dispose()
+    {
+    }
+}

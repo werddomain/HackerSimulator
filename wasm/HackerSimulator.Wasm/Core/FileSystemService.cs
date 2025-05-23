@@ -307,6 +307,22 @@ namespace HackerSimulator.Wasm.Core
             return Task.FromResult(_entries.TryGetValue(path, out var rec) && rec.Entry.IsBinary);
         }
 
+        /// <summary>
+        /// Search for files and directories containing the given term.
+        /// Returns full paths for all matches.
+        /// </summary>
+        public Task<IEnumerable<string>> Search(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return Task.FromResult(Enumerable.Empty<string>());
+
+            var results = _entries.Values
+                .Where(e => e.Entry.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Select(e => e.Path);
+
+            return Task.FromResult(results);
+        }
+
         public class FileStats
         {
             public bool IsDirectory { get; set; }
