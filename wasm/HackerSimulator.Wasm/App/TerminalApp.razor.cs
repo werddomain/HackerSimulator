@@ -4,12 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using HackerSimulator.Wasm.Core;
 using Microsoft.AspNetCore.Components.Web;
 using HackerSimulator.Wasm.Commands;
 using HackerSimulator.Wasm.Windows;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:terminal")] 
     public partial class TerminalApp : WindowBase
     {
         private readonly List<string> _lines = new();

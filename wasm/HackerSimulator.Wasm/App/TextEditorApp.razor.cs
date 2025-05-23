@@ -5,6 +5,7 @@ using HackerSimulator.Wasm.Core;
 namespace HackerSimulator.Wasm.Apps
 {
     [OpenFileType("txt", "md", "doc", "docx")]
+    [AppIcon("fa:file-lines")]
     public partial class TextEditorApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;

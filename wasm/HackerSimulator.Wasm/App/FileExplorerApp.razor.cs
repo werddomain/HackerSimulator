@@ -7,10 +7,12 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
+using HackerSimulator.Wasm.Core;
 using HackerSimulator.Wasm.Shared;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:folder")]
     public partial class FileExplorerApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;

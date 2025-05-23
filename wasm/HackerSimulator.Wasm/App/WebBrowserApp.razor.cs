@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using HackerSimulator.Wasm.Web;
+using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:globe")]
     public partial class WebBrowserApp : Windows.WindowBase, IAsyncDisposable
     {
         [Inject] private HackerHttpClient Http { get; set; } = default!;

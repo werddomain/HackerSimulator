@@ -1,9 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [AppIcon("fa:chart-line")]
     public partial class SystemMonitorApp : Windows.WindowBase, IDisposable
     {
         private Timer? _timer;
