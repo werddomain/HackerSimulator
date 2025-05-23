@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
 using HackerSimulator.Wasm.Core;
@@ -17,6 +19,8 @@ namespace HackerSimulator.Wasm.Apps
     {
         [Inject] private FileSystemService FS { get; set; } = default!;
         [Inject] private FileTypeService FileTypes { get; set; } = default!;
+        [Inject] private FileOpsService FileOps { get; set; } = default!;
+        [Inject] private IJSRuntime JS { get; set; } = default!;
 
         [Inject] private ApplicationService Apps { get; set; } = default!;
         private string _path = "/home/user";
@@ -26,6 +30,8 @@ namespace HackerSimulator.Wasm.Apps
         private int _historyIndex = -1;
         private (bool cut, List<string> paths)? _clipboard;
         private readonly Dictionary<string, ShortcutData> _shortcuts = new();
+        private InputFile? _fileInput;
+        private readonly string _fileInputId = "fileInput" + Guid.NewGuid().ToString("N");
 
         private List<ApplicationService.AppInfo> _openWith = new();
         private bool ShowHidden { get; set; }
@@ -297,6 +303,54 @@ namespace HackerSimulator.Wasm.Apps
             _showMenu = false;
         }
 
+
+        private async Task TriggerUpload()
+        {
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('{_fileInputId}').click()");
+        }
+
+        private async Task HandleFileSelected(InputFileChangeEventArgs e)
+        {
+            foreach (var file in e.GetMultipleFiles())
+            {
+                using var stream = file.OpenReadStream(long.MaxValue);
+                using var ms = new System.IO.MemoryStream();
+                await stream.CopyToAsync(ms);
+                var bytes = ms.ToArray();
+                var path = (_path == "/" ? string.Empty : _path) + "/" + file.Name;
+                await FS.WriteBinaryFile(path, bytes);
+            }
+            await Load();
+        }
+
+        private async Task DownloadSelection()
+        {
+            if (Selected.Count == 0) return;
+            if (Selected.Count == 1)
+            {
+                var path = Selected.First();
+                var stat = await FS.Stat(path);
+                if (stat.IsDirectory)
+                {
+                    var bytes = await FS.ZipEntry(path);
+                    var name = path.Split('/').Last() + ".zip";
+                    await FileOps.SaveFile(name, bytes);
+                }
+                else
+                {
+                    var bytes = await FS.ReadFileBytes(path);
+                    var name = path.Split('/').Last();
+                    await FileOps.SaveFile(name, bytes);
+                }
+            }
+            else
+            {
+                var bytes = await FS.ZipEntries(Selected);
+                await FileOps.SaveFile("download.zip", bytes);
+            }
+        }
+
+
         private async Task OpenWith(string command)
         {
             if (_menuEntry == null) return;
@@ -304,6 +358,7 @@ namespace HackerSimulator.Wasm.Apps
             await Shell.Run(command, new[] { path }, this);
             _showMenu = false;
         }
+
         private record ShortcutData(string Command, string[]? Args, string? Icon);
     }
 }

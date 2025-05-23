@@ -19,8 +19,11 @@
             <button class="view-btn @(ViewMode == FileListViewMode.Grid ? "active" : null)" @onclick="() => SetView(FileListViewMode.Grid)">Grid</button>
             <button class="view-btn @(ViewMode == FileListViewMode.List ? "active" : null)" @onclick="() => SetView(FileListViewMode.List)">List</button>
             <button class="view-btn show-hidden @(ShowHidden ? "active" : null)" @onclick="ToggleHidden">Hidden</button>
+            <button class="view-btn upload-btn" @onclick="TriggerUpload">Upload</button>
+            <button class="view-btn download-btn" @onclick="DownloadSelection">Download</button>
         </div>
     </div>
+    <InputFile id="@_fileInputId" OnChange="HandleFileSelected" multiple style="display:none" @ref="_fileInput" />
     <div class="file-explorer-main">
         <div class="file-explorer-sidebar">
             <div class="sidebar-section">
