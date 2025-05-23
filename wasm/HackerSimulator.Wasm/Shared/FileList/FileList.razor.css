@@ -1,0 +1,15 @@
+.file-list.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(100px,1fr));
+    gap: 10px;
+}
+.file-item {
+    padding: 4px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.file-item:hover { background:#2a2d2e; }
+.file-item.selected { background:#094771; }
+.file-list.list .file-item { display:flex; align-items:center; }
+.file-icon { font-size:1.5em; margin-right:5px; }
+.empty-folder { padding:30px; text-align:center; color:#a0a0a0; }

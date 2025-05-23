@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
+using HackerSimulator.Wasm.Shared;
 
 namespace HackerSimulator.Wasm.Apps
 {
@@ -19,9 +21,10 @@ namespace HackerSimulator.Wasm.Apps
         private List<string> _history = new();
         private int _historyIndex = -1;
         private (bool cut, List<string> paths)? _clipboard;
+        private readonly Dictionary<string, ShortcutData> _shortcuts = new();
 
         private bool ShowHidden { get; set; }
-        private ViewModes ViewMode { get; set; } = ViewModes.List;
+        private FileListViewMode ViewMode { get; set; } = FileListViewMode.List;
 
         private bool IsBackDisabled => _historyIndex <= 0;
         private bool IsForwardDisabled => _historyIndex >= _history.Count - 1;
@@ -43,6 +46,23 @@ namespace HackerSimulator.Wasm.Apps
                 .OrderBy(e => e.Type)
                 .ThenBy(e => e.Name)
                 .ToList();
+
+            _shortcuts.Clear();
+            foreach (var e in _entries)
+            {
+                var p = EntryPath(e);
+                if (!e.IsDirectory && p.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var json = await FS.ReadFile(p);
+                        var sc = JsonSerializer.Deserialize<ShortcutData>(json);
+                        if (sc != null) _shortcuts[p] = sc;
+                    }
+                    catch { }
+                }
+            }
+
             Selected.Clear();
             StateHasChanged();
         }
@@ -87,6 +107,16 @@ namespace HackerSimulator.Wasm.Apps
         private string EntryPath(FileSystemService.FileSystemEntry e)
             => (_path == "/" ? string.Empty : _path) + "/" + e.Name;
 
+        private string GetIcon(FileSystemService.FileSystemEntry e)
+        {
+            var path = EntryPath(e);
+            if (e.IsDirectory) return "📁";
+            if (_shortcuts.TryGetValue(path, out var sc) && !string.IsNullOrEmpty(sc.Icon))
+                return sc.Icon!;
+            if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase)) return "🔗";
+            return "📄";
+        }
+
         private void Select(FileSystemService.FileSystemEntry entry)
         {
             var path = EntryPath(entry);
@@ -101,10 +131,31 @@ namespace HackerSimulator.Wasm.Apps
 
         private async Task Open(FileSystemService.FileSystemEntry entry)
         {
+            var path = EntryPath(entry);
             if (entry.IsDirectory)
-                await Navigate(EntryPath(entry));
+            {
+                await Navigate(path);
+            }
+            else if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!_shortcuts.TryGetValue(path, out var sc))
+                {
+                    try
+                    {
+                        var json = await FS.ReadFile(path);
+                        sc = JsonSerializer.Deserialize<ShortcutData>(json);
+                    }
+                    catch { }
+                }
+                if (sc != null && !string.IsNullOrWhiteSpace(sc.Command))
+                {
+                    await Shell.Run(sc.Command, sc.Args ?? Array.Empty<string>(), this);
+                }
+            }
             else
-                await Shell.Run("texteditorapp", new[] { EntryPath(entry) });
+            {
+                await Shell.Run("texteditorapp", new[] { path });
+            }
         }
 
         private async Task NewFile()
@@ -172,7 +223,7 @@ namespace HackerSimulator.Wasm.Apps
             await Load();
         }
 
-        private Task SetView(ViewModes mode)
+        private Task SetView(FileListViewMode mode)
         {
             ViewMode = mode;
             return Task.CompletedTask;
@@ -199,6 +250,12 @@ namespace HackerSimulator.Wasm.Apps
 
         private void ShowBackgroundMenu(MouseEventArgs e) => ShowContextMenu(e, null);
         private void HideMenu() => _showMenu = false;
+
+        private Task OnListContextMenu((MouseEventArgs e, FileSystemService.FileSystemEntry? entry) data)
+        {
+            ShowContextMenu(data.e, data.entry);
+            return Task.CompletedTask;
+        }
 
         private async Task ContextAction(string action)
         {
@@ -232,6 +289,6 @@ namespace HackerSimulator.Wasm.Apps
             _showMenu = false;
         }
 
-        private enum ViewModes { List, Grid }
+        private record ShortcutData(string Command, string[]? Args, string? Icon);
     }
 }
