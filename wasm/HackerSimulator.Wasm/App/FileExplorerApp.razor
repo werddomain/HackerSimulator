@@ -1,6 +1,7 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 @inject HackerSimulator.Wasm.Core.ShellService Shell
+@using MudBlazor
 @using HackerSimulator.Wasm.Shared
 
 <div class="file-explorer-app" @onclick="HideMenu">
@@ -53,6 +54,17 @@
             @if (_menuEntry != null)
             {
                 <div class="context-menu-item" @onclick='() => ContextAction("open")'>Open</div>
+                <MudMenu AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft" Class="context-submenu">
+                    <ActivatorContent>
+                        <div class="context-menu-item">Open With &gt;</div>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @foreach (var app in _openWith)
+                        {
+                            <MudMenuItem OnClick="() => OpenWith(app.Command)">@app.Name</MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
                 <div class="context-menu-item" @onclick='() => ContextAction("rename")'>Rename</div>
                 <div class="context-menu-item" @onclick='() => ContextAction("delete")'>Delete</div>
                 <div class="context-menu-separator"></div>
