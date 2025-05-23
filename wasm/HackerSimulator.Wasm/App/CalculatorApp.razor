@@ -1,0 +1,17 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="calculator">
+    <div class="display">@_display</div>
+    <div class="buttons">
+        @foreach (var row in _layout)
+        {
+            <div class="row">
+                @foreach (var btn in row)
+                {
+                    <button class="btn" @onclick="() => Press(btn)">@btn</button>
+                }
+            </div>
+        }
+    </div>
+</div>
