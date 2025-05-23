@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
+using Microsoft.AspNetCore.Components.Web;
+using HackerSimulator.Wasm.Shared.Terminal;
 using Microsoft.AspNetCore.Components;
 using HackerSimulator.Wasm.Core;
 using BlazorMonaco;
@@ -26,6 +29,11 @@ namespace HackerSimulator.Wasm.Apps
         private readonly List<EditorTab> _tabs = new();
         private EditorTab? _activeTab;
         private CodeEditor? _editor;
+        private string _workingDirectory = "/home/user";
+
+        private int _terminalCount = 1;
+        private int _activeTerminal;
+        private readonly List<Shared.Terminal.Terminal?> _terminalRefs = new();
 
         private StandaloneEditorConstructionOptions _editorOptions(StandaloneCodeEditor editor) { 
             return new()
@@ -43,6 +51,7 @@ namespace HackerSimulator.Wasm.Apps
         {
             base.OnInitialized();
             Title = "Code Editor";
+            _terminalRefs.Add(null); // placeholder for first terminal
         }
 
         private static string GuessLanguage(string path)
@@ -90,6 +99,60 @@ namespace HackerSimulator.Wasm.Apps
             if (_activeTab == null) return;
             await FS.WriteFile(_activeTab.Path, _activeTab.Content);
             _activeTab.IsDirty = false;
+        }
+
+        private async Task OpenFolder()
+        {
+            var dialog = new Dialogs.FolderPickerDialog();
+            var path = await dialog.ShowDialog(this);
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                _workingDirectory = path;
+            }
+        }
+
+        private void AddTerminal()
+        {
+            _terminalCount++;
+            _terminalRefs.Add(null);
+        }
+
+        private void ActivateTerminal(int index)
+        {
+            _activeTerminal = index;
+        }
+
+        private record Workspace(string WorkingDirectory, List<string> Files);
+
+        private async Task SaveWorkspace()
+        {
+            var dialog = new Dialogs.PromptDialog { Message = "Workspace file path?" };
+            var path = await dialog.ShowDialog(this);
+            if (string.IsNullOrWhiteSpace(path)) return;
+            var data = new Workspace(_workingDirectory, _tabs.Select(t => t.Path).ToList());
+            var json = JsonSerializer.Serialize(data);
+            await FS.WriteFile(path, json);
+        }
+
+        private async Task LoadWorkspace()
+        {
+            var dialog = new Dialogs.FilePickerDialog();
+            var path = await dialog.ShowDialog(this);
+            if (string.IsNullOrWhiteSpace(path)) return;
+            var json = await FS.ReadFile(path);
+            var data = JsonSerializer.Deserialize<Workspace>(json);
+            if (data == null) return;
+            _workingDirectory = data.WorkingDirectory;
+            foreach (var file in data.Files)
+                await OpenFile(file);
+        }
+
+        private async Task HandleKey(KeyboardEventArgs e)
+        {
+            if (e.CtrlKey && (e.Key == "s" || e.Code == "KeyS"))
+            {
+                await Save();
+            }
         }
 
 

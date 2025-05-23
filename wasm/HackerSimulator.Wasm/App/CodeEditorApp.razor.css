@@ -40,6 +40,12 @@
     flex-direction: column;
 }
 
+.menu-bar {
+    background-color: #2d2d30;
+    color: #ddd;
+    padding: 4px;
+}
+
 .editor {
     flex: 1;
     width: 100%;
@@ -83,6 +89,37 @@
     resize: vertical;
     overflow: auto;
     min-height: 100px;
+}
+
+.terminal-tabs {
+    display: flex;
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.terminal-tab {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #ddd;
+}
+
+.terminal-tab.active {
+    background-color: #3c3c3c;
+}
+
+.terminal-add {
+    background: none;
+    border: none;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.terminal-container {
+    display: none;
+}
+
+.terminal-container.active {
+    display: block;
 }
 
 /* Terminal component takes care of its own styling */
