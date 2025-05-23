@@ -18,6 +18,7 @@ namespace HackerSimulator.Wasm.Apps
         [Inject] private FileSystemService FS { get; set; } = default!;
         [Inject] private FileTypeService FileTypes { get; set; } = default!;
 
+        [Inject] private ApplicationService Apps { get; set; } = default!;
         private string _path = "/home/user";
         private List<FileSystemService.FileSystemEntry> _entries = new();
         private HashSet<string> Selected { get; } = new();
@@ -26,6 +27,7 @@ namespace HackerSimulator.Wasm.Apps
         private (bool cut, List<string> paths)? _clipboard;
         private readonly Dictionary<string, ShortcutData> _shortcuts = new();
 
+        private List<ApplicationService.AppInfo> _openWith = new();
         private bool ShowHidden { get; set; }
         private FileListViewMode ViewMode { get; set; } = FileListViewMode.List;
 
@@ -248,6 +250,7 @@ namespace HackerSimulator.Wasm.Apps
         private void ShowContextMenu(MouseEventArgs e, FileSystemService.FileSystemEntry? entry)
         {
             _menuEntry = entry;
+            _openWith = entry == null ? new List<ApplicationService.AppInfo>() : Apps.GetAppsForFile(EntryPath(entry)).ToList();
             _menuX = e.ClientX;
             _menuY = e.ClientY;
             _showMenu = true;
@@ -294,6 +297,13 @@ namespace HackerSimulator.Wasm.Apps
             _showMenu = false;
         }
 
+        private async Task OpenWith(string command)
+        {
+            if (_menuEntry == null) return;
+            var path = EntryPath(_menuEntry);
+            await Shell.Run(command, new[] { path }, this);
+            _showMenu = false;
+        }
         private record ShortcutData(string Command, string[]? Args, string? Icon);
     }
 }
