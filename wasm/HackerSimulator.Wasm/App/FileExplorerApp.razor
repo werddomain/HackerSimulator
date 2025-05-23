@@ -2,16 +2,77 @@
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 @inject HackerSimulator.Wasm.Core.ShellService Shell
 
-<div class="file-explorer">
-    <div class="toolbar">
-        <button @onclick="Up">Up</button>
-        <input type="text" @bind="_path" class="path-box" />
-        <button @onclick="Load">Go</button>
+<div class="file-explorer-app" @onclick="HideMenu">
+    <div class="file-explorer-toolbar">
+        <div class="navigation-buttons">
+            <button class="navigation-btn" @onclick="Back" disabled="@IsBackDisabled">Back</button>
+            <button class="navigation-btn" @onclick="Forward" disabled="@IsForwardDisabled">Forward</button>
+            <button class="navigation-btn" @onclick="Up">Up</button>
+            <button class="navigation-btn" @onclick="Refresh">Refresh</button>
+        </div>
+        <div class="path-bar">
+            <input class="path-input" @bind="_path" @bind:event="oninput" @onkeydown="OnPathKeyDown" />
+        </div>
+        <div class="view-options">
+            <button class="view-btn @(ViewMode == ViewModes.Grid ? "active" : null)" @onclick="() => SetView(ViewModes.Grid)">Grid</button>
+            <button class="view-btn @(ViewMode == ViewModes.List ? "active" : null)" @onclick="() => SetView(ViewModes.List)">List</button>
+            <button class="view-btn show-hidden @(ShowHidden ? "active" : null)" @onclick="ToggleHidden">Hidden</button>
+        </div>
     </div>
-    <ul class="entries">
-        @foreach (var entry in _entries)
-        {
-            <li @ondblclick="() => Open(entry)">@entry.Name@(entry.IsDirectory ? "/" : "")</li>
-        }
-    </ul>
+    <div class="file-explorer-main">
+        <div class="file-explorer-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">Favorites</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user")'>🏠 Home</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Desktop")'>🖥️ Desktop</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Documents")'>📄 Documents</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Downloads")'>⬇️ Downloads</div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-header">Devices</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/")'>💻 System</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/mnt")'>💿 Media</div>
+            </div>
+        </div>
+        <div class="file-explorer-content" @oncontextmenu="ShowBackgroundMenu">
+            <div class="file-list @(ViewMode == ViewModes.Grid ? "grid" : "list")">
+                @if (_entries.Count == 0)
+                {
+                    <div class="empty-folder">This folder is empty</div>
+                }
+                else
+                {
+                    @foreach (var entry in _entries)
+                    {
+                        var path = EntryPath(entry);
+                        <div class="file-item @(Selected.Contains(path) ? "selected" : null)" @onclick="() => Select(entry)" @ondblclick="() => Open(entry)" @oncontextmenu="e => ShowContextMenu(e, entry)">
+                            <span class="file-icon">@(entry.IsDirectory ? "📁" : "📄")</span>
+                            <span class="file-name">@entry.Name</span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (_showMenu)
+    {
+        <div class="context-menu" style="left:@(_menuX)px; top:@(_menuY)px; display:block;" @onclick:stopPropagation="true">
+            @if (_menuEntry != null)
+            {
+                <div class="context-menu-item" @onclick='() => ContextAction("open")'>Open</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("rename")'>Rename</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("delete")'>Delete</div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" @onclick='() => ContextAction("copy")'>Copy</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("cut")'>Cut</div>
+            }
+            else
+            {
+                <div class="context-menu-item" @onclick='() => ContextAction("new-file")'>New File</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("new-folder")'>New Folder</div>
+            }
+            <div class="context-menu-item" @onclick='() => ContextAction("paste")'>Paste</div>
+        </div>
+    }
 </div>
