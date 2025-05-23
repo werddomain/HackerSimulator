@@ -1,0 +1,17 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="code-editor">
+    <div class="toolbar">
+        <input type="text" @bind="_path" placeholder="/path/file" class="path-box" />
+        <select @bind="_language">
+            <option value="javascript">JavaScript</option>
+            <option value="csharp">C#</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+        </select>
+        <button @onclick="Open">Open</button>
+        <button @onclick="Save">Save</button>
+    </div>
+    <textarea class="editor" @bind="_content"></textarea>
+</div>

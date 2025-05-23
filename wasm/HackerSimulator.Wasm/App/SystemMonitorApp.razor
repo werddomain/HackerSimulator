@@ -1,0 +1,9 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="system-monitor">
+    <div>CPU: @_cpuUsage% </div>
+    <div class="bar"><div class="fill" style="width:@_cpuUsage%"></div></div>
+    <div>Memory: @_memUsage% </div>
+    <div class="bar"><div class="fill" style="width:@_memUsage%"></div></div>
+</div>

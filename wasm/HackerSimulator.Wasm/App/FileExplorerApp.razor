@@ -1,0 +1,17 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+
+<div class="file-explorer">
+    <div class="toolbar">
+        <button @onclick="Up">Up</button>
+        <input type="text" @bind="_path" class="path-box" />
+        <button @onclick="Load">Go</button>
+    </div>
+    <ul class="entries">
+        @foreach (var entry in _entries)
+        {
+            <li @ondblclick="() => Open(entry)">@entry.Name@(entry.IsDirectory ? "/" : "")</li>
+        }
+    </ul>
+</div>
