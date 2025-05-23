@@ -44,6 +44,12 @@ namespace HackerSimulator.Wasm.Core
                 {
                     "fa" => new Icon(IconType.FontAwesome, value),
                     "iconic" => new Icon(IconType.Iconic, value),
+                    "mat" => new Icon(IconType.Material, value),
+                    "material" => new Icon(IconType.Material, value),
+                    "mud" => new Icon(IconType.MudBlazor, value),
+                    "lucide" => new Icon(IconType.Lucide, value),
+                    "iconscout" => new Icon(IconType.IconScout, value),
+                    "emoji" => new Icon(IconType.Emoji, value),
                     "image" => new Icon(IconType.Image, value),
                     "ico" => new Icon(IconType.Image, value),
                     "data" => new Icon(IconType.Data, value),
@@ -70,6 +76,11 @@ namespace HackerSimulator.Wasm.Core
             {
                 IconType.FontAwesome => "fa",
                 IconType.Iconic => "iconic",
+                IconType.Material => "mat",
+                IconType.MudBlazor => "mud",
+                IconType.Lucide => "lucide",
+                IconType.IconScout => "iconscout",
+                IconType.Emoji => "emoji",
                 IconType.Data => "data",
                 _ => "image"
             };
@@ -87,6 +98,11 @@ namespace HackerSimulator.Wasm.Core
             {
                 IconType.FontAwesome => $"<i class=\"fa fa-{Value}\"{attrs}></i>",
                 IconType.Iconic => $"<span class=\"iconic-{Value}\"{attrs}></span>",
+                IconType.Material => $"<span class=\"material-icons\"{attrs}>{Value}</span>",
+                IconType.MudBlazor => $"<span class=\"mud-icon material-icons\"{attrs}>{Value}</span>",
+                IconType.Lucide => $"<i class=\"lucide lucide-{Value}\"{attrs}></i>",
+                IconType.IconScout => $"<i class=\"uil uil-{Value}\"{attrs}></i>",
+                IconType.Emoji => $"<span{attrs}>{Value}</span>",
                 IconType.Data => $"<img src=\"{EnsureDataPrefix(Value)}\"{attrs} />",
                 _ => $"<img src=\"{Value}\"{attrs} />"
             };
@@ -129,6 +145,11 @@ namespace HackerSimulator.Wasm.Core
     {
         FontAwesome,
         Iconic,
+        Material,
+        MudBlazor,
+        Lucide,
+        IconScout,
+        Emoji,
         Image,
         Data
     }
