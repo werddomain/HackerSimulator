@@ -11,5 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Update="Views/**/*.cshtml" CopyToOutputDirectory="Always" />
+    <Content Include="../Web/**/Views/**/*.cshtml" CopyToOutputDirectory="Always" />
+    <Compile Include="../Web/**/Controllers/*.cs" />
   </ItemGroup>
 </Project>
