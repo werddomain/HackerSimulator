@@ -48,9 +48,7 @@
 
     private string _search = string.Empty;
     private List<ApplicationService.AppInfo> _allApps = new();
-    private List<ApplicationService.AppInfo> _pinned = new() { "terminalapp", "fileexplorerapp", "settingsapp" }
-        .Select(c => AppService.GetApp(c)!)
-        .Where(a => a != null).ToList();
+    private List<ApplicationService.AppInfo> _pinned = new();
     private List<ApplicationService.AppInfo> _appResults = new();
     private List<string> _fileResults = new();
     private bool _showAll;
@@ -60,6 +58,10 @@
     protected override void OnInitialized()
     {
         _allApps = AppService.GetApps().ToList();
+        _pinned = new[] { "terminalapp", "fileexplorerapp", "settingsapp" }
+            .Select(c => AppService.GetApp(c)!)
+            .Where(a => a != null)
+            .ToList();
     }
 
     protected override async Task OnParametersSetAsync()

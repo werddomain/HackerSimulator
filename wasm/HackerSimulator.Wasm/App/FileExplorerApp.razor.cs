@@ -110,9 +110,8 @@ namespace HackerSimulator.Wasm.Apps
         private string EntryPath(FileSystemService.FileSystemEntry e)
             => (_path == "/" ? string.Empty : _path) + "/" + e.Name;
 
-        private string GetIcon(FileSystemService.FileSystemEntry e)
+        private string GetIcon(FileSystemService.FileSystemEntry e, string path)
         {
-            var path = EntryPath(e);
             if (e.IsDirectory) return "📁";
             if (_shortcuts.TryGetValue(path, out var sc) && !string.IsNullOrEmpty(sc.Icon))
                 return sc.Icon!;
