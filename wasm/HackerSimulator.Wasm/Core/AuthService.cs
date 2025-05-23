@@ -5,16 +5,16 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.JSInterop;
+
 
 namespace HackerSimulator.Wasm.Core
 {
     public class AuthService
     {
-        private const string UsersKey = "hacker-os-users";
-        private const string GroupsKey = "hacker-os-groups";
+        private const string UsersKey = "users";
+        private const string GroupsKey = "groups";
 
-        private readonly IJSRuntime _js;
+        private readonly DatabaseService _db;
         private readonly FileSystemService _fs;
 
         private readonly Dictionary<int, UserRecord> _users = new();
@@ -28,9 +28,9 @@ namespace HackerSimulator.Wasm.Core
 
         public event Action<UserRecord>? OnUserLogin;
 
-        public AuthService(IJSRuntime js, FileSystemService fs)
+        public AuthService(DatabaseService db, FileSystemService fs)
         {
-            _js = js;
+            _db = db;
             _fs = fs;
         }
 
@@ -46,24 +46,18 @@ namespace HackerSimulator.Wasm.Core
 
         private async Task LoadUsers()
         {
-            var json = await _js.InvokeAsync<string>("localStorage.getItem", UsersKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                var loaded = JsonSerializer.Deserialize<Dictionary<int, UserRecord>>(json);
-                if (loaded != null)
-                    foreach (var kv in loaded) _users[kv.Key] = kv.Value;
-            }
+            await _db.InitTable<UserRecord>(UsersKey, 1, null);
+            var all = await _db.GetAll<UserRecord>(UsersKey);
+            foreach (var user in all)
+                _users[user.Id] = user;
         }
 
         private async Task LoadGroups()
         {
-            var json = await _js.InvokeAsync<string>("localStorage.getItem", GroupsKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                var loaded = JsonSerializer.Deserialize<Dictionary<int, GroupRecord>>(json);
-                if (loaded != null)
-                    foreach (var kv in loaded) _groups[kv.Key] = kv.Value;
-            }
+            await _db.InitTable<GroupRecord>(GroupsKey, 1, null);
+            var all = await _db.GetAll<GroupRecord>(GroupsKey);
+            foreach (var grp in all)
+                _groups[grp.Id] = grp;
             if (_groups.Count == 0)
             {
                 _groups[1] = new GroupRecord { Id = 1, Name = "admin" };
@@ -72,16 +66,18 @@ namespace HackerSimulator.Wasm.Core
             }
         }
 
-        private Task SaveUsers()
+        private async Task SaveUsers()
         {
-            var json = JsonSerializer.Serialize(_users);
-            return _js.InvokeVoidAsync("localStorage.setItem", UsersKey, json).AsTask();
+            await _db.Clear(UsersKey);
+            foreach (var u in _users.Values)
+                await _db.Set(UsersKey, u.Id.ToString(), u);
         }
 
-        private Task SaveGroups()
+        private async Task SaveGroups()
         {
-            var json = JsonSerializer.Serialize(_groups);
-            return _js.InvokeVoidAsync("localStorage.setItem", GroupsKey, json).AsTask();
+            await _db.Clear(GroupsKey);
+            foreach (var g in _groups.Values)
+                await _db.Set(GroupsKey, g.Id.ToString(), g);
         }
 
         public IEnumerable<GroupRecord> GetGroups() => _groups.Values;

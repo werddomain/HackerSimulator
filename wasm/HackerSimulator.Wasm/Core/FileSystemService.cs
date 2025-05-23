@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.JSInterop;
+
 
 namespace HackerSimulator.Wasm.Core
 {
     /// <summary>
-    /// A very small persistent file system backed by browser localStorage.
+    /// A very small persistent file system backed by browser IndexedDB.
     /// It mimics a subset of the JavaScript IndexedDB implementation.
     /// </summary>
     public class FileSystemService
     {
-        private const string StorageKey = "hacker-os-fs";
-        private readonly IJSRuntime _js;
+        private const string StoreName = "fs";
+        private readonly DatabaseService _db;
         private readonly AliasService _aliases;
         private Dictionary<string, EntryRecord> _entries = new();
 
-        public FileSystemService(IJSRuntime js, AliasService aliases)
+        public FileSystemService(DatabaseService db, AliasService aliases)
         {
-            _js = js;
+            _db = db;
             _aliases = aliases;
         }
 
@@ -39,6 +39,12 @@ namespace HackerSimulator.Wasm.Core
             public string? Content { get; set; }
             public string? BinaryContent { get; set; }
             public bool IsBinary { get; set; }
+            public string? MimeType { get; set; }
+            public string? Description { get; set; }
+            public string? DefaultAppId { get; set; }
+            public string? Icon { get; set; }
+            public bool? Extractable { get; set; }
+            public bool? Compressible { get; set; }
             public MetaData Metadata { get; set; } = new MetaData();
             public bool IsDirectory => Type == "directory";
         }
@@ -55,11 +61,9 @@ namespace HackerSimulator.Wasm.Core
 
         public async Task InitAsync()
         {
-            var json = await _js.InvokeAsync<string>("localStorage.getItem", StorageKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                _entries = JsonSerializer.Deserialize<Dictionary<string, EntryRecord>>(json) ?? new();
-            }
+            await _db.InitTable<EntryRecord>(StoreName, 1, null);
+            var all = await _db.GetAll<EntryRecord>(StoreName);
+            _entries = all.ToDictionary(e => e.Path, e => e);
 
             if (!_entries.ContainsKey("/"))
             {
@@ -86,8 +90,9 @@ namespace HackerSimulator.Wasm.Core
 
         private async Task SaveAsync()
         {
-            var json = JsonSerializer.Serialize(_entries);
-            await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
+            await _db.Clear(StoreName);
+            foreach (var rec in _entries.Values)
+                await _db.Set(StoreName, rec.Path, rec);
         }
 
         public string ResolvePath(string path, string? cwd = null)

@@ -39,11 +39,9 @@ namespace HackerSimulator.Wasm.Core
             _auth.OnUserLogin += OnUserLogin;
         }
 
-        private Task OnUserLogin(AuthService.UserRecord user)
+        private void OnUserLogin(AuthService.UserRecord user)
         {
             // Placeholder for tasks after user login
-            return Task.CompletedTask;
-
         }
     }
 }

@@ -54,6 +54,7 @@
                 <div class="no-file">Open a file to start editing</div>
             }
             <div class="terminal-panel">
+
                 <div class="terminal-tabs">
                     @for (int i = 0; i < _terminalCount; i++)
                     {
@@ -64,9 +65,10 @@
                 @for (int i = 0; i < _terminalCount; i++)
                 {
                     <div class="terminal-container @(i == _activeTerminal ? "active" : null)">
-                        <Terminal @ref="_terminalRefs[i]" WorkingDirectory="@_workingDirectory" />
+                        <HackerSimulator.Wasm.Shared.Terminal.Terminal @ref="_terminalRefs[i]" WorkingDirectory="@_workingDirectory" />
                     </div>
                 }
+
             </div>
         </div>
     </div>
