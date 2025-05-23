@@ -1,10 +1,27 @@
 @inherits LayoutComponentBase
 @inject AutoRunService AutoRun
+@inject AuthService Auth
+@using HackerSimulator.Wasm.Pages
 
 <div class="container">
     <NavMenu />
     <main>
-        @Body
+        @if (!Auth.Initialized)
+        {
+            <p>Loading...</p>
+        }
+        else if (!Auth.HasUsers)
+        {
+            <Welcome />
+        }
+        else if (!Auth.IsAuthenticated)
+        {
+            <Login />
+        }
+        else
+        {
+            @Body
+        }
     </main>
 </div>
 <Taskbar />

@@ -1,0 +1,41 @@
+@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h1 class="login-title">Login</h1>
+
+<div class="login-form">
+    <input placeholder="Username" @bind="username" />
+    <input placeholder="Password" type="password" @bind="password" />
+    @if (requireTotp)
+    {
+        <input placeholder="TOTP" @bind="totp" />
+    }
+    <button @onclick="DoLogin">Login</button>
+</div>
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string totp = string.Empty;
+    private bool requireTotp;
+
+    protected override void OnInitialized()
+    {
+        if (!Auth.HasUsers)
+            Nav.NavigateTo("/welcome", true);
+    }
+
+    private async Task DoLogin()
+    {
+        var user = await Auth.Login(username, password, totp);
+        if (user != null)
+        {
+            Nav.NavigateTo("/", true);
+        }
+        else
+        {
+            requireTotp = true; // show totp field on failure if 2FA enabled
+        }
+    }
+}
