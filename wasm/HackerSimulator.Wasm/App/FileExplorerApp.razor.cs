@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
+using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
@@ -12,7 +12,6 @@ namespace HackerSimulator.Wasm.Apps
     public partial class FileExplorerApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;
-        [Inject] private IJSRuntime JS { get; set; } = default!;
 
         private string _path = "/home/user";
         private List<FileSystemService.FileSystemEntry> _entries = new();
@@ -110,7 +109,8 @@ namespace HackerSimulator.Wasm.Apps
 
         private async Task NewFile()
         {
-            var name = await JS.InvokeAsync<string?>("prompt", "File name?");
+            var dialog = new PromptDialog { Message = "File name?" };
+            var name = await dialog.ShowDialog(this);
             if (string.IsNullOrWhiteSpace(name)) return;
             await FS.WriteFile((_path == "/" ? string.Empty : _path) + "/" + name, string.Empty);
             await Load();
@@ -118,7 +118,8 @@ namespace HackerSimulator.Wasm.Apps
 
         private async Task NewFolder()
         {
-            var name = await JS.InvokeAsync<string?>("prompt", "Folder name?");
+            var dialog = new PromptDialog { Message = "Folder name?" };
+            var name = await dialog.ShowDialog(this);
             if (string.IsNullOrWhiteSpace(name)) return;
             await FS.CreateDirectory((_path == "/" ? string.Empty : _path) + "/" + name);
             await Load();
@@ -127,8 +128,9 @@ namespace HackerSimulator.Wasm.Apps
         private async Task DeleteSelection()
         {
             if (Selected.Count == 0) return;
-            var ok = await JS.InvokeAsync<bool>("confirm", "Delete selected?");
-            if (!ok) return;
+            var dialog = new MessageBoxDialog { Message = "Delete selected?", ShowCancel = true };
+            var ok = await dialog.ShowDialog(this);
+            if (ok != true) return;
             foreach (var p in Selected)
                 await FS.Remove(p);
             await Load();
@@ -137,7 +139,8 @@ namespace HackerSimulator.Wasm.Apps
         private async Task Rename(FileSystemService.FileSystemEntry entry)
         {
             var oldPath = EntryPath(entry);
-            var newName = await JS.InvokeAsync<string?>("prompt", "New name", entry.Name);
+            var dialog = new PromptDialog { Message = "New name", DefaultText = entry.Name };
+            var newName = await dialog.ShowDialog(this);
             if (string.IsNullOrWhiteSpace(newName) || newName == entry.Name) return;
             var newPath = (_path == "/" ? string.Empty : _path) + "/" + newName;
             await FS.Move(oldPath, newPath);
