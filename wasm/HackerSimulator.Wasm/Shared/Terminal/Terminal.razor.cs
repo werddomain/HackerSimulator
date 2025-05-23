@@ -11,6 +11,8 @@ namespace HackerSimulator.Wasm.Shared.Terminal
     {
         [Inject] private HackerSimulator.Wasm.Core.ShellService Shell { get; set; } = default!;
 
+        [Parameter] public string WorkingDirectory { get; set; } = "~";
+
         private readonly List<string> _lines = new();
         private string _input = string.Empty;
         private int _historyIndex = -1;
@@ -24,6 +26,7 @@ namespace HackerSimulator.Wasm.Shared.Terminal
         protected override void OnInitialized()
         {
             base.OnInitialized();
+            _cwd = WorkingDirectory;
             _lines.Add("Welcome to HackerOS Terminal");
             _lines.Add("Type \"help\" for a list of commands");
             _lines.Add(string.Empty);
