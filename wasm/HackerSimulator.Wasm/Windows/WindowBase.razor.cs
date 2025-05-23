@@ -32,11 +32,25 @@ namespace HackerSimulator.Wasm.Windows
 
         internal bool IsActive { get; private set; }
 
+        internal bool Locked { get; private set; }
+
         private bool _dragging;
         private double _startX;
         private double _startY;
         private double _startLeft;
         private double _startTop;
+
+        internal void Lock()
+        {
+            Locked = true;
+            StateHasChanged();
+        }
+
+        internal void Unlock()
+        {
+            Locked = false;
+            StateHasChanged();
+        }
 
         protected override void OnInitialized()
         {

@@ -1,0 +1,9 @@
+@inherits HackerSimulator.Wasm.Dialogs.Dialog<string?>
+<div class="prompt-dialog">
+    <p>@Message</p>
+    <input @bind="_value" />
+    <div class="dialog-buttons">
+        <button @onclick="Ok">Ok</button>
+        <button @onclick="Cancel">Cancel</button>
+    </div>
+</div>

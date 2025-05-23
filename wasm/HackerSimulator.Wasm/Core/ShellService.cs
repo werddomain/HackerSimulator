@@ -15,6 +15,12 @@ namespace HackerSimulator.Wasm.Core
         private readonly Dictionary<string, Type> _processes = new();
         private readonly CommandProcessor _processor = new();
 
+        public T CreateObject<T>(ProcessBase? scope = null)
+        {
+            // scope parameter reserved for future use
+            return ActivatorUtilities.CreateInstance<T>(_provider);
+        }
+
         public ShellService(IServiceProvider provider, KernelService kernel)
         {
             _provider = provider;

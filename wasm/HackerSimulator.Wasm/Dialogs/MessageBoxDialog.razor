@@ -1,0 +1,11 @@
+@inherits HackerSimulator.Wasm.Dialogs.Dialog<bool>
+<div class="message-box-dialog">
+    <p>@Message</p>
+    <div class="dialog-buttons">
+        <button @onclick="Ok">@OkText</button>
+        @if (ShowCancel)
+        {
+            <button @onclick="Cancel">@CancelText</button>
+        }
+    </div>
+</div>
