@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using HackerSimulator.Wasm.Core;
+using HackerSimulator.Wasm.Web;
+using HackerSimulator.Wasm.Web.Controllers;
 
 namespace HackerSimulator.Wasm
 {
@@ -19,10 +21,17 @@ namespace HackerSimulator.Wasm
 
             builder.Services.AddSingleton<NetworkService>();
             builder.Services.AddSingleton<DnsService>();
+            builder.Services.AddSingleton<HackerHttpClient>();
+
+            builder.Services.AddSingleton<HomeController>();
             builder.Services.AddSingleton<Windows.WindowManagerService>();
 
 
-            await builder.Build().RunAsync();
+            var host = builder.Build();
+            // Instantiate controllers so they register with the network
+            _ = host.Services.GetRequiredService<HomeController>();
+
+            await host.RunAsync();
         }
     }
 }
