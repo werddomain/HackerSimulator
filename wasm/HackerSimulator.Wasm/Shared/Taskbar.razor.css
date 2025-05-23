@@ -1,0 +1,32 @@
+.taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: #111;
+    display: flex;
+    align-items: center;
+}
+.start-button {
+    margin: 0 4px;
+    height: 32px;
+}
+.task-button {
+    display: flex;
+    align-items: center;
+    margin: 0 2px;
+    padding: 0 6px;
+    height: 32px;
+    background: #222;
+    color: #eee;
+    border: none;
+}
+.task-button.active {
+    background: #444;
+}
+.task-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
