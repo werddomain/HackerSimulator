@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HackerSimulator.Wasm.Web;
 
 namespace HackerSimulator.Wasm.Core
 {
@@ -54,6 +55,8 @@ namespace HackerSimulator.Wasm.Core
     public class NetworkService
     {
         private readonly Dictionary<string, HostInfo> _hosts = new();
+        private readonly Dictionary<string, Web.BaseController> _controllers = new();
+        private int _nextWebIp = 200;
 
         public NetworkService()
         {
@@ -163,6 +166,23 @@ namespace HackerSimulator.Wasm.Core
         }
 
         public void RegisterHost(HostInfo host) => _hosts[host.Ip] = host;
+
+        public void RegisterController(string hostname, Web.BaseController controller, DnsService dns)
+        {
+            var ip = $"10.0.0.{_nextWebIp++}";
+            dns.AddRecord(hostname, ip);
+            RegisterHost(new HostInfo
+            {
+                Ip = ip,
+                Hostname = hostname,
+                Ports = new List<PortInfo> { new PortInfo { Port = 80, State = "open", Service = new ServiceInfo { Name = "http" } } },
+                IsUp = true,
+                Latency = 1
+            });
+            _controllers[hostname] = controller;
+        }
+
+        public Web.BaseController? GetController(string hostname) => _controllers.TryGetValue(hostname, out var c) ? c : null;
 
         public HostInfo? GetHostByIp(string ip) => _hosts.TryGetValue(ip, out var host) ? host : null;
 
