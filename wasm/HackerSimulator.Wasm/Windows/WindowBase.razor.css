@@ -5,3 +5,4 @@
 .hs-window-buttons button { margin-left:4px; }
 .hs-window-content { overflow:auto; height:calc(100% - 30px); padding:4px; }
 .hs-window.active { border-color:#66f; }
+.hs-window.locked { pointer-events:none; opacity:0.6; }
