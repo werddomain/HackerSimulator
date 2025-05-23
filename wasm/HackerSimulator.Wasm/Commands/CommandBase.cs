@@ -10,11 +10,11 @@ namespace HackerSimulator.Wasm.Commands
     /// When started outside of a TerminalProcess, they will run inside a new
     /// terminal instance.
     /// </summary>
-    public abstract class Executable : ProcessBase, ICommandModule
+    public abstract class CommandBase : ProcessBase, ICommandModule
     {
         private readonly ShellService _shell;
 
-        protected Executable(string name, ShellService shell) : base(name)
+        protected CommandBase(string name, ShellService shell, KernelService kernel) : base(name, kernel)
         {
             _shell = shell;
         }

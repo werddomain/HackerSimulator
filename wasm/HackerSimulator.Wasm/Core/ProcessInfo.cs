@@ -30,8 +30,14 @@ namespace HackerSimulator.Wasm.Core
 
         public void Start(string[] args)
         {
-            Task = Process.StartAsync(args, CancellationTokenSource.Token);
-            Task.ContinueWith(_ =>
+            var task = Process.StartAsync(args, CancellationTokenSource.Token);
+            AttachTask(task);
+        }
+
+        internal void AttachTask(Task task)
+        {
+            Task = task;
+            task.ContinueWith(_ =>
             {
                 EndTime = DateTime.UtcNow;
                 EndMemory = GC.GetTotalMemory(false);

@@ -37,8 +37,8 @@ namespace HackerSimulator.Wasm.Core
 
         private void RegisterBuiltInCommands()
         {
-            RegisterCommand(new EchoCommand(this));
-            RegisterCommand(new UpperCommand(this));
+            RegisterCommand(new EchoCommand(this, _kernel));
+            RegisterCommand(new UpperCommand(this, _kernel));
         }
 
         public void RegisterCommand(ICommandModule command)
@@ -59,9 +59,9 @@ namespace HackerSimulator.Wasm.Core
                 return;
             }
 
-            // If the target process is an Executable and sender isn't a terminal,
+            // If the target process is a command and sender isn't a terminal,
             // launch it inside a new terminal instance.
-            if (typeof(Executable).IsAssignableFrom(type) && sender is not Processes.TerminalProcess)
+            if (typeof(CommandBase).IsAssignableFrom(type) && sender is not Processes.TerminalProcess)
             {
                 var terminalArgs = new string[] { name }.Concat(args).ToArray();
                 await Run("terminal", terminalArgs, sender);
@@ -69,7 +69,7 @@ namespace HackerSimulator.Wasm.Core
             }
 
             var process = (ProcessBase)ActivatorUtilities.CreateInstance(_provider, type);
-            await _kernel.RunProcess(process, args);
+            await process.StartAsync(args);
         }
     }
 }

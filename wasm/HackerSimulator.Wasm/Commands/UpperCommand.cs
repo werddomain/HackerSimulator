@@ -6,9 +6,9 @@ namespace HackerSimulator.Wasm.Commands
     /// <summary>
     /// Reads from stdin and writes uppercase output.
     /// </summary>
-    public class UpperCommand : Executable
+    public class UpperCommand : CommandBase
     {
-        public UpperCommand(ShellService shell) : base("upper", shell) { }
+        public UpperCommand(ShellService shell, KernelService kernel) : base("upper", shell, kernel) { }
 
         public override string Description => "Convert input to upper case";
         public override string Usage => "upper";

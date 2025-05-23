@@ -10,7 +10,7 @@ namespace HackerSimulator.Wasm.Processes
     {
         private readonly ShellService _shell;
 
-        public TerminalProcess(ShellService shell) : base("terminal")
+        public TerminalProcess(ShellService shell, KernelService kernel) : base("terminal", kernel)
         {
             _shell = shell;
         }
