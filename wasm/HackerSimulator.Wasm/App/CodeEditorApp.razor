@@ -27,7 +27,13 @@
             </div>
             @if (_activeTab != null)
             {
-                <textarea class="editor" @bind="_activeTab.Content" @oninput="MarkDirty"></textarea>
+                <MonacoEditor class="editor"
+                              @ref="_editor"
+                              Value="_activeTab.Content"
+                              Language="_activeTab.Language"
+                              Theme="vs-dark"
+                              OnDidChangeModelContent="EditorChanged"
+                              Options="_editorOptions" />
             }
             else
             {

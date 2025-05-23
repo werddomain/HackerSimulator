@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using HackerSimulator.Wasm.Core;
+using BlazorMonaco;
 
 namespace HackerSimulator.Wasm.Apps
 {
@@ -21,6 +22,11 @@ namespace HackerSimulator.Wasm.Apps
 
         private readonly List<EditorTab> _tabs = new();
         private EditorTab? _activeTab;
+        private MonacoEditor? _editor;
+        private readonly StandaloneEditorConstructionOptions _editorOptions = new()
+        {
+            AutomaticLayout = true
+        };
 
         protected override void OnInitialized()
         {
@@ -50,9 +56,23 @@ namespace HackerSimulator.Wasm.Apps
                 _tabs.Add(tab);
             }
             _activeTab = tab;
+            StateHasChanged();
         }
 
-        private void Activate(EditorTab tab) => _activeTab = tab;
+        private void Activate(EditorTab tab)
+        {
+            _activeTab = tab;
+            StateHasChanged();
+        }
+
+        private async Task EditorChanged()
+        {
+            if (_activeTab != null && _editor != null)
+            {
+                _activeTab.Content = await _editor.GetValue();
+                _activeTab.IsDirty = true;
+            }
+        }
 
         private async Task Save()
         {
@@ -61,11 +81,6 @@ namespace HackerSimulator.Wasm.Apps
             _activeTab.IsDirty = false;
         }
 
-        private void MarkDirty(ChangeEventArgs _)
-        {
-            if (_activeTab != null)
-                _activeTab.IsDirty = true;
-        }
 
         private void Close(EditorTab tab)
         {
