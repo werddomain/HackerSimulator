@@ -4,8 +4,9 @@
 @using BlazorMonaco
 @using BlazorMonaco.Editor
 @using BlazorMonaco.Languages
+@using MudBlazor
 
-<div class="code-editor-layout">
+<div class="code-editor-layout" tabindex="0" @onkeydown="HandleKey">
     <div class="activity-bar">
         <button class="activity-btn">📁</button>
         <button class="activity-btn">🔍</button>
@@ -13,9 +14,17 @@
     </div>
     <div class="editor-shell">
         <div class="sidebar">
-            <FileTree RootPath="/home/user" OnFileSelected="OpenFile" />
+            <FileTree RootPath="@_workingDirectory" OnFileSelected="OpenFile" />
         </div>
         <div class="editor-pane">
+            <div class="menu-bar">
+                <MudMenu Label="File">
+                    <MudMenuItem OnClick="Save">Save</MudMenuItem>
+                    <MudMenuItem OnClick="SaveWorkspace">Save Workspace</MudMenuItem>
+                    <MudMenuItem OnClick="LoadWorkspace">Load Workspace</MudMenuItem>
+                    <MudMenuItem OnClick="OpenFolder">Open Folder</MudMenuItem>
+                </MudMenu>
+            </div>
             <div class="tab-bar">
                 @foreach (var tab in _tabs)
                 {
@@ -45,7 +54,19 @@
                 <div class="no-file">Open a file to start editing</div>
             }
             <div class="terminal-panel">
-                <Terminal />
+                <div class="terminal-tabs">
+                    @for (int i = 0; i < _terminalCount; i++)
+                    {
+                        <div class="terminal-tab @(i == _activeTerminal ? "active" : null)" @onclick="() => ActivateTerminal(i)">Terminal @(i + 1)</div>
+                    }
+                    <button class="terminal-add" @onclick="AddTerminal">+</button>
+                </div>
+                @for (int i = 0; i < _terminalCount; i++)
+                {
+                    <div class="terminal-container @(i == _activeTerminal ? "active" : null)">
+                        <Terminal @ref="_terminalRefs[i]" WorkingDirectory="@_workingDirectory" />
+                    </div>
+                }
             </div>
         </div>
     </div>
