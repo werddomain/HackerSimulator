@@ -14,6 +14,7 @@
 @code {
     [Inject] private FileSystemService FS { get; set; } = default!;
     [Inject] private ShellService Shell { get; set; } = default!;
+    [Inject] private FileTypeService FileTypes { get; set; } = default!;
 
     private const string DesktopPath = "/home/user/Desktop";
 
@@ -55,7 +56,7 @@
         if (_shortcuts.TryGetValue(path, out var sc) && !string.IsNullOrEmpty(sc.Icon))
             return sc.Icon!;
         if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase)) return "🔗";
-        return "📄";
+        return FileTypes.GetIcon(path);
     }
 
     private void Select(FileSystemService.FileSystemEntry e)
@@ -90,7 +91,7 @@
         }
         else
         {
-            await Shell.Run("texteditorapp", new[] { path });
+            await Shell.OpenFile(path);
         }
     }
 

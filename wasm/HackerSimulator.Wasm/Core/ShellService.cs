@@ -14,6 +14,7 @@ namespace HackerSimulator.Wasm.Core
         private readonly KernelService _kernel;
         private readonly Dictionary<string, Type> _processes = new();
         private readonly CommandProcessor _processor = new();
+        private readonly FileTypeService _fileTypes;
 
         public T CreateObject<T>(ProcessBase? scope = null)
         {
@@ -21,10 +22,11 @@ namespace HackerSimulator.Wasm.Core
             return ActivatorUtilities.CreateInstance<T>(_provider);
         }
 
-        public ShellService(IServiceProvider provider, KernelService kernel)
+        public ShellService(IServiceProvider provider, KernelService kernel, FileTypeService fileTypes)
         {
             _provider = provider;
             _kernel = kernel;
+            _fileTypes = fileTypes;
             DiscoverProcesses();
             RegisterBuiltInCommands();
             DiscoverCommands();
@@ -96,5 +98,11 @@ namespace HackerSimulator.Wasm.Core
 
         public IEnumerable<ICommandModule> GetCommands() => _processor.GetCommands();
         public ICommandModule? GetCommand(string name) => _processor.GetCommand(name);
+
+        public Task OpenFile(string path)
+        {
+            var app = _fileTypes.GetDefaultApp(path);
+            return Run(app, new[] { path });
+        }
     }
 }
