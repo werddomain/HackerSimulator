@@ -1,17 +1,41 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 
-<div class="code-editor">
-    <div class="toolbar">
-        <input type="text" @bind="_path" placeholder="/path/file" class="path-box" />
-        <select @bind="_language">
-            <option value="javascript">JavaScript</option>
-            <option value="csharp">C#</option>
-            <option value="html">HTML</option>
-            <option value="css">CSS</option>
-        </select>
-        <button @onclick="Open">Open</button>
-        <button @onclick="Save">Save</button>
+<div class="code-editor-layout">
+    <div class="activity-bar">
+        <button class="activity-btn">📁</button>
+        <button class="activity-btn">🔍</button>
+        <button class="activity-btn">🐞</button>
     </div>
-    <textarea class="editor" @bind="_content"></textarea>
+    <div class="editor-shell">
+        <div class="sidebar">
+            <FileTree RootPath="/home/user" OnFileSelected="OpenFile" />
+        </div>
+        <div class="editor-pane">
+            <div class="tab-bar">
+                @foreach (var tab in _tabs)
+                {
+                    <div class="tab @(tab == _activeTab ? "active" : null)" @onclick="() => Activate(tab)">
+                        <span class="tab-name">@System.IO.Path.GetFileName(tab.Path)</span>
+                        @if (tab.IsDirty)
+                        {
+                            <span class="dirty">●</span>
+                        }
+                        <button class="close-tab" @onclick="(e) => Close(tab)" @onclick:stopPropagation="true">x</button>
+                    </div>
+                }
+            </div>
+            @if (_activeTab != null)
+            {
+                <textarea class="editor" @bind="_activeTab.Content" @oninput="MarkDirty"></textarea>
+            }
+            else
+            {
+                <div class="no-file">Open a file to start editing</div>
+            }
+            <div class="terminal-panel">
+                <Terminal />
+            </div>
+        </div>
+    </div>
 </div>

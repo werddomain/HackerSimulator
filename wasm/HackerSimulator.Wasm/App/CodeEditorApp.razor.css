@@ -1,0 +1,89 @@
+.code-editor-layout {
+    display: flex;
+    height: 100%;
+}
+
+.activity-bar {
+    width: 40px;
+    background-color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+}
+
+.activity-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    margin: 4px 0;
+    cursor: pointer;
+}
+
+.editor-shell {
+    display: flex;
+    flex: 1;
+    height: 100%;
+}
+
+.sidebar {
+    width: 200px;
+    background-color: #252526;
+    color: #ddd;
+    padding: 4px;
+    overflow-y: auto;
+}
+
+.editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor {
+    flex: 1;
+    width: 100%;
+    resize: none;
+}
+
+.tab-bar {
+    display: flex;
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    user-select: none;
+    color: #ddd;
+}
+
+.tab.active {
+    background-color: #3c3c3c;
+}
+
+.tab:hover {
+    background-color: #323234;
+}
+
+.tab-name { margin-right: 4px; }
+.dirty { color: #e0af68; margin-right: 4px; }
+.close-tab {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.terminal-panel {
+    border-top: 1px solid #3c3c3c;
+    resize: vertical;
+    overflow: auto;
+    min-height: 100px;
+}
+
+/* Terminal component takes care of its own styling */
+
