@@ -1,4 +1,7 @@
 using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
@@ -6,18 +9,8 @@ namespace HackerSimulator.Wasm.Apps
     [AppIcon("fa:calculator")]
     public partial class CalculatorApp : Windows.WindowBase
     {
-        private readonly string[][] _layout = new[]
-        {
-            new[] { "7", "8", "9", "/" },
-            new[] { "4", "5", "6", "*" },
-            new[] { "1", "2", "3", "-" },
-            new[] { "0", ".", "=", "+" },
-            new[] { "C" }
-        };
-
-        private string _display = "0";
-        private double? _accumulator;
-        private string? _operator;
+        private string _expression = string.Empty;
+        private ElementReference _inputRef;
 
         protected override void OnInitialized()
         {
@@ -25,55 +18,115 @@ namespace HackerSimulator.Wasm.Apps
             Title = "Calculator";
         }
 
-        private void Press(string key)
+        protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            if (char.IsDigit(key, 0) || key == ".")
+            await base.OnAfterRenderAsync(firstRender);
+            if (firstRender)
             {
-                if (_display == "0" && key != ".")
-                    _display = key;
-                else
-                    _display += key;
-                return;
-            }
-
-            switch (key)
-            {
-                case "C":
-                    _display = "0";
-                    _accumulator = null;
-                    _operator = null;
-                    break;
-                case "=":
-                    Calculate();
-                    _operator = null;
-                    break;
-                default:
-                    Calculate();
-                    _operator = key;
-                    break;
+                await _inputRef.FocusAsync();
             }
         }
 
-        private void Calculate()
+        private void HandleKey(KeyboardEventArgs e)
         {
-            var value = double.TryParse(_display, out var v) ? v : 0;
-            if (_accumulator is null)
+            if (e.Key == "=" || e.Key == "Enter")
             {
-                _accumulator = value;
-            }
-            else if (_operator is not null)
-            {
-                _accumulator = _operator switch
+                if (_expression.EndsWith("="))
+                    _expression = _expression[..^1];
+
+                try
                 {
-                    "+" => _accumulator + value,
-                    "-" => _accumulator - value,
-                    "*" => _accumulator * value,
-                    "/" => value == 0 ? 0 : _accumulator / value,
-                    _ => value
-                };
+                    var result = Evaluate(_expression);
+                    _expression = result.ToString();
+                }
+                catch
+                {
+                    _expression = "Error";
+                }
+            }
+        }
+
+        private static double Evaluate(string expression)
+        {
+            int index = 0;
+
+            double ParseExpression()
+            {
+                double value = ParseTerm();
+                while (true)
+                {
+                    SkipWhite();
+                    if (index >= expression.Length)
+                        break;
+                    char op = expression[index];
+                    if (op != '+' && op != '-')
+                        break;
+                    index++;
+                    double term = ParseTerm();
+                    value = op == '+' ? value + term : value - term;
+                }
+                return value;
             }
 
-            _display = _accumulator.ToString();
+            double ParseTerm()
+            {
+                double value = ParseFactor();
+                while (true)
+                {
+                    SkipWhite();
+                    if (index >= expression.Length)
+                        break;
+                    char op = expression[index];
+                    if (op != '*' && op != '/')
+                        break;
+                    index++;
+                    double factor = ParseFactor();
+                    value = op == '*' ? value * factor : value / factor;
+                }
+                return value;
+            }
+
+            double ParseFactor()
+            {
+                SkipWhite();
+                double sign = 1;
+                while (index < expression.Length && (expression[index] == '+' || expression[index] == '-'))
+                {
+                    if (expression[index] == '-')
+                        sign = -sign;
+                    index++;
+                    SkipWhite();
+                }
+
+                if (index < expression.Length && expression[index] == '(')
+                {
+                    index++;
+                    double val = ParseExpression();
+                    SkipWhite();
+                    if (index < expression.Length && expression[index] == ')')
+                        index++;
+                    return sign * val;
+                }
+
+                int start = index;
+                while (index < expression.Length && (char.IsDigit(expression[index]) || expression[index] == '.'))
+                    index++;
+                var numberStr = expression[start..index];
+                double.TryParse(numberStr, out var valNumber);
+                return sign * valNumber;
+            }
+
+            void SkipWhite()
+            {
+                while (index < expression.Length && char.IsWhiteSpace(expression[index]))
+                    index++;
+            }
+
+            var result = ParseExpression();
+            SkipWhite();
+            if (index < expression.Length)
+                throw new FormatException("Invalid expression");
+            return result;
         }
     }
 }
