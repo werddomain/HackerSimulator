@@ -11,13 +11,26 @@ namespace HackerSimulator.Wasm.Core
 
         public IReadOnlyList<ProcessInfo> Processes => _processes;
 
-        public Task RunProcess(ProcessBase process, string[] args)
+        public ProcessInfo RegisterProcess(ProcessBase process)
         {
             var cts = new CancellationTokenSource();
             var info = new ProcessInfo(process, cts);
             _processes.Add(info);
-            info.Start(args);
-            return Task.CompletedTask;
+            return info;
+        }
+
+        public void UnregisterProcess(System.Guid id)
+        {
+            var info = _processes.FirstOrDefault(p => p.Process.Id == id);
+            if (info != null)
+            {
+                _processes.Remove(info);
+            }
+        }
+
+        public Task RunProcess(ProcessBase process, string[] args)
+        {
+            return process.StartAsync(args);
         }
 
         public bool KillProcess(System.Guid id)
