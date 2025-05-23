@@ -8,6 +8,7 @@ using BlazorMonaco;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [OpenFileType("js", "ts", "cs", "json", "html", "css")]
     public partial class CodeEditorApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;

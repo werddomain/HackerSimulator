@@ -28,6 +28,9 @@ namespace HackerSimulator.Wasm.Core
             _started = true;
             var fs = _services.GetRequiredService<FileSystemService>();
             await fs.InitAsync();
+
+            var ft = _services.GetRequiredService<FileTypeService>();
+            ft.RegisterFromAttributes();
         }
     }
 }

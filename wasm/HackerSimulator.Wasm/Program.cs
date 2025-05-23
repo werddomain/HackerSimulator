@@ -17,6 +17,7 @@ namespace HackerSimulator.Wasm
             builder.Services.AddSingleton<AliasService>();
             builder.Services.AddSingleton<ShellService>();
             builder.Services.AddSingleton<FileSystemService>();
+            builder.Services.AddSingleton<FileTypeService>();
 
             builder.Services.AddSingleton<AutoRunService>();
 
