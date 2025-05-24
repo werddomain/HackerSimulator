@@ -1,0 +1,23 @@
+.notepad-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.notepad-app .menu-bar {
+    background: #333;
+    padding: 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.notepad-app .editor {
+    flex: 1;
+    background: #111;
+    color: #eee;
+    border: none;
+    padding: 8px;
+    resize: none;
+    font-family: monospace;
+}

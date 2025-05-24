@@ -1,0 +1,26 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+@using MudBlazor
+
+<div class="notepad-app">
+    <div class="menu-bar">
+        <MudMenu Label="File">
+            <MudMenuItem OnClick="NewFile">New</MudMenuItem>
+            <MudMenuItem OnClick="OpenFile">Open...</MudMenuItem>
+            <MudMenuItem OnClick="Save">Save</MudMenuItem>
+            <MudMenuItem OnClick="SaveAs">Save As...</MudMenuItem>
+            <MudMenuItem OnClick="Close">Exit</MudMenuItem>
+        </MudMenu>
+        <MudMenu Label="Edit">
+            <MudMenuItem OnClick="Undo">Undo</MudMenuItem>
+            <MudMenuItem OnClick="Cut">Cut</MudMenuItem>
+            <MudMenuItem OnClick="Copy">Copy</MudMenuItem>
+            <MudMenuItem OnClick="Paste">Paste</MudMenuItem>
+            <MudMenuItem OnClick="SelectAll">Select All</MudMenuItem>
+        </MudMenu>
+        <MudMenu Label="View">
+            <MudMenuItem OnClick="ToggleWrap">@(_wrap ? "Disable Wrap" : "Enable Wrap")</MudMenuItem>
+        </MudMenu>
+    </div>
+    <textarea class="editor" @bind="_content" wrap="@(_wrap ? "soft" : "off")" @ref="_editorRef"></textarea>
+</div>
