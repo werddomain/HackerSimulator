@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components;
 
 
 namespace HackerSimulator.Wasm.Core
@@ -13,26 +15,32 @@ namespace HackerSimulator.Wasm.Core
     {
         private const string UsersKey = "users";
         private const string GroupsKey = "groups";
+        private const string AuthTokenKey = "auth_token";
+        private const int TokenExpirationMinutes = 60; // 1 hour token expiration
+        private const int TokenRefreshThresholdMinutes = 10; // Refresh token if less than 10 minutes remaining
 
         private readonly DatabaseService _db;
         private readonly FileSystemService _fs;
+        private readonly IJSRuntime? _jsRuntime;
 
         private readonly Dictionary<int, UserRecord> _users = new();
         private readonly Dictionary<int, GroupRecord> _groups = new();
         private int _nextId = 1;
+        private DateTime _lastTokenRefresh = DateTime.MinValue;
 
         public UserRecord? CurrentUser { get; private set; }
         public bool Initialized { get; private set; }
         public bool HasUsers => _users.Count > 0;
         public bool IsAuthenticated => CurrentUser != null;
-
+        
         public event Action<UserRecord>? OnUserLogin;
-        public event Action OnAuthInitialised;
+        public event Action? OnAuthInitialised;
 
-        public AuthService(DatabaseService db, FileSystemService fs)
+        public AuthService(DatabaseService db, FileSystemService fs, IJSRuntime? jsRuntime = null)
         {
             _db = db;
             _fs = fs;
+            _jsRuntime = jsRuntime;
         }
 
         public async Task InitAsync()
@@ -42,8 +50,26 @@ namespace HackerSimulator.Wasm.Core
             await LoadGroups();
             if (_users.Count > 0)
                 _nextId = _users.Keys.Max() + 1;
+            
+            // Try to restore session from stored token
+            await TryAutoLoginFromStoredToken();
+            
             Initialized = true;
             OnAuthInitialised?.Invoke();
+        }
+
+        private async Task TryAutoLoginFromStoredToken()
+        {
+            var token = await GetTokenFromStorage();
+            if (!string.IsNullOrEmpty(token) && ValidateToken(token, out var user) && user != null)
+            {                CurrentUser = user;
+                _lastTokenRefresh = DateTime.UtcNow;
+                
+                // Register activity listeners for automatic token refresh
+                await RegisterActivityListeners();
+                
+                OnUserLogin?.Invoke(user);
+            }
         }
 
         private async Task LoadUsers()
@@ -120,15 +146,25 @@ namespace HackerSimulator.Wasm.Core
                 if (string.IsNullOrEmpty(totp) || !ValidateTotp(user.TwoFactorSecret, totp))
                     return null;
             }
+            
             CurrentUser = user;
+              // Generate and save authentication token
+            var token = GenerateToken(user);
+            await SaveTokenToStorage(token);
+            _lastTokenRefresh = DateTime.UtcNow;
+            
+            // Register activity listeners for automatic token refresh
+            await RegisterActivityListeners();
+            
             OnUserLogin?.Invoke(user);
             return user;
         }
 
-        public Task Logout()
+        public async Task Logout()
         {
             CurrentUser = null;
-            return Task.CompletedTask;
+            // Remove token from storage
+            await RemoveTokenFromStorage();
         }
 
         private static string HashPassword(string password, string salt)
@@ -136,12 +172,184 @@ namespace HackerSimulator.Wasm.Core
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(salt + password));
             return Convert.ToBase64String(bytes);
+        }        // Method to refresh the auth token
+        public async Task<bool> RefreshAuthToken()
+        {
+            if (CurrentUser == null)
+                return false;
+            
+            var token = GenerateToken(CurrentUser!);
+            await SaveTokenToStorage(token);
+            _lastTokenRefresh = DateTime.UtcNow;
+            return true;
+        }
+
+        // Called when user activity is detected
+        public async Task NotifyUserActivity()
+        {
+            if (CurrentUser == null)
+                return;
+
+            await RefreshTokenIfNeeded();
+        }
+
+        // Only refresh token if needed based on time threshold
+        private async Task<bool> RefreshTokenIfNeeded()
+        {
+            // If not authenticated, nothing to do
+            if (CurrentUser == null)
+                return false;
+
+            // If token was refreshed recently, skip refresh
+            if ((DateTime.UtcNow - _lastTokenRefresh).TotalMinutes < TokenRefreshThresholdMinutes)
+                return false;
+
+            // Get current token and check if it needs refresh
+            var token = await GetTokenFromStorage();
+            if (string.IsNullOrEmpty(token))
+                return false;
+
+            try
+            {
+                var tokenBytes = Convert.FromBase64String(token);
+                var tokenJson = Encoding.UTF8.GetString(tokenBytes);
+                var authToken = JsonSerializer.Deserialize<AuthToken>(tokenJson);
+
+                if (authToken == null)
+                    return false;
+
+                // If token is going to expire soon, refresh it
+                var minutesRemaining = (authToken.ExpiresAt - DateTime.UtcNow).TotalMinutes;
+                if (minutesRemaining < TokenRefreshThresholdMinutes)
+                {
+                    return await RefreshAuthToken();
+                }
+            }
+            catch
+            {
+                // If token is invalid, create a new one
+                return await RefreshAuthToken();
+            }
+
+            return false;
+        }
+
+        // Register activity listeners in the browser
+        public async Task RegisterActivityListeners()
+        {
+            if (_jsRuntime == null || CurrentUser == null)
+                return;
+
+            try
+            {
+                // Use null-forgiving operator since we've already checked _jsRuntime != null
+                await _jsRuntime!.InvokeVoidAsync("authActivityTracker.registerActivityListeners", 
+                    DotNetObjectReference.Create(this));
+            }
+            catch (Exception)
+            {
+                // Fail silently if JavaScript interop fails
+            }
+        }
+
+        // Method that will be called from JavaScript when activity is detected
+        [JSInvokable("OnUserActivity")]
+        public async Task OnUserActivityFromJS()
+        {
+            await NotifyUserActivity();
         }
 
         private static bool ValidateTotp(string secret, string code)
         {
             // TODO: implement real TOTP validation
             return true;
+        }
+
+        // Token model for JWT
+        private class AuthToken
+        {
+            public int UserId { get; set; }
+            public string UserName { get; set; } = string.Empty;
+            public DateTime ExpiresAt { get; set; }
+        }        // JWT token generation and validation methods
+        private string GenerateToken(UserRecord user)
+        {
+            var token = new AuthToken
+            {
+                UserId = user.Id,
+                UserName = user.UserName,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpirationMinutes)
+            };
+
+            var tokenJson = JsonSerializer.Serialize(token);
+            var tokenBytes = Encoding.UTF8.GetBytes(tokenJson);
+            // Simple "JWT" token for simulation purposes
+            return Convert.ToBase64String(tokenBytes);
+        }
+
+        private async Task SaveTokenToStorage(string token)
+        {
+            if (_jsRuntime == null) return;
+            
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthTokenKey, token);
+            }
+            catch (Exception)
+            {
+                // Fail silently if sessionStorage isn't available
+            }
+        }
+
+        private async Task<string?> GetTokenFromStorage()
+        {
+            if (_jsRuntime == null) return null;
+            
+            try
+            {
+                return await _jsRuntime.InvokeAsync<string?>("sessionStorage.getItem", AuthTokenKey);
+            }
+            catch (Exception)
+            {
+                // Fail silently if sessionStorage isn't available
+                return null;
+            }
+        }
+
+        private async Task RemoveTokenFromStorage()
+        {
+            if (_jsRuntime == null) return;
+            
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", AuthTokenKey);
+            }
+            catch (Exception)
+            {
+                // Fail silently if sessionStorage isn't available
+            }
+        }        private bool ValidateToken(string token, out UserRecord? user)
+        {
+            user = null;
+            try
+            {
+                var tokenBytes = Convert.FromBase64String(token);
+                var tokenJson = Encoding.UTF8.GetString(tokenBytes);
+                var authToken = JsonSerializer.Deserialize<AuthToken>(tokenJson);
+
+                if (authToken == null || authToken.ExpiresAt < DateTime.UtcNow)
+                    return false;
+
+                if (!_users.TryGetValue(authToken.UserId, out var foundUser))
+                    return false;
+
+                user = foundUser;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public record UserRecord

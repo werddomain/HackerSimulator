@@ -15,42 +15,61 @@
             <input placeholder="Password" type="password" @bind="password" class="welcome-input" />
             <button @onclick="CreateAdmin">Initialize System</button>
         </div>
-    </div>
+        
+        <div class="animation-toggle">
+            <span class="@(showTypingAnimation ? "" : "active")" @onclick="() => ToggleAnimation(false)">Matrix</span>
+            <span class="@(showTypingAnimation ? "active" : "")" @onclick="() => ToggleAnimation(true)">Code</span>
+        </div>    </div>
 </div>
-<script src="~/js/welcome-animation.js"></script>
 @code {
     private string username = string.Empty;
     private string password = string.Empty;
     private bool isLoading = false;
+    private bool showTypingAnimation = false;
+    private IJSObjectReference? module;
 
     protected override void OnInitialized()
     {
         if (Auth.HasUsers)
             Nav.NavigateTo("/login", true);
     }   
-     protected override async Task OnAfterRenderAsync(bool firstRender)
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Add the animation script dynamically
+            try {
+                module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
+                await module.InvokeVoidAsync("initializeCodeAnimation");
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"Error initializing animation: {ex.Message}");
+            }
+        }
+    }
 
-            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
-            await module.InvokeVoidAsync("initializeCodeAnimation");
-            // await JSRuntime.InvokeVoidAsync("eval", @"
-            //     if(!window.welcomeScriptLoaded) {
-            //         window.welcomeScriptLoaded = true;
-            //         var script = document.createElement('script');
-            //         script.src = './js/welcome-animation.js';
-            //         script.onload = function() { 
-            //             if(typeof window.initializeCodeAnimation === 'function') {
-            //                 window.initializeCodeAnimation();
-            //             }
-            //         };
-            //         document.head.appendChild(script);
-            //     } else if(typeof window.initializeCodeAnimation === 'function') {
-            //         window.initializeCodeAnimation();
-            //     }
-            // ");
+    private async Task ToggleAnimation(bool showTyping)
+    {
+        if (showTypingAnimation == showTyping) return;
+        
+        showTypingAnimation = showTyping;
+        
+        try {
+            if (module != null)
+            {
+                // Toggle animation type
+                if (showTypingAnimation)
+                {
+                    await module.InvokeVoidAsync("initializeCodeAnimation", true); // Pass true to show typing animation
+                }
+                else
+                {
+                    await module.InvokeVoidAsync("initializeCodeAnimation", false); // Pass false for matrix animation
+                }
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error toggling animation: {ex.Message}");
         }
     }
 

@@ -19,4 +19,7 @@
 		<PackageReference Include="FontAwesome" Version="4.7.0" />
 		<PackageReference Include="BlazorMonaco" Version="3.3.0" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Shared\Desktop\" />
+	</ItemGroup>
 </Project>

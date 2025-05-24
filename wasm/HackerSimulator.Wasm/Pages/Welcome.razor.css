@@ -140,6 +140,37 @@
     box-shadow: 0 0 5px rgba(0, 255, 70, 0.3);
 }
 
+/* Animation toggle */
+.animation-toggle {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    user-select: none;
+}
+
+.animation-toggle span {
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #aaa;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 255, 70, 0.1);
+}
+
+.animation-toggle span:hover {
+    color: #00ff46;
+    border-color: rgba(0, 255, 70, 0.3);
+}
+
+.animation-toggle span.active {
+    background-color: rgba(0, 255, 70, 0.1);
+    color: #00ff46;
+    border-color: rgba(0, 255, 70, 0.3);
+    box-shadow: 0 0 8px rgba(0, 255, 70, 0.2);
+}
+
 /* Matrix-like floating code */
 .code-background {
     position: absolute;
@@ -159,6 +190,67 @@
     animation-name: falling;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
+}
+
+/* Code typing animation */
+.typing-code-block {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 40%;
+    max-width: 500px;
+    height: 300px;
+    background-color: rgba(15, 15, 15, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 70, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 255, 70, 0.1) inset;
+    color: #e0e0e0;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    padding: 15px;
+    overflow-y: auto;
+    z-index: 2;
+    backdrop-filter: blur(4px);
+}
+
+.code-typed-line {
+    min-height: 1.5em;
+    line-height: 1.5;
+    white-space: pre;
+    position: relative;
+}
+
+/* Syntax highlighting */
+.code-typed-line.keyword {
+    color: #ff79c6;
+}
+
+.code-typed-line.string {
+    color: #f1fa8c;
+}
+
+.code-typed-line.comment {
+    color: #6272a4;
+}
+
+.code-typed-line.function {
+    color: #50fa7b;
+}
+
+.code-typed-line.variable {
+    color: #8be9fd;
+}
+
+.code-typed-line.number {
+    color: #bd93f9;
+}
+
+.code-typed-line.class-def {
+    color: #ffb86c;
+}
+
+.code-typed-line.control {
+    color: #ff5555;
 }
 
 /* Animations */
@@ -199,5 +291,30 @@
     
     .welcome-title {
         font-size: 2rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .typing-code-block {
+        width: 60%;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .typing-code-block {
+        width: 80%;
+        max-width: none;
+        right: 50%;
+        transform: translateX(50%);
+        bottom: 20px;
+        height: 200px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .typing-code-block {
+        display: none; /* Hide on very small screens */
     }
 }
