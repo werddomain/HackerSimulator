@@ -27,6 +27,7 @@ namespace HackerSimulator.Wasm.Core
         public bool IsAuthenticated => CurrentUser != null;
 
         public event Action<UserRecord>? OnUserLogin;
+        public event Action OnAuthInitialised;
 
         public AuthService(DatabaseService db, FileSystemService fs)
         {
@@ -42,6 +43,7 @@ namespace HackerSimulator.Wasm.Core
             if (_users.Count > 0)
                 _nextId = _users.Keys.Max() + 1;
             Initialized = true;
+            OnAuthInitialised?.Invoke();
         }
 
         private async Task LoadUsers()

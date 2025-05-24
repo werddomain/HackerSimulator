@@ -6,7 +6,7 @@
 
 
 <div class="container">
-    <NavMenu />
+
     <main>
 
         @if (!Auth.Initialized)
@@ -34,6 +34,10 @@
     {
         if (firstRender)
         {
+            Auth.OnAuthInitialised += () =>
+        {
+            StateHasChanged();
+        };
             await AutoRun.StartAsync();
         }
     }

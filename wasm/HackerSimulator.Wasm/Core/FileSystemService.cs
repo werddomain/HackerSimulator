@@ -109,25 +109,25 @@ namespace HackerSimulator.Wasm.Core
             return path;
         }
 
-        public async Task<bool> Exists(string path)
+        public Task<bool> Exists(string path)
         {
-            return _entries.ContainsKey(Normalize(path));
+            return Task.FromResult(_entries.ContainsKey(Normalize(path)));
         }
 
-        public async Task<IEnumerable<FileSystemEntry>> ReadDirectory(string path)
+        public Task<IEnumerable<FileSystemEntry>> ReadDirectory(string path)
         {
             path = Normalize(path);
-            return _entries.Values.Where(e => e.Parent == path).Select(e => e.Entry);
+            return Task.FromResult(_entries.Values.Where(e => e.Parent == path).Select(e => e.Entry));
         }
 
-        public async Task<string> ReadFile(string path)
+        public  Task<string> ReadFile(string path)
         {
             path = Normalize(path);
             if (!_entries.TryGetValue(path, out var rec) || rec.Entry.Type != "file")
                 throw new Exception($"Not a file: {path}");
             if (rec.Entry.IsBinary && rec.Entry.BinaryContent != null)
-                return rec.Entry.BinaryContent;
-            return rec.Entry.Content ?? string.Empty;
+                return Task.FromResult(rec.Entry.BinaryContent);
+            return Task.FromResult(rec.Entry.Content ?? string.Empty);
         }
 
         public async Task WriteFile(string path, string content)
