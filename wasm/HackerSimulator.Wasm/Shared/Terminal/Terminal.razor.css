@@ -1,0 +1,52 @@
+.terminal-container {
+    background-color: #1e1e1e;
+    color: #cccccc;
+    font-family: Consolas, 'Courier New', monospace;
+    padding: 10px;
+    overflow-y: auto;
+    height: 25%;
+}
+
+.terminal-output {
+    white-space: pre-wrap;
+}
+
+.terminal-input-line {
+    display: flex;
+}
+
+.terminal-input {
+    background-color: transparent;
+    border: none;
+    width: 100%;
+    color: #cccccc;
+    outline: none;
+}
+
+.terminal-prompt {
+    color: #569cd6;
+    margin-right: 4px;
+}
+
+.terminal-cursor {
+    background-color: #cccccc;
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.terminal-header {
+    background-color: #252526;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.terminal-header button,
+.terminal-header .icon {
+    margin-right: 4px;
+}
+

@@ -1,0 +1,40 @@
+.hack-paint-toolbar {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: #333;
+}
+.hack-paint-toolbar button {
+  background: #555;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.hack-paint-toolbar input[type="color"],
+.hack-paint-toolbar input[type="range"] {
+  margin-left: 5px;
+}
+.hack-paint-canvas-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #222;
+  position: relative;
+}
+.hack-paint-canvas-container.grid {
+  background-image:
+    linear-gradient(0deg, transparent 24%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.1) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 76%, transparent 77%),
+    linear-gradient(90deg, transparent 24%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.1) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 76%, transparent 77%);
+  background-size: 20px 20px;
+}
+.selection-rect {
+  position: absolute;
+  border: 1px dashed #fff;
+  pointer-events: none;
+}
+.hack-paint-canvas {
+  background: #fff;
+  display: block;
+  margin: 0 auto;
+}

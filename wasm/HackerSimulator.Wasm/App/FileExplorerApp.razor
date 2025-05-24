@@ -1,0 +1,90 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+@inject HackerSimulator.Wasm.Core.ShellService Shell
+@using MudBlazor
+@using HackerSimulator.Wasm.Shared
+
+<div class="file-explorer-app" @onclick="HideMenu">
+    <div class="file-explorer-toolbar">
+        <div class="navigation-buttons">
+            <button class="navigation-btn" @onclick="Back" disabled="@IsBackDisabled">Back</button>
+            <button class="navigation-btn" @onclick="Forward" disabled="@IsForwardDisabled">Forward</button>
+            <button class="navigation-btn" @onclick="Up">Up</button>
+            <button class="navigation-btn" @onclick="Refresh">Refresh</button>
+        </div>
+        <div class="path-bar">
+            <input class="path-input" @bind="_path" @bind:event="oninput" @onkeydown="OnPathKeyDown" />
+        </div>
+        <div class="view-options">
+            <button class="view-btn @(ViewMode == FileListViewMode.Grid ? "active" : null)" @onclick="() => SetView(FileListViewMode.Grid)">Grid</button>
+            <button class="view-btn @(ViewMode == FileListViewMode.List ? "active" : null)" @onclick="() => SetView(FileListViewMode.List)">List</button>
+            <button class="view-btn show-hidden @(ShowHidden ? "active" : null)" @onclick="ToggleHidden">Hidden</button>
+            <button class="view-btn upload-btn" @onclick="TriggerUpload">Upload</button>
+            <button class="view-btn download-btn" @onclick="DownloadSelection">Download</button>
+        </div>
+    </div>
+    <InputFile id="@_fileInputId" OnChange="HandleFileSelected" multiple style="display:none" @ref="_fileInput" />
+    <div class="file-explorer-main">
+        <div class="file-explorer-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">Favorites</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user")'>🏠 Home</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Desktop")'>🖥️ Desktop</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Documents")'>📄 Documents</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/home/user/Downloads")'>⬇️ Downloads</div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-header">Devices</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/")'>💻 System</div>
+                <div class="sidebar-item" @onclick='() => Navigate("/mnt")'>💿 Media</div>
+            </div>
+        </div>
+        <div class="file-explorer-content" @oncontextmenu="ShowBackgroundMenu">
+            <FileList Entries="_entries"
+                      Selected="Selected"
+                      ViewMode="ViewMode"
+                      EntryPath="EntryPath"
+                      IconProvider="GetIcon"
+                      OnSelect="Select"
+                      OnOpen="Open"
+                      OnContextMenu="OnListContextMenu" />
+        </div>
+    </div>
+
+    @if (_showMenu)
+    {
+        <div class="context-menu" style="left:@(_menuX)px; top:@(_menuY)px; display:block;" @onclick:stopPropagation="true">
+            @if (_menuEntry != null)
+            {
+                <div class="context-menu-item" @onclick='() => ContextAction("open")'>Open</div>
+                <MudMenu AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft" Class="context-submenu">
+                    <ActivatorContent>
+                        <div class="context-menu-item">Open With &gt;</div>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @foreach (var app in _openWith)
+                        {
+                            <MudMenuItem OnClick="() => OpenWith(app.Command)">@app.Name</MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
+                <div class="context-menu-item" @onclick='() => ContextAction("rename")'>Rename</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("delete")'>Delete</div>
+                <div class="context-menu-separator"></div>
+                @if (_menuEntry.IsDirectory)
+                {
+                    <div class="context-menu-item" @onclick='() => ContextAction("zip-folder")'>Zip Directory</div>
+                    <div class="context-menu-separator"></div>
+                }
+                <div class="context-menu-item" @onclick='() => ContextAction("copy")'>Copy</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("cut")'>Cut</div>
+            }
+            else
+            {
+                <div class="context-menu-item" @onclick='() => ContextAction("new-file")'>New File</div>
+                <div class="context-menu-item" @onclick='() => ContextAction("new-folder")'>New Folder</div>
+            }
+            <div class="context-menu-item" @onclick='() => ContextAction("paste")'>Paste</div>
+        </div>
+    }
+</div>

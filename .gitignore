@@ -139,3 +139,8 @@ dist
 # .NET build artifacts
 src/wasm/HackerSimulator.Wasm/bin/
 src/wasm/HackerSimulator.Wasm/obj/
+wasm/HackerSimulator.Wasm/bin/
+wasm/HackerSimulator.Wasm/obj/
+/.vs/HackerSimulator/CopilotIndices/17.14.670.39694
+/.vs
+/wasm/.vs/HackerSimulator.Wasm

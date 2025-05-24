@@ -1,0 +1,9 @@
+@namespace HackerSimulator.Wasm.Shared.Terminal
+
+<div class="terminal-container" @onclick="FocusInput">
+    <pre class="terminal-output">@_display</pre>
+    <div class="terminal-input-line">
+        <span class="terminal-prompt">@Prompt</span>
+        <input @ref="_inputRef" @bind="_input" @bind:event="oninput" @onkeydown="HandleInputKey" class="terminal-input" />
+    </div>
+</div>

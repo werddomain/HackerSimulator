@@ -1,0 +1,99 @@
+@namespace HackerSimulator.Wasm.Shared
+@using HackerSimulator.Wasm.Core
+
+<div class="desktop">
+    <FileList Entries="_entries"
+              Selected="_selected"
+              ViewMode="FileListViewMode.Grid"
+              EntryPath="GetPath"
+              IconProvider="GetIcon"
+              OnSelect="Select"
+              OnOpen="Open" />
+</div>
+
+@code {
+    [Inject] private FileSystemService FS { get; set; } = default!;
+    [Inject] private ShellService Shell { get; set; } = default!;
+    [Inject] private FileTypeService FileTypes { get; set; } = default!;
+
+    private const string DesktopPath = "/home/user/Desktop";
+
+    private List<FileSystemService.FileSystemEntry> _entries = new();
+    private HashSet<string> _selected = new();
+    private readonly Dictionary<string, ShortcutData> _shortcuts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        var items = await FS.ReadDirectory(DesktopPath);
+        _entries = items.OrderBy(e => e.Type).ThenBy(e => e.Name).ToList();
+        _shortcuts.Clear();
+        foreach (var e in _entries)
+        {
+            var p = GetPath(e);
+            if (!e.IsDirectory && p.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var json = await FS.ReadFile(p);
+                    var sc = System.Text.Json.JsonSerializer.Deserialize<ShortcutData>(json);
+                    if (sc != null) _shortcuts[p] = sc;
+                }
+                catch { }
+            }
+        }
+    }
+
+    private string GetPath(FileSystemService.FileSystemEntry e) => $"{DesktopPath}/{e.Name}";
+
+    private string GetIcon(FileSystemService.FileSystemEntry e, string path)
+    {
+        if (e.IsDirectory) return "📁";
+        if (_shortcuts.TryGetValue(path, out var sc) && !string.IsNullOrEmpty(sc.Icon))
+            return sc.Icon!;
+        if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase)) return "🔗";
+        return FileTypes.GetIcon(path);
+    }
+
+    private void Select(FileSystemService.FileSystemEntry e)
+    {
+        var path = GetPath(e);
+        _selected.Clear();
+        _selected.Add(path);
+    }
+
+    private async Task Open(FileSystemService.FileSystemEntry e)
+    {
+        var path = GetPath(e);
+        if (e.IsDirectory)
+        {
+            await Shell.Run("fileexplorerapp", new[] { path });
+        }
+        else if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_shortcuts.TryGetValue(path, out var sc))
+            {
+                try
+                {
+                    var json = await FS.ReadFile(path);
+                    sc = System.Text.Json.JsonSerializer.Deserialize<ShortcutData>(json);
+                }
+                catch { }
+            }
+            if (sc != null && !string.IsNullOrWhiteSpace(sc.Command))
+            {
+                await Shell.Run(sc.Command, sc.Args ?? Array.Empty<string>());
+            }
+        }
+        else
+        {
+            await Shell.OpenFile(path);
+        }
+    }
+
+    private record ShortcutData(string Command, string[]? Args, string? Icon);
+}

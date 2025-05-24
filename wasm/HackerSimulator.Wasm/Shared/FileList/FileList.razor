@@ -1,0 +1,35 @@
+@namespace HackerSimulator.Wasm.Shared
+@using HackerSimulator.Wasm.Core
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="file-list @(ViewMode == FileListViewMode.Grid ? "grid" : "list")">
+    @if (Entries.Count == 0)
+    {
+        <div class="empty-folder">This folder is empty</div>
+    }
+    else
+    {
+        @foreach (var entry in Entries)
+        {
+            var path = EntryPath(entry);
+            <div class="file-item @(Selected?.Contains(path) == true ? "selected" : null)"
+                 @onclick="() => OnSelect.InvokeAsync(entry)"
+                 @ondblclick="() => OnOpen.InvokeAsync(entry)"
+                 @oncontextmenu="e => OnContextMenu.InvokeAsync((e, entry))">
+                <span class="file-icon">@IconProvider(entry, path)</span>
+                <span class="file-name">@entry.Name</span>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<FileSystemService.FileSystemEntry> Entries { get; set; } = Array.Empty<FileSystemService.FileSystemEntry>();
+    [Parameter] public HashSet<string>? Selected { get; set; }
+    [Parameter] public FileListViewMode ViewMode { get; set; }
+    [Parameter] public Func<FileSystemService.FileSystemEntry, string> EntryPath { get; set; } = e => e.Name;
+    [Parameter] public Func<FileSystemService.FileSystemEntry, string, string> IconProvider { get; set; } = (e, p) => e.IsDirectory ? "📁" : "📄";
+    [Parameter] public EventCallback<FileSystemService.FileSystemEntry> OnSelect { get; set; }
+    [Parameter] public EventCallback<FileSystemService.FileSystemEntry> OnOpen { get; set; }
+    [Parameter] public EventCallback<(MouseEventArgs, FileSystemService.FileSystemEntry?)> OnContextMenu { get; set; }
+}

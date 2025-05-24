@@ -1,0 +1,78 @@
+@implements IDisposable
+@inject WindowManagerService WindowManager
+@using HackerSimulator.Wasm.Shared.StartMenu
+
+<div class="taskbar">
+    <button class="start-button" @onclick="ToggleMenu">Start</button>
+    <StartMenu.StartMenu Visible="_menuVisible" VisibleChanged="OnMenuVisibleChanged" />
+    @foreach (var win in _windows)
+    {
+        <button class="task-button @(win == _active ? "active" : "")" @onclick="() => Activate(win)">
+            @if (!string.IsNullOrEmpty(win.Icon))
+            {
+                <img src="@win.Icon" class="task-icon" />
+            }
+            <span class="task-title">@win.Title</span>
+        </button>
+    }
+</div>
+
+@code {
+    private readonly List<WindowBase> _windows = new();
+    private WindowBase? _active;
+    private bool _menuVisible;
+
+    protected override void OnInitialized()
+    {
+        _windows.AddRange(WindowManager.Windows);
+        WindowManager.WindowOpened += OnWindowOpened;
+        WindowManager.WindowClosed += OnWindowClosed;
+        WindowManager.ActiveWindowChanged += OnActiveWindowChanged;
+        _active = WindowManager.Windows.FirstOrDefault(w => w.IsActive);
+    }
+
+    private void OnWindowOpened(WindowBase win)
+    {
+        _windows.Add(win);
+        StateHasChanged();
+    }
+
+    private void OnWindowClosed(WindowBase win)
+    {
+        _windows.Remove(win);
+        StateHasChanged();
+    }
+
+    private void OnActiveWindowChanged(WindowBase? win)
+    {
+        _active = win;
+        StateHasChanged();
+    }
+
+    private void Activate(WindowBase win)
+    {
+        if (win.State == WindowState.Minimized)
+        {
+            win.Visible = true;
+            win.Restore();
+        }
+        win.Activate();
+    }
+
+    private void ToggleMenu()
+    {
+        _menuVisible = !_menuVisible;
+    }
+
+    private void OnMenuVisibleChanged(bool visible)
+    {
+        _menuVisible = visible;
+    }
+
+    public void Dispose()
+    {
+        WindowManager.WindowOpened -= OnWindowOpened;
+        WindowManager.WindowClosed -= OnWindowClosed;
+        WindowManager.ActiveWindowChanged -= OnActiveWindowChanged;
+    }
+}

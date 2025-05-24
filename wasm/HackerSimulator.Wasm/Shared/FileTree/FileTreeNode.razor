@@ -1,0 +1,60 @@
+@namespace HackerSimulator.Wasm.Shared.FileTree
+@using HackerSimulator.Wasm.Core
+
+<li class="file-tree-node">
+    <div class="node-header" @onclick="OnClick">
+        @if (Entry.IsDirectory)
+        {
+            <span class="node-toggle">@(_expanded ? "▼" : "▶")</span>
+            <span class="node-icon">📁</span>
+            <span class="node-name">@Entry.Name</span>
+        }
+        else
+        {
+            <span class="node-toggle"></span>
+            <span class="node-icon">📄</span>
+            <span class="node-name">@Entry.Name</span>
+        }
+    </div>
+    @if (_expanded && Entry.IsDirectory && _children != null)
+    {
+        <ul class="node-children">
+            @foreach (var child in _children)
+            {
+                <FileTreeNode Entry="child.Entry" Path="child.Path" OnFileSelected="OnFileSelected" />
+            }
+        </ul>
+    }
+</li>
+
+@code {
+    [Inject] private FileSystemService FS { get; set; } = default!;
+
+    [Parameter] public FileSystemService.FileSystemEntry Entry { get; set; } = default!;
+    [Parameter] public string Path { get; set; } = "/";
+    [Parameter] public EventCallback<string> OnFileSelected { get; set; }
+
+    private bool _expanded;
+    private List<(string Path, FileSystemService.FileSystemEntry Entry)>? _children;
+
+    private async Task OnClick()
+    {
+        if (Entry.IsDirectory)
+        {
+            _expanded = !_expanded;
+            if (_expanded && _children == null)
+            {
+                var list = await FS.ReadDirectory(Path);
+                _children = list
+                    .OrderBy(e => e.Type)
+                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(e => ((Path == "/" ? string.Empty : Path) + "/" + e.Name, e))
+                    .ToList();
+            }
+        }
+        else
+        {
+            await OnFileSelected.InvokeAsync(Path);
+        }
+    }
+}

@@ -1,0 +1,29 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="hack-paint-toolbar">
+    <input type="text" @bind="_path" placeholder="/path/file.hpaint" class="path-box" />
+    <button @onclick="OpenFile">Open</button>
+    <button @onclick="SaveFile">Save</button>
+    <button @onclick="NewDocument">New</button>
+    <InputFile OnChange="LoadImage" />
+    <button @onclick="ExportImage">Export</button>
+    <button @onclick="Undo">Undo</button>
+    <button @onclick="Redo">Redo</button>
+    <button @onclick="Rotate90">Rotate 90°</button>
+    <button @onclick="Rotate">Rotate</button>
+    <button @onclick="ToggleGrid">Grid</button>
+    <button @onclick="ZoomIn">Zoom In</button>
+    <button @onclick="ZoomOut">Zoom Out</button>
+    <select @bind="_exportFormat">
+        <option value="png">PNG</option>
+        <option value="jpeg">JPEG</option>
+    </select>
+    <input type="range" min="0" max="1" step="0.1" @bind="_quality" />
+    <input type="color" @bind="_color" />
+    <input type="range" min="1" max="50" @bind="_size" />
+</div>
+<div class="hack-paint-canvas-container @( _showGrid ? "grid" : string.Empty )" id="@ContainerId" @ref="containerRef">
+    <canvas class="hack-paint-canvas" id="@CanvasId" width="@_width" height="@_height"
+            @onmousedown="HandleMouseDown" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp"></canvas>
+</div>

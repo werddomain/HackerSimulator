@@ -1,0 +1,32 @@
+@page "/welcome"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h1 class="welcome-title">Welcome</h1>
+<p>Create the administrator account to begin using Hacker Simulator.</p>
+
+<div class="welcome-form">
+    <input placeholder="Username" @bind="username" />
+    <input placeholder="Password" type="password" @bind="password" />
+    <button @onclick="CreateAdmin">Create</button>
+</div>
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (Auth.HasUsers)
+            Nav.NavigateTo("/login", true);
+    }
+
+    private async Task CreateAdmin()
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            return;
+        await Auth.CreateUser(username, password, 1);
+        await Auth.Login(username, password);
+        Nav.NavigateTo("/", true);
+    }
+}

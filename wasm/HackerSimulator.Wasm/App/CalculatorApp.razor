@@ -1,0 +1,6 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="calculator-app">
+    <input class="calc-input" @bind="_expression" @bind:event="oninput" @onkeyup="HandleKey" @ref="_inputRef" />
+</div>

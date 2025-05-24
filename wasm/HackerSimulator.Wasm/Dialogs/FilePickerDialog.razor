@@ -1,0 +1,15 @@
+@inherits HackerSimulator.Wasm.Dialogs.Dialog<string?>
+<div class="file-picker-dialog">
+    <input @bind="_path" />
+    <button @onclick="Load">Go</button>
+    <ul>
+        @foreach(var entry in _entries)
+        {
+            <li @onclick="() => Select(entry)">@(entry.IsDirectory ? "[D]" : "[F]") @entry.Name</li>
+        }
+    </ul>
+    <div class="dialog-buttons">
+        <button @onclick="Ok" disabled="@(_selected == null)">Open</button>
+        <button @onclick="Cancel">Cancel</button>
+    </div>
+</div>

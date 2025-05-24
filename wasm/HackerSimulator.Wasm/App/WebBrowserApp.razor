@@ -1,0 +1,59 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="browser-app">
+    <div class="browser-toolbar">
+        <div class="browser-nav-buttons">
+            <button class="browser-btn" @onclick="Back" disabled="@IsBackDisabled">◀</button>
+            <button class="browser-btn" @onclick="Forward" disabled="@IsForwardDisabled">▶</button>
+            <button class="browser-btn" @onclick="Refresh">↻</button>
+        </div>
+        <div class="browser-address-bar">
+            <div class="browser-url-prefix @(IsSecure ? null : "insecure")">@(IsSecure ? "🔒" : "⚠️")</div>
+            <input class="browser-url-input" @bind="_currentUrl" @bind:event="oninput" @onkeydown="OnUrlKey" />
+            <button class="browser-btn browser-go" @onclick="() => Navigate(_currentUrl)">→</button>
+        </div>
+        <div class="browser-actions">
+            <button class="browser-btn browser-bookmark" @onclick="AddBookmark">★</button>
+            <button class="browser-btn browser-menu" @onclick="ToggleBookmarksMenu">⋮</button>
+        </div>
+    </div>
+    <div class="browser-bookmarks-bar">
+        @foreach (var bm in _bookmarks)
+        {
+            <div class="bookmark-item" @onclick="() => Navigate(bm.Value)">@bm.Key</div>
+        }
+    </div>
+    <div class="browser-content">
+        <iframe id="@_frameId" class="browser-iframe"></iframe>
+        @if (_loading)
+        {
+            <div class="loading">Loading...</div>
+        }
+    </div>
+    @if (_showBookmarksMenu)
+    {
+        <div class="bookmarks-menu" @onclick:stopPropagation="true">
+            <div class="bookmarks-header">
+                <div class="bookmarks-title">Bookmarks</div>
+                <button class="bookmarks-close" @onclick="ToggleBookmarksMenu">×</button>
+            </div>
+            <div class="bookmarks-list">
+                @foreach (var kv in _bookmarks)
+                {
+                    <div class="bookmark-entry">
+                        <div class="bookmark-name">@kv.Key</div>
+                        <div class="bookmark-url">@kv.Value</div>
+                        <button class="bookmark-delete" @onclick="() => DeleteBookmark(kv.Key)">×</button>
+                    </div>
+                }
+            </div>
+            <div class="bookmarks-add">
+                <input class="bookmark-name-input" placeholder="Name" @bind="_newBookmarkName" @bind:event="oninput" />
+                <input class="bookmark-url-input" placeholder="URL" @bind="_newBookmarkUrl" @bind:event="oninput" />
+                <button class="bookmark-add-btn" @onclick="AddBookmarkFromMenu">Add</button>
+            </div>
+        </div>
+    }
+</div>

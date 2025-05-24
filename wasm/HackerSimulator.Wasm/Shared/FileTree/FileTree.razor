@@ -1,0 +1,31 @@
+@namespace HackerSimulator.Wasm.Shared.FileTree
+@using HackerSimulator.Wasm.Core
+
+<ul class="file-tree-root">
+    @if (_entries != null)
+    {
+        @foreach (var e in _entries)
+        {
+            <FileTreeNode Entry="e.Entry" Path="e.Path" OnFileSelected="OnFileSelected" />
+        }
+    }
+</ul>
+
+@code {
+    [Inject] private FileSystemService FS { get; set; } = default!;
+
+    [Parameter] public string RootPath { get; set; } = "/";
+    [Parameter] public EventCallback<string> OnFileSelected { get; set; }
+
+    private List<(string Path, FileSystemService.FileSystemEntry Entry)>? _entries;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var list = await FS.ReadDirectory(RootPath);
+        _entries = list
+            .OrderBy(e => e.Type)
+            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(e => ((RootPath == "/" ? string.Empty : RootPath) + "/" + e.Name, e))
+            .ToList();
+    }
+}

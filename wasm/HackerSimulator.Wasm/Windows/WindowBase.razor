@@ -1,0 +1,20 @@
+@inherits HackerSimulator.Wasm.Core.ProcessBase
+<div class="hs-window @(IsActive ? "active" : "") @(Locked ? "locked" : "")" style="@Style" @onmousedown="HandleClick" @onmousemove="OnMouseMove" @onmouseup="StopDrag">
+    <div class="hs-window-header" @ondblclick="ToggleMaximize" @onmousedown="StartDrag">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <img class="hs-window-icon" src="@Icon" />
+        }
+        <span class="hs-window-title">@Title</span>
+        <div class="hs-window-buttons">
+            <button @onclick="Minimize">_</button>
+            <button @onclick="ToggleMaximize">@((State==WindowState.Maximized?"🗗":"🗖"))</button>
+            <button @onclick="Close">x</button>
+        </div>
+    </div>
+    <div class="hs-window-content">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </div>
+</div>

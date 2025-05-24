@@ -1,0 +1,93 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+@using MudBlazor
+
+<div class="system-monitor">
+    <MudTabs>
+        <MudTabPanel Text="Overview">
+            <div class="overview-cards">
+                <MudPaper Class="resource-card">
+                    <div class="card-header">CPU Usage</div>
+                    <MudProgressLinear Color="Color.Primary" Value="@_cpuUsage" />
+                    <div class="resource-value">@($"{_cpuUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Memory Usage</div>
+                    <MudProgressLinear Color="Color.Secondary" Value="@_memUsage" />
+                    <div class="resource-value">@($"{_memUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Disk Usage</div>
+                    <MudProgressLinear Color="Color.Info" Value="@_diskUsage" />
+                    <div class="resource-value">@($"{_diskUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Network</div>
+                    <MudProgressLinear Color="Color.Success" Value="@_networkUsage" />
+                    <div class="resource-value">@($"{_networkUsage:F1}%")</div>
+                </MudPaper>
+            </div>
+        </MudTabPanel>
+        <MudTabPanel Text="Processes">
+            <MudTable Items="@_processList" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>PID</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh>State</MudTh>
+                    <MudTh Align="Right">CPU %</MudTh>
+                    <MudTh Align="Right">Mem %</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Pid</MudTd>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>@context.State</MudTd>
+                    <MudTd Align="Right">@context.Cpu.ToString("0.0")</MudTd>
+                    <MudTd Align="Right">@context.Memory.ToString("0.0")</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => EndProcess(context.Id)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+        <MudTabPanel Text="Performance">
+            <MudChart ChartType="ChartType.Line" Labels="@_chartLabels" Datasets="@_chartData" Style="height:250px" />
+        </MudTabPanel>
+        <MudTabPanel Text="Disk">
+            <div class="disk-tab">
+                <MudProgressCircular Value="@_diskUsage" Color="Color.Info" Style="height:150px;width:150px;" />
+                <div class="disk-value">@($"{_diskUsage:F1}%")</div>
+            </div>
+            <MudTable Items="@_diskActivity" Dense="true">
+                <HeaderContent>
+                    <MudTh>Process</MudTh>
+                    <MudTh Align="Right">Read KB/s</MudTh>
+                    <MudTh Align="Right">Write KB/s</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd Align="Right">@context.ReadKB.ToString("0")</MudTd>
+                    <MudTd Align="Right">@context.WriteKB.ToString("0")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+        <MudTabPanel Text="Network">
+            <MudChart ChartType="ChartType.Line" Labels="@_chartLabels" Datasets="@_networkChartData" Style="height:250px" />
+            <MudTable Items="@_connections" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Process</MudTh>
+                    <MudTh>Protocol</MudTh>
+                    <MudTh>Local</MudTh>
+                    <MudTh>Remote</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Process</MudTd>
+                    <MudTd>@context.Protocol</MudTd>
+                    <MudTd>@context.Local</MudTd>
+                    <MudTd>@context.Remote</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
+</div>
