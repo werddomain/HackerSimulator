@@ -1,9 +1,58 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 
+@using MudBlazor
+
 <div class="system-monitor">
-    <div>CPU: @_cpuUsage% </div>
-    <div class="bar"><div class="fill" style="width:@_cpuUsage%"></div></div>
-    <div>Memory: @_memUsage% </div>
-    <div class="bar"><div class="fill" style="width:@_memUsage%"></div></div>
+    <MudTabs>
+        <MudTabPanel Text="Overview">
+            <div class="overview-cards">
+                <MudPaper Class="resource-card">
+                    <div class="card-header">CPU Usage</div>
+                    <MudProgressLinear Color="Color.Primary" Value="@_cpuUsage" />
+                    <div class="resource-value">@($"{_cpuUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Memory Usage</div>
+                    <MudProgressLinear Color="Color.Secondary" Value="@_memUsage" />
+                    <div class="resource-value">@($"{_memUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Disk Usage</div>
+                    <MudProgressLinear Color="Color.Info" Value="@_diskUsage" />
+                    <div class="resource-value">@($"{_diskUsage:F1}%")</div>
+                </MudPaper>
+                <MudPaper Class="resource-card">
+                    <div class="card-header">Network</div>
+                    <MudProgressLinear Color="Color.Success" Value="@_networkUsage" />
+                    <div class="resource-value">@($"{_networkUsage:F1}%")</div>
+                </MudPaper>
+            </div>
+        </MudTabPanel>
+        <MudTabPanel Text="Processes">
+            <MudTable Items="@_processList" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>PID</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh>State</MudTh>
+                    <MudTh Align="Right">CPU %</MudTh>
+                    <MudTh Align="Right">Mem %</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Pid</MudTd>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>@context.State</MudTd>
+                    <MudTd Align="Right">@context.Cpu.ToString("0.0")</MudTd>
+                    <MudTd Align="Right">@context.Memory.ToString("0.0")</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => EndProcess(context.Id)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+        <MudTabPanel Text="Performance">
+            <MudChart ChartType="ChartType.Line" Labels="@_chartLabels" Datasets="@_chartData" Style="height:250px" />
+        </MudTabPanel>
+    </MudTabs>
 </div>
