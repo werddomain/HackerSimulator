@@ -54,5 +54,40 @@
         <MudTabPanel Text="Performance">
             <MudChart ChartType="ChartType.Line" Labels="@_chartLabels" Datasets="@_chartData" Style="height:250px" />
         </MudTabPanel>
+        <MudTabPanel Text="Disk">
+            <div class="disk-tab">
+                <MudProgressCircular Value="@_diskUsage" Color="Color.Info" Style="height:150px;width:150px;" />
+                <div class="disk-value">@($"{_diskUsage:F1}%")</div>
+            </div>
+            <MudTable Items="@_diskActivity" Dense="true">
+                <HeaderContent>
+                    <MudTh>Process</MudTh>
+                    <MudTh Align="Right">Read KB/s</MudTh>
+                    <MudTh Align="Right">Write KB/s</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd Align="Right">@context.ReadKB.ToString("0")</MudTd>
+                    <MudTd Align="Right">@context.WriteKB.ToString("0")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+        <MudTabPanel Text="Network">
+            <MudChart ChartType="ChartType.Line" Labels="@_chartLabels" Datasets="@_networkChartData" Style="height:250px" />
+            <MudTable Items="@_connections" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Process</MudTh>
+                    <MudTh>Protocol</MudTh>
+                    <MudTh>Local</MudTh>
+                    <MudTh>Remote</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Process</MudTd>
+                    <MudTd>@context.Protocol</MudTd>
+                    <MudTd>@context.Local</MudTd>
+                    <MudTd>@context.Remote</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
     </MudTabs>
 </div>

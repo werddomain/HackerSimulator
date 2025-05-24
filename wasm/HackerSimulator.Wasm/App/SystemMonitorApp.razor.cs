@@ -15,6 +15,8 @@ namespace HackerSimulator.Wasm.Apps
         private readonly Dictionary<Guid, ProcessMetrics> _metrics = new();
         private readonly List<double> _cpuHistory = new();
         private readonly List<double> _memHistory = new();
+        private readonly List<double> _diskHistory = new();
+        private readonly List<double> _netHistory = new();
         private const int MaxHistory = 30;
         private readonly Random _rand = new();
 
@@ -24,6 +26,8 @@ namespace HackerSimulator.Wasm.Apps
         private double _networkUsage;
 
         private List<ProcessItem> _processList = new();
+        private List<DiskActivityItem> _diskActivity = new();
+        private List<ConnectionItem> _connections = new();
 
         protected override void OnInitialized()
         {
@@ -70,10 +74,14 @@ namespace HackerSimulator.Wasm.Apps
 
             _cpuHistory.Add(_cpuUsage);
             _memHistory.Add(_memUsage);
+            _diskHistory.Add(_diskUsage);
+            _netHistory.Add(_networkUsage);
             if (_cpuHistory.Count > MaxHistory)
             {
                 _cpuHistory.RemoveAt(0);
                 _memHistory.RemoveAt(0);
+                _diskHistory.RemoveAt(0);
+                _netHistory.RemoveAt(0);
             }
 
             _processList = _metrics.Values.Select(m => new ProcessItem
@@ -84,6 +92,27 @@ namespace HackerSimulator.Wasm.Apps
                 Cpu = m.Cpu,
                 Memory = m.Memory
             }).ToList();
+
+            _diskActivity = _processList
+                .OrderByDescending(p => p.Cpu)
+                .Take(5)
+                .Select(p => new DiskActivityItem
+                {
+                    Name = p.Name,
+                    ReadKB = Math.Abs(p.Cpu * 20 * _rand.NextDouble()),
+                    WriteKB = Math.Abs(p.Cpu * 15 * _rand.NextDouble())
+                }).ToList();
+
+            _connections = _processList
+                .OrderBy(_ => _rand.NextDouble())
+                .Take(5)
+                .Select(p => new ConnectionItem
+                {
+                    Process = p.Name,
+                    Protocol = _rand.Next(2) == 0 ? "TCP" : "UDP",
+                    Local = $"127.0.0.1:{_rand.Next(1024,65000)}",
+                    Remote = $"{_rand.Next(1,255)}.{_rand.Next(1,255)}.{_rand.Next(1,255)}.{_rand.Next(1,255)}:{_rand.Next(20,9000)}"
+                }).ToList();
 
             InvokeAsync(StateHasChanged);
         }
@@ -103,7 +132,14 @@ namespace HackerSimulator.Wasm.Apps
         private ChartSeries[] _chartData => new[]
         {
             new ChartSeries { Name = "CPU", Data = _cpuHistory.ToArray() },
-            new ChartSeries { Name = "Memory", Data = _memHistory.ToArray() }
+            new ChartSeries { Name = "Memory", Data = _memHistory.ToArray() },
+            new ChartSeries { Name = "Disk", Data = _diskHistory.ToArray() },
+            new ChartSeries { Name = "Network", Data = _netHistory.ToArray() }
+        };
+
+        private ChartSeries[] _networkChartData => new[]
+        {
+            new ChartSeries { Name = "Network", Data = _netHistory.ToArray() }
         };
 
         public new void Dispose()
@@ -127,6 +163,21 @@ namespace HackerSimulator.Wasm.Apps
             public string State { get; set; } = string.Empty;
             public double Cpu { get; set; }
             public double Memory { get; set; }
+        }
+
+        private class DiskActivityItem
+        {
+            public string Name { get; set; } = string.Empty;
+            public double ReadKB { get; set; }
+            public double WriteKB { get; set; }
+        }
+
+        private class ConnectionItem
+        {
+            public string Process { get; set; } = string.Empty;
+            public string Protocol { get; set; } = string.Empty;
+            public string Local { get; set; } = string.Empty;
+            public string Remote { get; set; } = string.Empty;
         }
     }
 }
