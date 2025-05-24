@@ -27,11 +27,22 @@ namespace HackerSimulator.Wasm.Core
         public async Task<int> InitTable<T>(string name, int version, Func<int, Task>? migration)
         {
             var mod = await GetModule();
-            var current = await mod.InvokeAsync<int>("initTable", name, version);
-            if (migration != null && current < version)
+
+            // ensure the store exists first
+            await mod.InvokeVoidAsync("ensureStore", name);
+
+            var current = await mod.InvokeAsync<int>("getSchemaVersionFor", name);
+
+            if (current < version)
             {
-                await migration(current);
+                if (migration != null)
+                {
+                    await migration(current);
+                }
+
+                await mod.InvokeVoidAsync("setSchemaVersionFor", name, version);
             }
+
             return current;
         }
 

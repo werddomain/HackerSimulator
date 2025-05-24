@@ -61,6 +61,28 @@ export async function initTable(name, version){
   return current;
 }
 
+export async function ensureStore(name){
+  let d = await getDb();
+  if(!d.objectStoreNames.contains(name)){
+    const newVersion = d.version + 1;
+    d.close();
+    d = await openDb(newVersion, db => {
+      if(!db.objectStoreNames.contains(name)) db.createObjectStore(name);
+    });
+    db = d;
+  }
+}
+
+export async function getSchemaVersionFor(name){
+  const d = await getDb();
+  return await getSchemaVersion(d, name);
+}
+
+export async function setSchemaVersionFor(name, version){
+  const d = await getDb();
+  await setSchemaVersion(d, name, version);
+}
+
 export async function get(store, key){
   const d = await getDb();
   return new Promise((resolve, reject) => {
