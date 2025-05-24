@@ -2,32 +2,43 @@
 
 @inject AutoRunService AutoRun
 @inject AuthService Auth
+@inject ThemeService Theme
 @using HackerSimulator.Wasm.Pages
 
+<MudThemeProvider Theme="Theme.CurrentTheme">
+    <MudDialogProvider />
+    <MudSnackbarProvider>
+        <MudLayout>
+            <MudAppBar Elevation="0" Color="Color.Primary">
+                <MudText Typo="Typo.h6">Hacker Simulator</MudText>
+            </MudAppBar>
 
-<div class="container">
-    <NavMenu />
-    <main>
+            <MudDrawer Class="nav-drawer" Variant="DrawerVariant.Mini" Elevation="1">
+                <NavMenu />
+            </MudDrawer>
 
-        @if (!Auth.Initialized)
-        {
-            <p>Loading...</p>
-        }
-        else if (!Auth.HasUsers)
-        {
-            <Welcome />
-        }
-        else if (!Auth.IsAuthenticated)
-        {
-            <Login />
-        }
-        else
-        {
-            @Body
-        }
-    </main>
-</div>
-<Taskbar />
+            <MudMainContent>
+                @if (!Auth.Initialized)
+                {
+                    <p>Loading...</p>
+                }
+                else if (!Auth.HasUsers)
+                {
+                    <Welcome />
+                }
+                else if (!Auth.IsAuthenticated)
+                {
+                    <Login />
+                }
+                else
+                {
+                    @Body
+                }
+            </MudMainContent>
+        </MudLayout>
+        <Taskbar />
+    </MudSnackbarProvider>
+</MudThemeProvider>
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)

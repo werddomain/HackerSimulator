@@ -42,6 +42,7 @@ namespace HackerSimulator.Wasm
             builder.Services.AddSingleton<HomeController>();
             builder.Services.AddSingleton<Windows.WindowManagerService>();
             builder.Services.AddMudServices();
+            builder.Services.AddSingleton<ThemeService>();
 
 
             var host = builder.Build();
