@@ -17,7 +17,7 @@
         </div>
     </div>
 </div>
-
+<script src="~/js/welcome-animation.js"></script>
 @code {
     private string username = string.Empty;
     private string password = string.Empty;
@@ -34,23 +34,23 @@
         {
             // Add the animation script dynamically
 
-            // var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/database.js");
-            // await module.InvokeVoidAsync("initializeCodeAnimation");
-            await JSRuntime.InvokeVoidAsync("eval", @"
-                if(!window.welcomeScriptLoaded) {
-                    window.welcomeScriptLoaded = true;
-                    var script = document.createElement('script');
-                    script.src = './js/welcome-animation.js';
-                    script.onload = function() { 
-                        if(typeof window.initializeCodeAnimation === 'function') {
-                            window.initializeCodeAnimation();
-                        }
-                    };
-                    document.head.appendChild(script);
-                } else if(typeof window.initializeCodeAnimation === 'function') {
-                    window.initializeCodeAnimation();
-                }
-            ");
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
+            await module.InvokeVoidAsync("initializeCodeAnimation");
+            // await JSRuntime.InvokeVoidAsync("eval", @"
+            //     if(!window.welcomeScriptLoaded) {
+            //         window.welcomeScriptLoaded = true;
+            //         var script = document.createElement('script');
+            //         script.src = './js/welcome-animation.js';
+            //         script.onload = function() { 
+            //             if(typeof window.initializeCodeAnimation === 'function') {
+            //                 window.initializeCodeAnimation();
+            //             }
+            //         };
+            //         document.head.appendChild(script);
+            //     } else if(typeof window.initializeCodeAnimation === 'function') {
+            //         window.initializeCodeAnimation();
+            //     }
+            // ");
         }
     }
 

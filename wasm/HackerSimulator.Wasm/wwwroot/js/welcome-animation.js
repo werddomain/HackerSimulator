@@ -56,9 +56,9 @@ function createCodeLine(container, chars) {
 }
 
 // Initialize animation when document is loaded
-if (typeof window !== 'undefined') {
-    // Make the function available globally so Blazor can call it
-    window.initializeCodeAnimation = initializeCodeAnimation;
-}
+//if (typeof window !== 'undefined') {
+//    // Make the function available globally so Blazor can call it
+//    window.initializeCodeAnimation = initializeCodeAnimation;
+//}
 
 // No need to export for module use since we're using window global

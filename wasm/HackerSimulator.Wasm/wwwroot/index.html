@@ -6,17 +6,30 @@
     <title>Hacker Simulator</title>
     <base href="/" />
 
-    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.373.0/font/Lucide.css" rel="stylesheet" />
-    <link href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" rel="stylesheet" />   
-     <link href="css/app.css" rel="stylesheet" />
+    <link href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="HackerSimulator.Wasm.styles.css" rel="stylesheet" />
 </head>
 <body>
-    <div id="app">Loading...</div>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
     <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
 </html>

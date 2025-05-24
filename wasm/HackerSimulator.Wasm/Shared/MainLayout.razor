@@ -43,6 +43,11 @@
         {
             StateHasChanged();
         };
+            Auth.OnUserLogin += (user) =>
+        {
+            StateHasChanged();
+
+};
             await AutoRun.StartAsync();
         }
     }
