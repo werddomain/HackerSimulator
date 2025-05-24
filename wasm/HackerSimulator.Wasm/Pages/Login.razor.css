@@ -1,15 +1,195 @@
+/* Login page styles matching the welcome page aesthetic */
+.login-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    overflow: hidden;
+    position: relative;
+}
+
+.login-container::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        rgba(0, 255, 70, 0.03) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0) 4px
+    );
+    pointer-events: none;
+}
+
+.login-card {
+    background: rgba(25, 25, 25, 0.85);
+    border: 1px solid rgba(0, 255, 70, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 255, 70, 0.2),
+                0 0 10px rgba(0, 255, 70, 0.1) inset;
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    width: 400px;
+    max-width: 90%;
+    text-align: center;
+    animation: pulse 3s infinite alternate;
+    position: relative;
+    z-index: 10;
+}
+
+.login-card::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, transparent 30%, rgba(0, 255, 70, 0.3) 45%, rgba(0, 255, 70, 0.3) 55%, transparent 70%);
+    z-index: -1;
+    border-radius: 14px;
+    filter: blur(1px);
+    animation: borderGlow 6s linear infinite;
+}
+
+.login-title {
+    color: #00ff46;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 10px rgba(0, 255, 70, 0.7);
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
 .login-form {
     display: flex;
     flex-direction: column;
-    width: 300px;
-    margin-top: 1rem;
+    gap: 16px;
+    width: 100%;
 }
 
-.login-form input {
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
+.login-input {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid rgba(0, 255, 70, 0.3);
+    border-radius: 6px;
+    color: #ffffff;
+    padding: 12px 16px;
+    font-size: 16px;
+    transition: all 0.3s;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 0 0 5px rgba(0, 255, 70, 0) inset;
+    margin-bottom: 0;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: rgba(0, 255, 70, 0.7);
+    box-shadow: 0 0 5px rgba(0, 255, 70, 0.5) inset;
 }
 
 .login-form button {
-    padding: 0.5rem;
+    background: linear-gradient(90deg, #004d1a, #00b33c);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    margin-top: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-form button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.6s;
+}
+
+.login-form button:hover::before {
+    left: 100%;
+}
+
+.login-form button:hover {
+    background: linear-gradient(90deg, #006622, #00cc44);
+    box-shadow: 0 0 15px rgba(0, 255, 70, 0.5);
+    transform: translateY(-2px);
+}
+
+.login-form button:active {
+    transform: translateY(0);
+    box-shadow: 0 0 5px rgba(0, 255, 70, 0.3);
+}
+
+/* Matrix-like floating code */
+.code-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.code-line {
+    position: absolute;
+    color: rgba(0, 255, 70, 0.15);
+    font-family: monospace;
+    font-size: 14px;
+    animation-name: falling;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+/* Animations reused from welcome page */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 8px 32px rgba(0, 255, 70, 0.2),
+                    0 0 10px rgba(0, 255, 70, 0.1) inset;
+    }
+    100% {
+        box-shadow: 0 8px 32px rgba(0, 255, 70, 0.4),
+                    0 0 15px rgba(0, 255, 70, 0.2) inset;
+    }
+}
+
+@keyframes borderGlow {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes falling {
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(100vh);
+    }
+}
+
+@media (max-width: 480px) {
+    .login-card {
+        padding: 30px 20px;
+    }
+
+    .login-title {
+        font-size: 2rem;
+    }
 }

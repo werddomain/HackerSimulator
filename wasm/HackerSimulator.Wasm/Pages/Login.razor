@@ -1,18 +1,25 @@
 @page "/login"
+@using Microsoft.JSInterop
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 
-<h1 class="login-title">/Login</h1>
-
-<div class="login-form">
-    <input placeholder="Username" @bind="username" />
-    <input placeholder="Password" type="password" @bind="password" />
-    @if (requireTotp)
-    {
-        <input placeholder="TOTP" @bind="totp" />
-    }
-    <button @onclick="DoLogin">Login</button>
+<div class="login-container">
+    <div class="code-background" id="codeBackground"></div>
+    <div class="login-card">
+        <h1 class="login-title">/Login</h1>
+        <div class="login-form">
+            <input placeholder="Username" @bind="username" class="login-input" />
+            <input placeholder="Password" type="password" @bind="password" class="login-input" />
+            @if (requireTotp)
+            {
+                <input placeholder="TOTP" @bind="totp" class="login-input" />
+            }
+            <button @onclick="DoLogin">Login</button>
+        </div>
+    </div>
 </div>
+<script src="~/js/welcome-animation.js"></script>
 
 @code {
     private string username = string.Empty;
@@ -24,6 +31,15 @@
     {
         // if (!Auth.HasUsers)
         //     Nav.NavigateTo("/welcome", true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
+            await module.InvokeVoidAsync("initializeCodeAnimation");
+        }
     }
 
     private async Task DoLogin()
