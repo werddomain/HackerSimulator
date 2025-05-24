@@ -30,7 +30,9 @@ namespace HackerSimulator.Wasm.Core
             _started = true;
             var fs = _services.GetRequiredService<FileSystemService>();
             await fs.InitAsync();
- var ft = _services.GetRequiredService<FileTypeService>();
+            await EnsureLinuxLayout(fs);
+
+            var ft = _services.GetRequiredService<FileTypeService>();
             ft.RegisterFromAttributes();
           
 
@@ -39,9 +41,22 @@ namespace HackerSimulator.Wasm.Core
             _auth.OnUserLogin += OnUserLogin;
         }
 
-        private void OnUserLogin(AuthService.UserRecord user)
+        private async void OnUserLogin(AuthService.UserRecord user)
         {
-            // Placeholder for tasks after user login
+            var fs = _services.GetRequiredService<FileSystemService>();
+            var path = $"/home/{user.UserName}/.config";
+            if (!await fs.Exists(path))
+                await fs.CreateDirectory(path);
+        }
+
+        private static async Task EnsureLinuxLayout(FileSystemService fs)
+        {
+            string[] dirs = ["/etc", "/usr", "/usr/bin", "/home", "/home/user", "/home/user/.config"];
+            foreach (var d in dirs)
+            {
+                if (!await fs.Exists(d))
+                    await fs.CreateDirectory(d);
+            }
         }
     }
 }
