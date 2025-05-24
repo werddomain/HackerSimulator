@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+
 using HackerSimulator.Wasm.Commands;
+
 
 namespace HackerSimulator.Wasm.Core
 {
@@ -13,6 +15,7 @@ namespace HackerSimulator.Wasm.Core
         private readonly IServiceProvider _provider;
         private readonly KernelService _kernel;
         private readonly Dictionary<string, Type> _processes = new();
+
         private readonly CommandProcessor _processor = new();
         private readonly FileTypeService _fileTypes;
 
@@ -30,6 +33,7 @@ namespace HackerSimulator.Wasm.Core
             DiscoverProcesses();
             RegisterBuiltInCommands();
             DiscoverCommands();
+
         }
 
         private void DiscoverProcesses()
@@ -43,6 +47,7 @@ namespace HackerSimulator.Wasm.Core
                 }
             }
         }
+
 
         private void RegisterBuiltInCommands()
         {
@@ -76,12 +81,14 @@ namespace HackerSimulator.Wasm.Core
         }
 
         public async Task Run(string name, string[] args, ProcessBase? sender = null)
+
         {
             if (!_processes.TryGetValue(name.ToLowerInvariant(), out var type))
             {
                 Console.WriteLine($"Process '{name}' not found.");
                 return;
             }
+
 
             // If the target process is a command and sender isn't a terminal,
             // launch it inside a new terminal instance.
@@ -103,6 +110,7 @@ namespace HackerSimulator.Wasm.Core
         {
             var app = _fileTypes.GetDefaultApp(path);
             return Run(app, new[] { path });
+
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.AspNetCore.Components;
 
 namespace HackerSimulator.Wasm.Core
@@ -16,9 +17,11 @@ namespace HackerSimulator.Wasm.Core
         [Inject]
         protected KernelService Kernel { get; set; } = default!;
 
+
         public Guid Id { get; } = Guid.NewGuid();
         public string Name { get; }
         public ProcessState State { get; private set; } = ProcessState.Created;
+
 
         private Task? _runningTask;
 
@@ -52,6 +55,7 @@ namespace HackerSimulator.Wasm.Core
         }
 
         public Task? RunningTask => _runningTask;
+
 
         protected abstract Task RunAsync(string[] args, CancellationToken token);
     }

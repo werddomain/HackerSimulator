@@ -1,13 +1,16 @@
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using HackerSimulator.Wasm.Core;
 using HackerSimulator.Wasm.Commands;
 
+
 namespace HackerSimulator.Wasm.Processes
 {
     public class TerminalProcess : ProcessBase
     {
+
         private readonly ShellService _shell;
 
         public TerminalProcess(ShellService shell, KernelService kernel) : base("terminal", kernel)
@@ -52,6 +55,7 @@ namespace HackerSimulator.Wasm.Processes
 
                 await _shell.ExecuteCommand(line, context);
             }
+
 
         }
     }

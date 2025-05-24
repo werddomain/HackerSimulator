@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Services;
 using HackerSimulator.Wasm.Core;
 using HackerSimulator.Wasm.Web;
 using HackerSimulator.Wasm.Web.Controllers;
+
 
 namespace HackerSimulator.Wasm
 {
@@ -14,6 +16,7 @@ namespace HackerSimulator.Wasm
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("#app");
+
             builder.RootComponents.Add<HeadOutlet>("head::after");
 
             builder.Services.AddSingleton<KernelService>();
@@ -46,6 +49,7 @@ namespace HackerSimulator.Wasm
             _ = host.Services.GetRequiredService<HomeController>();
 
             await host.RunAsync();
+
         }
     }
 }

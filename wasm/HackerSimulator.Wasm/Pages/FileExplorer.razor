@@ -1,7 +1,9 @@
 @page "/file-explorer"
 @inject FileSystemService FS
 @using System.Linq
+
 @using System.IO
+
 
 <h1>File Explorer</h1>
 
@@ -34,6 +36,7 @@
             newFolder = string.Empty;
             var dir = await FS.ReadDirectory(path);
             items = dir.Select(d => d.Name);
+
         }
     }
 }

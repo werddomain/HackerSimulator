@@ -3,6 +3,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
     <RazorCompileOnBuild>false</RazorCompileOnBuild>
     <RazorCompileOnPublish>false</RazorCompileOnPublish>
   </PropertyGroup>
@@ -14,5 +15,6 @@
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="8.6.0" />
     <PackageReference Include="MudBlazor.ThemeManager" Version="3.0.0" />
+
   </ItemGroup>
 </Project>

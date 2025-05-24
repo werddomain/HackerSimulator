@@ -1,12 +1,15 @@
 using System.Collections.Generic;
+
 using System.Linq;
 using System.Threading;
+
 using System.Threading.Tasks;
 
 namespace HackerSimulator.Wasm.Core
 {
     public class KernelService
     {
+
         private readonly List<ProcessInfo> _processes = new();
 
         public IReadOnlyList<ProcessInfo> Processes => _processes;
@@ -41,6 +44,7 @@ namespace HackerSimulator.Wasm.Core
 
             info.CancellationTokenSource.Cancel();
             return true;
+
         }
     }
 }
