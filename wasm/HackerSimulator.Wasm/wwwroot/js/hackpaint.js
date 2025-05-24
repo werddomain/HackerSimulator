@@ -69,6 +69,28 @@ export function rotate90(id){
     ctx.restore();
 }
 
+export function rotate(id, angle){
+    const rad = angle * Math.PI / 180.0;
+    const canvas = document.getElementById(id);
+    const temp = document.createElement('canvas');
+    temp.width = canvas.width;
+    temp.height = canvas.height;
+    const tctx = temp.getContext('2d');
+    tctx.drawImage(canvas,0,0);
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const newWidth = Math.round(temp.width * cos + temp.height * sin);
+    const newHeight = Math.round(temp.width * sin + temp.height * cos);
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    const ctx = canvas._hp_ctx;
+    ctx.save();
+    ctx.translate(newWidth / 2, newHeight / 2);
+    ctx.rotate(rad);
+    ctx.drawImage(temp, -temp.width / 2, -temp.height / 2);
+    ctx.restore();
+}
+
 export function toDataUrl(id, mime, quality){
     return document.getElementById(id).toDataURL(mime, quality);
 }

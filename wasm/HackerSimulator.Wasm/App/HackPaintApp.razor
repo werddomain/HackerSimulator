@@ -2,12 +2,16 @@
 @inherits HackerSimulator.Wasm.Windows.WindowBase
 
 <div class="hack-paint-toolbar">
+    <input type="text" @bind="_path" placeholder="/path/file.hpaint" class="path-box" />
+    <button @onclick="OpenFile">Open</button>
+    <button @onclick="SaveFile">Save</button>
     <button @onclick="NewDocument">New</button>
     <InputFile OnChange="LoadImage" />
     <button @onclick="ExportImage">Export</button>
     <button @onclick="Undo">Undo</button>
     <button @onclick="Redo">Redo</button>
     <button @onclick="Rotate90">Rotate 90°</button>
+    <button @onclick="Rotate">Rotate</button>
     <button @onclick="ToggleGrid">Grid</button>
     <button @onclick="ZoomIn">Zoom In</button>
     <button @onclick="ZoomOut">Zoom Out</button>
