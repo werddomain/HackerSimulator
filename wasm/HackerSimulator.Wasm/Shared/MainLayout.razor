@@ -5,17 +5,11 @@
 @inject ThemeService Theme
 @using HackerSimulator.Wasm.Pages
 
-<MudThemeProvider Theme="Theme.CurrentTheme">
+<MudThemeProvider Theme="Theme.CurrentTheme"/>
     <MudDialogProvider />
-    <MudSnackbarProvider>
+    <MudSnackbarProvider/>
         <MudLayout>
-            <MudAppBar Elevation="0" Color="Color.Primary">
-                <MudText Typo="Typo.h6">Hacker Simulator</MudText>
-            </MudAppBar>
-
-            <MudDrawer Class="nav-drawer" Variant="DrawerVariant.Mini" Elevation="1">
-                <NavMenu />
-            </MudDrawer>
+        
 
             <MudMainContent>
                 @if (!Auth.Initialized)
@@ -37,8 +31,8 @@
             </MudMainContent>
         </MudLayout>
         <Taskbar />
-    </MudSnackbarProvider>
-</MudThemeProvider>
+
+
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
