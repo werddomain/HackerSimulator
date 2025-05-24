@@ -71,6 +71,11 @@
                 <div class="context-menu-item" @onclick='() => ContextAction("rename")'>Rename</div>
                 <div class="context-menu-item" @onclick='() => ContextAction("delete")'>Delete</div>
                 <div class="context-menu-separator"></div>
+                @if (_menuEntry.IsDirectory)
+                {
+                    <div class="context-menu-item" @onclick='() => ContextAction("zip-folder")'>Zip Directory</div>
+                    <div class="context-menu-separator"></div>
+                }
                 <div class="context-menu-item" @onclick='() => ContextAction("copy")'>Copy</div>
                 <div class="context-menu-item" @onclick='() => ContextAction("cut")'>Cut</div>
             }

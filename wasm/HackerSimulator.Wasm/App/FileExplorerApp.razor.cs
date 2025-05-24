@@ -15,6 +15,7 @@ using HackerSimulator.Wasm.Shared;
 namespace HackerSimulator.Wasm.Apps
 {
     [AppIcon("fa:folder")]
+    [OpenFileType("zip")]
     public partial class FileExplorerApp : Windows.WindowBase
     {
         [Inject] private FileSystemService FS { get; set; } = default!;
@@ -33,12 +34,18 @@ namespace HackerSimulator.Wasm.Apps
         private InputFile? _fileInput;
         private readonly string _fileInputId = "fileInput" + Guid.NewGuid().ToString("N");
 
+        // zip viewing state
+        private bool _zipMode;
+        private string _zipFile = string.Empty;
+        private string _zipPath = string.Empty;
+        private string _pathBeforeZip = string.Empty;
+
         private List<ApplicationService.AppInfo> _openWith = new();
         private bool ShowHidden { get; set; }
         private FileListViewMode ViewMode { get; set; } = FileListViewMode.List;
 
-        private bool IsBackDisabled => _historyIndex <= 0;
-        private bool IsForwardDisabled => _historyIndex >= _history.Count - 1;
+        private bool IsBackDisabled => _zipMode || _historyIndex <= 0;
+        private bool IsForwardDisabled => _zipMode || _historyIndex >= _history.Count - 1;
 
         protected override void OnInitialized()
         {
@@ -51,6 +58,12 @@ namespace HackerSimulator.Wasm.Apps
 
         private async Task Load()
         {
+            if (_zipMode)
+            {
+                await LoadZip();
+                return;
+            }
+
             var entries = await FS.ReadDirectory(_path);
             _entries = entries
                 .Where(e => ShowHidden || !e.Name.StartsWith('.'))
@@ -78,6 +91,29 @@ namespace HackerSimulator.Wasm.Apps
             StateHasChanged();
         }
 
+        private async Task LoadZip()
+        {
+            _entries.Clear();
+            var bytes = await FS.ReadBinaryFile(_zipFile);
+            using var ms = new System.IO.MemoryStream(bytes);
+            using var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Read);
+            var prefix = string.IsNullOrEmpty(_zipPath) ? string.Empty : _zipPath.TrimEnd('/') + "/";
+            var names = new HashSet<string>();
+            foreach (var entry in archive.Entries)
+            {
+                if (!entry.FullName.StartsWith(prefix)) continue;
+                var rel = entry.FullName.Substring(prefix.Length);
+                if (string.IsNullOrEmpty(rel)) continue;
+                var parts = rel.Split('/', 2);
+                var name = parts[0];
+                if (!names.Add(name)) continue;
+                bool dir = parts.Length > 1 || entry.FullName.EndsWith("/");
+                _entries.Add(new FileSystemService.FileSystemEntry { Name = name, Type = dir ? "directory" : "file" });
+            }
+            Selected.Clear();
+            StateHasChanged();
+        }
+
         private async Task Navigate(string path)
         {
             _path = FS.ResolvePath(path, _path);
@@ -91,8 +127,30 @@ namespace HackerSimulator.Wasm.Apps
             await Load();
         }
 
+        private async Task EnterZip(string path)
+        {
+            _zipMode = true;
+            _zipFile = path;
+            _zipPath = string.Empty;
+            _pathBeforeZip = _path;
+            await Load();
+        }
+
         private Task Up()
         {
+            if (_zipMode)
+            {
+                if (string.IsNullOrEmpty(_zipPath))
+                {
+                    _zipMode = false;
+                    _path = _pathBeforeZip;
+                    return Load();
+                }
+                var idxZip = _zipPath.LastIndexOf('/');
+                _zipPath = idxZip <= 0 ? string.Empty : _zipPath[..idxZip];
+                return Load();
+            }
+
             if (_path == "/") return Task.CompletedTask;
             var idx = _path.LastIndexOf('/');
             var parent = idx <= 0 ? "/" : _path[..idx];
@@ -116,7 +174,11 @@ namespace HackerSimulator.Wasm.Apps
         private Task Refresh() => Load();
 
         private string EntryPath(FileSystemService.FileSystemEntry e)
-            => (_path == "/" ? string.Empty : _path) + "/" + e.Name;
+        {
+            if (_zipMode)
+                return (_zipPath == string.Empty ? string.Empty : _zipPath + "/") + e.Name;
+            return (_path == "/" ? string.Empty : _path) + "/" + e.Name;
+        }
 
         private string GetIcon(FileSystemService.FileSystemEntry e, string path)
         {
@@ -144,10 +206,24 @@ namespace HackerSimulator.Wasm.Apps
 
         private async Task Open(FileSystemService.FileSystemEntry entry)
         {
+            if (_zipMode)
+            {
+                if (entry.IsDirectory)
+                {
+                    _zipPath = string.IsNullOrEmpty(_zipPath) ? entry.Name : $"{_zipPath}/{entry.Name}";
+                    await Load();
+                }
+                return;
+            }
+
             var path = EntryPath(entry);
             if (entry.IsDirectory)
             {
                 await Navigate(path);
+            }
+            else if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                await EnterZip(path);
             }
             else if (path.EndsWith(".hlnk", StringComparison.OrdinalIgnoreCase))
             {
@@ -211,6 +287,15 @@ namespace HackerSimulator.Wasm.Apps
             await Load();
         }
 
+        private async Task ZipDirectory(FileSystemService.FileSystemEntry entry)
+        {
+            var path = EntryPath(entry);
+            var bytes = await FS.ZipEntry(path);
+            var dest = path + ".zip";
+            await FS.WriteBinaryFile(dest, bytes);
+            await Load();
+        }
+
         private void Copy() { if (Selected.Count > 0) _clipboard = (false, Selected.ToList()); }
         private void Cut() { if (Selected.Count > 0) _clipboard = (true, Selected.ToList()); }
 
@@ -255,6 +340,8 @@ namespace HackerSimulator.Wasm.Apps
 
         private void ShowContextMenu(MouseEventArgs e, FileSystemService.FileSystemEntry? entry)
         {
+            if (_zipMode)
+                return;
             _menuEntry = entry;
             _openWith = entry == null ? new List<ApplicationService.AppInfo>() : Apps.GetAppsForFile(EntryPath(entry)).ToList();
             _menuX = e.ClientX;
@@ -298,6 +385,9 @@ namespace HackerSimulator.Wasm.Apps
                     break;
                 case "paste":
                     await Paste();
+                    break;
+                case "zip-folder" when _menuEntry != null && _menuEntry.IsDirectory:
+                    await ZipDirectory(_menuEntry);
                     break;
             }
             _showMenu = false;
