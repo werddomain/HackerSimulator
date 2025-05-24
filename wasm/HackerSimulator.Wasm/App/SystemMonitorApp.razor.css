@@ -15,3 +15,14 @@
     width: 200px;
     padding: 8px;
 }
+
+.disk-tab {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.disk-value {
+    font-size: 1.5em;
+}
