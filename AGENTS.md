@@ -23,6 +23,7 @@
 1.  **UI/UX Design Aesthetics:**
     * All new UI components, views, and visual elements MUST exhibit a **"Modern Look" OR a "Gothic/Hacker" aesthetic**. Strive for visually distinct, thematic, and polished designs.
     * Avoid generic, unstyled, or purely functional appearances. Consider elements like color schemes (e.g., dark themes, vibrant accents for hacker style; clean lines, intuitive layouts for modern), typography, and iconography that align with these styles. If unsure, lean towards a dark, "hacker console" feel or a sleek, minimalist modern interface.
+    * **Tools**: Please use MudBlazor when creating complex component. Like menu, data grid tab pages, etc ...
 
 2.  **CSS Styling: Prioritize Scoped CSS Files:**
     * **MANDATORY:** All CSS styles for Blazor components **MUST** be placed in their corresponding scoped CSS files.
