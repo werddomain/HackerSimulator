@@ -1,9 +1,8 @@
-.container {
-    display: flex;
-    min-height: 100vh;
-    padding-bottom: 40px; /* space for taskbar */
+.nav-drawer {
+    width: 200px;
 }
-main {
-    flex: 1;
+
+.mud-main-content {
     padding: 1rem;
+    padding-bottom: 40px; /* space for taskbar */
 }
