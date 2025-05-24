@@ -1,0 +1,41 @@
+.wordpad-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.wordpad-app .toolbar {
+    background: #333;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.wordpad-app .path-box {
+    flex: 1;
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+    padding: 2px 4px;
+}
+
+.wordpad-app button {
+    background: #444;
+    color: #eee;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.wordpad-app button:hover {
+    background: #555;
+}
+
+.wordpad-app .editor {
+    flex: 1;
+    background: #111;
+    color: #eee;
+    padding: 8px;
+    overflow: auto;
+}
