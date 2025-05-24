@@ -10,10 +10,12 @@ using HackerSimulator.Wasm.Core;
 
 namespace HackerSimulator.Wasm.Apps
 {
+    [OpenFileType("png", "jpg", "jpeg", "gif", "hpaint")]
     [AppIcon("fa:paint-brush")]
     public partial class HackPaintApp : Windows.WindowBase, IAsyncDisposable
     {
         [Inject] private IJSRuntime JS { get; set; } = default!;
+        [Inject] private FileSystemService FS { get; set; } = default!;
 
         private IJSObjectReference? _module;
         private ElementReference containerRef;
@@ -25,6 +27,7 @@ namespace HackerSimulator.Wasm.Apps
         private double _quality = 0.92;
         private string _color = "#000000";
         private double _size = 5;
+        private string _path = string.Empty;
         private bool _drawing;
         private readonly List<string> _history = new();
         private int _historyIndex = -1;
@@ -103,6 +106,38 @@ namespace HackerSimulator.Wasm.Apps
             await PushHistory();
         }
 
+        private static string GetMime(string path)
+        {
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                _ => "image/png"
+            };
+        }
+
+        private async Task OpenFile()
+        {
+            if (_module == null || string.IsNullOrWhiteSpace(_path)) return;
+            var path = FS.ResolvePath(_path);
+            if (!await FS.Exists(path)) return;
+            var bytes = await FS.ReadFileBytes(path);
+            var mime = GetMime(path);
+            var dataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+            await _module.InvokeVoidAsync("loadImage", CanvasId, dataUrl);
+            await PushHistory();
+        }
+
+        private async Task SaveFile()
+        {
+            if (_module == null || string.IsNullOrWhiteSpace(_path)) return;
+            var url = await _module.InvokeAsync<string>("toDataUrl", CanvasId, "image/png", 1.0);
+            var base64 = url[(url.IndexOf(',') + 1)..];
+            var bytes = Convert.FromBase64String(base64);
+            await FS.WriteBinaryFile(_path, bytes);
+        }
+
 
         private async Task ExportImage()
         {
@@ -117,6 +152,17 @@ namespace HackerSimulator.Wasm.Apps
             if (_module == null) return;
             await _module.InvokeVoidAsync("rotate90", CanvasId);
             await PushHistory();
+        }
+
+        private async Task Rotate()
+        {
+            if (_module == null) return;
+            var input = await JS.InvokeAsync<string?>("prompt", "Angle", "0");
+            if (double.TryParse(input, out var angle))
+            {
+                await _module.InvokeVoidAsync("rotate", CanvasId, angle);
+                await PushHistory();
+            }
         }
 
         private async Task ToggleGrid()
