@@ -16,8 +16,12 @@ namespace HackerSimulator.Wasm.Core
         private const string UsersKey = "users";
         private const string GroupsKey = "groups";
         private const string AuthTokenKey = "auth_token";
-        private const int TokenExpirationMinutes = 60; // 1 hour token expiration
-        private const int TokenRefreshThresholdMinutes = 10; // Refresh token if less than 10 minutes remaining
+        private const string SettingsApp = "authsettingsapp";
+        private const string TokenExpirationSetting = "tokenExpirationMinutes";
+        private const string TokenRefreshThresholdSetting = "tokenRefreshThresholdMinutes";
+
+        private int _tokenExpirationMinutes = 60; // Default 1 hour token expiration
+        private int _tokenRefreshThresholdMinutes = 10; // Refresh token if less than 10 minutes remaining
 
         private readonly DatabaseService _db;
         private readonly FileSystemService _fs;
@@ -36,11 +40,14 @@ namespace HackerSimulator.Wasm.Core
         public event Action<UserRecord>? OnUserLogin;
         public event Action? OnAuthInitialised;
 
-        public AuthService(DatabaseService db, FileSystemService fs, IJSRuntime? jsRuntime = null)
+        private readonly IServiceProvider? _provider;
+
+        public AuthService(DatabaseService db, FileSystemService fs, IJSRuntime? jsRuntime = null, IServiceProvider? provider = null)
         {
             _db = db;
             _fs = fs;
             _jsRuntime = jsRuntime;
+            _provider = provider;
         }
 
         public async Task InitAsync()
@@ -62,7 +69,9 @@ namespace HackerSimulator.Wasm.Core
         {
             var token = await GetTokenFromStorage();
             if (!string.IsNullOrEmpty(token) && ValidateToken(token, out var user) && user != null)
-            {                CurrentUser = user;
+            {
+                CurrentUser = user;
+                await LoadSessionSettingsAsync();
                 _lastTokenRefresh = DateTime.UtcNow;
                 
                 // Register activity listeners for automatic token refresh
@@ -108,6 +117,20 @@ namespace HackerSimulator.Wasm.Core
                 await _db.Set(GroupsKey, g.Id.ToString(), g);
         }
 
+        private async Task LoadSessionSettingsAsync()
+        {
+            if (_provider == null || CurrentUser == null) return;
+
+            var settingsService = _provider.GetService<SettingsService>();
+            if (settingsService == null) return;
+
+            var settings = await settingsService.Load(SettingsApp);
+            if (settings.TryGetValue(TokenExpirationSetting, out var expStr) && int.TryParse(expStr, out var exp))
+                _tokenExpirationMinutes = exp;
+            if (settings.TryGetValue(TokenRefreshThresholdSetting, out var thrStr) && int.TryParse(thrStr, out var thr))
+                _tokenRefreshThresholdMinutes = thr;
+        }
+
         public IEnumerable<GroupRecord> GetGroups() => _groups.Values;
 
         public int? GetUserId() => CurrentUser?.Id;
@@ -148,7 +171,10 @@ namespace HackerSimulator.Wasm.Core
             }
             
             CurrentUser = user;
-              // Generate and save authentication token
+
+            await LoadSessionSettingsAsync();
+
+            // Generate and save authentication token
             var token = GenerateToken(user);
             await SaveTokenToStorage(token);
             _lastTokenRefresh = DateTime.UtcNow;
@@ -201,7 +227,7 @@ namespace HackerSimulator.Wasm.Core
                 return false;
 
             // If token was refreshed recently, skip refresh
-            if ((DateTime.UtcNow - _lastTokenRefresh).TotalMinutes < TokenRefreshThresholdMinutes)
+            if ((DateTime.UtcNow - _lastTokenRefresh).TotalMinutes < _tokenRefreshThresholdMinutes)
                 return false;
 
             // Get current token and check if it needs refresh
@@ -220,7 +246,7 @@ namespace HackerSimulator.Wasm.Core
 
                 // If token is going to expire soon, refresh it
                 var minutesRemaining = (authToken.ExpiresAt - DateTime.UtcNow).TotalMinutes;
-                if (minutesRemaining < TokenRefreshThresholdMinutes)
+                if (minutesRemaining < _tokenRefreshThresholdMinutes)
                 {
                     return await RefreshAuthToken();
                 }
@@ -278,7 +304,7 @@ namespace HackerSimulator.Wasm.Core
             {
                 UserId = user.Id,
                 UserName = user.UserName,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpirationMinutes)
+                ExpiresAt = DateTime.UtcNow.AddMinutes(_tokenExpirationMinutes)
             };
 
             var tokenJson = JsonSerializer.Serialize(token);
