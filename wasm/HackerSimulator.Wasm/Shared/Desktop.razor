@@ -1,22 +1,27 @@
 @namespace HackerSimulator.Wasm.Shared
 @using HackerSimulator.Wasm.Core
+@inject FileSystemService FS
+@inject ShellService Shell
+
+@inject AuthService Auth
+@inject FileTypeService FileTypes
 
 <div class="desktop">
-    <FileList Entries="_entries"
+    @* <FileList Entries="_entries"
               Selected="_selected"
               ViewMode="FileListViewMode.Grid"
               EntryPath="GetPath"
               IconProvider="GetIcon"
               OnSelect="Select"
-              OnOpen="Open" />
+              OnOpen="Open" /> *@
 </div>
 
 @code {
-    [Inject] private FileSystemService FS { get; set; } = default!;
-    [Inject] private ShellService Shell { get; set; } = default!;
-    [Inject] private FileTypeService FileTypes { get; set; } = default!;
+   
+   
+   
 
-    private const string DesktopPath = "/home/user/Desktop";
+    private string DesktopPath => $"/home/{Auth.CurrentUser?.UserName}/Desktop";
 
     private List<FileSystemService.FileSystemEntry> _entries = new();
     private HashSet<string> _selected = new();
@@ -24,6 +29,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Task.Yield();
         await Load();
     }
 

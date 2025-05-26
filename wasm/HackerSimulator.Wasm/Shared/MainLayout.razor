@@ -12,7 +12,9 @@
 
 
     <MudMainContent>
-        @if (!Auth.Initialized)
+        @Body
+
+        @* @if (!Auth.Initialized)
         {
             <p>Loading...</p>
         }
@@ -28,7 +30,7 @@
         {
             <Desktop />
             <Taskbar />
-        }
+        } *@
     </MudMainContent>
 </MudLayout>
 
@@ -40,15 +42,11 @@
     {
         if (firstRender)
         {
-            Auth.OnAuthInitialised += () =>
+            Auth.OnAuthInitialised += (s,e) =>
         {
             StateHasChanged();
         };
-            Auth.OnUserLogin += (user) =>
-        {
-            StateHasChanged();
-
-        };
+           
             await AutoRun.StartAsync();
         }
     }

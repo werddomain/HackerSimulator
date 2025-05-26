@@ -37,8 +37,8 @@ namespace HackerSimulator.Wasm.Core
         public bool HasUsers => _users.Count > 0;
         public bool IsAuthenticated => CurrentUser != null;
         
-        public event Action<UserRecord>? OnUserLogin;
-        public event Action? OnAuthInitialised;
+        public event EventHandler<UserRecord>? OnUserLogin;
+        public event EventHandler? OnAuthInitialised;
 
         private readonly IServiceProvider? _provider;
 
@@ -60,9 +60,12 @@ namespace HackerSimulator.Wasm.Core
             
             // Try to restore session from stored token
             await TryAutoLoginFromStoredToken();
-            
-            Initialized = true;
-            OnAuthInitialised?.Invoke();
+            if (!Initialized)
+            {
+                Initialized = true;
+                OnAuthInitialised?.Invoke(this, EventArgs.Empty);
+            }
+           
         }
 
         private async Task TryAutoLoginFromStoredToken()
@@ -77,7 +80,7 @@ namespace HackerSimulator.Wasm.Core
                 // Register activity listeners for automatic token refresh
                 await RegisterActivityListeners();
                 
-                OnUserLogin?.Invoke(user);
+                OnUserLogin?.Invoke(this, user);
             }
         }
 
@@ -181,8 +184,8 @@ namespace HackerSimulator.Wasm.Core
             
             // Register activity listeners for automatic token refresh
             await RegisterActivityListeners();
-            
-            OnUserLogin?.Invoke(user);
+
+            OnUserLogin?.Invoke(this, user);
             return user;
         }
 

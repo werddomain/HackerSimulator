@@ -1,3 +1,85 @@
+﻿:root {
+    --mud-appbar-height: 0px !important;
+}
+
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #111;
+    color: #eee;
+    font-family: 'Roboto', sans-serif;
+    flex-direction: column;
+    animation: crt-flicker 1.2s infinite alternate, crt-scanline 0.12s infinite linear;
+}
+
+.loading-screen img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    max-height: 100%;
+    height: auto;
+}
+
+.loading-screen .loading-progress-text {
+    color: #00ff00;
+    font-family: 'VT323', 'Fira Mono', 'Consolas', monospace;
+    text-transform: uppercase;
+    font-size: 2rem;
+    letter-spacing: 0.1em;
+    text-shadow:
+        0 0 2px #00ff00,
+        0 0 5px #00ff00,
+        0 0 10px #00ff00,
+        0 0 20px #00ff00;
+    
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,255,0,0.05) 0px,
+        rgba(0,255,0,0.05) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+    .loading-screen .loading-progress-text .loading-animation::before {
+        content: " / "; /* Contenu initial */
+        animation: rotating-bar 1s steps(1, end) infinite;
+    }
+
+    @keyframes rotating-bar {
+        0%   { content: " / "; }
+        25% { content: " ― "; }
+        50%  { content: " \\ "; }
+        75%  { content: " | "; }
+        100% { content: " / "; }
+    }
+
+    /* For browsers that do not support animating content, use JavaScript to update the text */
+@keyframes crt-flicker {
+    0% { opacity: 1; }
+    10% { opacity: 0.95; }
+    20% { opacity: 1; }
+    30% { opacity: 0.92; }
+    40% { opacity: 1; }
+    50% { opacity: 0.97; }
+    60% { opacity: 1; }
+    70% { opacity: 0.93; }
+    80% { opacity: 1; }
+    90% { opacity: 0.98; }
+    100% { opacity: 1; }
+}
+
+@keyframes crt-scanline {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(0.95); }
+    100% { filter: brightness(1); }
+}
+
 body {
     margin: 0;
     background-color: #111;

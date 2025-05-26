@@ -30,12 +30,25 @@ namespace HackerSimulator.Wasm.Core
             _provider = provider;
             _kernel = kernel;
             _fileTypes = fileTypes;
-            DiscoverProcesses();
-            RegisterBuiltInCommands();
-            DiscoverCommands();
+           
 
         }
+        public Task InitAsync()
+        {
+            try
+            {
+RegisterBuiltInCommands();
+            DiscoverProcesses();
+            DiscoverCommands();
+            }
+            catch (Exception e)
+            {
 
+                throw;
+            }
+            return Task.CompletedTask;
+
+        }
         private void DiscoverProcesses()
         {
             var assembly = Assembly.GetExecutingAssembly();
