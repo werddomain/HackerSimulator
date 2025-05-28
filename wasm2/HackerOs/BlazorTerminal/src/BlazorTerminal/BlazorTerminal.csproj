@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- NuGet Package Properties -->
+    <PackageId>BlazorTerminal</PackageId>
+    <Version>1.0.0-beta1</Version>
+    <Authors>BlazorTerminal Contributors</Authors>
+    <Company>BlazorTerminal Project</Company>
+    <Product>BlazorTerminal</Product>
+    <Description>A high-performance Blazor component library providing a feature-rich terminal emulator with ANSI support, virtualization, theming, and advanced text processing capabilities for Blazor WebAssembly and Server applications.</Description>
+    <PackageTags>blazor;terminal;console;emulator;ansi;wasm;component;xterm;vt100;shell;cli</PackageTags>
+    <PackageProjectUrl>https://github.com/BlazorTerminal/BlazorTerminal</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/BlazorTerminal/BlazorTerminal</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial beta release with core terminal functionality, ANSI support, performance optimizations, and virtualization.</PackageReleaseNotes>
+    <Copyright>Copyright (c) 2025 BlazorTerminal Contributors</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.5" />
+  </ItemGroup>  <!-- Include static web assets for the package, excluding duplicates -->
+  <ItemGroup>
+    <Content Remove="wwwroot\background.png" />
+    <Content Remove="wwwroot\clipboardInterop.js" />
+    <Content Remove="wwwroot\exampleJsInterop.js" />
+  </ItemGroup>
+  
+  <!-- Include package icon, README, and LICENSE -->
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\..\icon.png" Pack="true" PackagePath="\" Condition="Exists('..\..\icon.png')" />
+  </ItemGroup>
+
+</Project>

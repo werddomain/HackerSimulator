@@ -1,0 +1,198 @@
+/* DialogDemo Scoped Styles - Modern/Hacker Theme */
+
+.dialog-demo[b-m16vfbcty0] {
+    padding: 20px;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+    border-radius: 8px;
+    border: 1px solid #404040;
+}
+
+.dialog-demo h3[b-m16vfbcty0] {
+    margin: 0 0 20px 0;
+    color: #ffffff;
+    text-align: center;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.8);
+}
+
+.demo-section[b-m16vfbcty0] {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #404040;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.demo-section h4[b-m16vfbcty0] {
+    margin: 0 0 15px 0;
+    color: #cccccc;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #404040;
+    padding-bottom: 8px;
+}
+
+.button-group[b-m16vfbcty0] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.demo-button[b-m16vfbcty0] {
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid #00ff41;
+    border-radius: 4px;
+    color: #00ff41;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    min-width: 120px;
+}
+
+.demo-button:hover[b-m16vfbcty0] {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+    transform: translateY(-2px);
+}
+
+.demo-button:active[b-m16vfbcty0] {
+    transform: translateY(0);
+    box-shadow: 0 0 5px rgba(0, 255, 65, 0.6);
+}
+
+.demo-button[b-m16vfbcty0]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.demo-button:hover[b-m16vfbcty0]::before {
+    left: 100%;
+}
+
+.result-display[b-m16vfbcty0] {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #666666;
+    border-radius: 6px;
+}
+
+.result-display h4[b-m16vfbcty0] {
+    margin: 0 0 10px 0;
+    color: #ffffff;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.result-display pre[b-m16vfbcty0] {
+    margin: 0;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(0, 255, 65, 0.1);
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #00ff41;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .dialog-demo[b-m16vfbcty0] {
+        padding: 15px;
+    }
+    
+    .button-group[b-m16vfbcty0] {
+        flex-direction: column;
+    }
+    
+    .demo-button[b-m16vfbcty0] {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .demo-section[b-m16vfbcty0] {
+        padding: 12px;
+    }
+    
+    .dialog-demo h3[b-m16vfbcty0] {
+        font-size: 16px;
+    }
+    
+    .demo-section h4[b-m16vfbcty0] {
+        font-size: 12px;
+    }
+}
+
+/* Animation for result display */
+.result-display[b-m16vfbcty0] {
+    animation: resultFadeIn-b-m16vfbcty0 0.4s ease-out;
+}
+
+@keyframes resultFadeIn-b-m16vfbcty0 {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .dialog-demo[b-m16vfbcty0] {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .demo-section[b-m16vfbcty0] {
+        background: #000000;
+        border-color: #ffffff;
+    }
+    
+    .demo-section h4[b-m16vfbcty0] {
+        color: #ffffff;
+        border-bottom-color: #ffffff;
+    }
+    
+    .demo-button[b-m16vfbcty0] {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .demo-button:hover[b-m16vfbcty0] {
+        background: #333333;
+    }
+    
+    .result-display[b-m16vfbcty0] {
+        background: #000000;
+        border-color: #ffffff;
+    }
+    
+    .result-display pre[b-m16vfbcty0] {
+        background: #333333;
+        border-left-color: #ffffff;
+        color: #ffffff;
+    }
+}

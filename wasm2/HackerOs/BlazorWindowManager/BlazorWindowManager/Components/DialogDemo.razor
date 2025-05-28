@@ -1,0 +1,42 @@
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+
+<div class="dialog-demo">
+    <h3>Dialog Examples</h3>
+    
+    <div class="demo-section">
+        <h4>Message Boxes</h4>
+        <div class="button-group">
+            <button class="demo-button" @onclick="ShowInfoMessage">Information</button>
+            <button class="demo-button" @onclick="ShowWarningMessage">Warning</button>
+            <button class="demo-button" @onclick="ShowErrorMessage">Error</button>
+            <button class="demo-button" @onclick="ShowQuestionMessage">Question</button>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h4>Confirmation Dialogs</h4>
+        <div class="button-group">
+            <button class="demo-button" @onclick="ShowYesNoConfirmation">Yes/No</button>
+            <button class="demo-button" @onclick="ShowYesNoCancelConfirmation">Yes/No/Cancel</button>
+            <button class="demo-button" @onclick="ShowSimpleConfirmation">Simple Confirmation</button>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h4>Input Dialogs</h4>
+        <div class="button-group">
+            <button class="demo-button" @onclick="ShowTextPrompt">Text Input</button>
+            <button class="demo-button" @onclick="ShowPasswordPrompt">Password Input</button>
+            <button class="demo-button" @onclick="ShowEmailPrompt">Email Input</button>
+        </div>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(_lastResult))
+    {
+        <div class="result-display">
+            <h4>Last Result:</h4>
+            <pre>@_lastResult</pre>
+        </div>
+    }
+</div>

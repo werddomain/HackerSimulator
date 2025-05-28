@@ -1,0 +1,6 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+
+<div class="desktop-area @CssClass" @ref="desktopElement" style="@GetDesktopStyle()">
+    @ChildContent
+</div>

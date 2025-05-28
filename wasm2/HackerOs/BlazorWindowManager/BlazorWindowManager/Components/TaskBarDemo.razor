@@ -1,0 +1,194 @@
+@page "/taskbar-demo"
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@inject WindowManagerService WindowManager
+
+<PageTitle>TaskBar Demo</PageTitle>
+
+<h3>Blazor Window Manager - TaskBar Demo</h3>
+
+<div class="demo-container">
+    <div class="demo-controls">
+        <button class="btn btn-primary" @onclick="CreateSampleWindow">Create Window</button>
+        <button class="btn btn-secondary" @onclick="CreateCalculator">Create Calculator</button>
+        <button class="btn btn-success" @onclick="CreateNotepad">Create Notepad</button>
+        <button class="btn btn-info" @onclick="MinimizeAll">Minimize All</button>
+        <button class="btn btn-warning" @onclick="CloseAll">Close All</button>
+    </div>
+</div>
+
+<DesktopArea>
+    @foreach (var window in _activeWindows)
+    {
+        @if (window.Type == "Sample")
+        {
+            <SampleWindow />
+        }
+        else if (window.Type == "Calculator")
+        {
+            @* <CalculatorWindow /> *@
+        }
+        else if (window.Type == "Notepad")
+        {
+           @*  <NotepadWindow /> *@
+        }
+    }
+</DesktopArea>
+
+<TaskBarComponent>
+    <LeftContent>
+        <div class="start-menu-button">
+            <span class="start-icon">⚡</span>
+            <span class="start-text">START</span>
+        </div>
+    </LeftContent>
+    <RightContent>
+        <div class="system-icons">
+            <span class="system-icon" title="Network">📶</span>
+            <span class="system-icon" title="Volume">🔊</span>
+            <span class="system-icon" title="Battery">🔋</span>
+        </div>
+    </RightContent>
+</TaskBarComponent>
+
+@code {
+    private List<WindowDemoInfo> _activeWindows = new();
+    private int _windowCounter = 1;
+
+    private class WindowDemoInfo
+    {
+        public string Type { get; set; } = "";
+        public Guid Id { get; set; } = Guid.NewGuid();
+    }
+
+    private void CreateSampleWindow()
+    {
+        _activeWindows.Add(new WindowDemoInfo 
+        { 
+            Type = "Sample",
+            Id = Guid.NewGuid()
+        });
+        _windowCounter++;
+        StateHasChanged();
+    }
+
+    private void CreateCalculator()
+    {
+        _activeWindows.Add(new WindowDemoInfo 
+        { 
+            Type = "Calculator",
+            Id = Guid.NewGuid()
+        });
+        StateHasChanged();
+    }
+
+    private void CreateNotepad()
+    {
+        _activeWindows.Add(new WindowDemoInfo 
+        { 
+            Type = "Notepad",
+            Id = Guid.NewGuid()
+        });
+        StateHasChanged();
+    }
+
+    private async Task MinimizeAll()
+    {
+        var windows = WindowManager.GetAllWindows();
+        foreach (var window in windows)
+        {
+            await WindowManager.MinimizeWindowAsync(window.Id);
+        }
+    }
+
+    private async Task CloseAll()
+    {
+        var windows = WindowManager.GetAllWindows().ToList();
+        foreach (var window in windows)
+        {
+            await WindowManager.CloseWindowAsync(window.Id, force: true);
+        }
+        _activeWindows.Clear();
+        StateHasChanged();
+    }
+}
+
+<style>
+    .demo-container {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .demo-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary { background: #007bff; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn-warning { background: #ffc107; color: black; }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .start-menu-button {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+        border: 1px solid #00ff41;
+        border-radius: 4px;
+        color: #00ff41;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+    .start-menu-button:hover {
+        background: linear-gradient(180deg, #5a5a5a 0%, #3a3a3a 100%);
+        box-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+    }
+
+    .start-icon {
+        margin-right: 6px;
+        font-size: 14px;
+    }
+
+    .start-text {
+        font-size: 11px;
+    }
+
+    .system-icons {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .system-icon {
+        font-size: 14px;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 2px;
+        transition: background 0.2s ease;
+    }
+
+    .system-icon:hover {
+        background: rgba(0, 255, 65, 0.1);
+    }
+</style>

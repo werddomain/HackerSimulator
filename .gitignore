@@ -145,3 +145,8 @@ wasm/HackerSimulator.Wasm/obj/
 /.vs
 /wasm/.vs/HackerSimulator.Wasm
 /wasm/.vs/ProjectEvaluation
+/wasm2/HackerOs/.vs/HackerOs/CopilotIndices/17.14.698.11175
+/wasm2/HackerOs/.vs/HackerOs
+/wasm2/HackerOs/BlazorTerminal/.vs
+/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/bin/Debug/net9.0
+/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/obj

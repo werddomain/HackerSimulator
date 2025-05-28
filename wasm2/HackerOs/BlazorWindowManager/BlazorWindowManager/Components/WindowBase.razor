@@ -1,0 +1,107 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
+@inject WindowManagerService WindowManager
+@inject IJSRuntime JS
+@implements IWindowMessageReceiver
+@implements IAsyncDisposable
+
+<div class="window-container @GetWindowClasses()" 
+     style="@GetWindowStyle()"
+     tabindex="0"
+     @onmousedown="OnWindowMouseDown"
+     @onmousedown:preventDefault="true">
+    
+    <!-- Title Bar -->
+    <div class="window-titlebar" 
+         @onmousedown="OnTitleBarMouseDown"
+         @onmousedown:preventDefault="true">
+        
+        <!-- Window Icon -->
+        <div class="window-icon">
+            @if (Icon != null)
+            {
+                @Icon
+            }
+            else
+            {
+                <div class="default-window-icon"></div>
+            }
+        </div>
+        
+        <!-- Window Title -->
+        <div class="window-title">
+            @Title
+        </div>
+        
+        <!-- Window Controls -->
+        <div class="window-controls">
+            <button class="window-control-btn minimize-btn" 
+                    @onclick="MinimizeWindow"
+                    @onclick:preventDefault="true"
+                    title="Minimize">
+                <span class="minimize-icon">−</span>
+            </button>
+            
+            <button class="window-control-btn maximize-btn" 
+                    @onclick="ToggleMaximize"
+                    @onclick:preventDefault="true"
+                    title="@(CurrentState == WindowState.Maximized ? "Restore" : "Maximize")">
+                <span class="maximize-icon">@(CurrentState == WindowState.Maximized ? "❐" : "□")</span>
+            </button>
+            
+            <button class="window-control-btn close-btn" 
+                    @onclick="CloseWindow"
+                    @onclick:preventDefault="true"
+                    title="Close">
+                <span class="close-icon">×</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Window Content Area -->
+    <div class="window-content" @ref="contentElement">
+        @if (ChildContent != null)
+        {
+            @ChildContent
+        }
+    </div>
+    
+    <!-- Resize Handles (only shown when resizable and not maximized) -->
+    @if (Resizable && CurrentState != WindowState.Maximized)
+    {
+        <div class="resize-handle resize-n" @onmousedown="@(e => StartResize(e, "n"))"></div>
+        <div class="resize-handle resize-s" @onmousedown="@(e => StartResize(e, "s"))"></div>
+        <div class="resize-handle resize-e" @onmousedown="@(e => StartResize(e, "e"))"></div>
+        <div class="resize-handle resize-w" @onmousedown="@(e => StartResize(e, "w"))"></div>
+        <div class="resize-handle resize-ne" @onmousedown="@(e => StartResize(e, "ne"))"></div>
+        <div class="resize-handle resize-nw" @onmousedown="@(e => StartResize(e, "nw"))"></div>
+        <div class="resize-handle resize-se" @onmousedown="@(e => StartResize(e, "se"))"></div>
+        <div class="resize-handle resize-sw" @onmousedown="@(e => StartResize(e, "sw"))"></div>
+    }
+</div>
+
+@code {
+    // Component reference for content area
+    private ElementReference contentElement;
+    
+    // Window context for scoped services
+    private IServiceCollection? _windowContext;
+    
+    // Window information tracked by the manager
+    private WindowInfo? _windowInfo;
+    
+    // Current dragging/resizing state
+    private bool _isDragging = false;
+    private bool _isResizing = false;
+    private string _resizeDirection = "";
+    private double _dragStartX = 0;
+    private double _dragStartY = 0;
+    private WindowBounds _dragStartBounds = new();
+    
+    // JavaScript interop for mouse events
+    private DotNetObjectReference<WindowBase>? _dotNetRef;
+    private IJSObjectReference? _jsModule;
+}

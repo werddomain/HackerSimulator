@@ -1,0 +1,346 @@
+/* Window Container */
+.window-container[b-wvue3y3zre] {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    background: var(--window-background, #1a1a1a);
+    border: 1px solid var(--window-border, #333);
+    border-radius: var(--window-border-radius, 8px);
+    box-shadow: var(--window-shadow, 0 8px 32px rgba(0, 255, 0, 0.3), 0 0 0 1px rgba(0, 255, 0, 0.1));
+    overflow: hidden;
+    min-width: 200px;
+    min-height: 150px;
+    backdrop-filter: blur(10px);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.window-container:focus[b-wvue3y3zre] {
+    outline: none;
+}
+
+/* Active Window State */
+.window-container.window-active[b-wvue3y3zre] {
+    border-color: var(--window-active-border, #00ff00);
+    box-shadow: var(--window-active-shadow, 0 8px 32px rgba(0, 255, 0, 0.5), 0 0 0 2px rgba(0, 255, 0, 0.2));
+}
+
+/* Window States */
+.window-container.window-state-minimized[b-wvue3y3zre] {
+    display: none;
+}
+
+.window-container.window-state-maximized[b-wvue3y3zre] {
+    border-radius: 0;
+}
+
+/* Title Bar */
+.window-titlebar[b-wvue3y3zre] {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    background: var(--titlebar-background, linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 100%));
+    border-bottom: 1px solid var(--titlebar-border, #333);
+    padding: 0 8px;
+    cursor: move;
+    user-select: none;
+    position: relative;
+}
+
+.window-active .window-titlebar[b-wvue3y3zre] {
+    background: var(--titlebar-active-background, linear-gradient(90deg, #003300 0%, #001a00 100%));
+    border-bottom-color: var(--titlebar-active-border, #00ff00);
+}
+
+.window-titlebar[b-wvue3y3zre]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--titlebar-highlight, rgba(0, 255, 0, 0.2));
+}
+
+/* Window Icon */
+.window-icon[b-wvue3y3zre] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.default-window-icon[b-wvue3y3zre] {
+    width: 16px;
+    height: 16px;
+    background: var(--default-icon-color, #00ff00);
+    border-radius: 2px;
+    position: relative;
+}
+
+.default-window-icon[b-wvue3y3zre]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 6px;
+    border: 1px solid var(--window-background, #1a1a1a);
+    border-radius: 1px;
+}
+
+/* Window Title */
+.window-title[b-wvue3y3zre] {
+    flex: 1;
+    color: var(--title-color, #e0e0e0);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.window-active .window-title[b-wvue3y3zre] {
+    color: var(--title-active-color, #00ff00);
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+/* Window Controls */
+.window-controls[b-wvue3y3zre] {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.window-control-btn[b-wvue3y3zre] {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--control-border, #444);
+    background: var(--control-background, #2a2a2a);
+    color: var(--control-color, #e0e0e0);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.window-control-btn:hover[b-wvue3y3zre] {
+    background: var(--control-hover-background, #3a3a3a);
+    border-color: var(--control-hover-border, #555);
+    text-shadow: 0 0 6px currentColor;
+}
+
+.window-control-btn:active[b-wvue3y3zre] {
+    background: var(--control-active-background, #1a1a1a);
+    transform: translateY(1px);
+}
+
+/* Specific control button styles */
+.close-btn:hover[b-wvue3y3zre] {
+    background: var(--close-hover-background, #ff3333);
+    border-color: var(--close-hover-border, #ff6666);
+    color: #fff;
+}
+
+.maximize-btn:hover[b-wvue3y3zre] {
+    background: var(--maximize-hover-background, #3333ff);
+    border-color: var(--maximize-hover-border, #6666ff);
+    color: #fff;
+}
+
+.minimize-btn:hover[b-wvue3y3zre] {
+    background: var(--minimize-hover-background, #ffaa00);
+    border-color: var(--minimize-hover-border, #ffcc33);
+    color: #fff;
+}
+
+/* Window Content */
+.window-content[b-wvue3y3zre] {
+    flex: 1;
+    background: var(--content-background, #0f0f0f);
+    color: var(--content-color, #e0e0e0);
+    overflow: auto;
+    position: relative;
+    font-family: 'Courier New', monospace;
+    border-top: 1px solid var(--content-border, rgba(0, 255, 0, 0.1));
+}
+
+/* Scrollbar styling for content */
+.window-content[b-wvue3y3zre]::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.window-content[b-wvue3y3zre]::-webkit-scrollbar-track {
+    background: var(--scrollbar-track, #1a1a1a);
+    border-radius: 6px;
+}
+
+.window-content[b-wvue3y3zre]::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb, #333);
+    border-radius: 6px;
+    border: 2px solid var(--scrollbar-track, #1a1a1a);
+}
+
+.window-content[b-wvue3y3zre]::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover, #00ff00);
+}
+
+.window-content[b-wvue3y3zre]::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track, #1a1a1a);
+}
+
+/* Resize Handles */
+.resize-handle[b-wvue3y3zre] {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+
+.resize-handle:hover[b-wvue3y3zre] {
+    background: var(--resize-handle-hover, rgba(0, 255, 0, 0.3));
+}
+
+/* Resize handle positioning and cursors */
+.resize-n[b-wvue3y3zre] {
+    top: -3px;
+    left: 8px;
+    right: 8px;
+    height: 6px;
+    cursor: n-resize;
+}
+
+.resize-s[b-wvue3y3zre] {
+    bottom: -3px;
+    left: 8px;
+    right: 8px;
+    height: 6px;
+    cursor: s-resize;
+}
+
+.resize-e[b-wvue3y3zre] {
+    right: -3px;
+    top: 8px;
+    bottom: 8px;
+    width: 6px;
+    cursor: e-resize;
+}
+
+.resize-w[b-wvue3y3zre] {
+    left: -3px;
+    top: 8px;
+    bottom: 8px;
+    width: 6px;
+    cursor: w-resize;
+}
+
+.resize-ne[b-wvue3y3zre] {
+    top: -3px;
+    right: -3px;
+    width: 12px;
+    height: 12px;
+    cursor: ne-resize;
+}
+
+.resize-nw[b-wvue3y3zre] {
+    top: -3px;
+    left: -3px;
+    width: 12px;
+    height: 12px;
+    cursor: nw-resize;
+}
+
+.resize-se[b-wvue3y3zre] {
+    bottom: -3px;
+    right: -3px;
+    width: 12px;
+    height: 12px;
+    cursor: se-resize;
+}
+
+.resize-sw[b-wvue3y3zre] {
+    bottom: -3px;
+    left: -3px;
+    width: 12px;
+    height: 12px;
+    cursor: sw-resize;
+}
+
+/* Non-resizable windows */
+.window-not-resizable .resize-handle[b-wvue3y3zre] {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .window-container[b-wvue3y3zre] {
+        border-radius: 0;
+        box-shadow: none;
+    }
+    
+    .window-titlebar[b-wvue3y3zre] {
+        height: 40px;
+        padding: 0 12px;
+    }
+    
+    .window-control-btn[b-wvue3y3zre] {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .resize-handle[b-wvue3y3zre] {
+        display: none;
+    }
+}
+
+/* Animation effects */
+@keyframes windowAppear-b-wvue3y3zre {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.window-container[b-wvue3y3zre] {
+    animation: windowAppear-b-wvue3y3zre 0.3s ease-out;
+}
+
+/* Matrix/Hacker theme glow effects */
+.window-active[b-wvue3y3zre]::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, transparent, rgba(0, 255, 0, 0.1), transparent);
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    animation: pulse-b-wvue3y3zre 2s ease-in-out infinite;
+}
+
+@keyframes pulse-b-wvue3y3zre {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+/* Terminal-like text selection */
+.window-content [b-wvue3y3zre]::selection {
+    background: rgba(0, 255, 0, 0.3);
+    color: #00ff00;
+}

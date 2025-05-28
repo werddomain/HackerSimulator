@@ -1,0 +1,324 @@
+/* TaskBarComponent Scoped Styles - Modern/Hacker Theme */
+
+.taskbar[b-kpian34vfz] {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+    border-top: 1px solid #00ff41;
+    display: flex;
+    align-items: center;
+    z-index: 10000;
+    box-shadow: 0 -2px 10px rgba(0, 255, 65, 0.2);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.taskbar-left[b-kpian34vfz] {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    min-width: 100px;
+}
+
+.taskbar-center[b-kpian34vfz] {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+    padding: 0 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.taskbar-right[b-kpian34vfz] {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    min-width: 100px;
+    justify-content: flex-end;
+}
+
+.window-buttons[b-kpian34vfz] {
+    display: flex;
+    gap: 2px;
+    height: 100%;
+    align-items: center;
+}
+
+.window-button[b-kpian34vfz] {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-width: 120px;
+    max-width: 200px;
+    padding: 0 8px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid #404040;
+    border-radius: 3px;
+    color: #00ff41;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+}
+
+.window-button:hover[b-kpian34vfz] {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    border-color: #00ff41;
+    box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+}
+
+.window-button.active[b-kpian34vfz] {
+    background: linear-gradient(180deg, #004d1a 0%, #003314 100%);
+    border-color: #00ff41;
+    box-shadow: inset 0 2px 4px rgba(0, 255, 65, 0.2);
+}
+
+.window-button.minimized[b-kpian34vfz] {
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.window-button.minimized .window-button-text[b-kpian34vfz] {
+    text-decoration: line-through;
+}
+
+.window-button-icon[b-kpian34vfz] {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.default-window-icon[b-kpian34vfz] {
+    font-size: 12px;
+    color: #00ff41;
+}
+
+.window-button-text[b-kpian34vfz] {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.window-group-indicator[b-kpian34vfz] {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #ff6b00;
+    color: #ffffff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: bold;
+    border: 1px solid #000000;
+}
+
+.system-tray[b-kpian34vfz] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.clock[b-kpian34vfz] {
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border: 1px solid #404040;
+    border-radius: 2px;
+    text-shadow: 0 0 3px rgba(0, 255, 65, 0.5);
+}
+
+/* Context Menu Styles */
+.context-menu[b-kpian34vfz] {
+    position: fixed;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid #00ff41;
+    border-radius: 4px;
+    padding: 4px 0;
+    z-index: 10001;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0, 255, 65, 0.4);
+    animation: contextMenuFadeIn-b-kpian34vfz 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn-b-kpian34vfz {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.context-menu-item[b-kpian34vfz] {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    color: #00ff41;
+    cursor: pointer;
+    font-size: 11px;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.context-menu-item:hover[b-kpian34vfz] {
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.context-menu-item:active[b-kpian34vfz] {
+    background: rgba(0, 255, 65, 0.2);
+}
+
+.context-menu-icon[b-kpian34vfz] {
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
+    font-size: 10px;
+}
+
+.context-menu-separator[b-kpian34vfz] {
+    height: 1px;
+    background: #404040;
+    margin: 4px 8px;
+}
+
+.context-menu-overlay[b-kpian34vfz] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    background: transparent;
+}
+
+/* Scrollbar styling for taskbar center */
+.taskbar-center[b-kpian34vfz]::-webkit-scrollbar {
+    height: 4px;
+}
+
+.taskbar-center[b-kpian34vfz]::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.taskbar-center[b-kpian34vfz]::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.3);
+    border-radius: 2px;
+}
+
+.taskbar-center[b-kpian34vfz]::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 65, 0.5);
+}
+
+/* Animation for new window buttons */
+.window-button[b-kpian34vfz] {
+    animation: windowButtonSlideIn-b-kpian34vfz 0.3s ease-out;
+}
+
+@keyframes windowButtonSlideIn-b-kpian34vfz {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Pulse effect for active window */
+.window-button.active[b-kpian34vfz]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+    animation: activePulse-b-kpian34vfz 2s infinite;
+}
+
+@keyframes activePulse-b-kpian34vfz {
+    0%, 100% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(100%);
+    }
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .taskbar[b-kpian34vfz] {
+        height: 35px;
+    }
+    
+    .window-button[b-kpian34vfz] {
+        min-width: 80px;
+        max-width: 120px;
+        height: 28px;
+        padding: 0 6px;
+    }
+    
+    .window-button-text[b-kpian34vfz] {
+        font-size: 10px;
+    }
+    
+    .taskbar-left[b-kpian34vfz],
+    .taskbar-right[b-kpian34vfz] {
+        min-width: 80px;
+        padding: 0 6px;
+    }
+    
+    .clock[b-kpian34vfz] {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .taskbar[b-kpian34vfz] {
+        background: #000000;
+        border-top-color: #ffffff;
+    }
+    
+    .window-button[b-kpian34vfz] {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .window-button:hover[b-kpian34vfz] {
+        background: #333333;
+    }
+    
+    .window-button.active[b-kpian34vfz] {
+        background: #ffffff;
+        color: #000000;
+    }
+    
+    .clock[b-kpian34vfz] {
+        color: #ffffff;
+        border-color: #ffffff;
+    }
+}

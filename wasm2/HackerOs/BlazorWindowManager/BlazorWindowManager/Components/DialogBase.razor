@@ -1,0 +1,13 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@inherits WindowBase
+@typeparam TResult
+
+<CascadingValue Value="this" Name="Dialog">
+    @ChildContent
+</CascadingValue>
+
+@if (IsModal && _isVisible)
+{
+    <div class="modal-overlay" @onclick="OnOverlayClick" @onclick:stopPropagation="false"></div>
+}

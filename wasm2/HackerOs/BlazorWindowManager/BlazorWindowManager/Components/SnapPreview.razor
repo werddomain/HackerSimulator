@@ -1,0 +1,23 @@
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+
+@if (_currentSnapTarget != null && _isVisible)
+{
+    <div class="snap-preview" 
+         style="left: @(_currentSnapTarget.TargetBounds.Left)px; 
+                top: @(_currentSnapTarget.TargetBounds.Top)px;
+                width: @(_currentSnapTarget.TargetBounds.Width)px;
+                height: @(_currentSnapTarget.TargetBounds.Height)px;">
+        <div class="snap-preview-content">
+            <div class="snap-preview-icon">
+                @GetSnapIcon(_currentSnapTarget.Type)
+            </div>
+            @if (!string.IsNullOrEmpty(_currentSnapTarget.Description))
+            {
+                <div class="snap-preview-text">
+                    @_currentSnapTarget.Description
+                </div>
+            }
+        </div>
+    </div>
+}
