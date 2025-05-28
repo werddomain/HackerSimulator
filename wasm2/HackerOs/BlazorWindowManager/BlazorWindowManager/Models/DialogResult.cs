@@ -87,7 +87,7 @@ namespace BlazorWindowManager.Models
         /// </summary>
         /// <param name="closeReason">The reason the dialog was closed</param>
         /// <returns>A successful DialogResult</returns>
-        public new static DialogResult Ok(string closeReason = "OK")
+        public static DialogResult Ok(string closeReason = "OK")
         {
             return new DialogResult
             {

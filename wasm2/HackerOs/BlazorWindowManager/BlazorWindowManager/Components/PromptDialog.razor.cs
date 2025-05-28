@@ -60,16 +60,14 @@ public partial class PromptDialog : DialogBase<string>
     [Parameter] public string ValidationErrorMessage { get; set; } = "Invalid input";
 
     private string InputValue = string.Empty;
-    private ElementReference inputElement;
-
-    protected override void OnInitialized()
+    private ElementReference inputElement;    protected override void OnInitialized()
     {
         base.OnInitialized();
         
         // Set dialog properties
         Resizable = false;
-        Width = 450;
-        Height = 250;
+        InitialWidth = 450;
+        InitialHeight = 250;
         
         // Set default title if not specified
         if (string.IsNullOrEmpty(Title))

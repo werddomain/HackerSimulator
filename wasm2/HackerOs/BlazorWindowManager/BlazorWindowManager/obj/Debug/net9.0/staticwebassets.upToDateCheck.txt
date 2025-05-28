@@ -1,5 +1,0 @@
-wwwroot\background.png
-wwwroot\exampleJsInterop.js
-wwwroot\js\window-interactions.js
-C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\wwwroot\exampleJsInterop.js
-C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\wwwroot\js\window-interactions.js

@@ -24,8 +24,6 @@ C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\B
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\0wz98yz2xy-u9015k2po7.gz
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\bhdy4src5o-6pqz8bsss0.gz
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\0htj44x1r6-5h4nd8u52s.gz
-C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\ncdww884le-doz47rzjzo.gz
-C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\6pzssl4ry2-doz47rzjzo.gz
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets.build.json
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets.build.json.cache
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets.development.json
@@ -36,9 +34,15 @@ C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\B
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets\msbuild.buildMultiTargeting.BlazorWindowManager.props
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets\msbuild.buildTransitive.BlazorWindowManager.props
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets.pack.json
-C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\BlazorWindowManager.dll
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\refint\BlazorWindowManager.dll
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\BlazorWindowManager.xml
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\BlazorWindowManager.pdb
 C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\ref\BlazorWindowManager.dll
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\acat9hzs00-hpiynfdok6.gz
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\l9erbo9wik-jqajvh0r12.gz
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\9963trkpp0-pkqjxajzw2.gz
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\scopedcss\Components\ThemeDemo.razor.rz.scp.css
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\scopedcss\Components\ThemeSelector.razor.rz.scp.css
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\ncdww884le-nnlpv8ekgm.gz
+C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\obj\Debug\net9.0\compressed\6pzssl4ry2-nnlpv8ekgm.gz

@@ -150,6 +150,14 @@ namespace BlazorWindowManager.Services
         }
 
         /// <summary>
+        /// Hides the snap preview
+        /// </summary>
+        public void HideSnapPreview()
+        {
+            ShowSnapPreview(null);
+        }
+
+        /// <summary>
         /// Applies snapping to a window position
         /// </summary>
         /// <param name="windowId">The window to snap</param>

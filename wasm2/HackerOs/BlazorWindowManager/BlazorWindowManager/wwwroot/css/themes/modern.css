@@ -1,0 +1,307 @@
+/* 
+ * Blazor Window Manager - Modern Theme
+ * Clean, contemporary design with subtle gradients and smooth animations
+ */
+
+.bwm-theme-modern {
+    /* === THEME-SPECIFIC OVERRIDES === */
+    
+    /* Window Container */
+    --bwm-window-background: #ffffff;
+    --bwm-window-border: #e1e5e9;
+    --bwm-window-border-radius: 12px;
+    --bwm-window-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 2px 16px rgba(0, 0, 0, 0.04);
+    --bwm-window-active-border: #0078d4;
+    --bwm-window-active-shadow: 
+        0 12px 48px rgba(0, 120, 212, 0.15),
+        0 4px 24px rgba(0, 120, 212, 0.08);
+    --bwm-window-inactive-opacity: 0.95;
+    
+    /* Title Bar */
+    --bwm-titlebar-background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    --bwm-titlebar-border-bottom: #dee2e6;
+    --bwm-titlebar-height: 36px;
+    --bwm-titlebar-padding: 0 16px;
+    --bwm-titlebar-active-background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    
+    /* Title Bar Text */
+    --bwm-title-color: #495057;
+    --bwm-title-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --bwm-title-font-size: 14px;
+    --bwm-title-font-weight: 600;
+    --bwm-title-inactive-color: #868e96;
+    
+    /* Window Controls */
+    --bwm-control-button-size: 32px;
+    --bwm-control-button-background: transparent;
+    --bwm-control-button-hover-background: rgba(0, 0, 0, 0.05);
+    --bwm-control-button-active-background: rgba(0, 0, 0, 0.1);
+    --bwm-control-button-border: none;
+    --bwm-control-button-border-radius: 6px;
+    --bwm-control-button-color: #6c757d;
+    --bwm-control-close-hover-background: #dc3545;
+    --bwm-control-close-hover-color: #ffffff;
+    
+    /* Window Content */
+    --bwm-content-background: #ffffff;
+    --bwm-content-color: #212529;
+    --bwm-content-padding: 20px;
+    --bwm-content-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --bwm-content-font-size: 14px;
+    --bwm-content-line-height: 1.5;
+    
+    /* Resize Handles */
+    --bwm-resize-handle-color: rgba(0, 120, 212, 0.3);
+    --bwm-resize-handle-hover-color: rgba(0, 120, 212, 0.6);
+    --bwm-resize-handle-size: 6px;
+    
+    /* Taskbar */
+    --bwm-taskbar-background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+    --bwm-taskbar-border: #dee2e6;
+    --bwm-taskbar-height: 48px;
+    --bwm-taskbar-padding: 0 16px;
+    --bwm-taskbar-shadow: 
+        0 -2px 8px rgba(0, 0, 0, 0.08),
+        0 -1px 4px rgba(0, 0, 0, 0.04);
+    
+    /* Taskbar Buttons */
+    --bwm-taskbar-button-background: transparent;
+    --bwm-taskbar-button-hover-background: rgba(0, 120, 212, 0.08);
+    --bwm-taskbar-button-active-background: rgba(0, 120, 212, 0.12);
+    --bwm-taskbar-button-border: 1px solid transparent;
+    --bwm-taskbar-button-border-radius: 6px;
+    --bwm-taskbar-button-color: #495057;
+    --bwm-taskbar-button-padding: 8px 12px;
+    --bwm-taskbar-button-margin: 0 4px;
+    --bwm-taskbar-button-font-size: 13px;
+    --bwm-taskbar-button-font-weight: 500;
+    
+    /* Dialog */
+    --bwm-modal-overlay-background: rgba(0, 0, 0, 0.4);
+    --bwm-modal-overlay-backdrop-filter: blur(8px);
+    --bwm-dialog-shadow: 
+        0 24px 64px rgba(0, 0, 0, 0.12),
+        0 8px 32px rgba(0, 0, 0, 0.08);
+    
+    /* Desktop */
+    --bwm-desktop-background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    --bwm-desktop-pattern: none;
+    
+    /* Snap Preview */
+    --bwm-snap-preview-background: rgba(0, 120, 212, 0.15);
+    --bwm-snap-preview-border: 2px solid rgba(0, 120, 212, 0.5);
+    --bwm-snap-preview-border-radius: 8px;
+    
+    /* Scrollbar */
+    --bwm-scrollbar-width: 8px;
+    --bwm-scrollbar-background: rgba(0, 0, 0, 0.05);
+    --bwm-scrollbar-thumb-background: rgba(0, 0, 0, 0.2);
+    --bwm-scrollbar-thumb-hover-background: rgba(0, 0, 0, 0.3);
+    --bwm-scrollbar-thumb-border-radius: 4px;
+    
+    /* Animations - smoother for modern theme */
+    --bwm-transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --bwm-transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --bwm-transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === THEME-SPECIFIC ENHANCEMENTS === */
+
+.bwm-theme-modern .window-container {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: all var(--bwm-transition-normal);
+}
+
+.bwm-theme-modern .window-container:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.12),
+        0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.bwm-theme-modern .window-container.window-active {
+    transform: translateY(-2px);
+}
+
+/* Enhanced title bar */
+.bwm-theme-modern .window-titlebar {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.bwm-theme-modern .window-title {
+    letter-spacing: -0.2px;
+}
+
+/* Modern button styling */
+.bwm-theme-modern .window-controls button {
+    transition: all var(--bwm-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bwm-theme-modern .window-controls button:hover {
+    transform: scale(1.05);
+}
+
+.bwm-theme-modern .window-controls button:active {
+    transform: scale(0.95);
+}
+
+/* Close button special styling */
+.bwm-theme-modern .window-controls button.close-button:hover {
+    background: var(--bwm-control-close-hover-background);
+    color: var(--bwm-control-close-hover-color);
+}
+
+/* Content area enhancements */
+.bwm-theme-modern .window-content {
+    background: var(--bwm-content-background);
+}
+
+/* Taskbar modern styling */
+.bwm-theme-modern .taskbar {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--bwm-taskbar-border);
+}
+
+.bwm-theme-modern .window-button {
+    transition: all var(--bwm-transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bwm-theme-modern .window-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.15);
+}
+
+.bwm-theme-modern .window-button.active {
+    background: var(--bwm-taskbar-button-active-background);
+    border-color: rgba(0, 120, 212, 0.3);
+}
+
+.bwm-theme-modern .window-button-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal dialog enhancements */
+.bwm-theme-modern .modal-overlay {
+    backdrop-filter: var(--bwm-modal-overlay-backdrop-filter);
+    -webkit-backdrop-filter: var(--bwm-modal-overlay-backdrop-filter);
+}
+
+.bwm-theme-modern .dialog-container {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Custom scrollbar for modern theme */
+.bwm-theme-modern ::-webkit-scrollbar {
+    width: var(--bwm-scrollbar-width);
+    background: var(--bwm-scrollbar-background);
+}
+
+.bwm-theme-modern ::-webkit-scrollbar-thumb {
+    background: var(--bwm-scrollbar-thumb-background);
+    border-radius: var(--bwm-scrollbar-thumb-border-radius);
+    transition: background var(--bwm-transition-fast);
+}
+
+.bwm-theme-modern ::-webkit-scrollbar-thumb:hover {
+    background: var(--bwm-scrollbar-thumb-hover-background);
+}
+
+.bwm-theme-modern ::-webkit-scrollbar-corner {
+    background: var(--bwm-scrollbar-background);
+}
+
+/* Selection styling */
+.bwm-theme-modern ::selection {
+    background: rgba(0, 120, 212, 0.25);
+    color: inherit;
+}
+
+/* Form elements styling */
+.bwm-theme-modern input,
+.bwm-theme-modern textarea,
+.bwm-theme-modern select {
+    background: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    color: #495057;
+    font-family: var(--bwm-content-font-family);
+    padding: 8px 12px;
+    transition: all var(--bwm-transition-fast);
+}
+
+.bwm-theme-modern input:focus,
+.bwm-theme-modern textarea:focus,
+.bwm-theme-modern select:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+/* Button styling */
+.bwm-theme-modern button:not(.window-controls button) {
+    background: #0078d4;
+    border: 1px solid #0078d4;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: var(--bwm-content-font-family);
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: all var(--bwm-transition-fast);
+    cursor: pointer;
+}
+
+.bwm-theme-modern button:not(.window-controls button):hover {
+    background: #106ebe;
+    border-color: #106ebe;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.25);
+}
+
+.bwm-theme-modern button:not(.window-controls button):active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+}
+
+/* Snap preview modern styling */
+.bwm-theme-modern .snap-preview {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: modernSnapFade 0.2s ease-out;
+}
+
+@keyframes modernSnapFade {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Resize handles modern styling */
+.bwm-theme-modern .resize-handle {
+    transition: all var(--bwm-transition-fast);
+}
+
+.bwm-theme-modern .resize-handle:hover {
+    background: var(--bwm-resize-handle-hover-color);
+    border-radius: 2px;
+}

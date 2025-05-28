@@ -20,25 +20,65 @@
       <LastWriteTime>Wed, 28 May 2025 00:32:33 GMT</LastWriteTime>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\background.png'))</OriginalItemSpec>
     </StaticWebAsset>
-    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\BlazorWindowManager.doz47rzjzo.bundle.scp.css'))">
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\BlazorWindowManager.nnlpv8ekgm.bundle.scp.css'))">
       <SourceType>Package</SourceType>
       <SourceId>BlazorWindowManager</SourceId>
       <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
       <BasePath>_content/BlazorWindowManager</BasePath>
-      <RelativePath>BlazorWindowManager.doz47rzjzo.bundle.scp.css</RelativePath>
+      <RelativePath>BlazorWindowManager.nnlpv8ekgm.bundle.scp.css</RelativePath>
       <AssetKind>All</AssetKind>
       <AssetMode>Reference</AssetMode>
       <AssetRole>Primary</AssetRole>
       <RelatedAsset></RelatedAsset>
       <AssetTraitName>ScopedCss</AssetTraitName>
       <AssetTraitValue>ProjectBundle</AssetTraitValue>
-      <Fingerprint>doz47rzjzo</Fingerprint>
-      <Integrity>Y894Jaq3DsL1hO2oTgkTQohORwOlnEB063KZXfELyuc=</Integrity>
+      <Fingerprint>nnlpv8ekgm</Fingerprint>
+      <Integrity>HUf2OOKQeSrnBketFqego7KwIFba+6G2FlB7EJlENkA=</Integrity>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <FileLength>39260</FileLength>
-      <LastWriteTime>Wed, 28 May 2025 04:14:15 GMT</LastWriteTime>
-      <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\BlazorWindowManager.doz47rzjzo.bundle.scp.css'))</OriginalItemSpec>
+      <FileLength>39412</FileLength>
+      <LastWriteTime>Wed, 28 May 2025 06:01:25 GMT</LastWriteTime>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\BlazorWindowManager.nnlpv8ekgm.bundle.scp.css'))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\themes\hacker-matrix.css'))">
+      <SourceType>Package</SourceType>
+      <SourceId>BlazorWindowManager</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BlazorWindowManager</BasePath>
+      <RelativePath>css/themes/hacker-matrix.css</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <Fingerprint>hpiynfdok6</Fingerprint>
+      <Integrity>y4lE66FyB0qeKtfgb1QbzQvidbUqc6ephmn+fDkiQI0=</Integrity>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <FileLength>7756</FileLength>
+      <LastWriteTime>Wed, 28 May 2025 05:56:31 GMT</LastWriteTime>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\themes\hacker-matrix.css'))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\themes\modern.css'))">
+      <SourceType>Package</SourceType>
+      <SourceId>BlazorWindowManager</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BlazorWindowManager</BasePath>
+      <RelativePath>css/themes/modern.css</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <Fingerprint>jqajvh0r12</Fingerprint>
+      <Integrity>5R/JKlPXhMTC2JYq69NVBJTpAOj6mLpzyG2X5XhT2C4=</Integrity>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <FileLength>9448</FileLength>
+      <LastWriteTime>Wed, 28 May 2025 05:56:31 GMT</LastWriteTime>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\themes\modern.css'))</OriginalItemSpec>
     </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\exampleJsInterop.js'))">
       <SourceType>Package</SourceType>
@@ -59,6 +99,26 @@
       <FileLength>247</FileLength>
       <LastWriteTime>Wed, 28 May 2025 00:32:33 GMT</LastWriteTime>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\exampleJsInterop.js'))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\js\theme-manager.js'))">
+      <SourceType>Package</SourceType>
+      <SourceId>BlazorWindowManager</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BlazorWindowManager</BasePath>
+      <RelativePath>js/theme-manager.js</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <Fingerprint>pkqjxajzw2</Fingerprint>
+      <Integrity>SSYP6g9LEEE90JCUDaJpFASHGvwZw4tjskWQelduHyM=</Integrity>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <FileLength>7582</FileLength>
+      <LastWriteTime>Wed, 28 May 2025 05:56:31 GMT</LastWriteTime>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\js\theme-manager.js'))</OriginalItemSpec>
     </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\js\window-interactions.js'))">
       <SourceType>Package</SourceType>

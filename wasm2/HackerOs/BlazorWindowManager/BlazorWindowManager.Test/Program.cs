@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using BlazorWindowManager.Extensions;
 
 namespace BlazorWindowManager.Test
 {
@@ -12,6 +13,9 @@ namespace BlazorWindowManager.Test
             builder.RootComponents.Add<HeadOutlet>("head::after");
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+            
+            // Add Blazor Window Manager services including SnappingService
+            builder.Services.AddBlazorWindowManager();
 
             await builder.Build().RunAsync();
         }

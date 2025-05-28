@@ -78,14 +78,13 @@ public partial class DesktopArea : ComponentBase
         
         return string.Join("; ", styles);
     }
-    
-    /// <summary>
+      /// <summary>
     /// Gets the bounds of the desktop area for window constraint calculations
     /// </summary>
     /// <returns>WindowBounds representing the desktop area</returns>
-    public async Task<WindowBounds> GetDesktopBounds()
+    public Task<WindowBounds> GetDesktopBounds()
     {
         // This could be enhanced to get actual DOM bounds
-        return new WindowBounds(0, 0, 1920, 1080); // Default values
+        return Task.FromResult(new WindowBounds(0, 0, 1920, 1080)); // Default values
     }
 }

@@ -3,8 +3,6 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.JSInterop
-@inject WindowManagerService WindowManager
-@inject IJSRuntime JS
 @implements IWindowMessageReceiver
 @implements IAsyncDisposable
 
@@ -86,22 +84,4 @@
 @code {
     // Component reference for content area
     private ElementReference contentElement;
-    
-    // Window context for scoped services
-    private IServiceCollection? _windowContext;
-    
-    // Window information tracked by the manager
-    private WindowInfo? _windowInfo;
-    
-    // Current dragging/resizing state
-    private bool _isDragging = false;
-    private bool _isResizing = false;
-    private string _resizeDirection = "";
-    private double _dragStartX = 0;
-    private double _dragStartY = 0;
-    private WindowBounds _dragStartBounds = new();
-    
-    // JavaScript interop for mouse events
-    private DotNetObjectReference<WindowBase>? _dotNetRef;
-    private IJSObjectReference? _jsModule;
 }

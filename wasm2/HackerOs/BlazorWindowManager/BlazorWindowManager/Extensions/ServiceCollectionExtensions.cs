@@ -7,13 +7,15 @@ namespace BlazorWindowManager.Extensions;
 /// Extension methods for registering Blazor Window Manager services
 /// </summary>
 public static class ServiceCollectionExtensions
-{    /// <summary>
+{
+    /// <summary>
     /// Adds Blazor Window Manager services to the dependency injection container
     /// </summary>
     /// <param name="services">The service collection to add services to</param>
     /// <returns>The service collection for chaining</returns>
     public static IServiceCollection AddBlazorWindowManager(this IServiceCollection services)
-    {        // Register the core window manager service as singleton
+    {
+        // Register the core window manager service as singleton
         services.AddSingleton<WindowManagerService>();
         
         // Register the snapping service as singleton
@@ -22,9 +24,11 @@ public static class ServiceCollectionExtensions
         // Register the dialog service as scoped (for component lifecycle)
         services.AddScoped<DialogService>();
         
+        // Register the theme service as singleton
+        services.AddSingleton<ThemeService>();
+        
         return services;
-    }
-    
+    }    
     /// <summary>
     /// Adds Blazor Window Manager services with configuration options
     /// </summary>
@@ -39,7 +43,9 @@ public static class ServiceCollectionExtensions
         if (configure != null)
         {
             services.Configure(configure);
-        }          // Register the core services
+        }
+        
+        // Register the core services
         services.AddSingleton<WindowManagerService>();
         
         // Register the snapping service as singleton
@@ -47,6 +53,9 @@ public static class ServiceCollectionExtensions
         
         // Register the dialog service as scoped (for component lifecycle)
         services.AddScoped<DialogService>();
+        
+        // Register the theme service as singleton
+        services.AddSingleton<ThemeService>();
         
         return services;
     }

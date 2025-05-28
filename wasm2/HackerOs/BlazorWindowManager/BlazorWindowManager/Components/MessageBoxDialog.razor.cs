@@ -17,21 +17,19 @@ public partial class MessageBoxDialog : DialogBase<MessageBoxResult>
     /// <summary>
     /// The buttons to show in the dialog
     /// </summary>
-    [Parameter] public MessageBoxButtons Buttons { get; set; } = MessageBoxButtons.OK;
-
-    /// <summary>
+    [Parameter] public MessageBoxButtons Buttons { get; set; } = MessageBoxButtons.OK;    /// <summary>
     /// The icon to display in the dialog
     /// </summary>
-    [Parameter] public MessageBoxIcon Icon { get; set; } = MessageBoxIcon.Information;
-
+    [Parameter] public new MessageBoxIcon Icon { get; set; } = MessageBoxIcon.Information;
+    
     protected override void OnInitialized()
     {
         base.OnInitialized();
         
         // Set dialog properties
         Resizable = false;
-        Width = 400;
-        Height = 200;
+        InitialWidth = 400;
+        InitialHeight = 200;
         
         // Set title if not already set
         if (string.IsNullOrEmpty(Title))

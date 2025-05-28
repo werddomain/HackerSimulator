@@ -9,16 +9,15 @@ namespace BlazorWindowManager.Components;
 /// </summary>
 /// <typeparam name="TResult">The type of result returned by the dialog</typeparam>
 public partial class DialogBase<TResult> : WindowBase, IDialogBase
-{
-    /// <summary>
+{    /// <summary>
     /// Content to display inside the dialog
     /// </summary>
-    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public new RenderFragment? ChildContent { get; set; }
 
     /// <summary>
     /// Whether this dialog is modal (blocks interaction with parent/other windows)
     /// </summary>
-    [Parameter] public bool IsModal { get; set; } = true;
+    [Parameter] public new bool IsModal { get; set; } = true;
 
     /// <summary>
     /// Whether clicking the modal overlay should close the dialog

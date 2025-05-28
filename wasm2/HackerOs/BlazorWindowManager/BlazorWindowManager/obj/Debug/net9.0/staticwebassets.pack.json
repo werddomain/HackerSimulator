@@ -2,15 +2,27 @@
   "Files": [
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\BlazorWindowManager.bundle.scp.css",
-      "PackagePath": "staticwebassets\\BlazorWindowManager.doz47rzjzo.bundle.scp.css"
+      "PackagePath": "staticwebassets\\BlazorWindowManager.nnlpv8ekgm.bundle.scp.css"
     },
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\background.png",
       "PackagePath": "staticwebassets\\background.png"
     },
     {
+      "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\css\\themes\\hacker-matrix.css",
+      "PackagePath": "staticwebassets\\css\\themes\\hacker-matrix.css"
+    },
+    {
+      "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\css\\themes\\modern.css",
+      "PackagePath": "staticwebassets\\css\\themes\\modern.css"
+    },
+    {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\exampleJsInterop.js",
       "PackagePath": "staticwebassets\\exampleJsInterop.js"
+    },
+    {
+      "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\js\\theme-manager.js",
+      "PackagePath": "staticwebassets\\js\\theme-manager.js"
     },
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\js\\window-interactions.js",

@@ -241,6 +241,98 @@
             Base window component that provides core windowing functionality including
             dragging, resizing, state management, and integration with WindowManagerService.
             </summary>
+            <summary>
+            Base window component that provides core windowing functionality including
+            dragging, resizing, state management, and integration with WindowManagerService.
+            This is the main partial class file containing parameters and core properties.
+            </summary>
+            <summary>
+            WindowBase partial class - Event parameters and handling
+            </summary>
+            <summary>
+            WindowBase partial class - User interactions and JavaScript interop
+            </summary>
+            <summary>
+            WindowBase partial class - Component lifecycle methods
+            </summary>
+            <summary>
+            WindowBase partial class - Public API methods
+            </summary>
+            <summary>
+            WindowBase partial class - Utility methods and virtual methods
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.WindowManager">
+            <summary>
+            Window manager service for managing windows
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.JSRuntime">
+            <summary>
+            JavaScript runtime for interop
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.SnappingService">
+            <summary>
+            Snapping service for window snapping functionality
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.ServiceProvider">
+            <summary>
+            Service provider for dependency injection
+            </summary>
+        </member>
+        <member name="F:BlazorWindowManager.Components.WindowBase._jsModule">
+            <summary>
+            JavaScript module reference for window interactions
+            </summary>
+        </member>
+        <member name="F:BlazorWindowManager.Components.WindowBase._dotNetRef">
+            <summary>
+            .NET object reference for JavaScript callbacks
+            </summary>
+        </member>
+        <member name="F:BlazorWindowManager.Components.WindowBase._windowScope">
+            <summary>
+            Service scope for this window instance
+            </summary>
+        </member>
+        <member name="F:BlazorWindowManager.Components.WindowBase._windowInfo">
+            <summary>
+            Window information tracked by the window manager
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.CurrentBounds">
+            <summary>
+            Current bounds (position and size) of the window
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.CurrentState">
+            <summary>
+            Current state of the window (Normal, Minimized, Maximized)
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.IsActive">
+            <summary>
+            Whether this window is currently active (has focus)
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.WindowContext">
+            <summary>
+            Service scope for this window instance
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Components.WindowBase.GetContainerBounds">
+            <summary>
+            Gets the bounds of the desktop container for snapping calculations
+            </summary>
+            <returns>The bounds of the container where windows can be placed</returns>
+        </member>
+        <member name="M:BlazorWindowManager.Components.WindowBase.OnMessageReceived(BlazorWindowManager.Models.WindowMessageEventArgs)">
+            <summary>
+            Handles messages received from other windows
+            </summary>
+            <param name="args">Message event arguments</param>
         </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.Id">
             <summary>
@@ -292,24 +384,44 @@
             Maximum height constraint in pixels
             </summary>
         </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.InitialX">
+            <summary>
+            Initial X position when the window is first created
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.InitialY">
+            <summary>
+            Initial Y position when the window is first created
+            </summary>
+        </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.InitialWidth">
             <summary>
-            Initial width of the window in pixels
+            Initial width when the window is first created
             </summary>
         </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.InitialHeight">
             <summary>
-            Initial height of the window in pixels
+            Initial height when the window is first created
             </summary>
         </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.CssClass">
             <summary>
-            CSS classes to apply to the window container
+            Additional CSS class to apply to the window container
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.ParentWindow">
+            <summary>
+            Parent window for modal dialogs
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Components.WindowBase.IsModal">
+            <summary>
+            Whether this window is modal (blocks interaction with other windows)
             </summary>
         </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.ShowCloseButton">
             <summary>
-            Whether to show the close button in the window title bar
+            Whether the close button should be shown in the title bar
             </summary>
         </member>
         <member name="P:BlazorWindowManager.Components.WindowBase.OnBeforeClose">
@@ -367,34 +479,24 @@
             Raised when the window content is loaded
             </summary>
         </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.CurrentState">
+        <member name="M:BlazorWindowManager.Components.WindowBase.OnDragMove(System.Double,System.Double)">
             <summary>
-            Current state of the window
+            Called from JavaScript during window dragging
             </summary>
         </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.CurrentBounds">
+        <member name="M:BlazorWindowManager.Components.WindowBase.OnDragEnd">
             <summary>
-            Current bounds of the window
+            Called from JavaScript when window dragging ends
             </summary>
         </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.Width">
+        <member name="M:BlazorWindowManager.Components.WindowBase.OnResizeMove(System.Double,System.Double)">
             <summary>
-            Current width of the window in pixels
+            Called from JavaScript during window resizing
             </summary>
         </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.Height">
+        <member name="M:BlazorWindowManager.Components.WindowBase.OnResizeEnd">
             <summary>
-            Current height of the window in pixels
-            </summary>
-        </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.IsActive">
-            <summary>
-            Whether this window is currently active (has focus)
-            </summary>
-        </member>
-        <member name="P:BlazorWindowManager.Components.WindowBase.WindowContext">
-            <summary>
-            Window-scoped service collection for dependency injection
+            Called from JavaScript when resizing ends
             </summary>
         </member>
         <member name="M:BlazorWindowManager.Components.WindowBase.Close(System.Boolean)">
@@ -436,32 +538,6 @@
             Updates the window title
             </summary>
             <param name="newTitle">New title for the window</param>
-        </member>
-        <member name="M:BlazorWindowManager.Components.WindowBase.OnMessageReceived(BlazorWindowManager.Models.WindowMessageEventArgs)">
-            <summary>
-            Handles messages received from other windows
-            </summary>
-            <param name="args">Message event arguments</param>
-        </member>
-        <member name="M:BlazorWindowManager.Components.WindowBase.OnDragMove(System.Double,System.Double)">
-            <summary>
-            Called from JavaScript during window dragging
-            </summary>
-        </member>
-        <member name="M:BlazorWindowManager.Components.WindowBase.OnDragEnd">
-            <summary>
-            Called from JavaScript when dragging ends
-            </summary>
-        </member>
-        <member name="M:BlazorWindowManager.Components.WindowBase.OnResizeMove(System.Double,System.Double)">
-            <summary>
-            Called from JavaScript during window resizing
-            </summary>
-        </member>
-        <member name="M:BlazorWindowManager.Components.WindowBase.OnResizeEnd">
-            <summary>
-            Called from JavaScript when resizing ends
-            </summary>
         </member>
         <member name="M:BlazorWindowManager.Components.WindowBase.OnBeforeCloseAsync">
             <summary>
@@ -635,6 +711,96 @@
             <param name="errorMessage">The error message</param>
             <param name="closeReason">The reason the dialog was closed</param>
             <returns>A failed DialogResult</returns>
+        </member>
+        <member name="T:BlazorWindowManager.Models.ITheme">
+            <summary>
+            Interface for defining themes in the window manager
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.Id">
+            <summary>
+            Unique identifier for the theme
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.Name">
+            <summary>
+            Human-readable name of the theme
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.Description">
+            <summary>
+            Description of the theme
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.CssClass">
+            <summary>
+            CSS class name to apply to the root container
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.CssFilePath">
+            <summary>
+            Path to the theme's CSS file
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.Category">
+            <summary>
+            Theme category for organization
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.IsDarkTheme">
+            <summary>
+            Whether this theme supports dark mode aesthetics
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ITheme.CustomVariables">
+            <summary>
+            Custom CSS variables specific to this theme
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Models.ThemeDefinition">
+            <summary>
+            Built-in theme definition implementation
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Models.ThemeCategory">
+            <summary>
+            Categories for organizing themes
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Models.ThemeChangedEventArgs">
+            <summary>
+            Event arguments for theme change events
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Models.ThemeSettings">
+            <summary>
+            Theme preferences and settings
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ThemeSettings.ActiveThemeId">
+            <summary>
+            Currently active theme ID
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ThemeSettings.EnableThemeTransitions">
+            <summary>
+            Whether to apply theme transitions when switching
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ThemeSettings.TransitionDuration">
+            <summary>
+            Duration of theme transition animations
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ThemeSettings.PersistThemeSelection">
+            <summary>
+            Whether to persist theme selection across sessions
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.ThemeSettings.UserCustomVariables">
+            <summary>
+            Custom user-defined CSS variables that override theme defaults
+            </summary>
         </member>
         <member name="T:BlazorWindowManager.Models.WindowBounds">
             <summary>
@@ -1072,6 +1238,11 @@
             Shows or hides the snap preview
             </summary>
         </member>
+        <member name="M:BlazorWindowManager.Services.SnappingService.HideSnapPreview">
+            <summary>
+            Hides the snap preview
+            </summary>
+        </member>
         <member name="M:BlazorWindowManager.Services.SnappingService.ApplySnapping(System.Guid,BlazorWindowManager.Models.WindowBounds,BlazorWindowManager.Models.WindowBounds)">
             <summary>
             Applies snapping to a window position
@@ -1104,6 +1275,97 @@
         <member name="M:BlazorWindowManager.Services.SnappingService.DoesHorizontalRangeOverlap(BlazorWindowManager.Models.WindowBounds,BlazorWindowManager.Models.WindowBounds)">
             <summary>
             Checks if two windows overlap horizontally (for vertical snapping)
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Services.ThemeService">
+            <summary>
+            Service for managing themes in the Blazor Window Manager system.
+            Handles theme registration, switching, and CSS injection.
+            </summary>
+        </member>
+        <member name="E:BlazorWindowManager.Services.ThemeService.ThemeChanged">
+            <summary>
+            Raised when the active theme changes
+            </summary>
+        </member>
+        <member name="E:BlazorWindowManager.Services.ThemeService.ThemeRegistered">
+            <summary>
+            Raised when a new theme is registered
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.ThemeService.CurrentTheme">
+            <summary>
+            Gets the currently active theme
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.ThemeService.RegisteredThemes">
+            <summary>
+            Gets all registered themes
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.ThemeService.Settings">
+            <summary>
+            Gets current theme settings
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.InitializeAsync">
+            <summary>
+            Initializes the theme service and loads the default theme
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.RegisterTheme(BlazorWindowManager.Models.ITheme)">
+            <summary>
+            Registers a new theme
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.GetTheme(System.String)">
+            <summary>
+            Gets a theme by ID
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.GetThemesByCategory(BlazorWindowManager.Models.ThemeCategory)">
+            <summary>
+            Gets all themes in a specific category
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.ApplyThemeAsync(System.String)">
+            <summary>
+            Applies a theme by ID
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.ApplyThemeAsync(BlazorWindowManager.Models.ITheme,System.Boolean)">
+            <summary>
+            Applies a specific theme
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.UpdateSettingsAsync(BlazorWindowManager.Models.ThemeSettings)">
+            <summary>
+            Updates theme settings
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.SetCustomVariableAsync(System.String,System.String)">
+            <summary>
+            Adds or updates a user custom CSS variable
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.RemoveCustomVariableAsync(System.String)">
+            <summary>
+            Removes a user custom CSS variable
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.RegisterBuiltInThemes">
+            <summary>
+            Registers all built-in themes
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.LoadSettingsAsync">
+            <summary>
+            Loads theme settings from local storage
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.SaveSettingsAsync">
+            <summary>
+            Saves theme settings to local storage
             </summary>
         </member>
         <member name="T:BlazorWindowManager.Services.WindowManagerService">
