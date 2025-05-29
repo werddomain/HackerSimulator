@@ -195,15 +195,51 @@ This document tracks the implementation progress of the Blazor Window Manager co
   - [x] Validate integration with existing window management system
   - [x] Confirm application runs with both themes available
 
-- [ ] **Additional Themes (Phase 2 - Future Implementation)**
-  - [ ] Windows 98 theme (classic gray, raised buttons, nostalgic feel)
+- [ ] **Additional Themes (Phase 2 - CURRENT PRIORITY)**
+  - [ ] **Windows 98 theme (classic gray, raised buttons, nostalgic feel) - IN PROGRESS**
+    - [ ] Design classic Windows 98 color scheme and CSS variables
+    - [ ] Create windows-98.css theme file with full implementation
+    - [ ] Implement 3D beveled window borders and chrome styling
+    - [ ] Create classic raised/sunken button styles for window controls
+    - [ ] Design taskbar with Windows 98 classic gray look and raised borders
+    - [ ] Implement start button styling with Windows logo placeholder
+    - [ ] Create system tray area styling
+    - [ ] Add Windows 98 typography (MS Sans Serif style)
+    - [ ] Update ThemeService registration with complete variable definitions
+    - [ ] Test theme switching and integration with existing components
+    - [ ] Validate Windows 98 theme in ThemeSelector component
+    - [ ] Document Windows 98 theme implementation and design decisions
   - [ ] Windows XP theme (blue Luna style with rounded corners)
+    - [ ] Design Luna blue color scheme
+    - [ ] Implement rounded window corners and gradients
+    - [ ] Create XP-style taskbar with glass effects
+    - [ ] Add characteristic XP window controls
   - [ ] Windows Vista theme (Aero glass effects, transparency)
+    - [ ] Design Aero glass color scheme with transparency
+    - [ ] Implement glass-like window borders
+    - [ ] Create semi-transparent taskbar
+    - [ ] Add blur effects and transparency overlays
   - [ ] Windows 7 theme (refined Aero with better contrast)
+    - [ ] Design improved Aero color scheme
+    - [ ] Implement refined glass effects
+    - [ ] Create taskbar with improved contrast
+    - [ ] Add subtle animations and transitions
   - [ ] Windows 10 theme (flat design, modern minimalism)
+    - [ ] Design modern flat color scheme
+    - [ ] Implement flat window borders and controls
+    - [ ] Create modern taskbar with accent colors
+    - [ ] Add subtle shadows and modern typography
   - [ ] macOS theme (system-style buttons, refined typography)
+    - [ ] Design macOS color scheme (light/dark variants)
+    - [ ] Implement traffic light window controls
+    - [ ] Create dock-style taskbar
+    - [ ] Add macOS typography and spacing
   - [ ] Linux (modern) theme (GTK-inspired, clean and functional)
-  - [ ] Hacker/Matrix theme (CRT style, black and green)
+    - [ ] Design GTK-inspired color scheme
+    - [ ] Implement clean window decorations
+    - [ ] Create functional taskbar design
+    - [ ] Add Linux desktop environment styling
+
 
 ## Snapping Functionality
 
@@ -229,11 +265,13 @@ This document tracks the implementation progress of the Blazor Window Manager co
   - [x] Apply snap targets when dragging ends
   - [x] Handle container bounds detection from DesktopArea
 
-- [ ] **Complete Integration & Testing**
+- [ ] **Complete Integration & Testing (IMMEDIATE PRIORITY)**
+  - [ ] Create comprehensive snapping test demo page
   - [ ] Test all snap behaviors (edge, zone, window-to-window)
   - [ ] Verify snap preview visual feedback works correctly
   - [ ] Test configuration changes at runtime
   - [ ] Performance optimization for drag operations
+  - [ ] Create snapping functionality documentation
 
 ## Accessibility (A11y)
 
@@ -341,15 +379,12 @@ This document tracks the implementation progress of the Blazor Window Manager co
 **Issues & Blockers:**
 ✅ All critical blockers resolved. Project ready for advanced feature development.
 
-**Next Priorities:**
-1. Complete Integration & Testing (window snapping behaviors)
-2. Enhanced TaskBar features (system tray, window preview thumbnails)  
-3. Desktop component with wallpaper support and right-click context menus
-4. Start Menu integration with application launcher
-5. XML documentation completion (resolve remaining 81 warnings)
-
-**Next Priorities:**
-1. TaskBarComponent implementation
-2. DialogBase component
-3. Theming system
-4. Testing and documentation
+**Next Priorities (Updated May 28, 2025):**
+1. **IMMEDIATE**: Complete Integration & Testing (window snapping behaviors and comprehensive testing)
+2. **CURRENT**: Additional Themes Implementation (Phase 2 - Windows 98, XP, Vista, 7, 10, macOS, Linux)
+3. Enhanced TaskBar features (system tray, window preview thumbnails)  
+4. Desktop component with wallpaper support and right-click context menus
+5. Start Menu integration with application launcher
+6. XML documentation completion (resolve remaining 81 warnings)
+7. Accessibility features (keyboard navigation, screen reader support)
+8. Performance optimizations and unit testing

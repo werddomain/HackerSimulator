@@ -206,6 +206,26 @@
             Sample window component demonstrating window functionality
             </summary>
         </member>
+        <member name="T:BlazorWindowManager.Components.SnappingDemo">
+            <summary>
+            Demo page for testing and validating window snapping functionality
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Components.SnappingDemo.TestWindowInfo">
+            <summary>
+            Test window information for demo purposes
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Components.SnappingDemo.OnInitializedAsync">
+            <summary>
+            Initializes the snapping demo component
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Components.SnappingDemo.Dispose">
+            <summary>
+            Disposes the component and unsubscribes from events
+            </summary>
+        </member>
         <member name="T:BlazorWindowManager.Components.SnapPreview">
             <summary>
             Component for displaying snap preview overlays during window dragging
@@ -712,6 +732,71 @@
             <param name="closeReason">The reason the dialog was closed</param>
             <returns>A failed DialogResult</returns>
         </member>
+        <member name="T:BlazorWindowManager.Models.SnapPreviewInfo">
+            <summary>
+            Information about a snap preview being shown
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapPreviewInfo.SnapType">
+            <summary>
+            Type of snap being previewed
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapPreviewInfo.TargetBounds">
+            <summary>
+            Target bounds where the window would be placed
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapPreviewInfo.Description">
+            <summary>
+            Description of the snap operation
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapPreviewInfo.IsActive">
+            <summary>
+            Whether this preview is currently active
+            </summary>
+        </member>
+        <member name="T:BlazorWindowManager.Models.SnapResult">
+            <summary>
+            Result of a snap operation being applied
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.SnapType">
+            <summary>
+            Type of snap that was applied
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.WindowId">
+            <summary>
+            ID of the window that was snapped
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.OriginalBounds">
+            <summary>
+            Original bounds before snapping
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.NewBounds">
+            <summary>
+            New bounds after snapping
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.Timestamp">
+            <summary>
+            When the snap was applied
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.Description">
+            <summary>
+            Description of the snap operation
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.SnapResult.Success">
+            <summary>
+            Whether the snap was successful
+            </summary>
+        </member>
         <member name="T:BlazorWindowManager.Models.ITheme">
             <summary>
             Interface for defining themes in the window manager
@@ -835,6 +920,16 @@
         <member name="P:BlazorWindowManager.Models.WindowBounds.Bottom">
             <summary>
             Gets the bottom edge coordinate (Top + Height)
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.WindowBounds.X">
+            <summary>
+            Gets the X coordinate (alias for Left)
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Models.WindowBounds.Y">
+            <summary>
+            Gets the Y coordinate (alias for Top)
             </summary>
         </member>
         <member name="M:BlazorWindowManager.Models.WindowBounds.#ctor(System.Double,System.Double,System.Double,System.Double)">
@@ -1204,6 +1299,26 @@
             Represents a snap target location
             </summary>
         </member>
+        <member name="P:BlazorWindowManager.Services.SnapTarget.Type">
+            <summary>
+            Type of snapping operation
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnapTarget.TargetBounds">
+            <summary>
+            Target bounds where the window would be positioned
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnapTarget.Description">
+            <summary>
+            Description of the snap operation
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnapTarget.Distance">
+            <summary>
+            Distance from current position to snap target
+            </summary>
+        </member>
         <member name="T:BlazorWindowManager.Services.SnapType">
             <summary>
             Types of snapping operations
@@ -1219,9 +1334,45 @@
             Event raised when a snap preview should be shown
             </summary>
         </member>
+        <member name="E:BlazorWindowManager.Services.SnappingService.OnSnapPreviewChanged">
+            <summary>
+            Event raised when snap preview changes (compatible interface for demo)
+            </summary>
+        </member>
+        <member name="E:BlazorWindowManager.Services.SnappingService.OnSnapApplied">
+            <summary>
+            Event raised when a snap is applied to a window
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.SnappingService.#ctor(BlazorWindowManager.Services.WindowManagerService)">
+            <summary>
+            Initializes a new instance of the SnappingService
+            </summary>
+            <param name="windowManager">The window manager service</param>
+        </member>
         <member name="P:BlazorWindowManager.Services.SnappingService.Configuration">
             <summary>
             Gets the current snapping configuration
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnappingService.IsEnabled">
+            <summary>
+            Gets or sets whether snapping is enabled
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnappingService.EdgeSensitivity">
+            <summary>
+            Gets or sets the edge sensitivity for snapping
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnappingService.ZoneSensitivity">
+            <summary>
+            Gets or sets the zone sensitivity for snapping
+            </summary>
+        </member>
+        <member name="P:BlazorWindowManager.Services.SnappingService.ShowSnapPreview">
+            <summary>
+            Gets or sets whether to show snap preview
             </summary>
         </member>
         <member name="M:BlazorWindowManager.Services.SnappingService.CalculateSnapTarget(System.Guid,BlazorWindowManager.Models.WindowBounds,BlazorWindowManager.Models.WindowBounds)">
@@ -1233,10 +1384,18 @@
             <param name="containerBounds">The bounds of the container (desktop area)</param>
             <returns>The best snap target, or null if no snapping should occur</returns>
         </member>
-        <member name="M:BlazorWindowManager.Services.SnappingService.ShowSnapPreview(BlazorWindowManager.Services.SnapTarget)">
+        <member name="M:BlazorWindowManager.Services.SnappingService.UpdateSnapPreview(BlazorWindowManager.Services.SnapTarget)">
             <summary>
-            Shows or hides the snap preview
+            Updates the snap preview display
             </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.SnappingService.ApplySnapResult(System.Guid,BlazorWindowManager.Models.WindowBounds,BlazorWindowManager.Services.SnapTarget)">
+            <summary>
+            Applies a snap result and triggers the event
+            </summary>
+            <param name="windowId">ID of the window being snapped</param>
+            <param name="originalBounds">Original bounds before snap</param>
+            <param name="target">Snap target being applied</param>
         </member>
         <member name="M:BlazorWindowManager.Services.SnappingService.HideSnapPreview">
             <summary>
@@ -1353,6 +1512,16 @@
             Removes a user custom CSS variable
             </summary>
         </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.GetAvailableThemes">
+            <summary>
+            Gets all available themes as a list
+            </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.ThemeService.SetThemeAsync(System.String)">
+            <summary>
+            Sets the active theme by ID
+            </summary>
+        </member>
         <member name="M:BlazorWindowManager.Services.ThemeService.RegisterBuiltInThemes">
             <summary>
             Registers all built-in themes
@@ -1427,6 +1596,16 @@
         <member name="E:BlazorWindowManager.Services.WindowManagerService.WindowTitleChanged">
             <summary>
             Raised when a window's title changes
+            </summary>
+        </member>
+        <member name="E:BlazorWindowManager.Services.WindowManagerService.WindowOpened">
+            <summary>
+            Raised when a window is opened
+            </summary>
+        </member>
+        <member name="E:BlazorWindowManager.Services.WindowManagerService.WindowClosed">
+            <summary>
+            Raised when a window is closed
             </summary>
         </member>
         <member name="M:BlazorWindowManager.Services.WindowManagerService.RegisterWindow(Microsoft.AspNetCore.Components.ComponentBase,System.Guid,System.String,System.String)">
@@ -1514,6 +1693,25 @@
             <summary>
             Calculates the initial position for a new window using cascading logic
             </summary>
+        </member>
+        <member name="M:BlazorWindowManager.Services.WindowManagerService.OpenWindowAsync(Microsoft.AspNetCore.Components.ComponentBase,System.Guid,System.String,System.String)">
+            <summary>
+            Asynchronously opens a new window
+            </summary>
+            <param name="window">The window component to register</param>
+            <param name="id">Unique identifier for the window</param>
+            <param name="title">Initial title of the window</param>
+            <param name="name">Optional name for the window</param>
+            <returns>Task that completes with WindowInfo when the operation is done</returns>
+        </member>
+        <member name="M:BlazorWindowManager.Services.WindowManagerService.OpenWindowAsync``1">
+            <summary>
+            Asynchronously opens a new window
+            </summary>
+            <param name="id">Unique identifier for the window</param>
+            <param name="title">Initial title of the window</param>
+            <param name="name">Optional name for the window</param>
+            <returns>Task that completes with WindowInfo when the operation is done</returns>
         </member>
         <member name="M:BlazorWindowManager.Services.WindowManagerService.CloseWindowAsync(System.Guid,System.Boolean)">
             <summary>

@@ -29,11 +29,20 @@ public class WindowBounds
     /// Gets the right edge coordinate (Left + Width)
     /// </summary>
     public double Right => Left + Width;
-    
-    /// <summary>
+      /// <summary>
     /// Gets the bottom edge coordinate (Top + Height)
     /// </summary>
     public double Bottom => Top + Height;
+    
+    /// <summary>
+    /// Gets the X coordinate (alias for Left)
+    /// </summary>
+    public double X => Left;
+    
+    /// <summary>
+    /// Gets the Y coordinate (alias for Top)
+    /// </summary>
+    public double Y => Top;
     
     /// <summary>
     /// Creates a new WindowBounds instance

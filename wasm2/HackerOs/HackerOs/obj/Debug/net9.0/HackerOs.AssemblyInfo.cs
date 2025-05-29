@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HackerOs")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b94587fba1edcc86cc0a54450c7b181c554e3ad")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ffb1adb48dabd62711a23f1dce541350a30ba877")]
 [assembly: System.Reflection.AssemblyProductAttribute("HackerOs")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HackerOs")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

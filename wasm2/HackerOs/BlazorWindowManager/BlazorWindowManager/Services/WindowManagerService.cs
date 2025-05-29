@@ -1,3 +1,4 @@
+using BlazorWindowManager.Components;
 using BlazorWindowManager.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,10 +14,14 @@ public class WindowManagerService
     private readonly List<WindowInfo> _windows = new();
     private int _nextZIndex = 1000;
     private WindowInfo? _activeWindow;
+    private IServiceProvider serviceProvider;
     private readonly object _lock = new();
-
+    public WindowManagerService(IServiceProvider serviceProvider)
+    {
+        this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    }
     #region Events
-    
+
     /// <summary>
     /// Raised when a new window is created and registered
     /// </summary>
@@ -66,11 +71,20 @@ public class WindowManagerService
     /// Raised when a window gains focus
     /// </summary>
     public event EventHandler<WindowEventArgs>? WindowFocused;
-    
-    /// <summary>
+      /// <summary>
     /// Raised when a window's title changes
     /// </summary>
     public event EventHandler<WindowTitleChangedEventArgs>? WindowTitleChanged;
+    
+    /// <summary>
+    /// Raised when a window is opened
+    /// </summary>
+    public event EventHandler<WindowInfo>? WindowOpened;
+    
+    /// <summary>
+    /// Raised when a window is closed
+    /// </summary>
+    public event EventHandler<WindowInfo>? WindowClosed;
     
     #endregion
 
@@ -144,9 +158,9 @@ public class WindowManagerService
             if (_activeWindow?.Id == windowId)
             {
                 var newActiveWindow = _windows.LastOrDefault();
-                SetActiveWindow(newActiveWindow);
-            }
+                SetActiveWindow(newActiveWindow);            }
               WindowAfterClose?.Invoke(this, window);
+            WindowClosed?.Invoke(this, window);
             WindowUnregistered?.Invoke(this, new WindowEventArgs { Window = window });
             return true;
         }
@@ -399,9 +413,38 @@ public class WindowManagerService
     }
     
     #endregion
+      #region Async Window Operations
     
-    #region Async Window Operations
-    
+    /// <summary>
+    /// Asynchronously opens a new window
+    /// </summary>
+    /// <param name="window">The window component to register</param>
+    /// <param name="id">Unique identifier for the window</param>
+    /// <param name="title">Initial title of the window</param>
+    /// <param name="name">Optional name for the window</param>
+    /// <returns>Task that completes with WindowInfo when the operation is done</returns>
+    public async Task<WindowInfo> OpenWindowAsync(ComponentBase window, Guid id, string title, string? name = null)
+    {
+        return await Task.Run(() => {
+            var windowInfo = RegisterWindow(window, id, title, name);
+            WindowOpened?.Invoke(this, windowInfo);
+            return windowInfo;
+        });
+    }
+
+    /// <summary>
+    /// Asynchronously opens a new window
+    /// </summary>
+    /// <param name="id">Unique identifier for the window</param>
+    /// <param name="title">Initial title of the window</param>
+    /// <param name="name">Optional name for the window</param>
+    /// <returns>Task that completes with WindowInfo when the operation is done</returns>
+    public async Task<(WindowInfo info, WindowBase window)> OpenWindowAsync<T>() where T : WindowBase
+    {
+        var window = ActivatorUtilities.CreateInstance<T>(serviceProvider);
+        return (await OpenWindowAsync(window, Guid.NewGuid(), window.Title, window.Name), window);
+    }
+
     /// <summary>
     /// Asynchronously closes a window
     /// </summary>

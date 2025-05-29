@@ -223,8 +223,23 @@ public class ThemeService
         {
             await _jsModule.InvokeVoidAsync("removeCustomVariable", variableName);
         }
-        
-        await SaveSettingsAsync();
+          await SaveSettingsAsync();
+    }
+
+    /// <summary>
+    /// Gets all available themes as a list
+    /// </summary>
+    public IList<ITheme> GetAvailableThemes()
+    {
+        return _themes.Values.ToList();
+    }
+
+    /// <summary>
+    /// Sets the active theme by ID
+    /// </summary>
+    public async Task SetThemeAsync(string themeId)
+    {
+        await ApplyThemeAsync(themeId);
     }
 
     #endregion
@@ -279,9 +294,7 @@ public class ThemeService
                 ["--bwm-content-color"] = "#00ff00",
                 ["--bwm-content-font-family"] = "'Courier New', 'Liberation Mono', monospace"
             }
-        });
-
-        // Windows 98 Theme (placeholder for future implementation)
+        });        // Windows 98 Theme
         RegisterTheme(new ThemeDefinition
         {
             Id = "windows-98",
@@ -291,7 +304,38 @@ public class ThemeService
             CssFilePath = "./_content/BlazorWindowManager/css/themes/windows-98.css",
             Category = ThemeCategory.Windows,
             IsDarkTheme = false,
-            CustomVariables = new Dictionary<string, string>()
+            CustomVariables = new Dictionary<string, string>
+            {
+                // Classic Windows 98 System Colors
+                ["--win98-button-face"] = "#c0c0c0",
+                ["--win98-button-highlight"] = "#ffffff",
+                ["--win98-button-shadow"] = "#808080",
+                ["--win98-button-dark-shadow"] = "#404040",
+                ["--win98-button-text"] = "#000000",
+                ["--win98-active-caption"] = "#0a246a",
+                ["--win98-active-caption-text"] = "#ffffff",
+                ["--win98-inactive-caption"] = "#808080",
+                ["--win98-inactive-caption-text"] = "#c0c0c0",
+                ["--win98-window-background"] = "#c0c0c0",
+                ["--win98-window-text"] = "#000000",
+                ["--win98-highlight"] = "#316ac5",
+                ["--win98-highlight-text"] = "#ffffff",
+                
+                // Window System Overrides
+                ["--bwm-window-background"] = "#c0c0c0",
+                ["--bwm-window-border"] = "#404040",
+                ["--bwm-window-border-radius"] = "0px",
+                ["--bwm-titlebar-background"] = "linear-gradient(90deg, #0a246a 0%, #4570b5 100%)",
+                ["--bwm-title-color"] = "#ffffff",
+                ["--bwm-title-font-family"] = "'MS Sans Serif', sans-serif",
+                ["--bwm-title-font-size"] = "11px",
+                ["--bwm-content-background"] = "#c0c0c0",
+                ["--bwm-content-color"] = "#000000",
+                ["--bwm-content-font-family"] = "'MS Sans Serif', sans-serif",
+                ["--bwm-taskbar-background"] = "#c0c0c0",
+                ["--bwm-taskbar-height"] = "28px",
+                ["--bwm-desktop-background"] = "#008080"
+            }
         });
     }
 

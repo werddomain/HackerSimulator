@@ -7,7 +7,7 @@ namespace BlazorWindowManager.Components;
 /// <summary>
 /// Demonstration component for various dialog types and functionality
 /// </summary>
-public partial class DialogDemo : ComponentBase
+public partial class DialogDemo : WindowBase
 {
     [Inject] public DialogService DialogService { get; set; } = default!;
     [Inject] public WindowManagerService WindowManager { get; set; } = default!;

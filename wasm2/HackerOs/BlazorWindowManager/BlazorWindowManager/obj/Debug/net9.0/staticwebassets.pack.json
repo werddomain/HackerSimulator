@@ -2,7 +2,7 @@
   "Files": [
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\BlazorWindowManager.bundle.scp.css",
-      "PackagePath": "staticwebassets\\BlazorWindowManager.nnlpv8ekgm.bundle.scp.css"
+      "PackagePath": "staticwebassets\\BlazorWindowManager.vw03tm6xyy.bundle.scp.css"
     },
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\background.png",
@@ -15,6 +15,10 @@
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\css\\themes\\modern.css",
       "PackagePath": "staticwebassets\\css\\themes\\modern.css"
+    },
+    {
+      "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\css\\themes\\windows-98.css",
+      "PackagePath": "staticwebassets\\css\\themes\\windows-98.css"
     },
     {
       "Id": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\wwwroot\\exampleJsInterop.js",

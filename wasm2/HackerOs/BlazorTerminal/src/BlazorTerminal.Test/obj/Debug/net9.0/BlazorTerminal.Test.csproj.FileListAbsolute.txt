@@ -1,6 +1,0 @@
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.csproj.AssemblyReference.cache
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.AssemblyInfoInputs.cache
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.AssemblyInfo.cs
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.csproj.CoreCompileInputs.cache
-C:\Users\BenoitRobin\source\repos\BlazorTerminal\src\BlazorTerminal.Test\obj\Debug\net9.0\BlazorTerminal.Test.MvcApplicationPartsAssemblyInfo.cache

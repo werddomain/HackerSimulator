@@ -39,16 +39,29 @@ namespace BlazorWindowManager.Services
         /// Whether to show visual feedback during snapping operations
         /// </summary>
         public bool ShowSnapPreview { get; set; } = true;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Represents a snap target location
     /// </summary>
     public class SnapTarget
     {
+        /// <summary>
+        /// Type of snapping operation
+        /// </summary>
         public SnapType Type { get; set; }
+        
+        /// <summary>
+        /// Target bounds where the window would be positioned
+        /// </summary>
         public WindowBounds TargetBounds { get; set; } = new();
+        
+        /// <summary>
+        /// Description of the snap operation
+        /// </summary>
         public string? Description { get; set; }
+        
+        /// <summary>
+        /// Distance from current position to snap target
+        /// </summary>
         public double Distance { get; set; }
     }
 
@@ -77,25 +90,72 @@ namespace BlazorWindowManager.Services
     /// Service responsible for managing window snapping behavior
     /// </summary>
     public class SnappingService
-    {
-        private readonly WindowManagerService _windowManager;
+    {        private readonly WindowManagerService _windowManager;
         private readonly SnappingConfiguration _configuration;
-
+        
         /// <summary>
         /// Event raised when a snap preview should be shown
         /// </summary>
         public event Action<SnapTarget?>? SnapPreviewChanged;
 
+        /// <summary>
+        /// Event raised when snap preview changes (compatible interface for demo)
+        /// </summary>
+        public event Action<SnapPreviewInfo?>? OnSnapPreviewChanged;
+
+        /// <summary>
+        /// Event raised when a snap is applied to a window
+        /// </summary>
+        public event Action<SnapResult>? OnSnapApplied;
+
+        /// <summary>
+        /// Initializes a new instance of the SnappingService
+        /// </summary>
+        /// <param name="windowManager">The window manager service</param>
         public SnappingService(WindowManagerService windowManager)
         {
             _windowManager = windowManager;
             _configuration = new SnappingConfiguration();
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Gets the current snapping configuration
         /// </summary>
         public SnappingConfiguration Configuration => _configuration;
+
+        /// <summary>
+        /// Gets or sets whether snapping is enabled
+        /// </summary>
+        public bool IsEnabled
+        {
+            get => _configuration.IsEnabled;
+            set => _configuration.IsEnabled = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the edge sensitivity for snapping
+        /// </summary>
+        public int EdgeSensitivity
+        {
+            get => _configuration.SnapSensitivity;
+            set => _configuration.SnapSensitivity = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the zone sensitivity for snapping
+        /// </summary>
+        public int ZoneSensitivity
+        {
+            get => _configuration.SnapSensitivity; // Using same value for now
+            set => _configuration.SnapSensitivity = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether to show snap preview
+        /// </summary>
+        public bool ShowSnapPreview
+        {
+            get => _configuration.ShowSnapPreview;
+            set => _configuration.ShowSnapPreview = value;
+        }
 
         /// <summary>
         /// Calculates the best snap target for a window being moved
@@ -133,28 +193,56 @@ namespace BlazorWindowManager.Services
             var bestTarget = snapTargets
                 .Where(target => target.Distance <= _configuration.SnapSensitivity)
                 .OrderBy(target => target.Distance)
-                .FirstOrDefault();
-
-            return bestTarget;
+                .FirstOrDefault();            return bestTarget;
         }
 
         /// <summary>
-        /// Shows or hides the snap preview
+        /// Updates the snap preview display
         /// </summary>
-        public void ShowSnapPreview(SnapTarget? target)
+        public void UpdateSnapPreview(SnapTarget? target)
         {
             if (_configuration.ShowSnapPreview)
             {
                 SnapPreviewChanged?.Invoke(target);
+                
+                // Also trigger the compatible event for demo
+                var previewInfo = target != null ? new SnapPreviewInfo
+                {
+                    SnapType = target.Type,
+                    TargetBounds = target.TargetBounds,
+                    Description = target.Description,
+                    IsActive = true
+                } : null;
+                
+                OnSnapPreviewChanged?.Invoke(previewInfo);
             }
         }
 
         /// <summary>
+        /// Applies a snap result and triggers the event
+        /// </summary>
+        /// <param name="windowId">ID of the window being snapped</param>
+        /// <param name="originalBounds">Original bounds before snap</param>
+        /// <param name="target">Snap target being applied</param>
+        public void ApplySnapResult(Guid windowId, WindowBounds originalBounds, SnapTarget target)
+        {
+            var snapResult = new SnapResult
+            {
+                WindowId = windowId,
+                SnapType = target.Type,
+                OriginalBounds = originalBounds,
+                NewBounds = target.TargetBounds,
+                Description = target.Description,
+                Success = true
+            };
+            
+            OnSnapApplied?.Invoke(snapResult);
+        }        /// <summary>
         /// Hides the snap preview
         /// </summary>
         public void HideSnapPreview()
         {
-            ShowSnapPreview(null);
+            UpdateSnapPreview(null);
         }
 
         /// <summary>

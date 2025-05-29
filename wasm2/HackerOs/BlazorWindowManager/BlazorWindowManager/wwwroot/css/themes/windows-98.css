@@ -1,0 +1,420 @@
+/* 
+ * Blazor Window Manager - Windows 98 Theme
+ * Classic Windows 98 interface with raised buttons, 3D borders, and nostalgic styling
+ */
+
+.bwm-theme-windows-98 {
+    /* === WINDOWS 98 COLOR SCHEME === */
+    
+    /* Classic Windows 98 System Colors */
+    --win98-button-face: #c0c0c0;
+    --win98-button-highlight: #ffffff;
+    --win98-button-shadow: #808080;
+    --win98-button-dark-shadow: #404040;
+    --win98-button-text: #000000;
+    --win98-active-caption: #0a246a;
+    --win98-active-caption-text: #ffffff;
+    --win98-inactive-caption: #808080;
+    --win98-inactive-caption-text: #c0c0c0;
+    --win98-window-background: #c0c0c0;
+    --win98-window-text: #000000;
+    --win98-highlight: #316ac5;
+    --win98-highlight-text: #ffffff;
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container */
+    --bwm-window-background: var(--win98-button-face);
+    --bwm-window-border: var(--win98-button-dark-shadow);
+    --bwm-window-border-radius: 0px;
+    --bwm-window-shadow: 
+        inset 1px 1px 0 var(--win98-button-highlight),
+        inset -1px -1px 0 var(--win98-button-dark-shadow),
+        2px 2px 4px rgba(0, 0, 0, 0.3);
+    --bwm-window-active-border: var(--win98-active-caption);
+    --bwm-window-active-shadow: 
+        inset 1px 1px 0 var(--win98-button-highlight),
+        inset -1px -1px 0 var(--win98-button-dark-shadow),
+        3px 3px 6px rgba(0, 0, 0, 0.4);
+    --bwm-window-inactive-opacity: 1;
+    
+    /* Title Bar */
+    --bwm-titlebar-background: linear-gradient(90deg, var(--win98-active-caption) 0%, #4570b5 100%);
+    --bwm-titlebar-border-bottom: var(--win98-button-dark-shadow);
+    --bwm-titlebar-height: 18px;
+    --bwm-titlebar-padding: 2px 4px;
+    --bwm-titlebar-active-background: linear-gradient(90deg, var(--win98-active-caption) 0%, #4570b5 100%);
+    
+    /* Title Bar Text */
+    --bwm-title-color: var(--win98-active-caption-text);
+    --bwm-title-font-family: 'MS Sans Serif', sans-serif;
+    --bwm-title-font-size: 11px;
+    --bwm-title-font-weight: bold;
+    --bwm-title-inactive-color: var(--win98-inactive-caption-text);
+    
+    /* Window Controls (min, max, close buttons) */
+    --bwm-control-button-size: 16px;
+    --bwm-control-button-background: var(--win98-button-face);
+    --bwm-control-button-hover-background: var(--win98-button-face);
+    --bwm-control-button-active-background: var(--win98-button-face);
+    --bwm-control-button-border: 1px outset var(--win98-button-face);
+    --bwm-control-button-border-radius: 0px;
+    --bwm-control-button-color: var(--win98-button-text);
+    --bwm-control-close-hover-background: var(--win98-button-face);
+    --bwm-control-close-hover-color: var(--win98-button-text);
+    
+    /* Window Content */
+    --bwm-content-background: var(--win98-window-background);
+    --bwm-content-color: var(--win98-window-text);
+    --bwm-content-padding: 8px;
+    --bwm-content-font-family: 'MS Sans Serif', sans-serif;
+    --bwm-content-font-size: 11px;
+    --bwm-content-line-height: 1.2;
+    
+    /* Resize Handles */
+    --bwm-resize-handle-color: var(--win98-button-dark-shadow);
+    --bwm-resize-handle-hover-color: var(--win98-button-shadow);
+    --bwm-resize-handle-size: 3px;
+    
+    /* === TASKBAR OVERRIDES === */
+    
+    /* Taskbar Container */
+    --bwm-taskbar-background: var(--win98-button-face);
+    --bwm-taskbar-border: var(--win98-button-dark-shadow);
+    --bwm-taskbar-height: 28px;
+    --bwm-taskbar-padding: 2px;
+    --bwm-taskbar-shadow: 
+        inset 1px 1px 0 var(--win98-button-highlight),
+        inset 0 0 0 1px var(--win98-button-face);
+    
+    /* Taskbar Buttons */
+    --bwm-taskbar-button-background: var(--win98-button-face);
+    --bwm-taskbar-button-hover-background: var(--win98-button-face);
+    --bwm-taskbar-button-active-background: var(--win98-button-face);
+    --bwm-taskbar-button-border: 1px outset var(--win98-button-face);
+    --bwm-taskbar-button-border-radius: 0px;
+    --bwm-taskbar-button-color: var(--win98-button-text);
+    --bwm-taskbar-button-padding: 2px 8px;
+    --bwm-taskbar-button-margin: 1px;
+    --bwm-taskbar-button-font-size: 11px;
+    --bwm-taskbar-button-font-weight: normal;
+    
+    /* === DIALOG OVERRIDES === */
+    
+    /* Modal Overlay */
+    --bwm-modal-overlay-background: rgba(128, 128, 128, 0.5);
+    --bwm-modal-overlay-backdrop-filter: none;
+    
+    /* Dialog Styling */
+    --bwm-dialog-background: var(--win98-button-face);
+    --bwm-dialog-border: var(--win98-button-dark-shadow);
+    --bwm-dialog-shadow: 
+        inset 1px 1px 0 var(--win98-button-highlight),
+        inset -1px -1px 0 var(--win98-button-dark-shadow),
+        4px 4px 8px rgba(0, 0, 0, 0.3);
+    --bwm-dialog-border-radius: 0px;
+    
+    /* === DESKTOP OVERRIDES === */
+    
+    /* Desktop Area */
+    --bwm-desktop-background: #008080;
+    --bwm-desktop-pattern: none;
+    --bwm-desktop-pattern-size: 0;
+    
+    /* === SCROLLBAR OVERRIDES === */
+    
+    /* Scrollbars */
+    --bwm-scrollbar-width: 16px;
+    --bwm-scrollbar-background: var(--win98-button-face);
+    --bwm-scrollbar-thumb-background: var(--win98-button-face);
+    --bwm-scrollbar-thumb-hover-background: var(--win98-button-face);
+    --bwm-scrollbar-thumb-border-radius: 0px;
+    
+    /* Animations - disable smooth animations for authentic Windows 98 feel */
+    --bwm-transition-fast: 0s;
+    --bwm-transition-normal: 0s;
+    --bwm-transition-slow: 0s;
+}
+
+/* === WINDOWS 98 SPECIFIC COMPONENT STYLING === */
+
+/* Enhanced window styling with 3D effects */
+.bwm-theme-windows-98 .window-container {
+    border: 2px outset var(--win98-button-face);
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.bwm-theme-windows-98 .window-container.window-active {
+    /* Active window has slightly different shadow */
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Title bar styling with classic gradient */
+.bwm-theme-windows-98 .window-titlebar {
+    background: linear-gradient(90deg, var(--win98-active-caption) 0%, #4570b5 50%, var(--win98-active-caption) 100%);
+    border-bottom: 1px solid var(--win98-button-dark-shadow);
+    height: 18px;
+    padding: 2px 4px;
+}
+
+/* Inactive window title bar */
+.bwm-theme-windows-98 .window-container:not(.window-active) .window-titlebar {
+    background: linear-gradient(90deg, var(--win98-inactive-caption) 0%, #a0a0a0 50%, var(--win98-inactive-caption) 100%);
+}
+
+.bwm-theme-windows-98 .window-container:not(.window-active) .window-title {
+    color: var(--win98-inactive-caption-text);
+}
+
+/* Classic window control buttons */
+.bwm-theme-windows-98 .window-controls button {
+    width: 16px;
+    height: 14px;
+    border: 1px outset var(--win98-button-face);
+    background: var(--win98-button-face);
+    font-size: 8px;
+    font-weight: bold;
+    color: var(--win98-button-text);
+    margin-left: 1px;
+}
+
+.bwm-theme-windows-98 .window-controls button:hover {
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 .window-controls button:active {
+    border: 1px inset var(--win98-button-face);
+}
+
+/* Window control button icons using text symbols */
+.bwm-theme-windows-98 .window-controls button.minimize-button::after {
+    content: "_";
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.bwm-theme-windows-98 .window-controls button.maximize-button::after {
+    content: "□";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.bwm-theme-windows-98 .window-controls button.close-button::after {
+    content: "×";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Window content area styling */
+.bwm-theme-windows-98 .window-content {
+    background: var(--win98-window-background);
+    border: 2px inset var(--win98-button-face);
+    margin: 2px;
+    padding: 8px;
+}
+
+/* === TASKBAR WINDOWS 98 STYLING === */
+
+.bwm-theme-windows-98 .taskbar {
+    background: var(--win98-button-face);
+    border-top: 1px solid var(--win98-button-highlight);
+    border-left: 1px solid var(--win98-button-highlight);
+    border-right: 1px solid var(--win98-button-dark-shadow);
+    border-bottom: 1px solid var(--win98-button-dark-shadow);
+    height: 28px;
+    padding: 2px;
+}
+
+/* Start button styling */
+.bwm-theme-windows-98 .start-button {
+    background: var(--win98-button-face);
+    border: 1px outset var(--win98-button-face);
+    color: var(--win98-button-text);
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 8px;
+    height: 22px;
+    margin: 1px;
+}
+
+.bwm-theme-windows-98 .start-button:hover {
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 .start-button:active {
+    border: 1px inset var(--win98-button-face);
+}
+
+/* Taskbar window buttons */
+.bwm-theme-windows-98 .window-button {
+    background: var(--win98-button-face);
+    border: 1px outset var(--win98-button-face);
+    color: var(--win98-button-text);
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+    padding: 2px 8px;
+    margin: 1px;
+    height: 22px;
+    min-width: 80px;
+}
+
+.bwm-theme-windows-98 .window-button:hover {
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 .window-button:active,
+.bwm-theme-windows-98 .window-button.active {
+    border: 1px inset var(--win98-button-face);
+    background: var(--win98-button-face);
+}
+
+/* System tray area */
+.bwm-theme-windows-98 .system-tray {
+    background: var(--win98-button-face);
+    border: 1px inset var(--win98-button-face);
+    padding: 2px 4px;
+    margin: 1px;
+    height: 22px;
+}
+
+/* Clock styling */
+.bwm-theme-windows-98 .taskbar-clock {
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+    color: var(--win98-button-text);
+    background: var(--win98-button-face);
+    border: 1px inset var(--win98-button-face);
+    padding: 2px 6px;
+    margin: 1px;
+    height: 18px;
+    line-height: 14px;
+}
+
+/* === DIALOG STYLING === */
+
+.bwm-theme-windows-98 .dialog-container {
+    background: var(--win98-button-face);
+    border: 2px outset var(--win98-button-face);
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Dialog buttons */
+.bwm-theme-windows-98 .dialog-button,
+.bwm-theme-windows-98 button {
+    background: var(--win98-button-face);
+    border: 1px outset var(--win98-button-face);
+    color: var(--win98-button-text);
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+    padding: 4px 12px;
+    min-width: 60px;
+    height: 24px;
+}
+
+.bwm-theme-windows-98 .dialog-button:hover,
+.bwm-theme-windows-98 button:hover {
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 .dialog-button:active,
+.bwm-theme-windows-98 button:active {
+    border: 1px inset var(--win98-button-face);
+}
+
+/* === FORM CONTROLS === */
+
+.bwm-theme-windows-98 input[type="text"],
+.bwm-theme-windows-98 input[type="password"],
+.bwm-theme-windows-98 textarea,
+.bwm-theme-windows-98 select {
+    background: white;
+    border: 1px inset var(--win98-button-face);
+    color: var(--win98-window-text);
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+    padding: 2px;
+}
+
+.bwm-theme-windows-98 input[type="text"]:focus,
+.bwm-theme-windows-98 input[type="password"]:focus,
+.bwm-theme-windows-98 textarea:focus,
+.bwm-theme-windows-98 select:focus {
+    outline: 1px dotted var(--win98-button-text);
+    outline-offset: -2px;
+}
+
+/* === SCROLLBAR STYLING === */
+
+.bwm-theme-windows-98 ::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.bwm-theme-windows-98 ::-webkit-scrollbar-track {
+    background: var(--win98-button-face);
+    border: 1px inset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 ::-webkit-scrollbar-thumb {
+    background: var(--win98-button-face);
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 ::-webkit-scrollbar-thumb:hover {
+    background: var(--win98-button-face);
+    border: 1px outset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 ::-webkit-scrollbar-thumb:active {
+    border: 1px inset var(--win98-button-face);
+}
+
+.bwm-theme-windows-98 ::-webkit-scrollbar-corner {
+    background: var(--win98-button-face);
+}
+
+/* === ACCESSIBILITY AND FOCUS STYLES === */
+
+.bwm-theme-windows-98 *:focus {
+    outline: 1px dotted var(--win98-button-text);
+    outline-offset: 1px;
+}
+
+/* Remove modern focus styles */
+.bwm-theme-windows-98 button:focus,
+.bwm-theme-windows-98 .window-controls button:focus {
+    outline: 1px dotted var(--win98-button-text);
+    outline-offset: -2px;
+    box-shadow: none;
+}
+
+/* === RESPONSIVE ADJUSTMENTS === */
+
+@media (max-width: 768px) {
+    .bwm-theme-windows-98 {
+        --bwm-titlebar-height: 20px;
+        --bwm-taskbar-height: 32px;
+    }
+    
+    .bwm-theme-windows-98 .window-controls button {
+        width: 18px;
+        height: 16px;
+    }
+    
+    .bwm-theme-windows-98 .taskbar-clock {
+        font-size: 10px;
+    }
+}

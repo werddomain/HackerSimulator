@@ -113,15 +113,14 @@ public partial class WindowBase
         var newBounds = _dragStartBounds.Clone();
         newBounds.Left += deltaX;
         newBounds.Top += deltaY;
-        
-        // Get container bounds for snapping calculations
+          // Get container bounds for snapping calculations
         var containerBounds = await GetContainerBounds();
         
         // Calculate snap targets
         var snapTarget = SnappingService.CalculateSnapTarget(Id, newBounds, containerBounds);
         
         // Show snap preview if a target is found
-        SnappingService.ShowSnapPreview(snapTarget);
+        SnappingService.UpdateSnapPreview(snapTarget);
         
         // Update window position (snap will be applied on drag end)
         CurrentBounds = newBounds;

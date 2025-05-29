@@ -69,17 +69,17 @@
         // Initialize theme information
         _currentTheme = ThemeService.CurrentTheme;
         _availableThemeCount = ThemeService.GetAvailableThemes().Count();
-        
+
         // Subscribe to theme changes
         ThemeService.ThemeChanged += OnThemeChanged;
-        
+
         // Subscribe to window manager events
         WindowManager.WindowOpened += OnWindowCountChanged;
         WindowManager.WindowClosed += OnWindowCountChanged;
-        
+
         // Get initial window count
         UpdateWindowCount();
-        
+
         await base.OnInitializedAsync();
     }
 
@@ -89,7 +89,7 @@
         StateHasChanged();
     }
 
-    private void OnWindowCountChanged(object? sender, EventArgs e)
+    private void OnWindowCountChanged(object? sender, WindowInfo e)
     {
         UpdateWindowCount();
     }
@@ -98,41 +98,27 @@
     {
         _currentTheme = e.NewTheme;
         InvokeAsync(StateHasChanged);
-    }
+    }    
 
     private async Task OpenThemeSelector()
     {
-        await WindowManager.OpenWindowAsync<ThemeSelector>(config =>
-        {
-            config.Title = "Theme Selector";
-            config.Width = 800;
-            config.Height = 600;
-            config.Resizable = true;
-            config.MinWidth = 600;
-            config.MinHeight = 400;
-        });
+
+
+        var result = await WindowManager.OpenWindowAsync<ThemeSelector>();
     }
 
     private async Task OpenSampleWindow()
     {
-        await WindowManager.OpenWindowAsync<SampleWindow>(config =>
-        {
-            config.Title = $"Sample Window - {DateTime.Now:HH:mm:ss}";
-            config.Width = 500;
-            config.Height = 350;
-            config.Resizable = true;
-        });
+
+
+        await WindowManager.OpenWindowAsync<SampleWindow>();
     }
 
     private async Task OpenDialogDemo()
     {
-        await WindowManager.OpenWindowAsync<DialogDemo>(config =>
-        {
-            config.Title = "Dialog Demo";
-            config.Width = 400;
-            config.Height = 300;
-            config.Resizable = true;
-        });
+
+
+        await WindowManager.OpenWindowAsync<DialogDemo>();
     }
 
     private async Task ShowThemeInfo()
