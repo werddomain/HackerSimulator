@@ -86,9 +86,13 @@ public class WindowInfo
     /// When the window was created
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
-    /// <summary>
+      /// <summary>
     /// Type name of the window component (useful for grouping)
     /// </summary>
     public string ComponentType { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Parameters to pass to the window component when creating it dynamically
+    /// </summary>
+    public Dictionary<string, object> Parameters { get; set; } = new();
 }

@@ -1,0 +1,419 @@
+/* 
+ * Blazor Window Manager - Linux Theme
+ * GTK-inspired, clean and functional design
+ */
+
+.bwm-theme-linux {
+    /* === LINUX/GTK SYSTEM COLOR SCHEME === */
+    
+    /* GTK Light Theme Colors */
+    --gtk-background-primary: #ffffff;
+    --gtk-background-secondary: #f6f5f4;
+    --gtk-background-tertiary: #edebe9;
+    --gtk-text-primary: #2e3436;
+    --gtk-text-secondary: #555753;
+    --gtk-text-disabled: #888a85;
+    --gtk-border-color: #d3d7cf;
+    --gtk-border-dark: #babdb6;
+    --gtk-accent-blue: #3584e4;
+    --gtk-accent-blue-hover: #1c71d8;
+    --gtk-accent-blue-active: #1a5fb4;
+    
+    /* GTK Header Bar Colors */
+    --gtk-headerbar-background: #e9e9e7;
+    --gtk-headerbar-border: #cdc7c2;
+    --gtk-headerbar-text: #2e3436;
+    --gtk-headerbar-button-background: transparent;
+    --gtk-headerbar-button-hover: rgba(46, 52, 54, 0.1);
+    --gtk-headerbar-button-active: rgba(46, 52, 54, 0.2);
+    
+    /* GTK Button Colors */
+    --gtk-button-background: #f6f5f4;
+    --gtk-button-border: #cdc7c2;
+    --gtk-button-hover-background: #f0efed;
+    --gtk-button-active-background: #e6e5e3;
+    --gtk-button-text: #2e3436;
+    
+    /* GTK System Colors */
+    --gtk-selection-background: #3584e4;
+    --gtk-selection-text: #ffffff;
+    --gtk-warning-background: #f9f06b;
+    --gtk-warning-text: #2e3436;
+    --gtk-error-background: #e01b24;
+    --gtk-error-text: #ffffff;
+    --gtk-success-background: #26a269;
+    --gtk-success-text: #ffffff;
+    
+    /* GTK Shadows */
+    --gtk-shadow-light: rgba(0, 0, 0, 0.1);
+    --gtk-shadow-medium: rgba(0, 0, 0, 0.15);
+    --gtk-shadow-dark: rgba(0, 0, 0, 0.3);
+    --gtk-window-shadow: rgba(0, 0, 0, 0.2);
+    
+    /* GTK Panel/Taskbar */
+    --gtk-panel-background: #2e3436;
+    --gtk-panel-text: #eeeeec;
+    --gtk-panel-border: #1a1e20;
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container - GTK Style */
+    --bwm-window-background: var(--gtk-background-primary);
+    --bwm-window-border: var(--gtk-border-color);
+    --bwm-window-border-radius: 6px;
+    --bwm-window-shadow: 
+        0 8px 16px var(--gtk-shadow-light),
+        0 4px 8px var(--gtk-shadow-medium),
+        0 1px 2px var(--gtk-shadow-dark);
+    --bwm-window-active-border: var(--gtk-accent-blue);
+    --bwm-window-active-shadow: 
+        0 12px 24px var(--gtk-shadow-medium),
+        0 6px 12px var(--gtk-shadow-light),
+        0 0 0 1px var(--gtk-accent-blue);
+    --bwm-window-inactive-opacity: 0.9;
+    
+    /* Header Bar - GTK System Style */
+    --bwm-titlebar-background: var(--gtk-headerbar-background);
+    --bwm-titlebar-text-color: var(--gtk-headerbar-text);
+    --bwm-titlebar-height: 32px;
+    --bwm-titlebar-border-bottom: 1px solid var(--gtk-headerbar-border);
+    --bwm-titlebar-padding: 0 8px;
+    --bwm-titlebar-font-family: 'Inter', 'Ubuntu', 'Cantarell', system-ui, sans-serif;
+    --bwm-titlebar-font-size: 14px;
+    --bwm-titlebar-font-weight: 500;
+    --bwm-titlebar-text-align: left;
+    --bwm-titlebar-line-height: 32px;
+    --bwm-titlebar-border-radius: 6px 6px 0 0;
+    
+    /* Window Controls - GTK Style */
+    --bwm-control-close-background: var(--gtk-error-background);
+    --bwm-control-close-hover: #c01c28;
+    --bwm-control-close-text: var(--gtk-error-text);
+    --bwm-control-minimize-background: var(--gtk-warning-background);
+    --bwm-control-minimize-hover: #f6d32d;
+    --bwm-control-minimize-text: var(--gtk-warning-text);
+    --bwm-control-maximize-background: var(--gtk-success-background);
+    --bwm-control-maximize-hover: #1e8b5a;
+    --bwm-control-maximize-text: var(--gtk-success-text);
+    --bwm-control-size: 20px;
+    --bwm-control-margin: 4px;
+    --bwm-control-border-radius: 4px;
+    --bwm-control-border: 1px solid var(--gtk-border-dark);
+    --bwm-control-font-size: 12px;
+    --bwm-control-font-weight: bold;
+    
+    /* Window Content Area */
+    --bwm-content-background: var(--gtk-background-primary);
+    --bwm-content-padding: 16px;
+    --bwm-content-text-color: var(--gtk-text-primary);
+    --bwm-content-font-family: 'Inter', 'Ubuntu', 'Liberation Sans', system-ui, sans-serif;
+    --bwm-content-font-size: 14px;
+    --bwm-content-line-height: 1.5;
+    
+    /* Resize Handles - GTK Style */
+    --bwm-resize-handle-color: var(--gtk-border-color);
+    --bwm-resize-handle-hover-color: var(--gtk-accent-blue);
+    --bwm-resize-handle-size: 4px;
+    --bwm-resize-corner-size: 12px;
+    
+    /* Focus and Selection */
+    --bwm-focus-outline: 2px solid var(--gtk-accent-blue);
+    --bwm-focus-outline-offset: -2px;
+    --bwm-selection-background: var(--gtk-selection-background);
+    --bwm-selection-text-color: var(--gtk-selection-text);
+    
+    /* === TASKBAR/PANEL SYSTEM === */
+    
+    /* Panel-Style Taskbar */
+    --bwm-taskbar-background: var(--gtk-panel-background);
+    --bwm-taskbar-border: 1px solid var(--gtk-panel-border);
+    --bwm-taskbar-border-radius: 0px;
+    --bwm-taskbar-height: 48px;
+    --bwm-taskbar-padding: 0 8px;
+    --bwm-taskbar-margin: 0;
+    --bwm-taskbar-shadow: 
+        0 2px 8px var(--gtk-shadow-medium),
+        0 1px 2px var(--gtk-shadow-dark);
+    
+    /* Panel Items */
+    --bwm-taskbar-item-background: transparent;
+    --bwm-taskbar-item-hover-background: rgba(238, 238, 236, 0.1);
+    --bwm-taskbar-item-active-background: var(--gtk-accent-blue);
+    --bwm-taskbar-item-border-radius: 4px;
+    --bwm-taskbar-item-padding: 8px 12px;
+    --bwm-taskbar-item-margin: 2px;
+    --bwm-taskbar-item-border: 1px solid transparent;
+    --bwm-taskbar-item-transition: all 0.15s ease;
+    
+    /* Panel Text */
+    --bwm-taskbar-text-color: var(--gtk-panel-text);
+    --bwm-taskbar-text-active-color: white;
+    --bwm-taskbar-font-family: 'Inter', 'Ubuntu', 'Cantarell', system-ui, sans-serif;
+    --bwm-taskbar-font-size: 13px;
+    --bwm-taskbar-font-weight: 500;
+    
+    /* === DIALOG AND MODAL OVERRIDES === */
+    
+    /* Modal Overlay */
+    --bwm-modal-overlay-background: rgba(46, 52, 54, 0.5);
+    --bwm-modal-overlay-backdrop-filter: none;
+    
+    /* Dialog Styling */
+    --bwm-dialog-background: var(--gtk-background-primary);
+    --bwm-dialog-border: 1px solid var(--gtk-border-color);
+    --bwm-dialog-border-radius: 8px;
+    --bwm-dialog-shadow: 
+        0 16px 32px var(--gtk-shadow-dark),
+        0 8px 16px var(--gtk-shadow-medium);
+    
+    /* === ANIMATIONS AND TRANSITIONS === */
+    
+    /* GTK-Style Smooth Animations */
+    --bwm-transition-fast: 0.15s ease;
+    --bwm-transition-medium: 0.25s ease;
+    --bwm-transition-slow: 0.35s ease;
+    
+    /* Window State Transitions */
+    --bwm-minimize-transition: 0.3s ease-in;
+    --bwm-maximize-transition: 0.25s ease-out;
+    --bwm-restore-transition: 0.25s ease-out;
+    
+    /* Hover and Focus Effects */
+    --bwm-hover-scale: scale(1.01);
+    --bwm-focus-scale: scale(1.02);
+    --bwm-active-scale: scale(0.99);
+}
+
+/* === COMPONENT-SPECIFIC GTK STYLING === */
+
+/* GTK Window Controls Layout */
+.bwm-theme-linux .bwm-window-controls {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+
+.bwm-theme-linux .bwm-window-control {
+    width: var(--bwm-control-size);
+    height: var(--bwm-control-size);
+    border: var(--bwm-control-border);
+    border-radius: var(--bwm-control-border-radius);
+    cursor: pointer;
+    transition: var(--bwm-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--bwm-control-font-size);
+    font-weight: var(--bwm-control-font-weight);
+    font-family: monospace;
+}
+
+.bwm-theme-linux .bwm-control-close {
+    background: var(--bwm-control-close-background);
+    color: var(--bwm-control-close-text);
+}
+
+.bwm-theme-linux .bwm-control-close:hover {
+    background: var(--bwm-control-close-hover);
+}
+
+.bwm-theme-linux .bwm-control-close::after {
+    content: '×';
+}
+
+.bwm-theme-linux .bwm-control-minimize {
+    background: var(--bwm-control-minimize-background);
+    color: var(--bwm-control-minimize-text);
+}
+
+.bwm-theme-linux .bwm-control-minimize:hover {
+    background: var(--bwm-control-minimize-hover);
+}
+
+.bwm-theme-linux .bwm-control-minimize::after {
+    content: '−';
+}
+
+.bwm-theme-linux .bwm-control-maximize {
+    background: var(--bwm-control-maximize-background);
+    color: var(--bwm-control-maximize-text);
+}
+
+.bwm-theme-linux .bwm-control-maximize:hover {
+    background: var(--bwm-control-maximize-hover);
+}
+
+.bwm-theme-linux .bwm-control-maximize::after {
+    content: '□';
+}
+
+/* GTK Header Bar Title */
+.bwm-theme-linux .bwm-window-title {
+    text-align: var(--bwm-titlebar-text-align);
+    font-family: var(--bwm-titlebar-font-family);
+    font-size: var(--bwm-titlebar-font-size);
+    font-weight: var(--bwm-titlebar-font-weight);
+    padding: var(--bwm-titlebar-padding);
+    margin: 0;
+    padding-right: 100px; /* Space for controls */
+}
+
+/* Panel/Taskbar Styling */
+.bwm-theme-linux .bwm-taskbar {
+    background: var(--bwm-taskbar-background);
+    border-top: var(--bwm-taskbar-border);
+    border-radius: var(--bwm-taskbar-border-radius);
+    box-shadow: var(--bwm-taskbar-shadow);
+    margin: var(--bwm-taskbar-margin);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bwm-taskbar-height);
+    display: flex;
+    align-items: center;
+    padding: var(--bwm-taskbar-padding);
+}
+
+.bwm-theme-linux .bwm-taskbar-item {
+    background: var(--bwm-taskbar-item-background);
+    border: var(--bwm-taskbar-item-border);
+    border-radius: var(--bwm-taskbar-item-border-radius);
+    padding: var(--bwm-taskbar-item-padding);
+    margin: var(--bwm-taskbar-item-margin);
+    transition: var(--bwm-taskbar-item-transition);
+    font-family: var(--bwm-taskbar-font-family);
+    font-size: var(--bwm-taskbar-font-size);
+    font-weight: var(--bwm-taskbar-font-weight);
+    color: var(--bwm-taskbar-text-color);
+    cursor: pointer;
+}
+
+.bwm-theme-linux .bwm-taskbar-item:hover {
+    background: var(--bwm-taskbar-item-hover-background);
+    border-color: rgba(238, 238, 236, 0.2);
+}
+
+.bwm-theme-linux .bwm-taskbar-item.active {
+    background: var(--bwm-taskbar-item-active-background);
+    color: var(--bwm-taskbar-text-active-color);
+    border-color: var(--gtk-accent-blue);
+}
+
+/* Window Focus Effects */
+.bwm-theme-linux .bwm-window:focus-within {
+    box-shadow: var(--bwm-window-active-shadow);
+}
+
+.bwm-theme-linux .bwm-window.inactive {
+    opacity: var(--bwm-window-inactive-opacity);
+}
+
+/* GTK Button Styling */
+.bwm-theme-linux button,
+.bwm-theme-linux .btn {
+    background: var(--gtk-button-background);
+    border: 1px solid var(--gtk-button-border);
+    border-radius: 6px;
+    color: var(--gtk-button-text);
+    padding: 8px 16px;
+    font-family: var(--bwm-content-font-family);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--bwm-transition-fast);
+}
+
+.bwm-theme-linux button:hover,
+.bwm-theme-linux .btn:hover {
+    background: var(--gtk-button-hover-background);
+    border-color: var(--gtk-border-dark);
+}
+
+.bwm-theme-linux button:active,
+.bwm-theme-linux .btn:active {
+    background: var(--gtk-button-active-background);
+    transform: var(--bwm-active-scale);
+}
+
+.bwm-theme-linux button:focus,
+.bwm-theme-linux .btn:focus {
+    outline: var(--bwm-focus-outline);
+    outline-offset: var(--bwm-focus-outline-offset);
+}
+
+/* Smooth Animations */
+.bwm-theme-linux .bwm-window {
+    transition: 
+        transform var(--bwm-transition-medium),
+        opacity var(--bwm-transition-medium),
+        box-shadow var(--bwm-transition-fast);
+}
+
+.bwm-theme-linux .bwm-window-control {
+    transition: 
+        background-color var(--bwm-transition-fast),
+        transform var(--bwm-transition-fast),
+        border-color var(--bwm-transition-fast);
+}
+
+.bwm-theme-linux .bwm-window-control:active {
+    transform: var(--bwm-active-scale);
+}
+
+/* Typography */
+.bwm-theme-linux {
+    font-family: 'Inter', 'Ubuntu', 'Liberation Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.bwm-theme-linux h1, .bwm-theme-linux h2, .bwm-theme-linux h3,
+.bwm-theme-linux h4, .bwm-theme-linux h5, .bwm-theme-linux h6 {
+    font-family: var(--bwm-titlebar-font-family);
+    font-weight: 600;
+    color: var(--gtk-text-primary);
+    margin-top: 0;
+}
+
+.bwm-theme-linux p, .bwm-theme-linux span, .bwm-theme-linux div {
+    font-family: var(--bwm-content-font-family);
+    font-size: var(--bwm-content-font-size);
+    line-height: var(--bwm-content-line-height);
+    color: var(--bwm-content-text-color);
+}
+
+/* System Menu and Context Menu Styling */
+.bwm-theme-linux .context-menu {
+    background: var(--gtk-background-primary);
+    border: 1px solid var(--gtk-border-color);
+    border-radius: 8px;
+    box-shadow: 
+        0 8px 16px var(--gtk-shadow-medium),
+        0 4px 8px var(--gtk-shadow-light);
+    padding: 4px 0;
+    font-family: var(--bwm-content-font-family);
+    font-size: 14px;
+}
+
+.bwm-theme-linux .context-menu-item {
+    padding: 8px 16px;
+    color: var(--gtk-text-primary);
+    cursor: pointer;
+    transition: var(--bwm-transition-fast);
+}
+
+.bwm-theme-linux .context-menu-item:hover {
+    background: var(--gtk-accent-blue);
+    color: white;
+}
+
+.bwm-theme-linux .context-menu-separator {
+    height: 1px;
+    background: var(--gtk-border-color);
+    margin: 4px 8px;
+}

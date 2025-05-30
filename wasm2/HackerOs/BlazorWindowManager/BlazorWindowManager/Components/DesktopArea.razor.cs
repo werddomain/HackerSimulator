@@ -47,13 +47,21 @@ public partial class DesktopArea : ComponentBase
     /// Size of grid cells if ShowGrid is enabled
     /// </summary>
     [Parameter] public int GridSize { get; set; } = 20;
-    
-    protected override void OnInitialized()
+      protected override void OnInitialized()
     {
         // Subscribe to window manager events if needed
         // This could be used for managing window constraints within the desktop area
         base.OnInitialized();
     }
+    
+    /// <summary>
+    /// Render fragment for the window rendering component
+    /// </summary>
+    private RenderFragment WindowRenderer => builder =>
+    {
+        builder.OpenComponent<WindowRenderComponent>(0);
+        builder.CloseComponent();
+    };
     
     private string GetDesktopStyle()
     {

@@ -23,9 +23,13 @@ public static class ServiceCollectionExtensions
         
         // Register the dialog service as scoped (for component lifecycle)
         services.AddScoped<DialogService>();
-        
-        // Register the theme service as singleton
+          // Register the theme service as singleton
         services.AddSingleton<ThemeService>();
+          // Register the keyboard navigation service as singleton
+        services.AddSingleton<KeyboardNavigationService>();
+        
+        // Register the performance optimization service as singleton
+        services.AddSingleton<PerformanceOptimizationService>();
         
         return services;
     }    
@@ -53,9 +57,13 @@ public static class ServiceCollectionExtensions
         
         // Register the dialog service as scoped (for component lifecycle)
         services.AddScoped<DialogService>();
-        
-        // Register the theme service as singleton
+          // Register the theme service as singleton
         services.AddSingleton<ThemeService>();
+          // Register the keyboard navigation service as singleton
+        services.AddSingleton<KeyboardNavigationService>();
+        
+        // Register the performance optimization service as singleton
+        services.AddSingleton<PerformanceOptimizationService>();
         
         return services;
     }

@@ -1,0 +1,93 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.DependencyInjection
+@implements IDisposable
+
+<div class="window-render-container">
+    @foreach (var windowInfo in _windowsToRender)
+    {
+        @(CreateDynamicComponent(windowInfo))
+    }
+</div>
+
+@code {
+    [Inject] private WindowManagerService WindowManager { get; set; } = default!;
+    
+    private List<WindowInfo> _windowsToRender = new();
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to window manager events
+        WindowManager.WindowRegistered += OnWindowRegistered;
+        WindowManager.WindowUnregistered += OnWindowUnregistered;
+        
+        // Load any existing windows
+        var existingWindows = WindowManager.GetAllWindows();
+        _windowsToRender.AddRange(existingWindows);
+        
+        base.OnInitialized();
+    }
+      private void OnWindowRegistered(object? sender, WindowEventArgs e)
+    {
+        // Add window to render list - this gets called when a window is created
+        if (e?.Window != null)
+        {
+            var existingWindow = _windowsToRender.FirstOrDefault(w => w.Id == e.Window.Id);
+            if (existingWindow == null)
+            {
+                _windowsToRender.Add(e.Window);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+    
+    private void OnWindowUnregistered(object? sender, WindowEventArgs e)
+    {
+        // Remove window from render list
+        if (e?.Window != null)
+        {
+            var windowToRemove = _windowsToRender.FirstOrDefault(w => w.Id == e.Window.Id);
+            if (windowToRemove != null)
+            {
+                _windowsToRender.Remove(windowToRemove);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+      private Type GetComponentType(string typeName)
+    {
+        // Try to resolve the type from the component type name
+        // First check common window types in this assembly
+        var assembly = typeof(WindowBase).Assembly;
+        var fullTypeName = $"BlazorWindowManager.Components.{typeName}";
+        var type = assembly.GetType(fullTypeName);
+        
+        if (type != null)
+            return type;
+            
+        // If not found, try without namespace
+        var types = assembly.GetTypes().Where(t => t.Name == typeName).ToArray();
+        if (types.Length > 0)
+            return types[0];
+            
+        // Fallback to WindowBase
+        return typeof(WindowBase);
+    }
+    
+    private RenderFragment CreateDynamicComponent(WindowInfo windowInfo) => builder =>
+    {
+        builder.OpenComponent(0, typeof(Microsoft.AspNetCore.Components.DynamicComponent));
+        builder.AddAttribute(1, "Type", GetComponentType(windowInfo.ComponentType));
+        builder.AddAttribute(2, "Parameters", windowInfo.Parameters);
+        builder.SetKey(windowInfo.Id);
+        builder.CloseComponent();
+    };
+    
+    public void Dispose()
+    {
+        WindowManager.WindowRegistered -= OnWindowRegistered;
+        WindowManager.WindowUnregistered -= OnWindowUnregistered;
+    }
+}

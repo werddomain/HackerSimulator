@@ -9,14 +9,21 @@ namespace BlazorWindowManager.Components;
 public partial class WindowBase
 {
     #region Lifecycle Methods
-      protected override async Task OnInitializedAsync()
+    
+    protected override async Task OnInitializedAsync()
     {
         // Initialize window bounds
         CurrentBounds.Width = InitialWidth ?? 400;
         CurrentBounds.Height = InitialHeight ?? 300;
         
-        // Register with window manager
-        _windowInfo = WindowManager.RegisterWindow(this, Id, Title, Name);
+        // Try to register with existing window info first (for dynamically created windows)
+        _windowInfo = WindowManager.RegisterWindowComponent(this, Id);
+        
+        // If not found, register as a new window (for manually created windows)
+        if (_windowInfo == null)
+        {
+            _windowInfo = WindowManager.RegisterWindow(this, Id, Title, Name);
+        }
         
         // Setup JavaScript interop
         _dotNetRef = DotNetObjectReference.Create(this);
@@ -30,9 +37,11 @@ public partial class WindowBase
             // Load JavaScript module for mouse handling
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/BlazorWindowManager/js/window-interactions.js");
-            
-            // Initialize window position and size
+              // Initialize window position and size
             await UpdateWindowDisplay();
+            
+            // Register with keyboard navigation service
+            await KeyboardNavigation.RegisterWindowAsync(Id);
             
             // Notify that content is loaded
             await OnContentLoaded.InvokeAsync();
@@ -45,9 +54,11 @@ public partial class WindowBase
     {
         // Call the virtual dispose method
         Dispose(true);
-        
-        // Unregister from window manager
+          // Unregister from window manager
         WindowManager.UnregisterWindow(Id, force: true);
+        
+        // Unregister from keyboard navigation service
+        await KeyboardNavigation.UnregisterWindowAsync(Id);
         
         // Dispose JavaScript resources
         _dotNetRef?.Dispose();

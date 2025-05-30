@@ -80,8 +80,7 @@ public class WindowManagerService
     /// Raised when a window is opened
     /// </summary>
     public event EventHandler<WindowInfo>? WindowOpened;
-    
-    /// <summary>
+      /// <summary>
     /// Raised when a window is closed
     /// </summary>
     public event EventHandler<WindowInfo>? WindowClosed;
@@ -91,7 +90,77 @@ public class WindowManagerService
     #region Window Registration
     
     /// <summary>
-    /// Registers a new window with the window manager
+    /// Creates and registers a new window of the specified type with the window manager
+    /// </summary>
+    /// <typeparam name="TComponent">Type of window component to create</typeparam>
+    /// <param name="parameters">Parameters to pass to the window component</param>
+    /// <returns>WindowInfo object containing the window's information</returns>
+    public WindowInfo CreateWindow<TComponent>(Dictionary<string, object>? parameters = null) 
+        where TComponent : ComponentBase
+    {
+        var id = Guid.NewGuid();
+        var title = parameters?.ContainsKey("Title") == true ? parameters["Title"]?.ToString() ?? "Window" : "Window";
+        var name = parameters?.ContainsKey("Name") == true ? parameters["Name"]?.ToString() : null;
+        
+        var windowInfo = new WindowInfo
+        {
+            Id = id,
+            Name = name,
+            Title = title,
+            ComponentRef = null, // Will be set when the component registers itself
+            ComponentType = typeof(TComponent).Name,
+            ZIndex = _nextZIndex++,
+            Bounds = CalculateInitialPosition(),
+            Parameters = parameters ?? new Dictionary<string, object>()
+        };
+        
+        // Ensure Id and Title are in parameters for the component
+        windowInfo.Parameters["Id"] = id;
+        if (!windowInfo.Parameters.ContainsKey("Title"))
+            windowInfo.Parameters["Title"] = title;
+        if (!string.IsNullOrEmpty(name) && !windowInfo.Parameters.ContainsKey("Name"))
+            windowInfo.Parameters["Name"] = name;
+        
+        lock (_lock)
+        {
+            _windows.Add(windowInfo);
+            
+            // If this is the first window or no window is currently active, make it active
+            if (_activeWindow == null)
+            {
+                SetActiveWindow(windowInfo);
+            }
+        }
+        
+        WindowCreated?.Invoke(this, windowInfo);
+        WindowRegistered?.Invoke(this, new WindowEventArgs { Window = windowInfo });
+        return windowInfo;
+    }
+    
+    /// <summary>
+    /// Registers a window component with an existing window info (used for autonomous registration)
+    /// </summary>
+    /// <param name="window">The window component to register</param>
+    /// <param name="id">Unique identifier for the window</param>
+    /// <returns>WindowInfo object if found and updated, null otherwise</returns>
+    public WindowInfo? RegisterWindowComponent(ComponentBase window, Guid id)
+    {
+        lock (_lock)
+        {
+            var windowInfo = _windows.FirstOrDefault(w => w.Id == id);
+            if (windowInfo != null)
+            {
+                windowInfo.ComponentRef = window;
+                return windowInfo;
+            }
+            
+            // If not found, create a new registration (fallback for backwards compatibility)
+            return RegisterWindow(window, id, "Window");
+        }
+    }
+    
+    /// <summary>
+    /// Registers a new window with the window manager (legacy method)
     /// </summary>
     /// <param name="window">The window component to register</param>
     /// <param name="id">Unique identifier for the window</param>
@@ -408,12 +477,12 @@ public class WindowManagerService
             
             return new WindowBounds(newLeft, newTop, defaultWidth, defaultHeight);
         }
-        
-        return new WindowBounds(100, 100, defaultWidth, defaultHeight);
+          return new WindowBounds(100, 100, defaultWidth, defaultHeight);
     }
     
     #endregion
-      #region Async Window Operations
+
+    #region Async Window Operations
     
     /// <summary>
     /// Asynchronously opens a new window

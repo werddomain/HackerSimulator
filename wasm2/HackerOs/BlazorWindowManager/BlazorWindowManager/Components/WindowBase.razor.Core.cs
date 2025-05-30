@@ -23,11 +23,19 @@ public partial class WindowBase : ComponentBase, IWindowMessageReceiver, IAsyncD
     /// JavaScript runtime for interop
     /// </summary>
     [Inject] protected IJSRuntime JSRuntime { get; set; } = null!;
-    
-    /// <summary>
+      /// <summary>
     /// Snapping service for window snapping functionality
     /// </summary>
     [Inject] protected SnappingService SnappingService { get; set; } = null!;
+      /// <summary>
+    /// Keyboard navigation service for accessibility and keyboard controls
+    /// </summary>
+    [Inject] protected KeyboardNavigationService KeyboardNavigation { get; set; } = null!;
+    
+    /// <summary>
+    /// Performance optimization service for event debouncing and throttling
+    /// </summary>
+    [Inject] protected PerformanceOptimizationService PerformanceService { get; set; } = null!;
     
     /// <summary>
     /// Service provider for dependency injection

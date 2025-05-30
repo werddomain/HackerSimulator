@@ -1,0 +1,157 @@
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+@page "/window-architecture-test"
+@inject WindowManagerService WindowManager
+
+<h3>Window Architecture Test</h3>
+
+<div class="test-buttons">
+    <button class="btn btn-primary" @onclick="CreateSampleWindow">
+        Create Sample Window
+    </button>
+    
+    <button class="btn btn-success" @onclick="CreateCustomWindow">
+        Create Custom Window
+    </button>
+    
+    <button class="btn btn-info" @onclick="ListWindows">
+        List All Windows
+    </button>
+</div>
+
+<div class="desktop-container" style="height: 600px; border: 2px solid #ccc; margin: 20px 0; position: relative;">
+    <DesktopArea Width="100%" Height="100%" Background="#f0f0f0" />
+</div>
+
+<div class="window-list">
+    <h4>Current Windows:</h4>
+    <ul>
+        @foreach (var window in _currentWindows)
+        {
+            <li>
+                @window.Title (ID: @window.Id.ToString("N")[..8]..., Type: @window.ComponentType)
+                <button class="btn btn-sm btn-danger" @onclick="() => CloseWindow(window.Id)">
+                    Close
+                </button>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    private List<WindowInfo> _currentWindows = new();
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to window events to keep track of windows
+        WindowManager.WindowRegistered += OnWindowRegistered;
+        WindowManager.WindowUnregistered += OnWindowUnregistered;
+        
+        ListWindows();
+    }
+    
+    private void OnWindowRegistered(object? sender, WindowEventArgs e)
+    {
+        if (e?.Window != null)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void OnWindowUnregistered(object? sender, WindowEventArgs e)
+    {
+        if (e?.Window != null)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void CreateSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Title", $"Sample Window {DateTime.Now:HH:mm:ss}" },
+            { "InitialWidth", 400.0 },
+            { "InitialHeight", 300.0 },
+            { "InitialX", Random.Shared.Next(50, 300) },
+            { "InitialY", Random.Shared.Next(50, 200) }
+        };
+        
+        WindowManager.CreateWindow<SampleWindow>(parameters);
+        ListWindows();
+    }
+    
+    private void CreateCustomWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Title", $"Custom Window {DateTime.Now:HH:mm:ss}" },
+            { "InitialWidth", 500.0 },
+            { "InitialHeight", 400.0 },
+            { "InitialX", Random.Shared.Next(100, 200) },
+            { "InitialY", Random.Shared.Next(100, 150) }
+        };
+        
+        WindowManager.CreateWindow<WindowBase>(parameters);
+        ListWindows();
+    }
+    
+    private void CloseWindow(Guid windowId)
+    {
+        WindowManager.UnregisterWindow(windowId);
+        ListWindows();
+    }
+    
+    private void ListWindows()
+    {
+        _currentWindows = WindowManager.GetAllWindows().ToList();
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        WindowManager.WindowRegistered -= OnWindowRegistered;
+        WindowManager.WindowUnregistered -= OnWindowUnregistered;
+    }
+}
+
+<style>
+    .test-buttons {
+        margin: 20px 0;
+    }
+    
+    .test-buttons button {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .desktop-container {
+        background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                    linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    
+    .window-list {
+        margin-top: 20px;
+    }
+    
+    .window-list ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    
+    .window-list li {
+        padding: 8px;
+        margin: 4px 0;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>

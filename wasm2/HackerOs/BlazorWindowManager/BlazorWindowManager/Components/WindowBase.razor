@@ -9,6 +9,10 @@
 <div class="window-container @GetWindowClasses()" 
      style="@GetWindowStyle()"
      tabindex="0"
+     role="dialog"
+     aria-labelledby="window-title-@Id"
+     aria-describedby="window-content-@Id"
+     aria-modal="@IsModal.ToString().ToLower()"
      @onmousedown="OnWindowMouseDown"
      @onmousedown:preventDefault="true">
     
@@ -28,39 +32,41 @@
                 <div class="default-window-icon"></div>
             }
         </div>
-        
-        <!-- Window Title -->
-        <div class="window-title">
+          <!-- Window Title -->
+        <div class="window-title" id="window-title-@Id">
             @Title
         </div>
         
         <!-- Window Controls -->
-        <div class="window-controls">
-            <button class="window-control-btn minimize-btn" 
+        <div class="window-controls">            <button class="window-control-btn minimize-btn" 
                     @onclick="MinimizeWindow"
                     @onclick:preventDefault="true"
-                    title="Minimize">
-                <span class="minimize-icon">−</span>
+                    title="Minimize"
+                    aria-label="Minimize window"
+                    tabindex="0">
+                <span class="minimize-icon" aria-hidden="true">−</span>
             </button>
             
             <button class="window-control-btn maximize-btn" 
                     @onclick="ToggleMaximize"
                     @onclick:preventDefault="true"
-                    title="@(CurrentState == WindowState.Maximized ? "Restore" : "Maximize")">
-                <span class="maximize-icon">@(CurrentState == WindowState.Maximized ? "❐" : "□")</span>
+                    title="@(CurrentState == WindowState.Maximized ? "Restore" : "Maximize")"
+                    aria-label="@(CurrentState == WindowState.Maximized ? "Restore window" : "Maximize window")"
+                    tabindex="0">
+                <span class="maximize-icon" aria-hidden="true">@(CurrentState == WindowState.Maximized ? "❐" : "□")</span>
             </button>
-            
-            <button class="window-control-btn close-btn" 
+              <button class="window-control-btn close-btn" 
                     @onclick="CloseWindow"
                     @onclick:preventDefault="true"
-                    title="Close">
-                <span class="close-icon">×</span>
+                    title="Close"
+                    aria-label="Close window"
+                    tabindex="0">
+                <span class="close-icon" aria-hidden="true">×</span>
             </button>
         </div>
     </div>
-    
-    <!-- Window Content Area -->
-    <div class="window-content" @ref="contentElement">
+      <!-- Window Content Area -->
+    <div class="window-content" id="window-content-@Id" role="main" @ref="contentElement">
         @if (ChildContent != null)
         {
             @ChildContent

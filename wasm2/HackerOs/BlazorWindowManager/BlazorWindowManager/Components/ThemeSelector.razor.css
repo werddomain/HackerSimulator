@@ -261,3 +261,66 @@
     background: rgba(255, 255, 255, 0.8);
     border-color: rgba(255, 255, 255, 0.6);
 }
+
+/* Windows XP Theme Preview */
+.theme-preview.bwm-theme-windows-xp .preview-titlebar {
+    background: linear-gradient(180deg, #0997ff 0%, #0053ee 49%, #0050ee 50%, #06f 100%);
+    border-radius: 6px 6px 0 0;
+    border-bottom-color: #0054e3;
+}
+
+.theme-preview.bwm-theme-windows-xp .preview-title {
+    color: #ffffff;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.theme-preview.bwm-theme-windows-xp .preview-btn {
+    background: linear-gradient(180deg, #f4f1ea 0%, #ece9d8 49%, #e6e2d8 50%, #ddd8c8 100%);
+    border-color: #0054e3;
+    border-radius: 2px;
+    width: 16px;
+    height: 14px;
+}
+
+.theme-preview.bwm-theme-windows-xp .preview-content {
+    background: #ece9d8;
+    border-radius: 0 0 6px 6px;
+}
+
+.theme-preview.bwm-theme-windows-xp .preview-text {
+    color: #000000;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+}
+
+/* Windows 98 Theme Preview */
+.theme-preview.bwm-theme-windows-98 .preview-titlebar {
+    background: linear-gradient(90deg, #0a246a 0%, #4570b5 100%);
+    border-bottom-color: #404040;
+}
+
+.theme-preview.bwm-theme-windows-98 .preview-title {
+    color: #ffffff;
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+}
+
+.theme-preview.bwm-theme-windows-98 .preview-btn {
+    background: #c0c0c0;
+    border: 1px outset #c0c0c0;
+    border-radius: 0;
+    width: 16px;
+    height: 14px;
+}
+
+.theme-preview.bwm-theme-windows-98 .preview-content {
+    background: #c0c0c0;
+}
+
+.theme-preview.bwm-theme-windows-98 .preview-text {
+    color: #000000;
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 11px;
+}
