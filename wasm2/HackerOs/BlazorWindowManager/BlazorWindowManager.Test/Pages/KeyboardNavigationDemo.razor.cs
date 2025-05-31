@@ -4,7 +4,7 @@ using BlazorWindowManager.Models;
 using BlazorWindowManager.Services;
 using BlazorWindowManager.Components;
 
-namespace BlazorWindowManager.Components;
+namespace BlazorWindowManager.Test.Pages;
 
 /// <summary>
 /// Code-behind for the Keyboard Navigation Demo page

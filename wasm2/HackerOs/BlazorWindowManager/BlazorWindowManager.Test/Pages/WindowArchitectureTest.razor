@@ -25,6 +25,7 @@
         <button class="btn btn-danger" @onclick="CloseAllWindows">
             Close All Windows
         </button>
+        <WindowRenderComponent />
     </div>
 </div>
 
@@ -89,11 +90,7 @@
     {
         var parameters = new Dictionary<string, object>
         {
-            { "Title", $"Sample Window {DateTime.Now:HH:mm:ss}" },
-            { "InitialWidth", 400.0 },
-            { "InitialHeight", 300.0 },
-            { "InitialX", Random.Shared.Next(50, 300) },
-            { "InitialY", Random.Shared.Next(50, 200) }
+           
         };
         
         WindowManager.CreateWindow<SampleWindow>(parameters);
@@ -104,11 +101,7 @@
     {
         var parameters = new Dictionary<string, object>
         {
-            { "Title", $"Custom Window {DateTime.Now:HH:mm:ss}" },
-            { "InitialWidth", 500.0 },
-            { "InitialHeight", 400.0 },
-            { "InitialX", Random.Shared.Next(100, 200) },
-            { "InitialY", Random.Shared.Next(100, 150) }
+           
         };
         
         WindowManager.CreateWindow<WindowBase>(parameters);
@@ -119,11 +112,7 @@
     {
         var parameters = new Dictionary<string, object>
         {
-            { "Title", $"Large Sample {DateTime.Now:HH:mm:ss}" },
-            { "InitialWidth", 600.0 },
-            { "InitialHeight", 500.0 },
-            { "InitialX", Random.Shared.Next(50, 100) },
-            { "InitialY", Random.Shared.Next(50, 100) }
+           
         };
         
         WindowManager.CreateWindow<SampleWindow>(parameters);

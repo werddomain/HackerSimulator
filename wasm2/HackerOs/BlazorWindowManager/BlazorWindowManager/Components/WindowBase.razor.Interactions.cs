@@ -20,17 +20,21 @@ public partial class WindowBase
     // Resizing state
     private bool _isResizing = false;
     private string _resizeDirection = "";
+      #endregion
     
-    #endregion
-      #region IWindowMessageReceiver
+    #region IWindowMessageReceiver
     
     // OnMessageReceived is implemented in WindowBase.razor.Core.cs
     
     #endregion
-
+    
     #region Event Handlers
     
-    private async Task OnWindowMouseDown(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
+    /// <summary>
+    /// Handles mouse down events on the window to bring it to front and focus it
+    /// </summary>
+    /// <param name="e">Mouse event arguments</param>
+    public async Task OnWindowMouseDown(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
     {
         // Bring window to front when clicked
         BringToFront();
@@ -42,7 +46,11 @@ public partial class WindowBase
         }
     }
     
-    private async Task OnTitleBarMouseDown(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
+    /// <summary>
+    /// Handles mouse down events on the title bar to start window dragging
+    /// </summary>
+    /// <param name="e">Mouse event arguments</param>
+    public async Task OnTitleBarMouseDown(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
     {
         if (CurrentState == WindowState.Maximized) return;
         
@@ -58,17 +66,26 @@ public partial class WindowBase
         }
     }
     
-    private async Task CloseWindow()
+    /// <summary>
+    /// Closes the window using the public Close method
+    /// </summary>
+    public async Task CloseWindow()
     {
         await Close();
     }
     
-    private async Task MinimizeWindow()
+    /// <summary>
+    /// Minimizes the window using the public Minimize method
+    /// </summary>
+    public async Task MinimizeWindow()
     {
         await Minimize();
     }
     
-    private async Task ToggleMaximize()
+    /// <summary>
+    /// Toggles between maximized and normal window state
+    /// </summary>
+    public async Task ToggleMaximize()
     {
         if (CurrentState == WindowState.Maximized)
         {
@@ -80,7 +97,12 @@ public partial class WindowBase
         }
     }
     
-    private async Task StartResize(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string direction)
+    /// <summary>
+    /// Starts window resizing operation from a resize handle
+    /// </summary>
+    /// <param name="e">Mouse event arguments</param>
+    /// <param name="direction">Direction of the resize operation</param>
+    public async Task StartResize(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string direction)
     {
         if (!Resizable || CurrentState == WindowState.Maximized) return;
         

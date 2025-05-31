@@ -1,0 +1,68 @@
+.home-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.desktop-info {
+    background: var(--theme-background, #1a1a1a);
+    color: var(--theme-text, #ffffff);
+    padding: 1rem;
+    border-bottom: 1px solid var(--theme-border, #333);
+    flex-shrink: 0;
+}
+
+.desktop-info h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--theme-accent, #00ff00);
+    font-size: 1.5rem;
+}
+
+.desktop-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.desktop-info ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.desktop-info a {
+    color: var(--theme-accent, #00ff00);
+    text-decoration: none;
+}
+
+.desktop-info a:hover {
+    text-decoration: underline;
+}
+
+.main-desktop {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--theme-desktop-background, #2c2c2c);
+}
+
+/* Grid pattern for desktop */
+.main-desktop::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Ensure windows appear above grid */
+.main-desktop .window-render-container {
+    position: relative;
+    z-index: 1;
+}

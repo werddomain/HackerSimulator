@@ -6,88 +6,19 @@
 @implements IWindowMessageReceiver
 @implements IAsyncDisposable
 
-<div class="window-container @GetWindowClasses()" 
-     style="@GetWindowStyle()"
-     tabindex="0"
-     role="dialog"
-     aria-labelledby="window-title-@Id"
-     aria-describedby="window-content-@Id"
-     aria-modal="@IsModal.ToString().ToLower()"
-     @onmousedown="OnWindowMouseDown"
-     @onmousedown:preventDefault="true">
-    
-    <!-- Title Bar -->
-    <div class="window-titlebar" 
-         @onmousedown="OnTitleBarMouseDown"
-         @onmousedown:preventDefault="true">
-        
-        <!-- Window Icon -->
-        <div class="window-icon">
-            @if (Icon != null)
-            {
-                @Icon
-            }
-            else
-            {
-                <div class="default-window-icon"></div>
-            }
-        </div>
-          <!-- Window Title -->
-        <div class="window-title" id="window-title-@Id">
-            @Title
-        </div>
-        
-        <!-- Window Controls -->
-        <div class="window-controls">            <button class="window-control-btn minimize-btn" 
-                    @onclick="MinimizeWindow"
-                    @onclick:preventDefault="true"
-                    title="Minimize"
-                    aria-label="Minimize window"
-                    tabindex="0">
-                <span class="minimize-icon" aria-hidden="true">−</span>
-            </button>
-            
-            <button class="window-control-btn maximize-btn" 
-                    @onclick="ToggleMaximize"
-                    @onclick:preventDefault="true"
-                    title="@(CurrentState == WindowState.Maximized ? "Restore" : "Maximize")"
-                    aria-label="@(CurrentState == WindowState.Maximized ? "Restore window" : "Maximize window")"
-                    tabindex="0">
-                <span class="maximize-icon" aria-hidden="true">@(CurrentState == WindowState.Maximized ? "❐" : "□")</span>
-            </button>
-              <button class="window-control-btn close-btn" 
-                    @onclick="CloseWindow"
-                    @onclick:preventDefault="true"
-                    title="Close"
-                    aria-label="Close window"
-                    tabindex="0">
-                <span class="close-icon" aria-hidden="true">×</span>
-            </button>
-        </div>
-    </div>
-      <!-- Window Content Area -->
-    <div class="window-content" id="window-content-@Id" role="main" @ref="contentElement">
-        @if (ChildContent != null)
-        {
-            @ChildContent
-        }
-    </div>
-    
-    <!-- Resize Handles (only shown when resizable and not maximized) -->
-    @if (Resizable && CurrentState != WindowState.Maximized)
-    {
-        <div class="resize-handle resize-n" @onmousedown="@(e => StartResize(e, "n"))"></div>
-        <div class="resize-handle resize-s" @onmousedown="@(e => StartResize(e, "s"))"></div>
-        <div class="resize-handle resize-e" @onmousedown="@(e => StartResize(e, "e"))"></div>
-        <div class="resize-handle resize-w" @onmousedown="@(e => StartResize(e, "w"))"></div>
-        <div class="resize-handle resize-ne" @onmousedown="@(e => StartResize(e, "ne"))"></div>
-        <div class="resize-handle resize-nw" @onmousedown="@(e => StartResize(e, "nw"))"></div>
-        <div class="resize-handle resize-se" @onmousedown="@(e => StartResize(e, "se"))"></div>
-        <div class="resize-handle resize-sw" @onmousedown="@(e => StartResize(e, "sw"))"></div>
-    }
-</div>
+@* 
+WindowBase now serves primarily as a base class for windows.
+Windows that inherit from WindowBase should use WindowContent to render the complete window.
+This minimal template is only used for rare cases of direct WindowBase instantiation.
+*@
 
-@code {
-    // Component reference for content area
-    private ElementReference contentElement;
+@if (ChildContent != null)
+{
+    @ChildContent
+}
+else
+{
+    <div class="default-window-message">
+        <p>This WindowBase instance needs content. Consider using WindowContent component or providing ChildContent.</p>
+    </div>
 }

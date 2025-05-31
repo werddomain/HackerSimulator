@@ -2,8 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using BlazorWindowManager.Services;
 using BlazorWindowManager.Models;
+using BlazorWindowManager.Components;
 
-namespace BlazorWindowManager.Components;
+namespace BlazorWindowManager.Test.Pages;
 
 /// <summary>
 /// Demo page for testing and validating window snapping functionality

@@ -1,0 +1,88 @@
+<div class="window-container @GetWindowClasses()" 
+     style="@GetWindowStyle()"
+     tabindex="0"
+     role="dialog"
+     aria-labelledby="window-title-@Window.Id"
+     aria-describedby="window-content-@Window.Id"
+     aria-modal="@Window.IsModal.ToString().ToLower()"
+     @onmousedown="OnWindowMouseDown"
+     @onmousedown:preventDefault="true">
+    
+    <!-- Title Bar -->
+    <div class="window-titlebar" 
+         @onmousedown="OnTitleBarMouseDown"
+         @onmousedown:preventDefault="true">
+        
+        <!-- Window Icon -->
+        <div class="window-icon">
+            @if (Window.Icon != null)
+            {
+                @Window.Icon
+            }
+            else
+            {
+                <div class="default-window-icon"></div>
+            }
+        </div>
+        
+        <!-- Window Title -->
+        <div class="window-title" id="window-title-@Window.Id">
+            @Window.Title
+        </div>
+        
+        <!-- Window Controls -->
+        <div class="window-controls">
+            <button class="window-control-btn minimize-btn" 
+                    @onclick="MinimizeWindow"
+                    @onclick:preventDefault="true"
+                    title="Minimize"
+                    aria-label="Minimize window"
+                    tabindex="0">
+                <span class="minimize-icon" aria-hidden="true">−</span>
+            </button>
+            
+            <button class="window-control-btn maximize-btn" 
+                    @onclick="ToggleMaximize"
+                    @onclick:preventDefault="true"
+                    title="@(Window.CurrentState == WindowState.Maximized ? "Restore" : "Maximize")"
+                    aria-label="@(Window.CurrentState == WindowState.Maximized ? "Restore window" : "Maximize window")"
+                    tabindex="0">
+                <span class="maximize-icon" aria-hidden="true">@(Window.CurrentState == WindowState.Maximized ? "❐" : "□")</span>
+            </button>
+            
+            <button class="window-control-btn close-btn" 
+                    @onclick="CloseWindow"
+                    @onclick:preventDefault="true"
+                    title="Close"
+                    aria-label="Close window"
+                    tabindex="0">
+                <span class="close-icon" aria-hidden="true">×</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Window Content Area -->
+    <div class="window-content" id="window-content-@Window.Id" role="main" @ref="contentElement">
+        <CascadingValue Value="Window" Name="ParentWindow">
+            @ChildContent
+        </CascadingValue>
+    </div>
+    
+    <!-- Resize Handles (only shown when resizable and not maximized) -->
+    @if (Window.Resizable && Window.CurrentState != WindowState.Maximized)
+    {
+        <div class="resize-handle resize-n" @onmousedown="@(e => StartResize(e, "n"))"></div>
+        <div class="resize-handle resize-s" @onmousedown="@(e => StartResize(e, "s"))"></div>
+        <div class="resize-handle resize-e" @onmousedown="@(e => StartResize(e, "e"))"></div>
+        <div class="resize-handle resize-w" @onmousedown="@(e => StartResize(e, "w"))"></div>
+        <div class="resize-handle resize-ne" @onmousedown="@(e => StartResize(e, "ne"))"></div>
+        <div class="resize-handle resize-nw" @onmousedown="@(e => StartResize(e, "nw"))"></div>
+        <div class="resize-handle resize-se" @onmousedown="@(e => StartResize(e, "se"))"></div>
+        <div class="resize-handle resize-sw" @onmousedown="@(e => StartResize(e, "sw"))"></div>
+    }
+</div>
+
+@code {
+    // Component reference for content area
+    private ElementReference contentElement;
+}

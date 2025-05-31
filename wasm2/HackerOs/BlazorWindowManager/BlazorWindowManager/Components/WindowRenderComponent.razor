@@ -6,6 +6,11 @@
 @implements IDisposable
 
 <div class="window-render-container">
+    @* Debug info *@
+    <div class="debug-info" style="position: absolute; top: 0; right: 0; background: rgba(255,0,0,0.8); color: white; padding: 5px; z-index: 9999; font-size: 12px;">
+        Windows: @_windowsToRender.Count
+    </div>
+    
     @foreach (var windowInfo in _windowsToRender)
     {
         @(CreateDynamicComponent(windowInfo))
@@ -75,15 +80,52 @@
         // Fallback to WindowBase
         return typeof(WindowBase);
     }
-    
-    private RenderFragment CreateDynamicComponent(WindowInfo windowInfo) => builder =>
+      private RenderFragment CreateDynamicComponent(WindowInfo windowInfo) => builder =>
     {
         builder.OpenComponent(0, typeof(Microsoft.AspNetCore.Components.DynamicComponent));
         builder.AddAttribute(1, "Type", GetComponentType(windowInfo.ComponentType));
-        builder.AddAttribute(2, "Parameters", windowInfo.Parameters);
+        builder.AddAttribute(2, "Parameters", ConvertParameters(windowInfo.Parameters));
         builder.SetKey(windowInfo.Id);
         builder.CloseComponent();
     };
+    
+    private Dictionary<string, object> ConvertParameters(Dictionary<string, object> parameters)
+    {
+        var convertedParameters = new Dictionary<string, object>();
+        
+        foreach (var parameter in parameters)
+        {
+            var key = parameter.Key;
+            var value = parameter.Value;
+            
+            // Convert numeric parameters that should be double? for window positioning and sizing
+            if (key == "InitialX" || key == "InitialY" || key == "InitialWidth" || key == "InitialHeight")
+            {
+                if (value is int intValue)
+                {
+                    convertedParameters[key] = (double?)intValue;
+                }
+                else if (value is double doubleValue)
+                {
+                    convertedParameters[key] = (double?)doubleValue;
+                }
+                else if (value is float floatValue)
+                {
+                    convertedParameters[key] = (double?)floatValue;
+                }
+                else
+                {
+                    convertedParameters[key] = value; // Keep original value if it's already correct type or null
+                }
+            }
+            else
+            {
+                convertedParameters[key] = value; // Keep other parameters as-is
+            }
+        }
+        
+        return convertedParameters;
+    }
     
     public void Dispose()
     {

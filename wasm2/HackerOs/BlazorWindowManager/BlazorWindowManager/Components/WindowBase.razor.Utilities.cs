@@ -22,8 +22,11 @@ public partial class WindowBase
         await UpdateWindowDisplay();
         StateHasChanged();
     }
-    
-    private string GetWindowClasses()
+      /// <summary>
+    /// Gets the CSS classes for the window based on its current state
+    /// </summary>
+    /// <returns>Space-separated CSS class names</returns>
+    public string GetWindowClasses()
     {
         var classes = new List<string> { "window" };
         
@@ -41,7 +44,11 @@ public partial class WindowBase
         return string.Join(" ", classes);
     }
     
-    private string GetWindowStyle()
+    /// <summary>
+    /// Gets the inline CSS styles for the window based on its current bounds and state
+    /// </summary>
+    /// <returns>CSS style string</returns>
+    public string GetWindowStyle()
     {
         var styles = new List<string>();
         
