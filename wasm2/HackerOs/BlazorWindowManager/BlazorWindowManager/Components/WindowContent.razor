@@ -61,12 +61,22 @@
         </div>
     </div>
     
-    <!-- Window Content Area -->
+    
+        <!-- Window Content Area -->
     <div class="window-content" id="window-content-@Window.Id" role="main" @ref="contentElement">
         <CascadingValue Value="Window" Name="ParentWindow">
             @ChildContent
         </CascadingValue>
     </div>
+    @if (Window is IDialogBase dialog && Window is DialogBase dbase)
+    {
+
+        @if (dialog.IsModal && dialog.IsDialogVisible)
+        {
+            <div class="modal-overlay" @onclick="dbase.OnOverlayClick" @onclick:stopPropagation="false"></div>
+        }
+    }
+    
     
     <!-- Resize Handles (only shown when resizable and not maximized) -->
     @if (Window.Resizable && Window.CurrentState != WindowState.Maximized)

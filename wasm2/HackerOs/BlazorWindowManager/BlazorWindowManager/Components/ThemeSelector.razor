@@ -1,6 +1,7 @@
+@using BlazorWindowManager.Components
 @inject ThemeService ThemeService
 @inherits WindowBase
-<WindowContent>
+<WindowContent Window="this">
     <div class="theme-selector">
         <div class="theme-selector-header">
             <h4>Theme Selection</h4>

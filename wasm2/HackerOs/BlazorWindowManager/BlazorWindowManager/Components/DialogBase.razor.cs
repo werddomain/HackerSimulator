@@ -3,12 +3,14 @@ using BlazorWindowManager.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWindowManager.Components;
-
+public abstract class DialogBase : WindowBase {
+    internal abstract Task OnOverlayClick();
+}
 /// <summary>
 /// Base class for dialog components that provides modal dialog functionality
 /// </summary>
 /// <typeparam name="TResult">The type of result returned by the dialog</typeparam>
-public partial class DialogBase<TResult> : WindowBase, IDialogBase
+public partial class DialogBase<TResult> : DialogBase, IDialogBase
 {    /// <summary>
     /// Content to display inside the dialog
     /// </summary>
@@ -42,7 +44,11 @@ public partial class DialogBase<TResult> : WindowBase, IDialogBase
     private TaskCompletionSource<DialogResult<TResult>>? _dialogCompletionSource;
     private bool _isVisible = false;
     protected DialogResult<TResult>? _result;
-
+    /// <summary>
+    /// Gets a value indicating whether the dialog is currently visible.
+    /// </summary>
+    public bool IsDialogVisible => _isVisible;
+    /// <inheritdoc/>
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -50,8 +56,7 @@ public partial class DialogBase<TResult> : WindowBase, IDialogBase
         // Dialogs should not be resizable by default
         Resizable = false;
 
-        // Set initial state
-        _isVisible = true;
+       
 
         // Subscribe to parent window events if we have an owner
         if (OwnerWindow != null)
@@ -161,7 +166,7 @@ public partial class DialogBase<TResult> : WindowBase, IDialogBase
         await Task.CompletedTask;
     }
 
-    private async Task OnOverlayClick()
+    internal override async Task OnOverlayClick()
     {
         if (CloseOnOverlayClick)
         {

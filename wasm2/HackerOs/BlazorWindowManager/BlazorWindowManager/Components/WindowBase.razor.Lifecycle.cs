@@ -10,12 +10,13 @@ public partial class WindowBase
 {
     #region Lifecycle Methods
     
+    /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
         // Initialize window bounds
         CurrentBounds.Width = InitialWidth ?? 400;
         CurrentBounds.Height = InitialHeight ?? 300;
-        
+        Context.Window = this;
         // Try to register with existing window info first (for dynamically created windows)
         _windowInfo = WindowManager.RegisterWindowComponent(this, Id);
         
@@ -30,7 +31,8 @@ public partial class WindowBase
         
         await base.OnInitializedAsync();
     }
-    
+
+    /// <inheritdoc/>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {        if (firstRender)
         {
@@ -49,7 +51,8 @@ public partial class WindowBase
         
         await base.OnAfterRenderAsync(firstRender);
     }
-    
+
+    /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
         // Call the virtual dispose method
@@ -59,7 +62,8 @@ public partial class WindowBase
         
         // Unregister from keyboard navigation service
         await KeyboardNavigation.UnregisterWindowAsync(Id);
-        
+        Context.serviceScope.Dispose();
+        Context.Disposed = true;
         // Dispose JavaScript resources
         _dotNetRef?.Dispose();
         if (_jsModule != null)

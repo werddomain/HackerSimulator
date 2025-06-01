@@ -14,7 +14,10 @@ namespace BlazorWindowManager.Components;
 public partial class WindowBase : ComponentBase, IWindowMessageReceiver, IAsyncDisposable
 {
     #region Parameters
-    
+
+    [CascadingParameter]
+    internal WindowContext Context { get; set; }
+
     /// <summary>
     /// Unique identifier for this window instance
     /// </summary>
@@ -24,11 +27,12 @@ public partial class WindowBase : ComponentBase, IWindowMessageReceiver, IAsyncD
     /// Optional user-defined name for the window
     /// </summary>
     [Parameter] public string? Name { get; set; }
-    
+
+    private string title = "Window";
     /// <summary>
     /// Title displayed in the window's title bar
     /// </summary>
-    [Parameter] public string Title { get; set; } = "Window";
+    public string Title { get => title; set => SetTitle(value); }
     
     /// <summary>
     /// Optional icon content for the title bar

@@ -1,4 +1,5 @@
 using BlazorWindowManager.Models;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BlazorWindowManager.Components;
@@ -9,7 +10,7 @@ namespace BlazorWindowManager.Components;
 public partial class WindowBase
 {
     #region Public Methods
-    
+
     /// <summary>
     /// Closes the window, optionally forcing the close without cancellation check
     /// </summary>
@@ -25,28 +26,28 @@ public partial class WindowBase
             {
                 return false;
             }
-            
+
             var cancelArgs = new WindowCancelEventArgs { Window = this };
             await OnBeforeClose.InvokeAsync(cancelArgs);
-            
+
             if (cancelArgs.Cancel)
             {
                 return false;
             }
         }
-        
+
         var success = WindowManager.UnregisterWindow(Id, force);
         if (success)
         {
             await OnAfterClose.InvokeAsync();
-            
+
             // Call the virtual OnAfterCloseAsync method
             await OnAfterCloseAsync();
         }
-        
+
         return success;
     }
-    
+
     /// <summary>
     /// Minimizes the window
     /// </summary>
@@ -54,7 +55,7 @@ public partial class WindowBase
     {
         await SetWindowState(WindowState.Minimized);
     }
-    
+
     /// <summary>
     /// Maximizes the window
     /// </summary>
@@ -62,7 +63,7 @@ public partial class WindowBase
     {
         await SetWindowState(WindowState.Maximized);
     }
-    
+
     /// <summary>
     /// Restores the window to normal state
     /// </summary>
@@ -70,7 +71,7 @@ public partial class WindowBase
     {
         await SetWindowState(WindowState.Normal);
     }
-    
+
     /// <summary>
     /// Brings this window to the front and gives it focus
     /// </summary>
@@ -78,7 +79,7 @@ public partial class WindowBase
     {
         WindowManager.BringToFront(Id);
     }
-    
+
     /// <summary>
     /// Gets a service from the window's scoped service collection
     /// </summary>
@@ -89,21 +90,30 @@ public partial class WindowBase
         var serviceProvider = WindowContext.BuildServiceProvider();
         return serviceProvider.GetRequiredService<T>();
     }
-    
+
     /// <summary>
     /// Updates the window title
     /// </summary>
     /// <param name="newTitle">New title for the window</param>
-    public async Task SetTitle(string newTitle)
+    public async void SetTitle(string newTitle)
     {
         if (Title != newTitle)
         {
-            Title = newTitle;
+            title = newTitle;
             WindowManager.UpdateWindowTitle(Id, newTitle);
             await OnTitleChanged.InvokeAsync(newTitle);
             StateHasChanged();
         }
     }
-    
+
+    internal async void UpdateIcon(RenderFragment icon)
+    {
+        await InvokeAsync(() =>
+        {
+            this.Icon = icon;
+
+        });
+    }
+
     #endregion
 }

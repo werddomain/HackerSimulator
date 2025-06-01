@@ -1,6 +1,8 @@
-using BlazorWindowManager.Models;
+﻿using BlazorWindowManager.Models;
+using BlazorWindowManager.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using System.Xml.Schema;
 
 namespace BlazorWindowManager.Components;
 
@@ -11,10 +13,16 @@ namespace BlazorWindowManager.Components;
 /// </summary>
 public partial class WindowContent : ComponentBase
 {
+    [Inject]
+    internal WindowManagerService? ManagerService { get; set; }
+
+    [CascadingParameter]
+    internal WindowContext Context { get; set; }
+
     /// <summary>
     /// The window instance that this content belongs to
     /// </summary>
-    [Parameter, EditorRequired]
+    [Parameter]
     public WindowBase Window { get; set; } = null!;
 
     /// <summary>
@@ -23,6 +31,15 @@ public partial class WindowContent : ComponentBase
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// Window Icon. Create a <Icon></Icon> inside the WindowContent like this:
+    /// <WindowContent>
+    /// <icon>👌</icon>
+    /// <ChildContent>The window content</ChildContent>
+    /// </WindowContent>
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
     /// <summary>
     /// Gets the window classes from the parent window
     /// </summary>
@@ -103,5 +120,26 @@ public partial class WindowContent : ComponentBase
         {
             await Window.StartResize(e, direction);
         }
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        this.Window = Context.Window;
+        this.Context.Content = this;
+        if (Icon != null)
+        {
+            this.Window.UpdateIcon(Icon);
+        }
+
+
+        return base.OnInitializedAsync();
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) {
+            this.Context.ContentElement = contentElement;
+            this.Context.Rendered = true;
+        }
+        return base.OnAfterRenderAsync(firstRender);
     }
 }

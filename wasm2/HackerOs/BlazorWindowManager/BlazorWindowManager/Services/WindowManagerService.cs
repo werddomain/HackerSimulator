@@ -26,82 +26,82 @@ public class WindowManagerService
     /// Raised when a new window is created and registered
     /// </summary>
     public event EventHandler<WindowInfo>? WindowCreated;
-    
+
     /// <summary>
     /// Raised before a window is closed (cancellable)
     /// </summary>
     public event EventHandler<WindowCancelEventArgs>? WindowBeforeClose;
-    
+
     /// <summary>
     /// Raised when a window close operation is cancelled
     /// </summary>
     public event EventHandler<WindowInfo>? WindowCloseCancelled;
-    
+
     /// <summary>
     /// Raised after a window is closed and removed
     /// </summary>
     public event EventHandler<WindowInfo>? WindowAfterClose;
-    
+
     /// <summary>
     /// Raised when a window's state changes
     /// </summary>
     public event EventHandler<WindowStateChangedEventArgs>? WindowStateChanged;
-    
+
     /// <summary>
     /// Raised when the active window changes
     /// </summary>
     public event EventHandler<WindowFocusChangedEventArgs>? WindowActiveChanged;
-    
+
     /// <summary>
     /// Raised when a window's bounds change (move/resize)
     /// </summary>
     public event EventHandler<WindowBoundsChangedEventArgs>? WindowBoundsChanged;
-    
+
     /// <summary>
     /// Raised when a window is registered with the manager
     /// </summary>
     public event EventHandler<WindowEventArgs>? WindowRegistered;
-    
+
     /// <summary>
     /// Raised when a window is unregistered from the manager
     /// </summary>
     public event EventHandler<WindowEventArgs>? WindowUnregistered;
-    
+
     /// <summary>
     /// Raised when a window gains focus
     /// </summary>
     public event EventHandler<WindowEventArgs>? WindowFocused;
-      /// <summary>
+    /// <summary>
     /// Raised when a window's title changes
     /// </summary>
     public event EventHandler<WindowTitleChangedEventArgs>? WindowTitleChanged;
-    
+
     /// <summary>
     /// Raised when a window is opened
     /// </summary>
     public event EventHandler<WindowInfo>? WindowOpened;
-      /// <summary>
+    /// <summary>
     /// Raised when a window is closed
     /// </summary>
     public event EventHandler<WindowInfo>? WindowClosed;
-    
+
     #endregion
 
     #region Window Registration
-    
+
     /// <summary>
     /// Creates and registers a new window of the specified type with the window manager
     /// </summary>
     /// <typeparam name="TComponent">Type of window component to create</typeparam>
     /// <param name="parameters">Parameters to pass to the window component</param>
     /// <returns>WindowInfo object containing the window's information</returns>
-    public WindowInfo CreateWindow<TComponent>(Dictionary<string, object>? parameters = null) 
+    public WindowInfo CreateWindow<TComponent>(Dictionary<string, object>? parameters = null)
         where TComponent : ComponentBase
     {
         var id = Guid.NewGuid();
         var title = parameters?.ContainsKey("Title") == true ? parameters["Title"]?.ToString() ?? "Window" : "Window";
         var name = parameters?.ContainsKey("Name") == true ? parameters["Name"]?.ToString() : null;
-        
+
         var windowInfo = new WindowInfo
         {
             Id = id,
@@ -113,30 +113,30 @@ public class WindowManagerService
             Bounds = CalculateInitialPosition(),
             Parameters = parameters ?? new Dictionary<string, object>()
         };
-        
+
         // Ensure Id and Title are in parameters for the component
         windowInfo.Parameters["Id"] = id;
         if (!windowInfo.Parameters.ContainsKey("Title"))
             windowInfo.Parameters["Title"] = title;
         if (!string.IsNullOrEmpty(name) && !windowInfo.Parameters.ContainsKey("Name"))
             windowInfo.Parameters["Name"] = name;
-        
+
         lock (_lock)
         {
             _windows.Add(windowInfo);
-            
+
             // If this is the first window or no window is currently active, make it active
             if (_activeWindow == null)
             {
                 SetActiveWindow(windowInfo);
             }
         }
-        
+
         WindowCreated?.Invoke(this, windowInfo);
         WindowRegistered?.Invoke(this, new WindowEventArgs { Window = windowInfo });
         return windowInfo;
     }
-    
+
     /// <summary>
     /// Registers a window component with an existing window info (used for autonomous registration)
     /// </summary>
@@ -153,12 +153,12 @@ public class WindowManagerService
                 windowInfo.ComponentRef = window;
                 return windowInfo;
             }
-            
+
             // If not found, create a new registration (fallback for backwards compatibility)
             return RegisterWindow(window, id, "Window");
         }
     }
-    
+
     /// <summary>
     /// Registers a new window with the window manager (legacy method)
     /// </summary>
@@ -181,20 +181,20 @@ public class WindowManagerService
                 ZIndex = _nextZIndex++,
                 Bounds = CalculateInitialPosition()
             };
-            
+
             _windows.Add(windowInfo);
-            
+
             // If this is the first window or no window is currently active, make it active
             if (_activeWindow == null)
             {
                 SetActiveWindow(windowInfo);
             }
-              WindowCreated?.Invoke(this, windowInfo);
+            WindowCreated?.Invoke(this, windowInfo);
             WindowRegistered?.Invoke(this, new WindowEventArgs { Window = windowInfo });
             return windowInfo;
         }
     }
-    
+
     /// <summary>
     /// Unregisters a window from the window manager
     /// </summary>
@@ -207,38 +207,39 @@ public class WindowManagerService
         {
             var window = _windows.FirstOrDefault(w => w.Id == windowId);
             if (window == null) return false;
-            
+
             // Check if close should be cancelled (unless forced)
             if (!force)
             {
                 var cancelArgs = new WindowCancelEventArgs { Window = window.ComponentRef };
                 WindowBeforeClose?.Invoke(this, cancelArgs);
-                
+
                 if (cancelArgs.Cancel)
                 {
                     WindowCloseCancelled?.Invoke(this, window);
                     return false;
                 }
             }
-            
+
             _windows.Remove(window);
-            
+
             // If this was the active window, find a new active window
             if (_activeWindow?.Id == windowId)
             {
                 var newActiveWindow = _windows.LastOrDefault();
-                SetActiveWindow(newActiveWindow);            }
-              WindowAfterClose?.Invoke(this, window);
+                SetActiveWindow(newActiveWindow);
+            }
+            WindowAfterClose?.Invoke(this, window);
             WindowClosed?.Invoke(this, window);
             WindowUnregistered?.Invoke(this, new WindowEventArgs { Window = window });
             return true;
         }
     }
-    
+
     #endregion
-    
+
     #region Window Management
-    
+
     /// <summary>
     /// Gets information about a specific window
     /// </summary>
@@ -251,7 +252,7 @@ public class WindowManagerService
             return _windows.FirstOrDefault(w => w.Id == windowId);
         }
     }
-    
+
     /// <summary>
     /// Gets a list of all currently registered windows
     /// </summary>
@@ -263,7 +264,7 @@ public class WindowManagerService
             return _windows.ToList().AsReadOnly();
         }
     }
-    
+
     /// <summary>
     /// Gets the currently active window
     /// </summary>
@@ -275,7 +276,7 @@ public class WindowManagerService
             return _activeWindow;
         }
     }
-    
+
     /// <summary>
     /// Brings a window to the front and makes it active
     /// </summary>
@@ -287,13 +288,13 @@ public class WindowManagerService
         {
             var window = _windows.FirstOrDefault(w => w.Id == windowId);
             if (window == null) return false;
-            
+
             window.ZIndex = _nextZIndex++;
             SetActiveWindow(window);
             return true;
         }
     }
-    
+
     /// <summary>
     /// Updates the state of a window
     /// </summary>
@@ -306,24 +307,24 @@ public class WindowManagerService
         {
             var window = _windows.FirstOrDefault(w => w.Id == windowId);
             if (window == null) return false;
-            
+
             var oldState = window.State;
             if (oldState == newState) return true;
-            
+
             // Store restore bounds when maximizing
             if (newState == WindowState.Maximized && oldState == WindowState.Normal)
             {
                 window.RestoreBounds = window.Bounds.Clone();
             }
-            
+
             window.State = newState;
-            
+
             var args = new WindowStateChangedEventArgs(window.Id, window.ComponentRef!, oldState, newState);
             WindowStateChanged?.Invoke(this, args);
             return true;
         }
     }
-    
+
     /// <summary>
     /// Updates the bounds of a window
     /// </summary>
@@ -336,16 +337,16 @@ public class WindowManagerService
         {
             var window = _windows.FirstOrDefault(w => w.Id == windowId);
             if (window == null) return false;
-            
+
             var oldBounds = window.Bounds.Clone();
             window.Bounds = newBounds;
-            
+
             var args = new WindowBoundsChangedEventArgs(window.ComponentRef!, oldBounds, newBounds);
             WindowBoundsChanged?.Invoke(this, args);
             return true;
         }
     }
-    
+
     /// <summary>
     /// Updates the title of a window
     /// </summary>
@@ -357,21 +358,24 @@ public class WindowManagerService
         {
             var window = _windows.FirstOrDefault(w => w.Id == windowId);
             if (window == null) return false;
-            
+
             var oldTitle = window.Title;
-            window.Title = newTitle;
-            
-            // Fire the title changed event
-            var args = new WindowTitleChangedEventArgs(windowId, oldTitle, newTitle);
-            WindowTitleChanged?.Invoke(this, args);
+            if (oldTitle != newTitle)
+            {
+                window.Title = newTitle;
+
+                // Fire the title changed event
+                var args = new WindowTitleChangedEventArgs(windowId, oldTitle, newTitle);
+                WindowTitleChanged?.Invoke(this, args);
+            }
             return true;
         }
     }
-    
+
     #endregion
-    
+
     #region Inter-Window Communication
-    
+
     /// <summary>
     /// Sends a message from one window to another
     /// </summary>
@@ -385,61 +389,61 @@ public class WindowManagerService
         {
             var targetWindow = _windows.FirstOrDefault(w => w.Id == targetWindowId);
             if (targetWindow?.ComponentRef == null) return false;
-            
+
             // For now, we'll implement a simple message delivery
             // In a real implementation, you might want to use reflection or interfaces
             // to call methods on the target component
-            
+
             var args = new WindowMessageEventArgs(sourceWindowId, message);
-            
+
             // If the target component implements IWindowMessageReceiver, call it
             if (targetWindow.ComponentRef is IWindowMessageReceiver receiver)
             {
                 receiver.OnMessageReceived(args);
                 return true;
             }
-            
+
             return false;
         }
     }
-    
+
     #endregion
-    
+
     #region Private Methods
-    
+
     /// <summary>
     /// Sets the active window and raises appropriate events
     /// </summary>
     private void SetActiveWindow(WindowInfo? newActiveWindow)
     {
         var previousActive = _activeWindow;
-        
+
         // Update active state
         if (_activeWindow != null)
         {
             _activeWindow.IsActive = false;
         }
-        
+
         _activeWindow = newActiveWindow;
-        
+
         if (_activeWindow != null)
         {
             _activeWindow.IsActive = true;
         }
-          // Raise event
+        // Raise event
         var args = new WindowFocusChangedEventArgs(
-            _activeWindow?.ComponentRef, 
+            _activeWindow?.ComponentRef,
             previousActive?.ComponentRef
         );
         WindowActiveChanged?.Invoke(this, args);
-        
+
         // Fire focused event for TaskBar
         if (_activeWindow != null)
         {
             WindowFocused?.Invoke(this, new WindowEventArgs { Window = _activeWindow });
         }
     }
-    
+
     /// <summary>
     /// Calculates the initial position for a new window using cascading logic
     /// </summary>
@@ -449,7 +453,7 @@ public class WindowManagerService
         const double defaultHeight = 400;
         const double titleBarHeight = 32;
         const double cascadeOffset = titleBarHeight * 2;
-        
+
         // If no windows exist, center the first window
         if (_windows.Count == 0)
         {
@@ -460,30 +464,30 @@ public class WindowManagerService
                 height: defaultHeight
             );
         }
-        
+
         // Use cascading positioning for subsequent windows
         var lastWindow = _windows.LastOrDefault();
         if (lastWindow != null)
         {
             var newLeft = lastWindow.Bounds.Left + cascadeOffset;
             var newTop = lastWindow.Bounds.Top + titleBarHeight;
-            
+
             // Reset to top-left if we've cascaded too far
             if (newLeft > 800 || newTop > 600) // These would be adjusted based on container
             {
                 newLeft = 50;
                 newTop = 50;
             }
-            
+
             return new WindowBounds(newLeft, newTop, defaultWidth, defaultHeight);
         }
-          return new WindowBounds(100, 100, defaultWidth, defaultHeight);
+        return new WindowBounds(100, 100, defaultWidth, defaultHeight);
     }
-    
+
     #endregion
 
     #region Async Window Operations
-    
+
     /// <summary>
     /// Asynchronously opens a new window
     /// </summary>
@@ -494,7 +498,8 @@ public class WindowManagerService
     /// <returns>Task that completes with WindowInfo when the operation is done</returns>
     public async Task<WindowInfo> OpenWindowAsync(ComponentBase window, Guid id, string title, string? name = null)
     {
-        return await Task.Run(() => {
+        return await Task.Run(() =>
+        {
             var windowInfo = RegisterWindow(window, id, title, name);
             WindowOpened?.Invoke(this, windowInfo);
             return windowInfo;
@@ -524,7 +529,7 @@ public class WindowManagerService
     {
         return await Task.Run(() => UnregisterWindow(windowId, force));
     }
-    
+
     /// <summary>
     /// Asynchronously minimizes a window
     /// </summary>
@@ -534,7 +539,7 @@ public class WindowManagerService
     {
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Minimized));
     }
-    
+
     /// <summary>
     /// Asynchronously maximizes a window
     /// </summary>
@@ -544,7 +549,7 @@ public class WindowManagerService
     {
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Maximized));
     }
-    
+
     /// <summary>
     /// Asynchronously restores a window to normal state
     /// </summary>
@@ -554,7 +559,7 @@ public class WindowManagerService
     {
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Normal));
     }
-    
+
     /// <summary>
     /// Asynchronously focuses a window
     /// </summary>
@@ -562,16 +567,16 @@ public class WindowManagerService
     /// <returns>Task that completes when the operation is done</returns>
     public async Task<bool> FocusWindowAsync(Guid windowId)
     {
-        return await Task.Run(() => 
+        return await Task.Run(() =>
         {
             var window = GetWindow(windowId);
             if (window == null) return false;
-            
+
             SetActiveWindow(window);
             return true;
         });
     }
-    
+
     #endregion
 }
 

@@ -1,3 +1,4 @@
+using BlazorWindowManager.Models;
 using BlazorWindowManager.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,7 +31,9 @@ public static class ServiceCollectionExtensions
         
         // Register the performance optimization service as singleton
         services.AddSingleton<PerformanceOptimizationService>();
-        
+
+        services.AddScoped<WindowContext>();
+
         return services;
     }    
     /// <summary>
@@ -64,7 +67,8 @@ public static class ServiceCollectionExtensions
         
         // Register the performance optimization service as singleton
         services.AddSingleton<PerformanceOptimizationService>();
-        
+
+        services.AddScoped<WindowContext>();
         return services;
     }
 }
