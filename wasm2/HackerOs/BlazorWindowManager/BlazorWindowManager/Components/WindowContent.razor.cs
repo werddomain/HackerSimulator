@@ -2,6 +2,7 @@
 using BlazorWindowManager.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using System.Diagnostics;
 using System.Xml.Schema;
 
 namespace BlazorWindowManager.Components;
@@ -124,7 +125,13 @@ public partial class WindowContent : ComponentBase
 
     protected override Task OnInitializedAsync()
     {
-        this.Window = Context.Window;
+        if (this.Window == null)
+            this.Window = Context.Window;
+        if (this.Window == null)
+        {
+            Debug.WriteLine("No windowBase object avaliable for the WindowContent component");
+            ArgumentNullException.ThrowIfNull(Window);
+        }
         this.Context.Content = this;
         if (Icon != null)
         {
@@ -136,7 +143,8 @@ public partial class WindowContent : ComponentBase
     }
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender) {
+        if (firstRender)
+        {
             this.Context.ContentElement = contentElement;
             this.Context.Rendered = true;
         }

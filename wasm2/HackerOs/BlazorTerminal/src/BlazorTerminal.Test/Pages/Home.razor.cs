@@ -6,14 +6,16 @@ namespace BlazorTerminal.Test.Pages;
 
 public partial class Home : ComponentBase
 {
-    private Terminal? mainTerminal;    private TerminalTheme selectedTheme = TerminalTheme.Dark();
-    private string selectedThemeName  = "Dark";
-    public string SelectedThemeName {get => selectedThemeName; set
+    private Terminal? mainTerminal;    private TerminalTheme selectedTheme = TerminalTheme.Dark();    private string selectedThemeName = "Dark";
+    public string SelectedThemeName 
+    {
+        get => selectedThemeName; 
+        set
         {
             selectedThemeName = value;
             _ = OnThemeChanged(new ChangeEventArgs { Value = value });
-
-    }}
+        }
+    }
     private string selectedFontFamily = "'Consolas', 'Courier New', monospace";
     private int selectedFontSize = 14;
     private int terminalRows = 24;

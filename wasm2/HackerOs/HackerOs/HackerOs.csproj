@@ -5,19 +5,38 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
-  </PropertyGroup>
-
-  <ItemGroup>
+  </PropertyGroup>  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.5" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.5" />
+    <!-- HackerOS specific packages -->
+    <PackageReference Include="Microsoft.JSInterop" Version="9.0.5" />
+    <PackageReference Include="System.Text.Json" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
   </ItemGroup>
   <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
-  </ItemGroup>
-
-  <ItemGroup>
+  </ItemGroup>  <ItemGroup>
+    <!-- Re-enabling project references after fixing build issues -->
     <ProjectReference Include="..\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj" />
-  </ItemGroup>
+    <ProjectReference Include="..\BlazorTerminal\src\BlazorTerminal\BlazorTerminal.csproj" />
+  </ItemGroup>  <ItemGroup>
+  <Folder Include="OS\IO\Devices\" />
+  <Folder Include="OS\IO\FileSystem\" />
+  <Folder Include="OS\IO\Tests\" />
+  <Folder Include="OS\Kernel\Core\" />
+  <Folder Include="OS\Kernel\Memory\" />
+  <Folder Include="OS\Kernel\Process\" />
+  <Folder Include="OS\Network\WebServer\Example.com\Controllers\" />
+  <Folder Include="OS\Network\WebServer\Example.com\Views\" />
+  <Folder Include="OS\Network\WebServer\Example.com\wwwRoot\" />
+  <Folder Include="OS\Security\" />
+  <Folder Include="OS\Settings\" />
+  <Folder Include="OS\Shell\Commands\" />
+  <Folder Include="OS\System\Services\" />
+  <Folder Include="OS\Theme\" />
+  <Folder Include="OS\User\" />
+</ItemGroup>
 
 </Project>

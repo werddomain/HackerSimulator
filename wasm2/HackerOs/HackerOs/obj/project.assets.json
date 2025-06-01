@@ -529,6 +529,35 @@
           "buildMultiTargeting/MudBlazor.props": {}
         }
       },
+      "System.Text.Json/9.0.5": {
+        "type": "package",
+        "compile": {
+          "lib/net9.0/System.Text.Json.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/System.Text.Json.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/System.Text.Json.targets": {}
+        }
+      },
+      "BlazorTerminal/1.0.0-beta1": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Microsoft.AspNetCore.Components.Web": "9.0.5"
+        },
+        "compile": {
+          "bin/placeholder/BlazorTerminal.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BlazorTerminal.dll": {}
+        }
+      },
       "BlazorWindowManager/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v9.0",
@@ -1071,6 +1100,35 @@
         },
         "buildMultiTargeting": {
           "buildMultiTargeting/MudBlazor.props": {}
+        }
+      },
+      "System.Text.Json/9.0.5": {
+        "type": "package",
+        "compile": {
+          "lib/net9.0/System.Text.Json.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/System.Text.Json.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/System.Text.Json.targets": {}
+        }
+      },
+      "BlazorTerminal/1.0.0-beta1": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Microsoft.AspNetCore.Components.Web": "9.0.5"
+        },
+        "compile": {
+          "bin/placeholder/BlazorTerminal.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BlazorTerminal.dll": {}
         }
       },
       "BlazorWindowManager/1.0.0": {
@@ -2070,6 +2128,82 @@
         "staticwebassets/MudBlazor.min.js"
       ]
     },
+    "System.Text.Json/9.0.5": {
+      "sha512": "rnP61ZfloTgPQPe7ecr36loNiGX3g1PocxlKHdY/FUpDSsExKkTxpMAlB4X35wNEPr1X7mkYZuQvW3Lhxmu7KA==",
+      "type": "package",
+      "path": "system.text.json/9.0.5",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "analyzers/dotnet/roslyn3.11/cs/System.Text.Json.SourceGeneration.dll",
+        "analyzers/dotnet/roslyn3.11/cs/cs/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/de/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/es/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/fr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/it/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ja/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ko/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/pl/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/pt-BR/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ru/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/tr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/zh-Hans/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/zh-Hant/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/System.Text.Json.SourceGeneration.dll",
+        "analyzers/dotnet/roslyn4.0/cs/cs/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/de/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/es/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/fr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/it/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ja/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ko/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/pl/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/pt-BR/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ru/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/tr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/zh-Hans/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/zh-Hant/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/System.Text.Json.SourceGeneration.dll",
+        "analyzers/dotnet/roslyn4.4/cs/cs/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/de/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/es/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/fr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/it/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/ja/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/ko/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/pl/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/pt-BR/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/ru/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/tr/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/zh-Hans/System.Text.Json.SourceGeneration.resources.dll",
+        "analyzers/dotnet/roslyn4.4/cs/zh-Hant/System.Text.Json.SourceGeneration.resources.dll",
+        "buildTransitive/net461/System.Text.Json.targets",
+        "buildTransitive/net462/System.Text.Json.targets",
+        "buildTransitive/net8.0/System.Text.Json.targets",
+        "buildTransitive/netcoreapp2.0/System.Text.Json.targets",
+        "buildTransitive/netstandard2.0/System.Text.Json.targets",
+        "lib/net462/System.Text.Json.dll",
+        "lib/net462/System.Text.Json.xml",
+        "lib/net8.0/System.Text.Json.dll",
+        "lib/net8.0/System.Text.Json.xml",
+        "lib/net9.0/System.Text.Json.dll",
+        "lib/net9.0/System.Text.Json.xml",
+        "lib/netstandard2.0/System.Text.Json.dll",
+        "lib/netstandard2.0/System.Text.Json.xml",
+        "system.text.json.9.0.5.nupkg.sha512",
+        "system.text.json.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "BlazorTerminal/1.0.0-beta1": {
+      "type": "project",
+      "path": "../BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj",
+      "msbuildProject": "../BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj"
+    },
     "BlazorWindowManager/1.0.0": {
       "type": "project",
       "path": "../BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj",
@@ -2078,12 +2212,17 @@
   },
   "projectFileDependencyGroups": {
     "net9.0": [
+      "BlazorTerminal >= 1.0.0-beta1",
       "BlazorWindowManager >= 1.0.0",
       "Microsoft.AspNetCore.Components.WebAssembly >= 9.0.5",
       "Microsoft.AspNetCore.Components.WebAssembly.Authentication >= 9.0.5",
       "Microsoft.AspNetCore.Components.WebAssembly.DevServer >= 9.0.5",
+      "Microsoft.Extensions.Logging >= 9.0.5",
+      "Microsoft.Extensions.Logging.Abstractions >= 9.0.5",
+      "Microsoft.JSInterop >= 9.0.5",
       "Microsoft.NET.ILLink.Tasks >= 9.0.5",
-      "Microsoft.NET.Sdk.WebAssembly.Pack >= 9.0.5"
+      "Microsoft.NET.Sdk.WebAssembly.Pack >= 9.0.5",
+      "System.Text.Json >= 9.0.5"
     ]
   },
   "packageFolders": {
@@ -2119,6 +2258,9 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
+            "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj": {
+              "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj"
+            },
             "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj": {
               "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj"
             }
@@ -2154,6 +2296,18 @@
             "target": "Package",
             "version": "[9.0.5, )"
           },
+          "Microsoft.Extensions.Logging": {
+            "target": "Package",
+            "version": "[9.0.5, )"
+          },
+          "Microsoft.Extensions.Logging.Abstractions": {
+            "target": "Package",
+            "version": "[9.0.5, )"
+          },
+          "Microsoft.JSInterop": {
+            "target": "Package",
+            "version": "[9.0.5, )"
+          },
           "Microsoft.NET.ILLink.Tasks": {
             "suppressParent": "All",
             "target": "Package",
@@ -2165,6 +2319,10 @@
             "target": "Package",
             "version": "[9.0.5, )",
             "autoReferenced": true
+          },
+          "System.Text.Json": {
+            "target": "Package",
+            "version": "[9.0.5, )"
           }
         },
         "imports": [

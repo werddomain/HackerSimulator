@@ -89,13 +89,11 @@ public partial class WindowBase
     {
         var serviceProvider = WindowContext.BuildServiceProvider();
         return serviceProvider.GetRequiredService<T>();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Updates the window title
     /// </summary>
     /// <param name="newTitle">New title for the window</param>
-    public async void SetTitle(string newTitle)
+    public async Task SetTitle(string newTitle)
     {
         if (Title != newTitle)
         {

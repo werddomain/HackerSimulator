@@ -1,6 +1,6 @@
 @using BlazorWindowManager.Services
 @inherits DialogBase<MessageBoxResult>
-
+<WindowContent>
 <div class="dialog-content">
     <div class="dialog-icon @GetIconClass()">
         @GetIconSymbol()
@@ -20,3 +20,5 @@
         }
     </div>
 </div>
+</WindowContent>
+

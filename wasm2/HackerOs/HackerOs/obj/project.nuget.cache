@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "a/zg7L2C/Zc=",
+  "dgSpecHash": "PO3Qg5fLllc=",
   "success": true,
   "projectFilePath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\HackerOs.csproj",
   "expectedPackageFiles": [
@@ -34,7 +34,8 @@
     "C:\\Users\\clefw\\.nuget\\packages\\microsoft.jsinterop.webassembly\\9.0.5\\microsoft.jsinterop.webassembly.9.0.5.nupkg.sha512",
     "C:\\Users\\clefw\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.5\\microsoft.net.illink.tasks.9.0.5.nupkg.sha512",
     "C:\\Users\\clefw\\.nuget\\packages\\microsoft.net.sdk.webassembly.pack\\9.0.5\\microsoft.net.sdk.webassembly.pack.9.0.5.nupkg.sha512",
-    "C:\\Users\\clefw\\.nuget\\packages\\mudblazor\\8.0.0\\mudblazor.8.0.0.nupkg.sha512"
+    "C:\\Users\\clefw\\.nuget\\packages\\mudblazor\\8.0.0\\mudblazor.8.0.0.nupkg.sha512",
+    "C:\\Users\\clefw\\.nuget\\packages\\system.text.json\\9.0.5\\system.text.json.9.0.5.nupkg.sha512"
   ],
   "logs": []
 }
