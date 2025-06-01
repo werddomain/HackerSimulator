@@ -1,0 +1,340 @@
+@inherits LoginScreen
+
+<div class="login-screen">
+    <div class="login-container">
+        <div class="login-header">
+            <h1 class="system-title">HackerOS</h1>
+            <p class="system-subtitle">Secure Authentication Required</p>
+        </div>
+
+        <div class="login-form">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="error-message" @onclick="ClearError">
+                    <i class="error-icon">⚠</i>
+                    <span>@_errorMessage</span>
+                </div>
+            }
+
+            <div class="input-group">
+                <label for="username">Username:</label>
+                <input 
+                    id="username"
+                    type="text" 
+                    @bind="_username" 
+                    @onkeypress="HandleKeyPress"
+                    placeholder="Enter username"
+                    disabled="@_isLoggingIn"
+                    autocomplete="username" />
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password:</label>
+                <div class="password-input-container">
+                    <input 
+                        id="password"
+                        type="@(_showPassword ? "text" : "password")" 
+                        @bind="_password" 
+                        @onkeypress="HandleKeyPress"
+                        placeholder="Enter password"
+                        disabled="@_isLoggingIn"
+                        autocomplete="current-password" />
+                    <button 
+                        type="button" 
+                        class="password-toggle"
+                        @onclick="TogglePasswordVisibility"
+                        disabled="@_isLoggingIn"
+                        title="@(_showPassword ? "Hide password" : "Show password")">
+                        @(_showPassword ? "👁️" : "🔒")
+                    </button>
+                </div>
+            </div>
+
+            <div class="login-actions">
+                <button 
+                    class="login-button @(_isLoggingIn ? "loading" : "")"
+                    @onclick="HandleLogin"
+                    disabled="@_isLoggingIn">
+                    @if (_isLoggingIn)
+                    {
+                        <span class="loading-spinner"></span>
+                        <span>Authenticating...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
+            </div>
+
+            <div class="login-info">
+                <p>Default accounts:</p>
+                <ul>
+                    <li><strong>root</strong> / hackeros (Administrator)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="login-footer">
+            <p>HackerOS Simulator v2.0</p>
+            <p>Built with C# Blazor WebAssembly</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #1a1a1a 0%, #0d1117 50%, #000000 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Courier New', monospace;
+        color: #00ff00;
+        z-index: 9999;
+    }
+
+    .login-container {
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #00ff00;
+        border-radius: 8px;
+        padding: 2rem;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .system-title {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-shadow: 0 0 10px #00ff00;
+        color: #00ff00;
+    }
+
+    .system-subtitle {
+        margin: 0.5rem 0 0 0;
+        font-size: 0.9rem;
+        color: #888;
+    }
+
+    .login-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .error-message {
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px solid #ff0000;
+        color: #ff6666;
+        padding: 0.75rem;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .error-message:hover {
+        background: rgba(255, 0, 0, 0.15);
+    }
+
+    .error-icon {
+        font-size: 1.2rem;
+    }
+
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .input-group label {
+        font-size: 0.9rem;
+        color: #00ff00;
+        font-weight: bold;
+    }
+
+    .input-group input {
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 0.75rem;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-group input:focus {
+        outline: none;
+        border-color: #00ff00;
+        box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+
+    .input-group input:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .input-group input::placeholder {
+        color: #666;
+    }
+
+    .password-input-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-input-container input {
+        flex: 1;
+        padding-right: 3rem;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 0.5rem;
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0.25rem;
+        border-radius: 2px;
+        transition: color 0.2s;
+    }
+
+    .password-toggle:hover:not(:disabled) {
+        color: #00ff00;
+    }
+
+    .password-toggle:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .login-actions {
+        margin-top: 1rem;
+    }
+
+    .login-button {
+        width: 100%;
+        background: linear-gradient(45deg, #00ff00, #00cc00);
+        border: none;
+        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        color: #000;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .login-button:hover:not(:disabled) {
+        background: linear-gradient(45deg, #00cc00, #00aa00);
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+    }
+
+    .login-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .login-button.loading {
+        background: linear-gradient(45deg, #666, #444);
+        color: #ccc;
+    }
+
+    .loading-spinner {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid transparent;
+        border-top: 2px solid #ccc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .login-info {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 255, 0, 0.05);
+        border: 1px solid rgba(0, 255, 0, 0.2);
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .login-info p {
+        margin: 0 0 0.5rem 0;
+        color: #00ff00;
+        font-weight: bold;
+    }
+
+    .login-info ul {
+        margin: 0;
+        padding-left: 1rem;
+        color: #888;
+    }
+
+    .login-info li {
+        margin: 0.25rem 0;
+    }
+
+    .login-footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #333;
+        font-size: 0.7rem;
+        color: #666;
+    }
+
+    .login-footer p {
+        margin: 0.25rem 0;
+    }
+
+    /* Responsive design */
+    @media (max-width: 480px) {
+        .login-container {
+            margin: 1rem;
+            padding: 1.5rem;
+        }
+
+        .system-title {
+            font-size: 2rem;
+        }
+    }
+
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        .loading-spinner {
+            animation: none;
+        }
+        
+        * {
+            transition: none !important;
+        }
+    }
+</style>

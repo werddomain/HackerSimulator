@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Settings
@@ -149,6 +150,27 @@ namespace HackerOs.OS.Settings
             }
 
             return result;
+        }        /// <summary>
+        /// Validates configuration data asynchronously
+        /// </summary>
+        /// <param name="configData">Dictionary of configuration data</param>
+        /// <param name="fileName">The name of the configuration file (for error reporting)</param>
+        /// <returns>Configuration validation result</returns>
+        public Task<ConfigurationValidationResult> ValidateConfigurationAsync(Dictionary<string, object> configData, string fileName = "config")
+        {
+            var errors = new List<ConfigurationValidationError>();
+
+            // Convert to nullable dictionary for existing validation method
+            var nullableConfigData = configData.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
+            errors.AddRange(ValidateConfiguration(nullableConfigData));
+
+            var result = new ConfigurationValidationResult
+            {
+                IsValid = errors.Count == 0,
+                Errors = errors
+            };
+
+            return Task.FromResult(result);
         }
 
         private bool ValidateValueAgainstRule(string key, object? value, ConfigurationValidationRule rule)
@@ -301,10 +323,39 @@ namespace HackerOs.OS.Settings
     }
 
     /// <summary>
+    /// Represents the result of configuration validation
+    /// </summary>
+    public class ConfigurationValidationResult
+    {
+        /// <summary>
+        /// Whether the configuration is valid
+        /// </summary>
+        public bool IsValid { get; set; }
+
+        /// <summary>
+        /// List of validation errors
+        /// </summary>
+        public IEnumerable<ConfigurationValidationError> Errors { get; set; } = Array.Empty<ConfigurationValidationError>();
+
+        /// <summary>
+        /// Number of errors found
+        /// </summary>
+        public int ErrorCount => Errors?.Count() ?? 0;
+
+        /// <summary>
+        /// Configuration validation summary
+        /// </summary>
+        public string Summary => IsValid ? "Configuration is valid" : $"Configuration has {ErrorCount} error(s)";
+    }    /// <summary>
     /// Represents a configuration validation error
     /// </summary>
     public class ConfigurationValidationError
     {
+        /// <summary>
+        /// The configuration section that failed validation
+        /// </summary>
+        public string Section { get; set; } = string.Empty;
+
         /// <summary>
         /// The configuration key that failed validation
         /// </summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using HackerOs.OS.User;
 
 namespace HackerOs.IO.FileSystem
 {
@@ -146,6 +147,94 @@ namespace HackerOs.IO.FileSystem
         /// </summary>
         /// <returns>A string containing mount information similar to /proc/mounts</returns>
         string GetMountInfo();
+
+        /// <summary>
+        /// Gets the absolute path from a relative or absolute path using the specified current directory.
+        /// </summary>
+        /// <param name="path">The path to resolve (can be relative or absolute).</param>
+        /// <param name="currentDirectory">The current working directory to use for relative paths.</param>
+        /// <returns>The absolute path.</returns>
+        string GetAbsolutePath(string path, string currentDirectory);        /// <summary>
+        /// Checks if a directory exists and the user has permission to access it.
+        /// </summary>
+        /// <param name="path">The path to the directory.</param>
+        /// <param name="user">The user checking access.</param>
+        /// <returns>True if the directory exists and user can access it; otherwise, false.</returns>
+        Task<bool> DirectoryExistsAsync(string path, User user);
+
+        /// <summary>
+        /// Checks if a file exists and the user has permission to access it.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="user">The user checking access.</param>
+        /// <returns>True if the file exists and user can access it; otherwise, false.</returns>
+        Task<bool> FileExistsAsync(string path, User user);
+
+        /// <summary>
+        /// Gets a file system node at the specified path with user permission checking.
+        /// </summary>
+        /// <param name="path">The absolute or relative path to the node.</param>
+        /// <param name="user">The user requesting the node.</param>
+        /// <returns>The file system node if found and accessible; otherwise, null.</returns>
+        Task<VirtualFileSystemNode?> GetNodeAsync(string path, User user);
+
+        /// <summary>
+        /// Reads the content of a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="user">The user reading the file.</param>
+        /// <returns>The file content as a string; null if the file doesn't exist or user lacks permission.</returns>
+        Task<string?> ReadFileAsync(string path, User user);
+
+        /// <summary>
+        /// Writes content to a file with user permission checking, creating it if it doesn't exist.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="content">The content to write as a string.</param>
+        /// <param name="user">The user writing the file.</param>
+        /// <returns>True if the content was written successfully; otherwise, false.</returns>
+        Task<bool> WriteFileAsync(string path, string content, User user);
+
+        /// <summary>
+        /// Creates a new directory at the specified path with user permission checking.
+        /// </summary>
+        /// <param name="path">The path where the directory should be created.</param>
+        /// <param name="user">The user creating the directory.</param>
+        /// <returns>True if the directory was created successfully; otherwise, false.</returns>
+        Task<bool> CreateDirectoryAsync(string path, User user);
+
+        /// <summary>
+        /// Creates a new file at the specified path with user permission checking.
+        /// </summary>
+        /// <param name="path">The path where the file should be created.</param>
+        /// <param name="user">The user creating the file.</param>
+        /// <param name="content">Optional initial content for the file.</param>
+        /// <returns>True if the file was created successfully; otherwise, false.</returns>
+        Task<bool> CreateFileAsync(string path, User user, string? content = null);
+
+        /// <summary>
+        /// Deletes a file at the specified path with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file to delete.</param>
+        /// <param name="user">The user deleting the file.</param>
+        /// <returns>True if the file was deleted successfully; otherwise, false.</returns>
+        Task<bool> DeleteFileAsync(string path, User user);
+
+        /// <summary>
+        /// Deletes a directory at the specified path with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the directory to delete.</param>
+        /// <param name="user">The user deleting the directory.</param>
+        /// <returns>True if the directory was deleted successfully; otherwise, false.</returns>
+        Task<bool> DeleteDirectoryAsync(string path, User user);
+
+        /// <summary>
+        /// Lists the contents of a directory with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the directory.</param>
+        /// <param name="user">The user listing the directory.</param>
+        /// <returns>A collection of file system nodes in the directory that the user can access.</returns>
+        Task<IEnumerable<VirtualFileSystemNode>> ListDirectoryAsync(string path, User user);
 
         /// <summary>
         /// Event raised when file system operations occur.

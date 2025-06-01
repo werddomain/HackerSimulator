@@ -986,11 +986,158 @@ namespace HackerOs.IO.FileSystem
                 foreach (var child in directory.Children.Values)
                 {
                     var childPath = path == "/" ? "/" + child.Name : path + "/" + child.Name;
-                    RebuildCache(child, childPath);
-                }
+                    RebuildCache(child, childPath);                }
             }
         }
 
+        #endregion
+        
+        #region User-Specific Methods (Phase 2 Interface Extensions)
+        
+        /// <summary>
+        /// Gets absolute path from relative path and current directory
+        /// </summary>
+        /// <param name="path">Path to resolve</param>
+        /// <param name="currentDirectory">Current directory context</param>
+        /// <returns>Absolute path</returns>
+        public string GetAbsolutePath(string path, string currentDirectory)
+        {
+            if (string.IsNullOrEmpty(path))
+                return currentDirectory ?? "/";
+                
+            if (path.StartsWith("/"))
+                return NormalizePath(path);
+                
+            var baseDir = string.IsNullOrEmpty(currentDirectory) ? "/" : currentDirectory;
+            var combinedPath = baseDir.TrimEnd('/') + "/" + path.TrimStart('/');
+            return NormalizePath(combinedPath);
+        }
+        
+        /// <summary>
+        /// Checks if directory exists (user-specific)
+        /// </summary>
+        /// <param name="path">Directory path</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if directory exists and user has access</returns>
+        public async Task<bool> DirectoryExistsAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await DirectoryExistsAsync(absolutePath);
+        }
+        
+        /// <summary>
+        /// Checks if file exists (user-specific)
+        /// </summary>
+        /// <param name="path">File path</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if file exists and user has access</returns>
+        public async Task<bool> FileExistsAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await FileExistsAsync(absolutePath);
+        }
+        
+        /// <summary>
+        /// Gets file system node (user-specific)
+        /// </summary>
+        /// <param name="path">Node path</param>
+        /// <param name="user">User context</param>
+        /// <returns>File system node or null</returns>
+        public async Task<VirtualFileSystemNode?> GetNodeAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await GetNodeAsync(absolutePath);
+        }
+        
+        /// <summary>
+        /// Reads file content (user-specific)
+        /// </summary>
+        /// <param name="path">File path</param>
+        /// <param name="user">User context</param>
+        /// <returns>File content or null</returns>
+        public async Task<string?> ReadFileAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            var content = await ReadFileAsync(absolutePath);
+            return content != null ? Encoding.UTF8.GetString(content) : null;
+        }
+        
+        /// <summary>
+        /// Writes file content (user-specific)
+        /// </summary>
+        /// <param name="path">File path</param>
+        /// <param name="content">Content to write</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> WriteFileAsync(string path, string content, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            var bytes = Encoding.UTF8.GetBytes(content ?? string.Empty);
+            return await WriteFileAsync(absolutePath, bytes);
+        }
+        
+        /// <summary>
+        /// Creates directory (user-specific)
+        /// </summary>
+        /// <param name="path">Directory path</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> CreateDirectoryAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await CreateDirectoryAsync(absolutePath);
+        }
+        
+        /// <summary>
+        /// Creates file (user-specific)
+        /// </summary>
+        /// <param name="path">File path</param>
+        /// <param name="user">User context</param>
+        /// <param name="content">Optional initial content</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> CreateFileAsync(string path, HackerOs.OS.User.User user, string? content = null)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            var bytes = content != null ? Encoding.UTF8.GetBytes(content) : null;
+            return await CreateFileAsync(absolutePath, bytes);
+        }
+        
+        /// <summary>
+        /// Deletes file (user-specific)
+        /// </summary>
+        /// <param name="path">File path</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> DeleteFileAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await DeleteAsync(absolutePath, false);
+        }
+        
+        /// <summary>
+        /// Deletes directory (user-specific)
+        /// </summary>
+        /// <param name="path">Directory path</param>
+        /// <param name="user">User context</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> DeleteDirectoryAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await DeleteAsync(absolutePath, true);
+        }
+        
+        /// <summary>
+        /// Lists directory contents (user-specific)
+        /// </summary>
+        /// <param name="path">Directory path</param>
+        /// <param name="user">User context</param>
+        /// <returns>Directory contents</returns>
+        public async Task<IEnumerable<VirtualFileSystemNode>> ListDirectoryAsync(string path, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+            return await ListDirectoryAsync(absolutePath);
+        }
+        
         #endregion
     }
 }

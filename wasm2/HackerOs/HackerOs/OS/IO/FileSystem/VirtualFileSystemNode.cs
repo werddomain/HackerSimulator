@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading;
+using HackerOs.OS.User;
 
 namespace HackerOs.IO.FileSystem
 {
@@ -150,6 +151,35 @@ namespace HackerOs.IO.FileSystem
         public virtual bool CanAccess(string userId, string groupId, FileAccessMode accessMode)
         {
             return Permissions.CanAccess(Owner, Group, userId, groupId, accessMode);
+        }        /// <summary>
+        /// Checks if the specified user can execute/traverse this node.
+        /// For files, this means execute permission. For directories, this means traverse permission.
+        /// </summary>
+        /// <param name="user">The user requesting access</param>
+        /// <returns>True if the user can execute/traverse this node</returns>
+        public virtual bool CanExecute(User user)
+        {
+            return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Execute);
+        }
+
+        /// <summary>
+        /// Checks if the specified user can read this node.
+        /// </summary>
+        /// <param name="user">The user requesting access</param>
+        /// <returns>True if the user can read this node</returns>
+        public virtual bool CanRead(User user)
+        {
+            return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Read);
+        }
+
+        /// <summary>
+        /// Checks if the specified user can write to this node.
+        /// </summary>
+        /// <param name="user">The user requesting access</param>
+        /// <returns>True if the user can write to this node</returns>
+        public virtual bool CanWrite(User user)
+        {
+            return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Write);
         }
 
         /// <summary>
