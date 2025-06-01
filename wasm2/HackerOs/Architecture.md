@@ -39,7 +39,7 @@ L’architecture est inspirée d’un vrai système d’exploitation, avec une s
 ## Exemple de structure de dossiers
 
 ```
-/wasm2
+wasm2\HackerOs\HackerOs\OS
   /Kernel
   /System
   /IO

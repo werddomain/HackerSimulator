@@ -13,11 +13,10 @@
     <PackageReference Include="Microsoft.JSInterop" Version="9.0.5" />
     <PackageReference Include="System.Text.Json" Version="9.0.5" />
   </ItemGroup>
-
   <ItemGroup>
-    <Compile Include="..\FileSystem\*.cs" />
-    <Compile Include="..\Utilities\*.cs" />
-    <Compile Include="..\Tests\*.cs" />
+    <Compile Include="..\..\HackerOs\OS\IO\FileSystem\*.cs" />
+    <Compile Include="..\..\HackerOs\OS\IO\Utilities\*.cs" />
+    <Compile Include="..\..\HackerOs\OS\IO\Tests\*.cs" />
   </ItemGroup>
 
 </Project>

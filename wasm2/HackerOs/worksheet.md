@@ -51,7 +51,7 @@ There's a terminal project started but not tested here : wasm2\HackerOs\BlazorTe
 
 ### Phase 1: Core Infrastructure
 
-#### 1.1 Kernel Module (`wasm2/Kernel/`)
+#### 1.1 Kernel Module (`wasm2/HackerOs/HackerOs/OS/Kernel/`)
 ```
 Task Breakdown:
 [ ] Create IKernel interface with process, memory, and interrupt management
@@ -75,7 +75,7 @@ Task Breakdown:
 - All kernel access through defined system calls
 - Simulate real Linux kernel behavior (simplified)
 
-#### 1.2 IO Module (`wasm2/IO/`)
+#### 1.2 IO Module (`wasm2/HackerOs/HackerOs/OS/IO/`)
 ```
 Task Breakdown:
 [ ] Design VirtualFileSystem interface
@@ -105,7 +105,7 @@ Task Breakdown:
 
 ### Phase 2: System Services
 
-#### 2.1 Settings Module (`wasm2/Settings/`)
+#### 2.1 Settings Module (`wasm2/HackerOs/HackerOs/OS/Settings/`)
 ```
 Task Breakdown:
 [ ] Create ISettingsService interface
@@ -136,7 +136,7 @@ terminal_transparency=0.8
 start_menu_pinned=terminal,browser,editor
 ```
 
-#### 2.2 User Module (`wasm2/User/`)
+#### 2.2 User Module (`wasm2/HackerOs/HackerOs/OS/User/`)
 ```
 Task Breakdown:
 [ ] Create User and Group classes
@@ -150,7 +150,7 @@ Task Breakdown:
 
 ### Phase 3: Shell and Applications
 
-#### 3.1 Shell Module (`wasm2/Shell/`)
+#### 3.1 Shell Module (`wasm2/HackerOs/HackerOs/OS/Shell/`)
 ```
 Task Breakdown:
 [ ] Create IShell interface
@@ -163,7 +163,7 @@ Task Breakdown:
 [ ] Add tab completion
 ```
 
-#### 3.2 Applications Module (`wasm2/Applications/`)
+#### 3.2 Applications Module (`wasm2/HackerOs/HackerOs/OS/Applications/`)
 ```
 Task Breakdown:
 [ ] Create IApplication interface
@@ -197,7 +197,7 @@ This project allredy define the base of window, dislog, desktop and taskbar with
 
 ### Phase 5: Security and Networking
 
-#### 5.1 Security Module (`wasm2/Security/`)
+#### 5.1 Security Module (`wasm2/HackerOs/HackerOs/OS/Security/`)
 ```
 Task Breakdown:
 [ ] Implement permission checking system
@@ -207,7 +207,7 @@ Task Breakdown:
 [ ] Create security audit logging
 ```
 
-#### 5.2 Network Module (`wasm2/Network/`)
+#### 5.2 Network Module (`wasm2/HackerOs/HackerOs/OS/Network/`)
 ```
 Task Breakdown:
 [ ] Create virtual network stack
@@ -230,7 +230,7 @@ Task Breakdown:
 
 ### 1. File Organization
 ```
-wasm2/
+wasm2/HackerOs/HackerOs/OS/
 ├── Kernel/
 │   ├── Core/
 │   ├── Process/
