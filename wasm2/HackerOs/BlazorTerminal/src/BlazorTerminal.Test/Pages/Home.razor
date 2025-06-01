@@ -57,10 +57,9 @@
                     <h4 class="card-title mb-0">Terminal Settings</h4>
                 </div>
                 <div class="card-body">
-                    <!-- Theme Selection -->
-                    <div class="mb-3">
+                    <!-- Theme Selection -->                    <div class="mb-3">
                         <label class="form-label">Theme</label>
-                        <select class="form-select" @bind-value="selectedThemeName">
+                        <select class="form-select" @bind="selectedThemeName">
                             <option value="Dark">Dark</option>
                             <option value="Light">Light</option>
                             <option value="HighContrast">High Contrast</option>

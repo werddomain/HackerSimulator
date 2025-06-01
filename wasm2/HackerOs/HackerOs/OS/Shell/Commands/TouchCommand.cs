@@ -21,7 +21,7 @@ public class TouchCommand : CommandBase
         new("a", "access-only", "Change only the access time"),
         new("m", "modification-only", "Change only the modification time"),
         new("c", "no-create", "Do not create files that do not exist"),
-        new("t", "time", "Use specified time instead of current time", hasValue: true)
+        new("t", "time", "Use specified time instead of current time", requiresValue: true)
     };
 
     public override async Task<int> ExecuteAsync(

@@ -99,20 +99,19 @@ public abstract class CommandBase : ICommand
                 var lastSlash = partialPath.LastIndexOf('/');
                 basePath = partialPath[..lastSlash];
                 searchPattern = partialPath[(lastSlash + 1)..];
-            }
-            else
+            }            else
             {
-                basePath = context.CurrentWorkingDirectory;
+                basePath = context.WorkingDirectory;
                 searchPattern = partialPath;
             }
 
             // Convert relative path to absolute
-            basePath = vfs.GetAbsolutePath(basePath, context.CurrentWorkingDirectory);
+            basePath = vfs.GetAbsolutePath(basePath, context.WorkingDirectory);
 
             // Get directory contents
-            if (await vfs.DirectoryExistsAsync(basePath, context.UserSession.User))
+            if (await vfs.DirectoryExistsAsync(basePath, context.CurrentUser))
             {
-                var entries = await vfs.ListDirectoryAsync(basePath, context.UserSession.User);
+                var entries = await vfs.ListDirectoryAsync(basePath, context.CurrentUser);
                 
                 foreach (var entry in entries)
                 {

@@ -125,6 +125,18 @@ namespace HackerOs.OS.User
         private const string GroupFile = "/etc/group";
         private const string ShadowFile = "/etc/shadow";
 
+        // System user for internal operations (root equivalent)
+        private static readonly User SystemUser = new User
+        {
+            UserId = 0,
+            Username = "system",
+            FullName = "System User",
+            PrimaryGroupId = 0,
+            HomeDirectory = "/root",
+            Shell = "/bin/bash",
+            AdditionalGroups = new List<int>()
+        };
+
         public UserManager(IVirtualFileSystem fileSystem, ILogger<UserManager> logger)
         {
             _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -293,9 +305,8 @@ namespace HackerOs.OS.User
                     _users[user.Username] = user;
                     _usersByUid[user.UserId] = user;
                     user.UpdateEnvironment();
-                    
-                    _logger.LogInformation("Updated user {Username}", user.Username);
-                    _ = Task.Run(SaveUsersToFileAsync);
+                      _logger.LogInformation("Updated user {Username}", user.Username);
+                    _ = Task.Run(() => SaveUsersToFileAsync());
                     return true;
                 }
             }
@@ -318,11 +329,9 @@ namespace HackerOs.OS.User
                     }
 
                     _users.Remove(username);
-                    _usersByUid.Remove(user.UserId);
-
-                    _logger.LogInformation("Deleted user {Username}", username);
-                    _ = Task.Run(SaveUsersToFileAsync);
-                    _ = Task.Run(SaveGroupsToFileAsync);
+                    _usersByUid.Remove(user.UserId);                    _logger.LogInformation("Deleted user {Username}", username);
+                    _ = Task.Run(() => SaveUsersToFileAsync());
+                    _ = Task.Run(() => SaveGroupsToFileAsync());
                     return true;
                 }
             }
@@ -619,12 +628,11 @@ namespace HackerOs.OS.User
         }
 
         private async Task LoadUsersFromFileAsync()
-        {
-            try
+        {            try
             {
-                if (await _fileSystem.FileExistsAsync(PasswdFile))
+                if (await _fileSystem.FileExistsAsync(PasswdFile, SystemUser))
                 {
-                    var content = await _fileSystem.ReadAllTextAsync(PasswdFile);
+                    var content = await _fileSystem.ReadAllTextAsync(PasswdFile, SystemUser);
                     // Parse passwd file format and load users
                     // For now, we'll skip this as we're managing users in memory
                     _logger.LogDebug("Loaded users from {PasswdFile}", PasswdFile);
@@ -637,12 +645,11 @@ namespace HackerOs.OS.User
         }
 
         private async Task LoadGroupsFromFileAsync()
-        {
-            try
+        {            try
             {
-                if (await _fileSystem.FileExistsAsync(GroupFile))
+                if (await _fileSystem.FileExistsAsync(GroupFile, SystemUser))
                 {
-                    var content = await _fileSystem.ReadAllTextAsync(GroupFile);
+                    var content = await _fileSystem.ReadAllTextAsync(GroupFile, SystemUser);
                     // Parse group file format and load groups
                     // For now, we'll skip this as we're managing groups in memory
                     _logger.LogDebug("Loaded groups from {GroupFile}", GroupFile);
@@ -668,10 +675,8 @@ namespace HackerOs.OS.User
                         var line = $"{user.Username}:x:{user.UserId}:{user.PrimaryGroupId}:{user.FullName}:{user.HomeDirectory}:{user.Shell}";
                         lines.Add(line);
                     }
-                }
-
-                var content = string.Join("\n", lines);
-                await _fileSystem.WriteAllTextAsync(PasswdFile, content);
+                }                var content = string.Join("\n", lines);
+                await _fileSystem.WriteAllTextAsync(PasswdFile, content, SystemUser);
                 _logger.LogDebug("Saved users to {PasswdFile}", PasswdFile);
             }
             catch (Exception ex)
@@ -696,10 +701,8 @@ namespace HackerOs.OS.User
                         var line = $"{group.GroupName}:x:{group.GroupId}:{members}";
                         lines.Add(line);
                     }
-                }
-
-                var content = string.Join("\n", lines);
-                await _fileSystem.WriteAllTextAsync(GroupFile, content);
+                }                var content = string.Join("\n", lines);
+                await _fileSystem.WriteAllTextAsync(GroupFile, content, SystemUser);
                 _logger.LogDebug("Saved groups to {GroupFile}", GroupFile);
             }
             catch (Exception ex)

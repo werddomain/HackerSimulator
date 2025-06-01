@@ -133,18 +133,19 @@ namespace HackerOs.OS.User
         public bool BelongsToGroup(int groupId)
         {
             return PrimaryGroupId == groupId || AdditionalGroups.Contains(groupId);
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Adds the user to an additional group
         /// </summary>
         /// <param name="groupId">Group ID to add</param>
-        public void AddToGroup(int groupId)
+        /// <returns>True if the user was added to the group, false if already a member</returns>
+        public bool AddToGroup(int groupId)
         {
             if (!AdditionalGroups.Contains(groupId))
             {
                 AdditionalGroups.Add(groupId);
+                return true;
             }
+            return false;
         }
 
         /// <summary>

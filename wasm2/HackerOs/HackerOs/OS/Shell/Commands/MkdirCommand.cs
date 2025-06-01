@@ -19,7 +19,7 @@ public class MkdirCommand : CommandBase
     public override IReadOnlyList<CommandOption> Options => new List<CommandOption>
     {
         new("p", "parents", "Create parent directories as needed"),
-        new("m", "mode", "Set file mode (permissions) for created directories", hasValue: true),
+        new("m", "mode", "Set file mode (permissions) for created directories", requiresValue: true),
         new("v", "verbose", "Print a message for each created directory")
     };
 
@@ -131,15 +131,56 @@ public class MkdirCommand : CommandBase
         }
 
         return true;
-    }
-
-    public override async Task<IEnumerable<string>> GetCompletionsAsync(
+    }    public override async Task<IEnumerable<string>> GetCompletionsAsync(
         CommandContext context,
         string[] args,
         string currentArg)
     {
         // Complete with directories (for parent path context)
-        return await GetDirectoryCompletionsAsync(context, currentArg);
+        try
+        {
+            var vfs = GetVirtualFileSystem(context);
+            var completions = new List<string>();
+
+            // Resolve the base path for completion
+            string basePath;
+            string searchPattern;
+
+            if (currentArg.Contains('/'))
+            {
+                var lastSlash = currentArg.LastIndexOf('/');
+                basePath = currentArg[..lastSlash];
+                searchPattern = currentArg[(lastSlash + 1)..];
+            }
+            else
+            {
+                basePath = context.CurrentWorkingDirectory;
+                searchPattern = currentArg;
+            }
+
+            // Convert relative path to absolute
+            basePath = vfs.GetAbsolutePath(basePath, context.CurrentWorkingDirectory);
+
+            // Get directory contents - only directories for mkdir context
+            if (await vfs.DirectoryExistsAsync(basePath, context.UserSession.User))
+            {
+                var entries = await vfs.ListDirectoryAsync(basePath);
+                
+                foreach (var entry in entries.Where(e => e.IsDirectory))
+                {
+                    if (entry.Name.StartsWith(searchPattern, StringComparison.OrdinalIgnoreCase))
+                    {
+                        completions.Add($"{entry.Name}/");
+                    }
+                }
+            }
+
+            return completions;
+        }
+        catch
+        {
+            return Enumerable.Empty<string>();
+        }
     }
 
     public override CommandValidationResult ValidateArguments(string[] args)

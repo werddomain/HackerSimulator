@@ -237,6 +237,44 @@ namespace HackerOs.IO.FileSystem
         Task<IEnumerable<VirtualFileSystemNode>> ListDirectoryAsync(string path, User user);
 
         /// <summary>
+        /// Enables persistence for the file system.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        Task EnablePersistenceAsync();
+
+        /// <summary>
+        /// Reads text content from a file.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <returns>The file content as text, or null if the file doesn't exist.</returns>
+        Task<string?> ReadTextAsync(string path);
+
+        /// <summary>
+        /// Writes text content to a file.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="content">The text content to write.</param>
+        /// <returns>True if the operation was successful.</returns>
+        Task<bool> WriteTextAsync(string path, string content);
+
+        /// <summary>
+        /// Reads all text from a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="user">The user reading the file.</param>
+        /// <returns>The file content as text, or null if the file doesn't exist or user lacks permission.</returns>
+        Task<string?> ReadAllTextAsync(string path, User user);
+
+        /// <summary>
+        /// Writes all text to a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="content">The text content to write.</param>
+        /// <param name="user">The user writing the file.</param>
+        /// <returns>True if the operation was successful.</returns>
+        Task<bool> WriteAllTextAsync(string path, string content, User user);
+
+        /// <summary>
         /// Event raised when file system operations occur.
         /// </summary>
         event EventHandler<FileSystemEvent>? OnFileSystemEvent;

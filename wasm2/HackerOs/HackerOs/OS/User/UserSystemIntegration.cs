@@ -200,9 +200,8 @@ Have fun exploring the system!
                 foreach (var file in _standardUserFiles)
                 {
                     var filePath = $"{homeDir}/{file.Key}";
-                    
-                    // Only create if it doesn't exist
-                    if (!await _fileSystem.FileExistsAsync(filePath))
+                      // Only create if it doesn't exist
+                    if (!await _fileSystem.FileExistsAsync(filePath, user))
                     {
                         await _fileSystem.WriteAllTextAsync(filePath, file.Value);
                         _logger.LogDebug("Created file: {FilePath}", filePath);
@@ -229,7 +228,7 @@ Have fun exploring the system!
             {
                 var configPath = $"{user.HomeDirectory}/.config/hackeros/user.conf";
                 
-                if (await _fileSystem.FileExistsAsync(configPath))
+                if (await _fileSystem.FileExistsAsync(configPath, user))
                 {
                     // Load preferences using settings service
                     var desktopTheme = await _settingsService.GetSettingAsync<string>("Desktop", "theme", "gothic-hacker", SettingScope.User);
@@ -417,9 +416,8 @@ Have fun exploring the system!
         public async Task UpdateUserWorkingDirectoryAsync(User user, string newDirectory)
         {
             try
-            {
-                // Validate directory exists
-                if (!await _fileSystem.DirectoryExistsAsync(newDirectory))
+            {                // Validate directory exists
+                if (!await _fileSystem.DirectoryExistsAsync(newDirectory, user))
                 {
                     throw new DirectoryNotFoundException($"Directory not found: {newDirectory}");
                 }
@@ -474,9 +472,8 @@ Have fun exploring the system!
         private async Task<bool> CheckFileSystemPermissionAsync(User user, string path, string action)
         {
             try
-            {
-                // Check if file/directory exists
-                if (!await _fileSystem.FileExistsAsync(path) && !await _fileSystem.DirectoryExistsAsync(path))
+            {                // Check if file/directory exists
+                if (!await _fileSystem.FileExistsAsync(path, user) && !await _fileSystem.DirectoryExistsAsync(path, user))
                 {
                     return false;
                 }

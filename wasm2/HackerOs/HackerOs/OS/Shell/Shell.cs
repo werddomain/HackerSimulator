@@ -32,10 +32,9 @@ public class Shell : IShell
             _currentWorkingDirectory = value;
             DirectoryChanged?.Invoke(this, new DirectoryChangedEventArgs(previousDirectory, value));
         }
-    }
-
-    public IDictionary<string, string> EnvironmentVariables => _environmentVariables;
+    }    public IDictionary<string, string> EnvironmentVariables => _environmentVariables;
     public IReadOnlyList<string> CommandHistory => _commandHistory.AsReadOnly();
+    public IVirtualFileSystem FileSystem => _fileSystem;
 
     public event EventHandler<ShellOutputEventArgs>? OutputReceived;
     public event EventHandler<ShellErrorEventArgs>? ErrorReceived;

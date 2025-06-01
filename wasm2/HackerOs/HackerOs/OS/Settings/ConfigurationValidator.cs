@@ -95,15 +95,27 @@ namespace HackerOs.OS.Settings
         /// <returns>A list of validation errors, empty if valid</returns>
         public List<ConfigurationValidationError> ValidateConfigurationFile(string fileContent, string fileName = "config")
         {
-            var errors = new List<ConfigurationValidationError>();
-
-            try
+            var errors = new List<ConfigurationValidationError>();            try
             {
                 var parser = new ConfigFileParser();
-                var configuration = parser.ParseContent(fileContent);
+                var success = parser.ParseContent(fileContent);
                 
-                // Add file-specific errors
-                errors.AddRange(ValidateConfiguration(configuration));
+                if (success)
+                {
+                    var configuration = parser.ToDictionary();
+                    // Add file-specific errors
+                    errors.AddRange(ValidateConfiguration(configuration));
+                }
+                else
+                {
+                    errors.Add(new ConfigurationValidationError
+                    {
+                        Key = "parse_error",
+                        Value = fileContent,
+                        Message = "Failed to parse configuration file content",
+                        ErrorType = ConfigurationValidationErrorType.ParseError
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -171,6 +183,38 @@ namespace HackerOs.OS.Settings
             };
 
             return Task.FromResult(result);
+        }        /// <summary>
+        /// Validates configuration content from a string
+        /// </summary>
+        /// <param name="configContent">The configuration content as a string</param>
+        /// <returns>A task that represents the asynchronous validation operation, containing validation errors</returns>
+        public async Task<List<ConfigurationValidationError>> ValidateConfigurationContentAsync(string configContent)
+        {
+            await Task.CompletedTask; // Make async even though this is synchronous for now
+            
+            var errors = new List<ConfigurationValidationError>();
+            
+            try
+            {
+                // Parse the configuration content
+                var parser = new ConfigFileParser();
+                var parsedConfig = parser.ParseConfigString(configContent);
+                
+                // Validate the parsed configuration
+                return ValidateConfiguration(parsedConfig);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new ConfigurationValidationError
+                {
+                    Key = "parse_error",
+                    Value = configContent,
+                    Message = $"Failed to parse configuration: {ex.Message}",
+                    ErrorType = ConfigurationValidationErrorType.ParseError
+                });
+                
+                return errors;
+            }
         }
 
         private bool ValidateValueAgainstRule(string key, object? value, ConfigurationValidationRule rule)

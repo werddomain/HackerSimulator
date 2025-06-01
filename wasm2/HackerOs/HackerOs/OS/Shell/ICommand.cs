@@ -62,31 +62,7 @@ public interface ICommand
     /// Validate command arguments before execution
     /// </summary>
     /// <param name="args">Command arguments</param>
-    /// <returns>Validation result</returns>
-    CommandValidationResult ValidateArguments(string[] args);
-}
-
-/// <summary>
-/// Command execution context containing environment and user information
-/// </summary>
-public class CommandContext
-{
-    public IShell Shell { get; }
-    public string CurrentWorkingDirectory { get; }
-    public IDictionary<string, string> EnvironmentVariables { get; }
-    public User.UserSession UserSession { get; }
-
-    public CommandContext(
-        IShell shell,
-        string currentWorkingDirectory,
-        IDictionary<string, string> environmentVariables,
-        User.UserSession userSession)
-    {
-        Shell = shell;
-        CurrentWorkingDirectory = currentWorkingDirectory;
-        EnvironmentVariables = environmentVariables;
-        UserSession = userSession;
-    }
+    /// <returns>Validation result</returns>    CommandValidationResult ValidateArguments(string[] args);
 }
 
 /// <summary>

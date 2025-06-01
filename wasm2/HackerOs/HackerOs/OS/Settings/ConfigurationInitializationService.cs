@@ -115,13 +115,12 @@ namespace HackerOs.OS.Settings
 
                 // Create the system configuration file with template content
                 var configContent = DefaultSystemConfiguration.GetSystemConfigTemplate();
-                
-                // Validate the template content before writing
+                  // Validate the template content before writing
                 var validationResult = await _validator.ValidateConfigurationContentAsync(configContent);
-                if (!validationResult.IsValid)
+                if (validationResult.Count > 0)
                 {
                     _logger.LogWarning("System configuration template failed validation: {Errors}", 
-                        string.Join(", ", validationResult.Errors));
+                        string.Join(", ", validationResult.Select(e => e.Message)));
                 }
 
                 // Write the configuration file
@@ -248,12 +247,10 @@ namespace HackerOs.OS.Settings
             try
             {
                 var content = await _fileSystem.ReadTextAsync(configPath);
-                var validationResult = await _validator.ValidateConfigurationContentAsync(content);
-
-                if (!validationResult.IsValid)
+                var validationResult = await _validator.ValidateConfigurationContentAsync(content);                if (validationResult.Count > 0)
                 {
                     _logger.LogWarning("Configuration file has validation errors: {Path}, Errors: {Errors}",
-                        configPath, string.Join(", ", validationResult.Errors));
+                        configPath, string.Join(", ", validationResult.Select(e => e.Message)));
                 }
 
                 // Apply any missing default values

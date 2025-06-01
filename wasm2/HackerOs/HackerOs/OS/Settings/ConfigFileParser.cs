@@ -322,6 +322,49 @@ namespace HackerOs.OS.Settings
         }
 
         /// <summary>
+        /// Converts the current configuration to a string representation
+        /// </summary>
+        /// <returns>String representation of the configuration</returns>
+        public string ToConfigString()
+        {
+            return ToIniContent();
+        }
+
+        /// <summary>
+        /// Gets all configuration as a flat dictionary
+        /// </summary>
+        /// <returns>A dictionary containing all configuration values</returns>
+        public Dictionary<string, object?> ToDictionary()
+        {
+            var result = new Dictionary<string, object?>();
+            
+            foreach (var section in _sections)
+            {
+                foreach (var keyValue in section.Value)
+                {
+                    var key = section.Key == "global" ? keyValue.Key : $"{section.Key}.{keyValue.Key}";
+                    result[key] = keyValue.Value;
+                }
+            }
+            
+            return result;
+        }
+
+        /// <summary>
+        /// Parses configuration string and returns as dictionary
+        /// </summary>
+        /// <param name="content">Configuration content to parse</param>
+        /// <returns>Configuration as dictionary</returns>
+        public Dictionary<string, object?> ParseConfigString(string content)
+        {
+            if (ParseContent(content))
+            {
+                return ToDictionary();
+            }
+            return new Dictionary<string, object?>();
+        }
+
+        /// <summary>
         /// Validates the syntax of an INI configuration file content.
         /// </summary>
         /// <param name="content">The configuration file content</param>

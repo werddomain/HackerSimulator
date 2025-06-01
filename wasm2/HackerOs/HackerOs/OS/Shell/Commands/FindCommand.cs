@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using HackerOs.IO.FileSystem;
 using HackerOs.OS.User;
@@ -15,25 +17,33 @@ namespace HackerOs.OS.Shell.Commands
     {
         private readonly IVirtualFileSystem _fileSystem;
 
-        public FindCommand(IVirtualFileSystem fileSystem) : base("find")
+        public FindCommand(IVirtualFileSystem fileSystem)
         {
             _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-            Description = "Search for files and directories";
-            Usage = "find [PATH...] [OPTIONS]";
-            
-            Options = new Dictionary<string, string>
-            {
-                { "-name", "Find by name pattern (supports wildcards)" },
-                { "-type", "Find by type: f (file), d (directory)" },
-                { "-size", "Find by size: +N (larger), -N (smaller), N (exact)" },
-                { "-exec", "Execute command on found files" },
-                { "-print", "Print found files (default)" },
-                { "-maxdepth", "Maximum directory depth to search" },
-                { "-mindepth", "Minimum directory depth to search" }
-            };
         }
 
-        public override async Task<CommandResult> ExecuteAsync(string[] args, IShellContext context)
+        public override string Name => "find";
+        public override string Description => "Search for files and directories";
+        public override string Usage => "find [PATH...] [OPTIONS]";
+
+        public override IReadOnlyList<CommandOption> Options => new List<CommandOption>
+        {
+            new("name", null, "Find by name pattern (supports wildcards)", true),
+            new("type", null, "Find by type: f (file), d (directory)", true),
+            new("size", null, "Find by size: +N (larger), -N (smaller), N (exact)", true),
+            new("exec", null, "Execute command on found files", true),
+            new("print", null, "Print found files (default)"),
+            new("maxdepth", null, "Maximum directory depth to search", true),
+            new("mindepth", null, "Minimum directory depth to search", true)
+        };
+
+        public override async Task<int> ExecuteAsync(
+            CommandContext context,
+            string[] args,
+            Stream stdin,
+            Stream stdout,
+            Stream stderr,
+            CancellationToken cancellationToken = default)
         {
             var paths = new List<string>();
             var criteria = new FindCriteria();
@@ -119,27 +129,29 @@ namespace HackerOs.OS.Shell.Commands
             {
                 try
                 {
-                    var searchPath = _fileSystem.GetAbsolutePath(path, context.CurrentDirectory);
+                    var searchPath = _fileSystem.GetAbsolutePath(path, context.WorkingDirectory);
                     await SearchAsync(searchPath, criteria, 0, context.CurrentUser, results, errors);
                 }
                 catch (Exception ex)
                 {
                     errors.Add($"find: {path}: {ex.Message}");
                 }
-            }
-
-            var output = string.Join(Environment.NewLine, results);
+            }            var output = string.Join(Environment.NewLine, results);
             var errorOutput = string.Join(Environment.NewLine, errors);
+
+            if (!string.IsNullOrEmpty(output))
+            {
+                await WriteLineAsync(stdout, output, cancellationToken);
+            }
 
             if (errors.Any())
             {
-                return CommandResult.Error(errorOutput, output);
+                await WriteLineAsync(stderr, errorOutput, cancellationToken);
+                return 1; // Error exit code
             }
 
-            return CommandResult.Success(output);
-        }
-
-        private async Task SearchAsync(string path, FindCriteria criteria, int currentDepth, User user,
+            return 0; // Success exit code
+        }        private async Task SearchAsync(string path, FindCriteria criteria, int currentDepth, OS.User.User user,
             List<string> results, List<string> errors)
         {
             try
@@ -183,10 +195,8 @@ namespace HackerOs.OS.Shell.Commands
                         // In a real implementation, this would execute the command
                         results.Add($"Would execute: {string.Join(" ", expandedCommand)}");
                     }
-                }
-
-                // If it's a directory, recurse into it
-                if (node.Type == VirtualFileSystemNodeType.Directory)
+                }                // If it's a directory, recurse into it
+                if (node.IsDirectory)
                 {
                     try
                     {
@@ -220,15 +230,14 @@ namespace HackerOs.OS.Shell.Commands
 
             // Check type filter
             if (!string.IsNullOrEmpty(criteria.Type))
-            {
-                switch (criteria.Type.ToLower())
+            {                switch (criteria.Type.ToLower())
                 {
                     case "f":
-                        if (node.Type != VirtualFileSystemNodeType.File)
+                        if (node.IsDirectory)
                             return false;
                         break;
                     case "d":
-                        if (node.Type != VirtualFileSystemNodeType.Directory)
+                        if (!node.IsDirectory)
                             return false;
                         break;
                 }
@@ -242,10 +251,8 @@ namespace HackerOs.OS.Shell.Commands
                 {
                     return false;
                 }
-            }
-
-            // Check size (for files only)
-            if (!string.IsNullOrEmpty(criteria.Size) && node.Type == VirtualFileSystemNodeType.File)
+            }            // Check size (for files only)
+            if (!string.IsNullOrEmpty(criteria.Size) && !node.IsDirectory)
             {
                 if (!MatchesSize(node.Size, criteria.Size))
                 {
@@ -319,11 +326,12 @@ namespace HackerOs.OS.Shell.Commands
             }
 
             return expanded.ToArray();
-        }
-
-        public override Task<IEnumerable<string>> GetCompletionsAsync(string[] args, int cursorPosition, IShellContext context)
+        }        public override Task<IEnumerable<string>> GetCompletionsAsync(
+            CommandContext context,
+            string[] args,
+            string currentArg)
         {
-            return GetFileCompletionsAsync(args, cursorPosition, context);
+            return GetFileCompletionsAsync(context, currentArg);
         }
 
         private class FindCriteria

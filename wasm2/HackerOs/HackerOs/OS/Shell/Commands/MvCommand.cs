@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using HackerOs.IO.FileSystem;
 using HackerOs.OS.User;
@@ -14,173 +16,117 @@ namespace HackerOs.OS.Shell.Commands
     {
         private readonly IVirtualFileSystem _fileSystem;
 
-        public MvCommand(IVirtualFileSystem fileSystem) : base("mv")
+        public MvCommand(IVirtualFileSystem fileSystem)
         {
             _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-            Description = "Move (rename) files and directories";
-            Usage = "mv [OPTIONS] SOURCE... DESTINATION";
-            
-            Options = new Dictionary<string, string>
-            {
-                { "-f", "Force move, overwrite existing files" },
-                { "-v", "Verbose mode, show files being moved" },
-                { "-i", "Interactive mode, prompt before overwrite" }
-            };
         }
 
-        public override async Task<CommandResult> ExecuteAsync(string[] args, IShellContext context)
+        public override string Name => "mv";
+        public override string Description => "Move (rename) files and directories";
+        public override string Usage => "mv SOURCE DESTINATION";
+
+        public override IReadOnlyList<CommandOption> Options => new List<CommandOption>
+        {
+            new("f", null, "Force move, overwrite existing files"),
+            new("v", null, "Verbose mode, show files being moved")
+        };
+
+        public override async Task<int> ExecuteAsync(
+            CommandContext context,
+            string[] args,
+            Stream stdin,
+            Stream stdout,
+            Stream stderr,
+            CancellationToken cancellationToken = default)
         {
             if (args.Length < 2)
             {
-                return CommandResult.Error("mv: missing destination file operand");
+                await WriteLineAsync(stderr, "mv: missing destination file operand", cancellationToken);
+                return 1;
             }
 
-            var options = ParseOptions(args, out var files);
-            
-            if (files.Length < 2)
+            var source = args[0];
+            var destination = args[1];
+
+            try
             {
-                return CommandResult.Error("mv: missing destination file operand");
-            }
+                var sourcePath = _fileSystem.GetAbsolutePath(source, context.WorkingDirectory);
+                var destinationPath = _fileSystem.GetAbsolutePath(destination, context.WorkingDirectory);
 
-            bool force = options.Contains("-f");
-            bool verbose = options.Contains("-v");
-            bool interactive = options.Contains("-i");
-
-            var sources = files.Take(files.Length - 1).ToArray();
-            var destination = files.Last();
-
-            var destinationPath = _fileSystem.GetAbsolutePath(destination, context.CurrentDirectory);
-            var results = new List<string>();
-            var errors = new List<string>();
-
-            // Check if destination is a directory
-            bool destIsDirectory = await _fileSystem.DirectoryExistsAsync(destinationPath, context.CurrentUser);
-
-            if (sources.Length > 1 && !destIsDirectory)
-            {
-                return CommandResult.Error($"mv: target '{destination}' is not a directory");
-            }
-
-            foreach (var source in sources)
-            {
-                try
+                // Check if source exists
+                if (!await _fileSystem.FileExistsAsync(sourcePath, context.CurrentUser) && 
+                    !await _fileSystem.DirectoryExistsAsync(sourcePath, context.CurrentUser))
                 {
-                    var sourcePath = _fileSystem.GetAbsolutePath(source, context.CurrentDirectory);
-                    
-                    if (!await _fileSystem.FileExistsAsync(sourcePath, context.CurrentUser) && 
-                        !await _fileSystem.DirectoryExistsAsync(sourcePath, context.CurrentUser))
-                    {
-                        errors.Add($"mv: cannot stat '{source}': No such file or directory");
-                        continue;
-                    }
+                    await WriteLineAsync(stderr, $"mv: cannot stat '{source}': No such file or directory", cancellationToken);
+                    return 1;
+                }
 
-                    var sourceNode = await _fileSystem.GetNodeAsync(sourcePath, context.CurrentUser);
-                    if (sourceNode == null || !sourceNode.CanWrite(context.CurrentUser))
-                    {
-                        errors.Add($"mv: cannot move '{source}': Permission denied");
-                        continue;
-                    }
+                var sourceNode = await _fileSystem.GetNodeAsync(sourcePath, context.CurrentUser);
+                if (sourceNode == null || !sourceNode.CanRead(context.CurrentUser))
+                {
+                    await WriteLineAsync(stderr, $"mv: cannot access '{source}': Permission denied", cancellationToken);
+                    return 1;
+                }
 
-                    string targetPath;
-                    if (destIsDirectory)
+                // Check if destination exists
+                bool destExists = await _fileSystem.FileExistsAsync(destinationPath, context.CurrentUser) ||
+                                  await _fileSystem.DirectoryExistsAsync(destinationPath, context.CurrentUser);
+
+                if (destExists)
+                {
+                    var destNode = await _fileSystem.GetNodeAsync(destinationPath, context.CurrentUser);
+                    if (destNode != null && destNode.IsDirectory)
                     {
-                        targetPath = System.IO.Path.Combine(destinationPath, System.IO.Path.GetFileName(sourcePath));
+                        // Moving into a directory - create new path with source filename
+                        var fileName = System.IO.Path.GetFileName(sourcePath);
+                        destinationPath = System.IO.Path.Combine(destinationPath, fileName);
                     }
                     else
                     {
-                        targetPath = destinationPath;
-                    }
-
-                    // Check if target exists and handle overwrite
-                    bool targetExists = await _fileSystem.FileExistsAsync(targetPath, context.CurrentUser) ||
-                                      await _fileSystem.DirectoryExistsAsync(targetPath, context.CurrentUser);
-
-                    if (targetExists && !force)
-                    {
-                        if (interactive)
-                        {
-                            // In a real implementation, this would prompt the user
-                            // For now, we'll assume "no" to overwrite
-                            continue;
-                        }
-                        else
-                        {
-                            errors.Add($"mv: '{destination}' already exists (use -f to force)");
-                            continue;
-                        }
-                    }
-
-                    // If target exists and we're forcing, remove it first
-                    if (targetExists && force)
-                    {
-                        var targetNode = await _fileSystem.GetNodeAsync(targetPath, context.CurrentUser);
-                        if (targetNode != null)
-                        {
-                            if (targetNode.Type == VirtualFileSystemNodeType.Directory)
-                            {
-                                await _fileSystem.DeleteDirectoryAsync(targetPath, context.CurrentUser);
-                            }
-                            else
-                            {
-                                await _fileSystem.DeleteFileAsync(targetPath, context.CurrentUser);
-                            }
-                        }
-                    }
-
-                    // Perform the move operation
-                    if (sourceNode.Type == VirtualFileSystemNodeType.Directory)
-                    {
-                        await MoveDirectoryAsync(sourcePath, targetPath, context.CurrentUser);
-                    }
-                    else
-                    {
-                        await MoveFileAsync(sourcePath, targetPath, context.CurrentUser);
-                    }
-
-                    if (verbose)
-                    {
-                        results.Add($"'{source}' -> '{targetPath}'");
+                        // Destination file exists - would overwrite
+                        await WriteLineAsync(stderr, $"mv: '{destination}' already exists", cancellationToken);
+                        return 1;
                     }
                 }
-                catch (Exception ex)
+
+                // Perform the move operation
+                if (sourceNode.IsDirectory)
                 {
-                    errors.Add($"mv: cannot move '{source}': {ex.Message}");
+                    await MoveDirectoryAsync(sourcePath, destinationPath, context.CurrentUser);
                 }
+                else
+                {
+                    await MoveFileAsync(sourcePath, destinationPath, context.CurrentUser);
+                }
+
+                return 0;
             }
-
-            var output = string.Join(Environment.NewLine, results);
-            var errorOutput = string.Join(Environment.NewLine, errors);
-
-            if (errors.Any())
+            catch (Exception ex)
             {
-                return CommandResult.Error(errorOutput, output);
+                await WriteLineAsync(stderr, $"mv: {ex.Message}", cancellationToken);
+                return 1;
             }
-
-            return CommandResult.Success(output);
         }
 
-        private async Task MoveFileAsync(string sourcePath, string targetPath, User user)
+        private async Task MoveFileAsync(string sourcePath, string targetPath, OS.User.User user)
         {
-            // For a simple move, we can copy then delete
             var content = await _fileSystem.ReadFileAsync(sourcePath, user);
-            await _fileSystem.WriteFileAsync(targetPath, content, user);
+            await _fileSystem.CreateFileAsync(targetPath, user);
+            await _fileSystem.WriteFileAsync(targetPath, content ?? string.Empty, user);
             await _fileSystem.DeleteFileAsync(sourcePath, user);
         }
 
-        private async Task MoveDirectoryAsync(string sourcePath, string targetPath, User user)
+        private async Task MoveDirectoryAsync(string sourcePath, string targetPath, OS.User.User user)
         {
-            // Create target directory
             await _fileSystem.CreateDirectoryAsync(targetPath, user);
-
-            // Move all children
-            var children = await _fileSystem.ListDirectoryAsync(sourcePath, user);
             
-            foreach (var child in children)
+            var children = await _fileSystem.ListDirectoryAsync(sourcePath, user);
+            foreach (var child in children.Where(c => c.CanRead(user)))
             {
                 var childSourcePath = System.IO.Path.Combine(sourcePath, child.Name);
                 var childTargetPath = System.IO.Path.Combine(targetPath, child.Name);
-                
-                if (child.Type == VirtualFileSystemNodeType.Directory)
+
+                if (child.IsDirectory)
                 {
                     await MoveDirectoryAsync(childSourcePath, childTargetPath, user);
                 }
@@ -190,13 +136,15 @@ namespace HackerOs.OS.Shell.Commands
                 }
             }
 
-            // Remove the source directory
             await _fileSystem.DeleteDirectoryAsync(sourcePath, user);
         }
 
-        public override Task<IEnumerable<string>> GetCompletionsAsync(string[] args, int cursorPosition, IShellContext context)
+        public override Task<IEnumerable<string>> GetCompletionsAsync(
+            CommandContext context,
+            string[] args,
+            string currentArg)
         {
-            return GetFileCompletionsAsync(args, cursorPosition, context);
+            return GetFileCompletionsAsync(context, currentArg);
         }
     }
 }

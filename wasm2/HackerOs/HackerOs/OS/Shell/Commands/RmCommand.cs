@@ -14,38 +14,46 @@ namespace HackerOs.OS.Shell.Commands
     {
         private readonly IVirtualFileSystem _fileSystem;
 
-        public RmCommand(IVirtualFileSystem fileSystem) : base("rm")
+        public RmCommand(IVirtualFileSystem fileSystem)
         {
             _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-            Description = "Remove files and directories";
-            Usage = "rm [OPTIONS] FILE...";
-            
-            Options = new Dictionary<string, string>
-            {
-                { "-f", "Force removal, ignore nonexistent files" },
-                { "-r", "Remove directories and their contents recursively" },
-                { "-rf", "Force recursive removal" },
-                { "-v", "Verbose mode, show what is being removed" }
-            };
         }
 
-        public override async Task<CommandResult> ExecuteAsync(string[] args, IShellContext context)
+        public override string Name => "rm";
+        public override string Description => "Remove files and directories";
+        public override string Usage => "rm [OPTIONS] FILE...";
+
+        public override IReadOnlyList<CommandOption> Options => new List<CommandOption>
+        {
+            new("f", null, "Force removal, ignore nonexistent files"),
+            new("r", null, "Remove directories and their contents recursively"),
+            new("v", null, "Verbose mode, show what is being removed")
+        };        public override async Task<int> ExecuteAsync(
+            CommandContext context,
+            string[] args,
+            Stream stdin,
+            Stream stdout,
+            Stream stderr,
+            CancellationToken cancellationToken = default)
         {
             if (args.Length == 0)
             {
-                return CommandResult.Error("rm: missing operand");
+                await WriteLineAsync(stderr, "rm: missing operand");
+                return 1;
             }
 
-            var options = ParseOptions(args, out var files);
+            var parsedArgs = ParseArguments(args, Options);
+            var files = parsedArgs.Parameters;
             
-            if (files.Length == 0)
+            if (files.Count == 0)
             {
-                return CommandResult.Error("rm: missing operand");
+                await WriteLineAsync(stderr, "rm: missing operand");
+                return 1;
             }
 
-            bool force = options.Contains("-f") || options.Contains("-rf");
-            bool recursive = options.Contains("-r") || options.Contains("-rf");
-            bool verbose = options.Contains("-v");
+            bool force = parsedArgs.HasOption("f");
+            bool recursive = parsedArgs.HasOption("r");
+            bool verbose = parsedArgs.HasOption("v");
 
             var results = new List<string>();
             var errors = new List<string>();
@@ -54,7 +62,7 @@ namespace HackerOs.OS.Shell.Commands
             {
                 try
                 {
-                    var path = _fileSystem.GetAbsolutePath(file, context.CurrentDirectory);
+                    var path = _fileSystem.GetAbsolutePath(file, context.WorkingDirectory);
                     
                     if (!await _fileSystem.FileExistsAsync(path, context.CurrentUser) && 
                         !await _fileSystem.DirectoryExistsAsync(path, context.CurrentUser))
@@ -85,7 +93,7 @@ namespace HackerOs.OS.Shell.Commands
                         continue;
                     }
 
-                    if (node.Type == VirtualFileSystemNodeType.Directory)
+                    if (node.IsDirectory)
                     {
                         if (!recursive)
                         {
@@ -113,18 +121,26 @@ namespace HackerOs.OS.Shell.Commands
                 }
             }
 
-            var output = string.Join(Environment.NewLine, results);
-            var errorOutput = string.Join(Environment.NewLine, errors);
+            // Write output
+            foreach (var result in results)
+            {
+                await WriteLineAsync(stdout, result);
+            }
+
+            // Write errors
+            foreach (var error in errors)
+            {
+                await WriteLineAsync(stderr, error);
+            }
 
             if (errors.Any() && !force)
             {
-                return CommandResult.Error(errorOutput, output);
+                return 1;
             }
 
-            return CommandResult.Success(output);
-        }
+            return 0;        }
 
-        private async Task RemoveDirectoryRecursiveAsync(string path, User user, bool verbose, 
+        private async Task RemoveDirectoryRecursiveAsync(string path, OS.User.User user, bool verbose, 
             List<string> results, List<string> errors, bool force)
         {
             try
@@ -135,7 +151,7 @@ namespace HackerOs.OS.Shell.Commands
                 {
                     var childPath = System.IO.Path.Combine(path, child.Name);
                     
-                    if (child.Type == VirtualFileSystemNodeType.Directory)
+                    if (child.IsDirectory)
                     {
                         await RemoveDirectoryRecursiveAsync(childPath, user, verbose, results, errors, force);
                     }
@@ -171,9 +187,12 @@ namespace HackerOs.OS.Shell.Commands
             }
         }
 
-        public override Task<IEnumerable<string>> GetCompletionsAsync(string[] args, int cursorPosition, IShellContext context)
+        public override Task<IEnumerable<string>> GetCompletionsAsync(
+            CommandContext context,
+            string[] args,
+            string currentArg)
         {
-            return GetFileCompletionsAsync(args, cursorPosition, context);
+            return GetFileCompletionsAsync(context, currentArg);
         }
     }
 }

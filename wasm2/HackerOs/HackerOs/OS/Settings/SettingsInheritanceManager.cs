@@ -243,27 +243,6 @@ namespace HackerOs.OS.Settings
     }
 
     /// <summary>
-    /// Interface for objects that can provide settings values
-    /// </summary>
-    public interface ISettingsProvider
-    {
-        /// <summary>
-        /// Checks if a setting value exists
-        /// </summary>
-        bool HasValue(string key, string? section = null);
-
-        /// <summary>
-        /// Gets a setting value
-        /// </summary>
-        T GetValue<T>(string key, string? section = null, T defaultValue = default!);
-
-        /// <summary>
-        /// Gets all settings in a section
-        /// </summary>
-        Dictionary<string, object> GetAllSettings(string? section = null);
-    }
-
-    /// <summary>
     /// Information about setting resolution
     /// </summary>
     public class SettingResolutionInfo

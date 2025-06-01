@@ -1,4 +1,4 @@
-@inherits LoginScreen
+@inherits ComponentBase
 
 <div class="login-screen">
     <div class="login-container">
@@ -270,9 +270,7 @@
         border-top: 2px solid #ccc;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
+    }    @@keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
@@ -313,10 +311,8 @@
 
     .login-footer p {
         margin: 0.25rem 0;
-    }
-
-    /* Responsive design */
-    @media (max-width: 480px) {
+    }    /* Responsive design */
+    @@media (max-width: 480px) {
         .login-container {
             margin: 1rem;
             padding: 1.5rem;
@@ -328,7 +324,7 @@
     }
 
     /* Accessibility */
-    @media (prefers-reduced-motion: reduce) {
+    @@media (prefers-reduced-motion: reduce) {
         .loading-spinner {
             animation: none;
         }

@@ -1012,8 +1012,7 @@ namespace HackerOs.IO.FileSystem
             var combinedPath = baseDir.TrimEnd('/') + "/" + path.TrimStart('/');
             return NormalizePath(combinedPath);
         }
-        
-        /// <summary>
+          /// <summary>
         /// Checks if directory exists (user-specific)
         /// </summary>
         /// <param name="path">Directory path</param>
@@ -1022,10 +1021,10 @@ namespace HackerOs.IO.FileSystem
         public async Task<bool> DirectoryExistsAsync(string path, HackerOs.OS.User.User user)
         {
             var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await DirectoryExistsAsync(absolutePath);
+            var node = await GetNodeAsync(absolutePath);
+            return node != null && node.IsDirectory;
         }
-        
-        /// <summary>
+          /// <summary>
         /// Checks if file exists (user-specific)
         /// </summary>
         /// <param name="path">File path</param>
@@ -1034,7 +1033,8 @@ namespace HackerOs.IO.FileSystem
         public async Task<bool> FileExistsAsync(string path, HackerOs.OS.User.User user)
         {
             var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await FileExistsAsync(absolutePath);
+            var node = await GetNodeAsync(absolutePath);
+            return node != null && node.IsFile;
         }
         
         /// <summary>
@@ -1138,6 +1138,69 @@ namespace HackerOs.IO.FileSystem
             return await ListDirectoryAsync(absolutePath);
         }
         
+        #endregion
+
+        #region Persistence Methods
+
+        /// <summary>
+        /// Enables persistence for the file system.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        public async Task EnablePersistenceAsync()
+        {
+            _persistenceEnabled = true;
+            if (_storage != null)
+            {
+                await LoadFromPersistentStorageAsync();
+            }
+        }
+
+        /// <summary>
+        /// Reads text content from a file.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <returns>The file content as text, or null if the file doesn't exist.</returns>
+        public async Task<string?> ReadTextAsync(string path)
+        {
+            var bytes = await ReadFileAsync(path);
+            return bytes != null ? Encoding.UTF8.GetString(bytes) : null;
+        }
+
+        /// <summary>
+        /// Writes text content to a file.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="content">The text content to write.</param>
+        /// <returns>True if the operation was successful.</returns>
+        public async Task<bool> WriteTextAsync(string path, string content)
+        {
+            var bytes = Encoding.UTF8.GetBytes(content);
+            return await WriteFileAsync(path, bytes);
+        }
+
+        /// <summary>
+        /// Reads all text from a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="user">The user reading the file.</param>
+        /// <returns>The file content as text, or null if the file doesn't exist or user lacks permission.</returns>
+        public async Task<string?> ReadAllTextAsync(string path, HackerOs.OS.User.User user)
+        {
+            return await ReadFileAsync(path, user);
+        }
+
+        /// <summary>
+        /// Writes all text to a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="content">The text content to write.</param>
+        /// <param name="user">The user writing the file.</param>
+        /// <returns>True if the operation was successful.</returns>
+        public async Task<bool> WriteAllTextAsync(string path, string content, HackerOs.OS.User.User user)
+        {
+            return await WriteFileAsync(path, content, user);
+        }
+
         #endregion
     }
 }
