@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ ViewData["Title"] ?? "HackerOS Blog" }}</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/highlight.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <img src="/img/hackeros-logo.png" alt="HackerOS Blog" width="40" height="40">
+                    <span>HackerOS Blog</span>
+                </a>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/tag/tutorial">Tutorials</a></li>
+                    <li><a href="/tag/customization">Customization</a></li>
+                    <li><a href="/tag/security">Security</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/subscribe" class="highlight">Subscribe</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{ RenderBody() }}
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About HackerOS Blog</h3>
+                    <p>Your source for the latest news, tutorials, and tips about HackerOS.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/about">About</a></li>
+                        <li><a href="/subscribe">Subscribe</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Popular Tags</h3>
+                    <div class="tags">
+                        <a href="/tag/tutorial" class="tag">tutorial</a>
+                        <a href="/tag/customization" class="tag">customization</a>
+                        <a href="/tag/security" class="tag">security</a>
+                        <a href="/tag/productivity" class="tag">productivity</a>
+                        <a href="/tag/web-development" class="tag">web-development</a>
+                    </div>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2025 HackerOS Blog. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/highlight.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize syntax highlighting
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+        });
+    </script>
+</body>
+</html>

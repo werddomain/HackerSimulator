@@ -1,0 +1,67 @@
+<div class="create-post-page">
+    <h1>Create New Post</h1>
+    
+    {{ if (ViewData["ValidationErrors"] != null) { }}
+        <div class="validation-errors">
+            <ul>
+                {{ foreach (var error in (List<string>)ViewData["ValidationErrors"]) { }}
+                    <li>{{ error }}</li>
+                {{ } }}
+            </ul>
+        </div>
+    {{ } }}
+    
+    <form method="post" action="/post/create" class="post-form">
+        <div class="form-group">
+            <label for="title">Post Title</label>
+            <input type="text" id="title" name="Title" required 
+                   value="{{ ViewData["Post"] != null ? ((BlogPost)ViewData["Post"]).Title : "" }}">
+            {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Title")) { }}
+                <div class="field-error">
+                    {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Title"][0] }}
+                </div>
+            {{ } }}
+        </div>
+        
+        <div class="form-group">
+            <label for="author">Author Name</label>
+            <input type="text" id="author" name="Author" required 
+                   value="{{ ViewData["Post"] != null ? ((BlogPost)ViewData["Post"]).Author : "" }}">
+            {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Author")) { }}
+                <div class="field-error">
+                    {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Author"][0] }}
+                </div>
+            {{ } }}
+        </div>
+        
+        <div class="form-group">
+            <label for="content">Post Content</label>
+            <textarea id="content" name="Content" rows="15" required>{{ ViewData["Post"] != null ? ((BlogPost)ViewData["Post"]).Content : "" }}</textarea>
+            {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Content")) { }}
+                <div class="field-error">
+                    {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Content"][0] }}
+                </div>
+            {{ } }}
+            <div class="editor-tips">
+                <p>Tips: Use double newlines to create paragraphs. You can use basic HTML tags for formatting.</p>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="tags">Tags (comma separated)</label>
+            <input type="text" id="tags" name="Tags" placeholder="e.g. tutorial, security, customization" 
+                   value="{{ ViewData["Post"] != null && ((BlogPost)ViewData["Post"]).Tags != null ? string.Join(", ", ((BlogPost)ViewData["Post"]).Tags) : "" }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="featuredImageUrl">Featured Image URL</label>
+            <input type="text" id="featuredImageUrl" name="FeaturedImageUrl" placeholder="e.g. /img/featured-image.jpg" 
+                   value="{{ ViewData["Post"] != null ? ((BlogPost)ViewData["Post"]).FeaturedImageUrl : "" }}">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="submit-button">Publish Post</button>
+            <a href="/" class="cancel-button">Cancel</a>
+        </div>
+    </form>
+</div>

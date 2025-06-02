@@ -1,0 +1,56 @@
+<div class="tag-page">
+    {{ if (ViewData["Tag"] != null) { }}
+        <h1>Posts tagged with "{{ ViewData["Tag"] }}"</h1>
+        
+        {{ if (ViewData["Posts"] != null && ((List<BlogPost>)ViewData["Posts"]).Count > 0) { }}
+            <div class="post-grid">
+                {{ foreach (var post in (List<BlogPost>)ViewData["Posts"]) { }}
+                    <div class="post-card">
+                        <div class="post-image">
+                            <img src="{{ post.FeaturedImageUrl }}" alt="{{ post.Title }}">
+                        </div>
+                        <div class="post-content">
+                            <h3><a href="/post/{{ post.Id }}">{{ post.Title }}</a></h3>
+                            <div class="post-meta">
+                                <span class="author">By {{ post.Author }}</span>
+                                <span class="date">{{ post.PublishedDate.ToString("MMM d, yyyy") }}</span>
+                            </div>
+                            <p>{{ post.Content.Length > 150 ? post.Content.Substring(0, 150) + "..." : post.Content }}</p>
+                            <div class="tags">
+                                {{ foreach (var tag in post.Tags) { }}
+                                    <a href="/tag/{{ tag }}" class="tag {{ tag == ViewData["Tag"].ToString() ? "active" : "" }}">{{ tag }}</a>
+                                {{ } }}
+                            </div>
+                            <a href="/post/{{ post.Id }}" class="read-more">Read More</a>
+                        </div>
+                    </div>
+                {{ } }}
+            </div>
+        {{ } else { }}
+            <div class="no-posts">
+                <p>No posts found with the tag "{{ ViewData["Tag"] }}".</p>
+                <a href="/" class="cta-button">Return to Home</a>
+            </div>
+        {{ } }}
+        
+        <div class="other-tags">
+            <h2>Browse Other Tags</h2>
+            <div class="tags">
+                <a href="/tag/tutorial" class="tag {{ ViewData["Tag"].ToString() == "tutorial" ? "active" : "" }}">tutorial</a>
+                <a href="/tag/customization" class="tag {{ ViewData["Tag"].ToString() == "customization" ? "active" : "" }}">customization</a>
+                <a href="/tag/security" class="tag {{ ViewData["Tag"].ToString() == "security" ? "active" : "" }}">security</a>
+                <a href="/tag/productivity" class="tag {{ ViewData["Tag"].ToString() == "productivity" ? "active" : "" }}">productivity</a>
+                <a href="/tag/web-development" class="tag {{ ViewData["Tag"].ToString() == "web-development" ? "active" : "" }}">web-development</a>
+                <a href="/tag/basics" class="tag {{ ViewData["Tag"].ToString() == "basics" ? "active" : "" }}">basics</a>
+                <a href="/tag/getting-started" class="tag {{ ViewData["Tag"].ToString() == "getting-started" ? "active" : "" }}">getting-started</a>
+                <a href="/tag/frameworks" class="tag {{ ViewData["Tag"].ToString() == "frameworks" ? "active" : "" }}">frameworks</a>
+            </div>
+        </div>
+    {{ } else { }}
+        <div class="tag-not-found">
+            <h1>Tag Not Found</h1>
+            <p>The tag you are looking for does not exist or has been removed.</p>
+            <a href="/" class="cta-button">Return to Home</a>
+        </div>
+    {{ } }}
+</div>

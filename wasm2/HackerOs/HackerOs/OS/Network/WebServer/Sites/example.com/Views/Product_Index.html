@@ -1,0 +1,34 @@
+<h2>Our Products</h2>
+
+<div class="product-filters">
+    <h3>Categories</h3>
+    <ul class="category-list">
+        <li><a href="/category/Computers">Computers</a></li>
+        <li><a href="/category/Peripherals">Peripherals</a></li>
+        <li><a href="/category/Displays">Displays</a></li>
+        <li><a href="/category/Storage">Storage</a></li>
+    </ul>
+    
+    <a href="/products/add" class="btn btn-secondary">Add New Product</a>
+</div>
+
+<div class="product-list">
+    @foreach (var item in ViewData["Products"] as IEnumerable<object>) {
+        <div class="product-item">
+            <div class="product-image">
+                <img src="@item.ImageUrl" alt="@item.Name">
+                @if (!item.InStock) {
+                    <span class="out-of-stock-badge">Out of Stock</span>
+                }
+            </div>
+            
+            <div class="product-details">
+                <h3><a href="/products/@item.Id">@item.Name</a></h3>
+                <p class="product-category">Category: @item.Category</p>
+                <p class="product-price">$@item.Price</p>
+                <p class="product-description">@item.Description</p>
+                <a href="/products/@item.Id" class="btn">View Details</a>
+            </div>
+        </div>
+    }
+</div>

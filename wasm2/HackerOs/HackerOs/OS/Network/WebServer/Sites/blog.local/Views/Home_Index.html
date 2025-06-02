@@ -1,0 +1,65 @@
+<div class="hero">
+    <h1>Welcome to the HackerOS Blog</h1>
+    <p>Your source for the latest news, tutorials, and tips about HackerOS.</p>
+</div>
+
+<div class="blog-posts">
+    <h2>Latest Posts</h2>
+    
+    {{ if (ViewData["Posts"] != null && ((List<BlogPost>)ViewData["Posts"]).Count > 0) { }}
+        <div class="featured-post">
+            {{ var featuredPost = ((List<BlogPost>)ViewData["Posts"])[0]; }}
+            <div class="featured-image">
+                <img src="{{ featuredPost.FeaturedImageUrl }}" alt="{{ featuredPost.Title }}">
+            </div>
+            <div class="featured-content">
+                <h3><a href="/post/{{ featuredPost.Id }}">{{ featuredPost.Title }}</a></h3>
+                <div class="post-meta">
+                    <span class="author">By {{ featuredPost.Author }}</span>
+                    <span class="date">{{ featuredPost.PublishedDate.ToString("MMMM d, yyyy") }}</span>
+                    <span class="views">{{ featuredPost.ViewCount }} views</span>
+                </div>
+                <p>{{ featuredPost.Content.Length > 300 ? featuredPost.Content.Substring(0, 300) + "..." : featuredPost.Content }}</p>
+                <div class="tags">
+                    {{ foreach (var tag in featuredPost.Tags) { }}
+                        <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                    {{ } }}
+                </div>
+                <a href="/post/{{ featuredPost.Id }}" class="read-more">Read More</a>
+            </div>
+        </div>
+
+        <div class="post-grid">
+            {{ for (int i = 1; i < ((List<BlogPost>)ViewData["Posts"]).Count; i++) { }}
+                {{ var post = ((List<BlogPost>)ViewData["Posts"])[i]; }}
+                <div class="post-card">
+                    <div class="post-image">
+                        <img src="{{ post.FeaturedImageUrl }}" alt="{{ post.Title }}">
+                    </div>
+                    <div class="post-content">
+                        <h3><a href="/post/{{ post.Id }}">{{ post.Title }}</a></h3>
+                        <div class="post-meta">
+                            <span class="author">By {{ post.Author }}</span>
+                            <span class="date">{{ post.PublishedDate.ToString("MMM d, yyyy") }}</span>
+                        </div>
+                        <p>{{ post.Content.Length > 150 ? post.Content.Substring(0, 150) + "..." : post.Content }}</p>
+                        <div class="tags">
+                            {{ foreach (var tag in post.Tags) { }}
+                                <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                            {{ } }}
+                        </div>
+                        <a href="/post/{{ post.Id }}" class="read-more">Read More</a>
+                    </div>
+                </div>
+            {{ } }}
+        </div>
+    {{ } else { }}
+        <p>No posts found.</p>
+    {{ } }}
+</div>
+
+<div class="cta-subscribe">
+    <h2>Stay Updated</h2>
+    <p>Subscribe to our newsletter to get the latest updates and tutorials delivered straight to your inbox.</p>
+    <a href="/subscribe" class="cta-button">Subscribe Now</a>
+</div>
