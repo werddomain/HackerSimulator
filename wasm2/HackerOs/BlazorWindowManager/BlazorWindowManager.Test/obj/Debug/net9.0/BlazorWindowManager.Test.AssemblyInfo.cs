@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BlazorWindowManager.Test")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+736a9d2ec012c3e86a7e0472db73bd959d485f09")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fe1734799abf10feac849d3d287bbecde4923fb7")]
 [assembly: System.Reflection.AssemblyProductAttribute("BlazorWindowManager.Test")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BlazorWindowManager.Test")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,4 +1,3 @@
-
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -42,6 +41,55 @@ public class CommandParser
         }
 
         return new CommandPipeline(commands);
+    }
+
+    /// <summary>
+    /// Parse a command line into a pipeline AST with enhanced operator support
+    /// </summary>
+    /// <param name="commandLine">Command line to parse</param>
+    /// <param name="environmentVariables">Environment variables for substitution</param>
+    /// <returns>Parsed pipeline AST</returns>
+    public static PipelineTreeNode ParseCommandLineToAST(string commandLine, IDictionary<string, string>? environmentVariables = null)
+    {
+        if (string.IsNullOrWhiteSpace(commandLine))
+        {
+            return new PipelineTreeNode();
+        }
+
+        // Expand environment variables
+        var expandedLine = ExpandVariables(commandLine, environmentVariables ?? new Dictionary<string, string>());
+
+        // Parse the command line with operator precedence
+        return ParsePipelineWithPrecedence(expandedLine);
+    }
+
+    /// <summary>
+    /// Parse pipeline with proper operator precedence
+    /// Priority: ; (lowest) -> || -> && -> | (highest)
+    /// </summary>
+    private static PipelineTreeNode ParsePipelineWithPrecedence(string commandLine)
+    {
+        // For now, just handle simple pipe case - enhanced logic can be added later
+        var pipeSegments = SplitRespectingQuotes(commandLine, '|');
+        var commands = new List<CommandNode>();
+        var operators = new List<PipelineOperator>();
+
+        foreach (var segment in pipeSegments)
+        {
+            var command = ParseSingleCommandToNode(segment.Trim());
+            if (command != null)
+            {
+                commands.Add(command);
+            }
+        }
+
+        // Add pipe operators between commands
+        for (int i = 0; i < commands.Count - 1; i++)
+        {
+            operators.Add(PipelineOperator.Pipe);
+        }
+
+        return new PipelineTreeNode(commands, operators);
     }
 
     /// <summary>
@@ -102,6 +150,25 @@ public class CommandParser
         }
 
         return new ParsedCommand(command, args, redirections);
+    }
+
+    /// <summary>
+    /// Parse a single command into a CommandNode
+    /// </summary>
+    private static CommandNode? ParseSingleCommandToNode(string commandText)
+    {
+        var parsedCommand = ParseSingleCommand(commandText);
+        if (parsedCommand == null)
+        {
+            return null;
+        }
+
+        // Convert Redirection to RedirectionNode
+        var redirections = parsedCommand.Redirections
+            .Select(r => new RedirectionNode(r.Type, r.Target, r.FileDescriptor))
+            .ToList();
+
+        return new CommandNode(parsedCommand.Command, parsedCommand.Arguments, redirections);
     }
 
     /// <summary>
