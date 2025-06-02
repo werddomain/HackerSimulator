@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Provides IndexedDB persistence layer for the virtual file system.

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.IO;
-using HackerOs.IO.FileSystem;
+using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using Microsoft.Extensions.Logging;
 
@@ -11,15 +11,16 @@ namespace HackerOs.OS.Shell;
 /// Main shell implementation with command execution and session management
 /// </summary>
 public class Shell : IShell
-{
-    private readonly ICommandRegistry _commandRegistry;
+{    private readonly ICommandRegistry _commandRegistry;
     private readonly IVirtualFileSystem _fileSystem;
     private readonly ILogger<Shell> _logger;
+    private readonly ICommandInitializer _commandInitializer;
     private readonly List<string> _commandHistory = new();
     private readonly Dictionary<string, string> _environmentVariables = new();
     
     private UserSession? _currentSession;
     private string _currentWorkingDirectory = "/";
+    private bool _commandsInitialized = false;
     private const int MaxHistorySize = 1000;
 
     public UserSession? CurrentSession => _currentSession;
@@ -38,26 +39,31 @@ public class Shell : IShell
 
     public event EventHandler<ShellOutputEventArgs>? OutputReceived;
     public event EventHandler<ShellErrorEventArgs>? ErrorReceived;
-    public event EventHandler<DirectoryChangedEventArgs>? DirectoryChanged;
-
-    public Shell(
+    public event EventHandler<DirectoryChangedEventArgs>? DirectoryChanged;    public Shell(
         ICommandRegistry commandRegistry,
         IVirtualFileSystem fileSystem,
+        ICommandInitializer commandInitializer,
         ILogger<Shell> logger)
     {
         _commandRegistry = commandRegistry ?? throw new ArgumentNullException(nameof(commandRegistry));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _commandInitializer = commandInitializer ?? throw new ArgumentNullException(nameof(commandInitializer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         InitializeDefaultEnvironment();
-    }
-
-    public async Task<bool> InitializeAsync(UserSession session)
+    }    public async Task<bool> InitializeAsync(UserSession session)
     {
         try
         {
             _currentSession = session;
             _currentWorkingDirectory = session.User.HomeDirectory;
+
+            // Initialize commands if not already done
+            if (!_commandsInitialized)
+            {
+                await _commandInitializer.InitializeCommandsAsync();
+                _commandsInitialized = true;
+            }
 
             // Initialize environment variables for this session
             InitializeSessionEnvironment(session);
@@ -492,6 +498,15 @@ public class Shell : IShell
     internal void OnErrorReceived(string message, Exception? exception = null)
     {
         ErrorReceived?.Invoke(this, new ShellErrorEventArgs(message, exception));
+    }
+
+    /// <summary>
+    /// Get the current working directory
+    /// </summary>
+    /// <returns>The current working directory path</returns>
+    public string GetWorkingDirectory()
+    {
+        return CurrentWorkingDirectory;
     }
 }
 

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Main implementation of the virtual file system.
@@ -35,6 +35,11 @@ namespace HackerOs.IO.FileSystem
         /// Event fired when file system operations occur.
         /// </summary>
         public event EventHandler<FileSystemEvent>? OnFileSystemEvent;
+
+        /// <summary>
+        /// Event triggered when the file system changes (file created, deleted, modified, etc.)
+        /// </summary>
+        public event EventHandler<FileSystemEventArgs>? FileSystemChanged;
 
         /// <summary>
         /// Gets the root directory of the file system.
@@ -179,6 +184,8 @@ namespace HackerOs.IO.FileSystem
                     Timestamp = DateTime.UtcNow
                 });
                 
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.FileCreated, normalizedPath));
+
                 return true;
             }
             catch (Exception ex)
@@ -388,6 +395,15 @@ namespace HackerOs.IO.FileSystem
         {
             await Task.CompletedTask; // Make it async for interface compliance
             return Copy(sourcePath, destinationPath);
+        }        /// <summary>
+        /// Lists the contents of a directory with extended information asynchronously.
+        /// </summary>
+        /// <param name="path">The path to the directory.</param>
+        /// <returns>A collection of file system nodes in the directory.</returns>
+        public async Task<IEnumerable<VirtualFileSystemNode>> GetDirectoryContentsAsync(string path)
+        {
+            // Simply delegate to the existing ListDirectoryAsync method
+            return await ListDirectoryAsync(path);
         }
 
         /// <summary>
@@ -674,6 +690,8 @@ namespace HackerOs.IO.FileSystem
                     Timestamp = DateTime.UtcNow
                 });
 
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.DirectoryCreated, normalizedPath));
+
                 return true;
             }
             catch (Exception ex)
@@ -748,6 +766,8 @@ namespace HackerOs.IO.FileSystem
                     Path = normalizedPath,
                     Timestamp = DateTime.UtcNow
                 });
+
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(eventType, normalizedPath));
 
                 return true;
             }
@@ -1117,13 +1137,13 @@ namespace HackerOs.IO.FileSystem
         /// <summary>
         /// Deletes directory (user-specific)
         /// </summary>
-        /// <param name="path">Directory path</param>
-        /// <param name="user">User context</param>
+        /// <param name="path">Directory path</param>        /// <param name="user">User context</param>
+        /// <param name="recursive">Whether to delete directories recursively</param>
         /// <returns>True if successful</returns>
-        public async Task<bool> DeleteDirectoryAsync(string path, HackerOs.OS.User.User user)
+        public async Task<bool> DeleteDirectoryAsync(string path, HackerOs.OS.User.User user, bool recursive = false)
         {
             var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await DeleteAsync(absolutePath, true);
+            return await DeleteAsync(absolutePath, recursive);
         }
         
         /// <summary>
@@ -1202,5 +1222,53 @@ namespace HackerOs.IO.FileSystem
         }
 
         #endregion
+
+        /// <summary>
+        /// Creates a FileSystemEventArgs object for a given file system event.
+        /// </summary>
+        /// <param name="eventType">The type of file system event</param>
+        /// <param name="path">The path that the event applies to</param>
+        /// <returns>A properly configured FileSystemEventArgs object</returns>
+        private FileSystemEventArgs CreateFileSystemEventArgs(FileSystemEventType eventType, string path)
+        {
+            // Convert FileSystemEventType to WatcherChangeTypes
+            WatcherChangeTypes changeType = WatcherChangeTypes.Changed; // Default
+            
+            switch (eventType)
+            {
+                case FileSystemEventType.FileCreated:
+                case FileSystemEventType.DirectoryCreated:
+                    changeType = WatcherChangeTypes.Created;
+                    break;
+                case FileSystemEventType.FileDeleted:
+                case FileSystemEventType.DirectoryDeleted:
+                    changeType = WatcherChangeTypes.Deleted;
+                    break;
+                case FileSystemEventType.FileWritten:
+                    changeType = WatcherChangeTypes.Changed;
+                    break;
+                case FileSystemEventType.FileCopied:
+                case FileSystemEventType.DirectoryCopied:
+                case FileSystemEventType.SymbolicLinkCreated:
+                    changeType = WatcherChangeTypes.Created;
+                    break;
+                default:
+                    changeType = WatcherChangeTypes.Changed;
+                    break;
+            }
+            
+            // Split path into directory and filename
+            string directory = System.IO.Path.GetDirectoryName(path) ?? "/";
+            string fileName = System.IO.Path.GetFileName(path);
+            
+            // If path ends with /, it's a directory and we need to ensure fileName is correct
+            if (path.EndsWith('/') || path.EndsWith('\\'))
+            {
+                var parts = path.TrimEnd('/', '\\').Split('/', '\\');
+                fileName = parts.Length > 0 ? parts[parts.Length - 1] : "";
+            }
+            
+            return new FileSystemEventArgs(changeType, directory, fileName);
+        }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Represents Linux-style file permissions (rwx for owner, group, and others).

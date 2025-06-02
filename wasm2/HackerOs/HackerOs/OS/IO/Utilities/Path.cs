@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace HackerOs.IO.Utilities
+namespace HackerOs.OS.IO.Utilities
 {
     /// <summary>
     /// Provides path manipulation utilities for the virtual file system, similar to System.IO.Path.

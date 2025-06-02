@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Represents a directory in the virtual file system.

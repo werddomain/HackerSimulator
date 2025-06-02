@@ -4,8 +4,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using HackerOs.OS.IO.FileSystem;
 
-namespace HackerOs.IO.Utilities
+namespace HackerOs.OS.IO.Utilities
 {
     /// <summary>
     /// Provides static utility methods for file operations, similar to System.IO.File.
@@ -19,7 +20,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file to check</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>true if the file exists; otherwise, false</returns>
-        public static async Task<bool> ExistsAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<bool> ExistsAsync(string path, IVirtualFileSystem fileSystem)
         {
             try
             {
@@ -38,7 +39,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The path and name of the file to create</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task CreateAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task CreateAsync(string path, IVirtualFileSystem fileSystem)
         {
             await fileSystem.CreateFileAsync(path, Array.Empty<byte>());
         }
@@ -49,7 +50,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The name of the file to be deleted</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task DeleteAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task DeleteAsync(string path, IVirtualFileSystem fileSystem)
         {
             await fileSystem.DeleteAsync(path, false);
         }
@@ -62,7 +63,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="overwrite">true if the destination file can be overwritten; otherwise, false</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task CopyAsync(string sourceFileName, string destFileName, bool overwrite, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task CopyAsync(string sourceFileName, string destFileName, bool overwrite, IVirtualFileSystem fileSystem)
         {
             if (!overwrite && await ExistsAsync(destFileName, fileSystem))
             {
@@ -84,7 +85,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="destFileName">The name of the destination file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task CopyAsync(string sourceFileName, string destFileName, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task CopyAsync(string sourceFileName, string destFileName, IVirtualFileSystem fileSystem)
         {
             await CopyAsync(sourceFileName, destFileName, false, fileSystem);
         }
@@ -96,7 +97,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="destFileName">The new path and name for the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task MoveAsync(string sourceFileName, string destFileName, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task MoveAsync(string sourceFileName, string destFileName, IVirtualFileSystem fileSystem)
         {
             await fileSystem.MoveAsync(sourceFileName, destFileName);
         }
@@ -107,7 +108,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file to open for reading</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A string array containing all lines of the file</returns>
-        public static async Task<string[]> ReadAllLinesAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<string[]> ReadAllLinesAsync(string path, IVirtualFileSystem fileSystem)
         {
             var text = await ReadAllTextAsync(path, fileSystem);
             return text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
@@ -120,7 +121,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding applied to the contents of the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A string array containing all lines of the file</returns>
-        public static async Task<string[]> ReadAllLinesAsync(string path, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<string[]> ReadAllLinesAsync(string path, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             var text = await ReadAllTextAsync(path, encoding, fileSystem);
             return text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
@@ -132,7 +133,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file to open for reading</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A string containing all the text in the file</returns>
-        public static async Task<string> ReadAllTextAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<string> ReadAllTextAsync(string path, IVirtualFileSystem fileSystem)
         {
             return await ReadAllTextAsync(path, Encoding.UTF8, fileSystem);
         }
@@ -144,7 +145,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding applied to the contents of the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A string containing all the text in the file</returns>
-        public static async Task<string> ReadAllTextAsync(string path, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<string> ReadAllTextAsync(string path, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             var content = await fileSystem.ReadFileAsync(path);
             if (content == null)
@@ -160,7 +161,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file to open for reading</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A byte array containing the contents of the file</returns>
-        public static async Task<byte[]> ReadAllBytesAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<byte[]> ReadAllBytesAsync(string path, IVirtualFileSystem fileSystem)
         {
             var content = await fileSystem.ReadFileAsync(path);
             if (content == null)
@@ -177,7 +178,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="contents">The string to write to the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task WriteAllTextAsync(string path, string contents, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task WriteAllTextAsync(string path, string contents, IVirtualFileSystem fileSystem)
         {
             await WriteAllTextAsync(path, contents, Encoding.UTF8, fileSystem);
         }
@@ -190,7 +191,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding to apply to the string</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task WriteAllTextAsync(string path, string contents, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task WriteAllTextAsync(string path, string contents, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             var bytes = encoding.GetBytes(contents ?? string.Empty);
             await fileSystem.WriteFileAsync(path, bytes);
@@ -203,7 +204,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="contents">The lines to write to the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task WriteAllLinesAsync(string path, IEnumerable<string> contents, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task WriteAllLinesAsync(string path, IEnumerable<string> contents, IVirtualFileSystem fileSystem)
         {
             await WriteAllLinesAsync(path, contents, Encoding.UTF8, fileSystem);
         }
@@ -216,7 +217,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding to apply to the string</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task WriteAllLinesAsync(string path, IEnumerable<string> contents, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task WriteAllLinesAsync(string path, IEnumerable<string> contents, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             var text = string.Join(Environment.NewLine, contents);
             await WriteAllTextAsync(path, text, encoding, fileSystem);
@@ -229,7 +230,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="bytes">The bytes to write to the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task WriteAllBytesAsync(string path, byte[] bytes, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task WriteAllBytesAsync(string path, byte[] bytes, IVirtualFileSystem fileSystem)
         {
             await fileSystem.WriteFileAsync(path, bytes ?? Array.Empty<byte>());
         }
@@ -241,7 +242,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="contents">The string to append to the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task AppendAllTextAsync(string path, string contents, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task AppendAllTextAsync(string path, string contents, IVirtualFileSystem fileSystem)
         {
             await AppendAllTextAsync(path, contents, Encoding.UTF8, fileSystem);
         }
@@ -254,7 +255,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding to apply to the string</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task AppendAllTextAsync(string path, string contents, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task AppendAllTextAsync(string path, string contents, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             string existingContent = "";
             try
@@ -277,7 +278,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="contents">The lines to append to the file</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task AppendAllLinesAsync(string path, IEnumerable<string> contents, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task AppendAllLinesAsync(string path, IEnumerable<string> contents, IVirtualFileSystem fileSystem)
         {
             await AppendAllLinesAsync(path, contents, Encoding.UTF8, fileSystem);
         }
@@ -290,7 +291,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="encoding">The encoding to apply to the string</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        public static async Task AppendAllLinesAsync(string path, IEnumerable<string> contents, Encoding encoding, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task AppendAllLinesAsync(string path, IEnumerable<string> contents, Encoding encoding, IVirtualFileSystem fileSystem)
         {
             var linesToAppend = contents?.ToArray() ?? Array.Empty<string>();
             if (linesToAppend.Length == 0)
@@ -306,7 +307,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file for which to get creation time</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>The creation time of the file</returns>
-        public static async Task<DateTime> GetCreationTimeAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<DateTime> GetCreationTimeAsync(string path, IVirtualFileSystem fileSystem)
         {
             var node = await fileSystem.GetNodeAsync(path);
             if (node == null || node.IsDirectory)
@@ -322,7 +323,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file for which to get last access time</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>The last access time of the file</returns>
-        public static async Task<DateTime> GetLastAccessTimeAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<DateTime> GetLastAccessTimeAsync(string path, IVirtualFileSystem fileSystem)
         {
             var node = await fileSystem.GetNodeAsync(path);
             if (node == null || node.IsDirectory)
@@ -338,7 +339,7 @@ namespace HackerOs.IO.Utilities
         /// <param name="path">The file for which to get last write time</param>
         /// <param name="fileSystem">The virtual file system instance</param>
         /// <returns>The last write time of the file</returns>
-        public static async Task<DateTime> GetLastWriteTimeAsync(string path, FileSystem.IVirtualFileSystem fileSystem)
+        public static async Task<DateTime> GetLastWriteTimeAsync(string path, IVirtualFileSystem fileSystem)
         {
             var node = await fileSystem.GetNodeAsync(path);
             if (node == null || node.IsDirectory)

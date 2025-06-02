@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Represents a mount point in the virtual file system.

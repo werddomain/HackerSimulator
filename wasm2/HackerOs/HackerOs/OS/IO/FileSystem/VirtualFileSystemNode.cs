@@ -2,8 +2,9 @@ using System;
 using System.Threading;
 using System.Threading;
 using HackerOs.OS.User;
+using UserEntity = HackerOs.OS.User.User;
 
-namespace HackerOs.IO.FileSystem
+namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Abstract base class for all virtual file system nodes (files and directories).
@@ -26,9 +27,7 @@ namespace HackerOs.IO.FileSystem
         /// <summary>
         /// The timestamp when this node was created.
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;        /// <summary>
         /// The timestamp when this node was last modified.
         /// </summary>
         public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
@@ -46,9 +45,7 @@ namespace HackerOs.IO.FileSystem
         /// <summary>
         /// The owner of this file system node.
         /// </summary>
-        public string Owner { get; set; } = "root";
-
-        /// <summary>
+        public string Owner { get; set; } = "root";        /// <summary>
         /// The group that owns this file system node.
         /// </summary>
         public string Group { get; set; } = "root";
@@ -114,6 +111,21 @@ namespace HackerOs.IO.FileSystem
         public DateTime LastModifiedTime => ModifiedAt;
 
         /// <summary>
+        /// Gets the last modified time of the node. Alias for ModifiedAt.
+        /// </summary>
+        public DateTime ModifiedTime => ModifiedAt;
+
+        /// <summary>
+        /// Gets the ID of the user who owns this node. Numeric representation of Owner.
+        /// </summary>
+        public int OwnerId => int.TryParse(Owner, out int id) ? id : 0;
+
+        /// <summary>
+        /// Gets the ID of the group that owns this node. Numeric representation of Group.
+        /// </summary>
+        public int GroupId => int.TryParse(Group, out int id) ? id : 0;
+
+        /// <summary>
         /// Indicates whether this node is a file.
         /// </summary>
         public bool IsFile => !IsDirectory;
@@ -146,18 +158,19 @@ namespace HackerOs.IO.FileSystem
         /// </summary>
         /// <param name="userId">The user attempting to access the node</param>
         /// <param name="groupId">The group of the user attempting access</param>
-        /// <param name="accessMode">The type of access being requested</param>
-        /// <returns>True if access is allowed, false otherwise</returns>
+        /// <param name="accessMode">The type of access being requested</param>        /// <returns>True if access is allowed, false otherwise</returns>
         public virtual bool CanAccess(string userId, string groupId, FileAccessMode accessMode)
         {
             return Permissions.CanAccess(Owner, Group, userId, groupId, accessMode);
-        }        /// <summary>
+        }
+
+        /// <summary>
         /// Checks if the specified user can execute/traverse this node.
         /// For files, this means execute permission. For directories, this means traverse permission.
         /// </summary>
         /// <param name="user">The user requesting access</param>
         /// <returns>True if the user can execute/traverse this node</returns>
-        public virtual bool CanExecute(User user)
+        public virtual bool CanExecute(UserEntity user)
         {
             return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Execute);
         }
@@ -167,7 +180,7 @@ namespace HackerOs.IO.FileSystem
         /// </summary>
         /// <param name="user">The user requesting access</param>
         /// <returns>True if the user can read this node</returns>
-        public virtual bool CanRead(User user)
+        public virtual bool CanRead(UserEntity user)
         {
             return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Read);
         }
@@ -177,7 +190,7 @@ namespace HackerOs.IO.FileSystem
         /// </summary>
         /// <param name="user">The user requesting access</param>
         /// <returns>True if the user can write to this node</returns>
-        public virtual bool CanWrite(User user)
+        public virtual bool CanWrite(UserEntity user)
         {
             return CanAccess(user.UserId.ToString(), user.PrimaryGroupId.ToString(), FileAccessMode.Write);
         }

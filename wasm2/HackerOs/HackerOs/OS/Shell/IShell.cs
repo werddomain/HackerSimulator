@@ -1,4 +1,3 @@
-
 using HackerOs.OS.User;
 
 namespace HackerOs.OS.Shell;
@@ -100,6 +99,12 @@ public interface IShell
     /// Clear the shell session and reset state
     /// </summary>
     void ClearSession();
+
+    /// <summary>
+    /// Get the current working directory
+    /// </summary>
+    /// <returns>The current working directory path</returns>
+    string GetWorkingDirectory();
 }
 
 /// <summary>

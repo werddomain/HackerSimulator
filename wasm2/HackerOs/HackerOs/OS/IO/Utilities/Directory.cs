@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using HackerOs.IO.FileSystem;
+using HackerOs.OS.IO.FileSystem;
 
-namespace HackerOs.IO.Utilities
+namespace HackerOs.OS.IO.Utilities
 {
     /// <summary>
     /// Provides static utility methods for directory operations, similar to System.IO.Directory.

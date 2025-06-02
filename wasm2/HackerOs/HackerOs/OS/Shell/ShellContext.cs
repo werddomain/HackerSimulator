@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using HackerOs.IO.FileSystem;
+using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
-using IOPath = HackerOs.IO.Utilities.Path;
+using IOPath = HackerOs.OS.IO.Utilities.Path;
 
 namespace HackerOs.OS.Shell
 {
