@@ -61,35 +61,128 @@ public class CommandParser
 
         // Parse the command line with operator precedence
         return ParsePipelineWithPrecedence(expandedLine);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Parse pipeline with proper operator precedence
     /// Priority: ; (lowest) -> || -> && -> | (highest)
     /// </summary>
     private static PipelineTreeNode ParsePipelineWithPrecedence(string commandLine)
     {
-        // For now, just handle simple pipe case - enhanced logic can be added later
-        var pipeSegments = SplitRespectingQuotes(commandLine, '|');
+        // Parse command line into segments with operators
+        var segments = ParseCommandSegments(commandLine);
         var commands = new List<CommandNode>();
         var operators = new List<PipelineOperator>();
 
-        foreach (var segment in pipeSegments)
+        foreach (var segment in segments)
         {
-            var command = ParseSingleCommandToNode(segment.Trim());
+            var command = ParseSingleCommandToNode(segment.Text.Trim());
             if (command != null)
             {
                 commands.Add(command);
+                
+                // Add operator if this segment has one
+                if (segment.Operator.HasValue)
+                {
+                    operators.Add(segment.Operator.Value);
+                }
             }
         }
 
-        // Add pipe operators between commands
-        for (int i = 0; i < commands.Count - 1; i++)
-        {
-            operators.Add(PipelineOperator.Pipe);
-        }
-
         return new PipelineTreeNode(commands, operators);
+    }
+
+    /// <summary>
+    /// Parse command line into segments with their associated operators
+    /// Handles precedence: ; (lowest) -> || -> && -> | (highest)
+    /// </summary>
+    private static List<CommandSegment> ParseCommandSegments(string commandLine)
+    {
+        var segments = new List<CommandSegment>();
+        var currentSegment = new StringBuilder();
+        var inQuotes = false;
+        var quoteChar = '\0';
+        
+        for (int i = 0; i < commandLine.Length; i++)
+        {
+            char ch = commandLine[i];
+            
+            // Handle quotes
+            if ((ch == '"' || ch == '\'') && !inQuotes)
+            {
+                inQuotes = true;
+                quoteChar = ch;
+                currentSegment.Append(ch);
+                continue;
+            }
+            else if (ch == quoteChar && inQuotes)
+            {
+                inQuotes = false;
+                quoteChar = '\0';
+                currentSegment.Append(ch);
+                continue;
+            }
+            
+            if (!inQuotes)
+            {
+                // Check for operators
+                if (i < commandLine.Length - 1)
+                {
+                    var twoChar = commandLine.Substring(i, 2);
+                    PipelineOperator? op = null;
+                    
+                    switch (twoChar)
+                    {
+                        case "&&":
+                            op = PipelineOperator.And;
+                            break;
+                        case "||":
+                            op = PipelineOperator.Or;
+                            break;
+                    }
+                    
+                    if (op.HasValue)
+                    {
+                        // Found two-character operator
+                        if (currentSegment.Length > 0)
+                        {
+                            segments.Add(new CommandSegment(currentSegment.ToString().Trim(), op));
+                            currentSegment.Clear();
+                        }
+                        i++; // Skip next character
+                        continue;
+                    }
+                }
+                
+                // Check for single-character operators
+                switch (ch)
+                {
+                    case '|':
+                        if (currentSegment.Length > 0)
+                        {
+                            segments.Add(new CommandSegment(currentSegment.ToString().Trim(), PipelineOperator.Pipe));
+                            currentSegment.Clear();
+                        }
+                        continue;
+                        
+                    case ';':
+                        if (currentSegment.Length > 0)
+                        {
+                            segments.Add(new CommandSegment(currentSegment.ToString().Trim(), PipelineOperator.Semicolon));
+                            currentSegment.Clear();
+                        }
+                        continue;
+                }
+            }
+            
+            currentSegment.Append(ch);
+        }
+        
+        // Add final segment
+        if (currentSegment.Length > 0)
+        {
+            segments.Add(new CommandSegment(currentSegment.ToString().Trim(), null));
+        }
+        
+        return segments.Where(s => !string.IsNullOrWhiteSpace(s.Text)).ToList();
     }
 
     /// <summary>
@@ -318,5 +411,6 @@ public enum RedirectionType
     Output,         // >
     Append,         // >>
     ErrorOutput,    // 2>
-    ErrorAppend     // 2>>
+    ErrorAppend,    // 2>>
+    ErrorToOutput   // 2>&1 - redirect error to output
 }

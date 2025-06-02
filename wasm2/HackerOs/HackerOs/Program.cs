@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using HackerOs.OS.Shell;
+using HackerOs.OS.Shell.Completion;
 using HackerOs.OS.Applications;
 //using BlazorWindowManager.Extensions; // Temporarily disabled for initial setup
 
@@ -50,6 +51,27 @@ namespace HackerOs
             services.AddScoped<IShell, HackerOs.OS.Shell.Shell>();
             services.AddScoped<ICommandRegistry, CommandRegistry>();
             services.AddScoped<CommandParser>(); // No interface, register as concrete type
+              // Register shell completion services
+            services.AddScoped<ICompletionService, CompletionService>();
+            services.AddScoped<ICompletionProvider, CommandCompletionProvider>();
+            services.AddScoped<ICompletionProvider, FilePathCompletionProvider>();
+            services.AddScoped<ICompletionProvider, VariableCompletionProvider>();
+            
+            // Configure completion service with providers
+            services.AddScoped<ICompletionService>(serviceProvider =>
+            {
+                var completionService = new CompletionService(
+                    serviceProvider.GetRequiredService<ILogger<CompletionService>>());
+                
+                // Register all completion providers
+                var providers = serviceProvider.GetServices<ICompletionProvider>();
+                foreach (var provider in providers)
+                {
+                    completionService.RegisterProvider(provider);
+                }
+                
+                return completionService;
+            });
             
             // Register shell commands
             RegisterShellCommands(services);

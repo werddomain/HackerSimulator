@@ -3,6 +3,8 @@ using System.Text;
 using System.IO;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
+using HackerOs.OS.Shell.Completion;
+using HackerOs.OS.Shell.History;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Shell;
@@ -15,13 +17,13 @@ public class Shell : IShell
     private readonly IVirtualFileSystem _fileSystem;
     private readonly ILogger<Shell> _logger;
     private readonly ICommandInitializer _commandInitializer;
-    private readonly List<string> _commandHistory = new();
+    private readonly ICompletionService? _completionService;
+    private readonly IHistoryManager? _historyManager;
     private readonly Dictionary<string, string> _environmentVariables = new();
     
     private UserSession? _currentSession;
     private string _currentWorkingDirectory = "/";
     private bool _commandsInitialized = false;
-    private const int MaxHistorySize = 1000;
 
     public UserSession? CurrentSession => _currentSession;
     public string CurrentWorkingDirectory 
@@ -34,7 +36,7 @@ public class Shell : IShell
             DirectoryChanged?.Invoke(this, new DirectoryChangedEventArgs(previousDirectory, value));
         }
     }    public IDictionary<string, string> EnvironmentVariables => _environmentVariables;
-    public IReadOnlyList<string> CommandHistory => _commandHistory.AsReadOnly();
+    public IReadOnlyList<string> CommandHistory => _historyManager?.GetEntries().Select(e => e.Command).ToList() ?? new List<string>();
     public IVirtualFileSystem FileSystem => _fileSystem;
 
     public event EventHandler<ShellOutputEventArgs>? OutputReceived;
@@ -43,15 +45,19 @@ public class Shell : IShell
         ICommandRegistry commandRegistry,
         IVirtualFileSystem fileSystem,
         ICommandInitializer commandInitializer,
-        ILogger<Shell> logger)
+        ILogger<Shell> logger,
+        ICompletionService? completionService = null,
+        IHistoryManager? historyManager = null)
     {
         _commandRegistry = commandRegistry ?? throw new ArgumentNullException(nameof(commandRegistry));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _commandInitializer = commandInitializer ?? throw new ArgumentNullException(nameof(commandInitializer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _completionService = completionService;
+        _historyManager = historyManager;
 
         InitializeDefaultEnvironment();
-    }    public async Task<bool> InitializeAsync(UserSession session)
+    }public async Task<bool> InitializeAsync(UserSession session)
     {
         try
         {
@@ -63,13 +69,15 @@ public class Shell : IShell
             {
                 await _commandInitializer.InitializeCommandsAsync();
                 _commandsInitialized = true;
-            }
-
-            // Initialize environment variables for this session
+            }            // Initialize environment variables for this session
             InitializeSessionEnvironment(session);
 
-            // Load command history for this user
-            await LoadHistoryAsync();
+            // Set up history manager for this user
+            if (_historyManager != null)
+            {
+                _historyManager.SetUser(session.User);
+                await _historyManager.LoadAsync();
+            }
 
             _logger.LogInformation("Shell initialized for user {Username}", session.User.Username);
             return true;
@@ -93,23 +101,26 @@ public class Shell : IShell
         {
             ErrorReceived?.Invoke(this, new ShellErrorEventArgs("No active user session"));
             return 1;
-        }
-
-        try
+        }        try
         {
             // Add to history
             AddToHistory(commandLine);
 
-            // Parse the command line
-            var pipeline = CommandParser.ParseCommandLine(commandLine, _environmentVariables);
+            // Parse the command line using AST parser for advanced operator support
+            var ast = CommandParser.ParseCommandLineToAST(commandLine, _environmentVariables);
             
-            if (pipeline.IsEmpty)
+            if (ast.IsEmpty)
             {
                 return 0;
             }
 
-            // Execute the pipeline
-            return await ExecutePipelineAsync(pipeline, cancellationToken);
+            // Execute the AST (supports &&, ||, ;, and | operators)
+            var exitCode = await ExecuteASTAsync(ast, cancellationToken);
+            
+            // Update history with exit code
+            UpdateHistoryExitCode(commandLine, exitCode);
+            
+            return exitCode;
         }
         catch (OperationCanceledException)
         {
@@ -124,48 +135,181 @@ public class Shell : IShell
         }
     }
 
+    /// <summary>
+    /// Execute an Abstract Syntax Tree with support for advanced operators (&&, ||, ;, |)
+    /// </summary>
+    private async Task<int> ExecuteASTAsync(PipelineTreeNode ast, CancellationToken cancellationToken)
+    {
+        if (ast.IsEmpty)
+        {
+            return 0;
+        }
+
+        // If no operators, execute all commands as a simple pipeline
+        if (ast.Operators.Count == 0)
+        {
+            return await ExecuteCommandPipelineFromASTAsync(ast.Commands, cancellationToken);
+        }
+
+        // Process commands with operators
+        var lastExitCode = 0;
+        var currentPipelineCommands = new List<CommandNode>();
+
+        for (int i = 0; i < ast.Commands.Count; i++)
+        {
+            currentPipelineCommands.Add(ast.Commands[i]);
+
+            // Check if we need to execute the current pipeline
+            bool shouldExecute = false;
+            PipelineOperator? nextOperator = null;
+
+            if (i < ast.Operators.Count)
+            {
+                nextOperator = ast.Operators[i];
+                
+                // Execute pipeline before non-pipe operators
+                if (nextOperator != PipelineOperator.Pipe)
+                {
+                    shouldExecute = true;
+                }
+            }
+            else
+            {
+                // Last command, always execute
+                shouldExecute = true;
+            }
+
+            if (shouldExecute)
+            {
+                // Execute the current pipeline
+                lastExitCode = await ExecuteCommandPipelineFromASTAsync(currentPipelineCommands, cancellationToken);
+                
+                // Apply operator logic for next iteration
+                if (nextOperator.HasValue)
+                {
+                    switch (nextOperator.Value)
+                    {
+                        case PipelineOperator.And: // &&
+                            if (lastExitCode != 0)
+                            {
+                                // Command failed, skip remaining commands in && chain
+                                return lastExitCode;
+                            }
+                            break;
+                            
+                        case PipelineOperator.Or: // ||
+                            if (lastExitCode == 0)
+                            {
+                                // Command succeeded, skip remaining commands in || chain
+                                return lastExitCode;
+                            }
+                            break;
+                            
+                        case PipelineOperator.Semicolon: // ;
+                            // Continue execution regardless of exit code
+                            break;
+                    }
+                }
+                
+                // Reset for next pipeline
+                currentPipelineCommands.Clear();
+            }
+        }
+
+        return lastExitCode;
+    }
+
+    /// <summary>
+    /// Execute a pipeline of commands from AST CommandNode objects
+    /// </summary>
+    private async Task<int> ExecuteCommandPipelineFromASTAsync(IReadOnlyList<CommandNode> commandNodes, CancellationToken cancellationToken)
+    {
+        // Convert CommandNode objects to ParsedCommand objects for compatibility with existing pipeline execution
+        var parsedCommands = commandNodes.Select(node => new ParsedCommand(
+            node.Command,
+            node.Arguments,
+            node.Redirections.Select(r => new Redirection(r.Type, r.Target, r.FileDescriptor)).ToList()
+        )).ToList();
+
+        // Use existing pipeline execution logic
+        if (parsedCommands.Count == 1)
+        {
+            return await ExecuteSingleCommandAsync(parsedCommands[0], cancellationToken);
+        }
+        else
+        {
+            return await ExecuteCommandPipelineAsync(parsedCommands, cancellationToken);
+        }
+    }
+
     public async Task<IEnumerable<string>> GetCompletionsAsync(string partialCommand)
     {
-        var completions = new List<string>();
+        // For backward compatibility, delegate to the new completion system
+        return await GetCompletionsAsync(partialCommand, partialCommand.Length);
+    }
 
-        if (string.IsNullOrWhiteSpace(partialCommand))
+    public async Task<IEnumerable<string>> GetCompletionsAsync(string commandLine, int cursorPosition)
+    {
+        if (string.IsNullOrWhiteSpace(commandLine) || _currentSession == null)
         {
-            return completions;
+            return Enumerable.Empty<string>();
         }
 
         try
         {
-            var tokens = partialCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            
-            if (tokens.Length == 1)
+            // Use the new completion service if available, otherwise fall back to basic completion
+            if (_completionService != null)
             {
-                // Complete command names
-                completions.AddRange(_commandRegistry.GetCommandNamesStartingWith(tokens[0]));
-            }
-            else if (tokens.Length > 1)
-            {
-                // Complete arguments for specific command
-                var commandName = tokens[0];
-                var command = _commandRegistry.GetCommand(commandName);
+                var completionItems = await _completionService.GetCompletionsAsync(
+                    commandLine, 
+                    cursorPosition, 
+                    _currentWorkingDirectory, 
+                    _environmentVariables, 
+                    _currentSession.User);
                 
-                if (command != null && _currentSession != null)
-                {
-                    var context = new CommandContext(this, _currentWorkingDirectory, _environmentVariables, _currentSession);
-                    var args = tokens.Skip(1).ToArray();
-                    var currentArg = args.LastOrDefault() ?? "";
-                    
-                    var commandCompletions = await command.GetCompletionsAsync(context, args, currentArg);
-                    completions.AddRange(commandCompletions);
-                }
+                return completionItems.Select(item => item.Text);
             }
-
-            return completions.Distinct().OrderBy(c => c);
+            else
+            {
+                // Fallback to basic completion logic
+                return await GetBasicCompletionsAsync(commandLine);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting completions for: {PartialCommand}", partialCommand);
-            return completions;
+            _logger.LogError(ex, "Error getting completions for: {CommandLine}", commandLine);
+            return Enumerable.Empty<string>();
         }
+    }
+
+    private async Task<IEnumerable<string>> GetBasicCompletionsAsync(string partialCommand)
+    {
+        var completions = new List<string>();
+        var tokens = partialCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (tokens.Length == 1)
+        {
+            // Complete command names
+            completions.AddRange(_commandRegistry.GetCommandNamesStartingWith(tokens[0]));
+        }
+        else if (tokens.Length > 1 && _currentSession != null)
+        {
+            // Complete arguments for specific command
+            var commandName = tokens[0];
+            var command = _commandRegistry.GetCommand(commandName);
+            
+            if (command != null)
+            {
+                var context = new CommandContext(this, _currentWorkingDirectory, _environmentVariables, _currentSession);
+                var args = tokens.Skip(1).ToArray();
+                var currentArg = args.LastOrDefault() ?? "";
+                
+                var commandCompletions = await command.GetCompletionsAsync(context, args, currentArg);
+                completions.AddRange(commandCompletions);
+            }
+        }
+
+        return completions.Distinct().OrderBy(c => c);
     }
 
     public void SetEnvironmentVariable(string name, string value)
@@ -217,49 +361,16 @@ public class Shell : IShell
             ErrorReceived?.Invoke(this, new ShellErrorEventArgs($"Failed to change directory: {ex.Message}", ex));
             return false;
         }
-    }
-
-    public async Task LoadHistoryAsync()
+    }    public async Task SaveHistoryAsync()
     {
-        if (_currentSession == null)
+        if (_currentSession == null || _historyManager == null)
         {
             return;
         }
 
         try
         {
-            var historyPath = $"{_currentSession.User.HomeDirectory}/.bash_history";
-              if (await _fileSystem.FileExistsAsync(historyPath, _currentSession.User))
-            {
-                var content = await _fileSystem.ReadFileAsync(historyPath, _currentSession.User);
-                if (content != null)
-                {
-                    var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                    
-                    _commandHistory.Clear();
-                    _commandHistory.AddRange(lines.Take(MaxHistorySize));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to load command history for user {Username}", _currentSession.User.Username);
-        }
-    }
-
-    public async Task SaveHistoryAsync()
-    {
-        if (_currentSession == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var historyPath = $"{_currentSession.User.HomeDirectory}/.bash_history";
-            var content = string.Join("\n", _commandHistory.TakeLast(MaxHistorySize));
-            
-            await _fileSystem.WriteFileAsync(historyPath, content, _currentSession.User);
+            await _historyManager.SaveAsync();
         }
         catch (Exception ex)
         {
@@ -271,7 +382,6 @@ public class Shell : IShell
     {
         _currentSession = null;
         _currentWorkingDirectory = "/";
-        _commandHistory.Clear();
         _environmentVariables.Clear();
         InitializeDefaultEnvironment();
     }
@@ -294,28 +404,23 @@ public class Shell : IShell
         _environmentVariables["LOGNAME"] = session.User.Username;
         _environmentVariables["UID"] = session.User.UserId.ToString();
         _environmentVariables["GID"] = session.User.PrimaryGroupId.ToString();
-    }
-
-    private void AddToHistory(string commandLine)
+    }    private void AddToHistory(string commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine))
         {
             return;
         }
 
-        // Don't add duplicate consecutive commands
-        if (_commandHistory.Count > 0 && _commandHistory[^1] == commandLine)
-        {
-            return;
-        }
+        // Use HistoryManager if available, otherwise skip
+        _historyManager?.AddCommand(commandLine);
+    }
 
-        _commandHistory.Add(commandLine);
-
-        // Limit history size
-        if (_commandHistory.Count > MaxHistorySize)
-        {
-            _commandHistory.RemoveAt(0);
-        }
+    private void UpdateHistoryExitCode(string commandLine, int exitCode)
+    {
+        // This would update the most recent entry's exit code if needed
+        // The HistoryManager.AddCommand already accepts an exitCode parameter
+        // but since we call it before execution, we might want to track completion separately
+        // For now, this is a placeholder for future enhancement
     }
 
     private async Task<int> ExecutePipelineAsync(CommandPipeline pipeline, CancellationToken cancellationToken)
@@ -507,6 +612,62 @@ public class Shell : IShell
     public string GetWorkingDirectory()
     {
         return CurrentWorkingDirectory;
+    }    /// <summary>
+    /// Navigate up in command history (to older commands)
+    /// </summary>
+    /// <returns>The previous command, or null if at the beginning</returns>
+    public string? NavigateHistoryUp()
+    {
+        return _historyManager?.NavigateUp();
+    }
+
+    /// <summary>
+    /// Navigate down in command history (to newer commands)
+    /// </summary>
+    /// <returns>The next command, or null if at the end</returns>
+    public string? NavigateHistoryDown()
+    {
+        return _historyManager?.NavigateDown();
+    }
+
+    /// <summary>
+    /// Reset history navigation position
+    /// </summary>
+    public void ResetHistoryNavigation()
+    {
+        _historyManager?.ResetPosition();
+    }
+
+    /// <summary>
+    /// Search command history for commands containing the specified text
+    /// </summary>
+    /// <param name="searchText">Text to search for</param>
+    /// <returns>List of matching history entries</returns>
+    public IEnumerable<string> SearchHistory(string searchText)
+    {
+        if (_historyManager == null || string.IsNullOrWhiteSpace(searchText))
+        {
+            return Enumerable.Empty<string>();
+        }        var searchOptions = new HistorySearchOptions
+        {
+            SearchTerm = searchText,
+            CaseSensitive = false,
+            UseRegex = false
+        };
+
+        return _historyManager.Search(searchOptions).Select(entry => entry.Command);
+    }
+
+    /// <summary>
+    /// Load command history from persistent storage (compatibility method)
+    /// </summary>
+    public async Task LoadHistoryAsync()
+    {
+        if (_historyManager != null && _currentSession != null)
+        {
+            _historyManager.SetUser(_currentSession.User);
+            await _historyManager.LoadAsync();
+        }
     }
 }
 

@@ -55,14 +55,20 @@ public interface IShell
     /// <param name="commandLine">Command line to execute</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Exit code of the command execution</returns>
-    Task<int> ExecuteCommandAsync(string commandLine, CancellationToken cancellationToken = default);
-
-    /// <summary>
+    Task<int> ExecuteCommandAsync(string commandLine, CancellationToken cancellationToken = default);    /// <summary>
     /// Get command suggestions for tab completion
     /// </summary>
     /// <param name="partialCommand">Partial command to complete</param>
     /// <returns>List of possible completions</returns>
     Task<IEnumerable<string>> GetCompletionsAsync(string partialCommand);
+
+    /// <summary>
+    /// Get command suggestions for tab completion with cursor position
+    /// </summary>
+    /// <param name="commandLine">Full command line</param>
+    /// <param name="cursorPosition">Current cursor position in the command line</param>
+    /// <returns>List of possible completions</returns>
+    Task<IEnumerable<string>> GetCompletionsAsync(string commandLine, int cursorPosition);
 
     /// <summary>
     /// Set an environment variable for this shell session
@@ -88,12 +94,34 @@ public interface IShell
     /// <summary>
     /// Load command history from persistent storage
     /// </summary>
-    Task LoadHistoryAsync();
-
-    /// <summary>
+    Task LoadHistoryAsync();    /// <summary>
     /// Save command history to persistent storage
     /// </summary>
     Task SaveHistoryAsync();
+
+    /// <summary>
+    /// Navigate up in command history (to older commands)
+    /// </summary>
+    /// <returns>The previous command, or null if at the beginning</returns>
+    string? NavigateHistoryUp();
+
+    /// <summary>
+    /// Navigate down in command history (to newer commands)
+    /// </summary>
+    /// <returns>The next command, or null if at the end</returns>
+    string? NavigateHistoryDown();
+
+    /// <summary>
+    /// Reset history navigation position
+    /// </summary>
+    void ResetHistoryNavigation();
+
+    /// <summary>
+    /// Search command history for commands containing the specified text
+    /// </summary>
+    /// <param name="searchText">Text to search for</param>
+    /// <returns>List of matching history entries</returns>
+    IEnumerable<string> SearchHistory(string searchText);
 
     /// <summary>
     /// Clear the shell session and reset state

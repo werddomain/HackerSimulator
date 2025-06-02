@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace HackerOs.OS.IO.FileSystem
 {
@@ -220,41 +222,64 @@ namespace HackerOs.OS.IO.FileSystem
         }
 
         /// <summary>
-        /// Creates a deep copy of this file.
+        /// Creates a deep copy of this virtual file with all content and metadata.
         /// </summary>
+        /// <returns>A new VirtualFile instance that is a copy of this file</returns>
         public override VirtualFileSystemNode Clone()
         {
             var clone = new VirtualFile(Name, FullPath)
             {
+                Content = new byte[Content.Length],
+                MimeType = MimeType,
+                IsSymbolicLink = IsSymbolicLink,
+                SymbolicLinkTarget = SymbolicLinkTarget,
                 CreatedAt = CreatedAt,
                 ModifiedAt = ModifiedAt,
                 AccessedAt = AccessedAt,
-                Permissions = new FilePermissions
-                {
-                    OwnerRead = Permissions.OwnerRead,
-                    OwnerWrite = Permissions.OwnerWrite,
-                    OwnerExecute = Permissions.OwnerExecute,
-                    GroupRead = Permissions.GroupRead,
-                    GroupWrite = Permissions.GroupWrite,
-                    GroupExecute = Permissions.GroupExecute,
-                    OtherRead = Permissions.OtherRead,
-                    OtherWrite = Permissions.OtherWrite,
-                    OtherExecute = Permissions.OtherExecute
-                },
+                Permissions = new FilePermissions(Permissions.ToOctal()),
                 Owner = Owner,
                 Group = Group,
                 Size = Size,
-                MimeType = MimeType,
-                IsSymbolicLink = IsSymbolicLink,
-                SymbolicLinkTarget = SymbolicLinkTarget
+                InodeNumber = InodeNumber,
+                LinkCount = LinkCount,
+                DeviceId = DeviceId,
+                BlockSize = BlockSize,
+                Parent = Parent
             };
-
-            // Clone content
-            clone.Content = new byte[Content.Length];
+            
             Content.CopyTo(clone.Content, 0);
-
             return clone;
         }        /// <summary>
+        /// Opens the file for reading as a stream.
+        /// </summary>
+        /// <returns>A stream for reading the file content</returns>
+        public Task<Stream> OpenReadAsync()
+        {
+            UpdateAccessTime();
+            return Task.FromResult<Stream>(new MemoryStream(Content, false));
+        }
+
+        /// <summary>
+        /// Opens the file for writing as a stream (truncates existing content).
+        /// </summary>
+        /// <returns>A stream for writing to the file</returns>
+        public Task<Stream> OpenWriteAsync()
+        {
+            var stream = new VirtualFileWriteStream(this, false);
+            return Task.FromResult<Stream>(stream);
+        }
+
+        /// <summary>
+        /// Opens the file for appending as a stream.
+        /// </summary>
+        /// <returns>A stream for appending to the file</returns>
+        public Task<Stream> OpenAppendAsync()
+        {
+            var stream = new VirtualFileWriteStream(this, true);
+            return Task.FromResult<Stream>(stream);
+        }
+
+        /// <summary>
         /// Gets the path of this file (alias for FullPath).
         /// </summary>
         public string Path => FullPath;
@@ -284,6 +309,44 @@ namespace HackerOs.OS.IO.FileSystem
         {
             var linkInfo = IsSymbolicLink ? $" -> {SymbolicLinkTarget}" : "";
             return $"{(IsSymbolicLink ? "l" : "-")}{Permissions} {Owner}:{Group} {Size,8} {ModifiedAt:yyyy-MM-dd HH:mm} {Name}{linkInfo}";
+        }
+    }
+
+    /// <summary>
+    /// A stream wrapper for writing to virtual files.
+    /// </summary>
+    internal class VirtualFileWriteStream : MemoryStream
+    {
+        private readonly VirtualFile _virtualFile;
+        private readonly bool _append;
+
+        public VirtualFileWriteStream(VirtualFile virtualFile, bool append) : base()
+        {
+            _virtualFile = virtualFile;
+            _append = append;
+
+            if (_append && _virtualFile.Content.Length > 0)
+            {
+                // For append mode, start with existing content
+                Write(_virtualFile.Content, 0, _virtualFile.Content.Length);
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Update the virtual file content when the stream is disposed
+                _virtualFile.SetContent(ToArray());
+            }
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            // Update the virtual file content when the stream is disposed
+            _virtualFile.SetContent(ToArray());
+            await base.DisposeAsync();
         }
     }
 }

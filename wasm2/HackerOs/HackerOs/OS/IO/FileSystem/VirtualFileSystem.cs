@@ -1224,6 +1224,28 @@ namespace HackerOs.OS.IO.FileSystem
         #endregion
 
         /// <summary>
+        /// Gets a file node at the specified path for shell operations.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <returns>A file node if found and is a file; otherwise, null.</returns>
+        public VirtualFile? GetFile(string path)
+        {
+            var node = GetNodeAsync(path).Result;
+            return node as VirtualFile;
+        }
+
+        /// <summary>
+        /// Gets a directory node at the specified path for shell operations.
+        /// </summary>
+        /// <param name="path">The path to the directory.</param>
+        /// <returns>A directory node if found and is a directory; otherwise, null.</returns>
+        public VirtualDirectory? GetDirectory(string path)
+        {
+            var node = GetNodeAsync(path).Result;
+            return node as VirtualDirectory;
+        }
+
+        /// <summary>
         /// Creates a FileSystemEventArgs object for a given file system event.
         /// </summary>
         /// <param name="eventType">The type of file system event</param>

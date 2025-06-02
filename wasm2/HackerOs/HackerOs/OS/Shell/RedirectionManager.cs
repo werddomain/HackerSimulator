@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using HackerOs.OS.FileSystem;
+using HackerOs.OS.IO.FileSystem;
 
 namespace HackerOs.OS.Shell;
 
@@ -52,24 +52,23 @@ public class RedirectionManager : IRedirectionManager
             context.Dispose();
         }
     }
-    
-    private async Task ProcessRedirectionNodeAsync(RedirectionNode redirection, RedirectionContext context, IVirtualFileSystem fileSystem)
+      private async Task ProcessRedirectionNodeAsync(RedirectionNode redirection, RedirectionContext context, IVirtualFileSystem fileSystem)
     {
         switch (redirection.Type)
         {
-            case RedirectionType.InputRedirect: // <
+            case RedirectionType.Input: // <
                 await SetupInputRedirectionAsync(redirection, context, fileSystem);
                 break;
                 
-            case RedirectionType.OutputRedirect: // >
+            case RedirectionType.Output: // >
                 await SetupOutputRedirectionAsync(redirection, context, fileSystem, append: false);
                 break;
                 
-            case RedirectionType.OutputAppend: // >>
+            case RedirectionType.Append: // >>
                 await SetupOutputRedirectionAsync(redirection, context, fileSystem, append: true);
                 break;
                 
-            case RedirectionType.ErrorRedirect: // 2>
+            case RedirectionType.ErrorOutput: // 2>
                 await SetupErrorRedirectionAsync(redirection, context, fileSystem, append: false);
                 break;
                 

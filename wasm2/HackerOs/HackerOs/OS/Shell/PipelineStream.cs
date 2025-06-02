@@ -86,6 +86,11 @@ internal class PipelineStream : IAsyncDisposable, IDisposable
         }
     }
 
+    public async Task CloseOutputAsync()
+    {
+        await Task.Run(() => Close(false, true));
+    }
+
     public async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken = default)
     {
         await _readSemaphore.WaitAsync(cancellationToken);

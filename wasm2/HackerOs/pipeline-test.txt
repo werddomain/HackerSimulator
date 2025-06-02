@@ -1,0 +1,8 @@
+# Pipeline Integration Test
+
+This is a test file for verifying pipeline functionality.
+Line 1: Contains the word test
+Line 2: Contains the word data
+Line 3: Contains the word example
+Line 4: Another test line
+Line 5: Final data line

@@ -193,6 +193,17 @@ namespace HackerOs.OS.IO.FileSystem
         }
 
         /// <summary>
+        /// Creates a new file in this directory asynchronously.
+        /// </summary>
+        /// <param name="fileName">The name of the file to create</param>
+        /// <param name="content">The initial content of the file</param>
+        /// <returns>The created file, or null if a file with the same name already exists</returns>
+        public Task<VirtualFile?> CreateFileAsync(string fileName, byte[]? content = null)
+        {
+            return Task.FromResult(CreateFile(fileName, content));
+        }
+
+        /// <summary>
         /// Creates a new subdirectory in this directory.
         /// </summary>
         /// <param name="directoryName">The name of the directory to create</param>

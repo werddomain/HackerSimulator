@@ -262,15 +262,27 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         /// <param name="path">The path to the file.</param>        /// <param name="user">The user reading the file.</param>
         /// <returns>The file content as text, or null if the file doesn't exist or user lacks permission.</returns>
-        Task<string?> ReadAllTextAsync(string path, UserEntity user);
-
-        /// <summary>
+        Task<string?> ReadAllTextAsync(string path, UserEntity user);        /// <summary>
         /// Writes all text to a file with User permission checking.
         /// </summary>
         /// <param name="path">The path to the file.</param>
         /// <param name="content">The text content to write.</param>        /// <param name="user">The user writing the file.</param>
         /// <returns>True if the operation was successful.</returns>
         Task<bool> WriteAllTextAsync(string path, string content, UserEntity user);
+
+        /// <summary>
+        /// Gets a file node at the specified path for shell operations.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <returns>A file node if found and is a file; otherwise, null.</returns>
+        VirtualFile? GetFile(string path);
+
+        /// <summary>
+        /// Gets a directory node at the specified path for shell operations.
+        /// </summary>
+        /// <param name="path">The path to the directory.</param>
+        /// <returns>A directory node if found and is a directory; otherwise, null.</returns>
+        VirtualDirectory? GetDirectory(string path);
 
         /// <summary>
         /// Event raised when file system operations occur.
