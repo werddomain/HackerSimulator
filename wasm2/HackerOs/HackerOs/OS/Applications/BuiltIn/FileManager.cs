@@ -1,4 +1,5 @@
 using HackerOs.OS.Applications;
+using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using System.Text;
@@ -10,6 +11,11 @@ namespace HackerOs.OS.Applications.BuiltIn
     /// <summary>
     /// Graphical file manager application for browsing and managing files
     /// </summary>
+    [App("File Manager", "file-manager", 
+        Description = "Browse and manage files and directories",
+        IconPath = "/icons/file-manager.png",
+        Categories = new[] { "System", "Utilities" },
+        AutoStart = false)]
     public class FileManager : ApplicationBase
     {
         private readonly IVirtualFileSystem _fileSystem;

@@ -515,7 +515,7 @@ Before starting any major phase, create detailed analysis plans in separate file
 ### 3.2 Applications Module Implementation [✅] VERIFIED FOUNDATION COMPLETE
 **Prerequisites**: ✅ Created `analysis-plan-applications.md` - comprehensive implementation plan
 
-#### 3.2.1 Application Framework [✅] VERIFIED FOUNDATION COMPLETE
+#### 3.2.1 Application Framework
 - [✅] Create `IApplication.cs` interface - **VERIFIED IN `OS/Applications/` with 12 files**
 - [✅] Implement `ApplicationManager.cs` - **VERIFIED with application management**
   - [✅] Integrate with existing WindowManager in BlazorWindowManager project - **VERIFIED with WindowManager integration**
@@ -524,6 +524,28 @@ Before starting any major phase, create detailed analysis plans in separate file
 - [✅] Create application manifest system for app registration - **VERIFIED with manifest system**
 - [✅] Add sandboxed execution environment for security - **VERIFIED with security isolation**
 - [✅] Implement inter-process communication (IPC) - **VERIFIED with IPC framework**
+- [✅] Add File Type Registration System
+  - [✅] Create `FileTypeRegistration.cs` class with file type metadata
+  - [✅] Create `[OpenFileType]` attribute for file type association
+  - [✅] Implement automatic file type registration at application startup
+  - [✅] Add a service to discover applications that can open a specific file type
+  - [✅] Create extension methods for file opening by associated application
+- [✅] Create Application Registration System
+  - [✅] Implement `[App]` attribute with name, ID, and icon information
+  - [✅] Create attribute discovery service for application registration
+  - [✅] Store application manifests in file system (/usr/share/applications/)
+  - [✅] Add support for user-installed applications
+  - [✅] Create application installation/uninstallation methods
+- [✅] Enhance Application Manager
+  - [✅] Create application categories and browsing
+  - [✅] Implement application search and filtering
+  - [✅] Add version management and updates
+  - [✅] Create application icons and shortcuts
+  - [✅] Add start menu integration for applications
+  - [✅] Create UI component for application browsing and management
+  - [✅] Add shell commands for application installation and management
+  - The icon will be get by creating an instance and get the property from IApplication or WindowBase ...
+  - The icon is a renderFragment. I dont know it it will be usable when the instance get removed. Maybe we can extract the icon data ... but the render fragment will not be set until the component is added on the page and the display is rendered ... Maybe we can find a better way of setting the icon .... 
 
 #### 3.2.2 Built-in Applications Development [⚠️] PARTIAL IMPLEMENTATION
 
@@ -550,6 +572,11 @@ A base terminal implementation can be found in 'wasm2\HackerOs\BlazorTerminal'. 
   - [ ] Add context menus for file operations
   - [ ] Implement file search functionality
   - [ ] Add file properties dialog
+  - [ ] Support Upload & download of files
+  - [ ] Implement Zip functionalities
+    - [ ] Download folder as a zip file if it's a dirrectory selected when we click on download.
+    - [ ] Enable the application to open Zip file
+    - [ ] Enable the application to zip folder
 
 ##### 3.2.2.3 Text Editor Application [⚠️] FOUNDATION EXISTS
 - [ ] Create full-featured text editor

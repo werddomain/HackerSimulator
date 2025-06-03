@@ -1,4 +1,5 @@
 using HackerOs.OS.Applications;
+using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.Shell;
 using HackerOs.OS.User;
 using System.Text;
@@ -9,6 +10,12 @@ namespace HackerOs.OS.Applications.BuiltIn
     /// <summary>
     /// Terminal emulator application that provides command-line interface
     /// </summary>
+    [App("Terminal", "terminal", 
+        Description = "Command-line terminal for interacting with the system",
+        IconPath = "/icons/terminal.png",
+        Categories = new[] { "System", "Development" },
+        AutoStart = false)]
+    [OpenFileType("Shell Scripts", "sh", "bash", "cmd", "ps1", Priority = 10)]
     public class TerminalEmulator : ApplicationBase
     {
         private readonly IShell _shell;

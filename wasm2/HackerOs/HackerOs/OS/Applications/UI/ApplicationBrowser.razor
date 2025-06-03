@@ -1,0 +1,506 @@
+@using HackerOs.OS.Applications
+@using HackerOs.OS.User
+@inject IApplicationInstaller AppInstaller
+@inject IApplicationManager AppManager
+@inject IUserManager UserManager
+
+<div class="app-browser">
+    <div class="app-browser-header">
+        <h3>Application Browser</h3>
+        <div class="search-bar">
+            <input type="text" placeholder="Search applications..." @bind="SearchTerm" @bind:event="oninput" />
+            <button @onclick="PerformSearch">Search</button>
+        </div>
+        <div class="filter-options">
+            <label>
+                <input type="checkbox" @bind="ShowSystemApps" />
+                Show System Apps
+            </label>
+            <label>
+                <input type="checkbox" @bind="ShowUserApps" />
+                Show User Apps
+            </label>
+            <select @bind="SelectedCategory">
+                <option value="">All Categories</option>
+                @foreach (var category in Categories)
+                {
+                    <option value="@category">@category</option>
+                }
+            </select>
+        </div>
+    </div>
+    
+    <div class="app-list">
+        @if (FilteredApps.Any())
+        {
+            @foreach (var app in FilteredApps)
+            {
+                <div class="app-item @(SelectedApp?.Id == app.Id ? "selected" : "")" @onclick="() => SelectApp(app)">
+                    <div class="app-icon">
+                        @if (!string.IsNullOrEmpty(app.IconPath))
+                        {
+                            <img src="@app.IconPath" alt="@app.Name icon" />
+                        }
+                        else
+                        {
+                            <div class="default-icon">@app.Name.Substring(0, 1)</div>
+                        }
+                    </div>
+                    <div class="app-info">
+                        <h4>@app.Name</h4>
+                        <p class="app-version">v@(app.Version)</p>
+                        <p class="app-description">@app.Description</p>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="no-apps">
+                <p>No applications found matching your criteria.</p>
+            </div>
+        }
+    </div>
+    
+    @if (SelectedApp != null)
+    {
+        <div class="app-details">
+            <h3>@SelectedApp.Name</h3>
+            <div class="app-metadata">
+                <p><strong>Version:</strong> @SelectedApp.Version</p>
+                <p><strong>Author:</strong> @SelectedApp.Author</p>
+                <p><strong>Type:</strong> @SelectedApp.Type.ToString()</p>
+                <p><strong>Categories:</strong> @string.Join(", ", SelectedApp.Categories)</p>
+                @if (SelectedApp.SupportedFileTypes.Any())
+                {
+                    <p><strong>File Types:</strong> @string.Join(", ", SelectedApp.SupportedFileTypes)</p>
+                }
+            </div>
+            <div class="app-description">
+                <h4>Description</h4>
+                <p>@SelectedApp.Description</p>
+            </div>
+            
+            <div class="app-actions">
+                <button class="btn-launch" @onclick="() => LaunchApp(SelectedApp)">Launch</button>
+                
+                @if (SelectedApp.IsSystemApplication && !IsAdminUser)
+                {
+                    <button class="btn-uninstall" disabled>Uninstall (Admin only)</button>
+                }
+                else
+                {
+                    <button class="btn-uninstall" @onclick="() => UninstallApp(SelectedApp.Id)">Uninstall</button>
+                }
+            </div>
+        </div>
+    }
+    
+    <div class="app-browser-footer">
+        <button class="btn-install" @onclick="ShowInstallDialog">Install New Application</button>
+    </div>
+    
+    @if (ShowInstallPrompt)
+    {
+        <div class="install-dialog">
+            <h3>Install Application</h3>
+            <div class="form-group">
+                <label for="packagePath">Package Path:</label>
+                <input id="packagePath" type="text" @bind="PackagePath" placeholder="/path/to/application.hapkg" />
+            </div>
+            <div class="dialog-actions">
+                <button @onclick="InstallApp">Install</button>
+                <button @onclick="CloseInstallDialog">Cancel</button>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .app-browser {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        color: #00ff00;
+        background-color: #111;
+        font-family: 'Courier New', monospace;
+        padding: 10px;
+    }
+    
+    .app-browser-header {
+        padding: 10px;
+        border-bottom: 1px solid #333;
+    }
+    
+    .search-bar {
+        display: flex;
+        margin: 10px 0;
+    }
+    
+    .search-bar input {
+        flex-grow: 1;
+        background: #222;
+        border: 1px solid #444;
+        color: #00ff00;
+        padding: 5px;
+    }
+    
+    .search-bar button {
+        background: #333;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        padding: 5px 15px;
+        cursor: pointer;
+    }
+    
+    .filter-options {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .filter-options select {
+        background: #222;
+        border: 1px solid #444;
+        color: #00ff00;
+        padding: 3px;
+    }
+    
+    .app-list {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+    }
+    
+    .app-item {
+        display: flex;
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #333;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .app-item:hover {
+        background-color: #222;
+    }
+    
+    .app-item.selected {
+        background-color: #1a3300;
+        border-color: #00ff00;
+    }
+    
+    .app-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    
+    .default-icon {
+        width: 100%;
+        height: 100%;
+        background: #333;
+        color: #00ff00;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    
+    .app-info {
+        flex-grow: 1;
+    }
+    
+    .app-info h4 {
+        margin: 0 0 5px 0;
+        color: #00ff00;
+    }
+    
+    .app-version {
+        color: #888;
+        font-size: 12px;
+        margin: 0;
+    }
+    
+    .app-description {
+        margin: 5px 0 0 0;
+        font-size: 14px;
+        color: #ccc;
+    }
+    
+    .app-details {
+        padding: 15px;
+        border-top: 1px solid #333;
+    }
+    
+    .app-metadata {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .app-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .btn-launch {
+        background: #006600;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        cursor: pointer;
+    }
+    
+    .btn-uninstall {
+        background: #660000;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        cursor: pointer;
+    }
+    
+    .btn-uninstall:disabled {
+        background: #333;
+        color: #666;
+        cursor: not-allowed;
+    }
+    
+    .app-browser-footer {
+        padding: 10px;
+        border-top: 1px solid #333;
+        text-align: right;
+    }
+    
+    .btn-install {
+        background: #004080;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        cursor: pointer;
+    }
+    
+    .install-dialog {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #222;
+        border: 1px solid #00ff00;
+        padding: 20px;
+        width: 400px;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .install-dialog h3 {
+        margin-top: 0;
+        color: #00ff00;
+    }
+    
+    .form-group {
+        margin: 15px 0;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ccc;
+    }
+    
+    .form-group input {
+        width: 100%;
+        background: #111;
+        border: 1px solid #444;
+        color: #00ff00;
+        padding: 8px;
+    }
+    
+    .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .dialog-actions button {
+        background: #333;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        padding: 5px 15px;
+        cursor: pointer;
+    }
+    
+    .no-apps {
+        text-align: center;
+        padding: 20px;
+        color: #888;
+    }
+</style>
+
+@code {
+    private List<ApplicationManifest> AllApps = new();
+    private List<ApplicationManifest> FilteredApps = new();
+    private ApplicationManifest? SelectedApp;
+    private HashSet<string> Categories = new();
+    private UserSession? CurrentSession;
+    private bool IsAdminUser;
+    
+    // Search and filter state
+    private string SearchTerm = "";
+    private string SelectedCategory = "";
+    private bool ShowSystemApps = true;
+    private bool ShowUserApps = true;
+    
+    // Installation dialog
+    private bool ShowInstallPrompt;
+    private string PackagePath = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadApplicationsAsync();
+        await LoadCurrentUserAsync();
+    }
+    
+    private async Task LoadApplicationsAsync()
+    {
+        AllApps = AppManager.GetAvailableApplications().ToList();
+        
+        // Extract all unique categories
+        Categories.Clear();
+        foreach (var app in AllApps)
+        {
+            foreach (var category in app.Categories)
+            {
+                Categories.Add(category);
+            }
+        }
+        
+        ApplyFilters();
+    }
+    
+    private async Task LoadCurrentUserAsync()
+    {
+        // In a real implementation, get the current user session
+        // This is just a placeholder
+        CurrentSession = new UserSession();
+        
+        // Check if user is an administrator
+        IsAdminUser = CurrentSession.User.Username == "root" ||
+                     await UserManager.IsUserInGroupAsync(CurrentSession.User.Username, "admin");
+    }
+    
+    private void ApplyFilters()
+    {
+        FilteredApps = AllApps.Where(app => 
+            (string.IsNullOrEmpty(SearchTerm) || 
+             app.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+             app.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(SelectedCategory) || app.Categories.Contains(SelectedCategory)) &&
+            ((ShowSystemApps && app.IsSystemApplication) || (ShowUserApps && !app.IsSystemApplication))
+        ).ToList();
+    }
+    
+    private void PerformSearch()
+    {
+        ApplyFilters();
+    }
+    
+    private void SelectApp(ApplicationManifest app)
+    {
+        SelectedApp = app;
+    }
+    
+    private async Task LaunchApp(ApplicationManifest app)
+    {
+        if (CurrentSession == null)
+            return;
+            
+        // Create launch context
+        var context = new ApplicationLaunchContext(CurrentSession);
+        
+        // Launch the application
+        var instance = await AppManager.LaunchApplicationAsync(app.Id, context);
+        
+        if (instance == null)
+        {
+            // Handle launch failure
+            Console.WriteLine($"Failed to launch {app.Name}");
+        }
+    }
+    
+    private async Task UninstallApp(string appId)
+    {
+        if (CurrentSession == null)
+            return;
+            
+        // Confirm uninstallation
+        bool confirmed = true; // In a real implementation, show a confirmation dialog
+        
+        if (confirmed)
+        {
+            // Uninstall the application
+            bool success = await AppInstaller.UninstallApplicationAsync(appId, CurrentSession, true);
+            
+            if (success)
+            {
+                // Reload applications
+                await LoadApplicationsAsync();
+                
+                // Clear selection if it was the uninstalled app
+                if (SelectedApp?.Id == appId)
+                {
+                    SelectedApp = null;
+                }
+            }
+            else
+            {
+                // Handle uninstall failure
+                Console.WriteLine($"Failed to uninstall application {appId}");
+            }
+        }
+    }
+    
+    private void ShowInstallDialog()
+    {
+        ShowInstallPrompt = true;
+    }
+    
+    private void CloseInstallDialog()
+    {
+        ShowInstallPrompt = false;
+        PackagePath = "";
+    }
+    
+    private async Task InstallApp()
+    {
+        if (CurrentSession == null || string.IsNullOrWhiteSpace(PackagePath))
+            return;
+            
+        // Install the application
+        var manifest = await AppInstaller.InstallApplicationAsync(PackagePath, CurrentSession);
+        
+        if (manifest != null)
+        {
+            // Reload applications
+            await LoadApplicationsAsync();
+            
+            // Select the newly installed app
+            SelectedApp = FilteredApps.FirstOrDefault(a => a.Id == manifest.Id);
+            
+            // Close the dialog
+            CloseInstallDialog();
+        }
+        else
+        {
+            // Handle install failure
+            Console.WriteLine($"Failed to install application from {PackagePath}");
+        }
+    }
+}

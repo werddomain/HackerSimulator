@@ -28,9 +28,13 @@ namespace HackerOs
                 // Configure your authentication provider options here.
                 // For more information, see https://aka.ms/blazor-standalone-auth
                 builder.Configuration.Bind("Local", options.ProviderOptions);
-            });
-
-            await builder.Build().RunAsync();
+            });            var host = builder.Build();
+            
+            // Initialize the application
+            await Startup.InitializeAsync(host);
+            
+            // Run the application
+            await host.RunAsync();
         }
     }
 
@@ -72,15 +76,24 @@ namespace HackerOs
                 
                 return completionService;
             });
-            
-            // Register shell commands
+              // Register shell commands
             RegisterShellCommands(services);
             
-            // Add command initializer service
-            services.AddScoped<ICommandInitializer, CommandInitializer>();
+            // Register application management commands
+            RegisterApplicationCommands(services);
             
-            // Applications Services (Singleton - system-wide application management)
-            services.AddSingleton<IApplicationManager, ApplicationManager>();
+            // Add command initializer service
+            services.AddScoped<ICommandInitializer, CommandInitializer>();            // System Services (Singleton - system-wide services)
+            services.AddSingleton<HackerOs.OS.System.ISystemBootService, HackerOs.OS.System.SystemBootService>();
+            services.AddSingleton<HackerOs.OS.System.IMainService, HackerOs.OS.System.MainService>();
+              // Applications Services (Singleton - system-wide application management)            services.AddSingleton<IApplicationManager, ApplicationManager>();
+            services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();            services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();
+            services.AddSingleton<IApplicationInstaller, ApplicationInstaller>();
+            services.AddSingleton<HackerOs.OS.Applications.UI.IUserSettingsService, HackerOs.OS.Applications.UI.UserSettingsService>();
+            services.AddSingleton<HackerOs.OS.Applications.UI.IStartMenuIntegration, HackerOs.OS.Applications.UI.StartMenuIntegration>();
             
             // Network Services (Singleton - shared network stack)
             // TODO: Add INetworkStack service registration
@@ -107,6 +120,16 @@ namespace HackerOs
             services.AddScoped<HackerOs.OS.Shell.Commands.RmCommand>();
             services.AddScoped<HackerOs.OS.Shell.Commands.TouchCommand>();
             services.AddScoped<HackerOs.OS.Shell.Commands.ShCommand>();
+        }
+        
+        /// <summary>
+        /// Register application management commands
+        /// </summary>
+        private static void RegisterApplicationCommands(IServiceCollection services)
+        {
+            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.InstallCommand>();
+            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.UninstallCommand>();
+            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.ListAppsCommand>();
         }
     }
 }
