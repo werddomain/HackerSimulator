@@ -1,4 +1,5 @@
 using HackerOs.OS.Applications;
+using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using System.Text;
@@ -8,6 +9,13 @@ namespace HackerOs.OS.Applications.BuiltIn
     /// <summary>
     /// Text editor application with basic editing features
     /// </summary>
+    [App("Text Editor", "text-editor", 
+        Description = "Simple text editor for creating and editing text files",
+        IconPath = "/icons/text-editor.png",
+        Categories = new[] { "Office", "Development" })]
+    [OpenFileType("Text Files", "txt", "text", "log")]
+    [OpenFileType("Configuration Files", "conf", "config", "ini", "json", "xml", Priority = 10)]
+    [OpenFileType("Source Code", "cs", "ts", "js", "html", "css", "md", Priority = 5)]
     public class TextEditor : ApplicationBase
     {
         private readonly IVirtualFileSystem _fileSystem;

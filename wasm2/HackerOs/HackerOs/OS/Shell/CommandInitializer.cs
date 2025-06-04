@@ -1,4 +1,5 @@
 using HackerOs.OS.Shell.Commands;
+using HackerOs.OS.Shell.Commands.Applications;
 using HackerOs.OS.IO.FileSystem;
 using Microsoft.Extensions.Logging;
 
@@ -41,6 +42,7 @@ public class CommandInitializer : ICommandInitializer
             // Get all command instances from DI container
             var commands = new List<ICommand>
             {
+                // File system commands
                 _serviceProvider.GetRequiredService<CatCommand>(),
                 _serviceProvider.GetRequiredService<CdCommand>(),
                 _serviceProvider.GetRequiredService<CpCommand>(),
@@ -53,7 +55,12 @@ public class CommandInitializer : ICommandInitializer
                 _serviceProvider.GetRequiredService<PwdCommand>(),
                 _serviceProvider.GetRequiredService<RmCommand>(),
                 _serviceProvider.GetRequiredService<TouchCommand>(),
-                _serviceProvider.GetRequiredService<ShCommand>()
+                _serviceProvider.GetRequiredService<ShCommand>(),
+                
+                // Application management commands
+                _serviceProvider.GetRequiredService<Commands.Applications.InstallCommand>(),
+                _serviceProvider.GetRequiredService<Commands.Applications.UninstallCommand>(),
+                _serviceProvider.GetRequiredService<Commands.Applications.ListAppsCommand>()
             };
 
             // Register all commands
