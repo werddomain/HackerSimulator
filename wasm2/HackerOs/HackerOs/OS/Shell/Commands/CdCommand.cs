@@ -141,7 +141,10 @@ public class CdCommand : CommandBase
 
     private static IVirtualFileSystem GetVirtualFileSystem(CommandContext context)
     {
-        // This would be injected through DI in a real implementation
-        throw new NotImplementedException("VFS access needs proper DI integration");
+        // Access the file system exposed by the current shell via the context.
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 }

@@ -212,7 +212,10 @@ public class CatCommand : CommandBase
 
     private static IVirtualFileSystem GetVirtualFileSystem(CommandContext context)
     {
-        // This would be injected through DI in a real implementation
-        throw new NotImplementedException("VFS access needs proper DI integration");
+        // Access the VFS from the shell through the context
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 }

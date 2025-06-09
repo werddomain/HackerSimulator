@@ -137,9 +137,15 @@ public abstract class CommandBase : ICommand
     /// </summary>
     protected static IVirtualFileSystem GetFileSystem(CommandContext context)
     {
-        // In a real implementation, this would be injected or obtained from context
-        // For now, we'll assume it's available through the shell
-        throw new NotImplementedException("File system access needs to be implemented through dependency injection");
+        // In HackerOS the shell exposes the virtual file system via the
+        // CommandContext.  Commands can therefore access it directly without
+        // explicit dependency injection.  This helper centralises the access
+        // logic and throws a clear exception if the file system is not
+        // available.
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 
     /// <summary>
