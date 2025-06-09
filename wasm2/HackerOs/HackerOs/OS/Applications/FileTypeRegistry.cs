@@ -1,6 +1,7 @@
 using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
+using HackerOs.OS.IO.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -298,11 +299,9 @@ public class FileTypeRegistry : IFileTypeRegistry
             if (string.IsNullOrEmpty(filePath))
                 return null;
                 
-            // Normalize path and get file info
-            var normalizedPath = _fileSystem.NormalizePath(filePath);
-            var fileInfo = await _fileSystem.GetFileInfoAsync(normalizedPath);
-            
-            if (fileInfo == null || !fileInfo.Exists)
+            // Normalize path and verify file exists
+            var normalizedPath = HackerOs.OS.IO.Utilities.Path.NormalizePath(filePath);
+            if (!await _fileSystem.FileExistsAsync(normalizedPath, UserManager.SystemUser))
                 return null;
                 
             // Extract extension

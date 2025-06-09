@@ -40,9 +40,9 @@ namespace HackerOs.OS.Network.WebServer.Framework
             // Source dictionaries for binding values
             var sources = new List<Dictionary<string, string>>
             {
-                context.Request.RouteValues,
-                context.Request.QueryParameters,
-                context.Request.Form
+                context.Request.RouteData.ToDictionary(k => k.Key, k => k.Value?.ToString() ?? string.Empty),
+                new Dictionary<string, string>(context.Request.QueryParameters),
+                new Dictionary<string, string>(context.Request.Form)
             };
             
             // Try to bind each property

@@ -310,8 +310,8 @@ namespace HackerOs.OS.Network.DNS
             var cacheResult = CheckCache(cacheKey, DnsRecordType.PTR);
             if (cacheResult != null)
             {
-                FireQueryProcessedEvent(ipAddress, DnsRecordType.PTR, true, cacheResult.Value, true);
-                return cacheResult.Value;
+                FireQueryProcessedEvent(ipAddress, DnsRecordType.PTR, true, cacheResult, true);
+                return cacheResult;
             }
 
             // Look for matching records

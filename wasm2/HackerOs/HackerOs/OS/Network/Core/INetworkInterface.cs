@@ -52,6 +52,11 @@ namespace HackerOs.OS.Network.Core
         bool IsUp { get; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the interface is active.
+        /// </summary>
+        bool IsActive { get; }
+
+        /// <summary>
         /// Gets a value indicating whether this interface supports DHCP.
         /// </summary>
         bool SupportsDHCP { get; }

@@ -14,7 +14,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// <summary>
         /// Sends a GET request to the specified Uri and returns the value as a JSON string
         /// </summary>
-        public static async Task<T?> GetFromJsonAsync<T>(this HttpClient client, string requestUri, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<T?> GetFromJsonAsync<T>(this HttpClient client, string requestUri, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
             var response = await client.GetAsync(requestUri, cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -29,54 +29,54 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// <summary>
         /// Sends a GET request to the specified Uri and returns the value as a JSON string
         /// </summary>
-        public static async Task<T?> GetFromJsonAsync<T>(this HttpClient client, Uri requestUri, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<T?> GetFromJsonAsync<T>(this HttpClient client, Uri requestUri, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            return await GetFromJsonAsync<T>(client, requestUri.ToString(), options, cancellationToken);
+            return await GetFromJsonAsync<T>(client, requestUri.ToString(), cancellationToken, options);
         }
 
         /// <summary>
         /// Sends a POST request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PostAsJsonAsync<T>(this HttpClient client, string requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PostAsJsonAsync<T>(this HttpClient client, string requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
             var json = JsonSerializer.Serialize(value, options);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var content = new StringContent(json, "utf-8", "application/json");
             return await client.PostAsync(requestUri, content, cancellationToken);
         }
 
         /// <summary>
         /// Sends a POST request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PostAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PostAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            return await PostAsJsonAsync(client, requestUri.ToString(), value, options, cancellationToken);
+            return await PostAsJsonAsync(client, requestUri.ToString(), value, cancellationToken, options);
         }
 
         /// <summary>
         /// Sends a PUT request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PutAsJsonAsync<T>(this HttpClient client, string requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PutAsJsonAsync<T>(this HttpClient client, string requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
             var json = JsonSerializer.Serialize(value, options);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var content = new StringContent(json, "utf-8", "application/json");
             return await client.PutAsync(requestUri, content, cancellationToken);
         }
 
         /// <summary>
         /// Sends a PUT request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PutAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PutAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            return await PutAsJsonAsync(client, requestUri.ToString(), value, options, cancellationToken);
+            return await PutAsJsonAsync(client, requestUri.ToString(), value, cancellationToken, options);
         }
 
         /// <summary>
         /// Sends a PATCH request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PatchAsJsonAsync<T>(this HttpClient client, string requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PatchAsJsonAsync<T>(this HttpClient client, string requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
             var json = JsonSerializer.Serialize(value, options);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var content = new StringContent(json, "utf-8", "application/json");
             var request = new HttpRequestMessage(new HttpMethod("PATCH"), requestUri)
             {
                 Content = content
@@ -87,9 +87,9 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// <summary>
         /// Sends a PATCH request to the specified Uri containing the value serialized as JSON
         /// </summary>
-        public static async Task<HttpResponseMessage> PatchAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default)
+        public static async Task<HttpResponseMessage> PatchAsJsonAsync<T>(this HttpClient client, Uri requestUri, T value, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            return await PatchAsJsonAsync(client, requestUri.ToString(), value, options, cancellationToken);
+            return await PatchAsJsonAsync(client, requestUri.ToString(), value, cancellationToken, options);
         }
     }
 
@@ -121,14 +121,14 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public async Task SerializeToStreamAsync(System.IO.Stream stream, TransportContext? context = null)
         {
-            var bytes = System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
             await stream.WriteAsync(bytes, 0, bytes.Length);
         }/// <summary>
         /// Determines whether the HTTP content has a valid length in bytes
         /// </summary>
         public bool TryComputeLength(out long length)
         {
-            length = System.Text.Encoding.UTF8.GetByteCount(_jsonContent);
+            length = global::System.Text.Encoding.UTF8.GetByteCount(_jsonContent);
             return true;
         }
 
@@ -137,7 +137,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public override async Task<byte[]> ReadAsByteArrayAsync()
         {
-            return System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            return global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public override async Task<System.IO.Stream> ReadAsStreamAsync()
         {
-            var bytes = System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
             return new System.IO.MemoryStream(bytes);
         }
     }

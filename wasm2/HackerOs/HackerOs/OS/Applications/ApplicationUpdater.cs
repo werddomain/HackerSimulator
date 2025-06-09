@@ -1,5 +1,6 @@
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
+using HackerOs.OS.IO.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -431,7 +432,7 @@ public class ApplicationUpdater : IApplicationUpdater
             }
             
             // Get version directories
-            var directories = await _fileSystem.GetDirectoriesAsync(appUpdateDir, UserManager.SystemUser);
+            var directories = await HackerOs.OS.IO.Utilities.Directory.GetDirectoriesAsync(appUpdateDir, _fileSystem);
             versions.AddRange(directories.Select(System.IO.Path.GetFileName));
             
             return versions;
