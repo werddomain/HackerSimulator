@@ -151,20 +151,18 @@ namespace HackerOs.OS.UI
 
                 var x = settings.GetValue<double>($"app.{_application.Id}.window.x", defaultX);
                 var y = settings.GetValue<double>($"app.{_application.Id}.window.y", defaultY);
-                _windowInfo.Bounds = new WindowBounds(x, y)
+
+                var bounds = new WindowBounds(x, y)
                 {
                     Width = settings.GetValue<double>($"app.{_application.Id}.window.width", 800),
                     Height = settings.GetValue<double>($"app.{_application.Id}.window.height", 600)
                 };
-                _windowInfo.Bounds.Width = settings.GetValue<double>($"app.{_application.Id}.window.width", 800);
-                _windowInfo.Bounds.Height = settings.GetValue<double>($"app.{_application.Id}.window.height", 600);
 
                 var savedState = settings.GetValue<int>($"app.{_application.Id}.window.state", 0);
-                _windowInfo.State = (WindowState)savedState;
+                var state = (WindowState)savedState;
 
-                // Update window in manager
-                _windowManager.UpdateWindowBounds(_windowInfo.Id, _windowInfo.Bounds);
-                _windowManager.UpdateWindowState(_windowInfo.Id, _windowInfo.State);
+                _windowManager.UpdateWindowBounds(_windowInfo.Id, bounds);
+                _windowManager.UpdateWindowState(_windowInfo.Id, state);
 
                 _logger.LogDebug("Restored window state for application {AppId}", _application.Id);
             }
@@ -214,7 +212,7 @@ namespace HackerOs.OS.UI
         private void UpdateWindowFromApplication()
         {
             // Update window title
-            _windowInfo.Title = _application.Name;
+            _windowManager.UpdateWindowTitle(_windowInfo.Id, _application.Name);
 
             // Update window state based on application state
             switch (_application.State)
