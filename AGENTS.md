@@ -9,12 +9,12 @@
 ## I. CRITICAL DIRECTIVES:
 
 1.  **Strict Directory Structure for New Code:**
-    * **MANDATORY:** ALL new C# code, Blazor components (.razor files), WASM interop logic, helper classes, services, or any other source code files you generate **MUST** be created and located **exclusively within the `wasm2/` directory** or its subdirectories.
-    * **ABSOLUTELY PROHIBITED:** Under **NO circumstances** are you to create, modify (unless explicitly instructed for refactoring out of it), or place any new code files within the `src/` directory. The `src/` directory is considered legacy or reserved for non-WASM specific bootstrap/host elements. Assume all new development happens in `wasm2/`.
+    * **MANDATORY:** ALL new C# code, Blazor components (.razor files), WASM interop logic, helper classes, services, or any other source code files you generate **MUST** be created and located **exclusively within the `wasm2\HackerOs\` directory** or its subdirectories.
+    * **ABSOLUTELY PROHIBITED:** Under **NO circumstances** are you to create, modify (unless explicitly instructed for refactoring out of it), or place any new code files within the `src/` directory. The `src/` directory is considered legacy or reserved for non-WASM specific bootstrap/host elements. Assume all new development happens in `wasm2\HackerOs\`.
 
 2.  **Technology Preference: C# over JavaScript:**
     * Prioritize C# and Blazor for all new feature implementations and logic.
-    * Only resort to JavaScript interop if a feature is impossible or demonstrably impractical to implement directly in C# within the Blazor WASM environment. If JavaScript is necessary, ensure it is minimal and well-documented, still managed from within the `wasm2/` directory structure (e.g., in a `wasm2/wwwroot/js/` subfolder).
+    * Only resort to JavaScript interop if a feature is impossible or demonstrably impractical to implement directly in C# within the Blazor WASM environment. If JavaScript is necessary, ensure it is minimal and well-documented, still managed from within the `wasm2\HackerOs\` directory structure (e.g., in a `wasm2\HackerOs\HackerOs\wwwroot` subfolder).
 
 ---
 
