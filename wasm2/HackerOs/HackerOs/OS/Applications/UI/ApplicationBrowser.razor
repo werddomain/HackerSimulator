@@ -423,7 +423,7 @@
             return;
             
         // Create launch context
-        var context = new ApplicationLaunchContext(CurrentSession);
+        var context = ApplicationLaunchContext.Create(CurrentSession);
         
         // Launch the application
         var instance = await AppManager.LaunchApplicationAsync(app.Id, context);

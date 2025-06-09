@@ -70,8 +70,23 @@ namespace HackerOs.OS.Network.HTTP
             {
                 return values[0];
             }
-            
+
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Tries to get the first header value for the specified name.
+        /// </summary>
+        public bool TryGetValue(string name, out string value)
+        {
+            if (_headers.TryGetValue(name, out var values) && values.Count > 0)
+            {
+                value = values[0];
+                return true;
+            }
+
+            value = string.Empty;
+            return false;
         }
 
         /// <summary>

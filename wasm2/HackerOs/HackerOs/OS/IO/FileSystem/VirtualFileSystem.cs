@@ -1295,7 +1295,8 @@ namespace HackerOs.OS.IO.FileSystem
                     break;
             }
             
-            // Split path into directory and filename            string directory = Path.GetDirectoryName(path) ?? "/";
+            // Split path into directory and filename
+            string directory = Path.GetDirectoryName(path) ?? "/";
             string fileName = Path.GetFileName(path);
             
             // If path ends with /, it's a directory and we need to ensure fileName is correct
