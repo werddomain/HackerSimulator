@@ -145,7 +145,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
         {
             // Match the route
             var route = _router.MatchRoute(
-                context.Request.Path, 
+                context.Request.Url.AbsolutePath,
                 context.Request.Method,
                 out var routeParameters);
             
@@ -156,7 +156,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
                     // Add route parameters to the request
                     foreach (var param in routeParameters)
                     {
-                        context.Request.RouteValues[param.Key] = param.Value;
+                        context.Request.RouteData[param.Key] = param.Value;
                     }
                     
                     // Add controller name to context
@@ -234,7 +234,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
             if (string.IsNullOrEmpty(DocumentRoot))
                 return false;
             
-            var path = context.Request.Path.TrimStart('/');
+            var path = context.Request.Url.AbsolutePath.TrimStart('/');
             var filePath = Path.Combine(DocumentRoot, path);
             
             // Check if it's a directory
@@ -308,7 +308,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
                 
                 // For other file types, serve directly
                 var bytes = await File.ReadAllBytesAsync(filePath);
-                await context.Response.WriteBytesAsync(bytes);
+                await context.Response.WriteAsync(bytes, 0, bytes.Length);
                 
                 return true;
             }

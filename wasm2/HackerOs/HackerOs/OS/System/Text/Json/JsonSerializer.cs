@@ -16,7 +16,6 @@ namespace HackerOs.OS.System.Text.Json
         {
             PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
             WriteIndented = true,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
             PropertyNameCaseInsensitive = true
         };
 
@@ -44,9 +43,7 @@ namespace HackerOs.OS.System.Text.Json
                     ? System.Text.Json.JsonNamingPolicy.CamelCase
                     : null,
                 WriteIndented = options.WriteIndented,
-                DefaultIgnoreCondition = options.IgnoreNullValues
-                    ? System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                    : System.Text.Json.Serialization.JsonIgnoreCondition.Never,
+                IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 
@@ -79,9 +76,7 @@ namespace HackerOs.OS.System.Text.Json
                     ? System.Text.Json.JsonNamingPolicy.CamelCase
                     : null,
                 WriteIndented = options.WriteIndented,
-                DefaultIgnoreCondition = options.IgnoreNullValues
-                    ? System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                    : System.Text.Json.Serialization.JsonIgnoreCondition.Never,
+                IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 

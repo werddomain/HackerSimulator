@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using HackerOs.OS.IO.FileSystem;
 using System.Text.RegularExpressions;
+using HackerOs.OS.System.IO;
 
 namespace HackerOs.OS.Network.DNS
 {
@@ -147,7 +148,7 @@ namespace HackerOs.OS.Network.DNS
             try
             {
                 // Ensure the directory exists
-                var directory = _fileSystem.GetDirectoryName(_hostsFilePath);
+                var directory = HackerOs.OS.System.IO.Path.GetDirectoryName(_hostsFilePath);
                 if (!string.IsNullOrEmpty(directory) && !await _fileSystem.DirectoryExistsAsync(directory))
                 {
                     await _fileSystem.CreateDirectoryAsync(directory);
@@ -245,8 +246,8 @@ namespace HackerOs.OS.Network.DNS
             var cacheResult = CheckCache(hostname, DnsRecordType.A);
             if (cacheResult != null)
             {
-                FireQueryProcessedEvent(hostname, DnsRecordType.A, true, cacheResult.Value, true);
-                return cacheResult.Value;
+                FireQueryProcessedEvent(hostname, DnsRecordType.A, true, cacheResult, true);
+                return cacheResult;
             }
 
             // Look up in records
