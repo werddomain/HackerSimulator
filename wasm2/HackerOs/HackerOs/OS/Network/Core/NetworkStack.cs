@@ -260,11 +260,11 @@ namespace HackerOs.OS.Network.Core
             {
                 if (intf.Statistics != null)
                 {
-                    stats.PacketsSent += intf.Statistics.PacketsSent;
+                    stats.PacketsSent += intf.Statistics.PacketsTransmitted;
                     stats.PacketsReceived += intf.Statistics.PacketsReceived;
-                    stats.BytesSent += intf.Statistics.BytesSent;
+                    stats.BytesSent += intf.Statistics.BytesTransmitted;
                     stats.BytesReceived += intf.Statistics.BytesReceived;
-                    stats.TrafficByInterface[intf.Name] = intf.Statistics.BytesSent + intf.Statistics.BytesReceived;
+                    stats.TrafficByInterface[intf.Name] = intf.Statistics.BytesTransmitted + intf.Statistics.BytesReceived;
                 }
             }
             

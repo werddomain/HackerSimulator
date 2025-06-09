@@ -279,7 +279,7 @@ namespace HackerOs.OS.System.Net.Http
         }        public override Task<System.IO.Stream> ReadAsStreamAsync()
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(_content);
-            return Task.FromResult<System.IO.Stream>(new System.IO.MemoryStream(bytes));
+            return Task.FromResult<System.IO.Stream>(new global::System.IO.MemoryStream(bytes));
         }
     }
 

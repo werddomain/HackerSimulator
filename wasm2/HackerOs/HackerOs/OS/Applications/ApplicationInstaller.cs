@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
+using HackerOs.OS.IO.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Applications;
@@ -416,7 +417,7 @@ public class ApplicationInstaller : IApplicationInstaller
                 // System-wide installation
                 appDir = string.Format(APP_DATA_DIR, app.Id);
                 manifestDir = SYSTEM_APPS_DIR;
-                manifestPath = Path.Combine(manifestDir, $"{app.Id}.app.json");
+                manifestPath = System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
             }
             else
             {
@@ -427,7 +428,7 @@ public class ApplicationInstaller : IApplicationInstaller
                 // User-specific installation
                 appDir = string.Format(USER_APP_DATA_DIR, username, app.Id);
                 manifestDir = string.Format(USER_APPS_DIR, username);
-                manifestPath = Path.Combine(manifestDir, $"{app.Id}.app.json");
+                manifestPath = System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
             }
             
             // Delete application files
@@ -492,14 +493,14 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Find all manifest files
-            var manifestFiles = await _fileSystem.GetFilesAsync(userAppsDir, "*.app.json", User.User.CurrentLogedUser);
+            var manifestFiles = await HackerOs.OS.IO.Utilities.Directory.GetFilesAsync(userAppsDir, "*.app.json", _fileSystem);
             
             // Load each manifest
             foreach (var manifestFile in manifestFiles)
             {
                 try
                 {
-                    string json = await _fileSystem.ReadAllTextAsync(manifestFile);
+                    string json = await _fileSystem.ReadAllTextAsync(manifestFile, UserManager.SystemUser);
                     var manifest = JsonSerializer.Deserialize<ApplicationManifest>(json);
                     
                     if (manifest != null)

@@ -1,6 +1,7 @@
 using HackerOs.OS.Applications;
 using HackerOs.OS.UI.Models;
 using HackerOs.OS.UI.Services;
+using HackerOs.OS.User;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ namespace HackerOs.OS.UI.Components
         [Inject] protected IApplicationManager ApplicationManager { get; set; } = null!;
         [Inject] protected LauncherService LauncherService { get; set; } = null!;
         [Inject] protected ILogger<ApplicationLauncher> Logger { get; set; } = null!;
+        [Inject] protected IUserManager UserManager { get; set; } = null!;
 
         /// <summary>
         /// Event called when the launcher open state changes
@@ -192,8 +194,10 @@ namespace HackerOs.OS.UI.Components
                 _isOpen = false;
                 await OnLauncherOpenChanged.InvokeAsync(false);
                 
-                // Launch the application
-                await ApplicationManager.LaunchApplicationAsync(appId);
+                // Launch the application with a basic context
+                var session = new UserSession(UserManager.SystemUser, "system");
+                var context = ApplicationLaunchContext.Create(session);
+                await ApplicationManager.LaunchApplicationAsync(appId, context);
                 
                 // Track as recently used
                 await LauncherService.RecordApplicationLaunchAsync(appId);

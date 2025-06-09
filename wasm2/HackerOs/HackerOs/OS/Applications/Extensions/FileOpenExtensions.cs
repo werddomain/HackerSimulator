@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
+using HackerOs.OS.IO.Utilities;
 
 namespace HackerOs.OS.Applications.Extensions;
 
@@ -36,7 +37,7 @@ public static class FileOpenExtensions
         try
         {
             // Normalize path and check if file exists
-            var normalizedPath = fileSystem.NormalizePath(filePath);
+            var normalizedPath = HackerOs.OS.IO.Utilities.Path.NormalizePath(filePath);
             if (!await fileSystem.FileExistsAsync(normalizedPath))
             {
                 return false;
@@ -105,7 +106,7 @@ public static class FileOpenExtensions
         try
         {
             // Normalize path and check if file exists
-            var normalizedPath = fileSystem.NormalizePath(filePath);
+            var normalizedPath = HackerOs.OS.IO.Utilities.Path.NormalizePath(filePath);
             if (!await fileSystem.FileExistsAsync(normalizedPath))
             {
                 return false;
