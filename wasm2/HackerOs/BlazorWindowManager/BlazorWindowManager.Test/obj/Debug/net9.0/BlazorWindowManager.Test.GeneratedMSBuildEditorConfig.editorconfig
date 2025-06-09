@@ -13,69 +13,69 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = browser
 build_property.RootNamespace = BlazorWindowManager.Test
 build_property.RootNamespace = BlazorWindowManager.Test
-build_property.ProjectDir = /workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/
+build_property.ProjectDir = C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager.Test\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = false
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = /workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test
+build_property.MSBuildProjectDirectory = C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager.Test
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/App.razor]
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/App.razor]
 build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Counter.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQ291bnRlci5yYXpvcg==
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Counter.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291bnRlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/TaskBarDemo.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvVGFza0JhckRlbW8ucmF6b3I=
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/TaskBarDemo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGFza0JhckRlbW8ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Weather.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV2VhdGhlci5yYXpvcg==
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Weather.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV2VhdGhlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/WindowArchitectureTest.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV2luZG93QXJjaGl0ZWN0dXJlVGVzdC5yYXpvcg==
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/WindowArchitectureTest.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV2luZG93QXJjaGl0ZWN0dXJlVGVzdC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/WindowTest.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV2luZG93VGVzdC5yYXpvcg==
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/WindowTest.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV2luZG93VGVzdC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/_Imports.razor]
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Layout/MainLayout.razor]
-build_metadata.AdditionalFiles.TargetPath = TGF5b3V0L01haW5MYXlvdXQucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = b-c0jck8yt7i
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-0a652sksf5
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Layout/NavMenu.razor]
-build_metadata.AdditionalFiles.TargetPath = TGF5b3V0L05hdk1lbnUucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = b-2l3xvacfk0
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Layout/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE5hdk1lbnUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-9g9axorunp
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/DialogDemo.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRGlhbG9nRGVtby5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = b-2ge3n6ip7t
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/DialogDemo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGlhbG9nRGVtby5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-z2e471919i
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Home.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvSG9tZS5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = b-x8tv5iu1o0
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSG9tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-iitlle9ej2
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/KeyboardNavigationDemo.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvS2V5Ym9hcmROYXZpZ2F0aW9uRGVtby5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = b-7tkeizyvcb
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/KeyboardNavigationDemo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcS2V5Ym9hcmROYXZpZ2F0aW9uRGVtby5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-tumvwr42u1
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/SnappingDemo.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvU25hcHBpbmdEZW1vLnJhem9y
-build_metadata.AdditionalFiles.CssScope = b-joptad3f6t
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/SnappingDemo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU25hcHBpbmdEZW1vLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-odyl1himze
 
-[/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/ThemeDemo.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvVGhlbWVEZW1vLnJhem9y
-build_metadata.AdditionalFiles.CssScope = b-x7t1cyhcc0
+[C:/Users/clefw/source/repos/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/Pages/ThemeDemo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGhlbWVEZW1vLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-d8j49v1hj8

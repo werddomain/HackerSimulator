@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -7,10 +6,25 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Add StaticWebAssetBasePath to distinguish assets -->
+    <StaticWebAssetBasePath>host</StaticWebAssetBasePath>
+    <!-- Prevent duplicate static web assets -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+    <DisableStaticWebAssetsDuplicateDetection>true</DisableStaticWebAssetsDuplicateDetection>
   </PropertyGroup>
 
   <!--<ItemGroup>
     <ProjectReference Include="..\HackerOs\HackerOs.csproj" />
   </ItemGroup>-->
+  
+
+  
+  <!-- Additional static web assets configuration -->
+  <PropertyGroup>
+    <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+  </PropertyGroup>
+  
+  
 
 </Project>

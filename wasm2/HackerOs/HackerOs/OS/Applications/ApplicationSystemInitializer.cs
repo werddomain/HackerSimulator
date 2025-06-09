@@ -1,7 +1,8 @@
-using System.Threading.Tasks;
+using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.User;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using HackerOs.OS.IO.FileSystem;
+using System.Threading.Tasks;
 
 namespace HackerOs.OS.Applications;
 
@@ -84,9 +85,9 @@ public class ApplicationSystemInitializer : IApplicationSystemInitializer
         
         foreach (var dir in directories)
         {
-            if (!await _fileSystem.DirectoryExistsAsync(dir))
+            if (!await _fileSystem.DirectoryExistsAsync(dir, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(dir, true);
+                await _fileSystem.CreateDirectoryAsync(dir, UserManager.SystemUser);
                 _logger.LogInformation("Created application directory: {Dir}", dir);
             }
         }

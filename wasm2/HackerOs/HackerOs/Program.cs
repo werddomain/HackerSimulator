@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using HackerOs.OS.Shell;
 using HackerOs.OS.Shell.Completion;
 using HackerOs.OS.Applications;
+using HackerOs.OS.Theme;
+using HackerOs.OS.Core.Settings;
 //using BlazorWindowManager.Extensions; // Temporarily disabled for initial setup
 
 namespace HackerOs
@@ -21,14 +23,14 @@ namespace HackerOs
             // Temporarily disabled: builder.Services.AddBlazorWindowManager();
 
             // Add HackerOS Core Services
-            builder.Services.AddHackerOSServices();
-
-            builder.Services.AddOidcAuthentication(options =>
+            builder.Services.AddHackerOSServices();            builder.Services.AddOidcAuthentication(options =>
             {
                 // Configure your authentication provider options here.
                 // For more information, see https://aka.ms/blazor-standalone-auth
                 builder.Configuration.Bind("Local", options.ProviderOptions);
-            });            var host = builder.Build();
+            });
+            
+            var host = builder.Build();
             
             // Initialize the application
             await Startup.InitializeAsync(host);
@@ -44,18 +46,21 @@ namespace HackerOs
         {
             // Core Infrastructure Services (Singletons - shared across application)
             // TODO: Add IKernel service registration
-            // TODO: Add IFileSystem service registration
-            // TODO: Add IMemoryManager service registration
+            // TODO: Add IFileSystem service registration            // TODO: Add IMemoryManager service registration
             
             // System Services (Scoped - per user session)
-            // TODO: Add ISettingsService service registration
+            // Settings Service
+            services.AddScoped<ISettingsService, SettingsService>();
             // TODO: Add IUserManager service registration
-            // TODO: Add ISecurityService service registration            // Application Services (Scoped - per user session)
+            // TODO: Add ISecurityService service registration            // Theme Services
+            services.AddScoped<IThemeManager, ThemeManager>();
+            
+            // Application Services (Scoped - per user session)
             // Shell Services
             services.AddScoped<IShell, HackerOs.OS.Shell.Shell>();
-            services.AddScoped<ICommandRegistry, CommandRegistry>();
-            services.AddScoped<CommandParser>(); // No interface, register as concrete type
-              // Register shell completion services
+            services.AddScoped<ICommandRegistry, CommandRegistry>();            services.AddScoped<CommandParser>(); // No interface, register as concrete type
+            
+            // Register shell completion services
             services.AddScoped<ICompletionService, CompletionService>();
             services.AddScoped<ICompletionProvider, CommandCompletionProvider>();
             services.AddScoped<ICompletionProvider, FilePathCompletionProvider>();
@@ -71,25 +76,28 @@ namespace HackerOs
                 var providers = serviceProvider.GetServices<ICompletionProvider>();
                 foreach (var provider in providers)
                 {
-                    completionService.RegisterProvider(provider);
-                }
+                    completionService.RegisterProvider(provider);                }
                 
                 return completionService;
             });
-              // Register shell commands
-            RegisterShellCommands(services);
             
-            // Register application management commands
+            // Register shell commands
+            RegisterShellCommands(services);
+              // Register application management commands
             RegisterApplicationCommands(services);
             
             // Add command initializer service
-            services.AddScoped<ICommandInitializer, CommandInitializer>();            // System Services (Singleton - system-wide services)
+            services.AddScoped<ICommandInitializer, CommandInitializer>();
+              // System Services (Singleton - system-wide services)
             services.AddSingleton<HackerOs.OS.System.ISystemBootService, HackerOs.OS.System.SystemBootService>();
             services.AddSingleton<HackerOs.OS.System.IMainService, HackerOs.OS.System.MainService>();
-              // Applications Services (Singleton - system-wide application management)            services.AddSingleton<IApplicationManager, ApplicationManager>();
+            
+            // Applications Services (Singleton - system-wide application management)
+            services.AddSingleton<IApplicationManager, ApplicationManager>();
             services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
             services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
-            services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();            services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
+            services.AddSingleton<IApplicationFinder, ApplicationFinder>();
             services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();
             services.AddSingleton<IApplicationInstaller, ApplicationInstaller>();
             services.AddSingleton<HackerOs.OS.Applications.UI.IUserSettingsService, HackerOs.OS.Applications.UI.UserSettingsService>();

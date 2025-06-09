@@ -19,6 +19,10 @@ namespace HackerOs.OS.Network.Core
         private NetworkEndPoint? _localEndPoint;
         private NetworkEndPoint? _remoteEndPoint;
         private bool _disposed;
+        private TimeSpan _timeout = TimeSpan.FromSeconds(30);
+        private int _receiveBufferSize = 8192;
+        private int _sendBufferSize = 8192;
+        private readonly SocketStatistics _statistics = new SocketStatistics();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VirtualSocket"/> class.
@@ -61,7 +65,7 @@ namespace HackerOs.OS.Network.Core
                 {
                     var oldState = _state;
                     _state = value;
-                    OnStateChanged(new SocketStateEventArgs(this, oldState, _state));
+                    OnStateChanged(new SocketStateChangedEventArgs(oldState, _state));
                 }
             }
         }
@@ -79,35 +83,52 @@ namespace HackerOs.OS.Network.Core
         public bool IsBound => State == SocketState.Bound || State == SocketState.Listening || State == SocketState.Connected;
 
         /// <inheritdoc/>
-        public bool IsListening => State == SocketState.Listening;
+        public bool IsListening => State == SocketState.Listening;        /// <inheritdoc/>
+        public event EventHandler<SocketStateChangedEventArgs>? StateChanged;
 
         /// <inheritdoc/>
-        public event EventHandler<SocketStateEventArgs>? StateChanged;
+        public event EventHandler<SocketDataReceivedEventArgs>? DataReceived;
 
         /// <inheritdoc/>
-        public event EventHandler<SocketDataEventArgs>? DataReceived;
+        public event EventHandler<SocketErrorEventArgs>? ErrorOccurred;
 
         /// <inheritdoc/>
-        public async Task<bool> BindAsync(NetworkEndPoint localEndPoint)
+        public TimeSpan Timeout 
+        { 
+            get => _timeout; 
+            set => _timeout = value; 
+        }
+
+        /// <inheritdoc/>
+        public int ReceiveBufferSize 
+        { 
+            get => _receiveBufferSize; 
+            set => _receiveBufferSize = value; 
+        }
+
+        /// <inheritdoc/>
+        public int SendBufferSize 
+        { 
+            get => _sendBufferSize; 
+            set => _sendBufferSize = value; 
+        }
+
+        /// <inheritdoc/>
+        public SocketStatistics Statistics => _statistics;        /// <inheritdoc/>
+        public async Task BindAsync(NetworkEndPoint localEndPoint)
         {
             ThrowIfDisposed();
 
             if (IsBound)
             {
                 throw new InvalidOperationException("Socket is already bound");
-            }
-
-            lock (_stateLock)
+            }            lock (_stateLock)
             {
                 _localEndPoint = localEndPoint;
                 State = SocketState.Bound;
             }
-
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> ConnectAsync(NetworkEndPoint remoteEndPoint)
+        }        /// <inheritdoc/>
+        public async Task ConnectAsync(NetworkEndPoint remoteEndPoint)
         {
             ThrowIfDisposed();
 
@@ -120,30 +141,25 @@ namespace HackerOs.OS.Network.Core
             {
                 // Auto-bind to a random local port if not already bound
                 await BindAsync(new NetworkEndPoint("0.0.0.0", GetRandomPort()));
-            }
-
-            try
+            }            try
             {
                 // Simulate connection delay
                 await Task.Delay(SimulateConnectionDelay(remoteEndPoint));
 
-                lock (_stateLock)
-                {
+                lock (_stateLock)                {
                     _remoteEndPoint = remoteEndPoint;
                     State = SocketState.Connected;
                 }
-
-                return true;
             }
             catch
             {
-                State = SocketState.Failed;
+                State = SocketState.Error;
                 throw;
             }
         }
 
         /// <inheritdoc/>
-        public async Task<bool> ListenAsync(int backlog)
+        public async Task ListenAsync(int backlog)
         {
             ThrowIfDisposed();
 
@@ -155,14 +171,10 @@ namespace HackerOs.OS.Network.Core
             if (IsConnected)
             {
                 throw new InvalidOperationException("Socket is already connected");
-            }
-
-            lock (_stateLock)
+            }            lock (_stateLock)
             {
                 State = SocketState.Listening;
             }
-
-            return true;
         }
 
         /// <inheritdoc/>
@@ -253,8 +265,7 @@ namespace HackerOs.OS.Network.Core
                     Data = new byte[size]
                 };
                 
-                // Copy the data to send
-                Array.Copy(buffer, offset, packet.Data, 0, size);
+                // Copy the data to send                Array.Copy(buffer, offset, packet.Data, 0, size);
 
                 // In a real implementation, we'd send this via the network stack
                 // For now, just return success
@@ -262,9 +273,42 @@ namespace HackerOs.OS.Network.Core
             }
             catch
             {
-                State = SocketState.Failed;
+                State = SocketState.Error;
                 throw;
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> SendAsync(byte[] data, SocketFlags flags = SocketFlags.None)
+        {
+            ThrowIfDisposed();
+            
+            if (!IsConnected)
+            {
+                throw new InvalidOperationException("Socket is not connected");
+            }
+
+            // Simulate send delay
+            await Task.Delay(SimulateSendDelay(data.Length));
+            
+            _statistics.IncrementBytesSent(data.Length);
+            _statistics.IncrementPacketsSent();
+            
+            return data.Length;
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> SendToAsync(byte[] data, NetworkEndPoint remoteEndPoint, SocketFlags flags = SocketFlags.None)
+        {
+            ThrowIfDisposed();
+            
+            // For UDP-like behavior, we don't need to be connected
+            await Task.Delay(SimulateSendDelay(data.Length));
+            
+            _statistics.IncrementBytesSent(data.Length);
+            _statistics.IncrementPacketsSent();
+            
+            return data.Length;
         }
 
         /// <inheritdoc/>
@@ -320,49 +364,117 @@ namespace HackerOs.OS.Network.Core
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CloseAsync()
+        public async Task<int> ReceiveAsync(byte[] buffer, SocketFlags flags = SocketFlags.None)
         {
-            if (_disposed)
+            ThrowIfDisposed();
+            
+            if (!IsConnected)
             {
-                return true;
+                throw new InvalidOperationException("Socket is not connected");
             }
 
-            try
+            // Wait for data to be available
+            await _receiveSemaphore.WaitAsync();
+            
+            if (_receiveQueue.TryDequeue(out var data))
             {
-                // Simulate close operation
-                if (IsConnected)
-                {
-                    // For TCP, we'd normally send a FIN packet
-                    await Task.Delay(10); // Small delay to simulate TCP close
-                }
-
-                // Update state
-                State = SocketState.Closed;
+                var bytesToCopy = Math.Min(data.Length, buffer.Length);
+                Array.Copy(data, 0, buffer, 0, bytesToCopy);
                 
-                return true;
+                _statistics.IncrementBytesReceived(bytesToCopy);
+                _statistics.IncrementPacketsReceived();
+                
+                return bytesToCopy;
             }
-            catch
+            
+            return 0;
+        }
+
+        /// <inheritdoc/>
+        public async Task<SocketReceiveResult> ReceiveFromAsync(byte[] buffer, SocketFlags flags = SocketFlags.None)
+        {
+            ThrowIfDisposed();
+            
+            // Wait for data to be available
+            await _receiveSemaphore.WaitAsync();
+            
+            if (_receiveQueue.TryDequeue(out var data))
             {
-                State = SocketState.Failed;
-                return false;
+                var bytesToCopy = Math.Min(data.Length, buffer.Length);
+                Array.Copy(data, 0, buffer, 0, bytesToCopy);
+                
+                _statistics.IncrementBytesReceived(bytesToCopy);
+                _statistics.IncrementPacketsReceived();
+                
+                // For simulation, return a default source endpoint
+                var sourceEndPoint = new NetworkEndPoint("192.168.1.1", 8080);
+                return new SocketReceiveResult(bytesToCopy, sourceEndPoint);
             }
-            finally
+            
+            return new SocketReceiveResult(0, null);
+        }
+
+        /// <inheritdoc/>
+        public async Task ShutdownAsync(SocketShutdown how)
+        {
+            ThrowIfDisposed();
+            
+            await Task.CompletedTask; // Immediate operation for simulation
+            
+            // Update state based on shutdown type
+            if (how == SocketShutdown.Both)
             {
-                Dispose();
+                State = SocketState.Closed;
             }
         }
 
         /// <inheritdoc/>
-        public void Dispose()
+        public async Task CloseAsync()
         {
-            if (_disposed)
-            {
-                return;
-            }
-
+            if (_disposed) return;
+            
+            await Task.CompletedTask; // Immediate operation for simulation
+            
             State = SocketState.Closed;
-            _receiveSemaphore.Dispose();
             _disposed = true;
+        }
+
+        /// <inheritdoc/>
+        public object GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName)
+        {
+            ThrowIfDisposed();
+            
+            // Return default values for simulation
+            return optionName switch
+            {
+                SocketOptionName.ReceiveBuffer => _receiveBufferSize,
+                SocketOptionName.SendBuffer => _sendBufferSize,
+                SocketOptionName.ReuseAddress => true,
+                SocketOptionName.KeepAlive => false,
+                _ => new object()
+            };
+        }
+
+        /// <inheritdoc/>
+        public async Task SetSocketOptionAsync(SocketOptionLevel optionLevel, SocketOptionName optionName, object optionValue)
+        {
+            ThrowIfDisposed();
+            
+            await Task.CompletedTask; // Immediate operation for simulation
+            
+            // Handle known options
+            switch (optionName)
+            {
+                case SocketOptionName.ReceiveBuffer:
+                    if (optionValue is int receiveSize)
+                        _receiveBufferSize = receiveSize;
+                    break;
+                case SocketOptionName.SendBuffer:
+                    if (optionValue is int sendSize)
+                        _sendBufferSize = sendSize;
+                    break;
+                // Other options ignored for simulation
+            }
         }
 
         /// <summary>
@@ -376,12 +488,10 @@ namespace HackerOs.OS.Network.Core
             if (!IsConnected)
             {
                 throw new InvalidOperationException("Socket is not connected");
-            }
-
-            _receiveQueue.Enqueue(data);
+            }            _receiveQueue.Enqueue(data);
             _receiveSemaphore.Release();
             
-            OnDataReceived(new SocketDataEventArgs(this, data.Length));
+            OnDataReceived(new SocketDataReceivedEventArgs(data));
         }
 
         /// <summary>
@@ -463,13 +573,11 @@ namespace HackerOs.OS.Network.Core
         {
             // Ephemeral ports typically in range 49152-65535
             return new Random().Next(49152, 65535);
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Raises the state changed event.
         /// </summary>
         /// <param name="e">The event arguments.</param>
-        protected virtual void OnStateChanged(SocketStateEventArgs e)
+        protected virtual void OnStateChanged(SocketStateChangedEventArgs e)
         {
             StateChanged?.Invoke(this, e);
         }
@@ -478,46 +586,21 @@ namespace HackerOs.OS.Network.Core
         /// Raises the data received event.
         /// </summary>
         /// <param name="e">The event arguments.</param>
-        protected virtual void OnDataReceived(SocketDataEventArgs e)
+        protected virtual void OnDataReceived(SocketDataReceivedEventArgs e)
         {
             DataReceived?.Invoke(this, e);
         }
-    }
 
-    /// <summary>
-    /// Represents a network endpoint (IP address and port).
-    /// </summary>
-    public class NetworkEndPoint
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NetworkEndPoint"/> class.
-        /// </summary>
-        /// <param name="address">The IP address.</param>
-        /// <param name="port">The port number.</param>
-        public NetworkEndPoint(string address, int port)
+        /// <inheritdoc/>
+        public void Dispose()
         {
-            Address = address;
-            Port = port;
+            if (_disposed) return;
+            
+            State = SocketState.Closed;
+            _disposed = true;
+            _receiveSemaphore?.Dispose();
         }
-
-        /// <summary>
-        /// Gets the IP address.
-        /// </summary>
-        public string Address { get; }
-
-        /// <summary>
-        /// Gets the port number.
-        /// </summary>
-        public int Port { get; }
-
-        /// <summary>
-        /// Returns a string representation of this endpoint.
-        /// </summary>
-        /// <returns>A string in the format "address:port".</returns>
-        public override string ToString() => $"{Address}:{Port}";
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Event arguments for socket state changes.
     /// </summary>
     public class SocketStateEventArgs : EventArgs

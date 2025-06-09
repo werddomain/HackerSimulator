@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:ProxyServer.GUI.ViewModels"
+             xmlns:models="clr-namespace:ProxyServer.Protocol.Models.FileSystem;assembly=ProxyServer.Protocol"
+             x:Class="ProxyServer.GUI.Pages.SharedFolderConfigPage"
+             Title="Shared Folder Configuration"
+             x:DataType="viewmodels:SharedFolderViewModel">
+
+    <Grid RowDefinitions="Auto,*" Padding="20" RowSpacing="20">
+        <!-- Status Message -->
+        <Label Text="{Binding StatusMessage}" 
+               TextColor="{Binding HasError, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Red,Green'}" 
+               IsVisible="{Binding StatusMessage, Converter={StaticResource StringToBoolConverter}}"
+               HorizontalOptions="Center" Margin="0,0,0,10" />
+        
+        <Grid Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10">
+            <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
+                   Text="Add New Shared Folder" FontSize="Title" />
+            
+            <!-- Path Selection -->
+            <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="5">
+                <Label Text="Folder Path" FontAttributes="Bold" />
+                <Entry Text="{Binding NewFolderPath}" Placeholder="Select folder path" IsReadOnly="True" />
+            </VerticalStackLayout>
+            
+            <Button Grid.Row="1" Grid.Column="1" Text="Browse" 
+                    Command="{Binding BrowseFolderCommand}" VerticalOptions="End" />
+            
+            <!-- Alias -->
+            <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Spacing="5">
+                <Label Text="Folder Alias" FontAttributes="Bold" />
+                <Entry Text="{Binding NewFolderAlias}" Placeholder="Enter an alias for this folder" />
+                <Label Text="The alias will be used to reference this folder in the HackerOS" 
+                       FontSize="12" TextColor="{StaticResource Gray500}" />
+            </VerticalStackLayout>
+            
+            <!-- Permissions -->
+            <HorizontalStackLayout Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Spacing="15">
+                <Label Text="Access Permissions:" VerticalOptions="Center" />
+                <RadioButton Content="Read Only" IsChecked="{Binding IsReadOnly}" GroupName="permissions" />
+                <RadioButton Content="Read/Write" IsChecked="{Binding IsReadOnly, Converter={StaticResource InvertedBoolConverter}}" GroupName="permissions" />
+            </HorizontalStackLayout>
+            
+            <!-- Add Button -->
+            <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Text="Add Shared Folder" 
+                    Command="{Binding AddSharedFolderCommand}" 
+                    BackgroundColor="{StaticResource Primary}" TextColor="White" />
+        </Grid>
+        
+        <!-- Shared Folders List -->
+        <Grid Row="1" RowDefinitions="Auto,*">
+            <Label Text="Configured Shared Folders" FontSize="Title" Margin="0,0,0,10" />
+            
+            <Grid Row="1" RowDefinitions="*,Auto">
+                <CollectionView ItemsSource="{Binding SharedFolders}" 
+                                SelectedItem="{Binding SelectedFolder}"
+                                SelectionMode="Single">
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center">
+                            <Label Text="No shared folders configured" FontSize="16" TextColor="{StaticResource Gray500}" />
+                            <Label Text="Add a shared folder above" FontSize="14" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                    
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:SharedFolderInfo">
+                            <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}"
+                                   Margin="0,5" Padding="15" CornerRadius="8">
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                    <Label Grid.Row="0" Grid.Column="0" Text="{Binding Alias}" FontSize="18" FontAttributes="Bold" />
+                                    
+                                    <Border Grid.Row="0" Grid.Column="1" Padding="10,3" StrokeShape="RoundRectangle 12">
+                                        <Border.BackgroundColor>
+                                            <OnPlatform x:TypeArguments="Color">
+                                                <On Platform="Android,iOS" Value="{StaticResource Primary}" />
+                                                <On Platform="WinUI" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            </OnPlatform>
+                                        </Border.BackgroundColor>
+                                        <Label Text="{Binding Permissions}" TextColor="White" FontSize="12" />
+                                    </Border>
+                                    
+                                    <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+                                           Text="{Binding HostPath}" Margin="0,5,0,0" />
+                                    
+                                    <Label Grid.Row="2" Grid.Column="0" 
+                                           Text="{Binding Id, StringFormat='ID: {0}'}" 
+                                           TextColor="{StaticResource Gray500}" FontSize="10" Margin="0,5,0,0" />
+                                </Grid>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                
+                <Button Grid.Row="1" Text="Remove Selected Folder" 
+                        Command="{Binding RemoveSharedFolderCommand}"
+                        IsEnabled="{Binding SelectedFolder, Converter={StaticResource ObjectToBoolConverter}}"
+                        BackgroundColor="#E74C3C" TextColor="White" 
+                        HorizontalOptions="End" Margin="0,10,0,0" />
+            </Grid>
+        </Grid>
+    </Grid>
+</ContentPage>

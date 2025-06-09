@@ -126,7 +126,7 @@ namespace HackerOs.OS.User
         private const string ShadowFile = "/etc/shadow";
 
         // System user for internal operations (root equivalent)
-        private static readonly User SystemUser = new User
+        internal static readonly User SystemUser = new User
         {
             UserId = 0,
             Username = "system",

@@ -1,0 +1,80 @@
+@namespace HackerOs.OS.UI.Components
+@inherits ApplicationWindowBase
+
+<div class="app-window @GetApplicationStateClass()">
+    @if (IsLoading)
+    {
+        <div class="app-loading">
+            <div class="spinner"></div>
+            <div>Loading application...</div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="app-error">
+            <div class="error-icon">!</div>
+            <div class="error-message">@ErrorMessage</div>
+        </div>
+    }
+    else if (Application != null)
+    {
+        <div class="app-content">
+            @if (ApplicationContentComponent != null)
+            {
+                @ApplicationContentComponent
+            }
+            else
+            {
+                <div class="app-missing-content">
+                    <div class="warning-icon">⚠</div>
+                    <div>No content renderer available for this application type.</div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The component that renders the application content
+    /// </summary>
+    private RenderFragment? ApplicationContentComponent { get; set; }
+
+    /// <summary>
+    /// Initializes the component
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (Application != null)
+        {
+            try
+            {
+                // Create the application content component
+                ApplicationContentComponent = ApplicationManager.GetApplicationContentRenderer(Application);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error rendering application: {ex.Message}";
+                Logger.LogError(ex, "Error rendering application {ApplicationId}", ApplicationId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the CSS class for the current application state
+    /// </summary>
+    private string GetApplicationStateClass()
+    {
+        return Application?.State switch
+        {
+            ApplicationState.Running => "app-running",
+            ApplicationState.Suspended => "app-suspended",
+            ApplicationState.Minimized => "app-minimized",
+            ApplicationState.Maximized => "app-maximized",
+            ApplicationState.Terminated => "app-terminated",
+            _ => string.Empty
+        };
+    }
+}

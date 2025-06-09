@@ -42,6 +42,9 @@ namespace HackerOs.OS.Network.Core
                 { "Dropped", "0" },
                 { "LastActivity", DateTime.UtcNow.ToString("o") }
             };
+
+            // Initialize NetworkInterfaceStatistics
+            Statistics = new NetworkInterfaceStatistics();
         }
 
         /// <inheritdoc/>
@@ -57,16 +60,32 @@ namespace HackerOs.OS.Network.Core
         public string IPAddress { get; set; }
 
         /// <inheritdoc/>
-        public string SubnetMask { get; set; }
-
-        /// <inheritdoc/>
+        public string SubnetMask { get; set; }       
+         /// <inheritdoc/>
         public string Gateway { get; set; }
 
+        /// <summary>
+        /// Gets or sets the DNS servers for this interface.
+        /// </summary>
+        public List<string> DnsServers { get; set; } = new List<string>();
+        
         /// <inheritdoc/>
         public string MacAddress { get; set; }
-
+        
         /// <inheritdoc/>
         public int MTU { get; set; }
+
+        /// <inheritdoc/>
+        public bool IsUp => _isActive;
+
+        /// <inheritdoc/>
+        public bool SupportsDHCP { get; private set; } = true;
+
+        /// <inheritdoc/>
+        public NetworkLinkState LinkState => _isActive ? NetworkLinkState.Up : NetworkLinkState.Down;
+
+        /// <inheritdoc/>
+        public NetworkInterfaceStatistics Statistics { get; private set; }
 
         /// <inheritdoc/>
         public bool IsActive
@@ -80,43 +99,35 @@ namespace HackerOs.OS.Network.Core
                     OnStatusChanged(new NetworkInterfaceEventArgs(this));
                 }
             }
-        }
+        }        /// <inheritdoc/>
+        public event EventHandler<NetworkInterfaceStateChangedEventArgs>? StateChanged;
 
         /// <inheritdoc/>
-        public IReadOnlyDictionary<string, string> Statistics => _statistics;
-
+        public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+        
         /// <inheritdoc/>
-        public event EventHandler<NetworkInterfaceEventArgs>? StatusChanged;
-
-        /// <inheritdoc/>
-        public event EventHandler<NetworkPacketEventArgs>? PacketReceived;
-
-        /// <inheritdoc/>
-        public async Task<bool> BringUpAsync()
+        public async Task BringUpAsync()
         {
             if (string.IsNullOrEmpty(IPAddress) || string.IsNullOrEmpty(SubnetMask))
             {
-                return false;
+                return;
             }
 
             IsActive = true;
-            return true;
         }
 
         /// <inheritdoc/>
-        public async Task<bool> BringDownAsync()
+        public async Task BringDownAsync()
         {
             IsActive = false;
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> SendPacketAsync(NetworkPacket packet)
+        }          /// <inheritdoc/>
+        public async Task SendPacketAsync(NetworkPacket packet)
         {
             if (!IsActive)
             {
                 IncrementStatistic("Dropped");
-                return false;
+                Statistics.DroppedPackets++;
+                return;
             }
 
             try
@@ -124,6 +135,8 @@ namespace HackerOs.OS.Network.Core
                 // Update statistics
                 IncrementStatistic("PacketsSent");
                 IncrementStatistic("BytesSent", packet.Data.Length);
+                Statistics.PacketsTransmitted++;
+                Statistics.BytesTransmitted += packet.Data.Length;
                 UpdateLastActivity();
 
                 // If this is the loopback interface or the packet is destined for this interface,
@@ -131,22 +144,21 @@ namespace HackerOs.OS.Network.Core
                 if (Name == "lo" || IsDestinationLocal(packet.DestinationAddress))
                 {
                     await ReceivePacketAsync(packet);
-                    return true;
+                    return;
                 }
 
                 // Simulate network transmission delay
                 await Task.Delay(SimulateNetworkDelay(packet));
-
-                return true;
             }
             catch
             {
                 IncrementStatistic("Errors");
-                return false;
             }
-        }
-
-        /// <inheritdoc/>
+        }/// <summary>
+        /// Handles a received network packet.
+        /// </summary>
+        /// <param name="packet">The network packet that was received.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public async Task<bool> ReceivePacketAsync(NetworkPacket packet)
         {
             if (!IsActive)
@@ -171,10 +183,9 @@ namespace HackerOs.OS.Network.Core
                     {
                         _packetQueue.RemoveAt(0);
                     }
-                }
-
+                }                
                 // Raise packet received event
-                OnPacketReceived(new NetworkPacketEventArgs(packet));
+                OnPacketReceived(new PacketReceivedEventArgs(packet));
 
                 return true;
             }
@@ -324,24 +335,98 @@ namespace HackerOs.OS.Network.Core
             {
                 _statistics["LastActivity"] = DateTime.UtcNow.ToString("o");
             }
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Raises the status changed event.
         /// </summary>
-        /// <param name="e">The event arguments.</param>
+        /// <param name="e">The event arguments.</param>        
         protected virtual void OnStatusChanged(NetworkInterfaceEventArgs e)
         {
-            StatusChanged?.Invoke(this, e);
+            StateChanged?.Invoke(this, new NetworkInterfaceStateChangedEventArgs(NetworkLinkState.Down, LinkState));
         }
 
         /// <summary>
         /// Raises the packet received event.
         /// </summary>
         /// <param name="e">The event arguments.</param>
-        protected virtual void OnPacketReceived(NetworkPacketEventArgs e)
+        protected virtual void OnPacketReceived(PacketReceivedEventArgs e)
         {
             PacketReceived?.Invoke(this, e);
+        }
+
+        /// <inheritdoc/>
+        public async Task ConfigureAsync(NetworkInterfaceConfig config)
+        {
+            IPAddress = config.IPAddress;
+            SubnetMask = config.SubnetMask;
+            Gateway = config.Gateway;
+            // Apply other configuration settings as needed
+        }
+
+        /// <inheritdoc/>
+        public async Task<DHCPLease> RequestDHCPLeaseAsync()
+        {
+            // Simulate DHCP lease request            
+            var lease = new DHCPLease
+            {
+                IPAddress = "192.168.1.100", // Example IP
+                SubnetMask = "255.255.255.0",
+                Gateway = "192.168.1.1",
+                DnsServers = new List<string> { "8.8.8.8", "8.8.4.4" },
+                ExpiresAt = DateTime.UtcNow.AddHours(24),
+                DHCPServer = "192.168.1.1"
+            };
+            
+            // Apply the lease
+            IPAddress = lease.IPAddress;
+            SubnetMask = lease.SubnetMask;
+            Gateway = lease.Gateway;
+            
+            return lease;
+        }
+
+        /// <inheritdoc/>
+        public async Task ReleaseDHCPLeaseAsync()
+        {
+            // Reset to default values
+            IPAddress = string.Empty;
+            SubnetMask = string.Empty;
+            Gateway = string.Empty;
+        }        /// <inheritdoc/>
+        public NetworkInterfaceConfig GetConfiguration()
+        {
+            return new NetworkInterfaceConfig
+            {
+                IPAddress = IPAddress,
+                SubnetMask = SubnetMask,
+                Gateway = Gateway,
+                DnsServers = DnsServers,
+                // Add other properties as needed
+            };
+        }
+
+        /// <inheritdoc/>
+        public async Task<PingResult> PingAsync(string destination, TimeSpan timeout)
+        {
+            if (!IsActive)
+            {
+                return new PingResult
+                {
+                    Success = false,
+                    ErrorMessage = "Interface is not active",
+                    Destination = destination
+                };
+            }
+
+            // Simulate ping operation
+            await Task.Delay(50); // Simulate network delay
+            
+            return new PingResult
+            {
+                Success = true,
+                RoundTripTime = TimeSpan.FromMilliseconds(50),
+                Destination = destination,
+                TTL = 64
+            };
         }
     }
 

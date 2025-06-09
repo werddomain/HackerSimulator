@@ -77,15 +77,14 @@ namespace HackerOs.OS.Network.HTTP
             RequestTimestamp = DateTime.UtcNow;
             ConnectionId = Guid.NewGuid().ToString();
         }
-        
-        /// <summary>
+          /// <summary>
         /// Authenticates the request using the provided user session
         /// </summary>
-        public bool Authenticate(UserSession session)
+        public bool Authenticate(UserSession? session)
         {
-            if (session == null || !session.IsAuthenticated)
+            if (session == null || !session.IsAuthenticated())
             {
-                User = null;
+                User = null!;
                 return false;
             }
             
@@ -118,11 +117,10 @@ namespace HackerOs.OS.Network.HTTP
             
             return null;
         }
-        
-        /// <summary>
+          /// <summary>
         /// Creates a response with the specified status code and content
         /// </summary>
-        public async Task SetStatusCodeResultAsync(HttpStatusCode statusCode, string content = null)
+        public async Task SetStatusCodeResultAsync(HttpStatusCode statusCode, string? content = null)
         {
             Response.StatusCode = statusCode;
             

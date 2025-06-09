@@ -17,14 +17,24 @@ namespace HackerOs.OS.User
             return session?.User;
         }
 
-    /// <summary>
-    /// Converts a UserSession to a User
-    /// </summary>
-    /// <param name="session">The user session to convert</param>
-    /// <returns>The User object or null if session is null</returns>
-    public static User? ToUser(this UserSession? session)
-    {
-        return session?.User;
-    }
+        /// <summary>
+        /// Converts a UserSession to a User
+        /// </summary>
+        /// <param name="session">The user session to convert</param>
+        /// <returns>The User object or null if session is null</returns>
+        public static User? ToUser(this UserSession? session)
+        {
+            return session?.User;
+        }
+        
+        /// <summary>
+        /// Checks if the session is authenticated
+        /// </summary>
+        /// <param name="session">The user session</param>
+        /// <returns>True if the session is authenticated</returns>
+        public static bool IsAuthenticated(this UserSession? session)
+        {
+            return session?.User != null && !string.IsNullOrEmpty(session.Token);
+        }
     }
 }

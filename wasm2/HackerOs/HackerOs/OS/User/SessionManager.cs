@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace HackerOs.OS.User
 {
@@ -468,6 +469,7 @@ namespace HackerOs.OS.User
             {
                 if (session != null)
                 {
+                    //TODO: Use JWT or similar for secure token storage
                     var sessionData = JsonSerializer.Serialize(session.ToSerializable());
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", CurrentSessionKey, sessionData);
                     _logger.LogDebug("Set current session to {SessionId}", session.SessionId);
@@ -660,7 +662,7 @@ namespace HackerOs.OS.User
 
         private static string GenerateSecureToken()
         {
-            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+            using var rng = RandomNumberGenerator.Create();
             var bytes = new byte[32];
             rng.GetBytes(bytes);
             return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Replace("=", "");

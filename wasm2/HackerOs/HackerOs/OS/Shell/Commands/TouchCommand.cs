@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 
 namespace HackerOs.OS.Shell.Commands;
 

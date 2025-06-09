@@ -56,5 +56,5 @@ namespace HackerOs.OS.Network.DNS
             Value = value;
             TimeToLive = ttl;
         }
-        
-        /// <summary>
+    }
+}

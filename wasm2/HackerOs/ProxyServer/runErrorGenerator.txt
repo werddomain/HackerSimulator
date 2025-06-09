@@ -1,0 +1,1 @@
+cd "c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs" ; .\Generate-ErrorReport.ps1 -ProjectPath "ProxyServer\" -OutputFile "wasm2\HackerOs\ProxyServer\erreurs-compilation.md"

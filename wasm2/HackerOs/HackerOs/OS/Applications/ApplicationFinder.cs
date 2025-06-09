@@ -97,9 +97,9 @@ public class ApplicationFinder : IApplicationFinder
             
             // Get all applications
             var allApps = _applicationManager.GetAvailableApplications();
-            
+
             // Filter by name, description, categories
-            var results = allApps
+            IEnumerable<ApplicationManifest> results = allApps
                 .Where(app => 
                     app.Name.ToLowerInvariant().Contains(query) ||
                     app.Description.ToLowerInvariant().Contains(query) ||
@@ -271,9 +271,9 @@ public class ApplicationFinder : IApplicationFinder
         {
             // Get all applications
             var allApps = _applicationManager.GetAvailableApplications();
-            
+
             // Sort by usage count
-            var results = allApps
+            IEnumerable<ApplicationManifest> results = allApps
                 .OrderByDescending(app => _applicationUsageCounts.TryGetValue(app.Id, out var count) ? count : 0)
                 .ThenBy(app => app.Name);
                 

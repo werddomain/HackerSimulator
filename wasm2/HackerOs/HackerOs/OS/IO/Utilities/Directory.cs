@@ -265,9 +265,7 @@ namespace HackerOs.OS.IO.Utilities
                 return "/";
             
             return normalizedPath.Substring(0, lastSlash);
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Determines whether a filename matches a search pattern using wildcards.
         /// </summary>
         /// <param name="filename">The filename to test</param>
@@ -277,14 +275,13 @@ namespace HackerOs.OS.IO.Utilities
         {
             if (string.IsNullOrEmpty(pattern) || pattern == "*")
                 return true;
-
-            // Convert pattern to regex
+                  // Convert pattern to regex
             var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
-                                                                      .Replace("\\*", ".*")
-                                                                      .Replace("\\?", ".") + "$";
+                                  .Replace("\\*", ".*")
+                                  .Replace("\\?", ".") + "$";
             
-            return System.Text.RegularExpressions.Regex.IsMatch(filename, regexPattern, 
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            // Using IsMatch with just the pattern - no third parameter to avoid the error
+            return System.Text.RegularExpressions.Regex.IsMatch(filename, regexPattern);
         }
     }
 }

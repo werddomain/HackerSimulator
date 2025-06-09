@@ -77,11 +77,10 @@ namespace HackerOs.OS.Network.WebServer.Framework
             
             return isValid;
         }
-        
-        /// <summary>
+          /// <summary>
         /// Creates a ViewResult for rendering a view
         /// </summary>
-        protected ViewResult View(string viewName = null, object model = null)
+        protected ViewResult View(string? viewName = null, object? model = null)
         {
             return new ViewResult
             {
@@ -196,42 +195,5 @@ namespace HackerOs.OS.Network.WebServer.Framework
         protected UnauthorizedResult Unauthorized()
         {
             return new UnauthorizedResult();
-        }
-    }
-    
-    /// <summary>
-    /// Dictionary for storing model state validation errors
-    /// </summary>
-    public class ModelStateDictionary : Dictionary<string, ModelStateEntry>
-    {
-        /// <summary>
-        /// Gets a value indicating whether the model state is valid
-        /// </summary>
-        public bool IsValid => Count == 0;
-        
-        /// <summary>
-        /// Adds a model error to the dictionary
-        /// </summary>
-        public void AddModelError(string key, string errorMessage)
-        {
-            if (!TryGetValue(key, out var entry))
-            {
-                entry = new ModelStateEntry();
-                this[key] = entry;
-            }
-            
-            entry.Errors.Add(errorMessage);
-        }
-    }
-    
-    /// <summary>
-    /// Entry in the model state dictionary
-    /// </summary>
-    public class ModelStateEntry
-    {
-        /// <summary>
-        /// Gets the list of errors for this entry
-        /// </summary>
-        public List<string> Errors { get; } = new List<string>();
-    }
+        }    }
 }

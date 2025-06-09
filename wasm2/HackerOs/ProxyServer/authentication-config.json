@@ -1,0 +1,50 @@
+{
+  "Authentication": {
+    "ApiKeys": [
+      {
+        "Key": "admin-key-1234567890abcdef1234567890abcdef",
+        "UserId": "admin",
+        "Role": "admin",
+        "DisplayName": "Administrator",
+        "IsEnabled": true
+      },
+      {
+        "Key": "power-key-1234567890abcdef1234567890abcdef",
+        "UserId": "power-user",
+        "Role": "power_user",
+        "DisplayName": "Power User",
+        "IsEnabled": true
+      },
+      {
+        "Key": "user-key-1234567890abcdef1234567890abcdef",
+        "UserId": "regular-user",
+        "Role": "user",
+        "DisplayName": "Regular User",
+        "IsEnabled": true
+      },
+      {
+        "Key": "custom-key-1234567890abcdef1234567890abcdef",
+        "UserId": "custom-user",
+        "Role": "user",
+        "DisplayName": "Custom Permissions User",
+        "IsEnabled": true,
+        "CustomPermissions": [
+          "tcp_connect",
+          "file_read",
+          "special_operation"
+        ]
+      }
+    ],
+    "SessionTimeoutMinutes": 60,
+    "SessionCleanupIntervalMinutes": 10,
+    "MaxSessionsPerClient": 5,
+    "RequireStrongApiKeys": true,
+    "MinApiKeyLength": 32
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "ProxyServer.Core.Authentication": "Debug"
+    }
+  }
+}

@@ -178,17 +178,17 @@ public class ApplicationInstaller : IApplicationInstaller
         try
         {
             // Ensure system app directory exists
-            if (!await _fileSystem.DirectoryExistsAsync(SYSTEM_APPS_DIR))
+            if (!await _fileSystem.DirectoryExistsAsync(SYSTEM_APPS_DIR, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(SYSTEM_APPS_DIR, true);
+                await _fileSystem.CreateDirectoryAsync(SYSTEM_APPS_DIR, UserManager.SystemUser);
                 _logger.LogInformation("Created system applications directory: {Dir}", SYSTEM_APPS_DIR);
             }
             
             // Ensure log directory exists
             string logDir = Path.GetDirectoryName(INSTALL_LOG_FILE) ?? "/var/log/hackeros";
-            if (!await _fileSystem.DirectoryExistsAsync(logDir))
+            if (!await _fileSystem.DirectoryExistsAsync(logDir, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(logDir, true);
+                await _fileSystem.CreateDirectoryAsync(logDir, UserManager.SystemUser);
                 _logger.LogInformation("Created installation log directory: {Dir}", logDir);
             }
         }
@@ -204,7 +204,7 @@ public class ApplicationInstaller : IApplicationInstaller
         try
         {
             // Check if package exists
-            if (!await _fileSystem.FileExistsAsync(packagePath))
+            if (!await _fileSystem.FileExistsAsync(packagePath, UserManager.SystemUser))
             {
                 _logger.LogWarning("Package does not exist: {Path}", packagePath);
                 return null;
@@ -218,7 +218,7 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Read package content
-            var packageContent = await _fileSystem.ReadAllBytesAsync(packagePath);
+            var packageContent = await _fileSystem.ReadAllBytesAsync(filePath:packagePath, User:UserManager.SystemUser);
             
             // Extract package (simulated for now)
             var extractedFiles = await ExtractPackageAsync(packageContent);
@@ -313,14 +313,14 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Ensure directories exist
-            if (!await _fileSystem.DirectoryExistsAsync(appDir))
+            if (!await _fileSystem.DirectoryExistsAsync(appDir, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(appDir, true);
+                await _fileSystem.CreateDirectoryAsync(appDir, UserManager.SystemUser);
             }
             
-            if (!await _fileSystem.DirectoryExistsAsync(manifestDir))
+            if (!await _fileSystem.DirectoryExistsAsync(manifestDir, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(manifestDir, true);
+                await _fileSystem.CreateDirectoryAsync(manifestDir, UserManager.SystemUser);
             }
             
             // Install application files
@@ -330,19 +330,19 @@ public class ApplicationInstaller : IApplicationInstaller
                 string? destDir = Path.GetDirectoryName(destPath);
                 
                 // Create parent directories if needed
-                if (!string.IsNullOrEmpty(destDir) && !await _fileSystem.DirectoryExistsAsync(destDir))
+                if (!string.IsNullOrEmpty(destDir) && !await _fileSystem.DirectoryExistsAsync(destDir, UserManager.SystemUser))
                 {
-                    await _fileSystem.CreateDirectoryAsync(destDir, true);
+                    await _fileSystem.CreateDirectoryAsync(destDir, UserManager.SystemUser);
                 }
                 
                 // Write the file
-                await _fileSystem.WriteAllTextAsync(destPath, entry.Value);
+                await _fileSystem.WriteAllTextAsync(destPath, entry.Value, UserManager.SystemUser);
             }
             
             // Save the manifest
             string manifestPath = Path.Combine(manifestDir, $"{manifest.Id}.app.json");
             string json = JsonSerializer.Serialize(manifest);
-            await _fileSystem.WriteAllTextAsync(manifestPath, json);
+            await _fileSystem.WriteAllTextAsync(manifestPath, json, UserManager.SystemUser);
             
             // Register the application
             bool registered = await _applicationManager.RegisterApplicationAsync(manifest);
@@ -431,15 +431,15 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Delete application files
-            if (await _fileSystem.DirectoryExistsAsync(appDir))
+            if (await _fileSystem.DirectoryExistsAsync(appDir, UserManager.SystemUser))
             {
-                await _fileSystem.DeleteDirectoryAsync(appDir, true);
+                await _fileSystem.DeleteDirectoryAsync(appDir, UserManager.SystemUser, true);
             }
             
             // Delete manifest file
-            if (await _fileSystem.FileExistsAsync(manifestPath))
+            if (await _fileSystem.FileExistsAsync(manifestPath, UserManager.SystemUser))
             {
-                await _fileSystem.DeleteFileAsync(manifestPath);
+                await _fileSystem.DeleteFileAsync(manifestPath, UserManager.SystemUser);
             }
             
             // Delete user data if requested
@@ -450,9 +450,9 @@ public class ApplicationInstaller : IApplicationInstaller
                 foreach (var user in users)
                 {
                     string userDataDir = string.Format(USER_APP_DATA_DIR, user.Username, app.Id);
-                    if (await _fileSystem.DirectoryExistsAsync(userDataDir))
+                    if (await _fileSystem.DirectoryExistsAsync(userDataDir, UserManager.SystemUser))
                     {
-                        await _fileSystem.DeleteDirectoryAsync(userDataDir, true);
+                        await _fileSystem.DeleteDirectoryAsync(userDataDir, UserManager.SystemUser, true);
                     }
                 }
             }
@@ -486,13 +486,13 @@ public class ApplicationInstaller : IApplicationInstaller
             string userAppsDir = string.Format(USER_APPS_DIR, username);
             
             // Check if directory exists
-            if (!await _fileSystem.DirectoryExistsAsync(userAppsDir))
+            if (!await _fileSystem.DirectoryExistsAsync(userAppsDir, UserManager.SystemUser))
             {
                 return applications;
             }
             
             // Find all manifest files
-            var manifestFiles = await _fileSystem.GetFilesAsync(userAppsDir, "*.app.json");
+            var manifestFiles = await _fileSystem.GetFilesAsync(userAppsDir, "*.app.json", User.User.CurrentLogedUser);
             
             // Load each manifest
             foreach (var manifestFile in manifestFiles)
@@ -627,10 +627,10 @@ public class ApplicationInstaller : IApplicationInstaller
             // Get existing records
             List<ApplicationInstallationRecord> records;
             
-            if (await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE))
+            if (await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE, UserManager.SystemUser))
             {
-                string content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE);
-                records = JsonSerializer.Deserialize<List<ApplicationInstallationRecord>>(content) ?? new List<ApplicationInstallationRecord>();
+                string? content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE, UserManager.SystemUser);
+                records = (content == null ? null : JsonSerializer.Deserialize<List<ApplicationInstallationRecord>>(content)) ?? new List<ApplicationInstallationRecord>();
             }
             else
             {
@@ -642,7 +642,7 @@ public class ApplicationInstaller : IApplicationInstaller
             
             // Save records
             string json = JsonSerializer.Serialize(records);
-            await _fileSystem.WriteAllTextAsync(INSTALL_LOG_FILE, json);
+            await _fileSystem.WriteAllTextAsync(INSTALL_LOG_FILE, json, UserManager.SystemUser);
         }
         catch (Exception ex)
         {
@@ -669,10 +669,10 @@ public class ApplicationInstaller : IApplicationInstaller
             // Get existing records
             List<object> records;
             
-            if (await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE))
+            if (await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE, UserManager.SystemUser))
             {
-                string content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE);
-                records = JsonSerializer.Deserialize<List<object>>(content) ?? new List<object>();
+                string? content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE, UserManager.SystemUser);
+                records = (content == null ? null : JsonSerializer.Deserialize<List<object>>(content)) ?? new List<object>();
             }
             else
             {
@@ -684,7 +684,7 @@ public class ApplicationInstaller : IApplicationInstaller
             
             // Save records
             string json = JsonSerializer.Serialize(records);
-            await _fileSystem.WriteAllTextAsync(INSTALL_LOG_FILE, json);
+            await _fileSystem.WriteAllTextAsync(INSTALL_LOG_FILE, json, UserManager.SystemUser);
         }
         catch (Exception ex)
         {
@@ -700,14 +700,14 @@ public class ApplicationInstaller : IApplicationInstaller
         try
         {
             // Check if log file exists
-            if (!await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE))
+            if (!await _fileSystem.FileExistsAsync(INSTALL_LOG_FILE, UserManager.SystemUser))
             {
                 return null;
             }
             
             // Read log file
-            string content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE);
-            var records = JsonSerializer.Deserialize<List<ApplicationInstallationRecord>>(content);
+            string? content = await _fileSystem.ReadAllTextAsync(INSTALL_LOG_FILE, UserManager.SystemUser);
+            var records = (content == null ? null : JsonSerializer.Deserialize<List<ApplicationInstallationRecord>>(content)) ?? new List<ApplicationInstallationRecord>();
             
             // Find installation record for the application
             return records?.FirstOrDefault(r => r.ApplicationId == applicationId);

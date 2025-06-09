@@ -5,8 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Add StaticWebAssetBasePath to distinguish assets -->
+    <StaticWebAssetBasePath>windowmanager</StaticWebAssetBasePath>
+    <!-- Prevent duplicate static web assets -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
-
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
@@ -14,6 +17,24 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.5" />
     <PackageReference Include="MudBlazor" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
-  </ItemGroup>
+  </ItemGroup>  <!-- Additional static web assets configuration -->
+  <PropertyGroup>
+    <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <DisableStaticWebAssetsDuplicateDetection>true</DisableStaticWebAssetsDuplicateDetection>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <RunFullAotCompilation>false</RunFullAotCompilation>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <DisableStaticWebAssetsCompression>true</DisableStaticWebAssetsCompression>
+  </PropertyGroup>
+  
+  <!-- Disable all static web asset processing that might cause duplicates -->
+  <Target Name="DisableStaticWebAssetProcessing" BeforeTargets="DiscoverPrecompressedAssets;GenerateStaticWebAssetsManifest;ComputeStaticWebAssetsForCurrentProject">
+    <PropertyGroup>
+      <ComputeStaticWebAssetsForCurrentProject>false</ComputeStaticWebAssetsForCurrentProject>
+    </PropertyGroup>
+  </Target>
+  
+  
 
 </Project>

@@ -1,4 +1,6 @@
 
+using HackerOs.OS.Shell;
+
 namespace HackerOs.OS.Shell.Commands;
 
 /// <summary>

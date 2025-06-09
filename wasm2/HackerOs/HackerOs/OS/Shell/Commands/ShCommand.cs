@@ -1,5 +1,6 @@
 using System.Text;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Shell.Commands;

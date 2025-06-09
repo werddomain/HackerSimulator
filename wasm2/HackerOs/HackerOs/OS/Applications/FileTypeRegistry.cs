@@ -1,12 +1,13 @@
+using HackerOs.OS.Applications.Attributes;
+using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.User;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using HackerOs.OS.Applications.Attributes;
-using HackerOs.OS.IO.FileSystem;
-using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Applications;
 
@@ -442,9 +443,9 @@ public class FileTypeRegistry : IFileTypeRegistry
         try
         {
             // Ensure /etc directory exists
-            if (!await _fileSystem.DirectoryExistsAsync("/etc"))
+            if (!await _fileSystem.DirectoryExistsAsync("/etc", UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync("/etc", true);
+                await _fileSystem.CreateDirectoryAsync("/etc", UserManager.SystemUser);
             }
             
             // Convert to serializable format
@@ -452,7 +453,7 @@ public class FileTypeRegistry : IFileTypeRegistry
             var json = System.Text.Json.JsonSerializer.Serialize(registrations);
             
             // Write to file
-            await _fileSystem.WriteAllTextAsync(REGISTRY_FILE, json);
+            await _fileSystem.WriteAllTextAsync(REGISTRY_FILE, json, UserManager.SystemUser);
             _logger.LogInformation("Saved file type registry to {Path}", REGISTRY_FILE);
         }
         catch (Exception ex)
@@ -471,14 +472,14 @@ public class FileTypeRegistry : IFileTypeRegistry
             _registrationsByExtension.Clear();
             
             // Check if registry file exists
-            if (!await _fileSystem.FileExistsAsync(REGISTRY_FILE))
+            if (!await _fileSystem.FileExistsAsync(REGISTRY_FILE, UserManager.SystemUser))
             {
                 _logger.LogInformation("File type registry not found, creating new one");
                 return;
             }
             
             // Read from file
-            var json = await _fileSystem.ReadAllTextAsync(REGISTRY_FILE);
+            var json = await _fileSystem.ReadAllTextAsync(REGISTRY_FILE, UserManager.SystemUser);
             var registrations = System.Text.Json.JsonSerializer.Deserialize<List<FileTypeRegistration>>(json);
             
             if (registrations != null)

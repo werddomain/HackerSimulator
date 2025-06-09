@@ -1,10 +1,11 @@
+using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.User;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using HackerOs.OS.IO.FileSystem;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace HackerOs.OS.Applications;
 
@@ -115,17 +116,17 @@ public class ApplicationUpdater : IApplicationUpdater
         try
         {
             // Ensure update repository directory exists
-            if (!await _fileSystem.DirectoryExistsAsync(UPDATE_REPOSITORY))
+            if (!await _fileSystem.DirectoryExistsAsync(UPDATE_REPOSITORY, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(UPDATE_REPOSITORY, true);
+                await _fileSystem.CreateDirectoryAsync(UPDATE_REPOSITORY, UserManager.SystemUser);
                 _logger.LogInformation("Created update repository directory: {Dir}", UPDATE_REPOSITORY);
             }
             
             // Ensure update history directory exists
             string historyDir = System.IO.Path.GetDirectoryName(UPDATE_HISTORY) ?? "/var/log/hackeros";
-            if (!await _fileSystem.DirectoryExistsAsync(historyDir))
+            if (!await _fileSystem.DirectoryExistsAsync(historyDir, UserManager.SystemUser))
             {
-                await _fileSystem.CreateDirectoryAsync(historyDir, true);
+                await _fileSystem.CreateDirectoryAsync(historyDir, UserManager.SystemUser);
                 _logger.LogInformation("Created update history directory: {Dir}", historyDir);
             }
         }
@@ -391,14 +392,14 @@ public class ApplicationUpdater : IApplicationUpdater
         try
         {
             // Check if history file exists
-            if (!await _fileSystem.FileExistsAsync(UPDATE_HISTORY))
+            if (!await _fileSystem.FileExistsAsync(UPDATE_HISTORY, UserManager.SystemUser))
             {
                 return history;
             }
             
             // Read history file
-            string content = await _fileSystem.ReadAllTextAsync(UPDATE_HISTORY);
-            var allRecords = JsonSerializer.Deserialize<List<ApplicationUpdateRecord>>(content) ?? new List<ApplicationUpdateRecord>();
+            string? content = await _fileSystem.ReadAllTextAsync(UPDATE_HISTORY, UserManager.SystemUser);
+            var allRecords = (string.IsNullOrEmpty(content) ? null : JsonSerializer.Deserialize<List<ApplicationUpdateRecord>>(content)) ?? new List<ApplicationUpdateRecord>();
             
             // Filter by application ID
             history = allRecords.Where(r => r.ApplicationId == applicationId).ToList();
@@ -423,13 +424,13 @@ public class ApplicationUpdater : IApplicationUpdater
         {
             // Check if application directory exists
             string appUpdateDir = $"{UPDATE_REPOSITORY}/{applicationId}";
-            if (!await _fileSystem.DirectoryExistsAsync(appUpdateDir))
+            if (!await _fileSystem.DirectoryExistsAsync(appUpdateDir, UserManager.SystemUser))
             {
                 return versions;
             }
             
             // Get version directories
-            var directories = await _fileSystem.GetDirectoriesAsync(appUpdateDir);
+            var directories = await _fileSystem.GetDirectoriesAsync(appUpdateDir, UserManager.SystemUser);
             versions.AddRange(directories.Select(System.IO.Path.GetFileName));
             
             return versions;
@@ -462,9 +463,9 @@ public class ApplicationUpdater : IApplicationUpdater
             // Get existing records
             List<ApplicationUpdateRecord> records;
             
-            if (await _fileSystem.FileExistsAsync(UPDATE_HISTORY))
+            if (await _fileSystem.FileExistsAsync(UPDATE_HISTORY, UserManager.SystemUser))
             {
-                string content = await _fileSystem.ReadAllTextAsync(UPDATE_HISTORY);
+                string content = await _fileSystem.ReadAllTextAsync(UPDATE_HISTORY, UserManager.SystemUser);
                 records = JsonSerializer.Deserialize<List<ApplicationUpdateRecord>>(content) ?? new List<ApplicationUpdateRecord>();
             }
             else
@@ -477,7 +478,7 @@ public class ApplicationUpdater : IApplicationUpdater
             
             // Save records
             string json = JsonSerializer.Serialize(records);
-            await _fileSystem.WriteAllTextAsync(UPDATE_HISTORY, json);
+            await _fileSystem.WriteAllTextAsync(UPDATE_HISTORY, json, UserManager.SystemUser);
             
             _logger.LogInformation("Logged update for application {AppId} from {PrevVersion} to {NewVersion}",
                 applicationId, previousVersion, newVersion);

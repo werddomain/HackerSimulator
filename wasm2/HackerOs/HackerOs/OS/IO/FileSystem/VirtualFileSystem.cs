@@ -5,15 +5,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
+using HackerOs.OS.System.IO;
+using Path = HackerOs.OS.System.IO.Path;
 
 namespace HackerOs.OS.IO.FileSystem
 {
     /// <summary>
     /// Main implementation of the virtual file system.
     /// Provides a complete Linux-like file system simulation with persistence.
-    /// </summary>
+    /// </summary>    
     public class VirtualFileSystem : IVirtualFileSystem
     {
+        private readonly ILogger<VirtualFileSystem>? _logger;
         private VirtualDirectory _rootDirectory;
         private readonly Dictionary<string, VirtualFileSystemNode> _pathCache;
         private readonly object _lockObject = new object();
@@ -143,9 +147,8 @@ namespace HackerOs.OS.IO.FileSystem
             await Task.CompletedTask; // Make it async for interface compliance
             
             try
-            {
-                var normalizedPath = NormalizePath(path);
-                var parentPath = System.IO.Path.GetDirectoryName(normalizedPath);
+            {                var normalizedPath = NormalizePath(path);
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(normalizedPath);
                 
                 if (string.IsNullOrEmpty(parentPath))
                     parentPath = "/";
@@ -156,14 +159,12 @@ namespace HackerOs.OS.IO.FileSystem
                 {
                     return false;
                 }
-                
-                // Check if file already exists
+                  // Check if file already exists
                 if (GetNode(normalizedPath) != null)
                 {
                     return false; // File already exists
-                }
-                
-                var fileName = System.IO.Path.GetFileName(normalizedPath);
+                }                
+                var fileName = HackerOs.OS.System.IO.Path.GetFileName(normalizedPath);
                 var file = new VirtualFile(fileName, normalizedPath);
                 
                 if (content != null)
@@ -297,6 +298,33 @@ namespace HackerOs.OS.IO.FileSystem
             });
             
             return file.GetContent();
+        }
+
+        /// <summary>
+        /// Reads the content of a file with user permission checking.
+        /// </summary>
+        /// <param name="path">The path to the file.</param>
+        /// <param name="user">The user reading the file.</param>
+        /// <returns>The file content as bytes; null if the file doesn't exist, is not a file, or user lacks permission.</returns>
+        public async Task<byte[]?> ReadFileAsync(string path, HackerOs.OS.User.User user)
+        {
+            // First, get the node to check permissions
+            var node = GetNode(path);
+            if (node == null || node.IsDirectory)
+            {
+                return null;
+            }
+            
+            // Check if user has read permission
+            if (!node.CanRead(user))
+            {
+                // Log permission denied
+                _logger?.LogWarning("Permission denied: User {Username} cannot read {Path}", user.Username, path);
+                return null;
+            }
+            
+            // User has permission, read the file content
+            return await ReadFileAsync(path);
         }
 
         /// <summary>
@@ -533,12 +561,9 @@ namespace HackerOs.OS.IO.FileSystem
                 var homeDir = $"/home/{_currentUser}";
                 path = path.Length == 1 ? homeDir : path.Substring(1).TrimStart('/');
                 path = homeDir + "/" + path;
-            }
-
-            // Convert relative paths to absolute
-            if (!path.StartsWith("/"))
-            {
-                path = System.IO.Path.Combine(_currentWorkingDirectory, path).Replace('\\', '/');
+            }            // Convert relative paths to absolute
+            if (!path.StartsWith("/"))            {
+                path = HackerOs.OS.System.IO.Path.Combine(_currentWorkingDirectory, path).Replace('\\', '/');
             }
 
             // Clean up the path
@@ -655,10 +680,8 @@ namespace HackerOs.OS.IO.FileSystem
                 if (GetNode(normalizedPath) != null)
                 {
                     return true; // Directory already exists, consider it success
-                }
-
-                // Create parent directories recursively if they don't exist
-                var parentPath = System.IO.Path.GetDirectoryName(normalizedPath);
+                }                // Create parent directories recursively if they don't exist
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(normalizedPath);
                 if (!string.IsNullOrEmpty(parentPath) && parentPath != "/")
                 {
                     // Ensure parent directory exists
@@ -669,12 +692,11 @@ namespace HackerOs.OS.IO.FileSystem
                 }
 
                 var parentNode = GetNode(parentPath ?? "/");
-                if (parentNode == null || !parentNode.IsDirectory)
-                {
+                if (parentNode == null || !parentNode.IsDirectory)                {
                     return false;
                 }
 
-                var directoryName = System.IO.Path.GetFileName(normalizedPath);
+                var directoryName = HackerOs.OS.System.IO.Path.GetFileName(normalizedPath);
                 var directory = new VirtualDirectory(directoryName, normalizedPath);
 
                 var parentDir = (VirtualDirectory)parentNode;
@@ -723,15 +745,12 @@ namespace HackerOs.OS.IO.FileSystem
                 if (node == null)
                 {
                     return false; // Node doesn't exist
-                }
-
-                // Cannot delete root directory
+                }                // Cannot delete root directory
                 if (normalizedPath == "/")
                 {
-                    return false;
-                }
+                    return false;                }
 
-                var parentPath = System.IO.Path.GetDirectoryName(normalizedPath);
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(normalizedPath);
                 if (string.IsNullOrEmpty(parentPath))
                     parentPath = "/";
 
@@ -794,11 +813,9 @@ namespace HackerOs.OS.IO.FileSystem
             _pathCache.Remove(path);
 
             if (node.IsDirectory)
-            {
-                var directory = (VirtualDirectory)node;
-                foreach (var child in directory.Children.Values)
-                {
-                    var childPath = System.IO.Path.Combine(path, child.Name).Replace('\\', '/');
+            {                var directory = (VirtualDirectory)node;
+                foreach (var child in directory.Children.Values)                {
+                    var childPath = HackerOs.OS.System.IO.Path.Combine(path, child.Name).Replace('\\', '/');
                     RemoveFromCache(childPath, child);
                 }
             }
@@ -888,14 +905,11 @@ namespace HackerOs.OS.IO.FileSystem
             if (!CreateDirectory(destinationPath))
             {
                 return false;
-            }
+            }            var sourceDir = (VirtualDirectory)GetNode(sourcePath)!;
 
-            var sourceDir = (VirtualDirectory)GetNode(sourcePath)!;
-
-            foreach (var child in sourceDir.Children.Values)
-            {
-                var childSourcePath = System.IO.Path.Combine(sourcePath, child.Name).Replace('\\', '/');
-                var childDestPath = System.IO.Path.Combine(destinationPath, child.Name).Replace('\\', '/');
+            foreach (var child in sourceDir.Children.Values)            {
+                var childSourcePath = HackerOs.OS.System.IO.Path.Combine(sourcePath, child.Name).Replace('\\', '/');
+                var childDestPath = HackerOs.OS.System.IO.Path.Combine(destinationPath, child.Name).Replace('\\', '/');
 
                 if (!Copy(childSourcePath, childDestPath))
                 {
@@ -932,9 +946,7 @@ namespace HackerOs.OS.IO.FileSystem
                 }
                 
                 // Create the symbolic link file
-                var parentPath = System.IO.Path.GetDirectoryName(normalizedLinkPath);
-                if (string.IsNullOrEmpty(parentPath))
-                    parentPath = "/";
+                var parentPath = System.IO.Path.GetDirectoryName(normalizedLinkPath);                if (string.IsNullOrEmpty(parentPath))                    parentPath = "/";
                 
                 var parentNode = GetNode(parentPath);
                 if (parentNode == null || !parentNode.IsDirectory)
@@ -942,7 +954,7 @@ namespace HackerOs.OS.IO.FileSystem
                     return false;
                 }
                 
-                var fileName = System.IO.Path.GetFileName(normalizedLinkPath);
+                var fileName = HackerOs.OS.System.IO.Path.GetFileName(normalizedLinkPath);
                 var linkFile = new VirtualFile(fileName, normalizedLinkPath)
                 {
                     IsSymbolicLink = true,
@@ -1075,11 +1087,24 @@ namespace HackerOs.OS.IO.FileSystem
         /// <param name="path">File path</param>
         /// <param name="user">User context</param>
         /// <returns>File content or null</returns>
-        public async Task<string?> ReadFileAsync(string path, HackerOs.OS.User.User user)
+        public async Task<string?> ReadAllTextAsync(string path, HackerOs.OS.User.User user)
         {
             var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
             var content = await ReadFileAsync(absolutePath);
             return content != null ? Encoding.UTF8.GetString(content) : null;
+        }
+
+        /// <summary>
+        /// Reads all bytes from a file with user permission checking.
+        /// </summary>
+        /// <param name="filePath">The path to the file.</param>
+        /// <param name="user">The user reading the file.</param>
+        /// <returns>The file content as bytes, or null if the file doesn't exist or user lacks permission.</returns>
+        public async Task<byte[]> ReadAllBytesAsync(string filePath, HackerOs.OS.User.User user)
+        {
+            var absolutePath = GetAbsolutePath(filePath, _currentWorkingDirectory);
+            var bytes = await ReadFileAsync(absolutePath, user);
+            return bytes ?? Array.Empty<byte>();
         }
         
         /// <summary>
@@ -1198,16 +1223,7 @@ namespace HackerOs.OS.IO.FileSystem
             return await WriteFileAsync(path, bytes);
         }
 
-        /// <summary>
-        /// Reads all text from a file with user permission checking.
-        /// </summary>
-        /// <param name="path">The path to the file.</param>
-        /// <param name="user">The user reading the file.</param>
-        /// <returns>The file content as text, or null if the file doesn't exist or user lacks permission.</returns>
-        public async Task<string?> ReadAllTextAsync(string path, HackerOs.OS.User.User user)
-        {
-            return await ReadFileAsync(path, user);
-        }
+
 
         /// <summary>
         /// Writes all text to a file with user permission checking.
@@ -1279,9 +1295,8 @@ namespace HackerOs.OS.IO.FileSystem
                     break;
             }
             
-            // Split path into directory and filename
-            string directory = System.IO.Path.GetDirectoryName(path) ?? "/";
-            string fileName = System.IO.Path.GetFileName(path);
+            // Split path into directory and filename            string directory = Path.GetDirectoryName(path) ?? "/";
+            string fileName = Path.GetFileName(path);
             
             // If path ends with /, it's a directory and we need to ensure fileName is correct
             if (path.EndsWith('/') || path.EndsWith('\\'))

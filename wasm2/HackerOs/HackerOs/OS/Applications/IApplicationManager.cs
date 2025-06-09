@@ -123,4 +123,10 @@ public interface IApplicationManager
     /// </summary>
     /// <returns>Application manager statistics</returns>
     ApplicationManagerStatistics GetStatistics();
+
+    /// <summary>
+    /// Get all registered applications in the system
+    /// </summary>
+    /// <returns>A list of all application manifests</returns>
+    IReadOnlyList<ApplicationManifest> GetAllApplications();
 }

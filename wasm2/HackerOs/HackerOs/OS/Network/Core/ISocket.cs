@@ -300,6 +300,8 @@ namespace HackerOs.OS.Network.Core
         /// </summary>
         Disconnected,
 
+        
+
         /// <summary>
         /// Socket is closed.
         /// </summary>
@@ -308,7 +310,12 @@ namespace HackerOs.OS.Network.Core
         /// <summary>
         /// Socket encountered an error.
         /// </summary>
-        Error
+        Error = -1,
+
+        /// <summary>
+        /// The socket has encountered an error and failed
+        /// </summary>
+        Failed = -1
     }
 
     /// <summary>
@@ -507,59 +514,7 @@ namespace HackerOs.OS.Network.Core
         public override int GetHashCode()
         {
             return HashCode.Combine(Address, Port, AddressFamily);
-        }
-    }
-
-    /// <summary>
-    /// Contains socket statistics.
-    /// </summary>
-    public class SocketStatistics
-    {
-        /// <summary>
-        /// Gets or sets the number of bytes sent.
-        /// </summary>
-        public long BytesSent { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of bytes received.
-        /// </summary>
-        public long BytesReceived { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of packets sent.
-        /// </summary>
-        public long PacketsSent { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of packets received.
-        /// </summary>
-        public long PacketsReceived { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of connection attempts.
-        /// </summary>
-        public long ConnectionAttempts { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of successful connections.
-        /// </summary>
-        public long SuccessfulConnections { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of connection failures.
-        /// </summary>
-        public long ConnectionFailures { get; set; }
-
-        /// <summary>
-        /// Gets or sets the creation time of the socket.
-        /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Gets the socket lifetime.
-        /// </summary>
-        public TimeSpan Lifetime => DateTime.UtcNow - CreatedAt;
-    }
+        }    }
 
     /// <summary>
     /// Event arguments for socket data received events.

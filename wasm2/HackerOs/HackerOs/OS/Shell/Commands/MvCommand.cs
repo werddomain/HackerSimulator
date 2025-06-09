@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 using HackerOs.OS.User;
 
 namespace HackerOs.OS.Shell.Commands
@@ -110,7 +111,7 @@ namespace HackerOs.OS.Shell.Commands
 
         private async Task MoveFileAsync(string sourcePath, string targetPath, OS.User.User user)
         {
-            var content = await _fileSystem.ReadFileAsync(sourcePath, user);
+            var content = await _fileSystem.ReadAllTextAsync(sourcePath, user);
             await _fileSystem.CreateFileAsync(targetPath, user);
             await _fileSystem.WriteFileAsync(targetPath, content ?? string.Empty, user);
             await _fileSystem.DeleteFileAsync(sourcePath, user);

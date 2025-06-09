@@ -41,7 +41,9 @@ public class FileTypeRegistration
     /// Whether this is the default handler for the extensions
     /// </summary>
     public bool IsDefault { get; set; }
-    
+    public string FileExtension { get; internal set; }
+    public string ApplicationName { get; internal set; }
+
     /// <summary>
     /// Creates a new file type registration
     /// </summary>

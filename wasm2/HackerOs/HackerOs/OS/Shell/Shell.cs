@@ -540,7 +540,7 @@ public class Shell : IShell
         {            try
             {
                 var absolutePath = _fileSystem.GetAbsolutePath(inputRedirection.Target, _currentWorkingDirectory);
-                var content = await _fileSystem.ReadFileAsync(absolutePath, _currentSession!.User);
+                var content = await _fileSystem.ReadAllTextAsync(absolutePath, _currentSession!.User);
                 return new MemoryStream(Encoding.UTF8.GetBytes(content ?? ""));
             }
             catch (Exception ex)
@@ -553,7 +553,7 @@ public class Shell : IShell
         return new MemoryStream(); // Empty input stream
     }
 
-    private async Task<Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
+    private async Task<HackerOs.OS.System.IO.Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
     {
         var redirection = isError ? parsedCommand.GetErrorRedirection() : parsedCommand.GetOutputRedirection();
         
@@ -566,9 +566,10 @@ public class Shell : IShell
                 if (redirection.Type == RedirectionType.Append || redirection.Type == RedirectionType.ErrorAppend)
                 {
                     // For append redirections, we need to read existing content first
-                    var existingContent = "";                    if (await _fileSystem.FileExistsAsync(absolutePath, _currentSession!.User))
+                    var existingContent = "";                    
+                    if (await _fileSystem.FileExistsAsync(absolutePath, _currentSession!.User))
                     {
-                        existingContent = await _fileSystem.ReadFileAsync(absolutePath, _currentSession.User) ?? "";
+                        existingContent = await _fileSystem.ReadAllTextAsync(absolutePath, _currentSession.User) ?? "";
                     }
                     
                     return new FileRedirectionStream(absolutePath, existingContent, _fileSystem, _currentSession!.User);
@@ -674,7 +675,7 @@ public class Shell : IShell
 /// <summary>
 /// Stream that redirects output to a file in the virtual file system
 /// </summary>
-internal class FileRedirectionStream : Stream
+internal class FileRedirectionStream : HackerOs.OS.System.IO.Stream
 {
     private readonly string _filePath;
     private readonly IVirtualFileSystem _fileSystem;
@@ -698,14 +699,7 @@ internal class FileRedirectionStream : Stream
     { 
         get => _buffer.Position; 
         set => _buffer.Position = value; 
-    }
-
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        await _buffer.WriteAsync(buffer, offset, count, cancellationToken);
-    }
-
-    public override void Write(byte[] buffer, int offset, int count)
+    }    public override void Write(byte[] buffer, int offset, int count)
     {
         _buffer.Write(buffer, offset, count);
     }
@@ -728,16 +722,18 @@ internal class FileRedirectionStream : Stream
             _buffer.Dispose();
         }
         base.Dispose(disposing);
-    }    public override void Flush() => _buffer.Flush();
+    }
+
+    public override void Flush() => _buffer.Flush();
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
+    public override long Seek(long offset, HackerOs.OS.System.IO.SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
 }
 
 /// <summary>
 /// Stream that redirects output to the shell's output events
 /// </summary>
-internal class ShellOutputRedirectionStream : Stream
+internal class ShellOutputRedirectionStream : HackerOs.OS.System.IO.Stream
 {
     private readonly Shell _shell;
     private readonly bool _isError;
@@ -757,13 +753,7 @@ internal class ShellOutputRedirectionStream : Stream
     { 
         get => _buffer.Position; 
         set => _buffer.Position = value; 
-    }    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        await _buffer.WriteAsync(buffer, offset, count, cancellationToken);
-        FlushToShell();
-    }
-
-    public override void Write(byte[] buffer, int offset, int count)
+    }    public override void Write(byte[] buffer, int offset, int count)
     {
         _buffer.Write(buffer, offset, count);
         FlushToShell();
@@ -783,7 +773,8 @@ internal class ShellOutputRedirectionStream : Stream
                 _shell.OnOutputReceived(content);
             }
             _buffer.SetLength(0);
-            _buffer.Position = 0;        }
+            _buffer.Position = 0;
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -798,6 +789,6 @@ internal class ShellOutputRedirectionStream : Stream
 
     public override void Flush() => FlushToShell();
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
+    public override long Seek(long offset, HackerOs.OS.System.IO.SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
 }

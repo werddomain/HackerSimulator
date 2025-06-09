@@ -1,6 +1,7 @@
 
 using System.Text;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 
 namespace HackerOs.OS.Shell.Commands;
 
@@ -74,7 +75,8 @@ public class CatCommand : CommandBase
                 }
 
                 try
-                {                    var content = await vfs.ReadFileAsync(absolutePath, context.UserSession.User);
+                {                    
+                    var content = await vfs.ReadAllTextAsync(absolutePath, context.UserSession.User);
                     using var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(content ?? ""));
                     await ProcessStream(contentStream, stdout, stderr, parsedArgs, filePath, cancellationToken);
                 }

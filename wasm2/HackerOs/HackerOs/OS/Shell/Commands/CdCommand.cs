@@ -1,5 +1,6 @@
 
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 
 namespace HackerOs.OS.Shell.Commands;
 

@@ -510,7 +510,7 @@ namespace HackerOs.OS.Applications.BuiltIn
             
             if (await _fileSystem.FileExistsAsync(sourcePath, user))
             {
-                var content = await _fileSystem.ReadFileAsync(sourcePath, user);
+                var content = await _fileSystem.ReadAllTextAsync(sourcePath, user);
                 if (content != null)
                 {
                     await _fileSystem.WriteFileAsync(targetPath, content, user);
@@ -535,7 +535,7 @@ namespace HackerOs.OS.Applications.BuiltIn
             
             if (await _fileSystem.FileExistsAsync(sourcePath, user))
             {
-                var content = await _fileSystem.ReadFileAsync(sourcePath, user);
+                var content = await _fileSystem.ReadAllTextAsync(sourcePath, user);
                 if (content != null)
                 {
                     await _fileSystem.WriteFileAsync(targetPath, content, user);

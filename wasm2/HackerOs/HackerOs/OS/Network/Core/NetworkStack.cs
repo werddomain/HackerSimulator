@@ -27,13 +27,11 @@ namespace HackerOs.OS.Network.Core
             _interfaces = new Dictionary<string, INetworkInterface>();
             _sockets = new Dictionary<string, ISocket>();
             _isInitialized = false;
-        }
+        }        /// <inheritdoc/>
+        public event EventHandler<NetworkInterfaceEventArgs>? InterfaceStatusChanged;
 
         /// <inheritdoc/>
-        public event EventHandler<NetworkInterfaceEventArgs>? NetworkInterfaceStatusChanged;
-
-        /// <inheritdoc/>
-        public event EventHandler<NetworkPacketEventArgs>? PacketReceived;
+        public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
 
         /// <inheritdoc/>
         public async Task<bool> InitializeAsync()
@@ -74,7 +72,7 @@ namespace HackerOs.OS.Network.Core
                 // Subscribe to interface events
                 foreach (var iface in _interfaces.Values)
                 {
-                    iface.StatusChanged += OnNetworkInterfaceStatusChanged;
+                    iface.StateChanged += OnNetworkInterfaceStatusChanged;
                     iface.PacketReceived += OnPacketReceived;
                 }
 
@@ -105,7 +103,7 @@ namespace HackerOs.OS.Network.Core
                 // Unsubscribe from interface events
                 foreach (var iface in _interfaces.Values)
                 {
-                    iface.StatusChanged -= OnNetworkInterfaceStatusChanged;
+                    iface.StateChanged -= OnNetworkInterfaceStatusChanged;
                     iface.PacketReceived -= OnPacketReceived;
                 }
 
@@ -220,10 +218,9 @@ namespace HackerOs.OS.Network.Core
                 {
                     _logger.LogWarning("No route to host: {Destination}", packet.DestinationAddress);
                     return false;
-                }
-
-                // Send the packet via the appropriate interface
-                return await outInterface.SendPacketAsync(packet);
+                }                // Send the packet via the appropriate interface
+                await outInterface.SendPacketAsync(packet);
+                return true; // Return true after sending the packet
             }
             catch (Exception ex)
             {
@@ -248,27 +245,57 @@ namespace HackerOs.OS.Network.Core
             // For now, just use eth0 for all other traffic
             // Will be replaced with proper routing logic later
             if (_interfaces.TryGetValue("eth0", out var eth0) && eth0.IsActive)
-            {
-                return eth0;
+            {                return eth0;
             }
 
             return null;
         }
 
-        /// <summary>
+        /// <inheritdoc/>
+        public NetworkStatistics GetNetworkStatistics()
+        {
+            var stats = new NetworkStatistics();
+            
+            foreach (var intf in _interfaces.Values)
+            {
+                if (intf.Statistics != null)
+                {
+                    stats.PacketsSent += intf.Statistics.PacketsSent;
+                    stats.PacketsReceived += intf.Statistics.PacketsReceived;
+                    stats.BytesSent += intf.Statistics.BytesSent;
+                    stats.BytesReceived += intf.Statistics.BytesReceived;
+                    stats.TrafficByInterface[intf.Name] = intf.Statistics.BytesSent + intf.Statistics.BytesReceived;
+                }
+            }
+            
+            stats.ActiveConnections = _sockets.Count;
+            stats.LastUpdated = DateTime.UtcNow;
+            
+            return stats;
+        }
+
+        /// <inheritdoc/>
+        public bool IsNetworkAvailable => _interfaces.Values.Any(intf => intf.IsUp && intf.IsActive);        /// <summary>
         /// Handles network interface status changed events.
         /// </summary>
-        private void OnNetworkInterfaceStatusChanged(object? sender, NetworkInterfaceEventArgs e)
+        private void OnNetworkInterfaceStatusChanged(object? sender, NetworkInterfaceStateChangedEventArgs e)
         {
-            _logger.LogInformation("Network interface {Name} status changed to {IsActive}",
-                e.Interface.Name, e.Interface.IsActive);
-            NetworkInterfaceStatusChanged?.Invoke(this, e);
+            var networkInterface = sender as INetworkInterface;
+            _logger.LogInformation("Network interface {Name} state changed from {PreviousState} to {NewState}",
+                networkInterface?.Name, e.PreviousState, e.NewState);
+            
+            // Create a new NetworkInterfaceEventArgs to pass to InterfaceStatusChanged event
+            if (networkInterface != null)
+            {
+                var eventArgs = new NetworkInterfaceEventArgs(networkInterface);
+                InterfaceStatusChanged?.Invoke(this, eventArgs);
+            }
         }
 
         /// <summary>
         /// Handles packet received events.
         /// </summary>
-        private void OnPacketReceived(object? sender, NetworkPacketEventArgs e)
+        private void OnPacketReceived(object? sender, PacketReceivedEventArgs e)
         {
             _logger.LogDebug("Packet received on interface {InterfaceName}: {PacketId}",
                 (sender as INetworkInterface)?.Name, e.Packet.PacketId);

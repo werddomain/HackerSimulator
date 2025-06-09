@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:ProxyServer.GUI.ViewModels"
+             x:Class="ProxyServer.GUI.Pages.ProxySettingsPage"
+             Title="Proxy Server Settings"
+             x:DataType="viewmodels:ProxySettingsViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <!-- Status Message -->
+            <Label Text="{Binding StatusMessage}" 
+                   TextColor="{Binding HasError, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Red,Green'}" 
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource StringToBoolConverter}}"
+                   HorizontalOptions="Center" Margin="0,0,0,10" />
+
+            <!-- Security Section -->
+            <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}"
+                   CornerRadius="10" Padding="15" Margin="0,5">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Security Settings" FontSize="Title" />
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="15">
+                        <!-- Authentication -->
+                        <Label Grid.Row="0" Grid.Column="0" Text="Use Authentication" VerticalOptions="Center" />
+                        <Switch Grid.Row="0" Grid.Column="1" IsToggled="{Binding UseAuthentication}" />
+
+                        <!-- Encryption -->
+                        <Label Grid.Row="1" Grid.Column="0" Text="Use Encryption (SSL/TLS)" VerticalOptions="Center" />
+                        <Switch Grid.Row="1" Grid.Column="1" IsToggled="{Binding UseEncryption}" />
+
+                        <!-- Auth Token -->
+                        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Spacing="5" 
+                                             IsEnabled="{Binding UseAuthentication}">
+                            <Label Text="Authentication Token" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Entry Grid.Column="0" Text="{Binding AuthToken}" IsPassword="True" />
+                                <Button Grid.Column="1" Text="Generate" Command="{Binding GenerateAuthTokenCommand}" />
+                            </Grid>
+                            <Label Text="This token will be required by clients to connect to the proxy server"
+                                   FontSize="12" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Connection Settings -->
+            <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}"
+                   CornerRadius="10" Padding="15" Margin="0,5">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Connection Settings" FontSize="Title" />
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="15">
+                        <!-- Timeout -->
+                        <VerticalStackLayout Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Spacing="5">
+                            <Label Text="Connection Timeout (seconds)" FontAttributes="Bold" />
+                            <HorizontalStackLayout Spacing="10">
+                                <Slider Value="{Binding ConnectionTimeout}" Minimum="5" Maximum="300" 
+                                        WidthRequest="300" />
+                                <Label Text="{Binding ConnectionTimeout}" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                            <Label Text="Inactive connections will be closed after this time"
+                                   FontSize="12" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+
+                        <!-- Max Connections -->
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="5">
+                            <Label Text="Maximum Concurrent Connections" FontAttributes="Bold" />
+                            <HorizontalStackLayout Spacing="10">
+                                <Slider Value="{Binding MaxConnections}" Minimum="10" Maximum="500" 
+                                        WidthRequest="300" />
+                                <Label Text="{Binding MaxConnections}" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Logging Settings -->
+            <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}"
+                   CornerRadius="10" Padding="15" Margin="0,5">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Logging Settings" FontSize="Title" />
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="15">
+                        <!-- Enable Logging -->
+                        <Label Grid.Row="0" Grid.Column="0" Text="Enable Logging" VerticalOptions="Center" />
+                        <Switch Grid.Row="0" Grid.Column="1" IsToggled="{Binding EnableLogging}" />
+
+                        <!-- Log Path -->
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="5" 
+                                             IsEnabled="{Binding EnableLogging}">
+                            <Label Text="Log File Path" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Entry Grid.Column="0" Text="{Binding LogPath}" IsReadOnly="True" />
+                                <Button Grid.Column="1" Text="Browse" Command="{Binding BrowseLogPathCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Monitoring Settings -->
+            <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}"
+                   CornerRadius="10" Padding="15" Margin="0,5">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Monitoring Settings" FontSize="Title" />
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto" RowSpacing="15">
+                        <!-- Traffic Monitoring -->
+                        <Label Grid.Row="0" Grid.Column="0" Text="Enable Traffic Monitoring" VerticalOptions="Center" />
+                        <Switch Grid.Row="0" Grid.Column="1" IsToggled="{Binding EnableTrafficMonitoring}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Action Buttons -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20" Margin="0,10,0,0">
+                <Button Grid.Column="0" Text="Save Settings" Command="{Binding SaveSettingsCommand}"
+                        BackgroundColor="{StaticResource Primary}" TextColor="White" />
+                <Button Grid.Column="1" Text="Reset to Defaults" Command="{Binding ResetSettingsCommand}"
+                        BackgroundColor="{StaticResource Secondary}" TextColor="White" />
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

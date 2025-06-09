@@ -39,15 +39,13 @@ namespace HackerOs.OS.Network.WebServer.Framework
         public void SetLayout(string layoutContent)
         {
             _layoutView = layoutContent;
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Adds a view source to the view engine.
         /// </summary>
         /// <param name="viewName">The name of the view.</param>
         /// <param name="viewContent">The view template content.</param>
         /// <param name="controllerName">Optional controller name for the view.</param>
-        public void AddViewSource(string viewName, string viewContent, string controllerName = null)
+        public void AddViewSource(string viewName, string viewContent, string? controllerName = null)
         {
             var key = GetViewKey(viewName, controllerName);
             
@@ -88,24 +86,22 @@ namespace HackerOs.OS.Network.WebServer.Framework
 
         /// <summary>
         /// Checks if a view exists.
-        /// </summary>
-        /// <param name="viewName">The name of the view.</param>
+        /// </summary>        /// <param name="viewName">The name of the view.</param>
         /// <param name="controllerName">Optional controller name for the view.</param>
         /// <returns>True if the view exists, false otherwise.</returns>
-        public bool ViewExists(string viewName, string controllerName = null)
+        public bool ViewExists(string viewName, string? controllerName = null)
         {
             var key = GetViewKey(viewName, controllerName);
             return _viewSources.ContainsKey(key);
         }
 
         /// <summary>
-        /// Renders a view template with the specified model data.
-        /// </summary>
+        /// Renders a view template with the specified model data.        /// </summary>
         /// <param name="viewName">The name of the view to render.</param>
         /// <param name="model">The model data to pass to the view.</param>
         /// <param name="controllerName">The name of the controller.</param>
         /// <returns>The rendered HTML content.</returns>
-        public async Task<string> RenderViewAsync(string viewName, object model, string controllerName = null)
+        public async Task<string> RenderViewAsync(string viewName, object model, string? controllerName = null)
         {
             var viewKey = GetViewKey(viewName, controllerName);
             
@@ -150,11 +146,10 @@ namespace HackerOs.OS.Network.WebServer.Framework
         /// Renders a template with the specified model data.
         /// </summary>
         /// <param name="template">The template to render.</param>
-        /// <param name="model">The model data.</param>
-        /// <param name="bodyContent">Optional body content for layouts.</param>
+        /// <param name="model">The model data.</param>        /// <param name="bodyContent">Optional body content for layouts.</param>
         /// <param name="modelType">Optional model type for the view.</param>
         /// <returns>The rendered content.</returns>
-        public async Task<string> RenderTemplateAsync(string template, object model, string bodyContent = null, string modelType = null)
+        public async Task<string> RenderTemplateAsync(string template, object model, string? bodyContent = null, string? modelType = null)
         {
             // Remove @model directive
             if (modelType != null)

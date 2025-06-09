@@ -163,8 +163,9 @@ namespace HackerOs.OS.User
         public void UpdateLastLogin()
         {
             LastLogin = DateTime.UtcNow;
+            CurrentLogedUser = this;
         }
-
+        public static User? CurrentLogedUser { get; private set; }
         /// <summary>
         /// Initializes default environment variables for the user
         /// </summary>

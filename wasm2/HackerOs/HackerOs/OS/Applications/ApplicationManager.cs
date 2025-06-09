@@ -544,6 +544,12 @@ public class ApplicationManager : IApplicationManager
             _logger.LogError(ex, "Failed to register built-in applications");
         }
     }
+
+    /// <inheritdoc />
+    public IReadOnlyList<ApplicationManifest> GetAllApplications()
+    {
+        return _registeredApplications.Values.ToList().AsReadOnly();
+    }
 }
 
 /// <summary>

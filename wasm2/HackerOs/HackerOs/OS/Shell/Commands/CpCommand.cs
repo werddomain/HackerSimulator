@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 using HackerOs.OS.User;
 
 namespace HackerOs.OS.Shell.Commands
@@ -145,7 +146,7 @@ namespace HackerOs.OS.Shell.Commands
             return CommandResult.Success(output);
         }        private async Task CopyFileAsync(string sourcePath, string targetPath, User.User user)
         {
-            var content = await _fileSystem.ReadFileAsync(sourcePath, user);
+            var content = await _fileSystem.ReadAllTextAsync(sourcePath, user);
             await _fileSystem.WriteFileAsync(targetPath, content, user);
         }
 

@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.System.Text.Json;
+using HackerOs.OS.User;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Applications;
@@ -30,11 +32,11 @@ public interface IApplicationDiscoveryService
 /// Service that discovers and registers applications from attributes
 /// </summary>
 public class ApplicationDiscoveryService : IApplicationDiscoveryService
-{
-    private readonly ILogger<ApplicationDiscoveryService> _logger;
+{    private readonly ILogger<ApplicationDiscoveryService> _logger;
     private readonly IApplicationManager _applicationManager;
     private readonly IFileTypeRegistry _fileTypeRegistry;
     private readonly IVirtualFileSystem _fileSystem;
+    private readonly IUserManager _userManager;
     private readonly Dictionary<Type, ApplicationManifest> _discoveredApplications = new();
     
     // Application manifest directory
@@ -44,18 +46,19 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
     public IDictionary<Type, ApplicationManifest> DiscoveredApplications => _discoveredApplications;
     
     /// <summary>
-    /// Creates a new instance of the ApplicationDiscoveryService
-    /// </summary>
+    /// Creates a new instance of the ApplicationDiscoveryService    /// </summary>
     public ApplicationDiscoveryService(
         ILogger<ApplicationDiscoveryService> logger,
         IApplicationManager applicationManager,
         IFileTypeRegistry fileTypeRegistry,
-        IVirtualFileSystem fileSystem)
+        IVirtualFileSystem fileSystem,
+        IUserManager userManager)
     {
         _logger = logger;
         _applicationManager = applicationManager;
         _fileTypeRegistry = fileTypeRegistry;
         _fileSystem = fileSystem;
+        _userManager = userManager;
     }
     
     /// <inheritdoc />
@@ -113,8 +116,7 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
             _logger.LogError(ex, "Failed to discover applications");
             return 0;
         }
-    }
-    
+    }    
     /// <summary>
     /// Saves an application manifest to the file system
     /// </summary>
@@ -122,20 +124,26 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
     {
         try
         {
-            // Ensure the manifest directory exists
-            if (!await _fileSystem.DirectoryExistsAsync(MANIFEST_DIRECTORY))
+            // Get the root user for system operations
+            var rootUser = await _userManager.GetUserAsync("root");
+            if (rootUser == null) 
             {
-                await _fileSystem.CreateDirectoryAsync(MANIFEST_DIRECTORY, true);
+                _logger.LogError("Cannot save application manifest - root user not found");
+                return;
             }
             
-            // Create manifest filename
+            // Ensure the manifest directory exists
+            if (!await _fileSystem.DirectoryExistsAsync(MANIFEST_DIRECTORY, rootUser))
+            {
+                await _fileSystem.CreateDirectoryAsync(MANIFEST_DIRECTORY);
+            }              // Create manifest filename
             var manifestPath = $"{MANIFEST_DIRECTORY}/{manifest.Id}.app.json";
             
             // Serialize the manifest
-            var json = System.Text.Json.JsonSerializer.Serialize(manifest);
+            var json = JsonSerializer.Serialize(manifest);
             
             // Write to file
-            await _fileSystem.WriteAllTextAsync(manifestPath, json);
+            await _fileSystem.WriteAllTextAsync(manifestPath, json, rootUser);
             _logger.LogInformation("Saved manifest for {AppId} to {Path}", manifest.Id, manifestPath);
         }
         catch (Exception ex)

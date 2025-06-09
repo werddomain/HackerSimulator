@@ -547,7 +547,10 @@ Before starting any major phase, create detailed analysis plans in separate file
   - The icon will be get by creating an instance and get the property from IApplication or WindowBase ...
   - The icon is a renderFragment. I dont know it it will be usable when the instance get removed. Maybe we can extract the icon data ... but the render fragment will not be set until the component is added on the page and the display is rendered ... Maybe we can find a better way of setting the icon .... 
 
+
+
 #### 3.2.2 Built-in Applications Development [⚠️] PARTIAL IMPLEMENTATION
+
 
 ##### 3.2.2.1 Terminal Emulators [⚠️] FOUNDATION EXISTS
 A base terminal implementation can be found in 'wasm2\HackerOs\BlazorTerminal'. Please update this project when changing thinks about the terminal itself.

@@ -189,8 +189,8 @@ namespace HackerOs.OS.IO.FileSystem
         /// Reads the content of a file with User permission checking.
         /// </summary>
         /// <param name="path">The path to the file.</param>        /// <param name="user">The user reading the file.</param>
-        /// <returns>The file content as a string; null if the file doesn't exist or user lacks permission.</returns>
-        Task<string?> ReadFileAsync(string path, UserEntity user);
+        /// <returns>The file content as a byte array; null if the file doesn't exist or user lacks permission.</returns>
+        Task<byte[]?> ReadFileAsync(string path, UserEntity user);
 
         /// <summary>
         /// Writes content to a file with User permission checking, creating it if it doesn't exist.
@@ -283,6 +283,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// <param name="path">The path to the directory.</param>
         /// <returns>A directory node if found and is a directory; otherwise, null.</returns>
         VirtualDirectory? GetDirectory(string path);
+        Task<byte[]> ReadAllBytesAsync(string filePath, UserEntity User);
 
         /// <summary>
         /// Event raised when file system operations occur.

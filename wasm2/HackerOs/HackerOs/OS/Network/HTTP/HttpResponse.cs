@@ -119,11 +119,10 @@ namespace HackerOs.OS.Network.HTTP
             var json = JsonSerializer.Serialize(value, _jsonOptions);
             await WriteAsync(json);
         }
-        
-        /// <summary>
+          /// <summary>
         /// Adds a cookie to the response
         /// </summary>
-        public void SetCookie(string name, string value, CookieOptions options = null)
+        public void SetCookie(string name, string value, CookieOptions? options = null)
         {
             if (string.IsNullOrEmpty(name))
             {

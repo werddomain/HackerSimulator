@@ -155,7 +155,7 @@ namespace HackerOs.OS.Settings
                     _logger.LogWarning("Config file does not exist: {ConfigPath}", configPath);
                     return false;
                 }                // Read file content
-                var content = await _fileSystem.ReadFileAsync(configPath, currentUser);
+                var content = await _fileSystem.ReadAllTextAsync(configPath, currentUser);
                 if (content == null)
                 {
                     _logger.LogError("Failed to read content from config file: {ConfigPath}", configPath);
@@ -231,7 +231,7 @@ namespace HackerOs.OS.Settings
                   if (!await _fileSystem.FileExistsAsync(configPath, currentUser))
                     return false;
 
-                var content = await _fileSystem.ReadFileAsync(configPath, currentUser);
+                var content = await _fileSystem.ReadAllTextAsync(configPath, currentUser);
                 return content != null && ConfigFileParser.ValidateSyntax(content);
             }
             catch (Exception ex)
@@ -422,7 +422,7 @@ namespace HackerOs.OS.Settings
                     return null;
                 }
 
-                var content = await _fileSystem.ReadFileAsync(configPath, currentUser);
+                var content = await _fileSystem.ReadAllTextAsync(configPath, currentUser);
                 if (content == null)
                 {
                     return null;

@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.Shell;
 using HackerOs.OS.User;
 
 namespace HackerOs.OS.Shell.Commands
@@ -91,7 +92,7 @@ namespace HackerOs.OS.Shell.Commands
                         {
                             errors.Add($"grep: {file}: Is a directory");
                             continue;
-                        }                        var content = await _fileSystem.ReadFileAsync(filePath, context.CurrentUser);
+                        }                        var content = await _fileSystem.ReadAllTextAsync(filePath, context.CurrentUser);
                         if (content == null) continue;
                         
                         var lines = content.Split('\n');

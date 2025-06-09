@@ -1,3 +1,4 @@
+using BlazorWindowManager.Components;
 using HackerOs.OS.User;
 using System.Diagnostics;
 
@@ -6,18 +7,16 @@ namespace HackerOs.OS.Applications;
 /// <summary>
 /// Base class for all applications in HackerOS
 /// </summary>
-public abstract class ApplicationBase : IApplication
+public abstract class ApplicationBase : WindowBase, IApplication
 {
     private ApplicationState _state = ApplicationState.Stopped;
     private readonly object _stateLock = new();
     private ApplicationStatistics? _statistics;
-    private CancellationTokenSource? _cancellationTokenSource;
+    private CancellationTokenSource? _cancellationTokenSource;    /// <inheritdoc />
+    public new virtual string Id { get; protected set; } = string.Empty;
 
     /// <inheritdoc />
-    public virtual string Id { get; protected set; } = string.Empty;
-
-    /// <inheritdoc />
-    public virtual string Name { get; protected set; } = string.Empty;
+    public new virtual string Name { get; protected set; } = string.Empty;
 
     /// <inheritdoc />
     public virtual string Description { get; protected set; } = string.Empty;

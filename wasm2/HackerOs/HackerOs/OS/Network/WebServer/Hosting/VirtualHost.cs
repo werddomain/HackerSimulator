@@ -81,15 +81,13 @@ namespace HackerOs.OS.Network.WebServer.Hosting
         public void RegisterController(Type controllerType)
         {
             _router.RegisterController(controllerType);
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Registers a view with this virtual host.
         /// </summary>
         /// <param name="viewName">The name of the view.</param>
         /// <param name="viewContent">The content of the view.</param>
         /// <param name="controllerName">Optional controller name for the view.</param>
-        public void RegisterView(string viewName, string viewContent, string controllerName = null)
+        public void RegisterView(string viewName, string viewContent, string? controllerName = null)
         {
             _viewEngine.AddViewSource(viewName, viewContent, controllerName);
         }
