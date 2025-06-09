@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using HackerOs.OS.IO.FileSystem;
 using System.Text.RegularExpressions;
 using HackerOs.OS.System.IO;
+using HackerOs.OS.User;
 
 namespace HackerOs.OS.Network.DNS
 {

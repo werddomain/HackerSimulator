@@ -16,7 +16,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public static async Task<T?> GetFromJsonAsync<T>(this HttpClient client, string requestUri, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            var response = await client.GetAsync(requestUri, cancellationToken);
+            var response = await client.GetAsync(requestUri, cancellationToken.GetSystemToken());
             response.EnsureSuccessStatusCode();
             
             var content = await response.Content.ReadAsStringAsync();
@@ -41,7 +41,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         {
             var json = JsonSerializer.Serialize(value, options);
             var content = new StringContent(json, "utf-8", "application/json");
-            return await client.PostAsync(requestUri, content, cancellationToken);
+            return await client.PostAsync(requestUri, content, cancellationToken.GetSystemToken());
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         {
             var json = JsonSerializer.Serialize(value, options);
             var content = new StringContent(json, "utf-8", "application/json");
-            return await client.PutAsync(requestUri, content, cancellationToken);
+            return await client.PutAsync(requestUri, content, cancellationToken.GetSystemToken());
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace HackerOs.OS.System.Net.Http.Json
             {
                 Content = content
             };
-            return await client.SendAsync(request, cancellationToken);
+            return await client.SendAsync(request, cancellationToken.GetSystemToken());
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         public JsonContent(object value, JsonSerializerOptions? options = null)
         {
             _jsonContent = JsonSerializer.Serialize(value, options);
-            Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            Headers.ContentType = "application/json";
         }
 
         /// <summary>
@@ -115,11 +115,11 @@ namespace HackerOs.OS.System.Net.Http.Json
         public JsonContent(string json)
         {
             _jsonContent = json;
-            Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            Headers.ContentType = "application/json";
         }        /// <summary>
         /// Serialize the HTTP content to a stream as an asynchronous operation
         /// </summary>
-        public async Task SerializeToStreamAsync(System.IO.Stream stream, TransportContext? context = null)
+        public async Task SerializeToStreamAsync(global::System.IO.Stream stream, TransportContext? context = null)
         {
             var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
             await stream.WriteAsync(bytes, 0, bytes.Length);
@@ -154,7 +154,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         public override async Task<System.IO.Stream> ReadAsStreamAsync()
         {
             var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
-            return new System.IO.MemoryStream(bytes);
+            return new global::System.IO.MemoryStream(bytes);
         }
     }
 }

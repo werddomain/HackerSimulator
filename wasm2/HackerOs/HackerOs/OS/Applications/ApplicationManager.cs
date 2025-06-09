@@ -7,6 +7,7 @@ using HackerOs.OS.Kernel.Process;
 using HackerOs.OS.Kernel.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components;
 using System.Collections.Concurrent;
 using System.Reflection;
 

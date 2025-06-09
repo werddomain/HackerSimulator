@@ -335,7 +335,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle application installed event
         /// </summary>
-        private async void OnApplicationInstalled(object? sender, ApplicationEventArgs e)
+        private async void OnApplicationInstalled(object? sender, ApplicationInstalledEventArgs e)
         {
             await LoadDataAsync();
         }
@@ -343,7 +343,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle application uninstalled event
         /// </summary>
-        private async void OnApplicationUninstalled(object? sender, ApplicationEventArgs e)
+        private async void OnApplicationUninstalled(object? sender, ApplicationUninstalledEventArgs e)
         {
             await LoadDataAsync();
         }
@@ -351,7 +351,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle application started event
         /// </summary>
-        private async void OnApplicationStarted(object? sender, ApplicationEventArgs e)
+        private async void OnApplicationStarted(object? sender, ApplicationLaunchedEventArgs e)
         {
             // Refresh recent apps when an application is started
             var recent = await LauncherService.GetRecentApplicationsAsync();
@@ -360,7 +360,7 @@ namespace HackerOs.OS.UI.Components
             await InvokeAsync(StateHasChanged);
         }
 
-        private async void OnApplicationClosed(object? sender, ApplicationEventArgs e)
+        private async void OnApplicationClosed(object? sender, ApplicationTerminatedEventArgs e)
         {
             RefreshRunningApplications();
             await InvokeAsync(StateHasChanged);
