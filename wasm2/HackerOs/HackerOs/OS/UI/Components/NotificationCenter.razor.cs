@@ -1,6 +1,7 @@
 using HackerOs.OS.UI.Models;
 using HackerOs.OS.UI.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -101,7 +102,7 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         protected async Task MarkAllAsRead()
         {
-            await NotificationService.MarkAllAsReadAsync();
+            await NotificationService.MarkAllNotificationsAsReadAsync();
             
             // Update local notifications
             foreach (var notification in _notifications)
@@ -117,7 +118,7 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         protected async Task MarkAsRead(string notificationId)
         {
-            await NotificationService.MarkAsReadAsync(notificationId);
+            await NotificationService.MarkNotificationAsReadAsync(notificationId);
             
             // Update local notification
             var notification = _notifications.FirstOrDefault(n => n.Id == notificationId);
@@ -180,6 +181,43 @@ namespace HackerOs.OS.UI.Components
             {
                 return timestamp.ToString("MMM d, yyyy");
             }
+        }
+
+        /// <summary>
+        /// Helper used by the UI to display a relative time string.
+        /// </summary>
+        /// <param name="timestamp">Notification time stamp</param>
+        /// <returns>Formatted relative time string</returns>
+        protected string GetTimeAgo(DateTime timestamp) => GetFormattedTime(timestamp);
+
+        /// <summary>
+        /// Called when a notification is clicked. Marks it as read and closes the center.
+        /// </summary>
+        /// <param name="notification">The clicked notification</param>
+        protected async Task OnNotificationClick(NotificationModel notification)
+        {
+            await MarkAsRead(notification.Id);
+            CloseNotificationCenter();
+        }
+
+        /// <summary>
+        /// Called when an action button on a notification is clicked.
+        /// </summary>
+        protected async Task OnNotificationActionClick(MouseEventArgs e, NotificationModel notification, NotificationAction action)
+        {
+            await MarkAsRead(notification.Id);
+            if (action.DismissesNotification)
+            {
+                await ClearNotification(notification.Id);
+            }
+        }
+
+        /// <summary>
+        /// Dismisses a notification by id.
+        /// </summary>
+        protected async Task DismissNotification(string id)
+        {
+            await ClearNotification(id);
         }
 
         /// <summary>

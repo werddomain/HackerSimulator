@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 
 namespace HackerOs.OS.UI
@@ -173,6 +174,54 @@ namespace HackerOs.OS.UI
         public IReadOnlyCollection<ApplicationWindow> GetAllApplicationWindows()
         {
             return _applicationWindows.Values.ToList().AsReadOnly();
+        }
+
+        /// <summary>
+        /// Gets all windows associated with a specific application.
+        /// </summary>
+        public IReadOnlyCollection<ApplicationWindow> GetWindowsForApplication(string applicationId)
+        {
+            return _applicationWindows.Values
+                .Where(w => w.Application.Id == applicationId)
+                .ToList()
+                .AsReadOnly();
+        }
+
+        /// <summary>
+        /// Brings the application's window to the front.
+        /// </summary>
+        public void BringToFront(string applicationId)
+        {
+            var window = GetApplicationWindow(applicationId);
+            if (window != null)
+            {
+                _windowManager.BringToFront(window.WindowInfo.Id);
+            }
+        }
+
+        /// <summary>
+        /// Minimizes the application's window.
+        /// </summary>
+        public async Task MinimizeApplication(string applicationId)
+        {
+            var window = GetApplicationWindow(applicationId);
+            if (window != null)
+            {
+                await _windowManager.MinimizeWindowAsync(window.WindowInfo.Id);
+            }
+        }
+
+        /// <summary>
+        /// Restores a minimized application window.
+        /// </summary>
+        public async Task RestoreApplication(string applicationId)
+        {
+            var window = GetApplicationWindow(applicationId);
+            if (window != null)
+            {
+                await _windowManager.RestoreWindowAsync(window.WindowInfo.Id);
+                BringToFront(applicationId);
+            }
         }
 
         /// <summary>
