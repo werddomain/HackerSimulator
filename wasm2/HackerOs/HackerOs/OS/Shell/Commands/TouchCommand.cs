@@ -118,7 +118,10 @@ public class TouchCommand : CommandBase
 
     private static IVirtualFileSystem GetVirtualFileSystem(CommandContext context)
     {
-        // This would be injected through DI in a real implementation
-        throw new NotImplementedException("VFS access needs proper DI integration");
+        // Use the file system exposed by the shell
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 }

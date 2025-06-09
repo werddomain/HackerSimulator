@@ -196,7 +196,10 @@ public class MkdirCommand : CommandBase
 
     private static IVirtualFileSystem GetVirtualFileSystem(CommandContext context)
     {
-        // This would be injected through DI in a real implementation
-        throw new NotImplementedException("VFS access needs proper DI integration");
+        // Access the file system provided by the shell
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 }

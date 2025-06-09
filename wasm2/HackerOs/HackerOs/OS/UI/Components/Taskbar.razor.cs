@@ -1,6 +1,7 @@
 using HackerOs.OS.UI.Models;
 using HackerOs.OS.UI.Services;
 using HackerOs.OS.Applications;
+using BlazorWindowManager.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using System;
@@ -353,11 +354,12 @@ namespace HackerOs.OS.UI.Components
         private void OnApplicationStateChanged(object? sender, ApplicationStateChangedEventArgs e)
         {
             // Update the application state in the taskbar
-            var app = RunningApplications.FirstOrDefault(a => a.Id == e.ApplicationId);
+            var app = RunningApplications.FirstOrDefault(a => a.Id == e.Application.Id);
             if (app != null)
             {
-                app.IsActive = e.IsActive;
-                app.IsMinimized = e.IsMinimized;
+                var window = WindowManager.GetApplicationWindow(app.Id);
+                app.IsActive = window?.WindowInfo.IsActive ?? false;
+                app.IsMinimized = window?.WindowInfo.State == WindowState.Minimized;
                 InvokeAsync(StateHasChanged);
             }
         }

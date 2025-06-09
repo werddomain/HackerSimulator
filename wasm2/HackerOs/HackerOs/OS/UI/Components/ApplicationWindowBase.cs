@@ -64,7 +64,8 @@ namespace HackerOs.OS.UI.Components
                 }
 
                 // Look up the application
-                Application = ApplicationManager.GetApplicationById(ApplicationId);
+                Application = ApplicationManager.GetRunningApplication(ApplicationId) ??
+                              ApplicationManager.GetRunningApplications().FirstOrDefault(a => a.Id == ApplicationId);
                 if (Application == null)
                 {
                     ErrorMessage = $"Application not found: {ApplicationId}";
