@@ -146,7 +146,7 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         private async Task LoadNotifications()
         {
-            _notifications = (await NotificationService.GetNotificationsAsync()).ToList();
+            _notifications = NotificationService.GetNotifications().ToList();
             StateHasChanged();
         }
 

@@ -178,7 +178,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle theme changes
         /// </summary>
-        private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
+        private void OnThemeChanged(object? sender, EventArgs e)
         {
             StateHasChanged();
         }
@@ -308,8 +308,7 @@ namespace HackerOs.OS.UI.Components
             // Hide context menu
             IsContextMenuVisible = false;
             
-            // Stop event propagation
-            e.StopPropagation();
+
             
             StateHasChanged();
         }
@@ -322,8 +321,7 @@ namespace HackerOs.OS.UI.Components
             // Launch the application or open the file
             await LaunchIconTarget(icon);
             
-            // Stop event propagation
-            e.StopPropagation();
+
         }
 
         /// <summary>
@@ -355,8 +353,7 @@ namespace HackerOs.OS.UI.Components
                 IsDragging = true;
             }
             
-            // Stop event propagation
-            e.StopPropagation();
+
         }
 
         /// <summary>
@@ -383,8 +380,7 @@ namespace HackerOs.OS.UI.Components
             IsContextMenuVisible = true;
             StateHasChanged();
             
-            // Stop event propagation
-            e.StopPropagation();
+
         }
 
         #endregion

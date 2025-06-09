@@ -18,6 +18,7 @@ namespace HackerOs.OS.UI.Components
     public partial class ApplicationLauncher : ComponentBase, IDisposable
     {
         [Inject] protected IApplicationManager ApplicationManager { get; set; } = null!;
+        [Inject] protected IApplicationInstaller ApplicationInstaller { get; set; } = null!;
         [Inject] protected LauncherService LauncherService { get; set; } = null!;
         [Inject] protected ILogger<ApplicationLauncher> Logger { get; set; } = null!;
         [Inject] protected IUserManager UserManager { get; set; } = null!;
@@ -73,10 +74,10 @@ namespace HackerOs.OS.UI.Components
         protected override async Task OnInitializedAsync()
         {
             // Subscribe to application events
-            ApplicationManager.ApplicationInstalled += OnApplicationInstalled;
-            ApplicationManager.ApplicationUninstalled += OnApplicationUninstalled;
-            ApplicationManager.ApplicationStarted += OnApplicationStarted;
-            ApplicationManager.ApplicationClosed += OnApplicationClosed;
+            ApplicationInstaller.ApplicationInstalled += OnApplicationInstalled;
+            ApplicationInstaller.ApplicationUninstalled += OnApplicationUninstalled;
+            ApplicationManager.ApplicationLaunched += OnApplicationStarted;
+            ApplicationManager.ApplicationTerminated += OnApplicationClosed;
 
             // Load initial data
             await LoadDataAsync();
@@ -90,10 +91,10 @@ namespace HackerOs.OS.UI.Components
         public void Dispose()
         {
             // Unsubscribe from events
-            ApplicationManager.ApplicationInstalled -= OnApplicationInstalled;
-            ApplicationManager.ApplicationUninstalled -= OnApplicationUninstalled;
-            ApplicationManager.ApplicationStarted -= OnApplicationStarted;
-            ApplicationManager.ApplicationClosed -= OnApplicationClosed;
+            ApplicationInstaller.ApplicationInstalled -= OnApplicationInstalled;
+            ApplicationInstaller.ApplicationUninstalled -= OnApplicationUninstalled;
+            ApplicationManager.ApplicationLaunched -= OnApplicationStarted;
+            ApplicationManager.ApplicationTerminated -= OnApplicationClosed;
         }
 
         /// <summary>
@@ -195,7 +196,7 @@ namespace HackerOs.OS.UI.Components
                 await OnLauncherOpenChanged.InvokeAsync(false);
                 
                 // Launch the application with a basic context
-                var session = new UserSession(UserManager.SystemUser, "system");
+                var session = new UserSession(HackerOs.OS.User.UserManager.SystemUser, "system");
                 var context = ApplicationLaunchContext.Create(session);
                 await ApplicationManager.LaunchApplicationAsync(appId, context);
                 
