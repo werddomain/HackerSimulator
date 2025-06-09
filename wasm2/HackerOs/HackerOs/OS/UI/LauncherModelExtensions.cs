@@ -87,10 +87,10 @@ namespace HackerOs.OS.UI
                 Name = app.Name,
                 Icon = app.IconPath ?? "/images/icons/default-app.png",
                 Description = app.Description ?? string.Empty,
-                CategoryId = app.Category ?? "Other",
-                Tags = app.Keywords?.ToList() ?? new List<string>(),
+                CategoryId = app.Categories.FirstOrDefault() ?? "Other",
+                Tags = app.Categories.ToList(),
                 IsPinned = isPinned,
-                ComponentType = app.ComponentTypeName,
+                ComponentType = app.EntryPoint,
                 Version = app.Version ?? "1.0.0"
             };
         }
