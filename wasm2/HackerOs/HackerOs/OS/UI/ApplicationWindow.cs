@@ -57,13 +57,10 @@ namespace HackerOs.OS.UI
             _windowManager.WindowBeforeClose += OnWindowBeforeClose;
             _windowManager.WindowAfterClose += OnWindowAfterClose;
             _windowManager.WindowStateChanged += OnWindowStateChanged;
-            _windowManager.WindowPositionChanged += OnWindowPositionChanged;
-            _windowManager.WindowSizeChanged += OnWindowSizeChanged;
+            _windowManager.WindowBoundsChanged += OnWindowBoundsChanged;
 
             // Subscribe to application events
             _application.StateChanged += OnApplicationStateChanged;
-            
-            _application.Terminating += OnApplicationTerminating;
 
             // Set initial window properties from application
             UpdateWindowFromApplication();
@@ -204,13 +201,10 @@ namespace HackerOs.OS.UI
             _windowManager.WindowBeforeClose -= OnWindowBeforeClose;
             _windowManager.WindowAfterClose -= OnWindowAfterClose;
             _windowManager.WindowStateChanged -= OnWindowStateChanged;
-            //TODO: Change the 2 event to WindowBoundsChanged (bound is position and size ...)
-            _windowManager.WindowPositionChanged -= OnWindowPositionChanged;
-            _windowManager.WindowSizeChanged -= OnWindowSizeChanged;
+            _windowManager.WindowBoundsChanged -= OnWindowBoundsChanged;
 
             // Unsubscribe from application events
             _application.StateChanged -= OnApplicationStateChanged;
-            _application.Terminating -= OnApplicationTerminating;
 
             _isDisposed = true;
         }
@@ -239,7 +233,7 @@ namespace HackerOs.OS.UI
                     break;
                 case ApplicationState.Terminated:
                     // Application is terminating, close the window
-                    _windowManager.CloseWindowForce(_windowInfo.Id);
+                    _windowManager.CloseWindowAsync(_windowInfo.Id, true).Wait();
                     break;
             }
         }
@@ -247,18 +241,8 @@ namespace HackerOs.OS.UI
         private void UpdateApplicationFromWindow()
         {
             // Update application state based on window state
-            switch (_windowInfo.State)
-            {
-                case WindowState.Normal:
-                    _application.SetState(ApplicationState.Running);
-                    break;
-                case WindowState.Minimized:
-                    _application.SetState(ApplicationState.Minimized);
-                    break;
-                case WindowState.Maximized:
-                    _application.SetState(ApplicationState.Maximized);
-                    break;
-            }
+            // Application interface does not expose direct state manipulation,
+            // so window state changes are not propagated back.
         }
 
         #endregion
@@ -267,14 +251,9 @@ namespace HackerOs.OS.UI
 
         private void OnWindowBeforeClose(object? sender, WindowCancelEventArgs e)
         {
-            if (e.WindowInfo.Id != _windowInfo.Id) return;
+            if (e.Window != _windowInfo.ComponentRef) return;
 
-            // Check if application allows closing
-            if (!_application.CanTerminate())
-            {
-                e.Cancel = true;
-                _logger.LogDebug("Application {AppId} prevented window close", _application.Id);
-            }
+            // No additional checks - always allow close
         }
 
         private void OnWindowAfterClose(object? sender, WindowInfo e)
@@ -284,7 +263,7 @@ namespace HackerOs.OS.UI
             // Window was closed, terminate the application
             if (_application.State != ApplicationState.Terminated)
             {
-                _application.Terminate();
+                _application.TerminateAsync().Wait();
                 _logger.LogDebug("Window closed, terminating application {AppId}", _application.Id);
             }
 
@@ -294,7 +273,7 @@ namespace HackerOs.OS.UI
 
         private void OnWindowStateChanged(object? sender, WindowStateChangedEventArgs e)
         {
-            if (e.WindowInfo.Id != _windowInfo.Id) return;
+            if (e.WindowId != _windowInfo.Id) return;
 
             // Sync window state to application
             SyncWindowStateToApplication();
@@ -303,19 +282,12 @@ namespace HackerOs.OS.UI
             SaveWindowState();
         }
 
-        private void OnWindowPositionChanged(object? sender, WindowInfo e)
+        private void OnWindowBoundsChanged(object? sender, WindowBoundsChangedEventArgs e)
         {
-            if (e.Id != _windowInfo.Id) return;
+            if (e.Window != _windowInfo.ComponentRef)
+                return;
 
-            // Save window position on change
-            SaveWindowState();
-        }
-
-        private void OnWindowSizeChanged(object? sender, WindowInfo e)
-        {
-            if (e.Id != _windowInfo.Id) return;
-
-            // Save window size on change
+            // Save window position and size on change
             SaveWindowState();
         }
 
@@ -325,11 +297,6 @@ namespace HackerOs.OS.UI
             SyncApplicationStateToWindow();
         }
 
-        private void OnApplicationTerminating(object? sender, EventArgs e)
-        {
-            // Application is terminating, close the window
-            _windowManager.CloseWindowForce(_windowInfo.Id);
-        }
 
         #endregion
     }

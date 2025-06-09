@@ -105,7 +105,7 @@ namespace HackerOs.OS.UI.Services
             try
             {
                 // Get recent application IDs and timestamps
-                var recentAppsJson = await _settingsService.GetSettingAsync(RECENT_APPS_KEY);
+                var recentAppsJson = await _settingsService.GetSettingAsync<string>("launcher", RECENT_APPS_KEY);
                 var recentAppDictionary = string.IsNullOrEmpty(recentAppsJson)
                     ? new Dictionary<string, DateTime>()
                     : JsonSerializer.Deserialize<Dictionary<string, DateTime>>(recentAppsJson);
@@ -124,10 +124,10 @@ namespace HackerOs.OS.UI.Services
                         recentApps.Add(new LauncherAppModel
                         {
                             Id = app.Id,
-                            DisplayName = app.Name,
-                            IconPath = app.IconPath ?? "/images/icons/default-app.png",
+                            Name = app.Name,
+                            Icon = app.IconPath ?? "/images/icons/default-app.png",
                             Description = app.Description ?? string.Empty,
-                            Category = GetApplicationCategory(app),
+                            CategoryId = GetApplicationCategory(app),
                             LastLaunched = appEntry.Value
                         });
                     }
@@ -171,10 +171,10 @@ namespace HackerOs.OS.UI.Services
                         pinnedApps.Add(new LauncherAppModel
                         {
                             Id = app.Id,
-                            DisplayName = app.Name,
-                            IconPath = app.IconPath ?? "/images/icons/default-app.png",
+                            Name = app.Name,
+                            Icon = app.IconPath ?? "/images/icons/default-app.png",
                             Description = app.Description ?? string.Empty,
-                            Category = GetApplicationCategory(app),
+                            CategoryId = GetApplicationCategory(app),
                             IsPinned = true
                         });
                     }
@@ -197,7 +197,7 @@ namespace HackerOs.OS.UI.Services
             try
             {
                 // Get recent application IDs and timestamps
-                var recentAppsJson = await _settingsService.GetSettingAsync(RECENT_APPS_KEY);
+                var recentAppsJson = await _settingsService.GetSettingAsync<string>("launcher", RECENT_APPS_KEY);
                 var recentAppDictionary = string.IsNullOrEmpty(recentAppsJson)
                     ? new Dictionary<string, DateTime>()
                     : JsonSerializer.Deserialize<Dictionary<string, DateTime>>(recentAppsJson);
@@ -214,7 +214,7 @@ namespace HackerOs.OS.UI.Services
                 
                 // Save the updated list
                 var updatedJson = JsonSerializer.Serialize(recentAppDictionary);
-                await _settingsService.SaveSettingAsync(RECENT_APPS_KEY, updatedJson);
+                await _settingsService.SetSettingAsync("launcher", RECENT_APPS_KEY, updatedJson);
             }
             catch (Exception ex)
             {
@@ -244,7 +244,7 @@ namespace HackerOs.OS.UI.Services
                 
                 // Save the updated list
                 var updatedJson = JsonSerializer.Serialize(pinnedAppIds);
-                await _settingsService.SaveSettingAsync(PINNED_APPS_KEY, updatedJson);
+                await _settingsService.SetSettingAsync("launcher", PINNED_APPS_KEY, updatedJson);
             }
             catch (Exception ex)
             {
@@ -274,11 +274,11 @@ namespace HackerOs.OS.UI.Services
                 var launcherApps = apps.Select(app => new LauncherAppModel
                 {
                     Id = app.Id,
-                    DisplayName = app.Name,
-                    IconPath = app.IconPath ?? "/images/icons/default-app.png",
+                    Name = app.Name,
+                    Icon = app.IconPath ?? "/images/icons/default-app.png",
                     Description = app.Description ?? string.Empty,
-                    Category = GetApplicationCategory(app),
-                    Keywords = GetApplicationKeywords(app),
+                    CategoryId = GetApplicationCategory(app),
+                    Tags = GetApplicationKeywords(app),
                     IsPinned = pinnedAppIds.Contains(app.Id)
                 }).ToList();
                 
@@ -294,14 +294,14 @@ namespace HackerOs.OS.UI.Services
                 foreach (var app in launcherApps)
                 {
                     // Check for exact match on name
-                    if (app.DisplayName.ToLowerInvariant() == query)
+                    if (app.Name.ToLowerInvariant() == query)
                     {
                         exactMatches.Add(app);
                         continue;
                     }
                     
                     // Check for partial match on name
-                    if (app.DisplayName.ToLowerInvariant().Contains(query))
+                    if (app.Name.ToLowerInvariant().Contains(query))
                     {
                         nameMatches.Add(app);
                         continue;
@@ -316,7 +316,7 @@ namespace HackerOs.OS.UI.Services
                     }
                     
                     // Check for match on keywords
-                    if (app.Keywords.Any(k => k.ToLowerInvariant().Contains(query)))
+                    if (app.Tags.Any(k => k.ToLowerInvariant().Contains(query)))
                     {
                         keywordMatches.Add(app);
                     }
@@ -343,7 +343,7 @@ namespace HackerOs.OS.UI.Services
         /// </summary>
         private async Task<List<string>> GetPinnedApplicationIdsAsync()
         {
-            var pinnedAppsJson = await _settingsService.GetSettingAsync(PINNED_APPS_KEY);
+            var pinnedAppsJson = await _settingsService.GetSettingAsync<string>("launcher", PINNED_APPS_KEY);
             return string.IsNullOrEmpty(pinnedAppsJson)
                 ? new List<string>()
                 : JsonSerializer.Deserialize<List<string>>(pinnedAppsJson);

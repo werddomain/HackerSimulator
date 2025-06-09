@@ -159,6 +159,16 @@ public enum ApplicationState
     Running,
 
     /// <summary>
+    /// Application window is minimized
+    /// </summary>
+    Minimized,
+
+    /// <summary>
+    /// Application window is maximized
+    /// </summary>
+    Maximized,
+
+    /// <summary>
     /// Application is paused
     /// </summary>
     Paused,
@@ -172,6 +182,16 @@ public enum ApplicationState
     /// Application has crashed or encountered an error
     /// </summary>
     Crashed,
+
+    /// <summary>
+    /// Application is suspended and may resume later
+    /// </summary>
+    Suspended,
+
+    /// <summary>
+    /// Application has terminated and cannot be resumed
+    /// </summary>
+    Terminated,
 
     /// <summary>
     /// Application is waiting for user input
