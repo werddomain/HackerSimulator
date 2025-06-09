@@ -302,6 +302,10 @@ namespace HackerOs.OS.System.Net.Http
     /// </summary>
     public class HttpContentHeaders : Dictionary<string, IEnumerable<string>>
     {
+        /// <summary>
+        /// Gets or sets the Content-Type header value.
+        /// </summary>
+        public string? ContentType { get; set; }
     }
 
     /// <summary>

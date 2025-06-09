@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
@@ -39,7 +40,7 @@ public static class FileOpenExtensions
             // Normalize path and check if file exists
             // Normalize path using the public utility available for the virtual file system
             var normalizedPath = HackerOs.OS.System.IO.Path.NormalizePath(filePath);
-            if (!await fileSystem.FileExistsAsync(normalizedPath))
+            if (!await fileSystem.FileExistsAsync(normalizedPath, userSession.User))
             {
                 return false;
             }
@@ -66,7 +67,7 @@ public static class FileOpenExtensions
             var context = new ApplicationLaunchContext
             {
                 UserSession = userSession,
-                Arguments = new[] { normalizedPath },
+                Arguments = new List<string> { normalizedPath },
                 WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
@@ -109,7 +110,7 @@ public static class FileOpenExtensions
             // Normalize path and check if file exists
             // Normalize path using the public utility so callers don't rely on private helpers
             var normalizedPath = HackerOs.OS.System.IO.Path.NormalizePath(filePath);
-            if (!await fileSystem.FileExistsAsync(normalizedPath))
+            if (!await fileSystem.FileExistsAsync(normalizedPath, userSession.User))
             {
                 return false;
             }
@@ -118,7 +119,7 @@ public static class FileOpenExtensions
             var context = new ApplicationLaunchContext
             {
                 UserSession = userSession,
-                Arguments = new[] { normalizedPath },
+                Arguments = new List<string> { normalizedPath },
                 WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
