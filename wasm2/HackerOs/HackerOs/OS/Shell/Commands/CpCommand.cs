@@ -135,8 +135,8 @@ namespace HackerOs.OS.Shell.Commands
                 }
             }
 
-            var output = string.Join(System.Environment.NewLine, results);
-            var errorOutput = string.Join(System.Environment.NewLine, errors);
+            var output = string.Join(global::System.Environment.NewLine, results);
+            var errorOutput = string.Join(global::System.Environment.NewLine, errors);
 
             if (errors.Any())
             {

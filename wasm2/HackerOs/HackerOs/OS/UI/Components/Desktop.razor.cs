@@ -317,10 +317,10 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle icon double click
         /// </summary>
-        protected void OnIconDoubleClick(MouseEventArgs e, DesktopIcon icon)
+        protected async Task OnIconDoubleClick(MouseEventArgs e, DesktopIcon icon)
         {
             // Launch the application or open the file
-            LaunchIconTarget(icon);
+            await LaunchIconTarget(icon);
             
             // Stop event propagation
             e.StopPropagation();
@@ -466,7 +466,7 @@ namespace HackerOs.OS.UI.Components
                     // Handle open menu item
                     if (ContextMenuIcon != null)
                     {
-                        LaunchIconTarget(ContextMenuIcon);
+                        await LaunchIconTarget(ContextMenuIcon);
                     }
                     break;
                     
@@ -614,7 +614,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Launch the application or open the file associated with the icon
         /// </summary>
-        private void LaunchIconTarget(DesktopIcon icon)
+        private async Task LaunchIconTarget(DesktopIcon icon)
         {
             try
             {
@@ -624,7 +624,9 @@ namespace HackerOs.OS.UI.Components
                     var app = ApplicationManager.GetApplication(icon.Target);
                     if (app != null)
                     {
-                        WindowManager.LaunchApplication(app);
+                        var session = UserSession ?? new UserSession(UserManager.SystemUser, "system");
+                        var context = ApplicationLaunchContext.Create(session);
+                        await ApplicationManager.LaunchApplicationAsync(app.Id, context);
                     }
                     else
                     {

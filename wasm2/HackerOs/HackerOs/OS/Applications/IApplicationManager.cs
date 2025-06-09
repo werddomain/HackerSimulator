@@ -86,6 +86,13 @@ public interface IApplicationManager
     IApplication? GetRunningApplication(int processId);
 
     /// <summary>
+    /// Get a running application instance by its application ID
+    /// </summary>
+    /// <param name="applicationId">The application identifier</param>
+    /// <returns>Application instance if found, null otherwise</returns>
+    IApplication? GetRunningApplication(string applicationId);
+
+    /// <summary>
     /// Terminate a specific application
     /// </summary>
     /// <param name="applicationId">Application ID to terminate</param>

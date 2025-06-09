@@ -263,6 +263,12 @@ public class ApplicationManager : IApplicationManager
     }
 
     /// <inheritdoc />
+    public IApplication? GetRunningApplication(string applicationId)
+    {
+        return _runningApplications.Values.FirstOrDefault(a => a.Id == applicationId);
+    }
+
+    /// <inheritdoc />
     public async Task<bool> TerminateApplicationAsync(string applicationId, bool force = false)
     {
         try
