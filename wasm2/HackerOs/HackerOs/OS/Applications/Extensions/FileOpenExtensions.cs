@@ -37,14 +37,15 @@ public static class FileOpenExtensions
         try
         {
             // Normalize path and check if file exists
-            var normalizedPath = HackerOs.OS.IO.Utilities.Path.NormalizePath(filePath);
+            // Normalize path using the public utility available for the virtual file system
+            var normalizedPath = HackerOs.OS.System.IO.Path.NormalizePath(filePath);
             if (!await fileSystem.FileExistsAsync(normalizedPath))
             {
                 return false;
             }
             
             // Get file extension
-            var extension = Path.GetExtension(normalizedPath);
+            var extension = System.IO.Path.GetExtension(normalizedPath);
             if (string.IsNullOrEmpty(extension))
             {
                 return false;
@@ -66,7 +67,7 @@ public static class FileOpenExtensions
             {
                 UserSession = userSession,
                 Arguments = new[] { normalizedPath },
-                WorkingDirectory = Path.GetDirectoryName(normalizedPath)
+                WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
             var app = await applicationManager.LaunchApplicationAsync(appId, context);
@@ -106,7 +107,8 @@ public static class FileOpenExtensions
         try
         {
             // Normalize path and check if file exists
-            var normalizedPath = HackerOs.OS.IO.Utilities.Path.NormalizePath(filePath);
+            // Normalize path using the public utility so callers don't rely on private helpers
+            var normalizedPath = HackerOs.OS.System.IO.Path.NormalizePath(filePath);
             if (!await fileSystem.FileExistsAsync(normalizedPath))
             {
                 return false;
@@ -117,7 +119,7 @@ public static class FileOpenExtensions
             {
                 UserSession = userSession,
                 Arguments = new[] { normalizedPath },
-                WorkingDirectory = Path.GetDirectoryName(normalizedPath)
+                WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
             var app = await applicationManager.LaunchApplicationAsync(applicationId, context);
@@ -150,7 +152,7 @@ public static class FileOpenExtensions
         try
         {
             // Get file extension
-            var extension = Path.GetExtension(filePath);
+            var extension = System.IO.Path.GetExtension(filePath);
             if (string.IsNullOrEmpty(extension))
             {
                 return false;

@@ -107,9 +107,10 @@ namespace HackerOs.OS.Network.DNS
         {
             try
             {
-                if (await _fileSystem.FileExistsAsync(_hostsFilePath))
+                // Use system-level permissions when interacting with the hosts file
+                if (await _fileSystem.FileExistsAsync(_hostsFilePath, UserManager.SystemUser))
                 {
-                    var hostsContent = await _fileSystem.ReadAllTextAsync(_hostsFilePath);
+                    var hostsContent = await _fileSystem.ReadAllTextAsync(_hostsFilePath, UserManager.SystemUser);
                     await ParseHostsFileAsync(hostsContent);
                     _logger.LogInformation("Loaded hosts file from {Path}", _hostsFilePath);
                 }
@@ -149,12 +150,12 @@ namespace HackerOs.OS.Network.DNS
             {
                 // Ensure the directory exists
                 var directory = HackerOs.OS.System.IO.Path.GetDirectoryName(_hostsFilePath);
-                if (!string.IsNullOrEmpty(directory) && !await _fileSystem.DirectoryExistsAsync(directory))
+                if (!string.IsNullOrEmpty(directory) && !await _fileSystem.DirectoryExistsAsync(directory, UserManager.SystemUser))
                 {
-                    await _fileSystem.CreateDirectoryAsync(directory);
+                    await _fileSystem.CreateDirectoryAsync(directory, UserManager.SystemUser);
                 }
 
-                await _fileSystem.WriteAllTextAsync(_hostsFilePath, defaultContent);
+                await _fileSystem.WriteAllTextAsync(_hostsFilePath, defaultContent, UserManager.SystemUser);
                 _logger.LogInformation("Created default hosts file at {Path}", _hostsFilePath);
                 
                 // Parse the default hosts file
