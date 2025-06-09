@@ -33,7 +33,10 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// The application window bridge
         /// </summary>
-        protected ApplicationWindow? ApplicationWindow { get; private set; }
+        /// <summary>
+        /// Bridge object between the application and its window
+        /// </summary>
+        protected HackerOs.OS.UI.ApplicationWindow? AppWindowBridge { get; private set; }
 
         /// <summary>
         /// Error message if application can't be loaded
@@ -73,8 +76,8 @@ namespace HackerOs.OS.UI.Components
                 }
 
                 // Get the application window
-                ApplicationWindow = WindowManager.GetApplicationWindow(ApplicationId);
-                if (ApplicationWindow == null)
+                AppWindowBridge = WindowManager.GetApplicationWindow(ApplicationId);
+                if (AppWindowBridge == null)
                 {
                     ErrorMessage = $"Application window not found: {ApplicationId}";
                     return;
