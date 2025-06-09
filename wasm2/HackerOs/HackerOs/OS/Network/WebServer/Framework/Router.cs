@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using HackerOs.OS.Network.HTTP;
+using HttpMethod = HackerOs.OS.Network.HTTP.HttpMethod;
 
 namespace HackerOs.OS.Network.WebServer.Framework
 {

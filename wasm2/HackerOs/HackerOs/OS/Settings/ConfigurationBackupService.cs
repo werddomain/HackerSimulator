@@ -352,7 +352,7 @@ namespace HackerOs.OS.Settings
         private string GenerateVersionHash(string content)
         {
             // Simple hash for version tracking
-            return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content)))[..16];
+            return Convert.ToHexString(global::System.Security.Cryptography.SHA256.HashData(global::System.Text.Encoding.UTF8.GetBytes(content)))[..16];
         }
     }
 

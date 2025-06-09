@@ -300,8 +300,7 @@ public class FileTypeRegistry : IFileTypeRegistry
                 return null;
                 
             // Normalize path and verify file exists
-            // Use the public NormalizePath method from the virtual file system utilities
-            var normalizedPath = HackerOs.OS.System.IO.Path.NormalizePath(filePath);
+            var normalizedPath = Path.GetFullPath(filePath);
             if (!await _fileSystem.FileExistsAsync(normalizedPath, UserManager.SystemUser))
                 return null;
                 

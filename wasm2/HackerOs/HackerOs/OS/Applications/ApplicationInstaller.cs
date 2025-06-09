@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using HackerOs.OS.IO.Utilities;
+using IOPath = HackerOs.OS.IO.Utilities.Path;
 using Microsoft.Extensions.Logging;
 
 namespace HackerOs.OS.Applications;
@@ -186,7 +187,7 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Ensure log directory exists
-            string logDir = Path.GetDirectoryName(INSTALL_LOG_FILE) ?? "/var/log/hackeros";
+            string logDir = global::System.IO.Path.GetDirectoryName(INSTALL_LOG_FILE) ?? "/var/log/hackeros";
             if (!await _fileSystem.DirectoryExistsAsync(logDir, UserManager.SystemUser))
             {
                 await _fileSystem.CreateDirectoryAsync(logDir, UserManager.SystemUser);
@@ -327,8 +328,8 @@ public class ApplicationInstaller : IApplicationInstaller
             // Install application files
             foreach (var entry in sourceFiles)
             {
-                string destPath = Path.Combine(appDir, entry.Key);
-                string? destDir = Path.GetDirectoryName(destPath);
+                string destPath = global::System.IO.Path.Combine(appDir, entry.Key);
+                string? destDir = global::System.IO.Path.GetDirectoryName(destPath);
                 
                 // Create parent directories if needed
                 if (!string.IsNullOrEmpty(destDir) && !await _fileSystem.DirectoryExistsAsync(destDir, UserManager.SystemUser))
@@ -341,7 +342,7 @@ public class ApplicationInstaller : IApplicationInstaller
             }
             
             // Save the manifest
-            string manifestPath = Path.Combine(manifestDir, $"{manifest.Id}.app.json");
+            string manifestPath = global::System.IO.Path.Combine(manifestDir, $"{manifest.Id}.app.json");
             string json = JsonSerializer.Serialize(manifest);
             await _fileSystem.WriteAllTextAsync(manifestPath, json, UserManager.SystemUser);
             
@@ -417,7 +418,7 @@ public class ApplicationInstaller : IApplicationInstaller
                 // System-wide installation
                 appDir = string.Format(APP_DATA_DIR, app.Id);
                 manifestDir = SYSTEM_APPS_DIR;
-                manifestPath = System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
+                manifestPath = global::System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
             }
             else
             {
@@ -428,7 +429,7 @@ public class ApplicationInstaller : IApplicationInstaller
                 // User-specific installation
                 appDir = string.Format(USER_APP_DATA_DIR, username, app.Id);
                 manifestDir = string.Format(USER_APPS_DIR, username);
-                manifestPath = System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
+                manifestPath = global::System.IO.Path.Combine(manifestDir, $"{app.Id}.app.json");
             }
             
             // Delete application files

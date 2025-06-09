@@ -41,7 +41,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Error message if application can't be loaded
         /// </summary>
-        protected string? ErrorMessage { get; private set; }
+        protected string? ErrorMessage { get; set; }
 
         /// <summary>
         /// Whether the application is loading

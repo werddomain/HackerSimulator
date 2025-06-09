@@ -146,7 +146,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
             // Match the route
             var route = _router.MatchRoute(
                 context.Request.Url.AbsolutePath,
-                context.Request.Method,
+                context.Request.Method.ToString(),
                 out var routeParameters);
             
             if (route != null)
@@ -325,7 +325,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
         {
             try
             {
-                var sb = new System.Text.StringBuilder();
+                var sb = new global::System.Text.StringBuilder();
                 sb.AppendLine("<!DOCTYPE html>");
                 sb.AppendLine("<html>");
                 sb.AppendLine("<head>");
