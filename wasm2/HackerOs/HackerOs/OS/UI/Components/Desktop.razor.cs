@@ -624,7 +624,7 @@ namespace HackerOs.OS.UI.Components
                     var app = ApplicationManager.GetApplication(icon.Target);
                     if (app != null)
                     {
-                        var session = UserSession ?? new UserSession(UserManager.SystemUser, "system");
+                        var session = UserSession ?? new UserSession(HackerOs.OS.User.UserManager.SystemUser, "system");
                         var context = ApplicationLaunchContext.Create(session);
                         await ApplicationManager.LaunchApplicationAsync(app.Id, context);
                     }
@@ -725,6 +725,38 @@ namespace HackerOs.OS.UI.Components
         {
             // TODO: Implement desktop properties dialog
             Logger.LogInformation("Showing desktop properties");
+        }
+
+        /// <summary>
+        /// Called when the launcher open state changes
+        /// </summary>
+        private void OnLauncherOpenChanged(bool isOpen)
+        {
+            StateHasChanged();
+        }
+
+        /// <summary>
+        /// Toggle the launcher via taskbar
+        /// </summary>
+        private void OnLauncherToggled()
+        {
+            _applicationLauncher?.ToggleLauncher();
+        }
+
+        /// <summary>
+        /// Toggle the notification center via taskbar
+        /// </summary>
+        private void OnNotificationCenterToggled()
+        {
+            _notificationCenter?.ToggleNotificationCenter();
+        }
+
+        /// <summary>
+        /// Called when notification center open state changes
+        /// </summary>
+        private void OnNotificationCenterOpenChanged(bool isOpen)
+        {
+            StateHasChanged();
         }
 
         #endregion

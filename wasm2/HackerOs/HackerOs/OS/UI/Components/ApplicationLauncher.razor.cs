@@ -56,6 +56,11 @@ namespace HackerOs.OS.UI.Components
         private List<LauncherAppModel> _pinnedApps = new();
 
         /// <summary>
+        /// IDs of currently running applications
+        /// </summary>
+        private HashSet<string> _runningApplications = new();
+
+        /// <summary>
         /// List of search results
         /// </summary>
         private List<LauncherAppModel> _searchResults = new();
@@ -69,6 +74,7 @@ namespace HackerOs.OS.UI.Components
             ApplicationManager.ApplicationInstalled += OnApplicationInstalled;
             ApplicationManager.ApplicationUninstalled += OnApplicationUninstalled;
             ApplicationManager.ApplicationStarted += OnApplicationStarted;
+            ApplicationManager.ApplicationClosed += OnApplicationClosed;
 
             // Load initial data
             await LoadDataAsync();
@@ -85,6 +91,7 @@ namespace HackerOs.OS.UI.Components
             ApplicationManager.ApplicationInstalled -= OnApplicationInstalled;
             ApplicationManager.ApplicationUninstalled -= OnApplicationUninstalled;
             ApplicationManager.ApplicationStarted -= OnApplicationStarted;
+            ApplicationManager.ApplicationClosed -= OnApplicationClosed;
         }
 
         /// <summary>
@@ -136,6 +143,8 @@ namespace HackerOs.OS.UI.Components
                   // Load pinned applications
                 var servicePinnedApps = await LauncherService.GetPinnedApplicationsAsync();
                 _pinnedApps = servicePinnedApps.Select(a => a.ToComponentModel()).ToList();
+
+                RefreshRunningApplications();
                 
                 // Ensure we have at least one category expanded
                 if (!_categories.Any(c => c.IsExpanded) && _categories.Any())
@@ -190,7 +199,8 @@ namespace HackerOs.OS.UI.Components
                 await LauncherService.RecordApplicationLaunchAsync(appId);
                 
                 // Refresh recent apps list
-                _recentApps = await LauncherService.GetRecentApplicationsAsync();
+                var serviceRecent = await LauncherService.GetRecentApplicationsAsync();
+                _recentApps = serviceRecent.Select(a => a.ToComponentModel()).ToList();
                 
                 StateHasChanged();
             }
@@ -250,7 +260,8 @@ namespace HackerOs.OS.UI.Components
             
             try
             {
-                _searchResults = await LauncherService.SearchApplicationsAsync(_searchQuery);
+                var serviceResults = await LauncherService.SearchApplicationsAsync(_searchQuery);
+                _searchResults = serviceResults.Select(a => a.ToComponentModel()).ToList();
                 StateHasChanged();
             }
             catch (Exception ex)
@@ -338,8 +349,21 @@ namespace HackerOs.OS.UI.Components
         private async void OnApplicationStarted(object? sender, ApplicationEventArgs e)
         {
             // Refresh recent apps when an application is started
-            _recentApps = await LauncherService.GetRecentApplicationsAsync();
+            var recent = await LauncherService.GetRecentApplicationsAsync();
+            _recentApps = recent.Select(a => a.ToComponentModel()).ToList();
+            RefreshRunningApplications();
             await InvokeAsync(StateHasChanged);
+        }
+
+        private async void OnApplicationClosed(object? sender, ApplicationEventArgs e)
+        {
+            RefreshRunningApplications();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private void RefreshRunningApplications()
+        {
+            _runningApplications = ApplicationManager.GetRunningApplications().Select(a => a.Id).ToHashSet();
         }
     }
 }

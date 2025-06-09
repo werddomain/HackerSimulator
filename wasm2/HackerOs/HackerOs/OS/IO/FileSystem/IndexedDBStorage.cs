@@ -260,7 +260,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         private string ComputeChecksum(string data)
         {
-            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(data));
+            var hash = global::System.Security.Cryptography.SHA256.HashData(global::System.Text.Encoding.UTF8.GetBytes(data));
             return Convert.ToHexString(hash);
         }
 

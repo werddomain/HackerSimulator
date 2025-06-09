@@ -207,11 +207,11 @@ public class HistoryManager : IHistoryManager
                 {
                     try
                     {
-                    System.Text.RegularExpressions.RegexOptions regexOptions = options.RegexOptions;
+                    global::System.Text.RegularExpressions.RegexOptions regexOptions = options.RegexOptions;
                     if (!options.CaseSensitive)
-                        regexOptions |= System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                        regexOptions |= global::System.Text.RegularExpressions.RegexOptions.IgnoreCase;
 
-                        var regex = new System.Text.RegularExpressions.Regex(options.SearchTerm, regexOptions);
+                        var regex = new global::System.Text.RegularExpressions.Regex(options.SearchTerm, regexOptions);
                         query = query.Where(e => regex.IsMatch(e.Command));
                     }
                     catch (Exception ex)

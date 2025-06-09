@@ -354,12 +354,15 @@ namespace HackerOs.OS.UI.Services
         /// </summary>
         private string GetApplicationCategory(IApplication app)
         {
-            // Try to get category from application metadata
-            var category = app.Metadata.TryGetValue("Category", out var categoryValue)
-                ? categoryValue.ToString()
-                : "Other";
-                
-            // Ensure the category is one of the default categories
+            return GetApplicationCategory(app.Manifest);
+        }
+
+        /// <summary>
+        /// Gets the category for an application manifest
+        /// </summary>
+        private string GetApplicationCategory(ApplicationManifest manifest)
+        {
+            var category = manifest.Categories.FirstOrDefault() ?? "Other";
             return _defaultCategories.Contains(category) ? category : "Other";
         }
         
@@ -368,27 +371,23 @@ namespace HackerOs.OS.UI.Services
         /// </summary>
         private List<string> GetApplicationKeywords(IApplication app)
         {
-            var keywords = new List<string>();
-            
-            // Add application name as a keyword
-            keywords.Add(app.Name);
-            
-            // Add description words as keywords
-            if (!string.IsNullOrEmpty(app.Description))
+            return GetApplicationKeywords(app.Manifest);
+        }
+
+        /// <summary>
+        /// Gets keywords for an application manifest to use in search
+        /// </summary>
+        private List<string> GetApplicationKeywords(ApplicationManifest manifest)
+        {
+            var keywords = new List<string> { manifest.Name };
+
+            if (!string.IsNullOrEmpty(manifest.Description))
             {
-                keywords.AddRange(app.Description.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                keywords.AddRange(manifest.Description.Split(' ', StringSplitOptions.RemoveEmptyEntries));
             }
-            
-            // Add keywords from metadata
-            if (app.Metadata.TryGetValue("Keywords", out var keywordsValue) && 
-                keywordsValue is string keywordsString)
-            {
-                keywords.AddRange(keywordsString.Split(',', StringSplitOptions.RemoveEmptyEntries));
-            }
-            
-            // Add category as a keyword
-            keywords.Add(GetApplicationCategory(app));
-            
+
+            keywords.AddRange(manifest.Categories);
+
             return keywords.Distinct().ToList();
         }
         
@@ -406,7 +405,7 @@ namespace HackerOs.OS.UI.Services
                 CategoryId = GetApplicationCategory(app),
                 Tags = GetApplicationKeywords(app),
                 IsPinned = isPinned,
-                ComponentType = app.ComponentTypeName,
+                ComponentType = app.EntryPoint,
                 Version = app.Version ?? "1.0.0"
             };
         }

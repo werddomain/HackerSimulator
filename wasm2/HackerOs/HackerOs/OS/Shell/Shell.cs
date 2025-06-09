@@ -449,16 +449,16 @@ public class Shell : IShell
         var context = new CommandContext(this, _currentWorkingDirectory, _environmentVariables, _currentSession!);
 
         // Set up streams based on redirections
-        using var stdin = await CreateInputStreamAsync(parsedCommand, cancellationToken);
-        using var stdout = await CreateOutputStreamAsync(parsedCommand, false, cancellationToken);
-        using var stderr = await CreateOutputStreamAsync(parsedCommand, true, cancellationToken);
+        using global::System.IO.Stream stdin = await CreateInputStreamAsync(parsedCommand, cancellationToken);
+        using global::System.IO.Stream stdout = await CreateOutputStreamAsync(parsedCommand, false, cancellationToken);
+        using global::System.IO.Stream stderr = await CreateOutputStreamAsync(parsedCommand, true, cancellationToken);
 
         return await command.ExecuteAsync(context, parsedCommand.Arguments, stdin, stdout, stderr, cancellationToken);
     }
 
     private async Task<int> ExecuteCommandPipelineAsync(IReadOnlyList<ParsedCommand> commands, CancellationToken cancellationToken)
     {
-        var streams = new List<Stream>();
+        var streams = new List<global::System.IO.Stream>();
         var tasks = new List<Task<int>>();
 
         try
@@ -466,7 +466,7 @@ public class Shell : IShell
             // Create pipe streams for connecting commands
             for (int i = 0; i < commands.Count - 1; i++)
             {
-                var pipeStream = new MemoryStream();
+                var pipeStream = new global::System.IO.MemoryStream();
                 streams.Add(pipeStream);
             }
 
@@ -485,7 +485,7 @@ public class Shell : IShell
                 var context = new CommandContext(this, _currentWorkingDirectory, _environmentVariables, _currentSession!);
 
                 // Set up streams for this command in the pipeline
-                Stream stdin, stdout;
+                  global::System.IO.Stream stdin, stdout;
                 
                 if (i == 0)
                 {
@@ -532,7 +532,7 @@ public class Shell : IShell
         }
     }
 
-    private async Task<Stream> CreateInputStreamAsync(ParsedCommand parsedCommand, CancellationToken cancellationToken)
+    private async Task<global::System.IO.Stream> CreateInputStreamAsync(ParsedCommand parsedCommand, CancellationToken cancellationToken)
     {
         var inputRedirection = parsedCommand.GetInputRedirection();
         
@@ -541,19 +541,19 @@ public class Shell : IShell
             {
                 var absolutePath = _fileSystem.GetAbsolutePath(inputRedirection.Target, _currentWorkingDirectory);
                 var content = await _fileSystem.ReadAllTextAsync(absolutePath, _currentSession!.User);
-                return new MemoryStream(Encoding.UTF8.GetBytes(content ?? ""));
+                return new global::System.IO.MemoryStream(global::System.Text.Encoding.UTF8.GetBytes(content ?? ""));
             }
             catch (Exception ex)
             {
                 ErrorReceived?.Invoke(this, new ShellErrorEventArgs($"Failed to read input file: {ex.Message}", ex));
-                return new MemoryStream();
+                return new global::System.IO.MemoryStream();
             }
         }
 
-        return new MemoryStream(); // Empty input stream
+        return new global::System.IO.MemoryStream(); // Empty input stream
     }
 
-    private async Task<System.IO.Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
+    private async Task<global::System.IO.Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
     {
         var redirection = isError ? parsedCommand.GetErrorRedirection() : parsedCommand.GetOutputRedirection();
         
@@ -680,14 +680,14 @@ internal class FileRedirectionStream : System.IO.Stream
     private readonly string _filePath;
     private readonly IVirtualFileSystem _fileSystem;
     private readonly User.User _user;
-    private readonly MemoryStream _buffer;
+    private readonly global::System.IO.MemoryStream _buffer;
 
     public FileRedirectionStream(string filePath, string initialContent, IVirtualFileSystem fileSystem, User.User user)
     {
         _filePath = filePath;
         _fileSystem = fileSystem;
         _user = user;
-        _buffer = new MemoryStream(Encoding.UTF8.GetBytes(initialContent));
+        _buffer = new global::System.IO.MemoryStream(global::System.Text.Encoding.UTF8.GetBytes(initialContent));
         _buffer.Position = _buffer.Length; // Position at end for append
     }
 
@@ -737,7 +737,7 @@ internal class ShellOutputRedirectionStream : System.IO.Stream
 {
     private readonly Shell _shell;
     private readonly bool _isError;
-    private readonly MemoryStream _buffer = new();
+    private readonly global::System.IO.MemoryStream _buffer = new();
 
     public ShellOutputRedirectionStream(Shell shell, bool isError)
     {
