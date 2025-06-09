@@ -214,7 +214,7 @@ namespace HackerOs.OS.UI.Services
                 
                 // Save the updated list
                 var updatedJson = JsonSerializer.Serialize(recentAppDictionary);
-                await _settingsService.SetSettingAsync("launcher", RECENT_APPS_KEY, updatedJson);
+                await _settingsService.SetSettingAsync(RECENT_APPS_KEY, updatedJson);
             }
             catch (Exception ex)
             {
@@ -244,7 +244,7 @@ namespace HackerOs.OS.UI.Services
                 
                 // Save the updated list
                 var updatedJson = JsonSerializer.Serialize(pinnedAppIds);
-                await _settingsService.SetSettingAsync("launcher", PINNED_APPS_KEY, updatedJson);
+                await _settingsService.SetSettingAsync(PINNED_APPS_KEY, updatedJson);
             }
             catch (Exception ex)
             {

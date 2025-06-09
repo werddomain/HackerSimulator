@@ -423,7 +423,28 @@ public class ApplicationManager : IApplicationManager
 
             return _statistics;
         }
-    }    /// <summary>
+    }
+
+    /// <summary>
+    /// Creates a render fragment to display the application's user interface.
+    /// </summary>
+    /// <param name="application">Application instance.</param>
+    public RenderFragment GetApplicationContentRenderer(IApplication application)
+    {
+        if (application is ComponentBase)
+        {
+            var type = application.GetType();
+            return builder =>
+            {
+                builder.OpenComponent(0, type);
+                builder.CloseComponent();
+            };
+        }
+
+        return builder => builder.AddContent(0, $"Application {application.Name} has no UI.");
+    }
+
+    /// <summary>
     /// Create an application instance from a manifest
     /// </summary>
     private async Task<IApplication?> CreateApplicationInstanceAsync(ApplicationManifest manifest, ApplicationLaunchContext context)

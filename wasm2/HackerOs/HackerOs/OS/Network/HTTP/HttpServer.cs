@@ -277,7 +277,7 @@ namespace HackerOs.OS.Network.HTTP
                     var receiveBuffer = new byte[8192]; // 8KB buffer
                     
                     // Receive request data
-                    int bytesRead = await clientSocket.ReceiveAsync(receiveBuffer, 0, receiveBuffer.Length);
+                    int bytesRead = await clientSocket.ReceiveAsync(receiveBuffer);
                     
                     if (bytesRead > 0)
                     {
@@ -312,7 +312,7 @@ namespace HackerOs.OS.Network.HTTP
                             "500 Internal Server Error";
                         
                         var errorBytes = Encoding.UTF8.GetBytes(errorResponse);
-                        await clientSocket.SendAsync(errorBytes, 0, errorBytes.Length);
+                        await clientSocket.SendAsync(errorBytes);
                     }
                     catch
                     {
@@ -531,7 +531,7 @@ namespace HackerOs.OS.Network.HTTP
                 var responseBytes = Encoding.UTF8.GetBytes(responseText);
                 
                 // Send the response
-                await clientSocket.SendAsync(responseBytes, 0, responseBytes.Length);
+                await clientSocket.SendAsync(responseBytes);
                 
                 // Log the response
                 _logger.LogDebug("Sent HTTP response: {StatusCode} {Method} {Url}",

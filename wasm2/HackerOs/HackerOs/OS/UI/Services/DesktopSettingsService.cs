@@ -45,7 +45,7 @@ namespace HackerOs.OS.UI.Services
         /// </summary>
         public async Task<List<DesktopIcon>> GetDesktopIconsAsync()
         {
-            var json = await _settingsService.GetSettingAsync(DESKTOP_ICONS_KEY);
+            var json = await _settingsService.GetSettingAsync<string>(DESKTOP_ICONS_KEY, string.Empty);
             if (string.IsNullOrEmpty(json))
             {
                 return CreateDefaultDesktopIcons();
@@ -68,7 +68,7 @@ namespace HackerOs.OS.UI.Services
         public async Task SaveDesktopIconsAsync(List<DesktopIcon> icons)
         {
             var json = JsonSerializer.Serialize(icons);
-            await _settingsService.SaveSettingAsync(DESKTOP_ICONS_KEY, json);
+            await _settingsService.SetSettingAsync(DESKTOP_ICONS_KEY, json);
         }
 
         /// <summary>
@@ -105,7 +105,7 @@ namespace HackerOs.OS.UI.Services
         /// </summary>
         private async Task<Dictionary<string, string>> GetDesktopSettingsAsync()
         {
-            var json = await _settingsService.GetSettingAsync(DESKTOP_SETTINGS_KEY);
+            var json = await _settingsService.GetSettingAsync<string>(DESKTOP_SETTINGS_KEY, string.Empty);
             if (string.IsNullOrEmpty(json))
             {
                 return CreateDefaultDesktopSettings();
@@ -128,7 +128,7 @@ namespace HackerOs.OS.UI.Services
         private async Task SaveDesktopSettingsAsync(Dictionary<string, string> settings)
         {
             var json = JsonSerializer.Serialize(settings);
-            await _settingsService.SaveSettingAsync(DESKTOP_SETTINGS_KEY, json);
+            await _settingsService.SetSettingAsync(DESKTOP_SETTINGS_KEY, json);
         }
 
         /// <summary>
