@@ -39,7 +39,21 @@ namespace HackerOs.OS.Network.WebServer.Framework
         public void SetLayout(string layoutContent)
         {
             _layoutView = layoutContent;
-        }        /// <summary>
+        }
+
+        /// <summary>
+        /// Creates a unique key for a view based on its name and controller.
+        /// </summary>
+        private static string GetViewKey(string viewName, string? controllerName)
+        {
+            return string.IsNullOrEmpty(controllerName)
+                ? viewName
+                : $"{controllerName}.{viewName}";
+        }
+
+        /// <summary>
+        /// Adds a view source to the view engine.
+        /// </summary>
         /// Adds a view source to the view engine.
         /// </summary>
         /// <param name="viewName">The name of the view.</param>

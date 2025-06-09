@@ -95,6 +95,11 @@ namespace HackerOs.OS.Network.HTTP
         /// Gets the form data parameters (for POST requests)
         /// </summary>
         public IDictionary<string, string> FormData { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Alias for FormData to mimic ASP.NET Core API.
+        /// </summary>
+        public IDictionary<string, string> Form => FormData;
         
         /// <summary>
         /// Gets the route data parameters (populated by routing middleware)

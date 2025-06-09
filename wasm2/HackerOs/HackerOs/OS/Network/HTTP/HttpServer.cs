@@ -106,18 +106,10 @@ namespace HackerOs.OS.Network.HTTP
                 // Bind to the specified port
                 var endpoint = new NetworkEndPoint("0.0.0.0", Port);
                 
-                if (!await _serverSocket.BindAsync(endpoint))
-                {
-                    _logger.LogError("Failed to bind HTTP server to port {Port}", Port);
-                    return false;
-                }
+                await _serverSocket.BindAsync(endpoint);
                 
                 // Start listening for connections
-                if (!await _serverSocket.ListenAsync(10))  // Max 10 pending connections
-                {
-                    _logger.LogError("Failed to start listening on port {Port}", Port);
-                    return false;
-                }
+                await _serverSocket.ListenAsync(10);  // Max 10 pending connections
                 
                 // Start accepting connections
                 _isRunning = true;

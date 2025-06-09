@@ -553,7 +553,7 @@ public class Shell : IShell
         return new MemoryStream(); // Empty input stream
     }
 
-    private async Task<HackerOs.OS.System.IO.Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
+    private async Task<System.IO.Stream> CreateOutputStreamAsync(ParsedCommand parsedCommand, bool isError, CancellationToken cancellationToken)
     {
         var redirection = isError ? parsedCommand.GetErrorRedirection() : parsedCommand.GetOutputRedirection();
         
@@ -675,7 +675,7 @@ public class Shell : IShell
 /// <summary>
 /// Stream that redirects output to a file in the virtual file system
 /// </summary>
-internal class FileRedirectionStream : HackerOs.OS.System.IO.Stream
+internal class FileRedirectionStream : System.IO.Stream
 {
     private readonly string _filePath;
     private readonly IVirtualFileSystem _fileSystem;
@@ -726,14 +726,14 @@ internal class FileRedirectionStream : HackerOs.OS.System.IO.Stream
 
     public override void Flush() => _buffer.Flush();
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override long Seek(long offset, HackerOs.OS.System.IO.SeekOrigin origin) => throw new NotSupportedException();
+    public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
 }
 
 /// <summary>
 /// Stream that redirects output to the shell's output events
 /// </summary>
-internal class ShellOutputRedirectionStream : HackerOs.OS.System.IO.Stream
+internal class ShellOutputRedirectionStream : System.IO.Stream
 {
     private readonly Shell _shell;
     private readonly bool _isError;
@@ -789,6 +789,6 @@ internal class ShellOutputRedirectionStream : HackerOs.OS.System.IO.Stream
 
     public override void Flush() => FlushToShell();
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override long Seek(long offset, HackerOs.OS.System.IO.SeekOrigin origin) => throw new NotSupportedException();
+    public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
 }

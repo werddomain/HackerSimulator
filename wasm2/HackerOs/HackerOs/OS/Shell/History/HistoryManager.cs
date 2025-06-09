@@ -207,9 +207,9 @@ public class HistoryManager : IHistoryManager
                 {
                     try
                     {
-                        var regexOptions = options.RegexOptions;
-                        if (!options.CaseSensitive)
-                            regexOptions |= System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                    System.Text.RegularExpressions.RegexOptions regexOptions = options.RegexOptions;
+                    if (!options.CaseSensitive)
+                        regexOptions |= System.Text.RegularExpressions.RegexOptions.IgnoreCase;
 
                         var regex = new System.Text.RegularExpressions.Regex(options.SearchTerm, regexOptions);
                         query = query.Where(e => regex.IsMatch(e.Command));

@@ -15,7 +15,6 @@ namespace HackerOs.OS.Shell.Commands.Applications;
 public class InstallCommand : CommandBase
 {
     private readonly IApplicationInstaller _appInstaller;
-    private readonly IUserManager _userManager;
 
     public override string Name => "install";
     public override string Description => "Install an application from a package";
@@ -24,7 +23,6 @@ public class InstallCommand : CommandBase
     public InstallCommand(IApplicationInstaller appInstaller, IUserManager userManager)
     {
         _appInstaller = appInstaller;
-        _userManager = userManager;
     }
 
     public override async Task<int> ExecuteAsync(
@@ -39,15 +37,18 @@ public class InstallCommand : CommandBase
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Usage: install <packagePath> [--verbose]\n"));
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Example: install /home/user/downloads/myapp.hapkg\n"));
             return 1;
-        }        string packagePath = args[0];
+        }
+        string packagePath = args[0];
         bool verbose = args.Contains("--verbose");
 
-        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Installing package from {packagePath}...\n"));        var userSession = await _userManager.GetSessionByUserIdAsync(context.CurrentSession.User.UserId);
+        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Installing package from {packagePath}...\n"));
+        var userSession = context.UserSession;
         if (userSession == null)
         {
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));
             return 1;
-        }        var manifest = await _appInstaller.InstallApplicationAsync(packagePath, userSession);
+        }
+        var manifest = await _appInstaller.InstallApplicationAsync(packagePath, userSession);
         if (manifest == null)
         {
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Failed to install application from package: {packagePath}\n"));
@@ -100,7 +101,6 @@ public class UninstallCommand : CommandBase
 {
     private readonly IApplicationInstaller _appInstaller;
     private readonly IApplicationManager _appManager;
-    private readonly IUserManager _userManager;
 
     public override string Name => "uninstall";
     public override string Description => "Uninstall an application";
@@ -110,9 +110,9 @@ public class UninstallCommand : CommandBase
         IApplicationInstaller appInstaller, 
         IApplicationManager appManager,
         IUserManager userManager)
-    {        _appInstaller = appInstaller;
+    {
+        _appInstaller = appInstaller;
         _appManager = appManager;
-        _userManager = userManager;
     }
 
     public override async Task<int> ExecuteAsync(
@@ -128,11 +128,13 @@ public class UninstallCommand : CommandBase
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Example: uninstall com.example.myapp\n"));
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Use 'list-apps' to see installed applications\n"));
             return 1;
-        }        string applicationId = args[0];
+    }
+        string applicationId = args[0];
         bool keepData = args.Contains("--keep-data");
         bool force = args.Contains("--force");
 
-        // Check if application exists        var app = _appManager.GetApplication(applicationId);
+        // Check if application exists
+        var app = _appManager.GetApplication(applicationId);
         if (app == null)
         {
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Application not found: {applicationId}\n"));
@@ -144,7 +146,8 @@ public class UninstallCommand : CommandBase
         if (force)
         {
             await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Forcing uninstallation...\n"));
-        }        var userSession = await _userManager.GetSessionByUserIdAsync(context.CurrentSession.User.UserId);
+        }
+        var userSession = context.UserSession;
         if (userSession == null)
         {
             await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));

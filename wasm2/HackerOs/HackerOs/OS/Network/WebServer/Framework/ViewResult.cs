@@ -115,7 +115,7 @@ namespace HackerOs.OS.Network.WebServer.Framework
                 context.Response.ContentType = ContentType;
                 await context.Response.WriteAsync(renderedContent);
             }
-            catch (System.Exception ex)
+            catch (global::System.Exception ex)
             {
                 context.Response.StatusCode = HttpStatusCode.InternalServerError;
                 await context.Response.WriteAsync($"Error rendering view: {ex.Message}");
