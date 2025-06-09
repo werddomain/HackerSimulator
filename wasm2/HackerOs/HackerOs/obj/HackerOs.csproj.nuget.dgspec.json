@@ -1,32 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\HackerOs.csproj": {}
+    "/workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/HackerOs.csproj": {}
   },
   "projects": {
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj": {
+    "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj": {
       "version": "1.0.0-beta1",
       "restore": {
-        "projectUniqueName": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj",
+        "projectUniqueName": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj",
         "projectName": "BlazorTerminal",
-        "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj",
-        "packagesPath": "C:\\Users\\clefw\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\obj\\",
+        "projectPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj",
+        "packagesPath": "/home/codespace/.nuget/packages/",
+        "outputPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\clefw\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/codespace/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -72,33 +65,26 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.300/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj": {
+    "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj",
+        "projectUniqueName": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj",
         "projectName": "BlazorWindowManager",
-        "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj",
-        "packagesPath": "C:\\Users\\clefw\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\obj\\",
+        "projectPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj",
+        "packagesPath": "/home/codespace/.nuget/packages/",
+        "outputPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\clefw\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/codespace/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -152,44 +138,37 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.300/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\HackerOs.csproj": {
+    "/workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/HackerOs.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\HackerOs.csproj",
+        "projectUniqueName": "/workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/HackerOs.csproj",
         "projectName": "HackerOs",
-        "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\HackerOs.csproj",
-        "packagesPath": "C:\\Users\\clefw\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\HackerOs\\obj\\",
+        "projectPath": "/workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/HackerOs.csproj",
+        "packagesPath": "/home/codespace/.nuget/packages/",
+        "outputPath": "/workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\clefw\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/codespace/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj": {
-                "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj"
+              "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj": {
+                "projectPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj"
               },
-              "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj": {
-                "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorWindowManager\\BlazorWindowManager\\BlazorWindowManager.csproj"
+              "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj": {
+                "projectPath": "/workspaces/HackerSimulator/wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager/BlazorWindowManager.csproj"
               }
             }
           }
@@ -263,12 +242,18 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
+              "version": "[9.0.5, 9.0.5]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.300/PortableRuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {
