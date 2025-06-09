@@ -232,8 +232,10 @@ public class LsCommand : CommandBase
 
     private static IVirtualFileSystem GetVirtualFileSystem(CommandContext context)
     {
-        // This would be injected through DI in a real implementation
-        // For now, we'll access it through the shell or context
-        throw new NotImplementedException("VFS access needs proper DI integration");
+        // Access the VFS from the shell via the command context
+        if (context.FileSystem == null)
+            throw new InvalidOperationException("File system not available in command context");
+
+        return context.FileSystem;
     }
 }
