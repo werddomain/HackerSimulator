@@ -436,3 +436,24 @@ __pycache__/
 
 */bin/
 */obj/
+wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/BlazorTerminal.Test.csproj.nuget.dgspec.json
+wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/BlazorTerminal.Test.csproj.nuget.g.props
+wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/BlazorTerminal.Test.csproj.nuget.g.targets
+wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/project.assets.json
+wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/project.nuget.cache
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/BlazorWindowManager.Test.csproj.nuget.dgspec.json
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/BlazorWindowManager.Test.csproj.nuget.g.props
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/BlazorWindowManager.Test.csproj.nuget.g.targets
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/project.assets.json
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/project.nuget.cache
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/BlazorWindowManager.Test.AssemblyInfo.cs
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/BlazorWindowManager.Test.AssemblyInfoInputs.cache
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/BlazorWindowManager.Test.assets.cache
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/BlazorWindowManager.Test.csproj.AssemblyReference.cache
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/BlazorWindowManager.Test.GeneratedMSBuildEditorConfig.editorconfig
+wasm2/HackerOs/BlazorWindowManager/BlazorWindowManager.Test/obj/Debug/net9.0/rpswa.dswa.cache.json
+wasm2/HackerOs/HackerOs/obj/HackerOs.csproj.nuget.dgspec.json
+wasm2/HackerOs/HackerOs/obj/HackerOs.csproj.nuget.g.props
+wasm2/HackerOs/HackerOs/obj/HackerOs.csproj.nuget.g.targets
+wasm2/HackerOs/HackerOs/obj/project.assets.json
+wasm2/HackerOs/HackerOs/obj/project.nuget.cache
