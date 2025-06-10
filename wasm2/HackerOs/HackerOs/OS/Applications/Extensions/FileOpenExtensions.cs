@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using HackerOs.OS.IO.FileSystem;
@@ -46,7 +45,7 @@ public static class FileOpenExtensions
             }
             
             // Get file extension
-            var extension = System.IO.Path.GetExtension(normalizedPath);
+            var extension = global::System.IO.Path.GetExtension(normalizedPath);
             if (string.IsNullOrEmpty(extension))
             {
                 return false;
@@ -68,7 +67,7 @@ public static class FileOpenExtensions
             {
                 UserSession = userSession,
                 Arguments = new List<string> { normalizedPath },
-                WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
+                WorkingDirectory = global::System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
             var app = await applicationManager.LaunchApplicationAsync(appId, context);
@@ -120,7 +119,7 @@ public static class FileOpenExtensions
             {
                 UserSession = userSession,
                 Arguments = new List<string> { normalizedPath },
-                WorkingDirectory = System.IO.Path.GetDirectoryName(normalizedPath)
+                WorkingDirectory = global::System.IO.Path.GetDirectoryName(normalizedPath)
             };
             
             var app = await applicationManager.LaunchApplicationAsync(applicationId, context);
@@ -153,7 +152,7 @@ public static class FileOpenExtensions
         try
         {
             // Get file extension
-            var extension = System.IO.Path.GetExtension(filePath);
+            var extension = global::System.IO.Path.GetExtension(filePath);
             if (string.IsNullOrEmpty(extension))
             {
                 return false;
