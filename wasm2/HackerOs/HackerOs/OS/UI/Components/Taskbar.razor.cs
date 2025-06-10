@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Timers;
+using global::System.Timers;
 
 namespace HackerOs.OS.UI.Components
 {
@@ -78,7 +78,7 @@ namespace HackerOs.OS.UI.Components
         protected List<CalendarDayModel> CalendarDays { get; set; } = new();        /// <summary>
         /// Timer for updating the clock
         /// </summary>
-        private System.Threading.Timer? _clockTimer;
+        private global::System.Timers.Timer? _clockTimer;
 
         /// <summary>
         /// Initialize the component
@@ -86,8 +86,8 @@ namespace HackerOs.OS.UI.Components
         protected override void OnInitialized()
         {
             // Subscribe to application events
-            ApplicationManager.ApplicationStarted += OnApplicationStarted;
-            ApplicationManager.ApplicationClosed += OnApplicationClosed;
+            ApplicationManager.ApplicationLaunched += OnApplicationStarted;
+            ApplicationManager.ApplicationTerminated += OnApplicationClosed;
             ApplicationManager.ApplicationStateChanged += OnApplicationStateChanged;
 
             // Subscribe to notification events
@@ -96,7 +96,7 @@ namespace HackerOs.OS.UI.Components
             NotificationService.NotificationRead += OnNotificationRead;
 
             // Initialize clock timer
-            _clockTimer = new Timer(1000);
+            _clockTimer = new global::System.Timers.Timer(1000);
             _clockTimer.Elapsed += (s, e) =>
             {
                 CurrentDateTime = DateTime.Now;
@@ -127,8 +127,8 @@ namespace HackerOs.OS.UI.Components
             }
 
             // Unsubscribe from events
-            ApplicationManager.ApplicationStarted -= OnApplicationStarted;
-            ApplicationManager.ApplicationClosed -= OnApplicationClosed;
+            ApplicationManager.ApplicationLaunched -= OnApplicationStarted;
+            ApplicationManager.ApplicationTerminated -= OnApplicationClosed;
             ApplicationManager.ApplicationStateChanged -= OnApplicationStateChanged;
 
             NotificationService.NotificationAdded -= OnNotificationAdded;
@@ -335,7 +335,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle application started event
         /// </summary>
-        private void OnApplicationStarted(object? sender, ApplicationEventArgs e)
+        private void OnApplicationStarted(object? sender, ApplicationLaunchedEventArgs e)
         {
             LoadRunningApplications();
         }
@@ -343,7 +343,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Handle application closed event
         /// </summary>
-        private void OnApplicationClosed(object? sender, ApplicationEventArgs e)
+        private void OnApplicationClosed(object? sender, ApplicationTerminatedEventArgs e)
         {
             LoadRunningApplications();
         }
