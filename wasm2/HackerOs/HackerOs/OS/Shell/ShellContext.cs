@@ -54,10 +54,11 @@ namespace HackerOs.OS.Shell
                 Environment["HOME"] = GetHomeDirectory();
             }
             Environment["PWD"] = WorkingDirectory;
-            Environment["PATH"] = "/bin:/usr/bin:/usr/local/bin";            Environment["SHELL"] = "/bin/bash";
+            Environment["PATH"] = "/bin:/usr/bin:/usr/local/bin";
+            Environment["SHELL"] = "/bin/bash";
         }        public async Task WriteLineAsync(string text)
         {
-            var bytes = Encoding.UTF8.GetBytes(text + Environment.NewLine);
+            var bytes = Encoding.UTF8.GetBytes(text + global::System.Environment.NewLine);
             await StandardOutput.WriteAsync(bytes);
             await StandardOutput.FlushAsync();
         }
@@ -69,7 +70,7 @@ namespace HackerOs.OS.Shell
             await StandardOutput.FlushAsync();
         }        public async Task WriteErrorAsync(string text)
         {
-            var bytes = Encoding.UTF8.GetBytes(text + Environment.NewLine);
+            var bytes = Encoding.UTF8.GetBytes(text + global::System.Environment.NewLine);
             await StandardError.WriteAsync(bytes);
             await StandardError.FlushAsync();
         }

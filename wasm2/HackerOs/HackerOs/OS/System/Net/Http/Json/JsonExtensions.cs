@@ -1,8 +1,10 @@
 using System;
 using System.Net;
 using System.Net.Security;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using HackerOs.OS.System.Net.Http;
 
 namespace HackerOs.OS.System.Net.Http.Json
 {

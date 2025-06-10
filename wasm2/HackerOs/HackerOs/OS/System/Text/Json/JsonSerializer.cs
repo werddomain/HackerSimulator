@@ -41,7 +41,7 @@ namespace HackerOs.OS.System.Text.Json
             {
                 PropertyNamingPolicy = options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
                     ? System.Text.Json.JsonNamingPolicy.CamelCase
-                    : null,
+                    : (System.Text.Json.JsonNamingPolicy?)null,
                 WriteIndented = options.WriteIndented,
                 IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
@@ -74,7 +74,7 @@ namespace HackerOs.OS.System.Text.Json
             {
                 PropertyNamingPolicy = options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
                     ? System.Text.Json.JsonNamingPolicy.CamelCase
-                    : null,
+                    : (System.Text.Json.JsonNamingPolicy?)null,
                 WriteIndented = options.WriteIndented,
                 IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive

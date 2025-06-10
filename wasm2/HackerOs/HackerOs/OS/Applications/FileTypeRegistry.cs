@@ -1,7 +1,6 @@
 using HackerOs.OS.Applications.Attributes;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
-using HackerOs.OS.IO.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -300,7 +299,7 @@ public class FileTypeRegistry : IFileTypeRegistry
                 return null;
                 
             // Normalize path and verify file exists
-            var normalizedPath = Path.GetFullPath(filePath);
+            var normalizedPath = HackerOs.OS.System.IO.Path.GetFullPath(filePath);
             if (!await _fileSystem.FileExistsAsync(normalizedPath, UserManager.SystemUser))
                 return null;
                 
