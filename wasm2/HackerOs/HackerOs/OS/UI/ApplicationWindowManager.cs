@@ -234,7 +234,7 @@ namespace HackerOs.OS.UI
             if (userSession == null) throw new ArgumentNullException(nameof(userSession));
             
             return _applicationWindows.Values
-                .Where(w => w.Application.OwnerSession?.Id == userSession.Id)
+                .Where(w => w.Application.OwnerSession?.SessionId == userSession.SessionId)
                 .ToList()
                 .AsReadOnly();
         }
@@ -244,7 +244,7 @@ namespace HackerOs.OS.UI
         private void OnApplicationLaunched(object? sender, ApplicationLaunchedEventArgs e)
         {
             // If the application is windowed, create a window for it
-            if (e.Application.Type == ApplicationType.Windowed && !_applicationWindows.ContainsKey(e.Application.Id))
+            if (e.Application.Type == ApplicationType.WindowedApplication && !_applicationWindows.ContainsKey(e.Application.Id))
             {
                 CreateWindowForApplication(e.Application);
             }

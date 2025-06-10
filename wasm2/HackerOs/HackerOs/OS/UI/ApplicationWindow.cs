@@ -33,6 +33,16 @@ namespace HackerOs.OS.UI
         public WindowInfo WindowInfo => _windowInfo;
 
         /// <summary>
+        /// Indicates whether the window is currently the active window.
+        /// </summary>
+        public bool IsActive => _windowInfo.IsActive;
+
+        /// <summary>
+        /// Indicates whether the window is currently minimized.
+        /// </summary>
+        public bool IsMinimized => _windowInfo.State == WindowState.Minimized;
+
+        /// <summary>
         /// Creates a new application window bridge
         /// </summary>
         /// <param name="application">The application instance</param>

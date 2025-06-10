@@ -32,7 +32,7 @@ namespace HackerOs.OS.Network.WebServer.Hosting
         {
             return async (context, next) =>
             {
-                var path = context.Request.Path;
+                var path = context.Request.Url.AbsolutePath;
                 
                 // Check if this request is for a static file
                 if (path.StartsWith(_urlPrefix, StringComparison.OrdinalIgnoreCase))

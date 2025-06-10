@@ -55,7 +55,7 @@ namespace HackerOs.OS.Network.WebServer.Framework
                         controllerType, 
                         method, 
                         defaultTemplate, 
-                        HttpMethod.Get.ToString(), 
+                        HttpMethod.GET.ToString(),
                         $"{controllerType.Name}.{method.Name}");
                     
                     _routes.Add(defaultRouteInfo);
@@ -69,7 +69,7 @@ namespace HackerOs.OS.Network.WebServer.Framework
                             controllerType,
                             method,
                             attr.Template,
-                            attr.HttpMethod ?? HttpMethod.Get.ToString(),
+                            attr.HttpMethod ?? HttpMethod.GET.ToString(),
                             attr.Name ?? $"{controllerType.Name}.{method.Name}");
                         
                         _routes.Add(routeInfo);

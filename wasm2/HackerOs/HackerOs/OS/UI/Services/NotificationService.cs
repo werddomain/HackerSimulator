@@ -229,7 +229,7 @@ namespace HackerOs.OS.UI.Services
             try
             {
                 var notificationsJson = JsonSerializer.Serialize(_notifications);
-                await _settingsService.SetSettingAsync("notifications", NOTIFICATIONS_KEY, notificationsJson);
+                await _settingsService.SetSettingAsync(NOTIFICATIONS_KEY, notificationsJson);
             }
             catch (Exception ex)
             {

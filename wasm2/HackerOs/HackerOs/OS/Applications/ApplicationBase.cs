@@ -25,6 +25,14 @@ public abstract class ApplicationBase : WindowBase, IApplication
     public virtual string Version { get; protected set; } = "1.0.0";
 
     /// <inheritdoc />
+    /// <inheritdoc />
+    public virtual string? IconPath
+    {
+        get => Manifest.IconPath;
+        protected set => Manifest.IconPath = value;
+    }
+
+    /// <inheritdoc />
     public virtual ApplicationType Type { get; protected set; } = ApplicationType.WindowedApplication;
 
     /// <inheritdoc />

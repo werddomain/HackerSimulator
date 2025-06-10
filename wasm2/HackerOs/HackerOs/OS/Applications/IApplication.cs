@@ -28,6 +28,11 @@ public interface IApplication
     string Version { get; }
 
     /// <summary>
+    /// Path to the icon representing the application
+    /// </summary>
+    string? IconPath { get; }
+
+    /// <summary>
     /// Type of application (windowed, command-line, etc.)
     /// </summary>
     ApplicationType Type { get; }
