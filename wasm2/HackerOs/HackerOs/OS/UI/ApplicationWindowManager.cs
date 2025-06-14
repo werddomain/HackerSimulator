@@ -79,22 +79,16 @@ namespace HackerOs.OS.UI
                 return existingWindow;
             }
             
-            // Create window info
-            var windowInfo = new WindowInfo
+            // Create window using the window manager's generic factory via reflection
+            var parameters = new Dictionary<string, object>
             {
-                Id = Guid.NewGuid(),
-                Title = application.Name,
-                Name = application.Id,
-                Icon = application.Manifest.Icon,
-                ComponentType = application.GetType().Name,
-                Bounds = new WindowBounds(100, 100, 800, 600), // Default bounds
+                ["ApplicationId"] = application.Id
             };
-            
-            // Add parameters for window content
-            windowInfo.Parameters["ApplicationId"] = application.Id;
-            
-            // Register window with window manager
-            _windowManager.RegisterWindow(windowInfo);
+
+            var method = typeof(WindowManagerService)
+                .GetMethod("CreateWindow")!
+                .MakeGenericMethod(application.GetType());
+            var windowInfo = (WindowInfo)method.Invoke(_windowManager, new object?[] { parameters })!;
             
             // Create application window bridge
             var logger = _loggerFactory.CreateLogger<ApplicationWindow>();

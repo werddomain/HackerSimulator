@@ -26,7 +26,7 @@ namespace HackerOs.OS.Settings
         /// <param name="logger">Logger for user settings</param>
         /// <param name="currentUser">The current user context (defaults to 'user')</param>
         public UserSettings(
-            ISettingsService settingsService, 
+            ISettingsService settingsService,
             SystemSettings systemSettings,
             ILogger<UserSettings> logger,
             string currentUser = "user")
@@ -35,6 +35,49 @@ namespace HackerOs.OS.Settings
             _systemSettings = systemSettings ?? throw new ArgumentNullException(nameof(systemSettings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUser = currentUser ?? "user";
+        }
+
+        /// <summary>
+        /// Convenience wrapper to synchronously set a value in the user configuration.
+        /// The key may optionally contain a section name separated by a dot
+        /// (e.g. "apps.window.x"). If no section is supplied, "General" is used.
+        /// </summary>
+        /// <param name="fullKey">Section and key in dotted notation</param>
+        /// <param name="value">Value to set</param>
+        /// <returns>True if the setting was written successfully</returns>
+        public bool SetValue(string fullKey, object value)
+        {
+            var (section, key) = ParseKey(fullKey);
+            return _settingsService
+                .SetSettingAsync(section, key, value, SettingScope.User)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Convenience wrapper to synchronously retrieve a value from the user configuration.
+        /// </summary>
+        /// <typeparam name="T">Type of the value</typeparam>
+        /// <param name="fullKey">Section and key in dotted notation</param>
+        /// <param name="defaultValue">Default value if not present</param>
+        /// <returns>Retrieved value or the provided default</returns>
+        public T GetValue<T>(string fullKey, T defaultValue = default!)
+        {
+            var (section, key) = ParseKey(fullKey);
+            var result = _settingsService
+                .GetSettingAsync(section, key, defaultValue, SettingScope.User)
+                .GetAwaiter().GetResult();
+            return result == null ? defaultValue : result;
+        }
+
+        private static (string Section, string Key) ParseKey(string fullKey)
+        {
+            if (string.IsNullOrWhiteSpace(fullKey))
+                throw new ArgumentException("Key cannot be null or empty", nameof(fullKey));
+
+            var index = fullKey.IndexOf('.');
+            return index > 0
+                ? (fullKey.Substring(0, index), fullKey[(index + 1)..])
+                : ("General", fullKey);
         }
 
         #region User Preferences
