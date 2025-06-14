@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+// Use fully qualified names to avoid clashes with the local
+// JsonSerializerOptions and JsonNamingPolicy types declared below.
 using System.Threading.Tasks;
 
 namespace HackerOs.OS.System.Text.Json
@@ -12,9 +12,9 @@ namespace HackerOs.OS.System.Text.Json
     /// </summary>
     public static class JsonSerializer
     {
-        private static readonly System.Text.Json.JsonSerializerOptions _defaultOptions = new()
+        private static readonly global::System.Text.Json.JsonSerializerOptions _defaultOptions = new()
         {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            PropertyNamingPolicy = global::System.Text.Json.JsonNamingPolicy.CamelCase,
             WriteIndented = true,
             PropertyNameCaseInsensitive = true
         };
@@ -26,7 +26,7 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A JSON string representation of the value.</returns>
         public static string Serialize(object value)
         {
-            return System.Text.Json.JsonSerializer.Serialize(value, _defaultOptions);
+            return global::System.Text.Json.JsonSerializer.Serialize(value, _defaultOptions);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace HackerOs.OS.System.Text.Json
                     ? global::System.Text.Json.JsonNamingPolicy.CamelCase
                     : null;
 
-            var wrappedOptions = new System.Text.Json.JsonSerializerOptions
+            var wrappedOptions = new global::System.Text.Json.JsonSerializerOptions
             {
                 PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
@@ -50,7 +50,7 @@ namespace HackerOs.OS.System.Text.Json
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(value, wrappedOptions);
+            return global::System.Text.Json.JsonSerializer.Serialize(value, wrappedOptions);
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A deserialized instance of type T.</returns>
         public static T Deserialize<T>(string json)
         {
-            return System.Text.Json.JsonSerializer.Deserialize<T>(json, _defaultOptions);
+            return global::System.Text.Json.JsonSerializer.Deserialize<T>(json, _defaultOptions);
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace HackerOs.OS.System.Text.Json
                     ? global::System.Text.Json.JsonNamingPolicy.CamelCase
                     : null;
 
-            var wrappedOptions = new System.Text.Json.JsonSerializerOptions
+            var wrappedOptions = new global::System.Text.Json.JsonSerializerOptions
             {
                 PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
@@ -86,7 +86,7 @@ namespace HackerOs.OS.System.Text.Json
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 
-            return System.Text.Json.JsonSerializer.Deserialize<T>(json, wrappedOptions);
+            return global::System.Text.Json.JsonSerializer.Deserialize<T>(json, wrappedOptions);
         }
     }
 

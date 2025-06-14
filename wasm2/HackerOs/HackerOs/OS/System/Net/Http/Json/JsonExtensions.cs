@@ -17,7 +17,8 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public static async Task<T?> GetFromJsonAsync<T>(this HackerOs.OS.System.Net.Http.HttpClient client, string requestUri, HackerOs.OS.System.Threading.CancellationToken cancellationToken = default, JsonSerializerOptions? options = null)
         {
-            var response = await client.GetAsync(requestUri, cancellationToken.GetSystemToken());
+            global::System.Threading.CancellationToken systemToken = cancellationToken.GetSystemToken();
+            var response = await client.GetAsync(requestUri, systemToken);
             response.EnsureSuccessStatusCode();
             
             var content = await response.Content.ReadAsStringAsync();
@@ -42,7 +43,8 @@ namespace HackerOs.OS.System.Net.Http.Json
         {
             var json = JsonSerializer.Serialize(value, options);
             var content = new StringContent(json, "utf-8", "application/json");
-            return await client.PostAsync(requestUri, content, cancellationToken.GetSystemToken());
+            global::System.Threading.CancellationToken systemToken = cancellationToken.GetSystemToken();
+            return await client.PostAsync(requestUri, content, systemToken);
         }
 
         /// <summary>
@@ -60,7 +62,8 @@ namespace HackerOs.OS.System.Net.Http.Json
         {
             var json = JsonSerializer.Serialize(value, options);
             var content = new StringContent(json, "utf-8", "application/json");
-            return await client.PutAsync(requestUri, content, cancellationToken.GetSystemToken());
+            global::System.Threading.CancellationToken systemToken = cancellationToken.GetSystemToken();
+            return await client.PutAsync(requestUri, content, systemToken);
         }
 
         /// <summary>
@@ -82,7 +85,8 @@ namespace HackerOs.OS.System.Net.Http.Json
             {
                 Content = content
             };
-            return await client.SendAsync(request, cancellationToken.GetSystemToken());
+            global::System.Threading.CancellationToken systemToken = cancellationToken.GetSystemToken();
+            return await client.SendAsync(request, systemToken);
         }
 
         /// <summary>
@@ -154,7 +158,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public override Task<global::System.IO.Stream> ReadAsStreamAsync()
         {
-            var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(_jsonContent);
             global::System.IO.Stream stream = new global::System.IO.MemoryStream(bytes);
             return Task.FromResult(stream);
         }
