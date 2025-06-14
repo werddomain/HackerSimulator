@@ -1,4 +1,6 @@
 
+using System;
+using System.IO;
 using System.Text;
 using HackerOs.OS.IO.FileSystem;
 
@@ -42,7 +44,7 @@ public abstract class CommandBase : ICommand
     /// </summary>
     protected static async Task WriteLineAsync(Stream stream, string text, CancellationToken cancellationToken = default)
     {
-        var bytes = Encoding.UTF8.GetBytes(text + Environment.NewLine);
+        var bytes = Encoding.UTF8.GetBytes(text + global::System.Environment.NewLine);
         await stream.WriteAsync(bytes, cancellationToken);
     }
 

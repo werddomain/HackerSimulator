@@ -219,7 +219,7 @@ namespace HackerOs.OS.IO.Utilities
         /// <returns>A task representing the asynchronous operation</returns>
         public static async Task WriteAllLinesAsync(string path, IEnumerable<string> contents, Encoding encoding, IVirtualFileSystem fileSystem)
         {
-            var text = string.Join(Environment.NewLine, contents);
+            var text = string.Join(global::System.Environment.NewLine, contents);
             await WriteAllTextAsync(path, text, encoding, fileSystem);
         }
 
@@ -297,7 +297,7 @@ namespace HackerOs.OS.IO.Utilities
             if (linesToAppend.Length == 0)
                 return;
 
-            var textToAppend = Environment.NewLine + string.Join(Environment.NewLine, linesToAppend);
+            var textToAppend = global::System.Environment.NewLine + string.Join(global::System.Environment.NewLine, linesToAppend);
             await AppendAllTextAsync(path, textToAppend, encoding, fileSystem);
         }
 

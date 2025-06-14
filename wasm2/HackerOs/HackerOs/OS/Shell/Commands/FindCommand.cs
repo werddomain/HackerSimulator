@@ -137,8 +137,9 @@ namespace HackerOs.OS.Shell.Commands
                 {
                     errors.Add($"find: {path}: {ex.Message}");
                 }
-            }            var output = string.Join(Environment.NewLine, results);
-            var errorOutput = string.Join(Environment.NewLine, errors);
+            }
+            var output = string.Join(global::System.Environment.NewLine, results);
+            var errorOutput = string.Join(global::System.Environment.NewLine, errors);
 
             if (!string.IsNullOrEmpty(output))
             {
