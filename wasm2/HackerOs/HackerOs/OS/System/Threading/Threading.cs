@@ -86,11 +86,11 @@ namespace HackerOs.OS.System.Threading
         /// <summary>
         /// Get the underlying System.Threading.CancellationToken
         /// </summary>
-        public System.Threading.CancellationToken GetSystemToken()
+        public global::System.Threading.CancellationToken GetSystemToken()
         {
-            return _isCancellationRequested ? 
-                new System.Threading.CancellationToken(true) : 
-                System.Threading.CancellationToken.None;
+            return _isCancellationRequested ?
+                new global::System.Threading.CancellationToken(true) :
+                global::System.Threading.CancellationToken.None;
         }
     }
 
