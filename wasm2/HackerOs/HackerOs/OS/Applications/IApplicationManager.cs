@@ -1,4 +1,5 @@
 using HackerOs.OS.User;
+using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.OS.Applications;
 
@@ -136,4 +137,11 @@ public interface IApplicationManager
     /// </summary>
     /// <returns>A list of all application manifests</returns>
     IReadOnlyList<ApplicationManifest> GetAllApplications();
+
+    /// <summary>
+    /// Creates a render fragment to display the UI of a running application.
+    /// </summary>
+    /// <param name="application">Application instance.</param>
+    /// <returns>Render fragment for the application's UI.</returns>
+    RenderFragment GetApplicationContentRenderer(IApplication application);
 }
