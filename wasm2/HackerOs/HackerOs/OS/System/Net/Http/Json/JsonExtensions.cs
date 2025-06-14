@@ -1,7 +1,6 @@
 using System;
 using System.Net;
 using System.Net.Security;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using HackerOs.OS.System.Net.Http;
@@ -98,7 +97,7 @@ namespace HackerOs.OS.System.Net.Http.Json
     /// <summary>
     /// JSON content for HTTP requests
     /// </summary>
-    public class JsonContent : HttpContent
+    public class JsonContent : HackerOs.OS.System.Net.Http.HttpContent
     {
         private readonly string _jsonContent;
 
@@ -137,26 +136,27 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// <summary>
         /// Serialize the HTTP content to a byte array as an asynchronous operation
         /// </summary>
-        public override async Task<byte[]> ReadAsByteArrayAsync()
+        public override Task<byte[]> ReadAsByteArrayAsync()
         {
-            return global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            return Task.FromResult(global::System.Text.Encoding.UTF8.GetBytes(_jsonContent));
         }
 
         /// <summary>
         /// Serialize the HTTP content to a string as an asynchronous operation
         /// </summary>
-        public override async Task<string> ReadAsStringAsync()
+        public override Task<string> ReadAsStringAsync()
         {
-            return _jsonContent;
+            return Task.FromResult(_jsonContent);
         }
 
         /// <summary>
         /// Serialize the HTTP content to a stream as an asynchronous operation
         /// </summary>
-        public override async Task<System.IO.Stream> ReadAsStreamAsync()
+        public override Task<System.IO.Stream> ReadAsStreamAsync()
         {
             var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
-            return new global::System.IO.MemoryStream(bytes);
+            global::System.IO.Stream stream = new global::System.IO.MemoryStream(bytes);
+            return Task.FromResult(stream);
         }
     }
 }

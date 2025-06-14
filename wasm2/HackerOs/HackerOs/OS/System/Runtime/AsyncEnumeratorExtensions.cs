@@ -23,8 +23,8 @@ namespace HackerOs.OS.System.Runtime
         /// Enables cancellation and configured awaits on an async enumerable.
         /// </summary>
         public static ConfiguredCancelableAsyncEnumerable<T> WithCancellation<T>(
-            this IAsyncEnumerable<T> enumerable, 
-            System.Threading.CancellationToken cancellationToken)
+            this IAsyncEnumerable<T> enumerable,
+            global::System.Threading.CancellationToken cancellationToken)
         {
             return new ConfiguredCancelableAsyncEnumerable<T>(enumerable, true, cancellationToken);
         }
@@ -37,12 +37,12 @@ namespace HackerOs.OS.System.Runtime
     {
         private readonly IAsyncEnumerable<T> _enumerable;
         private readonly bool _continueOnCapturedContext;
-        private readonly System.Threading.CancellationToken _cancellationToken;
+        private readonly global::System.Threading.CancellationToken _cancellationToken;
 
         internal ConfiguredCancelableAsyncEnumerable(
             IAsyncEnumerable<T> enumerable, 
             bool continueOnCapturedContext, 
-            System.Threading.CancellationToken cancellationToken)
+            global::System.Threading.CancellationToken cancellationToken)
         {
             _enumerable = enumerable ?? throw new ArgumentNullException(nameof(enumerable));
             _continueOnCapturedContext = continueOnCapturedContext;
