@@ -354,7 +354,7 @@ namespace HackerOs.OS.Applications.BuiltIn
 
         private async Task WriteLineAsync(string text)
         {
-            await WriteAsync(text + Environment.NewLine);
+            await WriteAsync(text + global::System.Environment.NewLine);
         }
 
         private async Task WriteAsync(string text)

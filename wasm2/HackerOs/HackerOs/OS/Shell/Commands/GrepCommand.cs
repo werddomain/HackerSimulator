@@ -117,14 +117,14 @@ namespace HackerOs.OS.Shell.Commands
                 // Write results to stdout
                 if (results.Any())
                 {
-                    var output = string.Join(Environment.NewLine, results);
+                    var output = string.Join(global::System.Environment.NewLine, results);
                     await WriteLineAsync(stdout, output, cancellationToken);
                 }
 
                 // Write errors to stderr
                 if (errors.Any())
                 {
-                    var errorOutput = string.Join(Environment.NewLine, errors);
+                    var errorOutput = string.Join(global::System.Environment.NewLine, errors);
                     await WriteLineAsync(stderr, errorOutput, cancellationToken);
                 }
 

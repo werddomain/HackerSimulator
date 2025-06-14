@@ -247,7 +247,7 @@ namespace HackerOs.OS.System.Net.Http
 
         public abstract Task<string> ReadAsStringAsync();
         public abstract Task<byte[]> ReadAsByteArrayAsync();
-        public abstract Task<System.IO.Stream> ReadAsStreamAsync();
+        public abstract Task<global::System.IO.Stream> ReadAsStreamAsync();
 
         public virtual void Dispose() { }
     }
@@ -276,10 +276,10 @@ namespace HackerOs.OS.System.Net.Http
         public override Task<byte[]> ReadAsByteArrayAsync()
         {
             return Task.FromResult(System.Text.Encoding.UTF8.GetBytes(_content));
-        }        public override Task<System.IO.Stream> ReadAsStreamAsync()
+        }        public override Task<global::System.IO.Stream> ReadAsStreamAsync()
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(_content);
-            return Task.FromResult<System.IO.Stream>(new System.IO.MemoryStream(bytes));
+            return Task.FromResult<global::System.IO.Stream>(new global::System.IO.MemoryStream(bytes));
         }
     }
 
