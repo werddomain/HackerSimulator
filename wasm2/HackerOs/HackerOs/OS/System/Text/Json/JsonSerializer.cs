@@ -37,11 +37,14 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A JSON string representation of the value.</returns>
         public static string Serialize(object value, JsonSerializerOptions options)
         {
+            global::System.Text.Json.JsonNamingPolicy? namingPolicy =
+                options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
+                    ? global::System.Text.Json.JsonNamingPolicy.CamelCase
+                    : null;
+
             var wrappedOptions = new System.Text.Json.JsonSerializerOptions
             {
-                PropertyNamingPolicy = options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
-                    ? System.Text.Json.JsonNamingPolicy.CamelCase
-                    : (System.Text.Json.JsonNamingPolicy?)null,
+                PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
                 IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
@@ -70,11 +73,14 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A deserialized instance of type T.</returns>
         public static T Deserialize<T>(string json, JsonSerializerOptions options)
         {
+            global::System.Text.Json.JsonNamingPolicy? namingPolicy =
+                options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
+                    ? global::System.Text.Json.JsonNamingPolicy.CamelCase
+                    : null;
+
             var wrappedOptions = new System.Text.Json.JsonSerializerOptions
             {
-                PropertyNamingPolicy = options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
-                    ? System.Text.Json.JsonNamingPolicy.CamelCase
-                    : (System.Text.Json.JsonNamingPolicy?)null,
+                PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
                 IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
