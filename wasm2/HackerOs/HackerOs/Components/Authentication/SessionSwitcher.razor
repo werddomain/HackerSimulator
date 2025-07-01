@@ -1,0 +1,133 @@
+@using HackerOs.OS.Security
+@using HackerOs.OS.User.Models
+@inject ISessionManager SessionManager
+@inject IAuthenticationService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="session-switcher @(IsVisible ? "visible" : "hidden")">
+    <div class="session-container">
+        <div class="session-header">
+            <h2>Session Manager</h2>
+            <button class="close-button" @onclick="Close">×</button>
+        </div>
+
+        <div class="sessions-list">
+            @if (ActiveSessions == null || !ActiveSessions.Any())
+            {
+                <div class="no-sessions">
+                    <p>No active sessions found</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var session in ActiveSessions)
+                {
+                    var isActive = session.SessionId == ActiveSessionId;
+                    <div class="session-item @(isActive ? "active" : "")" @onclick="() => SwitchToSession(session.SessionId)">
+                        <div class="session-avatar">
+                            <span class="avatar-initials">@GetUserInitials(session)</span>
+                        </div>
+                        <div class="session-info">
+                            <div class="session-user">
+                                @(session.User?.Username ?? "Unknown User")
+                                @if (isActive)
+                                {
+                                    <span class="active-badge">Current</span>
+                                }
+                            </div>
+                            <div class="session-details">
+                                <span class="session-time">Started: @FormatTime(session.StartTime)</span>
+                                <span class="session-state @session.State.ToString().ToLower()">@session.State</span>
+                            </div>
+                        </div>
+                        <div class="session-actions">
+                            @if (isActive)
+                            {
+                                <button class="lock-button" @onclick:stopPropagation="true" @onclick="LockSession" title="Lock session">
+                                    <span class="lock-icon">🔒</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="switch-button" title="Switch to this session">
+                                    <span class="switch-icon">↗</span>
+                                </button>
+                            }
+                            <button class="end-button" @onclick:stopPropagation="true" @onclick="() => EndSession(session.SessionId)" title="End session">
+                                <span class="end-icon">×</span>
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="session-actions-container">
+            <button class="new-session-button" @onclick="CreateNewSession">
+                <span class="new-session-icon">+</span>
+                <span>New Session</span>
+            </button>
+            
+            <button class="logout-all-button" @onclick="LogoutAllSessions">
+                <span class="logout-all-icon">⚠</span>
+                <span>Logout All</span>
+            </button>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="error-message">
+                <span class="error-icon">⚠</span>
+                <span>@ErrorMessage</span>
+            </div>
+        }
+    </div>
+</div>
+
+@if (IsCreatingNewSession)
+{
+    <div class="new-session-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Session</h3>
+                <button class="close-button" @onclick="() => IsCreatingNewSession = false">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="new-session-username">Username:</label>
+                    <input id="new-session-username" type="text" @bind="NewSessionUsername" />
+                </div>
+                <div class="input-group">
+                    <label for="new-session-password">Password:</label>
+                    <div class="password-input-container">
+                        <input 
+                            id="new-session-password"
+                            type="@(ShowPassword ? "text" : "password")" 
+                            @bind="NewSessionPassword" />
+                        <button 
+                            type="button" 
+                            class="password-toggle"
+                            @onclick="TogglePasswordVisibility"
+                            title="@(ShowPassword ? "Hide password" : "Show password")">
+                            @(ShowPassword ? "👁️" : "🔒")
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" @onclick="() => IsCreatingNewSession = false">Cancel</button>
+                <button class="create-button" @onclick="HandleCreateNewSession" disabled="@IsLoading">
+                    @if (IsLoading)
+                    {
+                        <span class="loading-spinner"></span>
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span>Create</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}

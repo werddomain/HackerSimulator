@@ -1,0 +1,99 @@
+@page "/login"
+@using HackerOs.OS.Security
+@using HackerOs.OS.User.Models
+@inject IAuthenticationService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="login-screen">
+    <div class="login-container">
+        <div class="login-header">
+            <h1 class="system-title">HackerOS</h1>
+            <p class="system-subtitle">Secure Authentication Required</p>
+        </div>
+
+        <div class="login-form">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-message" @onclick="ClearError">
+                    <i class="error-icon">⚠</i>
+                    <span>@ErrorMessage</span>
+                </div>
+            }
+
+            <div class="input-group">
+                <label for="username">Username:</label>
+                <input 
+                    id="username"
+                    type="text" 
+                    @bind="Username" 
+                    @onkeypress="HandleKeyPress"
+                    placeholder="Enter username"
+                    disabled="@IsLoggingIn"
+                    autocomplete="username"
+                    @ref="UsernameInput" />
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password:</label>
+                <div class="password-input-container">
+                    <input 
+                        id="password"
+                        type="@(ShowPassword ? "text" : "password")" 
+                        @bind="Password" 
+                        @onkeypress="HandleKeyPress"
+                        placeholder="Enter password"
+                        disabled="@IsLoggingIn"
+                        autocomplete="current-password" />
+                    <button 
+                        type="button" 
+                        class="password-toggle"
+                        @onclick="TogglePasswordVisibility"
+                        disabled="@IsLoggingIn"
+                        title="@(ShowPassword ? "Hide password" : "Show password")">
+                        @(ShowPassword ? "👁️" : "🔒")
+                    </button>
+                </div>
+            </div>
+
+            <div class="remember-me">
+                <input 
+                    type="checkbox" 
+                    id="remember-me" 
+                    @bind="RememberMe" 
+                    disabled="@IsLoggingIn" />
+                <label for="remember-me">Remember me for 30 days</label>
+            </div>
+
+            <div class="login-actions">
+                <button 
+                    class="login-button @(IsLoggingIn ? "loading" : "")"
+                    @onclick="HandleLogin"
+                    disabled="@IsLoggingIn">
+                    @if (IsLoggingIn)
+                    {
+                        <span class="loading-spinner"></span>
+                        <span>Authenticating...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
+            </div>
+
+            <div class="login-info">
+                <p>Default accounts:</p>
+                <ul>
+                    <li><strong>root</strong> / hackeros (Administrator)</li>
+                    <li><strong>guest</strong> / guest (Limited access)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="login-footer">
+            <p>HackerOS Simulator v2.0</p>
+            <p>Built with C# Blazor WebAssembly</p>
+            <p>Current time: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</p>
+        </div>
+    </div>
+</div>

@@ -5,6 +5,9 @@ using HackerOs.OS.Shell.Completion;
 using HackerOs.OS.Applications;
 using HackerOs.OS.Theme;
 using HackerOs.OS.Core.Settings;
+using HackerOs.OS.Security;
+using HackerOs.OS.User;
+using HackerOs.OS.Core.State;
 //using BlazorWindowManager.Extensions; // Temporarily disabled for initial setup
 
 namespace HackerOs
@@ -23,12 +26,11 @@ namespace HackerOs
             // Temporarily disabled: builder.Services.AddBlazorWindowManager();
 
             // Add HackerOS Core Services
-            builder.Services.AddHackerOSServices();            builder.Services.AddOidcAuthentication(options =>
-            {
-                // Configure your authentication provider options here.
-                // For more information, see https://aka.ms/blazor-standalone-auth
-                builder.Configuration.Bind("Local", options.ProviderOptions);
-            });
+            builder.Services.AddHackerOSServices();
+            
+            // Remove OIDC authentication placeholder - replaced with custom authentication
+            // Configure application state
+            builder.Services.AddScoped<IAppStateService, AppStateService>();
             
             var host = builder.Build();
             
@@ -47,6 +49,13 @@ namespace HackerOs
             // Core Infrastructure Services (Singletons - shared across application)
             // TODO: Add IKernel service registration
             // TODO: Add IFileSystem service registration            // TODO: Add IMemoryManager service registration
+            
+            // Authentication and User Management Services
+            services.AddSingleton<HackerOs.OS.Security.ISessionManager, HackerOs.OS.Security.SessionManager>();
+            services.AddScoped<HackerOs.OS.Security.ITokenService, HackerOs.OS.Security.TokenService>();
+            services.AddScoped<HackerOs.OS.Security.IAuthenticationService, HackerOs.OS.Security.AuthenticationService>();
+            services.AddScoped<HackerOs.OS.Security.IUserService, HackerOs.OS.Security.UserService>();
+            services.AddSingleton<HackerOs.OS.User.IUserManager, HackerOs.OS.User.UserManager>();
             
             // System Services (Scoped - per user session)
             // Settings Service

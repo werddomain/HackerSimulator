@@ -1,0 +1,336 @@
+.lock-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9998;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    color: #00ff00;
+}
+
+.lock-screen.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lock-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: -1;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.lock-container {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #00ff00;
+    border-radius: 8px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.4);
+    z-index: 9999;
+    animation: slideDown 0.5s ease-in-out;
+}
+
+.lock-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.system-title {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px #00ff00;
+    color: #00ff00;
+}
+
+.system-subtitle {
+    margin: 0.5rem 0 0 0;
+    font-size: 1rem;
+    color: #ff5555;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(0, 30, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 100, 0, 0.3);
+    border: 2px solid #00aa00;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.avatar-initials {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #00ff00;
+}
+
+.user-details {
+    flex: 1;
+}
+
+.username {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    color: #00ff00;
+}
+
+.lock-time, .lock-reason {
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+    color: #aaaaaa;
+}
+
+.lock-reason {
+    color: #ff9955;
+}
+
+.no-session-info {
+    width: 100%;
+    text-align: center;
+    padding: 1rem;
+    color: #ff5555;
+}
+
+.unlock-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.error-message {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid #ff0000;
+    color: #ff6666;
+    padding: 0.75rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.error-message:hover {
+    background: rgba(255, 0, 0, 0.15);
+}
+
+.error-icon {
+    font-style: normal;
+    font-size: 1.25rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+label {
+    font-size: 0.85rem;
+    color: #00cc00;
+}
+
+.password-input-container {
+    position: relative;
+    width: 100%;
+}
+
+input[type="text"],
+input[type="password"] {
+    background: rgba(0, 50, 0, 0.3);
+    border: 1px solid #00aa00;
+    color: #00ff00;
+    padding: 0.75rem;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: #00ff00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+input[type="text"]:disabled,
+input[type="password"]:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #00aa00;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 5px;
+}
+
+.password-toggle:hover {
+    color: #00ff00;
+}
+
+.password-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.unlock-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.unlock-button, .logout-button {
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+}
+
+.unlock-button {
+    background: #006600;
+    color: #ffffff;
+    flex: 2;
+}
+
+.unlock-button:hover {
+    background: #008800;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+}
+
+.logout-button {
+    background: #660000;
+    color: #ffffff;
+    flex: 1;
+}
+
+.logout-button:hover {
+    background: #880000;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+}
+
+.unlock-button:disabled, .logout-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.unlock-button.loading {
+    background: #004400;
+}
+
+.loading-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+.lock-footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666666;
+}
+
+.lock-footer p {
+    margin: 0.3rem 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+    .lock-container {
+        max-width: 90%;
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .avatar-initials {
+        font-size: 1.5rem;
+    }
+    
+    .username {
+        font-size: 1.3rem;
+    }
+    
+    .unlock-actions {
+        flex-direction: column;
+    }
+    
+    .unlock-button, .logout-button {
+        width: 100%;
+    }
+}
