@@ -171,7 +171,7 @@ namespace HackerOs.OS.System.Net.Http.Json
         /// </summary>
         public override Task<global::System.IO.Stream> ReadAsStreamAsync()
         {
-            var bytes = global::System.Text.Encoding.UTF8.GetBytes(_jsonContent);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(_jsonContent);
             global::System.IO.Stream stream = new global::System.IO.MemoryStream(bytes);
             return Task.FromResult(stream);
         }

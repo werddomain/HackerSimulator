@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using global::System.Threading;
 using System.Threading.Tasks;
 
 
@@ -31,7 +31,7 @@ namespace HackerOs.OS.System.Net.Http
         /// <summary>
         /// Sends an HTTP GET request
         /// </summary>
-        public async Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken cancellationToken = default)
+        public async Task<HttpResponseMessage> GetAsync(string requestUri, global::System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
             return await SendAsync(request, cancellationToken);
@@ -40,7 +40,7 @@ namespace HackerOs.OS.System.Net.Http
         /// <summary>
         /// Sends an HTTP POST request
         /// </summary>
-        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent? content, CancellationToken cancellationToken = default)
+        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent? content, global::System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -52,7 +52,7 @@ namespace HackerOs.OS.System.Net.Http
         /// <summary>
         /// Sends an HTTP PUT request
         /// </summary>
-        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent? content, CancellationToken cancellationToken = default)
+        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent? content, global::System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Put, requestUri)
             {
@@ -64,7 +64,7 @@ namespace HackerOs.OS.System.Net.Http
         /// <summary>
         /// Sends an HTTP DELETE request
         /// </summary>
-        public async Task<HttpResponseMessage> DeleteAsync(string requestUri, CancellationToken cancellationToken = default)
+        public async Task<HttpResponseMessage> DeleteAsync(string requestUri, global::System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
             return await SendAsync(request, cancellationToken);
@@ -73,7 +73,7 @@ namespace HackerOs.OS.System.Net.Http
         /// <summary>
         /// Sends an HTTP request
         /// </summary>
-        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, global::System.Threading.CancellationToken cancellationToken = default)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(HttpClient));
