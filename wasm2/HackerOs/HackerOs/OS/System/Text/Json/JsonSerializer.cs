@@ -37,20 +37,19 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A JSON string representation of the value.</returns>
         public static string Serialize(object value, JsonSerializerOptions options)
         {
-            global::System.Text.Json.JsonNamingPolicy? namingPolicy =
-                options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
-                    ? global::System.Text.Json.JsonNamingPolicy.CamelCase
-                    : null;
-
-            var wrappedOptions = new System.Text.Json.JsonSerializerOptions
+            var systemOptions = new System.Text.Json.JsonSerializerOptions
             {
-                PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
-                IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(value, wrappedOptions);
+            // Apply the appropriate naming policy based on our policy
+            if (options.PropertyNamingPolicy != null)
+            {
+                systemOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            }
+
+            return System.Text.Json.JsonSerializer.Serialize(value, systemOptions);
         }
 
         /// <summary>
@@ -73,20 +72,19 @@ namespace HackerOs.OS.System.Text.Json
         /// <returns>A deserialized instance of type T.</returns>
         public static T Deserialize<T>(string json, JsonSerializerOptions options)
         {
-            global::System.Text.Json.JsonNamingPolicy? namingPolicy =
-                options.PropertyNamingPolicy == JsonNamingPolicy.CamelCase
-                    ? global::System.Text.Json.JsonNamingPolicy.CamelCase
-                    : null;
-
-            var wrappedOptions = new System.Text.Json.JsonSerializerOptions
+            var systemOptions = new System.Text.Json.JsonSerializerOptions
             {
-                PropertyNamingPolicy = namingPolicy,
                 WriteIndented = options.WriteIndented,
-                IgnoreNullValues = options.IgnoreNullValues,
                 PropertyNameCaseInsensitive = options.PropertyNameCaseInsensitive
             };
 
-            return System.Text.Json.JsonSerializer.Deserialize<T>(json, wrappedOptions);
+            // Apply the appropriate naming policy based on our policy
+            if (options.PropertyNamingPolicy != null)
+            {
+                systemOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            }
+
+            return System.Text.Json.JsonSerializer.Deserialize<T>(json, systemOptions);
         }
     }
 
@@ -108,27 +106,12 @@ namespace HackerOs.OS.System.Text.Json
         /// <summary>
         /// Gets or sets a value that indicates whether null values should be ignored during serialization.
         /// </summary>
+        [Obsolete("IgnoreNullValues is obsolete. Use DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull instead.")]
         public bool IgnoreNullValues { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value that determines whether property names are matched case-insensitively during deserialization.
         /// </summary>
         public bool PropertyNameCaseInsensitive { get; set; } = true;
-    }
-
-    /// <summary>
-    /// Provides naming policies for JSON property names.
-    /// </summary>
-    public enum JsonNamingPolicy
-    {
-        /// <summary>
-        /// No naming policy (keep property names as-is).
-        /// </summary>
-        None,
-
-        /// <summary>
-        /// Use camelCase for property names.
-        /// </summary>
-        CamelCase
     }
 }
