@@ -128,7 +128,7 @@ public class MainService : IMainService
     /// Initializes the user environment for the active session.
     /// </summary>
     /// <param name="session">The active user session.</param>
-    private async Task InitializeUserEnvironmentAsync(HackerOs.OS.Security.UserSession session)
+    private async Task InitializeUserEnvironmentAsync(IUserSession session)
     {
         if (session?.User == null)
             return;

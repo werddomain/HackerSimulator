@@ -11,7 +11,7 @@ namespace HackerOs.OS.Security
     /// </summary>
     public class UserService : IUserService
     {
-        private readonly User.IUserManager _userManager;
+        private readonly IUserManager _userManager;
         private readonly ILogger<UserService> _logger;
 
         /// <summary>
@@ -19,65 +19,80 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="userManager">The user manager service.</param>
         /// <param name="logger">The logger.</param>
-        public UserService(User.IUserManager userManager, ILogger<UserService> logger)
+        public UserService(IUserManager userManager, ILogger<UserService> logger)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <summary>
-        /// Validates a user's credentials.
-        /// </summary>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
-        /// <returns>The user if validation succeeds, or null if validation fails.</returns>
-        public async Task<User?> ValidateUserAsync(string username, string password)
+        /// <inheritdoc />
+        public async Task<User.User?> AuthenticateAsync(string username, string password)
         {
             try
             {
-                _logger.LogInformation("Validating credentials for user: {Username}", username);
-                
-                // Use the user manager to authenticate the user
+                _logger.LogInformation("Authenticating user: {Username}", username);
                 var user = await _userManager.AuthenticateAsync(username, password);
                 
-                if (user != null)
+                if (user == null)
                 {
-                    _logger.LogInformation("User {Username} authenticated successfully", username);
-                    return user;
+                    _logger.LogWarning("Authentication failed for user: {Username}", username);
+                    return null;
                 }
-                
-                _logger.LogWarning("Authentication failed for user: {Username}", username);
-                return null;
+
+                _logger.LogInformation("User authenticated successfully: {Username}", username);
+                return user;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating user credentials for {Username}", username);
-                return null;
+                _logger.LogError(ex, "Error authenticating user: {Username}", username);
+                throw;
             }
         }
 
-        /// <summary>
-        /// Updates a user's information.
-        /// </summary>
-        /// <param name="user">The user to update.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task UpdateUserAsync(User user)
+        /// <inheritdoc />
+        public async Task<User.User?> GetUserAsync(string username)
         {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-                
             try
             {
-                _logger.LogInformation("Updating user information for {Username}", user.Username);
-                
-                // Use the user manager to update the user
-                await _userManager.UpdateUserAsync(user);
-                
-                _logger.LogInformation("User {Username} updated successfully", user.Username);
+                _logger.LogInformation("Getting user: {Username}", username);
+                return await _userManager.GetUserAsync(username);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user {Username}", user?.Username);
+                _logger.LogError(ex, "Error getting user: {Username}", username);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task UpdateUserAsync(User.User user)
+        {
+            try
+            {
+                _logger.LogInformation("Updating user: {Username}", user.Username);
+                await _userManager.UpdateUserAsync(user);
+                _logger.LogInformation("User updated successfully: {Username}", user.Username);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user: {Username}", user.Username);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<User.User> CreateUserAsync(string username, string fullName, string password, bool isAdmin = false)
+        {
+            try
+            {
+                _logger.LogInformation("Creating user: {Username}", username);
+                var user = await _userManager.CreateUserAsync(username, fullName, password, isAdmin);
+                _logger.LogInformation("User created successfully: {Username}", username);
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user: {Username}", username);
                 throw;
             }
         }

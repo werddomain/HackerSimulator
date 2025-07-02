@@ -27,7 +27,7 @@ namespace HackerOs.Components.Authentication
         [Parameter] public bool IsVisible { get; set; } = false;
         
         // Data properties
-        protected List<UserSession> ActiveSessions { get; set; } = new List<UserSession>();
+        protected List<HackerOs.OS.User.Models.UserSession> ActiveSessions { get; set; } = new List<HackerOs.OS.User.Models.UserSession>();
         protected string ActiveSessionId { get; set; } = string.Empty;
         protected string ErrorMessage { get; set; } = string.Empty;
         
@@ -300,7 +300,7 @@ namespace HackerOs.Components.Authentication
             try
             {
                 // Login with new credentials
-                var result = await AuthService.LoginAsync(NewSessionUsername, NewSessionPassword);
+                var result = await AuthService.LoginAsync(NewSessionUsername, NewSessionPassword, true);
                 
                 if (result.IsAuthenticated)
                 {
@@ -355,7 +355,7 @@ namespace HackerOs.Components.Authentication
         /// <summary>
         /// Gets user initials for avatar
         /// </summary>
-        protected string GetUserInitials(UserSession session)
+        protected string GetUserInitials(IUserSession session)
         {
             if (session?.User == null || string.IsNullOrEmpty(session.User.Username))
                 return "?";

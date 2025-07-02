@@ -27,8 +27,8 @@ namespace HackerOs.Components.Authentication
         protected bool ShowSessionSwitcher { get; set; } = false;
         
         // User data
-        protected Security.User? CurrentUser { get; set; }
-        protected UserSession? CurrentSession { get; set; }
+        protected HackerOs.OS.User.Models.User? CurrentUser { get; set; }
+        protected IUserSession? CurrentSession { get; set; }
         protected int SessionCount { get; set; } = 0;
         
         // Computed properties
@@ -77,7 +77,32 @@ namespace HackerOs.Components.Authentication
                     // Get user from session
                     if (CurrentSession != null)
                     {
-                        CurrentUser = CurrentSession.SecurityUser;
+                        // We need to convert the OS.User.User to OS.User.Models.User
+                        var user = CurrentSession.User;
+                        CurrentUser = new HackerOs.OS.User.Models.User
+                        {
+                            UserId = user.UserId.ToString(),
+                            Username = user.Username,
+                            FullName = user.FullName ?? user.Username,
+                            HomeDirectory = user.HomeDirectory ?? $"/home/{user.Username}",
+                            IsActive = user.IsActive,
+                            LastLogin = DateTime.UtcNow, // Default to now if not available
+                            Uid = int.TryParse(user.UserId.ToString(), out int uid) ? uid : 1000,
+                            Gid = 100, // Default to 'users' group
+                            SecondaryGroups = new List<int>() // Initialize secondary groups
+                        };
+                        
+                        // Add some default groups based on username (simplified example)
+                        if (user.Username.Equals("root", StringComparison.OrdinalIgnoreCase))
+                        {
+                            CurrentUser.Uid = 0;
+                            CurrentUser.Gid = 0; // root group
+                        }
+                        else if (user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
+                        {
+                            CurrentUser.SecondaryGroups.Add(27); // sudo group
+                            CurrentUser.SecondaryGroups.Add(4);  // adm group
+                        }
                     }
                     
                     // Get session count

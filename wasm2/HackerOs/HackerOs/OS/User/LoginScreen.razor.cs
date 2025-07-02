@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using HackerOs.OS.Security;
+using HackerOs.OS.User.Models;
 
 namespace HackerOs.OS.User
 {
@@ -23,11 +25,33 @@ namespace HackerOs.OS.User
 
         protected override async Task OnInitializedAsync()
         {
-            // Check if there's already an active session
-            var currentSession = await SessionManager.GetCurrentSessionAsync();
-            if (currentSession != null && !currentSession.IsLocked)
+            try
             {
-                await OnLoginSuccess.InvokeAsync(currentSession);
+                // Check if there's already an active session
+                var modelSession = await SessionManager.GetActiveSessionAsync();
+                if (modelSession is not null)
+                {
+                    Models.UserSession session = modelSession;
+                    if (session.State != SessionState.Locked)
+                    {
+                        // Convert the Models.UserSession to User.UserSession for the callback
+                        var userSession = new UserSession
+                        {
+                            SessionId = session.SessionId,
+                            Token = session.Token,
+                            User = session.User,
+                            State = session.State,
+                            LastActivity = session.LastActivity,
+                            StartTime = session.StartTime
+                        };
+
+                        await OnLoginSuccess.InvokeAsync(userSession);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error checking active session");
             }
         }
 
@@ -50,10 +74,20 @@ namespace HackerOs.OS.User
                 if (user != null)
                 {
                     var session = await SessionManager.CreateSessionAsync(user);
-                    await SessionManager.SetCurrentSessionAsync(session);
+                    await SessionManager.SwitchSessionAsync(session.SessionId);
                     
                     Logger.LogInformation("User {Username} logged in successfully", _username);
-                    await OnLoginSuccess.InvokeAsync(session);
+                    // Convert the Models.UserSession to User.UserSession for the callback
+                    var userSession = new UserSession
+                    {
+                        SessionId = session.SessionId,
+                        Token = session.Token,
+                        User = session.User,
+                        State = session.State,
+                        LastActivity = session.LastActivity,
+                        StartTime = session.StartTime
+                    };
+                    await OnLoginSuccess.InvokeAsync(userSession);
                     
                     // Clear form
                     _username = "";

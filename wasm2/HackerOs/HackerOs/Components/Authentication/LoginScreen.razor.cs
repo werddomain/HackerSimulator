@@ -71,7 +71,7 @@ namespace HackerOs.Components.Authentication
                 // Attempt login
                 var result = await AuthenticationService.LoginAsync(Username, Password, RememberMe);
                 
-                if (result.Success)
+                if (result.IsAuthenticated)
                 {
                     Logger.LogInformation("User {Username} logged in successfully", Username);
                     

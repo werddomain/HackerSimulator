@@ -15,7 +15,7 @@ namespace HackerOs.OS.Core.State
         private readonly IJSRuntime _jsRuntime;
         private readonly ILogger<AppStateService> _logger;
         private readonly IAuthenticationService _authService;
-        
+        private readonly ITokenService tokenService;
         private const string STATE_STORAGE_KEY = "hackeros_app_state";
         
         private bool _isAuthenticated;
@@ -34,12 +34,14 @@ namespace HackerOs.OS.Core.State
         public AppStateService(
             IJSRuntime jsRuntime,
             ILogger<AppStateService> logger,
-            IAuthenticationService authService)
+            IAuthenticationService authService,
+            ITokenService tokenService)
         {
             _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            
+            this.tokenService = tokenService;
+
             // Subscribe to authentication state changes
             _authService.AuthenticationStateChanged += OnAuthenticationStateChanged;
         }
@@ -127,7 +129,7 @@ namespace HackerOs.OS.Core.State
                 if (isAuthenticated)
                 {
                     // Get current session
-                    var sessionManager = new SessionManager(null, null, _jsRuntime);
+                    var sessionManager = new SessionManager(tokenService, _jsRuntime);
                     var session = await sessionManager.GetActiveSessionAsync();
                     
                     if (session != null)

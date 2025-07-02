@@ -6,8 +6,7 @@
     <!-- Add StaticWebAssetBasePath to distinguish assets -->
     <StaticWebAssetBasePath>terminaltest</StaticWebAssetBasePath>
     <!-- Prevent duplicate static web assets -->
-    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
-    <DisableStaticWebAssetsDuplicateDetection>true</DisableStaticWebAssetsDuplicateDetection>
+    
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,10 +21,7 @@
  
   
   <!-- Additional static web assets configuration -->
-  <PropertyGroup>
-    <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
-    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
-  </PropertyGroup>
+
   
 
 </Project>

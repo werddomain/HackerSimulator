@@ -1,8 +1,5 @@
 @using HackerOs.OS.Security
 @using HackerOs.OS.User.Models
-@inject ISessionManager SessionManager
-@inject IAuthenticationService AuthService
-@inject NavigationManager NavigationManager
 
 <div class="user-profile @(IsExpanded ? "expanded" : "collapsed")">
     <div class="profile-toggle" @onclick="ToggleExpand">

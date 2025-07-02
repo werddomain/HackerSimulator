@@ -126,7 +126,7 @@ namespace HackerOs.OS.User.Models
         {
             // In a real implementation, this would use a secure password hashing algorithm
             // such as BCrypt, Argon2, or PBKDF2
-            var hashedInput = Security.TokenService.ComputeHash(password + PasswordSalt);
+            var hashedInput = TokenService.ComputeHash(password + PasswordSalt);
             return hashedInput == HashedPassword;
         }
 
@@ -140,7 +140,7 @@ namespace HackerOs.OS.User.Models
             PasswordSalt = Guid.NewGuid().ToString("N");
             
             // Hash the password with the salt
-            HashedPassword = Security.TokenService.ComputeHash(newPassword + PasswordSalt);
+            HashedPassword = TokenService.ComputeHash(newPassword + PasswordSalt);
             
             // Update the password change timestamp
             LastPasswordChange = DateTime.UtcNow;
@@ -167,6 +167,49 @@ namespace HackerOs.OS.User.Models
         public void UpdateLastLogin()
         {
             LastLogin = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Gets the list of groups this user belongs to by name.
+        /// </summary>
+        [JsonIgnore]
+        public List<string> Groups 
+        { 
+            get 
+            {
+                // This is a simplified implementation. In a real system,
+                // this would look up group names from the GID values.
+                List<string> groups = new List<string>();
+                
+                // Add primary group
+                if (Gid == 0)
+                    groups.Add("root");
+                else if (Gid == 100)
+                    groups.Add("users");
+                else if (Gid == 10)
+                    groups.Add("wheel");
+                else if (Gid == 50)
+                    groups.Add("staff");
+                
+                // Add secondary groups
+                foreach (var gid in SecondaryGroups)
+                {
+                    if (gid == 0 && !groups.Contains("root"))
+                        groups.Add("root");
+                    else if (gid == 100 && !groups.Contains("users"))
+                        groups.Add("users");
+                    else if (gid == 10 && !groups.Contains("wheel"))
+                        groups.Add("wheel");
+                    else if (gid == 50 && !groups.Contains("staff"))
+                        groups.Add("staff");
+                    else if (gid == 4 && !groups.Contains("adm"))
+                        groups.Add("adm");
+                    else if (gid == 27 && !groups.Contains("sudo"))
+                        groups.Add("sudo");
+                }
+                
+                return groups;
+            }
         }
     }
 

@@ -15,7 +15,7 @@ namespace HackerOs.OS.Security
         /// <param name="username">The username of the user attempting to log in.</param>
         /// <param name="password">The password of the user attempting to log in.</param>
         /// <returns>An AuthenticationResult containing the result of the login attempt.</returns>
-        Task<AuthenticationResult> LoginAsync(string username, string password);
+        Task<AuthenticationResult> LoginAsync(string username, string password, bool? rememberMe);
 
         /// <summary>
         /// Logs out the current user, ending their session.

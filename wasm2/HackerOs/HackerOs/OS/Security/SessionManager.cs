@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
+using HackerOs.OS.User.Models;
 
 namespace HackerOs.OS.Security
 {
@@ -13,9 +17,14 @@ namespace HackerOs.OS.Security
     {
         private readonly ITokenService _tokenService;
         private readonly IJSRuntime _jsRuntime;
-        private readonly Dictionary<string, UserSession> _sessions;
+        private readonly ILogger<SessionManager>? _logger;
+        private readonly Dictionary<string, User.Models.UserSession> _sessions;
+        private readonly object _lock = new();
         private string? _activeSessionId;
         private readonly TimeSpan _sessionTimeout;
+        private const string SessionKeyPrefix = "hackeros_session_";
+        private const string CurrentSessionKey = "hackeros_current_session";
+        private const string SessionsKey = "hackeros_sessions";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SessionManager"/> class.
@@ -26,7 +35,7 @@ namespace HackerOs.OS.Security
         {
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
             _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
-            _sessions = new Dictionary<string, UserSession>();
+            _sessions = new Dictionary<string, HackerOs.OS.User.Models.UserSession>();
             _sessionTimeout = TimeSpan.FromMinutes(15); // Default to 15 minutes
         }
 
@@ -97,7 +106,7 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="user">The user for whom to create a session.</param>
         /// <returns>The newly created user session.</returns>
-        public async Task<UserSession> CreateSessionAsync(User user)
+        public async Task<User.Models.UserSession> CreateSessionAsync(HackerOs.OS.User.User user)
         {
             if (user == null)
             {
@@ -107,11 +116,22 @@ namespace HackerOs.OS.Security
             // Generate a new token for the user
             string token = _tokenService.GenerateToken(user);
 
-            // Create a new session
-            var session = new UserSession
+            // Convert Security.User to User.User
+            var userModel = new HackerOs.OS.User.User
+            {
+                UserId = user.UserId,
+                Username = user.Username,
+                FullName = user.Username, // Use username as fallback for full name
+                IsActive = user.IsActive,
+                HomeDirectory = user.HomeDirectory ?? $"/home/{user.Username}"
+                // Set other properties as needed
+            };
+
+            // Create a new session with the User as HackerOs.OS.User.User
+            var session = new HackerOs.OS.User.Models.UserSession
             {
                 SessionId = Guid.NewGuid().ToString(),
-                User = user,
+                User = userModel,
                 Token = token,
                 StartTime = DateTime.UtcNow,
                 LastActivity = DateTime.UtcNow,
@@ -132,7 +152,7 @@ namespace HackerOs.OS.Security
             await SaveSessionsAsync();
 
             // Raise session changed event
-            OnSessionChanged(session.SessionId, SessionState.Active, user);
+            OnSessionChanged(session.SessionId, SessionState.Active, session.User);
 
             return session;
         }
@@ -149,7 +169,7 @@ namespace HackerOs.OS.Security
                 throw new ArgumentException("Session ID cannot be null or empty.", nameof(sessionId));
             }
 
-            if (!_sessions.TryGetValue(sessionId, out UserSession? session))
+            if (!_sessions.TryGetValue(sessionId, out HackerOs.OS.User.Models.UserSession? session))
             {
                 throw new ArgumentException($"Session with ID {sessionId} not found.", nameof(sessionId));
             }
@@ -175,26 +195,26 @@ namespace HackerOs.OS.Security
         /// Gets the currently active user session.
         /// </summary>
         /// <returns>The active user session, or null if no session is active.</returns>
-        public Task<UserSession?> GetActiveSessionAsync()
+        public Task<User.Models.UserSession?> GetActiveSessionAsync()
         {
-            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out UserSession? session))
+            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out HackerOs.OS.User.Models.UserSession? session))
             {
-                return Task.FromResult<UserSession?>(null);
+                return Task.FromResult<HackerOs.OS.User.Models.UserSession?>(null);
             }
 
             // Update last activity
             session.UpdateActivity();
 
-            return Task.FromResult<UserSession?>(session);
+            return Task.FromResult<HackerOs.OS.User.Models.UserSession?>(session);
         }
 
         /// <summary>
         /// Gets all active user sessions.
         /// </summary>
         /// <returns>A collection of all active user sessions.</returns>
-        public Task<IEnumerable<UserSession>> GetAllSessionsAsync()
+        public Task<IEnumerable<User.Models.UserSession>> GetAllSessionsAsync()
         {
-            return Task.FromResult<IEnumerable<UserSession>>(_sessions.Values);
+            return Task.FromResult<IEnumerable<HackerOs.OS.User.Models.UserSession>>(_sessions.Values);
         }
 
         /// <summary>
@@ -209,7 +229,7 @@ namespace HackerOs.OS.Security
                 throw new ArgumentException("Session ID cannot be null or empty.", nameof(sessionId));
             }
 
-            if (!_sessions.TryGetValue(sessionId, out UserSession? session))
+            if (!_sessions.TryGetValue(sessionId, out HackerOs.OS.User.Models.UserSession? session))
             {
                 return false;
             }
@@ -244,7 +264,7 @@ namespace HackerOs.OS.Security
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task LockSessionAsync()
         {
-            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out UserSession? session))
+            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out HackerOs.OS.User.Models.UserSession? session))
             {
                 throw new InvalidOperationException("No active session to lock.");
             }
@@ -264,7 +284,7 @@ namespace HackerOs.OS.Security
         /// <returns>True if the unlock was successful, false otherwise.</returns>
         public async Task<bool> UnlockSessionAsync(string password)
         {
-            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out UserSession? session))
+            if (string.IsNullOrEmpty(_activeSessionId) || !_sessions.TryGetValue(_activeSessionId, out HackerOs.OS.User.Models.UserSession? session))
             {
                 throw new InvalidOperationException("No active session to unlock.");
             }
@@ -304,7 +324,7 @@ namespace HackerOs.OS.Security
             foreach (var kvp in _sessions)
             {
                 string sessionId = kvp.Key;
-                UserSession session = kvp.Value;
+                HackerOs.OS.User.Models.UserSession session = kvp.Value;
 
                 // Check if session has timed out
                 if (session.HasTimedOut(_sessionTimeout))
@@ -370,7 +390,7 @@ namespace HackerOs.OS.Security
         /// <param name="sessionId">The ID of the session that changed.</param>
         /// <param name="state">The new state of the session.</param>
         /// <param name="user">The user associated with the session.</param>
-        private void OnSessionChanged(string sessionId, SessionState state, User? user)
+        private void OnSessionChanged(string sessionId, SessionState state, HackerOs.OS.User.User? user)
         {
             SessionChanged?.Invoke(this, new SessionChangedEventArgs(sessionId, state, user));
         }

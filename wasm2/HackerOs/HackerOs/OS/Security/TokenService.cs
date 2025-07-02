@@ -37,7 +37,7 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="user">The user for whom to generate a token.</param>
         /// <returns>A new authentication token.</returns>
-        public string GenerateToken(User user)
+        public string GenerateToken(HackerOs.OS.User.User user)
         {
             if (user == null)
             {
@@ -47,7 +47,7 @@ namespace HackerOs.OS.Security
             // Create token payload
             var tokenData = new TokenPayload
             {
-                UserId = user.UserId,
+                UserId = user.UserId.ToString(),
                 Username = user.Username,
                 IssuedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow + _tokenLifetime
@@ -148,7 +148,7 @@ namespace HackerOs.OS.Security
                 return null;
             }
 
-            User? user = GetUserFromToken(token);
+            HackerOs.OS.User.User? user = GetUserFromToken(token);
             if (user == null)
             {
                 return null;
@@ -175,10 +175,11 @@ namespace HackerOs.OS.Security
 
             try
             {
+                DateTime now = DateTime.UtcNow;
                 // Check if token is in cache
                 if (_tokenCache.TryGetValue(token, out TokenInfo? tokenInfo) && tokenInfo != null)
                 {
-                    DateTime now = DateTime.UtcNow;
+                    
                     if (tokenInfo.ExpiresAt > now)
                     {
                         return tokenInfo.ExpiresAt - now;
@@ -198,7 +199,7 @@ namespace HackerOs.OS.Security
                     return TimeSpan.Zero;
                 }
 
-                DateTime now = DateTime.UtcNow;
+                
                 if (tokenData.ExpiresAt > now)
                 {
                     return tokenData.ExpiresAt - now;
@@ -217,7 +218,7 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="token">The token to extract user information from.</param>
         /// <returns>The user associated with the token, or null if the token is invalid.</returns>
-        public User? GetUserFromToken(string token)
+        public HackerOs.OS.User.User? GetUserFromToken(string token)
         {
             if (string.IsNullOrEmpty(token) || !ValidateToken(token))
             {
@@ -252,6 +253,21 @@ namespace HackerOs.OS.Security
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Computes a hash of the given input string.
+        /// </summary>
+        /// <param name="input">The string to hash.</param>
+        /// <returns>The hashed string.</returns>
+        public static string ComputeHash(string input)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+                byte[] hashBytes = sha256.ComputeHash(inputBytes);
+                return Convert.ToBase64String(hashBytes);
             }
         }
 
@@ -304,7 +320,7 @@ namespace HackerOs.OS.Security
             /// <summary>
             /// Gets or sets the user associated with this token.
             /// </summary>
-            public User User { get; set; } = null!;
+            public HackerOs.OS.User.User User { get; set; } = null!;
 
             /// <summary>
             /// Gets or sets the time when this token expires.

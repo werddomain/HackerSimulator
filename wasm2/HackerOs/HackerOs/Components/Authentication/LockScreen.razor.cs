@@ -26,8 +26,8 @@ namespace HackerOs.Components.Authentication
         [Parameter] public string LogoutUrl { get; set; } = "/login";
 
         private ElementReference PasswordInput;
-        private Timer? InactivityTimer;
-        private Timer? SessionCheckTimer;
+        private System.Timers.Timer? InactivityTimer;
+        private System.Timers.Timer? SessionCheckTimer;
         
         // Form fields
         protected string Password { get; set; } = "";
@@ -39,7 +39,7 @@ namespace HackerOs.Components.Authentication
         protected bool ShowPassword { get; set; } = false;
         protected string LockReason { get; set; } = "Session locked due to inactivity";
         protected DateTime LockTime { get; set; } = DateTime.Now;
-        protected UserSession? CurrentSession { get; set; }
+        protected HackerOs.OS.User.Models.UserSession? CurrentSession { get; set; }
         
         // Security settings
         protected int UnlockAttempts { get; set; } = 0;
@@ -52,7 +52,7 @@ namespace HackerOs.Components.Authentication
             await base.OnInitializedAsync();
             
             // Set up session check timer
-            SessionCheckTimer = new Timer(1000); // Check every second
+            SessionCheckTimer = new System.Timers.Timer(1000); // Check every second
             SessionCheckTimer.Elapsed += async (sender, e) => await CheckSessionState();
             SessionCheckTimer.Start();
         }

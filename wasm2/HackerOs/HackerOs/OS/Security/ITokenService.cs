@@ -12,7 +12,7 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="user">The user for whom to generate a token.</param>
         /// <returns>A new authentication token.</returns>
-        string GenerateToken(User user);
+        string GenerateToken(HackerOs.OS.User.User user);
 
         /// <summary>
         /// Validates the specified authentication token.
@@ -40,7 +40,7 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="token">The token to extract user information from.</param>
         /// <returns>The user associated with the token, or null if the token is invalid.</returns>
-        User? GetUserFromToken(string token);
+        HackerOs.OS.User.User? GetUserFromToken(string token);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ namespace HackerOs.OS.Security
         /// <summary>
         /// Gets the user associated with the token, if the token is valid.
         /// </summary>
-        public User? User { get; set; }
+        public HackerOs.OS.User.User? User { get; set; }
 
         /// <summary>
         /// Gets the error message if the token validation failed.
@@ -74,7 +74,7 @@ namespace HackerOs.OS.Security
         /// <param name="user">The user associated with the token.</param>
         /// <param name="expiresAt">The expiration time of the token.</param>
         /// <returns>A TokenValidationResult representing a successful validation.</returns>
-        public static TokenValidationResult Success(User user, DateTime expiresAt)
+        public static TokenValidationResult Success(HackerOs.OS.User.User user, DateTime expiresAt)
         {
             return new TokenValidationResult
             {

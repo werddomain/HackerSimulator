@@ -10,6 +10,9 @@ The WindowManager (UI) is in this project: wasm2\HackerOs\BlazorWindowManager\Bl
 
 There's a terminal project started but not tested here : wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal\BlazorTerminal.csproj
 
+
+to build the solution, just run: 'cd C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs; dotnet build'
+
 ## Core Architectural Principles
 
 ### 1. Module Isolation and Dependencies

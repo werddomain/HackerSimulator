@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
+using HackerOs.OS.User; // Add this using statement
 
 namespace HackerOs.OS.Security
 {
@@ -103,8 +104,9 @@ namespace HackerOs.OS.Security
         /// </summary>
         /// <param name="username">The username of the user attempting to log in.</param>
         /// <param name="password">The password of the user attempting to log in.</param>
+        /// <param name="rememberMe">Whether to remember the user's login.</param>
         /// <returns>An AuthenticationResult containing the result of the login attempt.</returns>
-        public async Task<AuthenticationResult> LoginAsync(string username, string password)
+        public async Task<AuthenticationResult> LoginAsync(string username, string password, bool? rememberMe)
         {
             if (string.IsNullOrEmpty(username))
             {
@@ -119,7 +121,7 @@ namespace HackerOs.OS.Security
             try
             {
                 // Validate user credentials
-                User? user = await _userService.ValidateUserAsync(username, password);
+                HackerOs.OS.User.User? user = await _userService.AuthenticateAsync(username, password);
                 if (user == null)
                 {
                     return AuthenticationResult.Failure("Invalid username or password.");
@@ -290,18 +292,35 @@ namespace HackerOs.OS.Security
     public interface IUserService
     {
         /// <summary>
-        /// Validates a user's credentials.
+        /// Authenticates a user with the provided credentials.
         /// </summary>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
-        /// <returns>The user if validation succeeds, or null if validation fails.</returns>
-        Task<User?> ValidateUserAsync(string username, string password);
+        /// <returns>The authenticated user or null if authentication fails.</returns>
+        Task<User.User?> AuthenticateAsync(string username, string password);
+
+        /// <summary>
+        /// Gets a user by username.
+        /// </summary>
+        /// <param name="username">The username to look up.</param>
+        /// <returns>The user if found, or null if not found.</returns>
+        Task<User.User?> GetUserAsync(string username);
 
         /// <summary>
         /// Updates a user's information.
         /// </summary>
         /// <param name="user">The user to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateUserAsync(User user);
+        Task UpdateUserAsync(User.User user);
+
+        /// <summary>
+        /// Creates a new user account.
+        /// </summary>
+        /// <param name="username">The username for the new account.</param>
+        /// <param name="fullName">The full name of the user.</param>
+        /// <param name="password">The password for the new account.</param>
+        /// <param name="isAdmin">Whether the user should have administrative privileges.</param>
+        /// <returns>The newly created user.</returns>
+        Task<User.User> CreateUserAsync(string username, string fullName, string password, bool isAdmin = false);
     }
 }

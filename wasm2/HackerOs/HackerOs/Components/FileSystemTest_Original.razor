@@ -113,12 +113,13 @@
     private string currentDirectory = "/";
     private string currentUser = "root";
     private List<string> outputLines = new();
-    
+
     // Create a system user for file operations
-    private readonly User systemUser = new User
+    private readonly OS.User.User systemUser = new OS.User.User
     {
         UserId = 0,
         Username = "system",
+        
         FullName = "System User",
         PrimaryGroupId = 0,
         HomeDirectory = "/root",
