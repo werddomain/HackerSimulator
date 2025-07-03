@@ -59,7 +59,7 @@
     cursor: pointer;
     position: relative;
     border-bottom: 2px solid transparent;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease-in-out;
 }
 
 .taskbar-app-button img {
@@ -72,24 +72,40 @@
     background-color: var(--taskbar-button-hover, rgba(80, 80, 80, 0.5));
 }
 
+.taskbar-app-focus-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--taskbar-focus-indicator, rgb(0, 120, 215));
+    animation: pulse 1.5s infinite;
+}
+
 .taskbar-app-button.active {
     background-color: var(--taskbar-button-active, rgba(100, 100, 100, 0.7));
     border-bottom-color: var(--taskbar-active-border, rgb(100, 150, 255));
+    box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
-.taskbar-app-indicator {
-    position: absolute;
-    bottom: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: var(--taskbar-active-border, rgb(100, 150, 255));
+.taskbar-app-button.minimized {
+    opacity: 0.7;
 }
 
-.taskbar-app-indicator.minimized {
-    background-color: var(--taskbar-minimized-indicator, rgba(180, 180, 180, 0.8));
+.taskbar-app-button.minimized:hover {
+    opacity: 1;
+}
+
+.taskbar-app-button.restored-animation {
+    animation: restore-animation 0.3s ease-in-out;
+}
+
+.taskbar-app-button.minimized-animation {
+    animation: minimize-animation 0.3s ease-in-out;
+}
+
+.taskbar-app-button.maximized-animation {
+    animation: maximize-animation 0.3s ease-in-out;
 }
 
 /* System Tray */
@@ -270,4 +286,50 @@
     background-color: var(--calendar-today-bg, rgba(100, 150, 255, 0.3));
     color: var(--calendar-today-text, white);
     font-weight: 500;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes restore-animation {
+    0% {
+        transform: scale(0.8);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes minimize-animation {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(0.9);
+    }
+}
+
+@keyframes maximize-animation {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
 }

@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Logging;
 using HackerOs.OS.System.IO;
+using HackerOs.OS.User;
 using Path = HackerOs.OS.System.IO.Path;
+using UserEntity = HackerOs.OS.User.User;
 
 namespace HackerOs.OS.IO.FileSystem
 {
@@ -15,7 +17,7 @@ namespace HackerOs.OS.IO.FileSystem
     /// Main implementation of the virtual file system.
     /// Provides a complete Linux-like file system simulation with persistence.
     /// </summary>    
-    public class VirtualFileSystem : IVirtualFileSystem
+    public partial class VirtualFileSystem : IVirtualFileSystem
     {
         private readonly ILogger<VirtualFileSystem>? _logger;
         private VirtualDirectory _rootDirectory;
@@ -308,23 +310,85 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>The file content as bytes; null if the file doesn't exist, is not a file, or user lacks permission.</returns>
         public async Task<byte[]?> ReadFileAsync(string path, HackerOs.OS.User.User user)
         {
-            // First, get the node to check permissions
-            var node = GetNode(path);
-            if (node == null || node.IsDirectory)
+            try
             {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                
+                // Check if the file exists
+                var node = GetNode(absolutePath);
+                if (node == null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"File not found: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return null;
+                }
+                
+                // Ensure it's a file
+                if (node.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Cannot read a directory as a file: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return null;
+                }
+                
+                // Check read permission using our comprehensive permission check
+                bool hasAccess = await CheckAccessAsync(absolutePath, user, FileAccessMode.Read);
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot read {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return null;
+                }
+                
+                // User has permission, read the file content
+                var file = (VirtualFile)node;
+                
+                // Handle symbolic links by resolving to target
+                if (file.IsSymbolicLink && file.SymbolicLinkTarget != null)
+                {
+                    return await ReadFileAsync(file.SymbolicLinkTarget, user);
+                }
+                
+                // Update access time
+                file.UpdateAccessTime();
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.FileRead,
+                    Path = absolutePath,
+                    Message = $"File read by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return file.Content;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error reading file: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
                 return null;
             }
-            
-            // Check if user has read permission
-            if (!node.CanRead(user))
-            {
-                // Log permission denied
-                _logger?.LogWarning("Permission denied: User {Username} cannot read {Path}", user.Username, path);
-                return null;
-            }
-            
-            // User has permission, read the file content
-            return await ReadFileAsync(path);
         }
 
         /// <summary>
@@ -389,28 +453,9 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if the item was moved successfully; otherwise, false.</returns>
         public async Task<bool> MoveAsync(string sourcePath, string destinationPath)
         {
-            await Task.CompletedTask; // Make it async for interface compliance
-            
-            try
-            {
-                // For now, implement as copy + delete
-                if (await CopyAsync(sourcePath, destinationPath))
-                {
-                    return await DeleteAsync(sourcePath, true);
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                FireFileSystemEvent(new FileSystemEvent
-                {
-                    EventType = FileSystemEventType.Error,
-                    Path = sourcePath,
-                    Message = ex.Message,
-                    Timestamp = DateTime.UtcNow
-                });
-                return false;
-            }
+            // Call the user-aware version with root user (which bypasses permission checks)
+            var rootUser = new HackerOs.OS.User.User { UserId = 0, Username = "root", PrimaryGroupId = 0 };
+            return await MoveAsync(sourcePath, destinationPath, rootUser);
         }
 
         /// <summary>
@@ -1116,9 +1161,78 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if successful</returns>
         public async Task<bool> WriteFileAsync(string path, string content, HackerOs.OS.User.User user)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            var bytes = Encoding.UTF8.GetBytes(content ?? string.Empty);
-            return await WriteFileAsync(absolutePath, bytes);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                var bytes = Encoding.UTF8.GetBytes(content ?? string.Empty);
+                
+                // Check if the file exists
+                var node = GetNode(absolutePath);
+                
+                if (node != null)
+                {
+                    // File exists - check write permission
+                    if (node.IsDirectory)
+                    {
+                        FireFileSystemEvent(new FileSystemEvent
+                        {
+                            EventType = FileSystemEventType.Error,
+                            Path = absolutePath,
+                            Message = $"Cannot write to a directory: {absolutePath}",
+                            Timestamp = DateTime.UtcNow
+                        });
+                        return false;
+                    }
+                    
+                    // Check write permission
+                    bool hasAccess = await CheckAccessAsync(absolutePath, user, FileAccessMode.Write);
+                    if (!hasAccess)
+                    {
+                        FireFileSystemEvent(new FileSystemEvent
+                        {
+                            EventType = FileSystemEventType.PermissionDenied,
+                            Path = absolutePath,
+                            Message = $"Permission denied: {user.Username} cannot write to {absolutePath}",
+                            Timestamp = DateTime.UtcNow
+                        });
+                        return false;
+                    }
+                    
+                    // Update the file content
+                    var file = (VirtualFile)node;
+                    file.SetContent(bytes);
+                    file.ModifiedAt = DateTime.UtcNow;
+                    
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.FileWritten,
+                        Path = absolutePath,
+                        Message = $"File modified by {user.Username}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    
+                    FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.FileWritten, absolutePath));
+                    
+                    return true;
+                }
+                else
+                {
+                    // File doesn't exist - create it
+                    return await CreateFileAsync(absolutePath, user, content);
+                }
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error writing to file: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
         }
         
         /// <summary>
@@ -1129,8 +1243,111 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if successful</returns>
         public async Task<bool> CreateDirectoryAsync(string path, HackerOs.OS.User.User user)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await CreateDirectoryAsync(absolutePath);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(absolutePath);
+                
+                if (string.IsNullOrEmpty(parentPath))
+                    parentPath = "/";
+                
+                // First check if the user has permission to write to the parent directory
+                bool hasAccess = await CheckAccessAsync(parentPath, user, FileAccessMode.Write);
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot create directory in {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check if parent directory exists
+                var parentNode = GetNode(parentPath);
+                if (parentNode == null || !parentNode.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Parent directory does not exist: {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check if directory already exists
+                if (GetNode(absolutePath) != null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Directory already exists: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var dirName = HackerOs.OS.System.IO.Path.GetFileName(absolutePath);
+                var parentDir = (VirtualDirectory)parentNode;
+                
+                // Calculate effective permissions using umask and parent directory inheritance
+                int umask = EffectivePermissions.GetUserUmask(user);
+                var basePermissions = new FilePermissions(493); // Default for directories: 0755 (rwxr-xr-x)
+                var effectivePermissions = EffectivePermissions.CalculateEffectivePermissions(
+                    basePermissions, umask, parentDir, true);
+                
+                // Create the directory with proper ownership and permissions
+                var newDir = new VirtualDirectory(dirName, absolutePath);
+                newDir.Owner = user.UserId.ToString();
+                newDir.Group = user.PrimaryGroupId.ToString();
+                newDir.Permissions = effectivePermissions;
+                
+                // If parent has SetGID bit set, inherit the group ID
+                if (parentDir.Permissions.SetGID)
+                {
+                    newDir.Group = parentDir.Group;
+                    
+                    // Also inherit SetGID for the new directory
+                    var newPermissions = new FilePermissions(effectivePermissions.ToOctal());
+                    newPermissions.SetGID = true;
+                    newDir.Permissions = newPermissions;
+                }
+                
+                // Add to parent directory
+                parentDir.AddChild(newDir);
+                
+                // Add to cache
+                _pathCache[absolutePath] = newDir;
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.DirectoryCreated,
+                    Path = absolutePath,
+                    Message = $"Directory created by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.DirectoryCreated, absolutePath));
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error creating directory: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
         }
         
         /// <summary>
@@ -1142,9 +1359,118 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if successful</returns>
         public async Task<bool> CreateFileAsync(string path, HackerOs.OS.User.User user, string? content = null)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            var bytes = content != null ? Encoding.UTF8.GetBytes(content) : null;
-            return await CreateFileAsync(absolutePath, bytes);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(absolutePath);
+                
+                if (string.IsNullOrEmpty(parentPath))
+                    parentPath = "/";
+                
+                // First check if the user has permission to write to the parent directory
+                bool hasAccess = await CheckAccessAsync(parentPath, user, FileAccessMode.Write);
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot create file in {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check if parent directory exists
+                var parentNode = GetNode(parentPath);
+                if (parentNode == null || !parentNode.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Parent directory does not exist: {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check if file already exists
+                if (GetNode(absolutePath) != null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"File already exists: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var fileName = HackerOs.OS.System.IO.Path.GetFileName(absolutePath);
+                var parentDir = (VirtualDirectory)parentNode;
+                
+                // Calculate effective permissions using umask and parent directory inheritance
+                int umask = EffectivePermissions.GetUserUmask(user);
+                var basePermissions = new FilePermissions(438); // Default for regular files: 0666 (rw-rw-rw-)
+                var effectivePermissions = EffectivePermissions.CalculateEffectivePermissions(
+                    basePermissions, umask, parentDir, false);
+                
+                // Create the file with proper ownership and permissions
+                var file = new VirtualFile(fileName, absolutePath);
+                file.Owner = user.UserId.ToString();
+                
+                // Check if parent directory has SetGID bit set
+                // If so, new file inherits the group of the parent directory
+                if (parentDir.Permissions.SetGID)
+                {
+                    file.Group = parentDir.Group;
+                }
+                else
+                {
+                    // Otherwise, use the user's primary group
+                    file.Group = user.PrimaryGroupId.ToString();
+                }
+                
+                file.Permissions = effectivePermissions;
+                
+                // Set content if provided
+                if (content != null)
+                {
+                    file.SetContent(Encoding.UTF8.GetBytes(content));
+                }
+                
+                // Add to parent directory
+                parentDir.AddChild(file);
+                
+                // Add to cache
+                _pathCache[absolutePath] = file;
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.FileCreated,
+                    Path = absolutePath,
+                    Message = $"File created by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.FileCreated, absolutePath));
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error creating file: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
         }
         
         /// <summary>
@@ -1155,8 +1481,126 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if successful</returns>
         public async Task<bool> DeleteFileAsync(string path, HackerOs.OS.User.User user)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await DeleteAsync(absolutePath, false);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                
+                // Check if the file exists
+                var node = GetNode(absolutePath);
+                if (node == null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"File not found: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Ensure it's a file
+                if (node.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Cannot delete directory as file: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Get parent directory
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(absolutePath);
+                if (string.IsNullOrEmpty(parentPath))
+                    parentPath = "/";
+                
+                var parentNode = GetNode(parentPath);
+                if (parentNode == null || !parentNode.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Parent directory not found: {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var parentDir = (VirtualDirectory)parentNode;
+                
+                // Check permissions - we need to handle sticky bit specially
+                bool hasAccess = true;
+                
+                // Root user can always delete files
+                if (user.UserId != 0)
+                {
+                    // If the directory has sticky bit set, user must either:
+                    // 1. Own the file, or
+                    // 2. Own the directory, or
+                    // 3. Be root (already checked)
+                    if (parentDir.Permissions.Sticky)
+                    {
+                        bool isFileOwner = node.OwnerId == user.UserId;
+                        bool isDirOwner = parentDir.OwnerId == user.UserId;
+                        
+                        if (!isFileOwner && !isDirOwner)
+                        {
+                            hasAccess = false;
+                        }
+                    }
+                    else
+                    {
+                        // Normal case: check write permission on parent directory
+                        hasAccess = await CheckAccessAsync(parentPath, user, FileAccessMode.Write);
+                    }
+                }
+                
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot delete {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Remove from parent
+                parentDir.RemoveChild(node.Name);
+                
+                // Remove from cache
+                RemoveFromCache(absolutePath, node);
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.FileDeleted,
+                    Path = absolutePath,
+                    Message = $"File deleted by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.FileDeleted, absolutePath));
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error deleting file: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
         }
         
         /// <summary>
@@ -1167,8 +1611,295 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>True if successful</returns>
         public async Task<bool> DeleteDirectoryAsync(string path, HackerOs.OS.User.User user, bool recursive = false)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await DeleteAsync(absolutePath, recursive);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                
+                // Check if the directory exists
+                var node = GetNode(absolutePath);
+                if (node == null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Directory not found: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Ensure it's a directory
+                if (!node.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Path is not a directory: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var directory = (VirtualDirectory)node;
+                
+                // Check if directory is not empty and recursive flag is not set
+                if (directory.Children.Count > 0 && !recursive)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Directory not empty: {absolutePath}. Use recursive option to delete.",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Get parent directory
+                var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(absolutePath);
+                if (string.IsNullOrEmpty(parentPath))
+                    parentPath = "/";
+                
+                var parentNode = GetNode(parentPath);
+                if (parentNode == null || !parentNode.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Parent directory not found: {parentPath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var parentDir = (VirtualDirectory)parentNode;
+                
+                // Cannot delete root directory
+                if (absolutePath == "/")
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = "Cannot delete root directory",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check permissions - we need to handle sticky bit specially
+                bool hasAccess = true;
+                
+                // Root user can always delete directories
+                if (user.UserId != 0)
+                {
+                    // If the parent directory has sticky bit set, user must either:
+                    // 1. Own the directory being deleted, or
+                    // 2. Own the parent directory, or
+                    // 3. Be root (already checked)
+                    if (parentDir.Permissions.Sticky)
+                    {
+                        bool isDirOwner = directory.OwnerId == user.UserId;
+                        bool isParentDirOwner = parentDir.OwnerId == user.UserId;
+                        
+                        if (!isDirOwner && !isParentDirOwner)
+                        {
+                            hasAccess = false;
+                        }
+                    }
+                    else
+                    {
+                        // Normal case: check write permission on parent directory
+                        hasAccess = await CheckAccessAsync(parentPath, user, FileAccessMode.Write);
+                    }
+                    
+                    // If recursive, check permissions for all subdirectories
+                    if (hasAccess && recursive && directory.Children.Count > 0)
+                    {
+                        // Check if user has permission to delete all children
+                        foreach (var child in directory.Children.Values)
+                        {
+                            // For directories, check recursive permission
+                            if (child.IsDirectory)
+                            {
+                                // Check if we can delete this subdirectory
+                                bool canDeleteSubdir = await CheckDirectoryDeletionPermission(child, user, recursive);
+                                if (!canDeleteSubdir)
+                                {
+                                    FireFileSystemEvent(new FileSystemEvent
+                                    {
+                                        EventType = FileSystemEventType.PermissionDenied,
+                                        Path = child.FullPath,
+                                        Message = $"Permission denied: {user.Username} cannot delete subdirectory {child.FullPath}",
+                                        Timestamp = DateTime.UtcNow
+                                    });
+                                    return false;
+                                }
+                            }
+                            else
+                            {
+                                // For files, check if we have write permission on this directory
+                                // And if sticky bit is set, check ownership
+                                bool canDeleteFile = true;
+                                
+                                if (directory.Permissions.Sticky)
+                                {
+                                    bool isFileOwner = child.OwnerId == user.UserId;
+                                    bool isDirOwner = directory.OwnerId == user.UserId;
+                                    
+                                    if (!isFileOwner && !isDirOwner)
+                                    {
+                                        canDeleteFile = false;
+                                    }
+                                }
+                                
+                                if (!canDeleteFile)
+                                {
+                                    FireFileSystemEvent(new FileSystemEvent
+                                    {
+                                        EventType = FileSystemEventType.PermissionDenied,
+                                        Path = child.FullPath,
+                                        Message = $"Permission denied: {user.Username} cannot delete file {child.FullPath} in sticky bit directory",
+                                        Timestamp = DateTime.UtcNow
+                                    });
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot delete {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Remove from parent directory
+                parentDir.RemoveChild(directory.Name);
+                
+                // Remove from cache (and all children if directory)
+                RemoveFromCache(absolutePath, directory);
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.DirectoryDeleted,
+                    Path = absolutePath,
+                    Message = $"Directory deleted by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.DirectoryDeleted, absolutePath));
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error deleting directory: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to check if a user has permission to delete a directory recursively.
+        /// </summary>
+        private async Task<bool> CheckDirectoryDeletionPermission(VirtualFileSystemNode dirNode, HackerOs.OS.User.User user, bool recursive)
+        {
+            // Root user can always delete
+            if (user.UserId == 0)
+            {
+                return true;
+            }
+            
+            // Must be a directory
+            if (!dirNode.IsDirectory)
+            {
+                return false;
+            }
+            
+            var directory = (VirtualDirectory)dirNode;
+            
+            // First check if we have write permission on the parent directory
+            var parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(directory.FullPath);
+            if (string.IsNullOrEmpty(parentPath))
+                parentPath = "/";
+                
+            var parentNode = GetNode(parentPath);
+            if (parentNode == null || !parentNode.IsDirectory)
+            {
+                return false;
+            }
+            
+            var parentDir = (VirtualDirectory)parentNode;
+            
+            // Check if parent has sticky bit and if we own the directory
+            if (parentDir.Permissions.Sticky)
+            {
+                bool isDirOwner = directory.OwnerId == user.UserId;
+                bool isParentDirOwner = parentDir.OwnerId == user.UserId;
+                
+                if (!isDirOwner && !isParentDirOwner)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                // Normal case: check write permission on parent directory
+                bool hasAccess = await CheckAccessAsync(parentPath, user, FileAccessMode.Write);
+                if (!hasAccess)
+                {
+                    return false;
+                }
+            }
+            
+            // If directory has children and recursive is true, check them too
+            if (recursive && directory.Children.Count > 0)
+            {
+                foreach (var child in directory.Children.Values)
+                {
+                    if (child.IsDirectory)
+                    {
+                        bool canDeleteSubdir = await CheckDirectoryDeletionPermission(child, user, recursive);
+                        if (!canDeleteSubdir)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // Check if file can be deleted (considering sticky bit)
+                        if (directory.Permissions.Sticky)
+                        {
+                            bool isFileOwner = child.OwnerId == user.UserId;
+                            bool isDirOwner = directory.OwnerId == user.UserId;
+                            
+                            if (!isFileOwner && !isDirOwner)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return true;
         }
         
         /// <summary>
@@ -1179,8 +1910,82 @@ namespace HackerOs.OS.IO.FileSystem
         /// <returns>Directory contents</returns>
         public async Task<IEnumerable<VirtualFileSystemNode>> ListDirectoryAsync(string path, HackerOs.OS.User.User user)
         {
-            var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
-            return await ListDirectoryAsync(absolutePath);
+            try
+            {
+                var absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                
+                // Check if the directory exists
+                var node = GetNode(absolutePath);
+                if (node == null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Directory not found: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return Enumerable.Empty<VirtualFileSystemNode>();
+                }
+                
+                // Ensure it's a directory
+                if (!node.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = absolutePath,
+                        Message = $"Path is not a directory: {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return Enumerable.Empty<VirtualFileSystemNode>();
+                }
+                
+                // Check if user has execute permission on the directory
+                bool hasAccess = await CheckAccessAsync(absolutePath, user, FileAccessMode.Execute);
+                if (!hasAccess)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.PermissionDenied,
+                        Path = absolutePath,
+                        Message = $"Permission denied: {user.Username} cannot list directory {absolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return Enumerable.Empty<VirtualFileSystemNode>();
+                }
+                
+                var directory = (VirtualDirectory)node;
+                
+                // Update access time
+                directory.UpdateAccessTime();
+                
+                // Log directory listing
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.FileRead,
+                    Path = absolutePath,
+                    Message = $"Directory listed by {user.Username}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                // Return all children (no permission filtering, just listing permission)
+                // In a real Unix system, we don't filter directory listing results by permission
+                // The user just needs execute permission on the directory to list its contents
+                return directory.Children.Values;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error listing directory: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return Enumerable.Empty<VirtualFileSystemNode>();
+            }
         }
         
         #endregion
@@ -1307,6 +2112,388 @@ namespace HackerOs.OS.IO.FileSystem
             }
             
             return new FileSystemEventArgs(changeType, directory, fileName);
+        }
+        
+        /// <summary>
+        /// Checks if a user has the required access permissions for a file or directory path.
+        /// This method verifies all path components for traversal permissions and the target for the specified access mode.
+        /// </summary>
+        /// <param name="path">The path to check</param>
+        /// <param name="user">The user requesting access</param>
+        /// <param name="accessMode">The type of access required (Read, Write, Execute, ReadWrite)</param>
+        /// <returns>True if access is granted; otherwise, false</returns>
+        public async Task<bool> CheckAccessAsync(string path, UserEntity user, FileAccessMode accessMode)
+        {
+            // Root user always has access
+            if (user.UserId == 0)
+            {
+                return true;
+            }
+
+            try
+            {
+                // Add a Task.CompletedTask to satisfy the async/await requirement
+                await Task.CompletedTask;
+                
+                // Normalize and resolve the path
+                string absolutePath = GetAbsolutePath(path, _currentWorkingDirectory);
+                
+                // Split the path into components
+                string[] pathComponents = absolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                
+                // Start from the root directory
+                VirtualDirectory currentDir = _rootDirectory;
+                string currentPath = "/";
+                
+                // Check execute permission on each directory in the path
+                for (int i = 0; i < pathComponents.Length - 1; i++)
+                {
+                    // Update current path
+                    currentPath = currentPath == "/" 
+                        ? $"/{pathComponents[i]}" 
+                        : $"{currentPath}/{pathComponents[i]}";
+                    
+                    // Get the next directory node
+                    var node = GetNode(currentPath);
+                    
+                    // If node doesn't exist or isn't a directory, access is denied
+                    if (node == null || !node.IsDirectory)
+                    {
+                        return false;
+                    }
+                    
+                    // Check if user can traverse (execute) this directory
+                    // Use the string version to avoid ambiguity
+                    if (!node.CanAccess(user.Username, UserModelExtensions.GetGroupName(user.PrimaryGroupId), FileAccessMode.Execute))
+                    {
+                        return false;
+                    }
+                    
+                    currentDir = (VirtualDirectory)node;
+                }
+                
+                // Get the target node (the last component in the path)
+                VirtualFileSystemNode? targetNode;
+                
+                if (pathComponents.Length == 0)
+                {
+                    // Root directory
+                    targetNode = _rootDirectory;
+                }
+                else
+                {
+                    // Regular file or directory
+                    targetNode = GetNode(absolutePath);
+                }
+                
+                // If target doesn't exist, check parent directory for write access (for creation)
+                if (targetNode == null)
+                {
+                    if (accessMode == FileAccessMode.Write || accessMode == FileAccessMode.ReadWrite)
+                    {
+                        string parentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(absolutePath) ?? "/";
+                        var parentNode = GetNode(parentPath);
+                        
+                        return parentNode != null && parentNode.IsDirectory && 
+                               parentNode.CanAccess(user.Username, UserModelExtensions.GetGroupName(user.PrimaryGroupId), FileAccessMode.Write);
+                    }
+                    
+                    return false;
+                }
+                
+                // Special handling for sticky bit on directories when deleting/renaming
+                if (accessMode == FileAccessMode.Write && targetNode.Parent != null && 
+                    targetNode.Parent.Permissions.Sticky)
+                {
+                    // If sticky bit is set on parent directory, only owner of the file or directory owner can delete/rename
+                    bool isFileOwner = targetNode.OwnerId == user.UserId;
+                    bool isDirOwner = targetNode.Parent.OwnerId == user.UserId;
+                    
+                    if (!isFileOwner && !isDirOwner && user.UserId != 0)
+                    {
+                        return false;
+                    }
+                }
+                
+                // Check final access based on mode
+                return targetNode.CanAccess(user.Username, UserModelExtensions.GetGroupName(user.PrimaryGroupId), accessMode);
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = path,
+                    Message = $"Error checking access: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Moves or renames a file or directory with user permission checking.
+        /// </summary>
+        /// <param name="sourcePath">Source path</param>
+        /// <param name="destinationPath">Destination path</param>
+        /// <param name="user">User performing the operation</param>
+        /// <returns>True if successful; otherwise, false</returns>
+        public async Task<bool> MoveAsync(string sourcePath, string destinationPath, HackerOs.OS.User.User user)
+        {
+            try
+            {
+                var sourceAbsolutePath = GetAbsolutePath(sourcePath, _currentWorkingDirectory);
+                var destinationAbsolutePath = GetAbsolutePath(destinationPath, _currentWorkingDirectory);
+                
+                // Check if source exists
+                var sourceNode = GetNode(sourceAbsolutePath);
+                if (sourceNode == null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = sourceAbsolutePath,
+                        Message = $"Source not found: {sourceAbsolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Check if destination exists
+                var destinationNode = GetNode(destinationAbsolutePath);
+                if (destinationNode != null)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = destinationAbsolutePath,
+                        Message = $"Destination already exists: {destinationAbsolutePath}",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                // Get parent directories
+                var sourceParentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(sourceAbsolutePath);
+                var destinationParentPath = HackerOs.OS.System.IO.Path.GetDirectoryName(destinationAbsolutePath);
+                
+                if (string.IsNullOrEmpty(sourceParentPath)) sourceParentPath = "/";
+                if (string.IsNullOrEmpty(destinationParentPath)) destinationParentPath = "/";
+                
+                var sourceParentNode = GetNode(sourceParentPath);
+                var destinationParentNode = GetNode(destinationParentPath);
+                
+                if (sourceParentNode == null || !sourceParentNode.IsDirectory ||
+                    destinationParentNode == null || !destinationParentNode.IsDirectory)
+                {
+                    FireFileSystemEvent(new FileSystemEvent
+                    {
+                        EventType = FileSystemEventType.Error,
+                        Path = sourceAbsolutePath,
+                        Message = "Source or destination parent directory does not exist",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    return false;
+                }
+                
+                var sourceParentDir = (VirtualDirectory)sourceParentNode;
+                var destinationParentDir = (VirtualDirectory)destinationParentNode;
+                
+                // Check permissions
+                
+                // Root user can always move files
+                if (user.UserId != 0)
+                {
+                    // Check sticky bit for source directory
+                    if (sourceParentDir.Permissions.Sticky)
+                    {
+                        bool isFileOwner = sourceNode.OwnerId == user.UserId;
+                        bool isDirOwner = sourceParentDir.OwnerId == user.UserId;
+                        
+                        if (!isFileOwner && !isDirOwner)
+                        {
+                            FireFileSystemEvent(new FileSystemEvent
+                            {
+                                EventType = FileSystemEventType.PermissionDenied,
+                                Path = sourceAbsolutePath,
+                                Message = $"Permission denied: {user.Username} cannot move file from sticky bit directory {sourceParentPath}",
+                                Timestamp = DateTime.UtcNow
+                            });
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // Check write permission on source parent
+                        bool hasSourceAccess = await CheckAccessAsync(sourceParentPath, user, FileAccessMode.Write);
+                        if (!hasSourceAccess)
+                        {
+                            FireFileSystemEvent(new FileSystemEvent
+                            {
+                                EventType = FileSystemEventType.PermissionDenied,
+                                Path = sourceAbsolutePath,
+                                Message = $"Permission denied: {user.Username} cannot write to source directory {sourceParentPath}",
+                                Timestamp = DateTime.UtcNow
+                            });
+                            return false;
+                        }
+                    }
+                    
+                    // Check write permission on destination parent
+                    bool hasDestAccess = await CheckAccessAsync(destinationParentPath, user, FileAccessMode.Write);
+                    if (!hasDestAccess)
+                    {
+                        FireFileSystemEvent(new FileSystemEvent
+                        {
+                            EventType = FileSystemEventType.PermissionDenied,
+                            Path = destinationAbsolutePath,
+                            Message = $"Permission denied: {user.Username} cannot write to destination directory {destinationParentPath}",
+                            Timestamp = DateTime.UtcNow
+                        });
+                        return false;
+                    }
+                }
+                
+                // All permission checks passed, perform the move
+                
+                // Create a new node at the destination
+                var fileName = HackerOs.OS.System.IO.Path.GetFileName(destinationAbsolutePath);
+                
+                // Clone the node (keeping all properties)
+                VirtualFileSystemNode newNode;
+                if (sourceNode.IsDirectory)
+                {
+                    var sourceDir = (VirtualDirectory)sourceNode;
+                    var newDir = new VirtualDirectory(fileName, destinationAbsolutePath);
+                    
+                    // Copy all properties
+                    newDir.CreatedAt = sourceDir.CreatedAt;
+                    newDir.ModifiedAt = DateTime.UtcNow;
+                    newDir.AccessedAt = DateTime.UtcNow;
+                    newDir.Permissions = sourceDir.Permissions;
+                    newDir.Owner = sourceDir.Owner;
+                    newDir.Group = sourceDir.Group;
+                    
+                    // Copy all children
+                    foreach (var child in sourceDir.Children.Values)
+                    {
+                        // Update the child's path
+                        string childNewPath = HackerOs.OS.System.IO.Path.Combine(destinationAbsolutePath, child.Name);
+                        child.FullPath = childNewPath;
+                        child.Parent = newDir;
+                        
+                        // Add to the new directory
+                        newDir.AddChild(child);
+                        
+                        // Update the path cache for this child
+                        _pathCache[childNewPath] = child;
+                        
+                        // Recursively update paths for all descendants if it's a directory
+                        if (child.IsDirectory)
+                        {
+                            UpdatePathsRecursively((VirtualDirectory)child, childNewPath);
+                        }
+                    }
+                    
+                    newNode = newDir;
+                }
+                else
+                {
+                    var sourceFile = (VirtualFile)sourceNode;
+                    var newFile = new VirtualFile(fileName, destinationAbsolutePath);
+                    
+                    // Copy all properties
+                    newFile.CreatedAt = sourceFile.CreatedAt;
+                    newFile.ModifiedAt = DateTime.UtcNow;
+                    newFile.AccessedAt = DateTime.UtcNow;
+                    newFile.Permissions = sourceFile.Permissions;
+                    newFile.Owner = sourceFile.Owner;
+                    newFile.Group = sourceFile.Group;
+                    newFile.MimeType = sourceFile.MimeType;
+                    newFile.IsSymbolicLink = sourceFile.IsSymbolicLink;
+                    newFile.SymbolicLinkTarget = sourceFile.SymbolicLinkTarget;
+                    
+                    // Copy content
+                    newFile.SetContent(sourceFile.Content);
+                    
+                    newNode = newFile;
+                }
+                
+                // Add the new node to the destination parent
+                destinationParentDir.AddChild(newNode);
+                
+                // Update the path cache
+                _pathCache[destinationAbsolutePath] = newNode;
+                
+                // Remove the source node from its parent
+                sourceParentDir.RemoveChild(sourceNode.Name);
+                
+                // Remove the source from the path cache
+                _pathCache.Remove(sourceAbsolutePath);
+                
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.FileCopied,
+                    Path = destinationAbsolutePath,
+                    Message = $"File moved by {user.Username} from {sourceAbsolutePath} to {destinationAbsolutePath}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                FileSystemChanged?.Invoke(this, CreateFileSystemEventArgs(FileSystemEventType.FileCopied, destinationAbsolutePath));
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FireFileSystemEvent(new FileSystemEvent
+                {
+                    EventType = FileSystemEventType.Error,
+                    Path = sourcePath,
+                    Message = $"Error moving file: {ex.Message}",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to recursively update paths for all descendants of a directory.
+        /// </summary>
+        private void UpdatePathsRecursively(VirtualDirectory directory, string newBasePath)
+        {
+            foreach (var child in directory.Children.Values)
+            {
+                string childNewPath = HackerOs.OS.System.IO.Path.Combine(newBasePath, child.Name);
+                child.FullPath = childNewPath;
+                
+                // Update the path cache
+                _pathCache[childNewPath] = child;
+                
+                // Recursively update paths for all descendants if it's a directory
+                if (child.IsDirectory)
+                {
+                    UpdatePathsRecursively((VirtualDirectory)child, childNewPath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Logs a file system event.
+        /// </summary>
+        /// <param name="eventType">The type of event</param>
+        /// <param name="path">The path associated with the event</param>
+        /// <param name="message">A message describing the event</param>
+        public void LogFileSystemEvent(FileSystemEventType eventType, string path, string message)
+        {
+            FireFileSystemEvent(new FileSystemEvent
+            {
+                EventType = eventType,
+                Path = path,
+                Message = message,
+                Timestamp = DateTime.UtcNow
+            });
         }
     }
 }

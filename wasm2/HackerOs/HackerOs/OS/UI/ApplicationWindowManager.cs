@@ -31,6 +31,12 @@ namespace HackerOs.OS.UI
         // Mapping of window ID to application window
         private readonly ConcurrentDictionary<Guid, ApplicationWindow> _windowApplications = new();
 
+        // Track the currently active window
+        private ApplicationWindow? _activeWindow;
+
+        // List of windows in Z-order (front to back)
+        private readonly List<ApplicationWindow> _windowZOrder = new();
+
         /// <summary>
         /// Event raised when an application window is created
         /// </summary>
@@ -40,6 +46,11 @@ namespace HackerOs.OS.UI
         /// Event raised when an application window is closed
         /// </summary>
         public event EventHandler<ApplicationWindow>? ApplicationWindowClosed;
+
+        /// <summary>
+        /// Event raised when the active window changes
+        /// </summary>
+        public event EventHandler<ApplicationWindowFocusChangedEventArgs>? ActiveWindowChanged;
 
         /// <summary>
         /// Creates a new instance of the ApplicationWindowManager
@@ -62,6 +73,7 @@ namespace HackerOs.OS.UI
             
             // Subscribe to window manager events
             _windowManager.WindowAfterClose += OnWindowAfterClose;
+            _windowManager.WindowActiveChanged += OnWindowActiveChanged;
         }
 
         /// <summary>
@@ -100,6 +112,15 @@ namespace HackerOs.OS.UI
             
             // Restore saved window state
             appWindow.RestoreWindowState();
+            
+            // Add to z-order list (new windows are always on top)
+            lock (_windowZOrder)
+            {
+                _windowZOrder.Insert(0, appWindow);
+            }
+
+            // Set as active window
+            SetActiveWindow(appWindow);
             
             // Raise event
             ApplicationWindowCreated?.Invoke(this, appWindow);
@@ -182,6 +203,27 @@ namespace HackerOs.OS.UI
         }
 
         /// <summary>
+        /// Gets the currently active window
+        /// </summary>
+        /// <returns>The active application window, or null if no windows are active</returns>
+        public ApplicationWindow? GetActiveWindow()
+        {
+            return _activeWindow;
+        }
+
+        /// <summary>
+        /// Gets all windows in z-order (front to back)
+        /// </summary>
+        /// <returns>Collection of windows in z-order</returns>
+        public IReadOnlyList<ApplicationWindow> GetWindowsInZOrder()
+        {
+            lock (_windowZOrder)
+            {
+                return _windowZOrder.ToList().AsReadOnly();
+            }
+        }
+
+        /// <summary>
         /// Brings the application's window to the front.
         /// </summary>
         public void BringToFront(string applicationId)
@@ -190,6 +232,64 @@ namespace HackerOs.OS.UI
             if (window != null)
             {
                 _windowManager.BringToFront(window.WindowInfo.Id);
+                
+                // Update our z-order tracking
+                UpdateZOrderForWindow(window);
+                
+                // Set as active window
+                SetActiveWindow(window);
+            }
+        }
+
+        /// <summary>
+        /// Brings the window with the specified ID to the front
+        /// </summary>
+        public void BringToFront(Guid windowId)
+        {
+            var window = GetApplicationWindowByWindowId(windowId);
+            if (window != null)
+            {
+                _windowManager.BringToFront(windowId);
+                
+                // Update our z-order tracking
+                UpdateZOrderForWindow(window);
+                
+                // Set as active window
+                SetActiveWindow(window);
+            }
+        }
+
+        /// <summary>
+        /// Updates the z-order for the specified window, bringing it to the front
+        /// </summary>
+        private void UpdateZOrderForWindow(ApplicationWindow window)
+        {
+            lock (_windowZOrder)
+            {
+                // Remove the window from its current position
+                _windowZOrder.Remove(window);
+                
+                // Add it to the front
+                _windowZOrder.Insert(0, window);
+            }
+        }
+
+        /// <summary>
+        /// Sets the active window
+        /// </summary>
+        private void SetActiveWindow(ApplicationWindow window)
+        {
+            var oldActiveWindow = _activeWindow;
+            _activeWindow = window;
+            
+            // Raise event if the active window changed
+            if (oldActiveWindow != window)
+            {
+                ActiveWindowChanged?.Invoke(this, new ApplicationWindowFocusChangedEventArgs
+                {
+                    OldWindow = oldActiveWindow,
+                    NewWindow = window
+                });
             }
         }
 
@@ -278,6 +378,47 @@ namespace HackerOs.OS.UI
                 ApplicationWindowClosed?.Invoke(this, appWindow);
                 
                 _logger.LogInformation("Window closed for application {AppId}", appWindow.Application.Id);
+            }
+        }
+
+        private void OnWindowActiveChanged(object? sender, WindowInfo e)
+        {
+            var window = GetApplicationWindowByWindowId(e.Id);
+            if (window != null)
+            {
+                // Update active window
+                SetActiveWindow(window);
+            }
+        }
+
+        /// <summary>
+        /// Handles the WindowActiveChanged event from the WindowManagerService
+        /// </summary>
+        private void OnWindowActiveChanged(object? sender, BlazorWindowManager.Models.WindowFocusChangedEventArgs e)
+        {
+            // Get the window info from the window manager
+            if (e.NewActiveWindow is ComponentBase component)
+            {
+                // Find window info for this component
+                var windowInfos = _windowManager.GetAllWindows();
+                var windowInfo = windowInfos.FirstOrDefault(w => w.ComponentRef == component);
+                
+                if (windowInfo != null)
+                {
+                    // Find our application window using the window ID
+                    var newAppWindow = GetApplicationWindowByWindowId(windowInfo.Id);
+                    
+                    if (newAppWindow != null)
+                    {
+                        // Update our z-order tracking
+                        UpdateZOrderForWindow(newAppWindow);
+                        
+                        // Set as active window
+                        SetActiveWindow(newAppWindow);
+                        
+                        _logger.LogDebug("Window active changed to {WindowId}", windowInfo.Id);
+                    }
+                }
             }
         }
 

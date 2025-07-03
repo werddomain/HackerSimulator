@@ -202,6 +202,81 @@ namespace HackerOs.OS.UI.Services
         }
         
         /// <summary>
+        /// Shows an information notification
+        /// </summary>
+        public Task ShowInfoAsync(string message, string title = "Information")
+        {
+            return CreateAndAddNotificationAsync(NotificationType.Info, title, message);
+        }
+        
+        /// <summary>
+        /// Shows a warning notification
+        /// </summary>
+        public Task ShowWarningAsync(string message, string title = "Warning")
+        {
+            return CreateAndAddNotificationAsync(NotificationType.Warning, title, message);
+        }
+        
+        /// <summary>
+        /// Shows an error notification
+        /// </summary>
+        public Task ShowErrorAsync(string message, string title = "Error")
+        {
+            return CreateAndAddNotificationAsync(NotificationType.Error, title, message);
+        }
+        
+        /// <summary>
+        /// Shows a success notification
+        /// </summary>
+        public Task ShowSuccessAsync(string message, string title = "Success")
+        {
+            return CreateAndAddNotificationAsync(NotificationType.Success, title, message);
+        }
+        
+        /// <summary>
+        /// Shows a message notification with a specific type
+        /// </summary>
+        public Task ShowMessageAsync(string title, string message, NotificationType type = NotificationType.Info)
+        {
+            return CreateAndAddNotificationAsync(type, title, message);
+        }
+        
+        /// <summary>
+        /// Creates and adds a notification with the specified type, title, and message
+        /// </summary>
+        private Task CreateAndAddNotificationAsync(NotificationType type, string title, string content)
+        {
+            var notification = new NotificationModel
+            {
+                Id = Guid.NewGuid().ToString(),
+                Title = title,
+                Content = content,
+                Type = type,
+                Source = "System",
+                Timestamp = DateTime.Now,
+                IsRead = false,
+                IconPath = GetIconPathForType(type)
+            };
+            
+            return AddNotificationAsync(notification);
+        }
+        
+        /// <summary>
+        /// Gets the appropriate icon path for a notification type
+        /// </summary>
+        private string GetIconPathForType(NotificationType type)
+        {
+            return type switch
+            {
+                NotificationType.Info => "/images/icons/notification-info.png",
+                NotificationType.Warning => "/images/icons/notification-warning.png",
+                NotificationType.Error => "/images/icons/notification-error.png",
+                NotificationType.Success => "/images/icons/notification-success.png",
+                _ => "/images/icons/notification-default.png"
+            };
+        }
+        
+        /// <summary>
         /// Loads notifications from storage
         /// </summary>
         private async Task LoadNotificationsAsync()

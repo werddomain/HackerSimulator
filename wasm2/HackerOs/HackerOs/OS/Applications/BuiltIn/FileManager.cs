@@ -19,6 +19,7 @@ namespace HackerOs.OS.Applications.BuiltIn
     public class FileManager : ApplicationBase
     {
         private readonly IVirtualFileSystem _fileSystem;
+        private readonly ILogger<FileManager> _logger;
         private string _currentPath;
         private List<VirtualFileSystemNode> _currentContents;
         private VirtualFileSystemNode? _selectedNode;
@@ -36,9 +37,10 @@ namespace HackerOs.OS.Applications.BuiltIn
         private FileOperation _pendingOperation = FileOperation.None;
         private List<string> _operationPaths = new List<string>();
 
-        public FileManager(IVirtualFileSystem fileSystem) : base()
+        public FileManager(IVirtualFileSystem fileSystem, ILogger<FileManager>? logger = null) : base()
         {
             _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+            _logger = logger ?? new LoggerFactory().CreateLogger<FileManager>();
             _currentPath = "/";
             _currentContents = new List<VirtualFileSystemNode>();
         }
@@ -518,8 +520,78 @@ namespace HackerOs.OS.Applications.BuiltIn
             }
             else if (await _fileSystem.DirectoryExistsAsync(sourcePath, user))
             {
-                // TODO: Implement recursive directory copying
-                await _fileSystem.CreateDirectoryAsync(targetPath, user);
+                // Implement recursive directory copying
+                await CopyDirectoryRecursivelyAsync(sourcePath, targetPath, user);
+            }
+        }
+        
+        /// <summary>
+        /// Recursively copies a directory and all its contents
+        /// </summary>
+        /// <param name="sourcePath">Source directory path</param>
+        /// <param name="targetPath">Target directory path</param>
+        /// <param name="user">The user performing the operation</param>
+        /// <returns>True if the copy was successful, false otherwise</returns>
+        private async Task<bool> CopyDirectoryRecursivelyAsync(string sourcePath, string targetPath, User.User user)
+        {
+            try
+            {
+                // Create the target directory if it doesn't exist
+                if (!await _fileSystem.DirectoryExistsAsync(targetPath, user))
+                {
+                    if (!await _fileSystem.CreateDirectoryAsync(targetPath, user))
+                    {
+                        await OnErrorAsync($"Failed to create target directory: {targetPath}");
+                        return false;
+                    }
+                }
+                
+                // Get all nodes in the source directory
+                var directoryContents = await _fileSystem.ListDirectoryAsync(sourcePath, user);
+                
+                // Process each node
+                foreach (var node in directoryContents)
+                {
+                    string sourceItemPath = Path.Combine(sourcePath, node.Name).Replace('\\', '/');
+                    string targetItemPath = Path.Combine(targetPath, node.Name).Replace('\\', '/');
+                    
+                    if (node.IsDirectory)
+                    {
+                        // Recursively copy subdirectory
+                        if (!await CopyDirectoryRecursivelyAsync(sourceItemPath, targetItemPath, user))
+                        {
+                            await OnErrorAsync($"Failed to copy subdirectory: {sourceItemPath}");
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // Copy file
+                        var content = await _fileSystem.ReadAllTextAsync(sourceItemPath, user);
+                        if (content != null)
+                        {
+                            if (!await _fileSystem.WriteFileAsync(targetItemPath, content, user))
+                            {
+                                await OnErrorAsync($"Failed to write file: {targetItemPath}");
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            await OnErrorAsync($"Failed to read file content: {sourceItemPath}");
+                            return false;
+                        }
+                    }
+                }
+                
+                await OnOutputAsync($"Successfully copied directory from {sourcePath} to {targetPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error copying directory from {SourcePath} to {TargetPath}", sourcePath, targetPath);
+                await OnErrorAsync($"Error copying directory: {ex.Message}");
+                return false;
             }
         }
 
@@ -544,9 +616,57 @@ namespace HackerOs.OS.Applications.BuiltIn
             }
             else if (await _fileSystem.DirectoryExistsAsync(sourcePath, user))
             {
-                // TODO: Implement recursive directory moving
-                await _fileSystem.CreateDirectoryAsync(targetPath, user);
-                await _fileSystem.DeleteDirectoryAsync(sourcePath, user, recursive: false);
+                // Recursive directory moving
+                try {
+                    // First try a simple move/rename operation
+                    string targetParentPath = Path.GetDirectoryName(targetPath)?.Replace('\\', '/') ?? "/";
+                    
+                    if (await _fileSystem.DirectoryExistsAsync(targetParentPath, user))
+                    {
+                        // Target parent directory exists, try direct move
+                        bool moveSucceeded = await _fileSystem.MoveAsync(sourcePath, targetPath);
+                        
+                        if (moveSucceeded)
+                        {
+                            await OnOutputAsync($"Moved directory {sourcePath} to {targetPath}");
+                            return;
+                        }
+                    }
+                    
+                    // If direct move fails, copy and delete
+                    _logger.LogInformation("Direct move failed, using copy and delete method for {SourcePath} to {TargetPath}", 
+                        sourcePath, targetPath);
+                    
+                    // Create target directory if needed
+                    if (!await _fileSystem.DirectoryExistsAsync(targetPath, user))
+                    {
+                        await _fileSystem.CreateDirectoryAsync(targetPath, user);
+                    }
+                    
+                    // Copy all contents
+                    bool copySucceeded = await CopyDirectoryRecursivelyAsync(sourcePath, targetPath, user);
+                    
+                    if (copySucceeded)
+                    {
+                        // Delete source directory after successful copy
+                        bool deleteSucceeded = await _fileSystem.DeleteDirectoryAsync(sourcePath, user, recursive: true);
+                        
+                        if (!deleteSucceeded)
+                        {
+                            _logger.LogWarning("Failed to delete source directory after copy: {SourcePath}", sourcePath);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to copy directory during move operation: {SourcePath} to {TargetPath}", 
+                            sourcePath, targetPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during recursive directory move from {SourcePath} to {TargetPath}", 
+                        sourcePath, targetPath);
+                }
             }
         }
 

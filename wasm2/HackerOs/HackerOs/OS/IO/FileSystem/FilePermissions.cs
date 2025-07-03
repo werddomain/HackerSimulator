@@ -22,6 +22,11 @@ namespace HackerOs.OS.IO.FileSystem
         public bool OtherRead { get; set; }
         public bool OtherWrite { get; set; }
         public bool OtherExecute { get; set; }
+        
+        // Special permission bits
+        public bool SetUID { get; set; }
+        public bool SetGID { get; set; }
+        public bool Sticky { get; set; }
 
         /// <summary>
         /// Creates default permissions (644 for files, 755 for directories).
@@ -44,12 +49,15 @@ namespace HackerOs.OS.IO.FileSystem
                 GroupRead = OtherRead = true;
                 OwnerExecute = GroupWrite = GroupExecute = OtherWrite = OtherExecute = false;
             }
+            
+            // Special bits default to false
+            SetUID = SetGID = Sticky = false;
         }
 
         /// <summary>
         /// Creates permissions from octal notation.
         /// </summary>
-        /// <param name="octal">Octal permission value (e.g., 644, 755).</param>
+        /// <param name="octal">Octal permission value (e.g., 644, 755, 4755 for setuid).</param>
         public FilePermissions(int octal)
         {
             SetFromOctal(octal);
@@ -73,8 +81,9 @@ namespace HackerOs.OS.IO.FileSystem
             int owner = (OwnerRead ? 4 : 0) + (OwnerWrite ? 2 : 0) + (OwnerExecute ? 1 : 0);
             int group = (GroupRead ? 4 : 0) + (GroupWrite ? 2 : 0) + (GroupExecute ? 1 : 0);
             int other = (OtherRead ? 4 : 0) + (OtherWrite ? 2 : 0) + (OtherExecute ? 1 : 0);
+            int special = (SetUID ? 4 : 0) + (SetGID ? 2 : 0) + (Sticky ? 1 : 0);
             
-            return owner * 100 + group * 10 + other;
+            return special * 1000 + owner * 100 + group * 10 + other;
         }
 
         /// <summary>
@@ -83,6 +92,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// <param name="octal">Octal permission value.</param>
         public void SetFromOctal(int octal)
         {
+            int special = (octal / 1000) % 10;
             int owner = (octal / 100) % 10;
             int group = (octal / 10) % 10;
             int other = octal % 10;
@@ -98,6 +108,10 @@ namespace HackerOs.OS.IO.FileSystem
             OtherRead = (other & 4) != 0;
             OtherWrite = (other & 2) != 0;
             OtherExecute = (other & 1) != 0;
+            
+            SetUID = (special & 4) != 0;
+            SetGID = (special & 2) != 0;
+            Sticky = (special & 1) != 0;
         }
 
         /// <summary>
@@ -171,6 +185,95 @@ namespace HackerOs.OS.IO.FileSystem
                 execute = OtherExecute;
             }
 
+            return accessMode switch
+            {
+                FileAccessMode.Read => read,
+                FileAccessMode.Write => write,
+                FileAccessMode.Execute => execute,
+                FileAccessMode.ReadWrite => read && write,
+                _ => false
+            };
+        }
+
+        /// <summary>
+        /// Enhanced permission check that considers setuid, setgid, and sticky bits
+        /// </summary>
+        /// <param name="user">The user requesting access</param>
+        /// <param name="fileOwnerId">The owner ID of the file</param>
+        /// <param name="fileGroupId">The group ID of the file</param>
+        /// <param name="accessMode">The type of access required</param>
+        /// <param name="isDirectory">Whether the node is a directory</param>
+        /// <returns>True if access is granted; otherwise, false</returns>
+        public bool CanAccess(User.User user, int fileOwnerId, int fileGroupId, FileAccessMode accessMode, bool isDirectory = false)
+        {
+            // Root always has all permissions
+            if (user.UserId == 0)
+                return true;
+
+            bool read, write, execute;
+            
+            // Determine base permissions
+            if (user.UserId == fileOwnerId)
+            {
+                // User is the owner
+                read = OwnerRead;
+                write = OwnerWrite;
+                execute = OwnerExecute;
+            }
+            else if (user.PrimaryGroupId == fileGroupId || user.AdditionalGroups.Contains(fileGroupId))
+            {
+                // User is in the file's group
+                read = GroupRead;
+                write = GroupWrite;
+                execute = GroupExecute;
+            }
+            else
+            {
+                // User is "other"
+                read = OtherRead;
+                write = OtherWrite;
+                execute = OtherExecute;
+            }
+
+            // Handle special bits
+            if (accessMode == FileAccessMode.Execute && !isDirectory)
+            {
+                // SetUID: If the file is executable by the user and has the setuid bit,
+                // execution happens with the privileges of the file owner
+                if (SetUID && execute)
+                {
+                    // The execution will proceed with elevated privileges
+                    // We still need to return true based on the user's execute permission
+                    return true;
+                }
+                
+                // SetGID: If the file is executable by the user and has the setgid bit,
+                // execution happens with the privileges of the file's group
+                if (SetGID && execute)
+                {
+                    // The execution will proceed with the group's privileges
+                    // We still need to return true based on the user's execute permission
+                    return true;
+                }
+            }
+            else if (isDirectory)
+            {
+                // For directories, SetGID means new files created in the directory
+                // inherit the directory's group rather than the user's primary group
+                // This doesn't affect access permissions check
+                
+                // Sticky bit on directories: if set, only the owner of a file can delete or rename it,
+                // even if other users have write permissions on the directory
+                if (Sticky && accessMode == FileAccessMode.Write && write)
+                {
+                    // The sticky bit affects deletion/renaming, but we can't know the target operation here
+                    // The complete check must be done at the operation level (e.g., Delete, Move methods)
+                    // Here we just return the basic write permission
+                    return write;
+                }
+            }
+
+            // Return permission based on the access mode
             return accessMode switch
             {
                 FileAccessMode.Read => read,
@@ -283,6 +386,100 @@ namespace HackerOs.OS.IO.FileSystem
         public string ToDetailedString()
         {
             return $"{ToString()} ({ToOctal():D3})";
+        }
+
+        /// <summary>
+        /// Creates an enhanced string representation of permissions including special bits.
+        /// </summary>
+        /// <returns>Detailed permission string.</returns>
+        public string ToDetailedPermissionString()
+        {
+            var sb = new StringBuilder(10);
+            
+            // First character indicates the type and special bits
+            if (SetUID)
+                sb.Append(OwnerExecute ? 's' : 'S');
+            else
+                sb.Append(OwnerExecute ? 'x' : '-');
+                
+            if (SetGID)
+                sb.Append(GroupExecute ? 's' : 'S');
+            else
+                sb.Append(GroupExecute ? 'x' : '-');
+                
+            if (Sticky)
+                sb.Append(OtherExecute ? 't' : 'T');
+            else
+                sb.Append(OtherExecute ? 'x' : '-');
+            
+            // Standard permissions
+            sb.Append(OwnerRead ? 'r' : '-');
+            sb.Append(OwnerWrite ? 'w' : '-');
+            
+            sb.Append(GroupRead ? 'r' : '-');
+            sb.Append(GroupWrite ? 'w' : '-');
+            
+            sb.Append(OtherRead ? 'r' : '-');
+            sb.Append(OtherWrite ? 'w' : '-');
+            
+            return sb.ToString();
+        }
+        
+        /// <summary>
+        /// Sets permissions from enhanced string notation including special bits.
+        /// </summary>
+        /// <param name="permissionString">Enhanced permission string (e.g., "rwsrwxrwt").</param>
+        public void SetFromDetailedString(string permissionString)
+        {
+            if (string.IsNullOrEmpty(permissionString) || permissionString.Length != 9)
+            {
+                throw new ArgumentException("Permission string must be exactly 9 characters");
+            }
+
+            OwnerRead = permissionString[0] == 'r';
+            OwnerWrite = permissionString[1] == 'w';
+            
+            // Special handling for setuid bit ('s', 'S')
+            if (permissionString[2] == 's' || permissionString[2] == 'S')
+            {
+                SetUID = true;
+                OwnerExecute = permissionString[2] == 's';
+            }
+            else
+            {
+                SetUID = false;
+                OwnerExecute = permissionString[2] == 'x';
+            }
+
+            GroupRead = permissionString[3] == 'r';
+            GroupWrite = permissionString[4] == 'w';
+            
+            // Special handling for setgid bit ('s', 'S')
+            if (permissionString[5] == 's' || permissionString[5] == 'S')
+            {
+                SetGID = true;
+                GroupExecute = permissionString[5] == 's';
+            }
+            else
+            {
+                SetGID = false;
+                GroupExecute = permissionString[5] == 'x';
+            }
+
+            OtherRead = permissionString[6] == 'r';
+            OtherWrite = permissionString[7] == 'w';
+            
+            // Special handling for sticky bit ('t', 'T')
+            if (permissionString[8] == 't' || permissionString[8] == 'T')
+            {
+                Sticky = true;
+                OtherExecute = permissionString[8] == 't';
+            }
+            else
+            {
+                Sticky = false;
+                OtherExecute = permissionString[8] == 'x';
+            }
         }
 
         /// <summary>

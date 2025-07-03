@@ -289,6 +289,8 @@ namespace HackerOs.OS.IO.FileSystem
         /// Event raised when file system operations occur.
         /// </summary>
         event EventHandler<FileSystemEvent>? OnFileSystemEvent;
+
+        
     }
 
     /// <summary>
@@ -319,6 +321,8 @@ namespace HackerOs.OS.IO.FileSystem
         DirectoryDeleted,
         DirectoryCopied,
         SymbolicLinkCreated,
+        PermissionElevation,
+        PermissionDenied,
         Error
     }
 }

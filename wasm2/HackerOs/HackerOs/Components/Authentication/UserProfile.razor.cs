@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using HackerOs.OS.Security;
+using HackerOs.OS.User;
 using HackerOs.OS.User.Models;
 
 namespace HackerOs.Components.Authentication
@@ -262,29 +263,32 @@ namespace HackerOs.Components.Authentication
             };
         }
         
-        /// <summary>
-        /// Gets user type (admin, regular, etc.)
-        /// </summary>
-        protected string GetUserType()
+    /// <summary>
+    /// Gets user type (admin, regular, etc.)
+    /// </summary>
+    protected string GetUserType()
+    {
+        if (CurrentUser == null)
+            return "Unknown";
+        
+        // Use the IsAdmin property directly
+        if (CurrentUser.IsAdmin)
         {
-            if (CurrentUser == null)
-                return "Unknown";
-                
-            // Check if user is in admin or root group
-            if (CurrentUser.Groups.Any(g => g.Equals("admin", StringComparison.OrdinalIgnoreCase) || 
-                                           g.Equals("root", StringComparison.OrdinalIgnoreCase)))
-            {
-                return "Administrator";
-            }
-            
-            // Check if user is in wheel group (sudo)
-            if (CurrentUser.Groups.Any(g => g.Equals("wheel", StringComparison.OrdinalIgnoreCase)))
-            {
-                return "Power User";
-            }
-            
-            return "Regular User";
+            return "Administrator";
         }
+        
+        // Get all group names the user belongs to
+        var groupNames = UserModelExtensions.GetGroupNames(CurrentUser);
+        
+        // Check if user is in wheel or sudo groups (power user)
+        if (groupNames.Any(g => g.Equals("wheel", StringComparison.OrdinalIgnoreCase) || 
+                               g.Equals("sudo", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Power User";
+        }
+        
+        return "Regular User";
+    }
         
         /// <summary>
         /// Gets session summary

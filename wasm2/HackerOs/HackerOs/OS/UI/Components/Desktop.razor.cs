@@ -10,8 +10,10 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using HackerOs.OS.IO.FileSystem;
 
 namespace HackerOs.OS.UI.Components
 {
@@ -28,6 +30,8 @@ namespace HackerOs.OS.UI.Components
         [Inject] protected ILogger<Desktop> Logger { get; set; } = null!;
         [Inject] protected DesktopSettingsService DesktopSettings { get; set; } = null!;
         [Inject] protected NotificationService NotificationService { get; set; } = null!;
+        [Inject] protected IVirtualFileSystem _fileSystem { get; set; } = null!;
+        [Inject] protected DesktopFileService DesktopFileService { get; set; } = null!;
 
         /// <summary>
         /// Reference to the application launcher component
@@ -633,12 +637,53 @@ namespace HackerOs.OS.UI.Components
                 {
                     // Open file
                     Logger.LogInformation($"Opening file: {icon.Target}");
-                    // TODO: Implement file opening logic
+                    await OpenFileAsync(icon.Target);
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, $"Error launching icon target: {icon.Target}");
+            }
+        }
+
+        /// <summary>
+        /// Open a file using the appropriate application
+        /// </summary>
+        protected async Task OpenFileAsync(string filePath)
+        {
+            try
+            {
+                // Check if file exists
+                var user = UserSession?.User ?? throw new InvalidOperationException("No user session available");
+                var fileExists = await _fileSystem.FileExistsAsync(filePath, user);
+                
+                if (!fileExists)
+                {
+                    Logger.LogWarning($"File not found: {filePath}");
+                    await NotificationService.ShowErrorAsync($"File not found: {filePath}", "File Error");
+                    return;
+                }
+                
+                // Get file extension
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
+                
+                // Find application for file type
+                var appInfo = await ApplicationManager.GetApplicationForFileTypeAsync(extension);
+                if (appInfo == null)
+                {
+                    Logger.LogWarning($"No application found for file type: {extension}");
+                    await NotificationService.ShowWarningAsync($"No application found to open {extension} files", "Open File");
+                    return;
+                }
+                
+                // Launch application with file
+                await ApplicationManager.LaunchApplicationAsync(appInfo.Id, new[] { filePath });
+                Logger.LogInformation($"Opened file {filePath} with application {appInfo.Name}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error opening file: {filePath}");
+                await NotificationService.ShowErrorAsync($"Error opening file: {ex.Message}", "File Error");
             }
         }
 
@@ -671,8 +716,41 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         private async Task CreateNewFolderAsync()
         {
-            // TODO: Implement folder creation
-            Logger.LogInformation("Creating new folder");
+            try
+            {
+                if (UserSession == null)
+                {
+                    Logger.LogWarning("Cannot create folder: No active user session");
+                    return;
+                }
+                
+                // Get desktop path
+                var desktopPath = $"/home/{UserSession.User.Username}/Desktop";
+                
+                // Generate unique folder name
+                string folderName = "New Folder";
+                int counter = 1;
+                string newFolderPath = Path.Combine(desktopPath, folderName);
+                
+                while (await _fileSystem.DirectoryExistsAsync(newFolderPath, UserSession.User))
+                {
+                    folderName = $"New Folder ({counter})";
+                    newFolderPath = Path.Combine(desktopPath, folderName);
+                    counter++;
+                }
+                
+                // Create the folder
+                await _fileSystem.CreateDirectoryAsync(newFolderPath, UserSession.User);
+                Logger.LogInformation($"Created new folder: {newFolderPath}");
+                
+                // Refresh desktop icons
+                await RefreshDesktopIconsAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error creating new folder");
+                await NotificationService.ShowErrorAsync("Failed to create folder: " + ex.Message, "Error");
+            }
         }
 
         /// <summary>
@@ -680,8 +758,41 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         private async Task CreateNewFileAsync()
         {
-            // TODO: Implement file creation
-            Logger.LogInformation("Creating new file");
+            try
+            {
+                if (UserSession == null)
+                {
+                    Logger.LogWarning("Cannot create file: No active user session");
+                    return;
+                }
+                
+                // Get desktop path
+                var desktopPath = $"/home/{UserSession.User.Username}/Desktop";
+                
+                // Generate unique file name
+                string fileName = "New Text Document.txt";
+                int counter = 1;
+                string newFilePath = Path.Combine(desktopPath, fileName);
+                
+                while (await _fileSystem.FileExistsAsync(newFilePath, UserSession.User))
+                {
+                    fileName = $"New Text Document ({counter}).txt";
+                    newFilePath = Path.Combine(desktopPath, fileName);
+                    counter++;
+                }
+                
+                // Create the file with empty content
+                await _fileSystem.WriteAllTextAsync(newFilePath, string.Empty, UserSession.User);
+                Logger.LogInformation($"Created new file: {newFilePath}");
+                
+                // Refresh desktop icons
+                await RefreshDesktopIconsAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error creating new file");
+                await NotificationService.ShowErrorAsync("Failed to create file: " + ex.Message, "Error");
+            }
         }
 
         /// <summary>
@@ -710,8 +821,44 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         private async Task ShowIconPropertiesAsync(DesktopIcon icon)
         {
-            // TODO: Implement icon properties dialog
-            Logger.LogInformation($"Showing properties for icon: {icon.DisplayName}");
+            try
+            {
+                if (UserSession == null)
+                {
+                    Logger.LogWarning("Cannot show properties: No active user session");
+                    return;
+                }
+                
+                // Get file/directory information
+                string path = icon.Target;
+                bool isDirectory = await _fileSystem.DirectoryExistsAsync(path, UserSession.User);
+                
+                // Create properties dialog
+                var propertiesModel = new FilePropertiesModel
+                {
+                    Name = icon.DisplayName,
+                    Path = path,
+                    IsDirectory = isDirectory,
+                    Size = isDirectory ? 0 : await _fileSystem.GetFileSizeAsync(path, UserSession.User),
+                    CreationTime = await _fileSystem.GetCreationTimeAsync(path, UserSession.User),
+                    LastModifiedTime = await _fileSystem.GetLastModifiedTimeAsync(path, UserSession.User),
+                    IsReadOnly = false, // TODO: Get actual permissions
+                    Owner = UserSession.User.Username // TODO: Get actual owner
+                };
+                
+                // Show properties dialog
+                await WindowManager.ShowDialogAsync<FilePropertiesDialog>(
+                    "Properties: " + icon.DisplayName,
+                    new Dictionary<string, object> { { "Model", propertiesModel } }
+                );
+                
+                Logger.LogInformation($"Showed properties for icon: {icon.DisplayName}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error showing properties for icon: {icon.DisplayName}");
+                await NotificationService.ShowMessageAsync("Error", $"Failed to show properties: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -719,8 +866,78 @@ namespace HackerOs.OS.UI.Components
         /// </summary>
         private async Task ShowDesktopPropertiesAsync()
         {
-            // TODO: Implement desktop properties dialog
-            Logger.LogInformation("Showing desktop properties");
+            try
+            {
+                // Get desktop settings
+                var settings = await DesktopSettings.GetDesktopSettingsAsync();
+                
+                // Create desktop properties model
+                var propertiesModel = new DesktopPropertiesModel
+                {
+                    BackgroundImagePath = settings.TryGetValue("BackgroundImage", out var bgPath) ? bgPath : BackgroundImagePath,
+                    ShowIcons = true,
+                    SnapToGrid = true,
+                    IconSize = 48, // Default icon size
+                    RefreshInterval = 30 // Default refresh interval in seconds
+                };
+                
+                // Show desktop properties dialog
+                await WindowManager.ShowDialogAsync<DesktopPropertiesDialog>(
+                    "Desktop Properties",
+                    new Dictionary<string, object> { { "Model", propertiesModel } }
+                );
+                
+                Logger.LogInformation("Showed desktop properties");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error showing desktop properties");
+                await NotificationService.ShowMessageAsync("Error", $"Failed to show desktop properties: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Refreshes the desktop icons from the file system
+        /// </summary>
+        private async Task RefreshDesktopIconsAsync()
+        {
+            try
+            {
+                if (UserSession == null)
+                {
+                    Logger.LogWarning("Cannot refresh desktop: No active user session");
+                    return;
+                }
+                
+                // Get desktop icons from file system
+                var icons = await DesktopFileService.GetDesktopIconsAsync(UserSession);
+                
+                // Convert to DesktopIcon model used by the component
+                Icons.Clear();
+                foreach (var icon in icons)
+                {
+                    Icons.Add(new DesktopIcon
+                    {
+                        Id = icon.Id,
+                        DisplayName = icon.DisplayName,
+                        IconPath = icon.IconPath,
+                        Target = icon.FilePath,
+                        IsDirectory = icon.IsDirectory,
+                        GridX = icon.GridX,
+                        GridY = icon.GridY,
+                        IsSelected = false
+                    });
+                }
+                
+                // Force UI update
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("Refreshed desktop icons");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error refreshing desktop icons");
+                await NotificationService.ShowMessageAsync("Error", $"Failed to refresh desktop: {ex.Message}");
+            }
         }
 
         /// <summary>

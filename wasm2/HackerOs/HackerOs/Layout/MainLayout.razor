@@ -1,17 +1,37 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@using HackerOs.OS.UI.Components
+@using BlazorWindowManager.Components
+@using HackerOs.OS.User
+@using HackerOs.OS.Theme
+@using HackerOs.OS.Applications
+@using Microsoft.AspNetCore.Components.Web
 
-    <main>
-        <div class="top-row px-4 auth">
-            <LoginDisplay />
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+@inject IThemeManager ThemeManager
+@inject IUserManager UserManager
+@inject IApplicationManager ApplicationManager
+
+<div class="hackerOS-main-layout" 
+     style="background-color: var(--desktop-background-color);"
+     @onkeydown="HandleKeyDown"
+     tabindex="0"
+     @ref="_mainLayoutDiv">
+    
+    <DesktopArea @ref="_desktopArea" CssClass="hackerOS-desktop-area">
+        <Desktop @ref="_desktop" UserSession="@_currentUserSession" />
+        
+        <!-- Windows will be rendered here by the DesktopArea component -->
+    </DesktopArea>
+    
+    <Taskbar @ref="_taskbar" />
+    
+    <!-- User authentication overlay, shown when no user is logged in -->
+    @if (_currentUserSession == null)
+    {
+        <div class="auth-overlay">
+            <div class="login-container">
+                <h2>HackerOS</h2>
+                <LoginDisplay />
+            </div>
         </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    }
 </div>

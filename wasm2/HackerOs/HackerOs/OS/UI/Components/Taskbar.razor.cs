@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using global::System.Timers;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace HackerOs.OS.UI.Components
 {
@@ -253,46 +254,73 @@ namespace HackerOs.OS.UI.Components
             foreach (var app in apps)
             {
                 // Find the main window for this application
-                var window = WindowManager.GetWindowsForApplication(app.Id).FirstOrDefault();
+                var window = WindowManager.GetApplicationWindow(app.Id);
                 if (window == null) continue;
 
-                RunningApplications.Add(new TaskbarAppModel
+                // Get last launch time from app history if available
+                DateTime? lastLaunchTime = null;
+                // This would normally come from a user app history service
+                // For now, we'll just use the current time
+                lastLaunchTime = DateTime.Now;
+
+                // Create taskbar app model
+                var taskbarApp = new TaskbarAppModel
                 {
                     Id = app.Id,
                     Name = app.Name,
-                    IconPath = app.IconPath,
+                    IconPath = app.IconPath ?? "/images/app-icons/default.png",
                     IsActive = window.IsActive,
                     IsMinimized = window.IsMinimized,
-                    PreviewImagePath = "/images/application-preview.png" // TODO: Generate actual preview
-                });
+                    PreviewImagePath = "/images/application-preview.png", // TODO: Generate actual preview
+                    LastLaunched = lastLaunchTime
+                };
+
+                RunningApplications.Add(taskbarApp);
             }
 
+            // Sort the applications by most recently used
+            RunningApplications = RunningApplications
+                .OrderByDescending(app => app.LastLaunched)
+                .ToList();
+
+            Logger.LogDebug("Loaded {Count} running applications", RunningApplications.Count);
             StateHasChanged();
         }
 
         /// <summary>
         /// Toggle an application's window state
         /// </summary>
-        protected void ToggleApplication(string appId)
+        protected async Task ToggleApplication(string appId)
         {
             var app = RunningApplications.FirstOrDefault(a => a.Id == appId);
             if (app == null) return;
 
+            // Log task switching action
+            Logger.LogDebug("Task switching: {AppId}, IsActive: {IsActive}, IsMinimized: {IsMinimized}", 
+                appId, app.IsActive, app.IsMinimized);
+
             if (app.IsActive)
             {
                 // If active, minimize
-                WindowManager.MinimizeApplication(appId);
+                await WindowManager.MinimizeApplication(appId);
+                Logger.LogDebug("Minimized application: {AppId}", appId);
             }
             else if (app.IsMinimized)
             {
                 // If minimized, restore
-                WindowManager.RestoreApplication(appId);
+                await WindowManager.RestoreApplication(appId);
+                Logger.LogDebug("Restored application: {AppId}", appId);
             }
             else
             {
                 // Otherwise, bring to front
                 WindowManager.BringToFront(appId);
+                Logger.LogDebug("Brought application to front: {AppId}", appId);
             }
+            
+            // Update the UI after a short delay to ensure state has propagated
+            await Task.Delay(50);
+            await InvokeAsync(StateHasChanged);
         }
 
         /// <summary>
@@ -355,12 +383,62 @@ namespace HackerOs.OS.UI.Components
         {
             // Update the application state in the taskbar
             var app = RunningApplications.FirstOrDefault(a => a.Id == e.Application.Id);
+            
             if (app != null)
             {
                 var window = WindowManager.GetApplicationWindow(app.Id);
-                app.IsActive = window?.WindowInfo.IsActive ?? false;
-                app.IsMinimized = window?.WindowInfo.State == WindowState.Minimized;
+                
+                if (window != null)
+                {
+                    app.IsActive = window.IsActive;
+                    app.IsMinimized = window.IsMinimized;
+                    
+                    // Track state change for visual feedback
+                    if (e.PreviousState != e.NewState)
+                    {
+                        // Log state change for debugging
+                        Logger.LogDebug("Application {AppId} state changed from {PrevState} to {NewState}", 
+                            e.Application.Id, e.PreviousState, e.NewState);
+                        
+                        // Provide visual indication for certain state changes
+                        switch (e.NewState)
+                        {
+                            case ApplicationState.Running:
+                                if (e.PreviousState == ApplicationState.Minimized)
+                                {
+                                    // Application was restored from minimized state
+                                    app.ShowRestoredAnimation = true;
+                                }
+                                break;
+                                
+                            case ApplicationState.Minimized:
+                                // Application was minimized
+                                app.ShowMinimizedAnimation = true;
+                                break;
+                                
+                            case ApplicationState.Maximized:
+                                // Application was maximized
+                                app.ShowMaximizedAnimation = true;
+                                break;
+                        }
+                        
+                        // Reset animation flags after a short delay
+                        _ = Task.Delay(500).ContinueWith(_ => 
+                        {
+                            app.ShowRestoredAnimation = false;
+                            app.ShowMinimizedAnimation = false;
+                            app.ShowMaximizedAnimation = false;
+                            InvokeAsync(StateHasChanged);
+                        });
+                    }
+                }
+                
                 InvokeAsync(StateHasChanged);
+            }
+            else if (e.NewState == ApplicationState.Running || e.NewState == ApplicationState.Maximized)
+            {
+                // New application started, refresh the list
+                LoadRunningApplications();
             }
         }
 
@@ -386,6 +464,53 @@ namespace HackerOs.OS.UI.Components
         private void OnNotificationRead(object? sender, NotificationEventArgs e)
         {
             InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Handle keyboard shortcuts for task switching (Alt+Tab)
+        /// </summary>
+        /// <param name="e">Keyboard event</param>
+        /// <returns>True if the shortcut was handled</returns>
+        public async Task<bool> HandleTaskSwitchingKeys(KeyboardEventArgs e)
+        {
+            // Alt+Tab implementation
+            if (e.AltKey && e.Key == "Tab")
+            {
+                // If no running applications, do nothing
+                if (!RunningApplications.Any())
+                {
+                    return false;
+                }
+                
+                // Find the next application to switch to
+                TaskbarAppModel? nextApp = null;
+                
+                // Get the current active app
+                var activeApp = RunningApplications.FirstOrDefault(a => a.IsActive);
+                
+                if (activeApp != null)
+                {
+                    // Find the next app in the list
+                    int currentIndex = RunningApplications.IndexOf(activeApp);
+                    int nextIndex = (currentIndex + 1) % RunningApplications.Count;
+                    nextApp = RunningApplications[nextIndex];
+                }
+                else
+                {
+                    // If no active app, select the first one
+                    nextApp = RunningApplications.FirstOrDefault();
+                }
+                
+                if (nextApp != null)
+                {
+                    // Switch to the next app
+                    await ToggleApplication(nextApp.Id);
+                    Logger.LogDebug("Task switching with keyboard shortcut to {AppId}", nextApp.Id);
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
 }

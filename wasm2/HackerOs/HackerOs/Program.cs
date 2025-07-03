@@ -8,7 +8,7 @@ using HackerOs.OS.Core.Settings;
 using HackerOs.OS.Security;
 using HackerOs.OS.User;
 using HackerOs.OS.Core.State;
-//using BlazorWindowManager.Extensions; // Temporarily disabled for initial setup
+using BlazorWindowManager.Extensions; // Enabled for window management
 
 namespace HackerOs
 {
@@ -23,10 +23,18 @@ namespace HackerOs
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
             // Add Blazor Window Manager services including ThemeService
-            // Temporarily disabled: builder.Services.AddBlazorWindowManager();
+            builder.Services.AddBlazorWindowManager();
 
             // Add HackerOS Core Services
             builder.Services.AddHackerOSServices();
+            
+            // Add Desktop UI Services
+            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopFileService>();
+            builder.Services.AddScoped<HackerOs.OS.UI.Services.NotificationService>();
+            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopSettingsService>();
+            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopIconService>();
+            builder.Services.AddScoped<HackerOs.OS.UI.Services.LauncherService>();
+            builder.Services.AddScoped<HackerOs.OS.UI.ApplicationWindowManager>();
             
             // Remove OIDC authentication placeholder - replaced with custom authentication
             // Configure application state
@@ -55,7 +63,14 @@ namespace HackerOs
             services.AddScoped<HackerOs.OS.Security.ITokenService, HackerOs.OS.Security.TokenService>();
             services.AddScoped<HackerOs.OS.Security.IAuthenticationService, HackerOs.OS.Security.AuthenticationService>();
             services.AddScoped<HackerOs.OS.Security.IUserService, HackerOs.OS.Security.UserService>();
-            services.AddSingleton<HackerOs.OS.User.IUserManager, HackerOs.OS.User.UserManager>();
+            
+            // Add enhanced user management with dependency injection
+            services.AddSingleton<HackerOs.OS.User.IUserManagerFactory, HackerOs.OS.User.DefaultUserManagerFactory>();
+            services.AddSingleton<HackerOs.OS.User.IUserManager>(sp => {
+                var factory = sp.GetRequiredService<HackerOs.OS.User.IUserManagerFactory>();
+                var logger = sp.GetRequiredService<ILogger<HackerOs.OS.User.UserManager>>();
+                return factory.CreateEnhanced();
+            });
             
             // System Services (Scoped - per user session)
             // Settings Service

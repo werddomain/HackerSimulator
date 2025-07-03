@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using HackerOs.OS.Security;
 
 namespace HackerOs.OS.User
 {
@@ -107,8 +108,9 @@ namespace HackerOs.OS.User
         /// <param name="password">Plain text password</param>
         public void SetPassword(string password)
         {
-            PasswordSalt = GenerateSalt();
-            PasswordHash = HashPassword(password, PasswordSalt);
+            // With BCrypt, we don't need a separate salt as it's embedded in the hash
+            PasswordSalt = string.Empty;
+            PasswordHash = PasswordHasher.HashPassword(password);
         }
 
         /// <summary>
@@ -118,11 +120,29 @@ namespace HackerOs.OS.User
         /// <returns>True if password matches, false otherwise</returns>
         public bool VerifyPassword(string password)
         {
-            if (string.IsNullOrEmpty(PasswordHash) || string.IsNullOrEmpty(PasswordSalt))
+            if (string.IsNullOrEmpty(PasswordHash))
                 return false;
 
-            string hashedInput = HashPassword(password, PasswordSalt);
-            return hashedInput == PasswordHash;
+            // If this is a BCrypt hash, use direct verification
+            if (PasswordHash.StartsWith("$2"))
+            {
+                return PasswordHasher.VerifyPassword(password, PasswordHash);
+            }
+            
+            // For legacy hash format (PBKDF2), verify and migrate if correct
+            if (!string.IsNullOrEmpty(PasswordSalt))
+            {
+                var newHash = PasswordHasher.MigrateFromLegacyHash(password, PasswordHash, PasswordSalt);
+                if (newHash != null)
+                {
+                    // Password was correct, update to new format
+                    PasswordHash = newHash;
+                    PasswordSalt = string.Empty; // No longer needed with BCrypt
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         /// <summary>
@@ -209,6 +229,7 @@ namespace HackerOs.OS.User
         /// <param name="password">Plain text password</param>
         /// <param name="salt">Base64 encoded salt</param>
         /// <returns>Base64 encoded hash</returns>
+        [Obsolete("Use PasswordHasher.HashPassword instead")]
         private static string HashPassword(string password, string salt)
         {
             byte[] saltBytes = Convert.FromBase64String(salt);

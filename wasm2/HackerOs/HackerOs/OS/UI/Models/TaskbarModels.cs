@@ -37,6 +37,26 @@ namespace HackerOs.OS.UI.Models
         /// Path to the application preview image
         /// </summary>
         public string PreviewImagePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Timestamp when the application was last launched
+        /// </summary>
+        public DateTime? LastLaunched { get; set; }
+
+        /// <summary>
+        /// Whether to show the restored animation
+        /// </summary>
+        public bool ShowRestoredAnimation { get; set; }
+        
+        /// <summary>
+        /// Whether to show the minimized animation
+        /// </summary>
+        public bool ShowMinimizedAnimation { get; set; }
+        
+        /// <summary>
+        /// Whether to show the maximized animation
+        /// </summary>
+        public bool ShowMaximizedAnimation { get; set; }
     }
     
     /// <summary>

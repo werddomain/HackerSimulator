@@ -13,19 +13,21 @@
         <div class="taskbar-running-apps">
             @foreach (var app in RunningApplications)
             {
-                <div class="taskbar-app-button @(app.IsActive ? "active" : "")" 
-                     @onclick="() => ToggleApplication(app.Id)"
+                <div class="taskbar-app-button @(app.IsActive ? "active" : "") 
+                          @(app.IsMinimized ? "minimized" : "") 
+                          @(app.ShowRestoredAnimation ? "restored-animation" : "")
+                          @(app.ShowMinimizedAnimation ? "minimized-animation" : "")
+                          @(app.ShowMaximizedAnimation ? "maximized-animation" : "")" 
+                     @onclick="async () => await ToggleApplication(app.Id)"
                      @onmouseover="() => ShowAppPreview(app.Id)" 
                      @onmouseout="() => HideAppPreview()"
                      title="@app.Name">
                     <img src="@app.IconPath" alt="@app.Name" />
-                    @if (app.IsMinimized)
+                    <div class="taskbar-app-indicator @(app.IsActive ? "active" : "") @(app.IsMinimized ? "minimized" : "")"></div>
+                    
+                    @if (app.IsActive)
                     {
-                        <div class="taskbar-app-indicator minimized"></div>
-                    }
-                    else
-                    {
-                        <div class="taskbar-app-indicator"></div>
+                        <div class="taskbar-app-focus-indicator"></div>
                     }
                 </div>
             }
