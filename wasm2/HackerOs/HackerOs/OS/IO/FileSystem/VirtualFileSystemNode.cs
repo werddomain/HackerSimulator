@@ -98,6 +98,9 @@ namespace HackerOs.OS.IO.FileSystem
         /// <summary>
         /// Indicates whether this node is a directory.
         /// </summary>
+        /// <summary>
+        /// Gets a value indicating whether this node is a directory.
+        /// </summary>
         public abstract bool IsDirectory { get; }
 
         /// <summary>
@@ -221,26 +224,14 @@ namespace HackerOs.OS.IO.FileSystem
             switch (accessMode)
             {
                 case FileAccessMode.Read:
-                    return Permissions.OtherRead;
+                    return Permissions.OthersRead;
                 case FileAccessMode.Write:
-                    return Permissions.OtherWrite;
+                    return Permissions.OthersWrite;
                 case FileAccessMode.Execute:
-                    return Permissions.OtherExecute;
+                    return Permissions.OthersExecute;
                 default:
                     return false;
             }
-        }
-
-        /// <summary>
-        /// Comprehensive permission check with support for special bits and supplementary groups.
-        /// Considers setuid, setgid, and sticky bit behaviors.
-        /// </summary>
-        /// <param name="user">The user attempting to access the node</param>
-        /// <param name="accessMode">The type of access being requested</param>
-        /// <returns>True if access is allowed, false otherwise</returns>
-        public virtual bool CanAccess(User.User user, FileAccessMode accessMode)
-        {
-            return Permissions.CanAccess(user, OwnerId, GroupId, accessMode, IsDirectory);
         }
 
         /// <summary>

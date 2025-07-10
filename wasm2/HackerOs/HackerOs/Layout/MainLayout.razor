@@ -22,7 +22,25 @@
         <!-- Windows will be rendered here by the DesktopArea component -->
     </DesktopArea>
     
-    <Taskbar @ref="_taskbar" />
+    <Taskbar @ref="_taskbar" 
+             OnLauncherToggled="ToggleStartMenu"
+             OnNotificationCenterToggled="ToggleNotificationCenter" />
+    
+    <!-- Start Menu component -->
+    <StartMenu @ref="_startMenu"
+               IsOpen="@_isStartMenuOpen"
+               IsOpenChanged="HandleStartMenuOpenChanged"
+               UserSession="@_currentUserSession"
+               OnApplicationLaunched="HandleStartMenuAppLaunched"
+               OnSignOut="HandleSignOut"
+               OnSettingsClicked="HandleSettingsClicked"
+               OnShutdown="HandleShutdown"
+               OnRestart="HandleRestart"
+               OnLock="HandleLock" />
+               
+    <!-- Notification components -->
+    <NotificationToast @ref="_notificationToast" OnToastClicked="HandleNotificationClick" />
+    <NotificationCenter @ref="_notificationCenter" OnNotificationCenterOpenChanged="HandleNotificationCenterOpenChanged" />
     
     <!-- User authentication overlay, shown when no user is logged in -->
     @if (_currentUserSession == null)

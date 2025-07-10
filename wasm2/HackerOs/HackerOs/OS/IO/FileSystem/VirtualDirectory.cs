@@ -1,3 +1,4 @@
+using HackerOs.OS.HSystem.Text.RegularExpressions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -277,14 +278,14 @@ namespace HackerOs.OS.IO.FileSystem
         /// <summary>
         /// Creates a regex pattern from a wildcard pattern.
         /// </summary>
-        private System.Text.RegularExpressions.Regex CreateWildcardRegex(string pattern)
+        private Regex CreateWildcardRegex(string pattern)
         {
-            var escapedPattern = System.Text.RegularExpressions.Regex.Escape(pattern)
+            var escapedPattern = Regex.Escape(pattern)
                 .Replace("\\*", ".*")
                 .Replace("\\?", ".");
             
-            return new System.Text.RegularExpressions.Regex($"^{escapedPattern}$", 
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return new System.Text.RegularExpressions.Regex($"^{escapedPattern}$",
+                RegexOptions.IgnoreCase);
         }
 
         /// <summary>

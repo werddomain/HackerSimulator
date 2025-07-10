@@ -1,3 +1,4 @@
+using HackerOs.OS.HSystem.Text;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -282,13 +283,13 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         /// <param name="encoding">The encoding to use for reading text</param>
         /// <returns>The text content of the file</returns>
-        public async Task<string> ReadAllTextAsync(System.Text.Encoding? encoding = null)
+        public async Task<string> ReadAllTextAsync(Encoding? encoding = null)
         {
             ThrowIfDisposed();
             if (!CanRead)
                 throw new InvalidOperationException("File descriptor does not have read access.");
 
-            encoding ??= System.Text.Encoding.UTF8;
+            encoding ??= Encoding.UTF8;
             
             lock (_lockObject)
             {
@@ -303,13 +304,13 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         /// <param name="text">The text to write</param>
         /// <param name="encoding">The encoding to use for writing text</param>
-        public async Task WriteAllTextAsync(string text, System.Text.Encoding? encoding = null)
+        public async Task WriteAllTextAsync(string text, Encoding? encoding = null)
         {
             ThrowIfDisposed();
             if (!CanWrite)
                 throw new InvalidOperationException("File descriptor does not have write access.");
 
-            encoding ??= System.Text.Encoding.UTF8;
+            encoding ??= Encoding.UTF8;
             text ??= string.Empty;
 
             lock (_lockObject)

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using HackerOs.OS.Network.HTTP;
 using HackerOs.OS.Network.WebServer.Framework;
-using HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Models;
+using HackerOs.OS.Network.WebServer.Sites.example.com.Models;
 
-namespace HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Controllers
+namespace HackerOs.OS.Network.WebServer.Sites.example.com.Controllers
 {
     /// <summary>
     /// Controller for home page and general site navigation.
@@ -168,18 +168,18 @@ namespace HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Controllers
             }
             
             // Create a ViewModel for the CSHTML view
-            var viewModel = new HackerOs.OS.Network.WebServer.Sites.example.com.Models.ProductViewModel
+            var viewModel = new ProductViewModel
             {
                 Name = product.Name,
                 Price = product.Price,
                 Description = product.Description,
                 IsInStock = product.InStock,
-                Categories = new List<HackerOs.OS.Network.WebServer.Sites.example.com.Models.CategoryModel>()
+                Categories = new List<CategoryModel>()
             };
             
             // Add some sample categories
-            viewModel.Categories.Add(new HackerOs.OS.Network.WebServer.Sites.example.com.Models.CategoryModel { Name = "Electronics" });
-            viewModel.Categories.Add(new HackerOs.OS.Network.WebServer.Sites.example.com.Models.CategoryModel { Name = "Gadgets" });
+            viewModel.Categories.Add(new CategoryModel { Name = "Electronics" });
+            viewModel.Categories.Add(new CategoryModel { Name = "Gadgets" });
             
             return new ViewResult
             {

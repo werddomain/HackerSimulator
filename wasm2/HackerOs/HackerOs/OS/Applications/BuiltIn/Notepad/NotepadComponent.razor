@@ -1,0 +1,100 @@
+@using HackerOs.OS.Applications.UI
+@using HackerOs.OS.IO
+@using HackerOs.OS.User
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="notepad-container">
+    <div class="notepad-toolbar">
+        <button class="toolbar-button" @onclick="NewFile">New</button>
+        <button class="toolbar-button" @onclick="OpenFile">Open</button>
+        <button class="toolbar-button" @onclick="SaveFile">Save</button>
+        <button class="toolbar-button" @onclick="SaveFileAs">Save As</button>
+    </div>
+    
+    <div class="notepad-editor">
+        <textarea 
+            @bind="Content" 
+            @bind:event="oninput" 
+            placeholder="Enter text here..."
+            @ref="textAreaRef"
+        ></textarea>
+    </div>
+    
+    <div class="notepad-statusbar">
+        @if (!string.IsNullOrEmpty(FilePath))
+        {
+            <span>@FilePath</span>
+        }
+        else
+        {
+            <span>Untitled</span>
+        }
+        <span class="status-info">
+            @(_lines) lines, @(_characters) characters
+        </span>
+    </div>
+</div>
+
+@if (_showOpenDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-container">
+            <div class="dialog-header">Open File</div>
+            <div class="dialog-content">
+                <div class="file-explorer">
+                    @if (_currentDirectory != null)
+                    {
+                        <div class="directory-path">@_currentDirectory</div>
+                        <div class="file-list">
+                            @foreach (var entry in _directoryEntries)
+                            {
+                                <div class="file-entry @(entry.IsDirectory ? "directory" : "file")" @onclick="() => OnFileEntryClick(entry)">
+                                    <i class="@(entry.IsDirectory ? "fas fa-folder" : "fas fa-file-alt")"></i>
+                                    <span>@entry.Name</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button @onclick="CancelOpenDialog">Cancel</button>
+                <button @onclick="ConfirmOpenFile" disabled="@(_selectedFile == null)">Open</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showSaveDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-container">
+            <div class="dialog-header">Save File</div>
+            <div class="dialog-content">
+                <div class="file-explorer">
+                    @if (_currentDirectory != null)
+                    {
+                        <div class="directory-path">@_currentDirectory</div>
+                        <div class="file-list">
+                            @foreach (var entry in _directoryEntries)
+                            {
+                                <div class="file-entry @(entry.IsDirectory ? "directory" : "file")" @onclick="() => OnFileEntryClick(entry)">
+                                    <i class="@(entry.IsDirectory ? "fas fa-folder" : "fas fa-file-alt")"></i>
+                                    <span>@entry.Name</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="file-name-input">
+                    <label for="fileName">File name:</label>
+                    <input type="text" id="fileName" @bind="_saveFileName" />
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button @onclick="CancelSaveDialog">Cancel</button>
+                <button @onclick="ConfirmSaveFile" disabled="@(string.IsNullOrEmpty(_saveFileName))">Save</button>
+            </div>
+        </div>
+    </div>
+}

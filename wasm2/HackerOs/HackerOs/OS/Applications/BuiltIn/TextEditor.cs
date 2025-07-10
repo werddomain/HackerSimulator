@@ -152,7 +152,7 @@ namespace HackerOs.OS.Applications.BuiltIn
                     _redoStack.Clear();
                 }
 
-                await OnOutputAsync($"File opened: {System.IO.Path.GetFileName(filePath)}");
+                await OnOutputAsync($"File opened: {HSystem.IO.HPath.GetFileName(filePath)}");
                 return true;
             }
             catch (Exception ex)
@@ -204,7 +204,7 @@ namespace HackerOs.OS.Applications.BuiltIn
                     _hasUnsavedChanges = false;
                 }
 
-                await OnOutputAsync($"File saved: {System.IO.Path.GetFileName(filePath)}");
+                await OnOutputAsync($"File saved: {HSystem.IO.HPath.GetFileName(filePath)}");
                 return true;
             }
             catch (Exception ex)
@@ -536,7 +536,7 @@ namespace HackerOs.OS.Applications.BuiltIn
                            $"Words: {words:N0}\n" +
                            $"Characters: {characters:N0}\n" +
                            $"Characters (no spaces): {charactersNoSpaces:N0}\n" +
-                           $"File: {System.IO.Path.GetFileName(_currentFilePath) ?? "Untitled"}\n" +
+                           $"File: {HSystem.IO.HPath.GetFileName(_currentFilePath) ?? "Untitled"}\n" +
                            $"Unsaved Changes: {(_hasUnsavedChanges ? "Yes" : "No")}";
 
                 return stats;

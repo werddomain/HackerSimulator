@@ -1,0 +1,99 @@
+@using System
+
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+
+<div class="month-view">
+    <div class="month-header">
+        @foreach (var dayName in DayNames)
+        {
+            <div class="day-header">@dayName</div>
+        }
+    </div>
+    
+    <div class="month-grid">
+        @for (int week = 0; week < Weeks.Count; week++)
+        {
+            <div class="week-row">
+                @for (int day = 0; day < 7; day++)
+                {
+                    var date = Weeks[week][day];
+                    var isCurrentMonth = date.Month == SelectedDate.Month;
+                    var isToday = date.Date == DateTime.Today;
+                    var isSelected = date.Date == SelectedDate.Date;
+                    
+                    <div class="day-cell @(!isCurrentMonth ? "other-month" : "") @(isToday ? "today" : "") @(isSelected ? "selected" : "")"
+                         @onclick="() => OnDateSelected.InvokeAsync(date)"
+                         data-date="@date.ToString("yyyy-MM-ddTHH:mm:ss")">
+                        <div class="day-number">@date.Day</div>
+                        
+                        <div class="day-events">
+                            @{
+                                var eventsForDay = EventsOnDate(date);
+                                var displayCount = Math.Min(eventsForDay.Count, 3);
+                                var remainingCount = eventsForDay.Count - displayCount;
+                            }
+                            
+                            @for (int i = 0; i < displayCount; i++)
+                            {
+                                var evt = eventsForDay[i];
+                                var eventId = $"month-event-{evt.OriginalEvent.Id}-{date.ToString("yyyyMMdd")}";
+                                
+                                <div class="day-event @(evt.OriginalEvent.IsAllDay ? "all-day" : "")"
+                                     id="@eventId"
+                                     style="background-color: @evt.OriginalEvent.Color"
+                                     @onclick:stopPropagation
+                                     @onclick="() => OnEventSelected.InvokeAsync(evt)"
+                                     data-event-id="@evt.OriginalEvent.Id">
+                                    @if (evt.OriginalEvent.Reminders.Any())
+                                    {
+                                        <span class="reminder-indicator" title="This event has reminders">
+                                            <i class="fas fa-bell"></i>
+                                        </span>
+                                    }
+                                    @evt.OriginalEvent.Title
+                                </div>
+                            }
+                            
+                            @if (remainingCount > 0)
+                            {
+                                <div class="more-events" @onclick:stopPropagation @onclick="() => ShowMoreEvents(date)">
+                                    +@remainingCount more
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+    @if (_showMoreEventsDialog)
+    {
+        <div class="more-events-dialog">
+            <div class="more-events-header">
+                <h3>@_currentMoreEventsDate.ToString("MMMM d, yyyy")</h3>
+                <button class="close-button" @onclick="CloseMoreEventsDialog">×</button>
+            </div>
+            <div class="more-events-list">
+                @foreach (var evt in _eventsInMoreDialog)
+                {
+                    <div class="more-event-item @(evt.OriginalEvent.IsAllDay ? "all-day" : "")"
+                         style="border-left-color: @evt.OriginalEvent.Color"
+                         @onclick="() => HandleMoreEventClick(evt)">
+                        <div class="more-event-time">
+                            @if (evt.OriginalEvent.IsAllDay)
+                            {
+                                <span>All day</span>
+                            }
+                            else
+                            {
+                                <span>@evt.StartTime.ToString("h:mm tt") - @evt.EndTime.ToString("h:mm tt")</span>
+                            }
+                        </div>
+                        <div class="more-event-title">@evt.OriginalEvent.Title</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

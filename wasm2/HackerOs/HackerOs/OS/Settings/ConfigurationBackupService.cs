@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using HackerOs.OS.IO.FileSystem;
+using HackerOs.OS.HSystem.IO;
 
 namespace HackerOs.OS.Settings
 {
@@ -49,7 +50,7 @@ namespace HackerOs.OS.Settings
 
                 // Generate backup file name with timestamp
                 var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-                var fileName = System.IO.Path.GetFileName(configFilePath);
+                var fileName = HSystem.IO.HPath.GetFileName(configFilePath);
                 var backupFileName = $"{fileName}.{timestamp}.backup";
                 var backupFilePath = $"{_backupDirectory}/{backupFileName}";
 
@@ -161,7 +162,7 @@ namespace HackerOs.OS.Settings
                 if (!await _fileSystem.ExistsAsync(_backupDirectory))
                     return backups;
 
-                var fileName = System.IO.Path.GetFileName(configFilePath);
+                var fileName = HSystem.IO.HPath.GetFileName(configFilePath);
                 var backupFiles = await _fileSystem.GetFilesAsync(_backupDirectory);
 
                 foreach (var backupFile in backupFiles)

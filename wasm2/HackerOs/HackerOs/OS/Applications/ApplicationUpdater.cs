@@ -125,7 +125,7 @@ public class ApplicationUpdater : IApplicationUpdater
             }
             
             // Ensure update history directory exists
-            string historyDir = System.IO.Path.GetDirectoryName(UPDATE_HISTORY) ?? "/var/log/hackeros";
+            string historyDir = HSystem.IO.HPath.GetDirectoryName(UPDATE_HISTORY) ?? "/var/log/hackeros";
             if (!await _fileSystem.DirectoryExistsAsync(historyDir, UserManager.SystemUser))
             {
                 await _fileSystem.CreateDirectoryAsync(historyDir, UserManager.SystemUser);
@@ -433,7 +433,7 @@ public class ApplicationUpdater : IApplicationUpdater
             
             // Get version directories
             var directories = await HackerOs.OS.IO.Utilities.Directory.GetDirectoriesAsync(appUpdateDir, _fileSystem);
-            versions.AddRange(directories.Select(System.IO.Path.GetFileName));
+            versions.AddRange(directories.Select(HSystem.IO.HPath.GetFileName));
             
             return versions;
         }

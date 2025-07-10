@@ -56,7 +56,7 @@ namespace HackerOs.OS.Security
                 var sessionsJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "hackerOs.sessions");
                 if (!string.IsNullOrEmpty(sessionsJson))
                 {
-                    var sessionDtos = System.Text.Json.JsonSerializer.Deserialize<List<SessionDto>>(sessionsJson);
+                    var sessionDtos = HSystem.Text.Json.JsonSerializer.Deserialize<List<SessionDto>>(sessionsJson);
                     if (sessionDtos != null)
                     {
                         foreach (var dto in sessionDtos)
@@ -375,7 +375,7 @@ namespace HackerOs.OS.Security
                     State = s.State
                 }).ToList();
 
-                string sessionsJson = System.Text.Json.JsonSerializer.Serialize(sessionDtos);
+                string sessionsJson = HSystem.Text.Json.JsonSerializer.Serialize(sessionDtos);
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "hackerOs.sessions", sessionsJson);
             }
             catch (Exception ex)

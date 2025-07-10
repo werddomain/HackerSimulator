@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
+using HackerOs.OS.HSystem.IO;
 
 namespace HackerOs.OS.IO.FileSystem
 {
@@ -190,7 +191,7 @@ namespace HackerOs.OS.IO.FileSystem
                 return "inode/symlink";
 
             // Determine MIME type based on file extension
-            var extension = System.IO.Path.GetExtension(Name).ToLowerInvariant();
+            var extension = HSystem.IO.HPath.GetExtension(Name).ToLowerInvariant();
             
             return extension switch
             {
@@ -236,7 +237,7 @@ namespace HackerOs.OS.IO.FileSystem
                 CreatedAt = CreatedAt,
                 ModifiedAt = ModifiedAt,
                 AccessedAt = AccessedAt,
-                Permissions = new FilePermissions(Permissions.ToOctal()),
+                Permissions = new FilePermissions(Convert.ToInt32(Permissions.ToOctal())),
                 Owner = Owner,
                 Group = Group,
                 Size = Size,

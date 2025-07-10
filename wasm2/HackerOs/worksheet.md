@@ -189,6 +189,158 @@ Task Breakdown:
   [ ] Web browser (will use internal network implementation)
 ```
 
+### 📋 APPLICATION DEVELOPMENT GUIDE
+
+#### How Applications Work in HackerOS
+
+Applications in HackerOS follow a **declarative registration pattern** using attributes:
+
+##### 1. Application Structure Pattern
+```csharp
+[App(Id="builtin.MyApp", Name="My Application", Icon="fa:icon-name")]
+[AppDescription("Brief description of what the app does")]
+[CanOpenFileType("txt", "md", "log")]  // Optional: file type associations
+public partial class MyApplication : WindowApplicationBase
+{
+    // Application logic
+}
+```
+
+##### 2. Complete Application Example
+```csharp
+// File: OS/Applications/BuiltIn/MyApplication.razor
+@page "/myapp"
+@inherits WindowApplicationBase
+
+[App(Id="builtin.MyApp", Name="My Application", Icon="fa:cog")]
+[AppDescription("A sample application demonstrating HackerOS app development")]
+[CanOpenFileType("txt", "cfg")]
+
+<WindowContent Window="this">
+    <!-- Your application UI here -->
+    <div class="my-app">
+        <h1>@Title</h1>
+        <p>Content goes here...</p>
+    </div>
+</WindowContent>
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Title = "My Application";
+        // Initialization logic
+    }
+}
+```
+
+##### 3. Existing Services Integration
+**✅ USE EXISTING SERVICES - DO NOT RECREATE:**
+
+```csharp
+// File System Access
+[Inject] private IFileSystemService FileSystem { get; set; } = null!;
+
+// Application Management  
+[Inject] private IApplicationManager ApplicationManager { get; set; } = null!;
+
+// Settings
+[Inject] private ISettingsService Settings { get; set; } = null!;
+
+// Notifications
+[Inject] private NotificationService Notifications { get; set; } = null!;
+
+// Theme Management
+[Inject] private IThemeManager ThemeManager { get; set; } = null!;
+```
+
+##### 4. File Type Association Pattern
+Applications automatically register file type associations:
+
+```csharp
+[CanOpenFileType("txt", "md", "log", "cfg")]
+public partial class TextEditorApp : WindowApplicationBase
+{
+    // When user double-clicks a .txt file, this app will be an option
+}
+```
+
+##### 5. Application Discovery Process
+1. **Automatic Discovery**: The system uses reflection to find all classes with `[App]` attributes
+2. **Registration**: Applications are automatically registered in the ApplicationRegistry
+3. **Start Menu**: Apps appear in Start Menu based on their `Name` and `Icon` properties
+4. **File Associations**: `[CanOpenFileType]` attributes create file type mappings
+5. **Launch**: Applications can be launched via Start Menu, file associations, or programmatically
+
+##### 6. Existing Application Examples
+Study these existing applications for patterns:
+
+- **`TextEditorApp`**: Basic text editing with file operations
+- **`CalculatorApp`**: Utility application with keyboard shortcuts  
+- **`CodeEditorApp`**: Advanced text editor with syntax highlighting
+- **`FileExplorerApp`**: File browsing with context menus
+- **`TerminalApp`**: Command-line interface
+- **`SystemMonitorApp`**: System information display
+
+##### 7. Application Lifecycle
+```csharp
+public partial class MyApplication : WindowApplicationBase
+{
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // App initialization
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // First render setup
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            // Cleanup resources
+        }
+        base.Dispose(disposing);
+    }
+}
+```
+
+##### 8. Best Practices
+- **Use Existing Services**: Always check for existing services before creating new ones
+- **Follow Naming**: Use `builtin.AppName` pattern for built-in applications
+- **Icon Standards**: Use FontAwesome icons with `fa:` prefix or file paths
+- **File Organization**: Place applications in `OS/Applications/BuiltIn/` folder
+- **Error Handling**: Use try-catch blocks for file operations and service calls
+- **State Management**: Use component state for UI, services for persistence
+- **Accessibility**: Support keyboard navigation and screen readers
+
+##### 9. Common Patterns
+```csharp
+// File Operations
+try 
+{
+    var content = await FileSystem.ReadFileAsync(filePath);
+    // Process content
+}
+catch (FileNotFoundException)
+{
+    await Notifications.ShowErrorAsync("File not found");
+}
+
+// Settings Management
+var userSetting = await Settings.GetUserSettingAsync("myapp.preference", defaultValue);
+await Settings.SetUserSettingAsync("myapp.preference", newValue);
+
+// Application Launching
+await ApplicationManager.LaunchApplicationAsync("builtin.Notepad", filePath);
+```
+
 ### Phase 4: UI Implementation
 
 

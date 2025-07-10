@@ -1,5 +1,4 @@
 using HackerOs.OS.Applications;
-using HackerOs.OS.UI.Models;
 using HackerOs.OS.UI.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -9,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace HackerOs.OS.UI.Components
+namespace HackerOs.OS.UI.Models
 {
     /// <summary>
     /// Application launcher model that represents an application in the launcher

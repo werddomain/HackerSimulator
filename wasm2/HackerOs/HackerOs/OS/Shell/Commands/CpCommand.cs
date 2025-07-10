@@ -83,7 +83,7 @@ namespace HackerOs.OS.Shell.Commands
                     string targetPath;
                     if (destIsDirectory)
                     {
-                        targetPath = System.IO.Path.Combine(destinationPath, System.IO.Path.GetFileName(sourcePath));
+                        targetPath = HSystem.IO.HPath.Combine(destinationPath, HSystem.IO.HPath.GetFileName(sourcePath));
                     }
                     else
                     {
@@ -166,8 +166,8 @@ namespace HackerOs.OS.Shell.Commands
                 
                 foreach (var child in children)
                 {
-                    var childSourcePath = System.IO.Path.Combine(sourcePath, child.Name);
-                    var childTargetPath = System.IO.Path.Combine(targetPath, child.Name);
+                    var childSourcePath = HSystem.IO.HPath.Combine(sourcePath, child.Name);
+                    var childTargetPath = HSystem.IO.HPath.Combine(targetPath, child.Name);
                     
                     if (await _fileSystem.DirectoryExistsAsync(childSourcePath, user))
                     {

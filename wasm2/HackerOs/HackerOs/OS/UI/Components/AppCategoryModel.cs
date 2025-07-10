@@ -1,6 +1,8 @@
 // This file is kept for compatibility but should be replaced with LauncherModelExtensions.cs
 // Implementation moved to HackerOs.OS.UI.LauncherModelExtensions
 
+using HackerOs.OS.UI.Models;
+
 namespace HackerOs.OS.UI.Components
 {
     /// <summary>

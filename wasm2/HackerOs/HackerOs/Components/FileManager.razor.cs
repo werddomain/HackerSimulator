@@ -1,5 +1,6 @@
 ﻿using HackerOs.OS.Applications;
 using HackerOs.OS.Applications.Attributes;
+using HackerOs.OS.Applications.Lifecycle;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using Microsoft.AspNetCore.Components;
@@ -42,38 +43,7 @@ namespace HackerOs.Components
             _currentContents = new List<VirtualFileSystemNode>();
         }
 
-        protected override async Task<bool> OnStartAsync(ApplicationLaunchContext context)
-        {
-            try
-            {
-                // Set initial directory to user's home directory
-                var userHome = context.UserSession?.User?.HomeDirectory ?? "/home";
-                var user = context.UserSession?.GetUser();
-
-                if (user != null && await FileSystem.DirectoryExistsAsync(userHome, user))
-                {
-                    _currentPath = userHome;
-                }
-                else
-                {
-                    _currentPath = "/";
-                }
-
-                // Subscribe to file system events
-                FileSystem.FileSystemChanged += OnFileSystemChanged;
-
-                // Load initial directory contents
-                await RefreshDirectoryAsync();
-
-                await OnOutputAsync($"File Manager opened at: {_currentPath}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await OnErrorAsync($"Failed to start file manager: {ex.Message}");
-                return false;
-            }
-        }
+  
         protected override async Task<bool> OnStopAsync()
         {
             try
@@ -553,9 +523,42 @@ namespace HackerOs.Components
         private void OnFileSystemChanged(object? sender, HackerOs.OS.IO.FileSystem.FileSystemEventArgs e)
         {
             // Refresh directory if the change affects current directory
-            if (e.Path.StartsWith(_currentPath))
+            if (e.FilePath.StartsWith(_currentPath))
             {
                 Task.Run(async () => await RefreshDirectoryAsync());
+            }
+        }
+
+        protected override async Task<bool> OnStartAsync(OS.Applications.ApplicationLaunchContext context)
+        {
+            try
+            {
+                // Set initial directory to user's home directory
+                var userHome = context.UserSession?.User?.HomeDirectory ?? "/home";
+                var user = context.UserSession?.GetUser();
+
+                if (user != null && await FileSystem.DirectoryExistsAsync(userHome, user))
+                {
+                    _currentPath = userHome;
+                }
+                else
+                {
+                    _currentPath = "/";
+                }
+
+                // Subscribe to file system events
+                FileSystem.FileSystemChanged += OnFileSystemChanged;
+
+                // Load initial directory contents
+                await RefreshDirectoryAsync();
+
+                await OnOutputAsync($"File Manager opened at: {_currentPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await OnErrorAsync($"Failed to start file manager: {ex.Message}");
+                return false;
             }
         }
     }

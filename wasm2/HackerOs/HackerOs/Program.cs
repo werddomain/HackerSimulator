@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using HackerOs.OS.Shell;
-using HackerOs.OS.Shell.Completion;
-using HackerOs.OS.Applications;
+// using HackerOs.OS.Shell;
+// using HackerOs.OS.Shell.Completion;
+// using HackerOs.OS.Applications;
+// using HackerOs.OS.Applications.Extensions;
 using HackerOs.OS.Theme;
 using HackerOs.OS.Core.Settings;
 using HackerOs.OS.Security;
@@ -26,15 +27,24 @@ namespace HackerOs
             builder.Services.AddBlazorWindowManager();
 
             // Add HackerOS Core Services
-            builder.Services.AddHackerOSServices();
+            // builder.Services.AddHackerOSServices();
+            
+            // Add Application Registry Services
+            // builder.Services.AddApplicationRegistry();
+            
+            // Add Calendar Services
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.ICalendarEngineService, 
+            //                          HackerOs.OS.Applications.BuiltIn.Calendar.CalendarEngineService>();
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.ReminderService>();
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.CalendarNotificationHandler>();
             
             // Add Desktop UI Services
-            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopFileService>();
-            builder.Services.AddScoped<HackerOs.OS.UI.Services.NotificationService>();
-            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopSettingsService>();
-            builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopIconService>();
-            builder.Services.AddScoped<HackerOs.OS.UI.Services.LauncherService>();
-            builder.Services.AddScoped<HackerOs.OS.UI.ApplicationWindowManager>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopFileService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.NotificationService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopSettingsService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopIconService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.LauncherService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.ApplicationWindowManager>();
             
             // Remove OIDC authentication placeholder - replaced with custom authentication
             // Configure application state
@@ -81,16 +91,18 @@ namespace HackerOs
             
             // Application Services (Scoped - per user session)
             // Shell Services
-            services.AddScoped<IShell, HackerOs.OS.Shell.Shell>();
-            services.AddScoped<ICommandRegistry, CommandRegistry>();            services.AddScoped<CommandParser>(); // No interface, register as concrete type
+            // services.AddScoped<IShell, HackerOs.OS.Shell.Shell>();
+            // services.AddScoped<ICommandRegistry, CommandRegistry>();
+            // services.AddScoped<CommandParser>(); // No interface, register as concrete type
             
             // Register shell completion services
-            services.AddScoped<ICompletionService, CompletionService>();
-            services.AddScoped<ICompletionProvider, CommandCompletionProvider>();
-            services.AddScoped<ICompletionProvider, FilePathCompletionProvider>();
-            services.AddScoped<ICompletionProvider, VariableCompletionProvider>();
+            // services.AddScoped<ICompletionService, CompletionService>();
+            // services.AddScoped<ICompletionProvider, CommandCompletionProvider>();
+            // services.AddScoped<ICompletionProvider, FilePathCompletionProvider>();
+            // services.AddScoped<ICompletionProvider, VariableCompletionProvider>();
             
             // Configure completion service with providers
+            /*
             services.AddScoped<ICompletionService>(serviceProvider =>
             {
                 var completionService = new CompletionService(
@@ -104,28 +116,29 @@ namespace HackerOs
                 
                 return completionService;
             });
+            */
             
             // Register shell commands
-            RegisterShellCommands(services);
-              // Register application management commands
-            RegisterApplicationCommands(services);
+            // RegisterShellCommands(services);
+            // Register application management commands
+            // RegisterApplicationCommands(services);
             
             // Add command initializer service
-            services.AddScoped<ICommandInitializer, CommandInitializer>();
-              // System Services (Singleton - system-wide services)
-            services.AddSingleton<HackerOs.OS.System.ISystemBootService, HackerOs.OS.System.SystemBootService>();
-            services.AddSingleton<HackerOs.OS.System.IMainService, HackerOs.OS.System.MainService>();
+            // services.AddScoped<ICommandInitializer, CommandInitializer>();
+            // System Services (Singleton - system-wide services)
+            // services.AddSingleton<HackerOs.OS.HSystem.ISystemBootService, HackerOs.OS.HSystem.SystemBootService>();
+            // services.AddSingleton<HackerOs.OS.HSystem.IMainService, HackerOs.OS.HSystem.MainService>();
             
             // Applications Services (Singleton - system-wide application management)
-            services.AddSingleton<IApplicationManager, ApplicationManager>();
-            services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
-            services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
-            services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
-            services.AddSingleton<IApplicationFinder, ApplicationFinder>();
-            services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();
-            services.AddSingleton<IApplicationInstaller, ApplicationInstaller>();
-            services.AddSingleton<HackerOs.OS.Applications.UI.IUserSettingsService, HackerOs.OS.Applications.UI.UserSettingsService>();
-            services.AddSingleton<HackerOs.OS.Applications.UI.IStartMenuIntegration, HackerOs.OS.Applications.UI.StartMenuIntegration>();
+            // services.AddSingleton<IApplicationManager, ApplicationManager>();
+            // services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            // services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            // services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
+            // services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            // services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();
+            // services.AddSingleton<IApplicationInstaller, ApplicationInstaller>();
+            // services.AddSingleton<HackerOs.OS.Applications.UI.IUserSettingsService, HackerOs.OS.Applications.UI.UserSettingsService>();
+            // services.AddSingleton<HackerOs.OS.Applications.UI.IStartMenuIntegration, HackerOs.OS.Applications.UI.StartMenuIntegration>();
             
             // Network Services (Singleton - shared network stack)
             // TODO: Add INetworkStack service registration
@@ -139,19 +152,19 @@ namespace HackerOs
         private static void RegisterShellCommands(IServiceCollection services)
         {
             // Register all shell commands as scoped services
-            services.AddScoped<HackerOs.OS.Shell.Commands.CatCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.CdCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.CpCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.EchoCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.FindCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.GrepCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.LsCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.MkdirCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.MvCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.PwdCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.RmCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.TouchCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.ShCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CatCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CdCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CpCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.EchoCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.FindCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.GrepCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.LsCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.MkdirCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.MvCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.PwdCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.RmCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.TouchCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.ShCommand>();
         }
         
         /// <summary>
@@ -159,9 +172,9 @@ namespace HackerOs
         /// </summary>
         private static void RegisterApplicationCommands(IServiceCollection services)
         {
-            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.InstallCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.UninstallCommand>();
-            services.AddScoped<HackerOs.OS.Shell.Commands.Applications.ListAppsCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.InstallCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.UninstallCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.ListAppsCommand>();
         }
     }
 }

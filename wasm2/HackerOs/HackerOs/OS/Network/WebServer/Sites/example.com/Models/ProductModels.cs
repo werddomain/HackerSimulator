@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using HackerOs.OS.Network.WebServer.Framework;
 
-namespace HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Models
+namespace HackerOs.OS.Network.WebServer.Sites.example.com.Models
 {
     /// <summary>
     /// Represents a product in the store.

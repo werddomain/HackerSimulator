@@ -64,25 +64,44 @@
   - [x] Add system tray with clock/notifications
   - [x] Implement task switching - COMPLETED July 3, 2025
 
-- [ ] Task 3.3: Create Start Menu
-  - [ ] Design start menu layout
-  - [ ] Implement application list from registry
-  - [ ] Add search functionality
-  - [ ] Implement category grouping
-  - [ ] Add recently used applications section
+- [~] Task 3.3: Create Start Menu
+  - [x] Design start menu layout - COMPLETED July 3, 2025
+  - [x] Implement application list from registry - COMPLETED July 3, 2025
+  - [x] Add search functionality - COMPLETED July 3, 2025
+  - [x] Implement category grouping - COMPLETED July 3, 2025
+  - [x] Add recently used applications section - COMPLETED July 3, 2025
+  - [x] Style Start Menu component with CSS - COMPLETED July 3, 2025
+  - [x] Integrate with MainLayout and Taskbar - COMPLETED July 3, 2025
+  - [~] Implement application pinning functionality
+  - [ ] Test all Start Menu functionality with actual applications
+
+- [~] Task 3.4: Implement Notification System
+  - [x] Create NotificationToast component - COMPLETED July 3, 2025
+  - [x] Enhance NotificationCenter component
+  - [x] Implement notification service integration
+  - [x] Add toast notifications
+  - [x] Implement application launching from notifications
+  - [ ] Add notification sound effects
 
 ### Application Management
 - [ ] Task 4.1: Implement Application Registry
+  - Requirements:
+    - App is declared using App Attribute. Like this for a built application: [App(Id="builtin.Notepad", Name="Notepad", Icon="/apps/notepad/icon.png"")] [AppDescription("Simple notepad application to read or write plain text document.")]
+    - (AppDescription is optional)
+    - Icon can also be an icon from a library. Like "fa-note" for the note icon from font awsome.
+      -> We will need an icon factory where we can pass a string (Like a filePath or a string in this format: "[fa/iconic/mid]-{name}" -> [icon provider]-{name}  ) and this factory will return a renderFragment to render the iconé
   - [ ] Create ApplicationRegistry service
   - [ ] Implement application discovery
   - [ ] Add metadata parsing (icons, descriptions, etc.)
   - [ ] Implement application launching service
 
-- [ ] Task 4.2: Create Application Window Wrapper
-  - [ ] Design common window shell
-  - [ ] Implement application lifecycle hooks
-  - [ ] Add window control buttons (minimize, maximize, close)
-  - [ ] Implement window state persistence
+- [ ] Task 4.2: Implement window use from "wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager"
+  - [ ] Create documentation on how to use the BlazorWindowManager like in the 'wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\Components\ThemeSelector.razor'
+    -> We need to write content inside a 'WindowContent' component. 
+    -> Code behing must be in a separate file. Like for ThemeSelector.razor, the code behind must be in ThemeSelector.razor.cs, style in ThemeSelector.razor.css and if we need javascript, in ThemeSelector.razor.js
+  - [ ] Create a simple Notepad application
+  - [ ] Implement application lifecycle hooks with the windowManager from "wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager"
+  - [ ] Implement window state persistence or use the one in "wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager"
 
 ### Main Page Integration
 - [~] Task 5.1: Create Main Layout
@@ -93,9 +112,9 @@
   - [ ] Implement global key bindings
 
 - [ ] Task 5.2: Implement User Session Integration
-  - [ ] Add user authentication check
+  - [ ] Add or use existing or use existing user authentication check
   - [ ] Implement session-specific desktop
-  - [ ] Add user preferences loading
+  - [ ] Add or use existing user preferences loading
   - [ ] Implement theme selection
 
 ### Testing & Validation

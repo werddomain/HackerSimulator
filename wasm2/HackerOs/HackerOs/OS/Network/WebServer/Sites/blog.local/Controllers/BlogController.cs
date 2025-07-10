@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using HackerOs.OS.Network.HTTP;
 using HackerOs.OS.Network.WebServer.Framework;
-using HackerOs.OS.Network.WebServer.Sites.BlogLocal.Models;
+using HackerOs.OS.Network.WebServer.Sites.blog.local.Models;
 
-namespace HackerOs.OS.Network.WebServer.Sites.BlogLocal.Controllers
+namespace HackerOs.OS.Network.WebServer.Sites.blog.local.Controllers
 {
     /// <summary>
     /// Controller for blog home page and general site navigation.

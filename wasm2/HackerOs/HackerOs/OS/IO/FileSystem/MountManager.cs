@@ -72,87 +72,6 @@ namespace HackerOs.OS.IO.FileSystem
     }
 
     /// <summary>
-    /// Represents mount options for a mount point.
-    /// </summary>
-    public class MountOptions
-    {
-        /// <summary>
-        /// Gets or sets whether the mount is read-only.
-        /// </summary>
-        public bool ReadOnly { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether the mount allows execution of binaries.
-        /// </summary>
-        public bool NoExec { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether the mount allows device files.
-        /// </summary>
-        public bool NoDev { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether the mount allows setuid binaries.
-        /// </summary>
-        public bool NoSuid { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether to synchronize I/O operations.
-        /// </summary>
-        public bool Sync { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether to use asynchronous I/O.
-        /// </summary>
-        public bool Async { get; set; }
-
-        /// <summary>
-        /// Gets or sets custom mount options.
-        /// </summary>
-        public Dictionary<string, string> CustomOptions { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// Initializes a new instance of the MountOptions class with default values.
-        /// </summary>
-        public MountOptions()
-        {
-            ReadOnly = false;
-            NoExec = false;
-            NoDev = false;
-            NoSuid = false;
-            Sync = false;
-            Async = true;
-        }
-
-        /// <summary>
-        /// Returns a string representation of the mount options.
-        /// </summary>
-        public override string ToString()
-        {
-            var options = new List<string>();
-            
-            if (ReadOnly) options.Add("ro");
-            else options.Add("rw");
-            
-            if (NoExec) options.Add("noexec");
-            if (NoDev) options.Add("nodev");
-            if (NoSuid) options.Add("nosuid");
-            if (Sync) options.Add("sync");
-            if (Async) options.Add("async");
-            
-            foreach (var custom in CustomOptions)
-            {
-                if (string.IsNullOrEmpty(custom.Value))
-                    options.Add(custom.Key);
-                else
-                    options.Add($"{custom.Key}={custom.Value}");
-            }
-            
-            return string.Join(",", options);
-        }
-    }
-
-    /// <summary>
     /// Manages mount points in the virtual file system.
     /// Provides Linux-like mount/umount functionality for different file systems.
     /// </summary>
@@ -382,17 +301,16 @@ namespace HackerOs.OS.IO.FileSystem
     public class MountPointEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the mount point associated with this event.
+        /// Gets the affected mount point.
         /// </summary>
         public MountPoint MountPoint { get; }
 
         /// <summary>
         /// Initializes a new instance of the MountPointEventArgs class.
         /// </summary>
-        /// <param name="mountPoint">The mount point</param>
         public MountPointEventArgs(MountPoint mountPoint)
         {
-            MountPoint = mountPoint ?? throw new ArgumentNullException(nameof(mountPoint));
+            MountPoint = mountPoint;
         }
     }
 }

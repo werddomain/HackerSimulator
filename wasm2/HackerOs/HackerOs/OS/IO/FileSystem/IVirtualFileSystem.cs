@@ -5,10 +5,11 @@ using HackerOs.OS.User;
 using UserEntity = HackerOs.OS.User.User;
 
 namespace HackerOs.OS.IO.FileSystem
-{    /// <summary>
+{    
+    /// <summary>
     /// Interface for the virtual file system providing Linux-like file operations.
     /// </summary>
-    public interface IVirtualFileSystem
+    public interface IVirtualFileSystem : IFileSystem
     {
         /// <summary>
         /// Event triggered when the file system changes (file created, deleted, modified, etc.)
@@ -41,7 +42,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         /// <param name="path">The path where the directory should be created.</param>
         /// <returns>True if the directory was created successfully; otherwise, false.</returns>
-        Task<bool> CreateDirectoryAsync(string path);
+        new Task<bool> CreateDirectoryAsync(string path);
 
         /// <summary>
         /// Deletes a file or directory at the specified path.
@@ -49,14 +50,14 @@ namespace HackerOs.OS.IO.FileSystem
         /// <param name="path">The path to the item to delete.</param>
         /// <param name="recursive">Whether to delete directories recursively.</param>
         /// <returns>True if the item was deleted successfully; otherwise, false.</returns>
-        Task<bool> DeleteAsync(string path, bool recursive = false);
+        new Task<bool> DeleteAsync(string path, bool recursive = false);
 
         /// <summary>
         /// Checks if a file or directory exists at the specified path.
         /// </summary>
         /// <param name="path">The path to check.</param>
         /// <returns>True if the item exists; otherwise, false.</returns>
-        Task<bool> ExistsAsync(string path);
+        new Task<bool> ExistsAsync(string path);
 
         /// <summary>
         /// Lists the contents of a directory.
@@ -70,7 +71,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// </summary>
         /// <param name="path">The path to the file.</param>
         /// <returns>The file content as bytes; null if the file doesn't exist or is not a file.</returns>
-        Task<byte[]?> ReadFileAsync(string path);
+        new Task<byte[]?> ReadFileAsync(string path);
 
         /// <summary>
         /// Writes content to a file, creating it if it doesn't exist.
@@ -78,7 +79,7 @@ namespace HackerOs.OS.IO.FileSystem
         /// <param name="path">The path to the file.</param>
         /// <param name="content">The content to write.</param>
         /// <returns>True if the content was written successfully; otherwise, false.</returns>
-        Task<bool> WriteFileAsync(string path, byte[] content);
+        new Task<bool> WriteFileAsync(string path, byte[] content);
 
         /// <summary>
         /// Moves a file or directory from source to destination.
@@ -289,40 +290,5 @@ namespace HackerOs.OS.IO.FileSystem
         /// Event raised when file system operations occur.
         /// </summary>
         event EventHandler<FileSystemEvent>? OnFileSystemEvent;
-
-        
-    }
-
-    /// <summary>
-    /// Event arguments for file system operations.
-    /// </summary>
-    public class FileSystemEvent : EventArgs
-    {
-        public FileSystemEventType EventType { get; set; }
-        public string Path { get; set; } = string.Empty;
-        public string? SourcePath { get; set; }
-        public string? TargetPath { get; set; }
-        public string? Message { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Types of file system events.
-    /// </summary>
-    public enum FileSystemEventType
-    {
-        SystemInitialized,
-        FileCreated,
-        FileDeleted,
-        FileRead,
-        FileWritten,
-        FileCopied,
-        DirectoryCreated,
-        DirectoryDeleted,
-        DirectoryCopied,
-        SymbolicLinkCreated,
-        PermissionElevation,
-        PermissionDenied,
-        Error
     }
 }

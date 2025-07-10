@@ -1,0 +1,259 @@
+@using System
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+
+<div class="event-edit-dialog-overlay" @onclick="OnCancel">
+    <div class="event-edit-dialog" @onclick:stopPropagation>
+        <div class="dialog-header">
+            <h2>@(IsNew ? "Create Event" : "Edit Event")</h2>
+            <button class="close-button" @onclick="OnCancel">×</button>
+        </div>
+        
+        <div class="dialog-body">
+            <div class="form-group">
+                <label for="event-title">Title</label>
+                <input id="event-title" 
+                       type="text" 
+                       @bind="Event.Title" 
+                       class="form-control" 
+                       placeholder="Event title" 
+                       required 
+                       autofocus />
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="event-start">Start</label>
+                    <input id="event-start-date" 
+                           type="date" 
+                           @bind="StartDate" 
+                           class="form-control" />
+                    @if (!Event.IsAllDay)
+                    {
+                        <input id="event-start-time" 
+                               type="time" 
+                               @bind="StartTime" 
+                               class="form-control" />
+                    }
+                </div>
+                
+                <div class="form-group">
+                    <label for="event-end">End</label>
+                    <input id="event-end-date" 
+                           type="date" 
+                           @bind="EndDate" 
+                           class="form-control" />
+                    @if (!Event.IsAllDay)
+                    {
+                        <input id="event-end-time" 
+                               type="time" 
+                               @bind="EndTime" 
+                               class="form-control" />
+                    }
+                </div>
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <input id="all-day" 
+                       type="checkbox" 
+                       @bind="Event.IsAllDay" />
+                <label for="all-day">All day</label>
+            </div>
+            
+            <div class="form-group">
+                <label for="event-location">Location</label>
+                <input id="event-location" 
+                       type="text" 
+                       @bind="Event.Location" 
+                       class="form-control" 
+                       placeholder="Location" />
+            </div>
+            
+            <div class="form-group">
+                <label for="event-description">Description</label>
+                <textarea id="event-description" 
+                          @bind="Event.Description" 
+                          class="form-control" 
+                          placeholder="Description" 
+                          rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="event-category">Category</label>
+                <select id="event-category" 
+                        @bind="Event.Category" 
+                        class="form-control">
+                    @foreach (var category in Categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="event-color">Color</label>
+                <div class="color-picker">
+                    @foreach (var color in Colors)
+                    {
+                        <div class="color-option @(Event.Color == color ? "selected" : "")" 
+                             style="background-color: @color"
+                             @onclick="() => Event.Color = color"></div>
+                    }
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Reminders</label>
+                <div class="reminders-list">
+                    @foreach (var reminder in Event.Reminders)
+                    {
+                        <div class="reminder-item">
+                            <select @bind="reminder.MinutesBefore" class="form-control reminder-time">
+                                <option value="0">At time of event</option>
+                                <option value="5">5 minutes before</option>
+                                <option value="10">10 minutes before</option>
+                                <option value="15">15 minutes before</option>
+                                <option value="30">30 minutes before</option>
+                                <option value="60">1 hour before</option>
+                                <option value="120">2 hours before</option>
+                                <option value="1440">1 day before</option>
+                                <option value="2880">2 days before</option>
+                                <option value="10080">1 week before</option>
+                            </select>
+                            <select @bind="reminder.ReminderType" class="form-control reminder-type">
+                                <option value="@ReminderType.Notification">Notification</option>
+                                <option value="@ReminderType.Email">Email</option>
+                                <option value="@ReminderType.Sound">Sound</option>
+                            </select>
+                            <button class="remove-button" @onclick="() => RemoveReminder(reminder)">×</button>
+                        </div>
+                    }
+                    <button class="add-reminder-button" @onclick="AddReminder">
+                        <i class="fas fa-plus"></i> Add Reminder
+                    </button>
+                    <div class="reminder-info">
+                        <i class="fas fa-info-circle"></i>
+                        You'll receive reminders for this event based on your settings.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group recurrence-section">
+                <label>Recurrence</label>
+                <div class="recurrence-controls">
+                    <select @bind="RecurrenceType" class="form-control">
+                        <option value="none">None</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                    
+                    @if (RecurrenceType != "none")
+                    {
+                        <div class="recurrence-details">
+                            @switch (RecurrenceType)
+                            {
+                                case "daily":
+                                    <div class="recurrence-interval">
+                                        <span>Every</span>
+                                        <input type="number" 
+                                               @bind="RecurrenceInterval" 
+                                               min="1" 
+                                               max="365" 
+                                               class="form-control" />
+                                        <span>day(s)</span>
+                                    </div>
+                                    break;
+                                    
+                                case "weekly":
+                                    <div class="recurrence-interval">
+                                        <span>Every</span>
+                                        <input type="number" 
+                                               @bind="RecurrenceInterval" 
+                                               min="1" 
+                                               max="52" 
+                                               class="form-control" />
+                                        <span>week(s)</span>
+                                    </div>
+                                    <div class="days-of-week">
+                                        @foreach (var day in DaysOfWeek)
+                                        {
+                                            <div class="day-checkbox">
+                                                <input type="checkbox" 
+                                                       id="@($"day-{day.Key}")" 
+                                                       checked="@IsWeekDaySelected(day.Key)"
+                                                       @onchange="(e) => ToggleWeekDay(day.Key, e.Value)" />
+                                                <label for="@($"day-{day.Key}")">@day.Value</label>
+                                            </div>
+                                        }
+                                    </div>
+                                    break;
+                                    
+                                case "monthly":
+                                    <div class="recurrence-interval">
+                                        <span>Every</span>
+                                        <input type="number" 
+                                               @bind="RecurrenceInterval" 
+                                               min="1" 
+                                               max="12" 
+                                               class="form-control" />
+                                        <span>month(s)</span>
+                                    </div>
+                                    break;
+                                    
+                                case "yearly":
+                                    <div class="recurrence-interval">
+                                        <span>Every</span>
+                                        <input type="number" 
+                                               @bind="RecurrenceInterval" 
+                                               min="1" 
+                                               max="10" 
+                                               class="form-control" />
+                                        <span>year(s)</span>
+                                    </div>
+                                    break;
+                            }
+                            
+                            <div class="recurrence-end">
+                                <select @bind="RecurrenceEnd" class="form-control">
+                                    <option value="never">Never</option>
+                                    <option value="date">On date</option>
+                                    <option value="count">After</option>
+                                </select>
+                                
+                                @if (RecurrenceEnd == "date")
+                                {
+                                    <input type="date" 
+                                           @bind="RecurrenceEndDate" 
+                                           class="form-control" />
+                                }
+                                else if (RecurrenceEnd == "count")
+                                {
+                                    <div class="count-input">
+                                        <input type="number" 
+                                               @bind="RecurrenceCount" 
+                                               min="1" 
+                                               max="999" 
+                                               class="form-control" />
+                                        <span>occurrences</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="dialog-footer">
+            @if (!IsNew)
+            {
+                <button class="delete-button" @onclick="DeleteEvent">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            }
+            <button class="cancel-button" @onclick="OnCancel">Cancel</button>
+            <button class="save-button" @onclick="SaveEvent">Save</button>
+        </div>
+    </div>
+</div>

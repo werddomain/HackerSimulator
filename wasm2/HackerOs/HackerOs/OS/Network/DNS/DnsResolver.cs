@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using HackerOs.OS.IO.FileSystem;
 using System.Text.RegularExpressions;
-using HackerOs.OS.System.IO;
 using HackerOs.OS.User;
 
 namespace HackerOs.OS.Network.DNS
@@ -150,7 +149,7 @@ namespace HackerOs.OS.Network.DNS
             try
             {
                 // Ensure the directory exists
-                var directory = HackerOs.OS.System.IO.Path.GetDirectoryName(_hostsFilePath);
+                var directory = HSystem.IO.HPath.GetDirectoryName(_hostsFilePath);
                 if (!string.IsNullOrEmpty(directory) && !await _fileSystem.DirectoryExistsAsync(directory, UserManager.SystemUser))
                 {
                     await _fileSystem.CreateDirectoryAsync(directory, UserManager.SystemUser);

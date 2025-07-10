@@ -129,7 +129,7 @@ namespace HackerOs.OS.IO.FileSystem
             
             // In a real implementation, this would be properly logged to the file system
         }
-        }
+        
         
         /// <summary>
         /// Disposes the context and restores original permissions.

@@ -1,4 +1,5 @@
 using HackerOs.OS.Applications.Attributes;
+using HackerOs.OS.HSystem.Text.Json;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using Microsoft.Extensions.Logging;
@@ -299,12 +300,12 @@ public class FileTypeRegistry : IFileTypeRegistry
                 return null;
                 
             // Normalize path and verify file exists
-            var normalizedPath = HackerOs.OS.System.IO.Path.GetFullPath(filePath);
+            var normalizedPath = HSystem.IO.HPath.GetFullPath(filePath);
             if (!await _fileSystem.FileExistsAsync(normalizedPath, UserManager.SystemUser))
                 return null;
                 
             // Extract extension
-            var extension = System.IO.Path.GetExtension(normalizedPath);
+            var extension = HSystem.IO.HPath.GetExtension(normalizedPath);
             if (string.IsNullOrEmpty(extension))
                 return null;
                 
@@ -448,7 +449,7 @@ public class FileTypeRegistry : IFileTypeRegistry
             
             // Convert to serializable format
             var registrations = GetAllRegistrations().ToList();
-            var json = System.Text.Json.JsonSerializer.Serialize(registrations);
+            var json = JsonSerializer.Serialize(registrations);
             
             // Write to file
             await _fileSystem.WriteAllTextAsync(REGISTRY_FILE, json, UserManager.SystemUser);
@@ -478,7 +479,7 @@ public class FileTypeRegistry : IFileTypeRegistry
             
             // Read from file
             var json = await _fileSystem.ReadAllTextAsync(REGISTRY_FILE, UserManager.SystemUser);
-            var registrations = System.Text.Json.JsonSerializer.Deserialize<List<FileTypeRegistration>>(json);
+            var registrations = JsonSerializer.Deserialize<List<FileTypeRegistration>>(json);
             
             if (registrations != null)
             {

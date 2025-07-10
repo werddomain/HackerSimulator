@@ -4,7 +4,8 @@ using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.User;
 using System.Text;
 using System.Text.Json;
-using System.IO; // For disambiguating FileSystemEventArgs
+using System.IO;
+using HackerOs.OS.HSystem.IO; // For disambiguating FileSystemEventArgs
 
 namespace HackerOs.OS.Applications.BuiltIn
 {
@@ -135,7 +136,7 @@ namespace HackerOs.OS.Applications.BuiltIn
         {
             if (_currentPath == "/") return false;
 
-            var parentPath = System.IO.Path.GetDirectoryName(_currentPath.Replace('/', '\\'))?.Replace('\\', '/') ?? "/";
+            var parentPath = HSystem.IO.HPath.GetDirectoryName(_currentPath.Replace('/', '\\'))?.Replace('\\', '/') ?? "/";
             if (string.IsNullOrEmpty(parentPath)) parentPath = "/";
             
             return await NavigateToAsync(parentPath);
@@ -229,7 +230,7 @@ namespace HackerOs.OS.Applications.BuiltIn
                     return false;
                 }
 
-                var newPath = System.IO.Path.Combine(_currentPath, name).Replace('\\', '/');
+                var newPath = HSystem.IO.HPath.Combine(_currentPath, name).Replace('\\', '/');
                 await _fileSystem.CreateDirectoryAsync(newPath, user);
                 
                 await OnOutputAsync($"Directory created: {name}");
@@ -263,7 +264,7 @@ namespace HackerOs.OS.Applications.BuiltIn
                     return false;
                 }
 
-                var newPath = System.IO.Path.Combine(_currentPath, name).Replace('\\', '/');
+                var newPath = HSystem.IO.HPath.Combine(_currentPath, name).Replace('\\', '/');
                 await _fileSystem.WriteFileAsync(newPath, string.Empty, user);
                 
                 await OnOutputAsync($"File created: {name}");
@@ -369,8 +370,8 @@ namespace HackerOs.OS.Applications.BuiltIn
             {
                 foreach (var sourcePath in _operationPaths)
                 {
-                    var fileName = System.IO.Path.GetFileName(sourcePath);
-                    var targetPath = System.IO.Path.Combine(_currentPath, fileName).Replace('\\', '/');
+                    var fileName = HSystem.IO.HPath.GetFileName(sourcePath);
+                    var targetPath = HSystem.IO.HPath.Combine(_currentPath, fileName).Replace('\\', '/');
 
                     if (_pendingOperation == FileOperation.Copy)
                     {
@@ -420,7 +421,7 @@ namespace HackerOs.OS.Applications.BuiltIn
 
             try
             {
-                var newPath = System.IO.Path.Combine(_currentPath, newName).Replace('\\', '/');
+                var newPath = HSystem.IO.HPath.Combine(_currentPath, newName).Replace('\\', '/');
                 await MoveItemAsync(_selectedNode.FullPath, newPath);
                 
                 await OnOutputAsync($"Renamed '{_selectedNode.Name}' to '{newName}'");
@@ -670,12 +671,12 @@ namespace HackerOs.OS.Applications.BuiltIn
             }
         }
 
-        private void OnFileSystemChanged(object? sender, HackerOs.OS.IO.FileSystem.FileSystemEventArgs e)
+        private async void OnFileSystemChanged(object? sender, HackerOs.OS.IO.FileSystem.FileSystemEventArgs e)
         {
             // Refresh directory if the change affects current directory
-            if (e.Path.StartsWith(_currentPath))
+            if (e.FilePath.StartsWith(_currentPath))
             {
-                Task.Run(async () => await RefreshDirectoryAsync());
+               await RefreshDirectoryAsync();
             }
         }
     }

@@ -6,7 +6,7 @@
     <!-- Add StaticWebAssetBasePath to distinguish assets -->
     <StaticWebAssetBasePath>terminaltest</StaticWebAssetBasePath>
     <!-- Prevent duplicate static web assets -->
-    
+    <NoCompress>true</NoCompress>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,11 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\BlazorTerminal\BlazorTerminal.csproj" />
   </ItemGroup>
-  
- 
-  
-  <!-- Additional static web assets configuration -->
 
+  
   
 
 </Project>

@@ -27,6 +27,7 @@ namespace HackerOs.OS.UI.Services
         public event EventHandler<NotificationEventArgs>? NotificationAdded;
         public event EventHandler<NotificationEventArgs>? NotificationRemoved;
         public event EventHandler<NotificationEventArgs>? NotificationRead;
+        public event EventHandler<NotificationActionEventArgs>? NotificationActionTriggered;
         
         /// <summary>
         /// Gets the count of unread notifications
@@ -172,6 +173,22 @@ namespace HackerOs.OS.UI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking all notifications as read");
+            }
+        }
+        
+        /// <summary>
+        /// Triggers the notification action event
+        /// </summary>
+        public void TriggerActionEvent(NotificationModel notification, NotificationAction action)
+        {
+            try
+            {
+                // Invoke the action event
+                NotificationActionTriggered?.Invoke(this, new NotificationActionEventArgs(notification, action));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error triggering notification action {action.Id} for notification {notification.Id}");
             }
         }
         
@@ -323,6 +340,28 @@ namespace HackerOs.OS.UI.Services
         public NotificationEventArgs(NotificationModel notification)
         {
             Notification = notification;
+        }
+    }
+    
+    /// <summary>
+    /// Event arguments for notification action events
+    /// </summary>
+    public class NotificationActionEventArgs : EventArgs
+    {
+        /// <summary>
+        /// The notification associated with the action
+        /// </summary>
+        public NotificationModel Notification { get; }
+        
+        /// <summary>
+        /// The action that was triggered
+        /// </summary>
+        public NotificationAction Action { get; }
+        
+        public NotificationActionEventArgs(NotificationModel notification, NotificationAction action)
+        {
+            Notification = notification;
+            Action = action;
         }
     }
 }

@@ -21,12 +21,12 @@ public class ApplicationManager : IApplicationManager
     private readonly ILogger<ApplicationManager> _logger;
     private readonly IUserManager _userManager;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IProcessManager _processManager;
     private readonly ConcurrentDictionary<string, ApplicationManifest> _registeredApplications = new();
     private readonly ConcurrentDictionary<int, IApplication> _runningApplications = new();
     private readonly ConcurrentDictionary<string, Type> _applicationTypes = new();
     private readonly object _statsLock = new();
     private ApplicationManagerStatistics _statistics = new();
-    private int _nextProcessId = 1000;
 
     /// <inheritdoc />
     public event EventHandler<ApplicationLaunchedEventArgs>? ApplicationLaunched;
@@ -35,17 +35,52 @@ public class ApplicationManager : IApplicationManager
     public event EventHandler<ApplicationTerminatedEventArgs>? ApplicationTerminated;
 
     /// <inheritdoc />
-    public event EventHandler<ApplicationStateChangedEventArgs>? ApplicationStateChanged;    public ApplicationManager(ILogger<ApplicationManager> logger, IUserManager userManager, IServiceProvider serviceProvider)
+    public event EventHandler<ApplicationStateChangedEventArgs>? ApplicationStateChanged;    
+    
+    public ApplicationManager(
+        ILogger<ApplicationManager> logger, 
+        IUserManager userManager, 
+        IServiceProvider serviceProvider,
+        IProcessManager processManager)
     {
         _logger = logger;
         _userManager = userManager;
         _serviceProvider = serviceProvider;
+        _processManager = processManager;
         
         // Initialize system start time
         _statistics.SystemUptime = TimeSpan.Zero;
         
         // Register built-in applications
         _ = Task.Run(RegisterBuiltInApplicationsAsync);
+        
+        // Subscribe to process events from the kernel
+        _processManager.OnProcessEvent += OnProcessEvent;
+    }
+    
+    private void OnProcessEvent(object? sender, ProcessEvent e)
+    {
+        // Handle process events from the kernel
+        if (e.EventType == ProcessEventType.Exited || e.EventType == ProcessEventType.Terminated)
+        {
+            // Remove from running applications if the process has exited
+            if (_runningApplications.TryRemove(e.ProcessId, out var app))
+            {
+                // Update statistics
+                lock (_statsLock)
+                {
+                    _statistics.TotalApplicationsTerminated++;
+                    _statistics.RunningApplicationCount = _runningApplications.Count;
+                }
+                
+                // Notify listeners
+                ApplicationTerminated?.Invoke(this, new ApplicationTerminatedEventArgs(
+                    app,
+                    e.Data is int exitCode ? exitCode : 0,
+                    e.EventType == ProcessEventType.Terminated,
+                    e.Message));
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -95,7 +130,8 @@ public class ApplicationManager : IApplicationManager
                 }
             }
 
-            // Check permissions            if (!await CheckApplicationPermissionsAsync(manifest.Id, manifest.RequiredPermissions, context.UserSession))
+            // Check permissions
+            if (!await CheckApplicationPermissionsAsync(manifest.Id, manifest.RequiredPermissions, context.UserSession))
             {
                 _logger.LogWarning("User {Username} does not have required permissions for application {ApplicationId}", 
                     context.UserSession.User.Username, manifest.Id);
@@ -109,9 +145,35 @@ public class ApplicationManager : IApplicationManager
                 _logger.LogError("Failed to create application instance for {ApplicationId}", manifest.Id);
                 return null;
             }
-
-            // Assign process ID
-            application.GetType().GetProperty("ProcessId")?.SetValue(application, GetNextProcessId());
+            
+            // Create a process for this application using the process manager
+            var processStartInfo = new ProcessStartInfo
+            {
+                Name = manifest.Name,
+                ExecutablePath = manifest.EntryPoint,
+                Arguments = context.Arguments?.ToArray() ?? Array.Empty<string>(),
+                WorkingDirectory = context.WorkingDirectory ?? "/",
+                Owner = context.UserSession.User.Username,
+                ParentProcessId = context.ParentProcessId ?? 0,
+                Environment = new Dictionary<string, string>
+                {
+                    { "APPLICATION_ID", manifest.Id },
+                    { "APPLICATION_VERSION", manifest.Version },
+                    { "USER", context.UserSession.User.Username }
+                },
+                CreateWindow = manifest.Type == ApplicationType.WindowedApplication
+            };
+            
+            // Create the process in the kernel
+            var process = await _processManager.CreateProcessAsync(processStartInfo);
+            if (process == null)
+            {
+                _logger.LogError("Failed to create process for application {ApplicationId}", manifest.Id);
+                return null;
+            }
+            
+            // Assign the process ID to the application
+            application.GetType().GetProperty("ProcessId")?.SetValue(application, process.ProcessId);
 
             // Subscribe to application events
             SubscribeToApplicationEvents(application);
@@ -315,14 +377,21 @@ public class ApplicationManager : IApplicationManager
             if (!_runningApplications.TryGetValue(processId, out var application))
                 return true;
 
+            // First try to gracefully stop the application
             bool terminated;
-            if (force)
-            {
-                terminated = await application.TerminateAsync();
-            }
-            else
+            if (!force)
             {
                 terminated = await application.StopAsync();
+                if (terminated)
+                    return true;
+            }
+            
+            // If that fails or force is true, use the process manager to terminate the process
+            terminated = await _processManager.TerminateProcessAsync(processId);
+            
+            if (!terminated)
+            {
+                _logger.LogWarning("Failed to terminate process with PID {ProcessId}", processId);
             }
 
             return terminated;
@@ -417,10 +486,16 @@ public class ApplicationManager : IApplicationManager
         {
             // Update runtime statistics
             _statistics.RunningApplicationCount = _runningApplications.Count;
-            _statistics.TotalMemoryUsageBytes = _runningApplications.Values
-                .Sum(app => app.GetStatistics().MemoryUsageBytes);
-            _statistics.TotalCpuTime = TimeSpan.FromTicks(_runningApplications.Values
-                .Sum(app => app.GetStatistics().CpuTime.Ticks));
+            
+            // Get process statistics from the kernel
+            var processStats = _processManager.GetProcessStatisticsAsync().GetAwaiter().GetResult();
+            
+            // Update application statistics based on process statistics
+            _statistics.TotalMemoryUsageBytes = processStats.TotalMemoryUsage;
+            _statistics.TotalCpuTime = processStats.TotalCpuTime;
+            
+            // Update system uptime - assume the statistics already have a startup time reference point
+            _statistics.SystemUptime = DateTime.UtcNow - processStats.Timestamp.AddMilliseconds(-processStats.TotalCpuTime.TotalMilliseconds);
 
             return _statistics;
         }
@@ -452,6 +527,9 @@ public class ApplicationManager : IApplicationManager
     {
         try
         {
+            // Wait a small amount of time to ensure this runs as a truly async method
+            await Task.Delay(1);
+            
             // Create built-in applications based on their ID
             return manifest.Id switch
             {
@@ -517,13 +595,9 @@ public class ApplicationManager : IApplicationManager
         ApplicationStateChanged?.Invoke(this, e);
     }
 
+     
+    
     /// <summary>
-    /// Get the next available process ID
-    /// </summary>
-    private int GetNextProcessId()
-    {
-        return Interlocked.Increment(ref _nextProcessId);
-    }    /// <summary>
     /// Register built-in applications
     /// </summary>
     private async Task RegisterBuiltInApplicationsAsync()

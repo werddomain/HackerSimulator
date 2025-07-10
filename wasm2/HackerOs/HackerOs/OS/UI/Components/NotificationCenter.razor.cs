@@ -80,7 +80,7 @@ namespace HackerOs.OS.UI.Components
         /// <summary>
         /// Close the notification center
         /// </summary>
-        protected void CloseNotificationCenter()
+        public void CloseNotificationCenter()
         {
             _isOpen = false;
             OnNotificationCenterOpenChanged.InvokeAsync(false);

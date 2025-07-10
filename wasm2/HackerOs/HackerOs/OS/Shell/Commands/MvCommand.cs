@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HackerOs.OS.HSystem.IO;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.Shell;
 using HackerOs.OS.User;
@@ -79,8 +80,8 @@ namespace HackerOs.OS.Shell.Commands
                     if (destNode != null && destNode.IsDirectory)
                     {
                         // Moving into a directory - create new path with source filename
-                        var fileName = System.IO.Path.GetFileName(sourcePath);
-                        destinationPath = System.IO.Path.Combine(destinationPath, fileName);
+                        var fileName = HSystem.IO.HPath.GetFileName(sourcePath);
+                        destinationPath = HSystem.IO.HPath.Combine(destinationPath, fileName);
                     }
                     else
                     {
@@ -124,8 +125,8 @@ namespace HackerOs.OS.Shell.Commands
             var children = await _fileSystem.ListDirectoryAsync(sourcePath, user);
             foreach (var child in children.Where(c => c.CanRead(user)))
             {
-                var childSourcePath = System.IO.Path.Combine(sourcePath, child.Name);
-                var childTargetPath = System.IO.Path.Combine(targetPath, child.Name);
+                var childSourcePath = HSystem.IO.HPath.Combine(sourcePath, child.Name);
+                var childTargetPath = HSystem.IO.HPath.Combine(targetPath, child.Name);
 
                 if (child.IsDirectory)
                 {

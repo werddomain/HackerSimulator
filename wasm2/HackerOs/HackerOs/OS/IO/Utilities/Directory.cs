@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using HackerOs.OS.HSystem.Text.RegularExpressions;
 using HackerOs.OS.IO.FileSystem;
 
 namespace HackerOs.OS.IO.Utilities
@@ -89,7 +90,7 @@ namespace HackerOs.OS.IO.Utilities
         public static async Task<string[]> GetFilesAsync(string path, string searchPattern, IVirtualFileSystem fileSystem)
         {
             var allFiles = await GetFilesAsync(path, fileSystem);
-            return allFiles.Where(f => MatchesPattern(System.IO.Path.GetFileName(f), searchPattern))
+            return allFiles.Where(f => MatchesPattern(HSystem.IO.HPath.GetFileName(f), searchPattern))
                           .ToArray();
         }
 
@@ -117,7 +118,7 @@ namespace HackerOs.OS.IO.Utilities
         public static async Task<string[]> GetDirectoriesAsync(string path, string searchPattern, IVirtualFileSystem fileSystem)
         {
             var allDirectories = await GetDirectoriesAsync(path, fileSystem);
-            return allDirectories.Where(d => MatchesPattern(System.IO.Path.GetFileName(d), searchPattern))
+            return allDirectories.Where(d => MatchesPattern(HSystem.IO.HPath.GetFileName(d), searchPattern))
                                .ToArray();
         }
 
@@ -143,7 +144,7 @@ namespace HackerOs.OS.IO.Utilities
         public static async Task<string[]> GetFileSystemEntriesAsync(string path, string searchPattern, IVirtualFileSystem fileSystem)
         {
             var allEntries = await GetFileSystemEntriesAsync(path, fileSystem);
-            return allEntries.Where(e => MatchesPattern(System.IO.Path.GetFileName(e), searchPattern))
+            return allEntries.Where(e => MatchesPattern(HSystem.IO.HPath.GetFileName(e), searchPattern))
                            .ToArray();
         }
 
@@ -276,12 +277,12 @@ namespace HackerOs.OS.IO.Utilities
             if (string.IsNullOrEmpty(pattern) || pattern == "*")
                 return true;
                   // Convert pattern to regex
-            var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+            var regexPattern = "^" + Regex.Escape(pattern)
                                   .Replace("\\*", ".*")
                                   .Replace("\\?", ".") + "$";
             
             // Using IsMatch with just the pattern - no third parameter to avoid the error
-            return System.Text.RegularExpressions.Regex.IsMatch(filename, regexPattern);
+            return Regex.IsMatch(filename, regexPattern);
         }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HackerOs.OS.Network.WebServer.Framework;
 
-namespace HackerOs.OS.Network.WebServer.Sites.BlogLocal.Models
+namespace HackerOs.OS.Network.WebServer.Sites.blog.local.Models
 {
     /// <summary>
     /// Represents a blog post.

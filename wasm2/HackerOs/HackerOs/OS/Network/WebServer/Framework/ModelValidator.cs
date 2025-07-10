@@ -1,3 +1,4 @@
+using HackerOs.OS.HSystem.Text.RegularExpressions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -263,7 +264,7 @@ namespace HackerOs.OS.Network.WebServer.Framework
                 return false;
             }
             
-            return System.Text.RegularExpressions.Regex.IsMatch(str, Pattern);
+            return Regex.IsMatch(str, Pattern);
         }
         
         /// <summary>

@@ -6,6 +6,7 @@ using System.Threading;
 using HackerOs.OS.Applications;
 using HackerOs.OS.Shell;
 using HackerOs.OS.User;
+using HackerOs.OS.HSystem.Text;
 
 namespace HackerOs.OS.Shell.Commands.Applications;
 
@@ -34,40 +35,40 @@ public class InstallCommand : CommandBase
         CancellationToken cancellationToken = default)
     {        if (args.Length < 1)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Usage: install <packagePath> [--verbose]\n"));
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Example: install /home/user/downloads/myapp.hapkg\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Usage: install <packagePath> [--verbose]\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Example: install /home/user/downloads/myapp.hapkg\n"));
             return 1;
         }
         string packagePath = args[0];
         bool verbose = args.Contains("--verbose");
 
-        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Installing package from {packagePath}...\n"));
+        await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Installing package from {packagePath}...\n"));
         var userSession = context.UserSession;
         if (userSession == null)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));
             return 1;
         }
         var manifest = await _appInstaller.InstallApplicationAsync(packagePath, userSession);
         if (manifest == null)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Failed to install application from package: {packagePath}\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes($"Failed to install application from package: {packagePath}\n"));
             return 1;
         }
 
-        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Successfully installed: {manifest.Name} v{manifest.Version}\n"));
+        await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Successfully installed: {manifest.Name} v{manifest.Version}\n"));
           if (verbose)
         {
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("\n"));
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Application Details:\n"));
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"ID: {manifest.Id}\n"));
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Author: {manifest.Author}\n"));
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Description: {manifest.Description}\n"));
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Categories: {string.Join(", ", manifest.Categories)}\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes("\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes("Application Details:\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes($"ID: {manifest.Id}\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Author: {manifest.Author}\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Description: {manifest.Description}\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Categories: {string.Join(", ", manifest.Categories)}\n"));
             
             if (manifest.SupportedFileTypes.Count > 0)
             {
-                await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Supported file types: {string.Join(", ", manifest.SupportedFileTypes)}\n"));            }
+                await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Supported file types: {string.Join(", ", manifest.SupportedFileTypes)}\n"));            }
         }
 
         return 0;
@@ -124,9 +125,9 @@ public class UninstallCommand : CommandBase
     {
         if (args.Length < 1)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Usage: uninstall <applicationId> [--keep-data] [--force]\n"));
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Example: uninstall com.example.myapp\n"));
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Use 'list-apps' to see installed applications\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Usage: uninstall <applicationId> [--keep-data] [--force]\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Example: uninstall com.example.myapp\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Use 'list-apps' to see installed applications\n"));
             return 1;
     }
         string applicationId = args[0];
@@ -137,39 +138,39 @@ public class UninstallCommand : CommandBase
         var app = _appManager.GetApplication(applicationId);
         if (app == null)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Application not found: {applicationId}\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes($"Application not found: {applicationId}\n"));
             return 1;
         }
 
-        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Uninstalling application: {app.Name} (ID: {app.Id})\n"));
+        await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Uninstalling application: {app.Name} (ID: {app.Id})\n"));
 
         if (force)
         {
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Forcing uninstallation...\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes("Forcing uninstallation...\n"));
         }
         var userSession = context.UserSession;
         if (userSession == null)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes("Error: Could not find valid user session\n"));
             return 1;
         }
 
         bool success = await _appInstaller.UninstallApplicationAsync(applicationId, userSession, keepData);
         if (!success)
         {
-            await stderr.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Failed to uninstall application: {app.Name}\n"));
+            await stderr.WriteAsync(Encoding.UTF8.GetBytes($"Failed to uninstall application: {app.Name}\n"));
             return 1;
         }
 
-        await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"Successfully uninstalled: {app.Name}\n"));
+        await stdout.WriteAsync(Encoding.UTF8.GetBytes($"Successfully uninstalled: {app.Name}\n"));
         
         if (keepData)
         {
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("User data was preserved.\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes("User data was preserved.\n"));
         }
         else
         {
-            await stdout.WriteAsync(System.Text.Encoding.UTF8.GetBytes("User data was removed.\n"));
+            await stdout.WriteAsync(Encoding.UTF8.GetBytes("User data was removed.\n"));
         }
 
         return 0;

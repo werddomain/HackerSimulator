@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HackerOs.OS.Applications;
+using HackerOs.OS.UI.Models;
 
 namespace HackerOs.OS.UI
 {
@@ -13,7 +14,7 @@ namespace HackerOs.OS.UI
         /// <summary>
         /// Converts a service model to a component model
         /// </summary>
-        public static Components.LauncherAppModel ToComponentModel(this Services.LauncherAppModel model)
+        public static LauncherAppModel ToComponentModel(this Services.LauncherAppModel model)
         {
             return new Components.LauncherAppModel
             {
@@ -38,7 +39,7 @@ namespace HackerOs.OS.UI
                 Id = model.Id,
                 DisplayName = model.Name,
                 IconPath = model.Icon,
-                Applications = model.Applications?.Select(a => a.ToComponentModel()).ToList() ?? new List<Components.LauncherAppModel>(),
+                Applications = model.Applications?.Select(a => a.ToComponentModel()).ToList() ?? new List<LauncherAppModel>(),
                 IsExpanded = model.IsVisible
             };
         }
@@ -46,7 +47,7 @@ namespace HackerOs.OS.UI
         /// <summary>
         /// Converts a component model to a service model
         /// </summary>
-        public static Services.LauncherAppModel ToServiceModel(this Components.LauncherAppModel model)
+        public static Services.LauncherAppModel ToServiceModel(this LauncherAppModel model)
         {
             return new Services.LauncherAppModel
             {

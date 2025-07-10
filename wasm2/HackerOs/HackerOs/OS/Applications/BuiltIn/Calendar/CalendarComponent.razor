@@ -1,0 +1,211 @@
+@using System
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-title">
+            <h1>@GetMonthYearTitle()</h1>
+        </div>
+        
+        <div class="calendar-navigation">
+            <button class="calendar-nav-button" @onclick="NavigateToToday" title="Today">
+                <i class="fas fa-calendar-day"></i>
+            </button>
+            <button class="calendar-nav-button" @onclick="NavigatePrevious" title="Previous">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="calendar-nav-button" @onclick="NavigateNext" title="Next">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        
+        <div class="calendar-view-switcher">
+            <button class="view-button @(CurrentView == CalendarViewMode.Month ? "active" : "")" 
+                    @onclick="() => SwitchView(CalendarViewMode.Month)">
+                Month
+            </button>
+            <button class="view-button @(CurrentView == CalendarViewMode.Week ? "active" : "")" 
+                    @onclick="() => SwitchView(CalendarViewMode.Week)">
+                Week
+            </button>
+            <button class="view-button @(CurrentView == CalendarViewMode.Day ? "active" : "")" 
+                    @onclick="() => SwitchView(CalendarViewMode.Day)">
+                Day
+            </button>
+            <button class="view-button @(CurrentView == CalendarViewMode.Agenda ? "active" : "")" 
+                    @onclick="() => SwitchView(CalendarViewMode.Agenda)">
+                Agenda
+            </button>
+        </div>
+        
+        <div class="calendar-actions">
+            <button class="calendar-action-button" @onclick="CreateNewEvent" title="Create Event">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button class="calendar-action-button" @onclick="OpenSettings" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="calendar-body">
+        @switch (CurrentView)
+        {
+            case CalendarViewMode.Month:
+                <MonthViewComponent 
+                    SelectedDate="SelectedDate"
+                    Events="_eventOccurrences"
+                    OnDateSelected="HandleDateSelected"
+                    OnEventSelected="HandleEventSelected"
+                    OnEventDragged="HandleDraggedEvent" />
+                break;
+                
+            case CalendarViewMode.Week:
+                <WeekViewComponent 
+                    SelectedDate="SelectedDate"
+                    Events="_eventOccurrences"
+                    OnDateSelected="HandleDateSelected"
+                    OnEventSelected="HandleEventSelected" 
+                    OnEventDragged="HandleDraggedEvent"
+                    OnEventResized="HandleResizedEvent" />
+                break;
+                
+            case CalendarViewMode.Day:
+                <DayViewComponent 
+                    SelectedDate="SelectedDate"
+                    Events="_eventOccurrences"
+                    OnDateSelected="HandleDateSelected"
+                    OnEventSelected="HandleEventSelected"
+                    OnEventDragged="HandleDraggedEvent"
+                    OnEventResized="HandleResizedEvent" />
+                break;
+                
+            case CalendarViewMode.Agenda:
+                @*
+                <AgendaViewComponent 
+                    SelectedDate="SelectedDate"
+                    Events="_eventOccurrences"
+                    OnDateSelected="HandleDateSelected"
+                    OnEventSelected="HandleEventSelected" />
+                *@
+                break;
+        }
+    </div>
+    
+    <div class="calendar-sidebar">
+        @if (CalendarEngine.Settings.ShowMiniCalendar)
+        {
+            <div class="mini-calendar">
+                <MiniCalendarComponent 
+                    SelectedDate="SelectedDate"
+                    OnDateSelected="HandleDateSelected" />
+            </div>
+        }
+        
+        @if (CalendarEngine.Settings.ShowUpcomingEvents)
+        {
+            <div class="upcoming-events">
+                <h3>Upcoming</h3>
+                <UpcomingEventsComponent 
+                    Events="_eventOccurrences"
+                    OnEventSelected="HandleEventSelected" />
+            </div>
+        }
+    </div>
+    
+    @if (_showEventEditDialog)
+    {
+        <EventEditDialog 
+            Event="_selectedEventOccurrence?.OriginalEvent"
+            OnSave="HandleEventEditSave"
+            OnCancel="HandleEventEditCancel"
+            OnDelete="HandleEventDelete" />
+    }
+</div>
+
+@code {
+    private string GetMonthYearTitle()
+    {
+        return SelectedDate.ToString("MMMM yyyy");
+    }
+    
+    private void NavigateToToday()
+    {
+        HandleDateSelected(DateTime.Today);
+    }
+    
+    private void NavigatePrevious()
+    {
+        switch (CurrentView)
+        {
+            case CalendarViewMode.Month:
+                HandleDateSelected(SelectedDate.AddMonths(-1));
+                break;
+            case CalendarViewMode.Week:
+                HandleDateSelected(SelectedDate.AddDays(-7));
+                break;
+            case CalendarViewMode.Day:
+                HandleDateSelected(SelectedDate.AddDays(-1));
+                break;
+        }
+    }
+    
+    private void NavigateNext()
+    {
+        switch (CurrentView)
+        {
+            case CalendarViewMode.Month:
+                HandleDateSelected(SelectedDate.AddMonths(1));
+                break;
+            case CalendarViewMode.Week:
+                HandleDateSelected(SelectedDate.AddDays(7));
+                break;
+            case CalendarViewMode.Day:
+                HandleDateSelected(SelectedDate.AddDays(1));
+                break;
+        }
+    }
+    
+    private void SwitchView(CalendarViewMode viewMode)
+    {
+        HandleViewChanged(viewMode);
+    }
+    
+    private void CreateNewEvent()
+    {
+        HandleCreateEvent();
+    }
+    
+    private void OpenSettings()
+    {
+        // TODO: Implement settings dialog
+    }
+
+    private async Task HandleDraggedEvent((Guid EventId, DateTime NewDate, TimeSpan NewTime) eventInfo)
+    {
+        // Convert the tuple to the EventDragInfo format
+        var dragInfo = new EventDragInfo
+        {
+            EventId = eventInfo.EventId,
+            NewDate = eventInfo.NewDate,
+            NewTimeMinutes = (int)eventInfo.NewTime.TotalMinutes
+        };
+        
+        // Handle the drag event
+        await HandleEventDraggedAsync(null, dragInfo);
+    }
+    
+    private async Task HandleResizedEvent((Guid EventId, TimeSpan Duration) eventInfo)
+    {
+        // Convert the tuple to the EventResizeInfo format
+        var resizeInfo = new EventResizeInfo
+        {
+            EventId = eventInfo.EventId,
+            DurationMinutes = (int)eventInfo.Duration.TotalMinutes
+        };
+        
+        // Handle the resize event
+        await HandleEventResizedAsync(null, resizeInfo);
+    }
+}

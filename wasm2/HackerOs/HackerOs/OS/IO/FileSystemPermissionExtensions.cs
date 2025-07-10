@@ -123,9 +123,9 @@ namespace HackerOs.OS.IO
             }
             else
             {
-                if (requireRead && !permissions.OtherRead) return false;
-                if (requireWrite && !permissions.OtherWrite) return false;
-                if (requireExecute && !permissions.OtherExecute) return false;
+                if (requireRead && !permissions.OthersRead) return false;
+                if (requireWrite && !permissions.OthersWrite) return false;
+                if (requireExecute && !permissions.OthersExecute) return false;
             }
 
             return true;
@@ -155,7 +155,7 @@ namespace HackerOs.OS.IO
                 }
 
                 // Check parent directory write permissions for destination
-                string parentDir = System.IO.Path.GetDirectoryName(destinationPath)?.Replace('\\', '/') ?? "/";
+                string parentDir = HSystem.IO.HPath.GetDirectoryName(destinationPath)?.Replace('\\', '/') ?? "/";
                 if (!await CheckPermissionsAsync(fileSystem, parentDir, user, requireWrite: true, requireExecute: true))
                 {
                     return false;
@@ -207,7 +207,7 @@ namespace HackerOs.OS.IO
                 }
                 
                 // Check parent directory permissions for destination
-                string parentDir = System.IO.Path.GetDirectoryName(destinationPath)?.Replace('\\', '/') ?? "/";
+                string parentDir = HSystem.IO.HPath.GetDirectoryName(destinationPath)?.Replace('\\', '/') ?? "/";
                 if (!await CheckPermissionsAsync(fileSystem, parentDir, user, requireWrite: true, requireExecute: true))
                 {
                     return false;
@@ -231,7 +231,7 @@ namespace HackerOs.OS.IO
         public static async Task<bool> IsSetUIDAsync(this IVirtualFileSystem fileSystem, string path)
         {
             var node = await fileSystem.GetNodeAsync(path);
-            return node?.Permissions.SetUID ?? false;
+            return node?.Permissions.IsSUID ?? false;
         }
         
         /// <summary>
@@ -263,7 +263,7 @@ namespace HackerOs.OS.IO
             try
             {
                 var permissions = node.Permissions;
-                permissions.SetUID = enable;
+                permissions.IsSUID = enable;
                 node.Permissions = permissions;
                 node.ModifiedAt = DateTime.UtcNow;
                 
@@ -293,7 +293,7 @@ namespace HackerOs.OS.IO
         public static async Task<bool> IsSetGIDAsync(this IVirtualFileSystem fileSystem, string path)
         {
             var node = await fileSystem.GetNodeAsync(path);
-            return node?.Permissions.SetGID ?? false;
+            return node?.Permissions.IsSGID ?? false;
         }
         
         /// <summary>
@@ -325,7 +325,7 @@ namespace HackerOs.OS.IO
             try
             {
                 var permissions = node.Permissions;
-                permissions.SetGID = enable;
+                permissions.IsSGID = enable;
                 node.Permissions = permissions;
                 node.ModifiedAt = DateTime.UtcNow;
                 
@@ -355,7 +355,7 @@ namespace HackerOs.OS.IO
         public static async Task<bool> IsStickyAsync(this IVirtualFileSystem fileSystem, string path)
         {
             var node = await fileSystem.GetNodeAsync(path);
-            return node?.Permissions.Sticky ?? false;
+            return node?.Permissions.IsSticky ?? false;
         }
         
         /// <summary>
@@ -393,7 +393,7 @@ namespace HackerOs.OS.IO
             try
             {
                 var permissions = node.Permissions;
-                permissions.Sticky = enable;
+                permissions.IsSticky = enable;
                 node.Permissions = permissions;
                 node.ModifiedAt = DateTime.UtcNow;
                 
@@ -515,7 +515,7 @@ namespace HackerOs.OS.IO
                 // Add execute permissions where read permissions exist
                 if (permissions.OwnerRead) permissions.OwnerExecute = true;
                 if (permissions.GroupRead) permissions.GroupExecute = true;
-                if (permissions.OtherRead) permissions.OtherExecute = true;
+                if (permissions.OthersRead) permissions.OthersExecute = true;
                 
                 node.Permissions = permissions;
                 node.ModifiedAt = DateTime.UtcNow;
@@ -559,7 +559,7 @@ namespace HackerOs.OS.IO
                 // Remove all write permissions
                 permissions.OwnerWrite = false;
                 permissions.GroupWrite = false;
-                permissions.OtherWrite = false;
+                permissions.OthersWrite = false;
                 
                 node.Permissions = permissions;
                 node.ModifiedAt = DateTime.UtcNow;
@@ -598,37 +598,37 @@ namespace HackerOs.OS.IO
                 // Check for high-risk permission combinations
                 
                 // World-writable directories with execute permissions
-                if (permissions.OtherWrite && permissions.OtherExecute && (node?.IsDirectory ?? isNewFile))
+                if (permissions.OthersWrite && permissions.OthersExecute && (node?.IsDirectory ?? isNewFile))
                 {
                     return (false, "World-writable directories with execute permissions are a security risk");
                 }
                 
                 // World-writable files with SetUID
-                if (permissions.OtherWrite && permissions.SetUID && !(node?.IsDirectory ?? isNewFile))
+                if (permissions.OthersWrite && permissions.IsSUID && !(node?.IsDirectory ?? isNewFile))
                 {
-                    return (false, "World-writable files with SetUID are a severe security risk");
+                    return (false, "World-writable files with IsSUID are a severe security risk");
                 }
                 
                 // World-writable files with SetGID
-                if (permissions.OtherWrite && permissions.SetGID && !(node?.IsDirectory ?? isNewFile))
+                if (permissions.OthersWrite && permissions.IsSGID && !(node?.IsDirectory ?? isNewFile))
                 {
-                    return (false, "World-writable files with SetGID are a severe security risk");
+                    return (false, "World-writable files with IsSGID are a severe security risk");
                 }
                 
                 // World-writable root-owned files
-                if (permissions.OtherWrite && !isNewFile && node != null && node.OwnerId == 0)
+                if (permissions.OthersWrite && !isNewFile && node != null && node.OwnerId == 0)
                 {
                     return (false, "World-writable root-owned files are a security risk");
                 }
                 
                 // SetUID on shell scripts is dangerous
-                if (permissions.SetUID && !isNewFile && node != null && !node.IsDirectory)
+                if (permissions.IsSUID && !isNewFile && node != null && !node.IsDirectory)
                 {
                     // Check if this is a script file
                     if (path.EndsWith(".sh") || path.EndsWith(".bash") || path.EndsWith(".py") || 
                         path.EndsWith(".pl") || path.EndsWith(".rb"))
                     {
-                        return (false, "SetUID on script files is extremely dangerous");
+                        return (false, "IsSUID on script files is extremely dangerous");
                     }
                 }
                 
@@ -641,7 +641,7 @@ namespace HackerOs.OS.IO
                                        path.EndsWith(".ini") ||
                                        path.EndsWith(".json");
                     
-                    if (isConfigFile && permissions.OtherRead)
+                    if (isConfigFile && permissions.OthersRead)
                     {
                         return (true, "Warning: Configuration files should not be world-readable");
                     }
@@ -655,142 +655,6 @@ namespace HackerOs.OS.IO
             }
         }
         
-        /// <summary>
-        /// Sets default permissions on a file or directory based on common templates
-        /// </summary>
-        /// <param name="fileSystem">The virtual file system</param>
-        /// <param name="path">Path to the file or directory</param>
-        /// <param name="template">Permission template to apply</param>
-        /// <param name="user">User performing the operation</param>
-        /// <returns>True if successful; otherwise, false</returns>
-        public static async Task<bool> SetDefaultPermissionsAsync(
-            this IVirtualFileSystem fileSystem,
-            string path,
-            PermissionTemplate template,
-            User.User user)
-        {
-            var node = await fileSystem.GetNodeAsync(path, user);
-            if (node == null)
-            {
-                return false;
-            }
-            
-            // Only owner or root can change permissions
-            if (user.UserId != 0 && node.OwnerId != user.UserId)
-            {
-                return false;
-            }
-            
-            try
-            {
-                // Get appropriate permission mode based on template and node type
-                int mode = GetTemplateMode(template, node.IsDirectory);
-                
-                // Convert octal mode to FilePermissions object
-                var permissions = new FilePermissions(mode);
-                
-                // Validate the permissions
-                var (isValid, message) = await fileSystem.ValidatePermissionsAsync(path, permissions);
-                if (!isValid)
-                {
-                    // Log validation failure
-                    if (fileSystem is VirtualFileSystem fsys)
-                    {
-                        fsys.LogFileSystemEvent(
-                            FileSystemEventType.PermissionDenied,
-                            path,
-                            $"Permission template validation failed: {message}");
-                    }
-                    return false;
-                }
-                
-                // Apply the permissions
-                node.Permissions = permissions;
-                node.ModifiedAt = DateTime.UtcNow;
-                
-                // Log the change
-                if (fileSystem is VirtualFileSystem vfs)
-                {
-                    vfs.LogFileSystemEvent(
-                        FileSystemEventType.FileWritten,
-                        path,
-                        $"Applied permission template '{template}' (mode {mode.ToString("000", CultureInfo.InvariantCulture)}) by {user.Username}");
-                }
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Log the error
-                if (fileSystem is VirtualFileSystem vfs)
-                {
-                    vfs.LogFileSystemEvent(
-                        FileSystemEventType.Error,
-                        path,
-                        $"Error applying permission template: {ex.Message}");
-                }
-                return false;
-            }
-        }
         
-        /// <summary>
-        /// Gets the permission mode for a given template
-        /// </summary>
-        /// <param name="template">The permission template</param>
-        /// <param name="isDirectory">Whether the target is a directory</param>
-        /// <returns>The octal permission mode</returns>
-        private static int GetTemplateMode(PermissionTemplate template, bool isDirectory)
-        {
-            switch (template)
-            {
-                case PermissionTemplate.UserPrivate:
-                    return isDirectory ? 0700 : 0600;
-                    
-                case PermissionTemplate.UserReadGroupRead:
-                    return isDirectory ? 0750 : 0640;
-                    
-                case PermissionTemplate.UserReadable:
-                    return isDirectory ? 0755 : 0644;
-                    
-                case PermissionTemplate.UserExecutable:
-                    return isDirectory ? 0755 : 0755;
-                    
-                case PermissionTemplate.GroupShared:
-                    return isDirectory ? 0770 : 0660;
-                    
-                case PermissionTemplate.GroupExecutable:
-                    return isDirectory ? 0775 : 0775;
-                    
-                case PermissionTemplate.WorldReadable:
-                    return isDirectory ? 0755 : 0644;
-                    
-                case PermissionTemplate.WorldExecutable:
-                    return isDirectory ? 0755 : 0755;
-                    
-                case PermissionTemplate.WorldWritable:
-                    return isDirectory ? 0777 : 0666;
-                    
-                case PermissionTemplate.SetUID:
-                    return isDirectory ? 0755 : 4755;
-                    
-                case PermissionTemplate.SetGID:
-                    return isDirectory ? 2775 : 2755;
-                    
-                case PermissionTemplate.StickyDir:
-                    return isDirectory ? 1755 : 0755;
-                    
-                case PermissionTemplate.TempDir:
-                    return 1777; // World-writable with sticky bit
-                    
-                case PermissionTemplate.ConfigFile:
-                    return 0640; // User read/write, group read
-                    
-                case PermissionTemplate.LogFile:
-                    return 0640; // User read/write, group read
-                    
-                default:
-                    return isDirectory ? 0755 : 0644; // Default standard permissions
-            }
-        }
     }
 }

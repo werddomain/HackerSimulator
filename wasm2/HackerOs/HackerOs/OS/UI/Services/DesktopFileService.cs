@@ -122,7 +122,7 @@ namespace HackerOs.OS.UI.Services
         /// <summary>
         /// Gets the icon path for a file system entry
         /// </summary>
-        private string GetIconPathForEntry(FileSystemEntry entry)
+        private string GetIconPathForEntry(HackerOs.OS.IO.FileSystemEntry entry)
         {
             if (entry.IsDirectory)
             {

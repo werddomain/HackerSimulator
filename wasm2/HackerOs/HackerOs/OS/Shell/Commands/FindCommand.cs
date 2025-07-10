@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using HackerOs.OS.HSystem.IO;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.Shell;
 using HackerOs.OS.User;
@@ -206,7 +207,7 @@ namespace HackerOs.OS.Shell.Commands
                         
                         foreach (var child in children.Where(c => c.CanRead(user)))
                         {
-                            var childPath = System.IO.Path.Combine(path, child.Name);
+                            var childPath = HSystem.IO.HPath.Combine(path, child.Name);
                             await SearchAsync(childPath, criteria, currentDepth + 1, user, results, errors);
                         }
                     }
@@ -248,7 +249,7 @@ namespace HackerOs.OS.Shell.Commands
             // Check name pattern
             if (!string.IsNullOrEmpty(criteria.NamePattern))
             {
-                var fileName = System.IO.Path.GetFileName(path);
+                var fileName = HSystem.IO.HPath.GetFileName(path);
                 if (!MatchesPattern(fileName, criteria.NamePattern))
                 {
                     return false;

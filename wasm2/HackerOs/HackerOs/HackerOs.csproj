@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -18,6 +18,7 @@
     <PackageReference Include="System.Text.Json" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +32,7 @@
     <Content Remove="**/*.cshtml" />
     <EmbeddedResource Remove="**/*.cshtml" />
     <RazorGenerate Remove="**/*.cshtml" />
+    
   </ItemGroup>
   <!-- Explicitly include only .cs and .razor files for compilation -->
   <ItemGroup>
@@ -39,12 +41,6 @@
   </ItemGroup>
 
   <!-- Include necessary content files -->
-  <ItemGroup>
-    <!-- <Content Include="wwwroot\**\*" />
-    <Content Include="*.html" />
-    <Content Include="*.js" />
-    <Content Include="*.css" /> -->
-  </ItemGroup>
 
   <ItemGroup>    <!-- Re-enabling project references after fixing build issues -->
     <ProjectReference Include="..\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj" />

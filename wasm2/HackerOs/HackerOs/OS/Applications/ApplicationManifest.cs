@@ -1,3 +1,4 @@
+using HackerOs.OS.HSystem.Text.RegularExpressions;
 using System.ComponentModel.DataAnnotations;
 
 namespace HackerOs.OS.Applications;
@@ -147,7 +148,7 @@ public class ApplicationManifest
             errors.Add("Entry point is required");
 
         // Validate ID format (should be alphanumeric with dots and dashes)
-        if (!string.IsNullOrWhiteSpace(Id) && !System.Text.RegularExpressions.Regex.IsMatch(Id, @"^[a-zA-Z0-9\.\-_]+$"))
+        if (!string.IsNullOrWhiteSpace(Id) && !Regex.IsMatch(Id, @"^[a-zA-Z0-9\.\-_]+$"))
             errors.Add("Application ID contains invalid characters");
 
         return new ValidationResult(errors.Count == 0, errors);

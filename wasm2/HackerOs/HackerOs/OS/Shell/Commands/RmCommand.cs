@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using HackerOs.OS.HSystem.IO;
 using HackerOs.OS.IO.FileSystem;
 using HackerOs.OS.Shell;
 using HackerOs.OS.User;
@@ -150,7 +151,7 @@ namespace HackerOs.OS.Shell.Commands
                 
                 foreach (var child in children)
                 {
-                    var childPath = System.IO.Path.Combine(path, child.Name);
+                    var childPath = HSystem.IO.HPath.Combine(path, child.Name);
                     
                     if (child.IsDirectory)
                     {

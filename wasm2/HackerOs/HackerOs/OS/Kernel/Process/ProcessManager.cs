@@ -25,7 +25,13 @@ namespace HackerOs.OS.Kernel.Process
         {
             _logger = logger;
         }
-
+        /// <summary>
+        /// Get the next available process ID
+        /// </summary>
+        private int getNextProcessId()
+        {
+            return Interlocked.Increment(ref _nextProcessId);
+        }
         public async Task<IProcess> CreateProcessAsync(ProcessStartInfo startInfo)
         {
             var processId = AllocateProcessId();
@@ -102,10 +108,7 @@ namespace HackerOs.OS.Kernel.Process
 
         public int AllocateProcessId()
         {
-            lock (_pidLock)
-            {
-                return _nextProcessId++;
-            }
+            return getNextProcessId();
         }
 
         public int GetCurrentProcessId()
