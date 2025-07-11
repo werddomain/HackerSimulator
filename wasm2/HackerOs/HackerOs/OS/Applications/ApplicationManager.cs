@@ -605,7 +605,8 @@ public class ApplicationManager : IApplicationManager
         try
         {
             // This would scan for built-in applications and register them
-            // For now, we'll register some basic applications
+            // For now, we'll register some basic applications but in the final implementation
+            // this would be dynamic based on the App attribute
             
             var terminalManifest = new ApplicationManifest
             {
