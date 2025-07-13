@@ -1,0 +1,139 @@
+@page "/apps/notepad"
+@using HackerOs.OS.IO
+@using HackerOs.OS.IO.FileSystem
+@using HackerOs.OS.User
+@inherits WindowBase
+
+<div class="notepad-app">
+    <div class="notepad-toolbar">
+        <button class="toolbar-button" @onclick="NewDocument">
+            <i class="fas fa-file"></i> New
+        </button>
+        <button class="toolbar-button" @onclick="OpenDocument">
+            <i class="fas fa-folder-open"></i> Open
+        </button>
+        <button class="toolbar-button" @onclick="SaveDocument">
+            <i class="fas fa-save"></i> Save
+        </button>
+        <button class="toolbar-button" @onclick="SaveDocumentAs">
+            <i class="fas fa-save"></i> Save As
+        </button>
+    </div>
+    
+    <div class="notepad-editor">
+        <textarea 
+            @bind="DocumentContent" 
+            @bind:event="oninput" 
+            @onkeydown="HandleKeyDown"
+            placeholder="Enter text here..."
+            @ref="TextAreaRef"
+        ></textarea>
+    </div>
+    
+    <div class="notepad-statusbar">
+        <div class="status-file">
+            @if (!string.IsNullOrEmpty(CurrentFilePath))
+            {
+                <span>@CurrentFilePath</span>
+            }
+            else
+            {
+                <span>Untitled</span>
+            }
+            @if (IsDocumentModified)
+            {
+                <span class="modified-indicator">*</span>
+            }
+        </div>
+        <div class="status-info">
+            Lines: @LineCount | Characters: @CharacterCount
+        </div>
+    </div>
+</div>
+
+@if (ShowOpenFileDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-container">
+            <div class="dialog-header">
+                <span>Open File</span>
+                <button class="dialog-close" @onclick="CloseOpenFileDialog">×</button>
+            </div>
+            <div class="dialog-body">
+                <div class="file-browser">
+                    <div class="file-path">@CurrentDirectory</div>
+                    <div class="file-list">
+                        @foreach (var entry in DirectoryEntries)
+                        {
+                            <div class="file-entry @(entry.IsDirectory ? "directory" : "file") @(SelectedFileEntry?.FullPath == entry.FullPath ? "selected" : "")"
+                                 @onclick="() => SelectFileEntry(entry)"
+                                 @ondblclick="() => HandleFileEntryDoubleClick(entry)">
+                                <i class="@(entry.IsDirectory ? "fas fa-folder" : "fas fa-file-alt")"></i>
+                                <span>@entry.Name</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-button" @onclick="CloseOpenFileDialog">Cancel</button>
+                <button class="dialog-button primary" @onclick="ConfirmOpenFile" disabled="@(SelectedFileEntry == null || SelectedFileEntry.IsDirectory)">Open</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowSaveFileDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-container">
+            <div class="dialog-header">
+                <span>Save File</span>
+                <button class="dialog-close" @onclick="CloseSaveFileDialog">×</button>
+            </div>
+            <div class="dialog-body">
+                <div class="file-browser">
+                    <div class="file-path">@CurrentDirectory</div>
+                    <div class="file-list">
+                        @foreach (var entry in DirectoryEntries)
+                        {
+                            <div class="file-entry @(entry.IsDirectory ? "directory" : "file") @(SelectedFileEntry?.FullPath == entry.FullPath ? "selected" : "")"
+                                 @onclick="() => SelectFileEntry(entry)"
+                                 @ondblclick="() => HandleFileEntryDoubleClick(entry)">
+                                <i class="@(entry.IsDirectory ? "fas fa-folder" : "fas fa-file-alt")"></i>
+                                <span>@entry.Name</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="file-name-input">
+                    <label for="fileName">Filename:</label>
+                    <input type="text" id="fileName" @bind="SaveFileName" />
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-button" @onclick="CloseSaveFileDialog">Cancel</button>
+                <button class="dialog-button primary" @onclick="ConfirmSaveFile" disabled="@string.IsNullOrWhiteSpace(SaveFileName)">Save</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowUnsavedChangesDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-container">
+            <div class="dialog-header">
+                <span>Unsaved Changes</span>
+            </div>
+            <div class="dialog-body">
+                <p>You have unsaved changes. Do you want to save them?</p>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-button" @onclick="() => HandleUnsavedChangesResponse(UnsavedChangesResponse.Discard)">Don't Save</button>
+                <button class="dialog-button" @onclick="() => HandleUnsavedChangesResponse(UnsavedChangesResponse.Cancel)">Cancel</button>
+                <button class="dialog-button primary" @onclick="() => HandleUnsavedChangesResponse(UnsavedChangesResponse.Save)">Save</button>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,294 @@
+.calculator-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: var(--app-background);
+    color: var(--text-color);
+    font-family: var(--system-font);
+    overflow: hidden;
+}
+
+/* Calculator in standard mode */
+.calculator-container.standard {
+    flex-direction: column;
+}
+
+/* Calculator in scientific mode */
+.calculator-container.scientific {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+/* Toolbar with mode switchers and indicators */
+.calculator-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: var(--app-header-background);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calculator-mode-toggle {
+    display: flex;
+}
+
+.mode-button {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.mode-button:hover {
+    background-color: var(--button-hover-background);
+}
+
+.mode-button.active {
+    color: var(--text-color);
+    background-color: var(--button-active-background);
+}
+
+.calculator-memory-indicator {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.memory-active {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.angle-mode-button {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-color-secondary);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.angle-mode-button:hover {
+    background-color: var(--button-hover-background);
+}
+
+/* Display area */
+.calculator-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 1rem;
+    background-color: var(--app-background);
+    min-height: 5rem;
+}
+
+.expression {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+    height: 1.25rem;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.result {
+    font-size: 2rem;
+    font-weight: 500;
+    color: var(--text-color);
+    text-align: right;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+/* Calculator buttons */
+.calculator-buttons {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.standard-buttons {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0.5rem;
+    gap: 0.5rem;
+}
+
+.scientific-buttons {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    gap: 0.5rem;
+    background-color: var(--app-secondary-background);
+    border-left: 1px solid var(--border-color);
+}
+
+.button-row {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.calc-button {
+    flex: 1;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.75rem;
+    transition: background-color 0.1s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calc-button:active {
+    transform: scale(0.97);
+}
+
+.number-button {
+    background-color: var(--button-number-background, var(--app-control-background));
+    color: var(--button-number-color, var(--text-color));
+}
+
+.number-button:hover {
+    background-color: var(--button-number-hover-background, var(--app-control-hover-background));
+}
+
+.operation-button {
+    background-color: var(--button-operation-background, var(--accent-color-light));
+    color: var(--button-operation-color, var(--accent-color));
+    font-weight: bold;
+}
+
+.operation-button:hover {
+    background-color: var(--button-operation-hover-background, var(--accent-color-hover));
+}
+
+.function-button {
+    background-color: var(--button-function-background, var(--app-control-background-alt));
+    color: var(--button-function-color, var(--text-color-secondary));
+}
+
+.function-button:hover {
+    background-color: var(--button-function-hover-background, var(--app-control-hover-background-alt));
+}
+
+.memory-button {
+    background-color: var(--button-memory-background, var(--app-control-background-alt));
+    color: var(--button-memory-color, var(--text-color-secondary));
+    font-size: 0.875rem;
+}
+
+.memory-button:hover {
+    background-color: var(--button-memory-hover-background, var(--app-control-hover-background-alt));
+}
+
+.equals-button {
+    background-color: var(--button-equals-background, var(--accent-color));
+    color: var(--button-equals-color, white);
+    font-weight: bold;
+}
+
+.equals-button:hover {
+    background-color: var(--button-equals-hover-background, var(--accent-color-hover));
+}
+
+/* History sidebar */
+.calculator-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 250px;
+    background-color: var(--app-secondary-background);
+    border-left: 1px solid var(--border-color);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.clear-history-button {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+.clear-history-button:hover {
+    background-color: var(--button-hover-background);
+}
+
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.history-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    background-color: var(--app-control-background);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.history-item:hover {
+    background-color: var(--app-control-hover-background);
+}
+
+.history-empty {
+    color: var(--text-color-secondary);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 480px) {
+    .calculator-container.scientific {
+        flex-direction: column;
+    }
+    
+    .scientific-buttons {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .calculator-sidebar {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+}

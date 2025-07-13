@@ -89,4 +89,35 @@ public interface IApplicationRegistry
     /// </summary>
     /// <returns>Number of applications discovered/updated</returns>
     Task<int> RefreshApplicationsAsync();
+    
+    /// <summary>
+    /// Get applications by type
+    /// </summary>
+    /// <param name="applicationType">Application type</param>
+    /// <returns>Collection of applications of the specified type</returns>
+    IEnumerable<ApplicationMetadata> GetApplicationsByType(ApplicationType applicationType);
+    
+    /// <summary>
+    /// Get all windowed applications
+    /// </summary>
+    /// <returns>Collection of windowed applications</returns>
+    IEnumerable<ApplicationMetadata> GetWindowedApplications();
+    
+    /// <summary>
+    /// Get all service applications
+    /// </summary>
+    /// <returns>Collection of service applications</returns>
+    IEnumerable<ApplicationMetadata> GetServiceApplications();
+    
+    /// <summary>
+    /// Get all command-line applications
+    /// </summary>
+    /// <returns>Collection of command-line applications</returns>
+    IEnumerable<ApplicationMetadata> GetCommandLineApplications();
+    
+    /// <summary>
+    /// Get all system applications
+    /// </summary>
+    /// <returns>Collection of system applications</returns>
+    IEnumerable<ApplicationMetadata> GetSystemApplications();
 }

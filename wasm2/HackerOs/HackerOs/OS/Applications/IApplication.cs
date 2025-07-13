@@ -115,6 +115,13 @@ public interface IApplication
     /// </summary>
     /// <returns>Application runtime statistics</returns>
     ApplicationStatistics GetStatistics();
+
+    /// <summary>
+    /// Set the application to a specific state
+    /// </summary>
+    /// <param name="state">The state to set the application to</param>
+    /// <returns>True if the state was successfully set</returns>
+    Task<bool> SetStateAsync(ApplicationState state);
 }
 
 /// <summary>

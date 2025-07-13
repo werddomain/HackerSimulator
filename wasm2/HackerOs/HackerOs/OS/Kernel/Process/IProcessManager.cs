@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using HackerOs.OS.Applications;
 
 namespace HackerOs.OS.Kernel.Process
 {
@@ -181,6 +182,8 @@ namespace HackerOs.OS.Kernel.Process
         public int ParentProcessId { get; set; } = 0;
         public Dictionary<string, string> Environment { get; set; } = new();
         public bool CreateWindow { get; set; } = true;
+        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
+        public bool IsBackground { get; set; } = false;
     }
 
     /// <summary>

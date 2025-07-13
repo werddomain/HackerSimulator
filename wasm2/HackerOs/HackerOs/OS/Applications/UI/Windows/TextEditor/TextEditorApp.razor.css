@@ -1,0 +1,241 @@
+.text-editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: var(--editor-font, 'Consolas', 'Courier New', monospace);
+}
+
+.toolbar {
+    flex: 0 0 auto;
+    padding: 4px;
+    background-color: var(--app-toolbar-bg);
+    border-bottom: 1px solid var(--app-border-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.toolbar-section {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    padding: 0 4px;
+    border-right: 1px solid var(--app-border-color);
+}
+
+.toolbar-section:last-child {
+    border-right: none;
+}
+
+.toolbar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    height: 28px;
+    min-width: 28px;
+    transition: background-color 0.2s;
+}
+
+.toolbar button:hover {
+    background: var(--button-hover-bg);
+}
+
+.toolbar button:active {
+    background: var(--button-active-bg);
+}
+
+.toolbar .icon {
+    font-size: 16px;
+}
+
+.editor-area {
+    flex: 1 1 auto;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--app-content-bg);
+}
+
+.line-numbers {
+    flex: 0 0 auto;
+    background-color: var(--app-sidebar-bg);
+    color: var(--app-text-muted);
+    font-size: 12px;
+    padding: 8px 8px 8px 0;
+    text-align: right;
+    border-right: 1px solid var(--app-border-color);
+    user-select: none;
+    overflow-y: hidden;
+}
+
+.line-number {
+    height: 1.4em;
+    padding: 0 8px;
+}
+
+.text-content {
+    flex: 1 1 auto;
+    background-color: transparent;
+    color: var(--app-text);
+    border: none;
+    resize: none;
+    padding: 8px;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.4;
+    outline: none;
+    overflow: auto;
+    white-space: pre;
+    tab-size: var(--tab-size, 4);
+}
+
+.text-content.word-wrap {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.status-bar {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    background-color: var(--app-statusbar-bg);
+    border-top: 1px solid var(--app-border-color);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--app-text-muted);
+}
+
+/* Dialog styles */
+.dialog {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--app-dialog-bg);
+    border: 1px solid var(--app-border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    min-width: 300px;
+    max-width: 90%;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--app-toolbar-bg);
+    border-bottom: 1px solid var(--app-border-color);
+    font-weight: bold;
+}
+
+.dialog-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--app-text-muted);
+}
+
+.dialog-header button:hover {
+    color: var(--app-text);
+}
+
+.dialog-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.input-group label {
+    font-size: 12px;
+    color: var(--app-text-muted);
+}
+
+.input-group input {
+    padding: 6px 8px;
+    border: 1px solid var(--app-border-color);
+    border-radius: 3px;
+    background-color: var(--input-bg);
+    color: var(--app-text);
+}
+
+.input-group input[type="number"] {
+    width: 80px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin: 0;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.dialog-buttons button {
+    padding: 6px 12px;
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.dialog-buttons button:hover {
+    background: var(--button-hover-bg);
+}
+
+/* Specific dialog styles */
+.stats-dialog .stats-content {
+    white-space: pre-line;
+    font-family: inherit;
+}
+
+.find-dialog, .replace-dialog {
+    min-width: 320px;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .toolbar-section {
+        border-right: none;
+        border-bottom: 1px solid var(--app-border-color);
+        padding: 4px 0;
+        width: 100%;
+    }
+    
+    .toolbar-section:last-child {
+        border-bottom: none;
+    }
+}

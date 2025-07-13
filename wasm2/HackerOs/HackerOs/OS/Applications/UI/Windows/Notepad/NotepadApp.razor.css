@@ -1,0 +1,253 @@
+/* NotepadApp isolated styles */
+
+.notepad-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: var(--window-background, #f5f5f5);
+    color: var(--window-text, #333);
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.notepad-toolbar {
+    display: flex;
+    padding: 4px 8px;
+    background-color: var(--toolbar-background, #e9e9e9);
+    border-bottom: 1px solid var(--border-color, #ccc);
+}
+
+.toolbar-button {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 4px 8px;
+    margin-right: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-button:hover {
+    background-color: var(--button-hover, #d5d5d5);
+    border-color: var(--border-color, #ccc);
+}
+
+.toolbar-button:active {
+    background-color: var(--button-active, #c5c5c5);
+}
+
+.toolbar-button i {
+    font-size: 0.9rem;
+}
+
+.notepad-editor {
+    flex: 1;
+    padding: 4px;
+    overflow: hidden;
+}
+
+.notepad-editor textarea {
+    width: 100%;
+    height: 100%;
+    border: none;
+    resize: none;
+    outline: none;
+    background-color: var(--editor-background, white);
+    color: var(--editor-text, #333);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 1rem;
+    line-height: 1.4;
+    padding: 8px;
+}
+
+.notepad-statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 8px;
+    background-color: var(--statusbar-background, #e9e9e9);
+    border-top: 1px solid var(--border-color, #ccc);
+    font-size: 0.8rem;
+}
+
+.status-file {
+    display: flex;
+    align-items: center;
+}
+
+.modified-indicator {
+    margin-left: 4px;
+    color: var(--modified-indicator, #ff6b6b);
+    font-weight: bold;
+}
+
+.status-info {
+    color: var(--status-info, #666);
+}
+
+/* Dialog styles */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dialog-container {
+    background-color: var(--dialog-background, #f5f5f5);
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    width: 500px;
+    max-width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: var(--dialog-header, #e0e0e0);
+    border-bottom: 1px solid var(--border-color, #ccc);
+    border-radius: 4px 4px 0 0;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--dialog-close, #666);
+}
+
+.dialog-close:hover {
+    color: var(--dialog-close-hover, #333);
+}
+
+.dialog-body {
+    padding: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.dialog-footer {
+    padding: 10px 15px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid var(--border-color, #ccc);
+}
+
+.dialog-button {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 3px;
+    background-color: var(--button-background, #e9e9e9);
+    cursor: pointer;
+}
+
+.dialog-button:hover {
+    background-color: var(--button-hover, #d5d5d5);
+}
+
+.dialog-button.primary {
+    background-color: var(--primary-button, #4a86e8);
+    color: white;
+    border-color: var(--primary-button-border, #3a76d8);
+}
+
+.dialog-button.primary:hover {
+    background-color: var(--primary-button-hover, #3a76d8);
+}
+
+.dialog-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* File browser styles */
+.file-browser {
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+}
+
+.file-path {
+    padding: 5px;
+    background-color: var(--file-path-background, #e0e0e0);
+    border: 1px solid var(--border-color, #ccc);
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #ccc);
+    background-color: white;
+}
+
+.file-entry {
+    display: flex;
+    align-items: center;
+    padding: 5px 8px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--file-entry-border, #f0f0f0);
+}
+
+.file-entry:hover {
+    background-color: var(--file-entry-hover, #f0f0f0);
+}
+
+.file-entry.selected {
+    background-color: var(--file-entry-selected, #e0e9f7);
+}
+
+.file-entry i {
+    margin-right: 8px;
+    font-size: 1rem;
+}
+
+.file-entry.directory i {
+    color: var(--directory-icon, #ffc107);
+}
+
+.file-entry.file i {
+    color: var(--file-icon, #607d8b);
+}
+
+.file-name-input {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.file-name-input label {
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.file-name-input input {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 3px;
+}
+
+.file-name-input input:focus {
+    border-color: var(--input-focus-border, #4a86e8);
+    outline: none;
+}

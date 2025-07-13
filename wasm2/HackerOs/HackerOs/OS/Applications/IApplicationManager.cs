@@ -54,7 +54,7 @@ public interface IApplicationManager
     Task<bool> UnregisterApplicationAsync(string applicationId);
 
     /// <summary>
-    /// Get all available applications
+    /// Get all available applications to install
     /// </summary>
     /// <returns>List of available application manifests</returns>
     IReadOnlyList<ApplicationManifest> GetAvailableApplications();

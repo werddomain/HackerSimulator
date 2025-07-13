@@ -1,0 +1,24 @@
+@using HackerOs.OS.Applications.Interfaces
+@using HackerOs.OS.Applications.Core
+@inherits BlazorWindowManager.Components.WindowBase
+@implements IApplication
+@implements IProcess
+@implements IApplicationEventSource
+
+@* 
+Enhanced WindowBase component that integrates with the HackerOS application architecture
+This component adds process and application capabilities to the base WindowBase
+*@
+
+<CascadingValue Value="this" Name="Window">
+    @if (ChildContent != null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <div class="window-content">
+            <p>This window has no content. Please provide content for this window.</p>
+        </div>
+    }
+</CascadingValue>

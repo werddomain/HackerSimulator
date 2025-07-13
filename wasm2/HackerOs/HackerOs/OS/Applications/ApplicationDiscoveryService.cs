@@ -77,6 +77,15 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
                 
             _logger.LogInformation("Found {Count} types with App attribute", appTypes.Count);
             
+            // Track counts by application type
+            Dictionary<ApplicationType, int> appTypeCount = new()
+            {
+                { ApplicationType.WindowedApplication, 0 },
+                { ApplicationType.CommandLineTool, 0 },
+                { ApplicationType.SystemService, 0 },
+                { ApplicationType.SystemApplication, 0 }
+            };
+            
             // Register each application
             foreach (var type in appTypes)
             {
@@ -93,7 +102,12 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
                     if (await _applicationManager.RegisterApplicationAsync(manifest))
                     {
                         _discoveredApplications.Add(type, manifest);
-                        _logger.LogInformation("Registered application {AppId} from type {TypeName}", manifest.Id, type.Name);
+                        
+                        // Increment the count for this application type
+                        appTypeCount[manifest.Type]++;
+                        
+                        _logger.LogInformation("Registered {Type} application {AppId} from type {TypeName}", 
+                            manifest.Type, manifest.Id, type.Name);
                         
                         // Register file type handlers
                         await _fileTypeRegistry.RegisterFromAttributesAsync(type, manifest.Id);
@@ -108,7 +122,13 @@ public class ApplicationDiscoveryService : IApplicationDiscoveryService
                 }
             }
             
-            _logger.LogInformation("Discovered and registered {Count} applications", _discoveredApplications.Count);
+            // Log the counts by application type
+            _logger.LogInformation("Discovered and registered {Count} applications:", _discoveredApplications.Count);
+            _logger.LogInformation("  - Windowed Applications: {Count}", appTypeCount[ApplicationType.WindowedApplication]);
+            _logger.LogInformation("  - Command-Line Tools: {Count}", appTypeCount[ApplicationType.CommandLineTool]);
+            _logger.LogInformation("  - System Services: {Count}", appTypeCount[ApplicationType.SystemService]);
+            _logger.LogInformation("  - System Applications: {Count}", appTypeCount[ApplicationType.SystemApplication]);
+            
             return _discoveredApplications.Count;
         }
         catch (Exception ex)

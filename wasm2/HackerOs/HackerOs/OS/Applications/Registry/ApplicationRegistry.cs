@@ -259,7 +259,7 @@ public class ApplicationRegistry : IApplicationRegistry
         try
         {
             // Get current user
-            var currentUser = _userManager.GetCurrentUser();
+            var currentUser = _userManager.GetUserAsync("current").Result;
             if (currentUser == null)
                 return;
                 
@@ -334,7 +334,7 @@ public class ApplicationRegistry : IApplicationRegistry
         try
         {
             // Get current user
-            var currentUser = _userManager.GetCurrentUser();
+            var currentUser = _userManager.GetUserAsync("current").Result;
             if (currentUser == null)
                 return;
                 
@@ -386,7 +386,7 @@ public class ApplicationRegistry : IApplicationRegistry
     private void OnApplicationLaunched(object? sender, ApplicationLaunchedEventArgs e)
     {
         // Record the launch
-        _ = RecordApplicationLaunchAsync(e.ApplicationId);
+        _ = RecordApplicationLaunchAsync(e.Application.Id);
     }
     
     /// <summary>
@@ -396,5 +396,35 @@ public class ApplicationRegistry : IApplicationRegistry
     {
         public int LaunchCount { get; set; }
         public DateTime LastLaunched { get; set; }
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<ApplicationMetadata> GetApplicationsByType(ApplicationType applicationType)
+    {
+        return GetApplications().Where(a => a.Type == applicationType);
+    }
+    
+    /// <inheritdoc />
+    public IEnumerable<ApplicationMetadata> GetWindowedApplications()
+    {
+        return GetApplicationsByType(ApplicationType.WindowedApplication);
+    }
+    
+    /// <inheritdoc />
+    public IEnumerable<ApplicationMetadata> GetServiceApplications()
+    {
+        return GetApplicationsByType(ApplicationType.SystemService);
+    }
+    
+    /// <inheritdoc />
+    public IEnumerable<ApplicationMetadata> GetCommandLineApplications()
+    {
+        return GetApplicationsByType(ApplicationType.CommandLineTool);
+    }
+    
+    /// <inheritdoc />
+    public IEnumerable<ApplicationMetadata> GetSystemApplications()
+    {
+        return GetApplicationsByType(ApplicationType.SystemApplication);
     }
 }

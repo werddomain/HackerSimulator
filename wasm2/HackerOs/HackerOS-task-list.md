@@ -1,4 +1,4 @@
-# HackerOS Implementation Task List - Authentication & Session Focus
+# HackerOS Implementation Task List
 
 **🚨 IMPORTANT: ONLY WORK IN THIS DIRECTORY: `wasm2\HackerOs`** 
 **🚨 REFER TO `wasm2\HackerOs\worksheet.md` FOR ALL ARCHITECTURAL GUIDELINES AND REQUIREMENTS**
@@ -18,6 +18,40 @@
 - [~] = In progress task
 - [!] = Blocked or needs attention
 - [✅] = Verified complete in codebase
+
+## 🎯 CURRENT PRIORITY: Window Manager Integration
+
+### Priority Task: Implement Task 2.2.3 (Window Manager Integration) from the HackerOS Application Architecture Task List
+
+## 📊 Window Manager Integration Tasks
+
+### Task 1: Enhance IApplication Interface
+- [ ] Add SetStateAsync method to IApplication interface
+  - [ ] Create method with ApplicationState parameter
+  - [ ] Document the method with XML comments
+
+### Task 2: Implement SetStateAsync in WindowBase
+- [ ] Create public SetStateAsync method in WindowBase class
+  - [ ] Implement to call existing SetApplicationStateAsync method
+  - [ ] Update window state accordingly (minimize, maximize, etc.)
+
+### Task 3: Verify Integration Between WindowManager and ApplicationManager
+- [ ] Ensure WindowApplicationManagerIntegration properly handles window state changes
+  - [ ] Verify window registration with WindowManager works correctly
+  - [ ] Test minimize/maximize/restore functionality synchronizes between systems
+  - [ ] Confirm application termination properly closes windows
+
+### Task 4: Test Integration
+- [ ] Create test plan for window application lifecycle
+  - [ ] Test window creation and state management
+  - [ ] Test bidirectional state synchronization
+  - [ ] Test window close handling
+  - [ ] Test application termination
+  
+### Task 5: Update Documentation
+- [ ] Update progress.md with summary of changes
+  - [ ] Document architecture integration details
+  - [ ] Explain bidirectional event handling
 
 ## 🎯 CURRENT PRIORITY: Authentication & Session Management for Main Entry Point
 

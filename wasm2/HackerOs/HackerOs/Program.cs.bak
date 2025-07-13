@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+            // Applications Services (Singleton - system-wide application management)
+            services.AddSingleton<IApplicationManager, ApplicationManager>();
+            services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            // services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            // services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
+            // services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            // services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();icrosoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
@@ -124,8 +130,7 @@ namespace HackerOs
                 var providers = serviceProvider.GetServices<ICompletionProvider>();
                 foreach (var provider in providers)
                 {
-                    completionService.RegisterProvider(provider);
-                }
+                    completionService.RegisterProvider(provider);                }
                 
                 return completionService;
             });
@@ -144,9 +149,9 @@ namespace HackerOs
             services.AddSingleton<HackerOs.OS.HSystem.IMainService, HackerOs.OS.HSystem.MainService>();
             
             // Applications Services (Singleton - system-wide application management)
-            services.AddSingleton<IApplicationManager, ApplicationManager>();
-            services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            // services.AddSingleton<IApplicationManager, ApplicationManager>();
             // services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            // services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
             // services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
             // services.AddSingleton<IApplicationFinder, ApplicationFinder>();
             // services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();

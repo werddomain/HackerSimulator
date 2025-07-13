@@ -138,76 +138,40 @@ public class ApplicationManager : IApplicationManager
                 return null;
             }
 
-            // Create application instance
-            var application = await CreateApplicationInstanceAsync(manifest, context);
-            if (application == null)
+            // Launch the application based on its type
+            IApplication? application = null;
+            
+            switch (manifest.Type)
             {
-                _logger.LogError("Failed to create application instance for {ApplicationId}", manifest.Id);
-                return null;
+                case ApplicationType.WindowedApplication:
+                    application = await LaunchWindowedApplicationAsync(manifest, context);
+                    break;
+                    
+                case ApplicationType.SystemService:
+                    application = await LaunchServiceApplicationAsync(manifest, context);
+                    break;
+                    
+                case ApplicationType.CommandLineTool:
+                    application = await LaunchCommandLineApplicationAsync(manifest, context);
+                    break;
+                    
+                case ApplicationType.SystemApplication:
+                    // System applications are treated similarly to windowed applications by default
+                    application = await LaunchWindowedApplicationAsync(manifest, context);
+                    break;
+                    
+                default:
+                    _logger.LogWarning("Unknown application type {Type} for {ApplicationId}", 
+                        manifest.Type, manifest.Id);
+                    return null;
             }
             
-            // Create a process for this application using the process manager
-            var processStartInfo = new ProcessStartInfo
+            if (application != null)
             {
-                Name = manifest.Name,
-                ExecutablePath = manifest.EntryPoint,
-                Arguments = context.Arguments?.ToArray() ?? Array.Empty<string>(),
-                WorkingDirectory = context.WorkingDirectory ?? "/",
-                Owner = context.UserSession.User.Username,
-                ParentProcessId = context.ParentProcessId ?? 0,
-                Environment = new Dictionary<string, string>
-                {
-                    { "APPLICATION_ID", manifest.Id },
-                    { "APPLICATION_VERSION", manifest.Version },
-                    { "USER", context.UserSession.User.Username }
-                },
-                CreateWindow = manifest.Type == ApplicationType.WindowedApplication
-            };
-            
-            // Create the process in the kernel
-            var process = await _processManager.CreateProcessAsync(processStartInfo);
-            if (process == null)
-            {
-                _logger.LogError("Failed to create process for application {ApplicationId}", manifest.Id);
-                return null;
+                // Raise the application launched event
+                ApplicationLaunched?.Invoke(this, new ApplicationLaunchedEventArgs(application, context));
             }
             
-            // Assign the process ID to the application
-            application.GetType().GetProperty("ProcessId")?.SetValue(application, process.ProcessId);
-
-            // Subscribe to application events
-            SubscribeToApplicationEvents(application);
-
-            // Start the application
-            var started = await application.StartAsync(context);
-            if (!started)
-            {
-                _logger.LogError("Failed to start application {ApplicationId}", manifest.Id);
-                return null;
-            }
-
-            // Track the running application
-            _runningApplications[application.ProcessId] = application;
-
-            // Update statistics
-            lock (_statsLock)
-            {
-                _statistics.TotalApplicationsLaunched++;
-                _statistics.RunningApplicationCount = _runningApplications.Count;
-                
-                if (!_statistics.ApplicationsByType.ContainsKey(manifest.Type))
-                    _statistics.ApplicationsByType[manifest.Type] = 0;
-                _statistics.ApplicationsByType[manifest.Type]++;
-                
-                if (!_statistics.ApplicationsByState.ContainsKey(ApplicationState.Running))
-                    _statistics.ApplicationsByState[ApplicationState.Running] = 0;
-                _statistics.ApplicationsByState[ApplicationState.Running]++;
-            }
-
-            _logger.LogInformation("Successfully launched application {ApplicationId} with PID {ProcessId}", 
-                manifest.Id, application.ProcessId);
-
-            ApplicationLaunched?.Invoke(this, new ApplicationLaunchedEventArgs(application, context));
             return application;
         }
         catch (Exception ex)
@@ -652,6 +616,274 @@ public class ApplicationManager : IApplicationManager
     public IReadOnlyList<ApplicationManifest> GetAllApplications()
     {
         return _registeredApplications.Values.ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Helper method to add a running application to the tracking collection
+    /// </summary>
+    /// <param name="processId">Process ID</param>
+    /// <param name="application">Application instance</param>
+    public void AddRunningApplication(int processId, IApplication application)
+    {
+        _runningApplications[processId] = application;
+        
+        // Update statistics
+        lock (_statsLock)
+        {
+            _statistics.RunningApplicationCount = _runningApplications.Count;
+            
+            if (!_statistics.ApplicationsByType.ContainsKey(application.Type))
+                _statistics.ApplicationsByType[application.Type] = 0;
+            _statistics.ApplicationsByType[application.Type]++;
+            
+            if (!_statistics.ApplicationsByState.ContainsKey(ApplicationState.Running))
+                _statistics.ApplicationsByState[ApplicationState.Running] = 0;
+            _statistics.ApplicationsByState[ApplicationState.Running]++;
+        }
+    }
+
+    /// <summary>
+    /// Launch a windowed application
+    /// </summary>
+    /// <param name="manifest">Application manifest</param>
+    /// <param name="context">Launch context</param>
+    /// <returns>Launched application if successful, null otherwise</returns>
+    private async Task<IApplication?> LaunchWindowedApplicationAsync(ApplicationManifest manifest, ApplicationLaunchContext context)
+    {
+        _logger.LogInformation("Launching windowed application {ApplicationId}", manifest.Id);
+        
+        // Create application instance
+        var application = await CreateApplicationInstanceAsync(manifest, context);
+        if (application == null)
+        {
+            _logger.LogError("Failed to create windowed application instance for {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Set process start info specific to windowed applications
+        var processStartInfo = new ProcessStartInfo
+        {
+            Name = manifest.Name,
+            ExecutablePath = manifest.EntryPoint,
+            Arguments = context.Arguments?.ToArray() ?? Array.Empty<string>(),
+            WorkingDirectory = context.WorkingDirectory ?? "/",
+            Owner = context.UserSession.User.Username,
+            ParentProcessId = context.ParentProcessId ?? 0,
+            Environment = new Dictionary<string, string>
+            {
+                { "APPLICATION_ID", manifest.Id },
+                { "APPLICATION_VERSION", manifest.Version },
+                { "USER", context.UserSession.User.Username },
+                { "APPLICATION_TYPE", "windowed" },
+                { "WINDOW_TITLE", manifest.Name },
+                { "WINDOW_ICON", manifest.IconPath ?? string.Empty }
+            },
+            CreateWindow = true, // Always create a window for windowed applications
+            Priority = ProcessPriority.Normal, // Default priority for UI applications
+            IsBackground = false // UI apps typically run in foreground
+        };
+        
+        // Create the process
+        var process = await _processManager.CreateProcessAsync(processStartInfo);
+        if (process == null)
+        {
+            _logger.LogError("Failed to create process for windowed application {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Assign the process ID to the application
+        application.GetType().GetProperty("ProcessId")?.SetValue(application, process.ProcessId);
+        
+        // Subscribe to application events
+        SubscribeToApplicationEvents(application);
+        
+        // Start the application with its context
+        var started = await application.StartAsync(context);
+        if (!started)
+        {
+            _logger.LogError("Failed to start windowed application {ApplicationId}", manifest.Id);
+            await _processManager.TerminateProcessAsync(process.ProcessId);
+            return null;
+        }
+        
+        // Track the running application
+        _runningApplications[application.ProcessId] = application;
+        
+        // Update statistics
+        UpdateApplicationStatistics(manifest.Type, ApplicationState.Running);
+        
+        _logger.LogInformation("Successfully launched windowed application {ApplicationId} with PID {ProcessId}", 
+            manifest.Id, application.ProcessId);
+            
+        return application;
+    }
+    
+    /// <summary>
+    /// Launch a service application
+    /// </summary>
+    /// <param name="manifest">Application manifest</param>
+    /// <param name="context">Launch context</param>
+    /// <returns>Launched application if successful, null otherwise</returns>
+    private async Task<IApplication?> LaunchServiceApplicationAsync(ApplicationManifest manifest, ApplicationLaunchContext context)
+    {
+        _logger.LogInformation("Launching service application {ApplicationId}", manifest.Id);
+        
+        // Create application instance
+        var application = await CreateApplicationInstanceAsync(manifest, context);
+        if (application == null)
+        {
+            _logger.LogError("Failed to create service application instance for {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Set process start info specific to service applications
+        var processStartInfo = new ProcessStartInfo
+        {
+            Name = manifest.Name,
+            ExecutablePath = manifest.EntryPoint,
+            Arguments = context.Arguments?.ToArray() ?? Array.Empty<string>(),
+            WorkingDirectory = context.WorkingDirectory ?? "/",
+            Owner = context.UserSession.User.Username,
+            ParentProcessId = context.ParentProcessId ?? 0,
+            Environment = new Dictionary<string, string>
+            {
+                { "APPLICATION_ID", manifest.Id },
+                { "APPLICATION_VERSION", manifest.Version },
+                { "USER", context.UserSession.User.Username },
+                { "APPLICATION_TYPE", "service" }
+            },
+            CreateWindow = false, // Services don't create windows
+            Priority = ProcessPriority.BelowNormal, // Services typically run at lower priority
+            IsBackground = true // Services run in the background
+        };
+        
+        // Create the process
+        var process = await _processManager.CreateProcessAsync(processStartInfo);
+        if (process == null)
+        {
+            _logger.LogError("Failed to create process for service application {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Assign the process ID to the application
+        application.GetType().GetProperty("ProcessId")?.SetValue(application, process.ProcessId);
+        
+        // Subscribe to application events
+        SubscribeToApplicationEvents(application);
+        
+        // Start the application with its context
+        var started = await application.StartAsync(context);
+        if (!started)
+        {
+            _logger.LogError("Failed to start service application {ApplicationId}", manifest.Id);
+            await _processManager.TerminateProcessAsync(process.ProcessId);
+            return null;
+        }
+        
+        // Track the running application
+        _runningApplications[application.ProcessId] = application;
+        
+        // Update statistics
+        UpdateApplicationStatistics(manifest.Type, ApplicationState.Running);
+        
+        _logger.LogInformation("Successfully launched service application {ApplicationId} with PID {ProcessId}", 
+            manifest.Id, application.ProcessId);
+            
+        return application;
+    }
+    
+    /// <summary>
+    /// Launch a command-line application
+    /// </summary>
+    /// <param name="manifest">Application manifest</param>
+    /// <param name="context">Launch context</param>
+    /// <returns>Launched application if successful, null otherwise</returns>
+    private async Task<IApplication?> LaunchCommandLineApplicationAsync(ApplicationManifest manifest, ApplicationLaunchContext context)
+    {
+        _logger.LogInformation("Launching command-line application {ApplicationId}", manifest.Id);
+        
+        // Create application instance
+        var application = await CreateApplicationInstanceAsync(manifest, context);
+        if (application == null)
+        {
+            _logger.LogError("Failed to create command-line application instance for {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Set process start info specific to command-line applications
+        var processStartInfo = new ProcessStartInfo
+        {
+            Name = manifest.Name,
+            ExecutablePath = manifest.EntryPoint,
+            Arguments = context.Arguments?.ToArray() ?? Array.Empty<string>(),
+            WorkingDirectory = context.WorkingDirectory ?? "/",
+            Owner = context.UserSession.User.Username,
+            ParentProcessId = context.ParentProcessId ?? 0,
+            Environment = new Dictionary<string, string>
+            {
+                { "APPLICATION_ID", manifest.Id },
+                { "APPLICATION_VERSION", manifest.Version },
+                { "USER", context.UserSession.User.Username },
+                { "APPLICATION_TYPE", "command" }
+            },
+            CreateWindow = false, // Command-line apps don't create windows
+            Priority = ProcessPriority.Normal, // Default priority
+            IsBackground = false // Command line tools typically run in foreground
+        };
+        
+        // Create the process
+        var process = await _processManager.CreateProcessAsync(processStartInfo);
+        if (process == null)
+        {
+            _logger.LogError("Failed to create process for command-line application {ApplicationId}", manifest.Id);
+            return null;
+        }
+        
+        // Assign the process ID to the application
+        application.GetType().GetProperty("ProcessId")?.SetValue(application, process.ProcessId);
+        
+        // Subscribe to application events
+        SubscribeToApplicationEvents(application);
+        
+        // Start the application with its context
+        var started = await application.StartAsync(context);
+        if (!started)
+        {
+            _logger.LogError("Failed to start command-line application {ApplicationId}", manifest.Id);
+            await _processManager.TerminateProcessAsync(process.ProcessId);
+            return null;
+        }
+        
+        // Track the running application
+        _runningApplications[application.ProcessId] = application;
+        
+        // Update statistics
+        UpdateApplicationStatistics(manifest.Type, ApplicationState.Running);
+        
+        _logger.LogInformation("Successfully launched command-line application {ApplicationId} with PID {ProcessId}", 
+            manifest.Id, application.ProcessId);
+            
+        return application;
+    }
+    
+    /// <summary>
+    /// Helper method to update application statistics
+    /// </summary>
+    private void UpdateApplicationStatistics(ApplicationType applicationType, ApplicationState applicationState)
+    {
+        lock (_statsLock)
+        {
+            _statistics.TotalApplicationsLaunched++;
+            _statistics.RunningApplicationCount = _runningApplications.Count;
+            
+            if (!_statistics.ApplicationsByType.ContainsKey(applicationType))
+                _statistics.ApplicationsByType[applicationType] = 0;
+            _statistics.ApplicationsByType[applicationType]++;
+            
+            if (!_statistics.ApplicationsByState.ContainsKey(applicationState))
+                _statistics.ApplicationsByState[applicationState] = 0;
+            _statistics.ApplicationsByState[applicationState]++;
+        }
     }
 }
 
