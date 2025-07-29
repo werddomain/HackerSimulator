@@ -1,0 +1,307 @@
+@using HackerOs.OS.IO.FileSystem
+@using HackerOs.OS.User
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="filesystem-test">
+    <h3>HackerOS File System Persistence Test</h3>
+    
+    <div class="test-section">
+        <h4>File System Status</h4>
+        <p>Initialized: <span class="status @(isInitialized ? "success" : "error")">@isInitialized</span></p>
+        <p>Persistence Enabled: <span class="status @(persistenceEnabled ? "success" : "error")">@persistenceEnabled</span></p>
+        <p>Current Working Directory: <code>@currentDirectory</code></p>
+        <p>Current User: <code>@currentUser</code></p>
+    </div>
+
+    <div class="test-actions">
+        <h4>Test Actions</h4>
+        <button class="btn btn-primary" @onclick="InitializeFileSystem" disabled="@isInitialized">
+            Initialize File System
+        </button>
+        <button class="btn btn-secondary" @onclick="EnablePersistence" disabled="@(!isInitialized || persistenceEnabled)">
+            Enable Persistence
+        </button>
+        <button class="btn btn-info" @onclick="CreateTestFiles" disabled="@(!isInitialized)">
+            Create Test Files
+        </button>
+        <button class="btn btn-warning" @onclick="ListRootDirectory" disabled="@(!isInitialized)">
+            List Root Directory
+        </button>
+        <button class="btn btn-success" @onclick="TestPersistence" disabled="@(!persistenceEnabled)">
+            Test Save/Load
+        </button>
+    </div>
+
+    <div class="test-output">
+        <h4>Test Output</h4>
+        <div class="output-box">
+            @foreach (var line in outputLines)
+            {
+                <div class="output-line">@line</div>
+            }
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearOutput">Clear</button>
+    </div>
+</div>
+
+<style>
+    .filesystem-test {
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin: 10px;
+    }
+
+    .test-section, .test-actions, .test-output {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+    }
+
+    .status.success {
+        color: green;
+        font-weight: bold;
+    }
+
+    .status.error {
+        color: red;
+        font-weight: bold;
+    }
+
+    .output-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+    }
+
+    .output-line {
+        margin-bottom: 2px;
+    }
+
+    .btn {
+        margin: 5px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-primary { background-color: #007bff; color: white; }
+    .btn-secondary { background-color: #6c757d; color: white; }
+    .btn-info { background-color: #17a2b8; color: white; }
+    .btn-warning { background-color: #ffc107; color: black; }
+    .btn-success { background-color: #28a745; color: white; }
+    .btn-outline-secondary { background-color: transparent; color: #6c757d; border: 1px solid #6c757d; }
+</style>
+
+@code {
+    private VirtualFileSystem? fileSystem;
+    private bool isInitialized = false;
+    private bool persistenceEnabled = false;
+    private string currentDirectory = "/";
+    private string currentUser = "root";
+    private List<string> outputLines = new();
+
+    // Create a system user for file operations
+    private readonly OS.User.User systemUser = new OS.User.User
+    {
+        UserId = 0,
+        Username = "system",
+        
+        FullName = "System User",
+        PrimaryGroupId = 0,
+        HomeDirectory = "/root",
+        Shell = "/bin/bash",
+        AdditionalGroups = new List<int>()
+    };
+
+    private void Log(string message)
+    {
+        outputLines.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+        StateHasChanged();
+    }
+
+    private void ClearOutput()
+    {
+        outputLines.Clear();
+        StateHasChanged();
+    }
+
+    private async Task InitializeFileSystem()
+    {
+        try
+        {
+            Log("Initializing file system...");
+            fileSystem = new VirtualFileSystem();
+            isInitialized = await fileSystem.InitializeAsync();
+            
+            if (isInitialized)
+            {
+                currentDirectory = fileSystem.CurrentWorkingDirectory;
+                currentUser = fileSystem.CurrentUser;
+                Log("✓ File system initialized successfully");
+                
+                // Initialize standard Unix directory structure
+                var initResult = await UnixDirectoryInitializer.InitializeStandardDirectoryStructureAsync(fileSystem);
+                if (initResult)
+                {
+                    Log("✓ Standard Unix directory structure created");
+                }
+                else
+                {
+                    Log("⚠ Failed to create standard directory structure");
+                }
+            }
+            else
+            {
+                Log("✗ Failed to initialize file system");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Error initializing file system: {ex.Message}");
+        }
+        
+        StateHasChanged();
+    }    private async Task EnablePersistence()
+    {
+        if (fileSystem == null) return;
+
+        try
+        {            Log("Enabling persistence...");
+            await fileSystem.EnablePersistenceAsync();
+            persistenceEnabled = true;
+            
+            if (persistenceEnabled)
+            {
+                Log("✓ Persistence enabled successfully");
+            }
+            else
+            {
+                Log("✗ Failed to enable persistence");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Error enabling persistence: {ex.Message}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task CreateTestFiles()
+    {
+        if (fileSystem == null) return;
+
+        try
+        {
+            Log("Creating test files...");
+              // Create a test file in /tmp
+            await fileSystem.CreateDirectoryAsync("/tmp");
+            await fileSystem.CreateFileAsync("/tmp/test.txt", systemUser, "This is a test file content.");
+            Log("✓ Created /tmp/test.txt");
+            
+            // Create a test file in user home directory
+            var homeDir = $"/home/{currentUser}";
+            await fileSystem.CreateDirectoryAsync(homeDir);
+            await fileSystem.CreateFileAsync($"{homeDir}/welcome.txt", systemUser, "Welcome to HackerOS!");
+            Log($"✓ Created {homeDir}/welcome.txt");
+            
+            // Create a hidden file
+            await fileSystem.CreateFileAsync($"{homeDir}/.bashrc", systemUser, "# Bash configuration\nexport PS1='$ '");
+            Log($"✓ Created {homeDir}/.bashrc (hidden file)");
+            
+            // Test tilde expansion
+            fileSystem.CurrentUser = currentUser;
+            var tildeTest = await fileSystem.FileExistsAsync("~/welcome.txt", systemUser);
+            Log($"✓ Tilde expansion test (~) result: {tildeTest}");
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Error creating test files: {ex.Message}");
+        }
+    }
+
+    private async Task ListRootDirectory()
+    {
+        if (fileSystem == null) return;        try
+        {
+            Log("Listing root directory...");
+            var contents = await fileSystem.ListDirectoryAsync("/", systemUser);
+            
+            Log($"Root directory contains {contents.Count()} items:");
+            foreach (var item in contents)
+            {
+                var type = item.IsDirectory ? "DIR " : "FILE";
+                var permissions = item.Permissions?.ToString() ?? "rwxr-xr-x";
+                var size = item.IsDirectory ? "" : $" ({((VirtualFile)item).Content?.Length ?? 0} bytes)";
+                Log($"  {type} {permissions} {item.Name}{size}");
+            }
+              // Also list /home if it exists
+            if (await fileSystem.DirectoryExistsAsync("/home", systemUser))
+            {
+                Log("\nListing /home directory...");
+                var homeContents = await fileSystem.ListDirectoryAsync("/home");
+                foreach (var item in homeContents)
+                {
+                    var type = item.IsDirectory ? "DIR " : "FILE";
+                    Log($"  {type} {item.Name}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Error listing directory: {ex.Message}");
+        }
+    }
+
+    private async Task TestPersistence()
+    {
+        if (fileSystem == null) return;
+
+        try
+        {
+            Log("Testing persistence save/load...");
+            
+            // Save current state
+            Log("Saving file system state...");
+            await fileSystem.SaveToPersistentStorageAsync();
+            Log("✓ File system state saved");
+            
+            // Create a new file system instance and try to load
+            Log("Creating new file system instance...");
+            var newFileSystem = new VirtualFileSystem();
+            await newFileSystem.InitializeAsync();
+              var storage = new IndexedDBStorage(JSRuntime);
+            await newFileSystem.EnablePersistenceAsync();
+            
+            Log("Loading file system state...");
+            await newFileSystem.LoadFromPersistentStorageAsync();
+            Log("✓ File system state loaded");
+              // Verify data was loaded correctly
+            var testFileExists = await newFileSystem.FileExistsAsync("/tmp/test.txt", systemUser);
+            Log($"Test file exists after reload: {testFileExists}");
+              if (testFileExists)
+            {
+                var content = await newFileSystem.ReadFileAsync("/tmp/test.txt", systemUser);
+                Log($"Test file content: '{content}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Error testing persistence: {ex.Message}");
+        }
+    }
+}

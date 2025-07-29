@@ -1,0 +1,84 @@
+@namespace BlazorTerminal.Components
+@inherits ComponentBase
+@inject IJSRuntime JSRuntime
+
+<div class="terminal-container" 
+     tabindex="0" 
+     @ref="_terminalElement"
+     @onkeydown="HandleKeyDown"
+     @onmousedown="HandleMouseDown"
+     @onmousemove="HandleMouseMove"
+     @onmouseup="HandleMouseUp"
+     @onwheel="HandleMouseWheel"
+     style="@GetTerminalContainerStyle()"
+     id="@_uniqueId">
+    
+    <div class="terminal-screen">
+        @* Scrollback buffer lines *@
+        @if (_firstVisibleRow < 0)
+        {
+            @for (int i = Math.Max(0, _scrollbackBuffer.Count + _firstVisibleRow); i < _scrollbackBuffer.Count && i < Math.Abs(_firstVisibleRow); i++)
+            {
+                var line = _scrollbackBuffer.GetLine(_scrollbackBuffer.Count - i - 1);
+                <div class="terminal-line scrollback-line">
+                    @for (int x = 0; x < Buffer.Width; x++)
+                    {
+                        if (x < line.Length)
+                        {
+                            var character = line[x];
+                            var isSelected = EnableSelection && _selectionService.IsPositionSelected(-i - 1, x);
+                            <span class="terminal-character @(isSelected ? "selected" : "")" style="@GetCharacterStyleCached(character, isSelected)">
+                                @(character.Character == ' ' ? "\u00A0" : character.Character)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="terminal-character">&nbsp;</span>
+                        }
+                    }
+                </div>
+            }
+        }
+        
+        @* Visible buffer lines *@
+        @for (int y = Math.Max(0, -_firstVisibleRow); y < Buffer.Height && y < Buffer.Height - _firstVisibleRow; y++)
+        {
+            var line = Buffer.GetLine(y + _firstVisibleRow);
+            <div class="terminal-line">
+                @for (int x = 0; x < Buffer.Width; x++)
+                {
+                    if (x < line.Length)
+                    {
+                        var character = line[x];
+                        var isSelected = EnableSelection && _selectionService.IsPositionSelected(y + _firstVisibleRow, x);
+                        <span class="terminal-character @(isSelected ? "selected" : "")" style="@GetCharacterStyleCached(character, isSelected)">
+                            @(character.Character == ' ' ? "\u00A0" : character.Character)
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="terminal-character">&nbsp;</span>
+                    }
+                }
+            </div>
+        }
+        
+        @* Cursor - only show when visible, not scrolled, and in blink 'on' state *@
+        @if (Cursor.Visible && Cursor.BlinkState && _firstVisibleRow <= Cursor.Y && Cursor.Y < _firstVisibleRow + Buffer.Height)
+        {
+            <div class="@GetCursorClass()" style="@GetCursorStyle()"></div>
+        }
+    </div>
+    
+    @* Scroll indicators *@
+    @if (_scrollbackBuffer.Count > 0)
+    {
+        <div class="terminal-scroll-indicator @(_firstVisibleRow < 0 ? "visible" : "")">
+            <span class="scroll-up-indicator">▲</span>
+            <span class="scroll-position-indicator">
+                @(Math.Abs(_firstVisibleRow)) / @(_scrollbackBuffer.Count)
+            </span>
+            <span class="scroll-down-indicator @(_firstVisibleRow == 0 ? "active" : "")">▼</span>
+        </div>
+    }
+</div>

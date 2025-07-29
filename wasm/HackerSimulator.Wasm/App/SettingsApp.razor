@@ -1,7 +1,26 @@
 @namespace HackerSimulator.Wasm.Apps
 @inherits HackerSimulator.Wasm.Windows.WindowBase
+@using MudBlazor
 
-<div class="settings">
-    <label><input type="checkbox" @bind="_dark"> Dark mode</label>
-    <button @onclick="Apply">Apply</button>
-</div>
+<MudPaper Class="settings-root">
+    <MudSelect T="string" Label="Application" Value="_selectedApp" ValueChanged="OnAppChanged" Class="app-select" Dense="true" CoerceValue="true">
+        @foreach (var app in _apps)
+        {
+            <MudSelectItem Value="@app.Command">@app.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudTabs @bind-ActivePanelIndex="_tab" Class="settings-tabs">
+        <MudTabPanel Text="User">
+            <SettingEditor Items="_userSettings" Changed="_ => _dirtyUser = true" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!_dirtyUser" OnClick="SaveUser">Save</MudButton>
+        </MudTabPanel>
+        <MudTabPanel Text="System" Disabled="!_isAdmin">
+            <SettingEditor Items="_machineSettings" Changed="_ => _dirtyMachine = true" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!_dirtyMachine" OnClick="SaveMachine">Save</MudButton>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
+
+@code {
+}

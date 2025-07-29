@@ -1,0 +1,60 @@
+<div class="product-details-page">
+    <div class="breadcrumb">
+        <a href="/products">Products</a> &gt; @ViewData["Product"].Name
+    </div>
+    
+    <div class="product-detail-container">
+        <div class="product-image-large">
+            <img src="@ViewData["Product"].ImageUrl" alt="@ViewData["Product"].Name">
+        </div>
+        
+        <div class="product-info">
+            <h2>@ViewData["Product"].Name</h2>
+            
+            <div class="product-meta">
+                <span class="product-category">Category: <a href="/category/@ViewData["Product"].Category">@ViewData["Product"].Category</a></span>
+                <span class="product-id">Product ID: @ViewData["Product"].Id</span>
+            </div>
+            
+            <div class="product-price-section">
+                <span class="product-price">$@ViewData["Product"].Price</span>
+                @if (ViewData["Product"].InStock) {
+                    <span class="in-stock">In Stock</span>
+                } else {
+                    <span class="out-of-stock">Out of Stock</span>
+                }
+            </div>
+            
+            <div class="product-description">
+                <h3>Description</h3>
+                <p>@ViewData["Product"].Description</p>
+            </div>
+            
+            <div class="product-actions">
+                <button class="btn btn-primary" @(!ViewData["Product"].InStock ? "disabled" : "")>Add to Cart</button>
+                <button class="btn btn-secondary">Add to Wishlist</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="related-products">
+        <h3>You May Also Like</h3>
+        <div class="product-grid small">
+            @{
+                var relatedProducts = ((System.Collections.Generic.List<HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Models.Product>)
+                    HackerOs.OS.Network.WebServer.Sites.ExampleDotCom.Models.ProductRepository.GetAll())
+                    .FindAll(p => p.Category == ViewData["Product"].Category && p.Id != ViewData["Product"].Id)
+                    .Take(3);
+            }
+            
+            @foreach (var item in relatedProducts) {
+                <div class="product-card">
+                    <img src="@item.ImageUrl" alt="@item.Name">
+                    <h3>@item.Name</h3>
+                    <p class="price">$@item.Price</p>
+                    <a href="/products/@item.Id" class="btn">View Details</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

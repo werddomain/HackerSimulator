@@ -1,0 +1,55 @@
+﻿@inherits LayoutComponentBase
+@using HackerOs.OS.UI.Components
+@using BlazorWindowManager.Components
+@using HackerOs.OS.User
+@using HackerOs.OS.Theme
+@using HackerOs.OS.Applications
+@using Microsoft.AspNetCore.Components.Web
+
+@inject IThemeManager ThemeManager
+@inject IUserManager UserManager
+@inject IApplicationManager ApplicationManager
+
+<div class="hackerOS-main-layout" 
+     style="background-color: var(--desktop-background-color);"
+     @onkeydown="HandleKeyDown"
+     tabindex="0"
+     @ref="_mainLayoutDiv">
+    
+    <DesktopArea @ref="_desktopArea" CssClass="hackerOS-desktop-area">
+        <Desktop @ref="_desktop" UserSession="@_currentUserSession" />
+        
+        <!-- Windows will be rendered here by the DesktopArea component -->
+    </DesktopArea>
+    
+    <Taskbar @ref="_taskbar" 
+             OnLauncherToggled="ToggleStartMenu"
+             OnNotificationCenterToggled="ToggleNotificationCenter" />
+    
+    <!-- Start Menu component -->
+    <StartMenu @ref="_startMenu"
+               IsOpen="@_isStartMenuOpen"
+               IsOpenChanged="HandleStartMenuOpenChanged"
+               UserSession="@_currentUserSession"
+               OnApplicationLaunched="HandleStartMenuAppLaunched"
+               OnSignOut="HandleSignOut"
+               OnSettingsClicked="HandleSettingsClicked"
+               OnShutdown="HandleShutdown"
+               OnRestart="HandleRestart"
+               OnLock="HandleLock" />
+               
+    <!-- Notification components -->
+    <NotificationToast @ref="_notificationToast" OnToastClicked="HandleNotificationClick" />
+    <NotificationCenter @ref="_notificationCenter" OnNotificationCenterOpenChanged="HandleNotificationCenterOpenChanged" />
+    
+    <!-- User authentication overlay, shown when no user is logged in -->
+    @if (_currentUserSession == null)
+    {
+        <div class="auth-overlay">
+            <div class="login-container">
+                <h2>HackerOS</h2>
+                <LoginDisplay />
+            </div>
+        </div>
+    }
+</div>

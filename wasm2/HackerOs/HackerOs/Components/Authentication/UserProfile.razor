@@ -1,0 +1,77 @@
+@using HackerOs.OS.Security
+@using HackerOs.OS.User.Models
+
+<div class="user-profile @(IsExpanded ? "expanded" : "collapsed")">
+    <div class="profile-toggle" @onclick="ToggleExpand">
+        <div class="user-avatar">
+            <span class="avatar-initials">@UserInitials</span>
+            <span class="status-indicator @UserStatusClass" title="@UserStatusText"></span>
+        </div>
+        @if (IsExpanded)
+        {
+            <span class="toggle-icon">▼</span>
+        }
+        else
+        {
+            <span class="toggle-icon">▲</span>
+        }
+    </div>
+    
+    @if (IsExpanded)
+    {
+        <div class="profile-dropdown">
+            <div class="profile-header">
+                <div class="user-avatar large">
+                    <span class="avatar-initials">@UserInitials</span>
+                </div>
+                <div class="user-info">
+                    <h3 class="username">@(CurrentUser?.Username ?? "Unknown User")</h3>
+                    <p class="user-type">@UserType</p>
+                </div>
+            </div>
+            
+            <div class="session-info">
+                <div class="info-item">
+                    <span class="info-label">Session ID:</span>
+                    <span class="info-value">@SessionSummary</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Login Time:</span>
+                    <span class="info-value">@LoginTime</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Session Status:</span>
+                    <span class="info-value @UserStatusClass">@UserStatusText</span>
+                </div>
+            </div>
+            
+            <div class="profile-actions">
+                <button class="profile-button" @onclick="OpenUserPreferences">
+                    <span class="button-icon">⚙</span>
+                    <span>Preferences</span>
+                </button>
+                <button class="profile-button" @onclick="OpenSessionSwitcher">
+                    <span class="button-icon">👥</span>
+                    <span>Sessions (@SessionCount)</span>
+                </button>
+                <button class="profile-button" @onclick="LockSession">
+                    <span class="button-icon">🔒</span>
+                    <span>Lock</span>
+                </button>
+                <button class="profile-button logout" @onclick="Logout">
+                    <span class="button-icon">⚠</span>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (ShowSessionSwitcher)
+{
+    <SessionSwitcher 
+        IsVisible="true" 
+        OnSessionSwitch="HandleSessionSwitch" 
+        OnSessionEnd="HandleSessionEnd"
+        OnSessionsUpdated="HandleSessionsUpdated" />
+}

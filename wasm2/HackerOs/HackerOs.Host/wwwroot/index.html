@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>HackerOS Host Server</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 20px;
+        }
+        .status {
+            color: #ffff00;
+            margin: 10px 0;
+        }
+        .info {
+            color: #ffffff;
+            margin: 10px 0;
+            opacity: 0.8;
+        }
+        .placeholder {
+            border: 2px dashed #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 HackerOS Host Server</h1>
+        <div class="status">✅ Server is running successfully!</div>
+        <div class="info">This is a placeholder page for the HackerOS Blazor WebAssembly application.</div>
+        
+        <div class="placeholder">
+            <h3>📦 Ready to host Blazor WebAssembly</h3>
+            <p>To deploy your HackerOS application:</p>
+            <ol style="text-align: left; display: inline-block;">
+                <li>Build your Blazor WebAssembly project</li>
+                <li>Copy the published files to the wwwroot directory</li>
+                <li>Restart the server</li>
+            </ol>
+        </div>
+        
+        <div class="info">
+            <p>🌐 Server configured and ready</p>
+            <p>📂 Serving from: wwwroot directory</p>
+            <p>⚡ Static file hosting enabled</p>
+            <p>🔧 WASM MIME types configured</p>
+        </div>
+    </div>
+</body>
+</html>

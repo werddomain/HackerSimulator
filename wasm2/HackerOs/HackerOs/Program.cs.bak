@@ -1,0 +1,199 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+            // Applications Services (Singleton - system-wide application management)
+            services.AddSingleton<IApplicationManager, ApplicationManager>();
+            services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            // services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            // services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
+            // services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            // services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();icrosoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using HackerOs.OS.Shell;
+using HackerOs.OS.Shell.Completion;
+using HackerOs.OS.Applications;
+using HackerOs.OS.Applications.Extensions;
+using HackerOs.OS.Theme;
+using HackerOs.OS.Core.Settings;
+using HackerOs.OS.Security;
+using HackerOs.OS.User;
+using HackerOs.OS.Core.State;
+using BlazorWindowManager.Extensions; // Enabled for window management
+
+namespace HackerOs
+{
+    public class Program
+    {
+        public static async Task Main(string[] args)
+        {
+            var builder = WebAssemblyHostBuilder.CreateDefault(args);
+            builder.RootComponents.Add<App>("#app");
+            builder.RootComponents.Add<HeadOutlet>("head::after");
+
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+            // Add Blazor Window Manager services including ThemeService
+            builder.Services.AddBlazorWindowManager();
+
+            // Add HackerOS Core Services
+            builder.Services.AddHackerOSServices();
+            
+            // Add Application Registry Services
+            builder.Services.AddApplicationRegistry();
+            
+            // Add Application Architecture Services
+            builder.Services.AddApplicationArchitecture();
+            
+            // Add Calendar Services
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.ICalendarEngineService, 
+            //                          HackerOs.OS.Applications.BuiltIn.Calendar.CalendarEngineService>();
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.ReminderService>();
+            // builder.Services.AddScoped<HackerOs.OS.Applications.BuiltIn.Calendar.CalendarNotificationHandler>();
+            
+            // Add Desktop UI Services
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopFileService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.NotificationService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopSettingsService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.DesktopIconService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.Services.LauncherService>();
+            // builder.Services.AddScoped<HackerOs.OS.UI.ApplicationWindowManager>();
+            
+            // Configure application state
+            builder.Services.AddScoped<IAppStateService, AppStateService>();
+            
+            var host = builder.Build();
+            
+            // Initialize the application
+            await Startup.InitializeAsync(host);
+            
+            // Run the application
+            await host.RunAsync();
+        }
+    }
+
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection AddHackerOSServices(this IServiceCollection services)
+        {
+            // Core Infrastructure Services (Singletons - shared across application)
+            // TODO: Add IKernel service registration
+            // TODO: Add IFileSystem service registration
+            // TODO: Add IMemoryManager service registration
+            
+            // Authentication and User Management Services
+            services.AddSingleton<HackerOs.OS.Security.ISessionManager, HackerOs.OS.Security.SessionManager>();
+            services.AddScoped<HackerOs.OS.Security.ITokenService, HackerOs.OS.Security.TokenService>();
+            services.AddScoped<HackerOs.OS.Security.IAuthenticationService, HackerOs.OS.Security.AuthenticationService>();
+            services.AddScoped<HackerOs.OS.Security.IUserService, HackerOs.OS.Security.UserService>();
+            
+            // Add enhanced user management with dependency injection
+            services.AddSingleton<HackerOs.OS.User.IUserManagerFactory, HackerOs.OS.User.DefaultUserManagerFactory>();
+            services.AddSingleton<HackerOs.OS.User.IUserManager>(sp => {
+                var factory = sp.GetRequiredService<HackerOs.OS.User.IUserManagerFactory>();
+                var logger = sp.GetRequiredService<ILogger<HackerOs.OS.User.UserManager>>();
+                return factory.CreateEnhanced();
+            });
+            
+            // TODO: Add IUserManager service registration
+            // TODO: Add ISecurityService service registration
+            
+            // System Services (Scoped - per user session)
+            // Settings Service
+            services.AddScoped<ISettingsService, SettingsService>();
+            
+            // Theme Services
+            services.AddScoped<IThemeManager, ThemeManager>();
+            
+            // Application Services (Scoped - per user session)
+            // Shell Services
+            // services.AddScoped<IShell, HackerOs.OS.Shell.Shell>();
+            // services.AddScoped<ICommandRegistry, CommandRegistry>();
+            // services.AddScoped<CommandParser>(); // No interface, register as concrete type
+            
+            // Register shell completion services
+            // services.AddScoped<ICompletionService, CompletionService>();
+            // services.AddScoped<ICompletionProvider, CommandCompletionProvider>();
+            // services.AddScoped<ICompletionProvider, FilePathCompletionProvider>();
+            // services.AddScoped<ICompletionProvider, VariableCompletionProvider>();
+            
+            // Configure completion service with providers
+            /*
+            services.AddScoped<ICompletionService>(serviceProvider =>
+            {
+                var completionService = new CompletionService(
+                    serviceProvider.GetRequiredService<ILogger<CompletionService>>());
+                
+                // Register all completion providers
+                var providers = serviceProvider.GetServices<ICompletionProvider>();
+                foreach (var provider in providers)
+                {
+                    completionService.RegisterProvider(provider);                }
+                
+                return completionService;
+            });
+            */
+            
+            // Register shell commands
+            // RegisterShellCommands(services);
+            // Register application management commands
+            // RegisterApplicationCommands(services);
+            
+            // Add command initializer service
+            // services.AddScoped<ICommandInitializer, CommandInitializer>();
+            
+            // System Services (Singleton - system-wide services)
+            services.AddSingleton<HackerOs.OS.HSystem.ISystemBootService, HackerOs.OS.HSystem.SystemBootService>();
+            services.AddSingleton<HackerOs.OS.HSystem.IMainService, HackerOs.OS.HSystem.MainService>();
+            
+            // Applications Services (Singleton - system-wide application management)
+            // services.AddSingleton<IApplicationManager, ApplicationManager>();
+            // services.AddSingleton<IFileTypeRegistry, FileTypeRegistry>();
+            // services.AddSingleton<IApplicationDiscoveryService, ApplicationDiscoveryService>();
+            // services.AddSingleton<IApplicationSystemInitializer, ApplicationSystemInitializer>();
+            // services.AddSingleton<IApplicationFinder, ApplicationFinder>();
+            // services.AddSingleton<IApplicationUpdater, ApplicationUpdater>();
+            // services.AddSingleton<IApplicationInstaller, ApplicationInstaller>();
+            // services.AddSingleton<HackerOs.OS.Applications.UI.IUserSettingsService, HackerOs.OS.Applications.UI.UserSettingsService>();
+            // services.AddSingleton<HackerOs.OS.Applications.UI.IStartMenuIntegration, HackerOs.OS.Applications.UI.StartMenuIntegration>();
+            
+            // Network Services (Singleton - shared network stack)
+            // TODO: Add INetworkStack service registration
+            
+            // Theme Services (already provided by BlazorWindowManager)
+            // Integration with existing theme system will be handled in Theme module
+            
+            return services;
+        }
+        
+        private static void RegisterShellCommands(IServiceCollection services)
+        {
+            // Register all shell commands as scoped services
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CatCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CdCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.CpCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.EchoCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.FindCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.GrepCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.LsCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.MkdirCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.MvCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.PwdCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.RmCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.TouchCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.ShCommand>();
+        }
+        
+        /// <summary>
+        /// Register application management commands
+        /// </summary>
+        private static void RegisterApplicationCommands(IServiceCollection services)
+        {
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.InstallCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.UninstallCommand>();
+            // services.AddScoped<HackerOs.OS.Shell.Commands.Applications.ListAppsCommand>();
+        }
+    }
+}

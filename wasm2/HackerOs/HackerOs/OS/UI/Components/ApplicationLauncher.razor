@@ -1,0 +1,202 @@
+@namespace HackerOs.OS.UI.Components
+@using HackerOs.OS.UI.Models
+@using HackerOs.OS.UI.Services
+
+<div class="launcher-container @(_isOpen ? "open" : "")">
+    <div class="launcher-header">
+        <div class="launcher-search">
+            <span class="launcher-search-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.5 14.5L11.5 11.5M13 7.5C13 10.5376 10.5376 13 7.5 13C4.46243 13 2 10.5376 2 7.5C2 4.46243 4.46243 2 7.5 2C10.5376 2 13 4.46243 13 7.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </span>
+            <input type="text" placeholder="Search applications..." @bind-value="_searchQuery" @bind-value:event="oninput" @onkeydown="e => OnSearchKeyDown(e)" />
+        </div>        <div class="launcher-close" @onclick="() => CloseLauncher()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </div>
+    </div>
+    
+    <div class="launcher-content">
+        @if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            <div class="launcher-sidebar">
+                <div class="launcher-sidebar-item @(_selectedSection == "recent" ? "active" : "")" @onclick="@(() => SelectSection("recent"))">
+                    <span class="launcher-sidebar-icon">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 4V8L10.5 10.5M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                    <span>Recent</span>
+                </div>
+                <div class="launcher-sidebar-item @(_selectedSection == "all" ? "active" : "")" @onclick="@(() => SelectSection("all"))">
+                    <span class="launcher-sidebar-icon">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 4H14M2 8H14M2 12H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                    <span>All Apps</span>
+                </div>
+                
+                @foreach (var category in _categories)
+                {
+                    <div class="launcher-sidebar-item @(_selectedSection == category.Id ? "active" : "")" @onclick="@(() => SelectSection(category.Id))">
+                        <span class="launcher-sidebar-icon">
+                            @if (!string.IsNullOrEmpty(category.IconPath))
+                            {
+                                <img src="@category.IconPath" width="16" height="16" alt="@category.DisplayName" />
+                            }
+                            else
+                            {
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+                                </svg>
+                            }
+                        </span>
+                        <span>@category.DisplayName</span>
+                    </div>
+                }
+            </div>
+            
+            <div class="launcher-main">
+                @if (_selectedSection == "recent")
+                {
+                    <div class="launcher-section">
+                        <div class="launcher-section-header">
+                            <span>Recent Applications</span>
+                        </div>
+                        
+                        @if (_recentApps.Any())
+                        {
+                            <div class="launcher-recent-grid">
+                                @foreach (var app in _recentApps)
+                                {
+                                    <div class="launcher-recent-item" @onclick="@(() => LaunchApplication(app.Id))">
+                                        <img class="launcher-recent-icon" src="@app.IconPath" alt="@app.DisplayName" />
+                                        <div class="launcher-recent-info">
+                                            <div class="launcher-recent-name">@app.DisplayName</div>
+                                            <div class="launcher-recent-time">
+                                                @(app.LastLaunched.HasValue ? $"Last used: {GetTimeAgo(app.LastLaunched.Value)}" : "")
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="launcher-no-results">
+                                No recent applications
+                            </div>
+                        }
+                    </div>
+                }
+                else if (_selectedSection == "all")
+                {
+                    foreach (var category in _categories)
+                    {
+                        <div class="launcher-section">
+                            <div class="launcher-section-header">
+                                <span>@category.DisplayName</span>
+                                <span class="launcher-section-toggle" @onclick="@(() => ToggleCategoryExpanded(category.Id))">
+                                    @if (category.IsExpanded)
+                                    {
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2 6H10M6 2V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    }
+                                </span>
+                            </div>
+                            
+                            @if (category.IsExpanded)
+                            {
+                                <div class="launcher-app-grid">
+                                    @foreach (var app in category.Applications)
+                                    {
+                                        <div class="launcher-app-item" @onclick="() => LaunchApplication(app.Id)" @ondblclick="() => LaunchApplication(app.Id)">
+                                            <img class="launcher-app-icon" src="@app.IconPath" alt="@app.DisplayName" />
+                                            <div class="launcher-app-name" title="@app.DisplayName">@app.DisplayName</div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    var selectedCategory = _categories.FirstOrDefault(c => c.Id == _selectedSection);
+                    if (selectedCategory != null)
+                    {
+                        <div class="launcher-section">
+                            <div class="launcher-section-header">
+                                <span>@selectedCategory.DisplayName</span>
+                            </div>
+                            
+                            <div class="launcher-app-grid">
+                                @foreach (var app in selectedCategory.Applications)
+                                {
+                                    <div class="launcher-app-item" @onclick="@(() => LaunchApplication(app.Id))" @ondblclick="@(() => LaunchApplication(app.Id))">
+                                        <img class="launcher-app-icon" src="@app.IconPath" alt="@app.DisplayName" />
+                                        <div class="launcher-app-name" title="@app.DisplayName">@app.DisplayName</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+        else
+        {
+            <div class="launcher-main">
+                <div class="launcher-section">
+                    <div class="launcher-section-header">
+                        <span>Search Results for "@_searchQuery"</span>
+                    </div>
+                    
+                    <div class="launcher-search-results">
+                        @if (_searchResults.Any())
+                        {
+                            <div class="launcher-app-grid">
+                                @foreach (var app in _searchResults)
+                                {
+                                    <div class="launcher-app-item" @onclick="@(() => LaunchApplication(app.Id))" @ondblclick="@(() => LaunchApplication(app.Id))">
+                                        <img class="launcher-app-icon" src="@app.IconPath" alt="@app.DisplayName" />
+                                        <div class="launcher-app-name" title="@app.DisplayName">@app.DisplayName</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="launcher-no-results">
+                                No applications found matching "@_searchQuery"
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    
+    <div class="launcher-quick-launch">
+        @foreach (var app in _pinnedApps)
+        {
+            <div class="launcher-quick-launch-item" @onclick="@(() => LaunchApplication(app.Id))" title="@app.DisplayName">
+                <img class="launcher-quick-launch-icon" src="@app.IconPath" alt="@app.DisplayName" />
+                @if (_runningApplications.Contains(app.Id))
+                {
+                    <div class="launcher-quick-launch-indicator"></div>
+                }
+            </div>
+        }
+    </div>
+</div>

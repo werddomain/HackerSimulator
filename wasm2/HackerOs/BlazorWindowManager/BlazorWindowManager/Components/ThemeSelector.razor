@@ -1,0 +1,138 @@
+@using BlazorWindowManager.Components
+@inject ThemeService ThemeService
+@inherits WindowBase
+<WindowContent Window="this">
+    <div class="theme-selector">
+        <div class="theme-selector-header">
+            <h4>Theme Selection</h4>
+            <div class="current-theme">
+                Current: <span class="current-theme-name">@_currentTheme?.Name</span>
+            </div>
+        </div>
+
+        <div class="theme-categories">
+            @foreach (var category in _themeCategories)
+            {
+                <div class="theme-category">
+                    <h5 class="category-title">@GetCategoryDisplayName(category)</h5>
+                    <div class="theme-grid">
+                        @foreach (var theme in _availableThemes.Where(t => t.Category == category))
+                        {
+                            <div class="theme-card @(theme.Id == _currentTheme?.Id ? "active" : "")"
+                                 @onclick="() => SelectTheme(theme)">
+                                <div class="theme-preview @theme.CssClass">
+                                    <div class="preview-titlebar">
+                                        <div class="preview-title">@theme.Name</div>
+                                        <div class="preview-buttons">
+                                            <span class="preview-btn"></span>
+                                            <span class="preview-btn"></span>
+                                            <span class="preview-btn"></span>
+                                        </div>
+                                    </div>
+                                    <div class="preview-content">
+                                        <div class="preview-text">Sample Content</div>
+                                    </div>
+                                </div>
+                                <div class="theme-info">
+                                    <div class="theme-title">@theme.Name</div>
+                                    <div class="theme-description">@theme.Description</div>
+                                    @if (theme.IsDarkTheme)
+                                    {
+                                        <span class="theme-badge dark">Dark</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="theme-badge light">Light</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Switching theme...</div>
+            </div>
+        }
+    </div>
+</WindowContent>
+
+
+@code {
+    private ITheme? _currentTheme;
+    private List<ITheme> _availableThemes = new();
+    private List<ThemeCategory> _themeCategories = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current theme
+        _currentTheme = ThemeService.CurrentTheme;
+        
+        // Get all available themes
+        _availableThemes = ThemeService.GetAvailableThemes().ToList();
+        
+        // Get unique categories
+        _themeCategories = _availableThemes.Select(t => t.Category).Distinct().OrderBy(c => c).ToList();
+        
+        // Subscribe to theme changes
+        ThemeService.ThemeChanged += OnThemeChanged;
+        
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SelectTheme(ITheme theme)
+    {
+        if (_isLoading || theme.Id == _currentTheme?.Id)
+            return;
+
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            await ThemeService.SetThemeAsync(theme.Id);
+        }
+        catch (Exception ex)
+        {
+            // Handle error - could add toast notification here
+            Console.WriteLine($"Error switching theme: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
+    {
+        _currentTheme = e.NewTheme;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetCategoryDisplayName(ThemeCategory category)
+    {
+        return category switch
+        {
+            ThemeCategory.Modern => "Modern",
+            ThemeCategory.Windows => "Windows",
+            ThemeCategory.MacOS => "macOS",
+            ThemeCategory.Linux => "Linux",
+            ThemeCategory.Retro => "Retro / Hacker",
+            ThemeCategory.Gaming => "Gaming",
+            ThemeCategory.Custom => "Custom",
+            _ => category.ToString()
+        };
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

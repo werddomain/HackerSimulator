@@ -1,0 +1,51 @@
+<h2>Products in @ViewData["Category"] Category</h2>
+
+<div class="breadcrumb">
+    <a href="/products">Products</a> &gt; @ViewData["Category"]
+</div>
+
+<div class="category-description">
+    <p>Browse our selection of products in the @ViewData["Category"] category.</p>
+</div>
+
+<div class="product-list">
+    @if (((System.Collections.Generic.List<object>)ViewData["Products"]).Count == 0) {
+        <div class="empty-category">
+            <p>No products found in this category.</p>
+            <a href="/products" class="btn">View All Products</a>
+        </div>
+    } else {
+        @foreach (var item in ViewData["Products"] as IEnumerable<object>) {
+            <div class="product-item">
+                <div class="product-image">
+                    <img src="@item.ImageUrl" alt="@item.Name">
+                    @if (!item.InStock) {
+                        <span class="out-of-stock-badge">Out of Stock</span>
+                    }
+                </div>
+                
+                <div class="product-details">
+                    <h3><a href="/products/@item.Id">@item.Name</a></h3>
+                    <p class="product-price">$@item.Price</p>
+                    <p class="product-description">@item.Description</p>
+                    <a href="/products/@item.Id" class="btn">View Details</a>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<div class="category-nav">
+    <h3>Other Categories</h3>
+    <ul>
+        @{
+            var categories = new[] { "Computers", "Peripherals", "Displays", "Storage" };
+        }
+        
+        @foreach (var category in categories) {
+            if (category != ViewData["Category"].ToString()) {
+                <li><a href="/category/@category">@category</a></li>
+            }
+        }
+    </ul>
+</div>

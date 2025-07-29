@@ -1,0 +1,29 @@
+<div class="thank-you-page">
+    <h2>Thank You for Contacting Us!</h2>
+    
+    <div class="confirmation-message">
+        <p>We have received your message and will get back to you as soon as possible.</p>
+        
+        <div class="submission-details">
+            <h3>Your Submission</h3>
+            <p><strong>Name:</strong> @ViewData["SubmittedForm"].Name</p>
+            <p><strong>Email:</strong> @ViewData["SubmittedForm"].Email</p>
+            <p><strong>Subject:</strong> @ViewData["SubmittedForm"].Subject</p>
+            <p><strong>Message:</strong></p>
+            <div class="message-box">
+                @ViewData["SubmittedForm"].Message
+            </div>
+        </div>
+    </div>
+    
+    <div class="next-steps">
+        <h3>What's Next?</h3>
+        <p>Our team will review your message and respond within 1-2 business days.</p>
+        <p>In the meantime, feel free to browse our products or learn more about our store.</p>
+        
+        <div class="button-group">
+            <a href="/" class="btn">Return to Home</a>
+            <a href="/products" class="btn btn-secondary">Browse Products</a>
+        </div>
+    </div>
+</div>

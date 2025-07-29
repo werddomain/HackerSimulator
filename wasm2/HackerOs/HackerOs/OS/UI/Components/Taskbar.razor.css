@@ -1,0 +1,335 @@
+.taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background-color: var(--taskbar-bg, rgba(30, 30, 30, 0.95));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    user-select: none;
+}
+
+.taskbar-left, .taskbar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+/* Launcher button */
+.taskbar-launcher-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--taskbar-icon-color, rgba(220, 220, 220, 0.9));
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: background-color 0.2s;
+}
+
+.taskbar-launcher-button:hover {
+    background-color: var(--taskbar-button-hover, rgba(80, 80, 80, 0.5));
+    color: var(--taskbar-icon-hover-color, white);
+}
+
+.taskbar-launcher-button:active {
+    background-color: var(--taskbar-button-active, rgba(100, 100, 100, 0.7));
+}
+
+/* Running Applications */
+.taskbar-running-apps {
+    display: flex;
+    height: 100%;
+    margin-left: 5px;
+}
+
+.taskbar-app-button {
+    height: 40px;
+    min-width: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 2px;
+    cursor: pointer;
+    position: relative;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.taskbar-app-button img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.taskbar-app-button:hover {
+    background-color: var(--taskbar-button-hover, rgba(80, 80, 80, 0.5));
+}
+
+.taskbar-app-focus-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--taskbar-focus-indicator, rgb(0, 120, 215));
+    animation: pulse 1.5s infinite;
+}
+
+.taskbar-app-button.active {
+    background-color: var(--taskbar-button-active, rgba(100, 100, 100, 0.7));
+    border-bottom-color: var(--taskbar-active-border, rgb(100, 150, 255));
+    box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+.taskbar-app-button.minimized {
+    opacity: 0.7;
+}
+
+.taskbar-app-button.minimized:hover {
+    opacity: 1;
+}
+
+.taskbar-app-button.restored-animation {
+    animation: restore-animation 0.3s ease-in-out;
+}
+
+.taskbar-app-button.minimized-animation {
+    animation: minimize-animation 0.3s ease-in-out;
+}
+
+.taskbar-app-button.maximized-animation {
+    animation: maximize-animation 0.3s ease-in-out;
+}
+
+/* System Tray */
+.taskbar-system-tray {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.taskbar-notification-icon, 
+.taskbar-network-icon, 
+.taskbar-battery-icon {
+    width: 30px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--taskbar-icon-color, rgba(220, 220, 220, 0.9));
+    cursor: pointer;
+    position: relative;
+}
+
+.taskbar-notification-icon:hover, 
+.taskbar-network-icon:hover, 
+.taskbar-battery-icon:hover {
+    background-color: var(--taskbar-button-hover, rgba(80, 80, 80, 0.5));
+    color: var(--taskbar-icon-hover-color, white);
+}
+
+.taskbar-notification-badge {
+    position: absolute;
+    top: 6px;
+    right: 5px;
+    background-color: var(--notification-badge-bg, rgb(255, 80, 80));
+    color: var(--notification-badge-text, white);
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.taskbar-clock {
+    padding: 0 10px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    color: var(--taskbar-text-color, rgba(220, 220, 220, 0.9));
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.taskbar-clock:hover {
+    background-color: var(--taskbar-button-hover, rgba(80, 80, 80, 0.5));
+    color: var(--taskbar-text-hover-color, white);
+}
+
+/* Application Preview */
+.taskbar-app-preview {
+    position: absolute;
+    width: 250px;
+    max-height: 200px;
+    background-color: var(--preview-bg, rgba(40, 40, 40, 0.95));
+    border: 1px solid var(--preview-border, rgba(100, 100, 100, 0.7));
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    z-index: 1001;
+}
+
+.taskbar-app-preview-header {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: var(--preview-header-bg, rgba(60, 60, 60, 0.9));
+    border-bottom: 1px solid var(--preview-border, rgba(100, 100, 100, 0.7));
+}
+
+.taskbar-app-preview-header img {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    object-fit: contain;
+}
+
+.taskbar-app-preview-header span {
+    color: var(--preview-header-text, white);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.taskbar-app-preview-content {
+    padding: 5px;
+    max-height: 150px;
+    overflow: hidden;
+}
+
+.taskbar-app-preview-content img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Calendar */
+.taskbar-calendar {
+    position: absolute;
+    bottom: 45px;
+    right: 10px;
+    width: 280px;
+    background-color: var(--calendar-bg, rgba(40, 40, 40, 0.95));
+    border: 1px solid var(--calendar-border, rgba(100, 100, 100, 0.7));
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    padding: 10px;
+    color: var(--calendar-text, rgba(220, 220, 220, 0.9));
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.calendar-nav button {
+    background-color: transparent;
+    border: none;
+    color: var(--calendar-nav, rgba(180, 180, 180, 0.8));
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.calendar-nav button:hover {
+    color: var(--calendar-nav-hover, white);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 5px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--calendar-weekday, rgba(180, 180, 180, 0.8));
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.calendar-day {
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 13px;
+    border-radius: 4px;
+}
+
+.calendar-day:hover {
+    background-color: var(--calendar-day-hover, rgba(80, 80, 80, 0.5));
+}
+
+.calendar-day.other-month {
+    color: var(--calendar-other-month, rgba(150, 150, 150, 0.6));
+}
+
+.calendar-day.today {
+    background-color: var(--calendar-today-bg, rgba(100, 150, 255, 0.3));
+    color: var(--calendar-today-text, white);
+    font-weight: 500;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes restore-animation {
+    0% {
+        transform: scale(0.8);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes minimize-animation {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(0.9);
+    }
+}
+
+@keyframes maximize-animation {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}

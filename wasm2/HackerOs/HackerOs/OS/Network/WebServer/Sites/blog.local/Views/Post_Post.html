@@ -1,0 +1,123 @@
+<div class="post-detail">
+    {{ if (ViewData["Post"] != null) { }}
+        {{ var post = (BlogPost)ViewData["Post"]; }}
+        
+        <article class="blog-post">
+            <header class="post-header">
+                <h1>{{ post.Title }}</h1>
+                <div class="post-meta">
+                    <span class="author">By {{ post.Author }}</span>
+                    <span class="date">{{ post.PublishedDate.ToString("MMMM d, yyyy") }}</span>
+                    <span class="views">{{ post.ViewCount }} views</span>
+                </div>
+                <div class="tags">
+                    {{ foreach (var tag in post.Tags) { }}
+                        <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                    {{ } }}
+                </div>
+            </header>
+            
+            {{ if (!string.IsNullOrEmpty(post.FeaturedImageUrl)) { }}
+                <div class="featured-image">
+                    <img src="{{ post.FeaturedImageUrl }}" alt="{{ post.Title }}">
+                </div>
+            {{ } }}
+            
+            <div class="post-content">
+                {{ var paragraphs = post.Content.Split(new[] { "\n\n" }, StringSplitOptions.None); }}
+                {{ foreach (var paragraph in paragraphs) { }}
+                    <p>{{ paragraph }}</p>
+                {{ } }}
+            </div>
+            
+            <footer class="post-footer">
+                <div class="share-buttons">
+                    <span>Share this post:</span>
+                    <a href="#" class="share-button twitter">Twitter</a>
+                    <a href="#" class="share-button facebook">Facebook</a>
+                    <a href="#" class="share-button linkedin">LinkedIn</a>
+                </div>
+            </footer>
+        </article>
+        
+        <section class="comments-section">
+            <h2>Comments ({{ ViewData["Comments"] != null ? ((List<Comment>)ViewData["Comments"]).Count : 0 }})</h2>
+            
+            {{ if (ViewData["Comments"] != null && ((List<Comment>)ViewData["Comments"]).Count > 0) { }}
+                <div class="comments-list">
+                    {{ foreach (var comment in (List<Comment>)ViewData["Comments"]) { }}
+                        <div class="comment">
+                            <div class="comment-header">
+                                <span class="comment-author">{{ comment.Name }}</span>
+                                <span class="comment-date">{{ comment.CommentDate.ToString("MMMM d, yyyy") }}</span>
+                            </div>
+                            <div class="comment-content">
+                                <p>{{ comment.Content }}</p>
+                            </div>
+                        </div>
+                    {{ } }}
+                </div>
+            {{ } else { }}
+                <p class="no-comments">No comments yet. Be the first to comment!</p>
+            {{ } }}
+            
+            <div class="comment-form">
+                <h3>Leave a Comment</h3>
+                
+                {{ if (ViewData["ValidationErrors"] != null) { }}
+                    <div class="validation-errors">
+                        <ul>
+                            {{ foreach (var error in (List<string>)ViewData["ValidationErrors"]) { }}
+                                <li>{{ error }}</li>
+                            {{ } }}
+                        </ul>
+                    </div>
+                {{ } }}
+                
+                <form method="post" action="/post/{{ post.Id }}/comment">
+                    <div class="form-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" name="Name" required 
+                               value="{{ ViewData["CommentFormData"] != null ? ((Comment)ViewData["CommentFormData"]).Name : "" }}">
+                        {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Name")) { }}
+                            <div class="field-error">
+                                {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Name"][0] }}
+                            </div>
+                        {{ } }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Your Email</label>
+                        <input type="email" id="email" name="Email" required 
+                               value="{{ ViewData["CommentFormData"] != null ? ((Comment)ViewData["CommentFormData"]).Email : "" }}">
+                        {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Email")) { }}
+                            <div class="field-error">
+                                {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Email"][0] }}
+                            </div>
+                        {{ } }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="content">Your Comment</label>
+                        <textarea id="content" name="Content" rows="5" required>{{ ViewData["CommentFormData"] != null ? ((Comment)ViewData["CommentFormData"]).Content : "" }}</textarea>
+                        {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Content")) { }}
+                            <div class="field-error">
+                                {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Content"][0] }}
+                            </div>
+                        {{ } }}
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="submit-button">Post Comment</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    {{ } else { }}
+        <div class="post-not-found">
+            <h1>Post Not Found</h1>
+            <p>The post you are looking for does not exist or has been removed.</p>
+            <a href="/" class="cta-button">Return to Home</a>
+        </div>
+    {{ } }}
+</div>

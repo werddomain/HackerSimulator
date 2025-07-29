@@ -1,0 +1,158 @@
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+@page "/window-architecture-test"
+@inject WindowManagerService WindowManager
+
+<h1>Window Architecture Test</h1>
+
+<div class="test-section">
+    <h3>Dynamic Window Creation Test</h3>
+    <p>Test the new CreateWindow&lt;TComponent&gt;() method functionality.</p>
+      <div class="test-buttons mb-4">
+        <button class="btn btn-primary me-2" @onclick="CreateSampleWindow">
+            Create Sample Window
+        </button>
+        
+        <button class="btn btn-secondary me-2" @onclick="CreateCustomWindow">
+            Create Another Sample Window
+        </button>
+        
+        <button class="btn btn-success me-2" @onclick="CreateLargeSampleWindow">
+            Create Large Sample Window
+        </button>
+        
+        <button class="btn btn-danger" @onclick="CloseAllWindows">
+            Close All Windows
+        </button>
+        <WindowRenderComponent />
+    </div>
+</div>
+
+<div class="test-section">
+    <h3>Theme Test</h3>
+    <p>Test Windows XP theme switching functionality.</p>
+    <p><em>Theme selector will be available on the main application page.</em></p>
+</div>
+
+<div class="test-section">
+    <h3>Window Manager Status</h3>
+    <p><strong>Active Windows:</strong> @_currentWindows.Count</p>
+    @if (_currentWindows.Any())
+    {
+        <ul>
+            @foreach (var window in _currentWindows)
+            {
+                <li>@window.Title (@window.Id.ToString("N")[..8]...)</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p><em>No windows currently active.</em></p>
+    }
+</div>
+
+<div class="test-section">
+    <h3>Desktop Area</h3>
+    <p><em>Windows will be rendered in the main desktop area. Navigate to the home page to see the desktop.</em></p>
+    <p>The WindowRenderComponent is integrated into the main DesktopArea component.</p>
+</div>
+
+@code {
+    private List<WindowInfo> _currentWindows = new();
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to window events to keep track of windows
+        WindowManager.WindowRegistered += OnWindowRegistered;
+        WindowManager.WindowUnregistered += OnWindowUnregistered;
+        
+        ListWindows();
+    }
+    
+    private void OnWindowRegistered(object? sender, WindowEventArgs e)
+    {
+        if (e?.Window != null)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void OnWindowUnregistered(object? sender, WindowEventArgs e)
+    {
+        if (e?.Window != null)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+      private void CreateSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+           
+        };
+        
+        WindowManager.CreateWindow<SampleWindow>(parameters);
+        ListWindows();
+    }
+    
+    private void CreateCustomWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+           
+        };
+        
+        WindowManager.CreateWindow<WindowBase>(parameters);
+        ListWindows();
+    }
+    
+    private void CreateLargeSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+           
+        };
+        
+        WindowManager.CreateWindow<SampleWindow>(parameters);
+        ListWindows();
+    }
+    
+    private void CloseAllWindows()
+    {
+        var windows = WindowManager.GetAllWindows().ToList();
+        foreach (var window in windows)
+        {
+            WindowManager.UnregisterWindow(window.Id);
+        }
+        ListWindows();
+    }
+    
+    private void ListWindows()
+    {
+        _currentWindows = WindowManager.GetAllWindows().ToList();
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        WindowManager.WindowRegistered -= OnWindowRegistered;
+        WindowManager.WindowUnregistered -= OnWindowUnregistered;
+    }
+}
+
+<style>
+    .test-section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .test-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+</style>

@@ -1,0 +1,338 @@
+/* 
+ * Blazor Window Manager - Windows 7 Aero Theme
+ * Enhanced Windows 7 interface with refined Aero glass effects, improved contrast, and modern polish
+ */
+
+.bwm-theme-windows-7 {
+    /* === WINDOWS 7 REFINED AERO COLOR SCHEME === */
+    
+    /* Enhanced Windows 7 Aero Colors with Better Contrast */
+    --win7-aero-blue: #2E74B5;
+    --win7-aero-light-blue: #E8F4FD;
+    --win7-aero-medium-blue: #C1E0F7;
+    --win7-aero-dark-blue: #1F4D73;
+    --win7-glass-blue: rgba(46, 116, 181, 0.85);
+    --win7-glass-light-blue: rgba(232, 244, 253, 0.92);
+    --win7-window-background: rgba(255, 255, 255, 0.98);
+    --win7-window-text: #000000;
+    --win7-button-face: rgba(240, 240, 240, 0.95);
+    --win7-button-highlight: rgba(255, 255, 255, 0.9);
+    --win7-button-shadow: rgba(120, 120, 120, 0.7);
+    --win7-button-dark-shadow: rgba(80, 80, 80, 0.85);
+    --win7-active-caption: linear-gradient(180deg, 
+        rgba(193, 224, 247, 0.95) 0%, 
+        rgba(46, 116, 181, 0.9) 50%,
+        rgba(31, 77, 115, 0.88) 100%);
+    --win7-active-caption-text: #FFFFFF;
+    --win7-inactive-caption: linear-gradient(180deg, 
+        rgba(245, 245, 245, 0.9) 0%, 
+        rgba(180, 180, 180, 0.85) 50%,
+        rgba(140, 140, 140, 0.8) 100%);
+    --win7-inactive-caption-text: rgba(255, 255, 255, 0.95);
+    --win7-highlight: rgba(46, 116, 181, 0.85);
+    --win7-highlight-text: #FFFFFF;
+    --win7-desktop-blue: #2E74B5;
+    --win7-taskbar-glass: linear-gradient(180deg,
+        rgba(46, 116, 181, 0.9) 0%,
+        rgba(31, 77, 115, 0.95) 100%);
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container - Enhanced Glass Effects */
+    --bwm-window-background: var(--win7-window-background);
+    --bwm-window-border: rgba(46, 116, 181, 0.7);
+    --bwm-window-border-radius: 8px;
+    --bwm-window-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.35),
+        0 3px 12px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -1px 0 rgba(46, 116, 181, 0.3);
+    --bwm-window-active-border: rgba(46, 116, 181, 0.9);
+    --bwm-window-active-shadow: 
+        0 15px 60px rgba(46, 116, 181, 0.25),
+        0 5px 20px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(46, 116, 181, 0.4);
+    --bwm-window-inactive-opacity: 0.88;
+    
+    /* Title Bar - Refined Aero Glass */
+    --bwm-titlebar-background: var(--win7-active-caption);
+    --bwm-titlebar-text-color: var(--win7-active-caption-text);
+    --bwm-titlebar-height: 32px;
+    --bwm-titlebar-padding: 0 12px;
+    --bwm-titlebar-inactive-background: var(--win7-inactive-caption);
+    --bwm-titlebar-inactive-text-color: var(--win7-inactive-caption-text);
+    --bwm-titlebar-border-bottom: 1px solid rgba(46, 116, 181, 0.4);
+    --bwm-titlebar-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    
+    /* Window Controls - Enhanced Visibility */
+    --bwm-control-button-size: 22px;
+    --bwm-control-button-margin: 0 2px;
+    --bwm-control-button-background: rgba(255, 255, 255, 0.15);
+    --bwm-control-button-border: 1px solid rgba(255, 255, 255, 0.3);
+    --bwm-control-button-border-radius: 3px;
+    --bwm-control-button-hover-background: rgba(255, 255, 255, 0.25);
+    --bwm-control-button-active-background: rgba(255, 255, 255, 0.35);
+    --bwm-control-button-text-color: #FFFFFF;
+    --bwm-control-button-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    
+    /* Close Button - Enhanced Red Styling */
+    --bwm-close-button-background: rgba(220, 20, 20, 0.8);
+    --bwm-close-button-hover-background: rgba(240, 30, 30, 0.9);
+    --bwm-close-button-active-background: rgba(200, 15, 15, 0.95);
+    --bwm-close-button-border: 1px solid rgba(150, 15, 15, 0.6);
+    
+    /* Content Area */
+    --bwm-content-background: var(--win7-window-background);
+    --bwm-content-text-color: var(--win7-window-text);
+    --bwm-content-padding: 12px;
+    --bwm-content-border-radius: 0 0 7px 7px;
+    
+    /* Resize Handles - Improved Visibility */
+    --bwm-resize-handle-color: rgba(46, 116, 181, 0.4);
+    --bwm-resize-handle-hover-color: rgba(46, 116, 181, 0.6);
+    --bwm-resize-handle-size: 8px;
+    --bwm-resize-corner-size: 16px;
+    
+    /* === TASKBAR STYLING === */
+    
+    /* Taskbar Container - Refined Glass Effect */
+    --bwm-taskbar-background: var(--win7-taskbar-glass);
+    --bwm-taskbar-height: 48px;
+    --bwm-taskbar-border-top: 1px solid rgba(255, 255, 255, 0.3);
+    --bwm-taskbar-shadow: 
+        0 -3px 12px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    --bwm-taskbar-backdrop-filter: blur(20px) saturate(1.2);
+    
+    /* Window Buttons - Enhanced 3D Effect */
+    --bwm-taskbar-button-background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(0, 0, 0, 0.1) 100%);
+    --bwm-taskbar-button-border: 1px solid rgba(255, 255, 255, 0.4);
+    --bwm-taskbar-button-border-radius: 4px;
+    --bwm-taskbar-button-margin: 0 3px;
+    --bwm-taskbar-button-padding: 8px 12px;
+    --bwm-taskbar-button-text-color: #FFFFFF;
+    --bwm-taskbar-button-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --bwm-taskbar-button-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    
+    /* Button States - Improved Feedback */
+    --bwm-taskbar-button-hover-background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(0, 0, 0, 0.05) 100%);
+    --bwm-taskbar-button-hover-border: 1px solid rgba(255, 255, 255, 0.6);
+    --bwm-taskbar-button-hover-shadow: 
+        0 3px 8px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    
+    --bwm-taskbar-button-active-background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.2) 100%);
+    --bwm-taskbar-button-active-border: 1px solid rgba(46, 116, 181, 0.8);
+    --bwm-taskbar-button-active-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.2),
+        0 1px 2px rgba(255, 255, 255, 0.3);
+    
+    /* Start Button - Windows 7 Orb Style */
+    --bwm-start-button-background: radial-gradient(circle at center,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(46, 116, 181, 0.9) 30%,
+        rgba(31, 77, 115, 0.95) 100%);
+    --bwm-start-button-border: 2px solid rgba(255, 255, 255, 0.6);
+    --bwm-start-button-border-radius: 50%;
+    --bwm-start-button-size: 40px;
+    --bwm-start-button-margin: 4px 8px;
+    --bwm-start-button-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    --bwm-start-button-hover-background: radial-gradient(circle at center,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(66, 136, 201, 0.95) 30%,
+        rgba(41, 97, 135, 1) 100%);
+    --bwm-start-button-hover-shadow: 
+        0 6px 16px rgba(0, 0, 0, 0.5),
+        inset 0 2px 6px rgba(255, 255, 255, 0.6);
+    
+    /* System Tray - Refined Styling */
+    --bwm-system-tray-background: rgba(255, 255, 255, 0.1);
+    --bwm-system-tray-border: 1px solid rgba(255, 255, 255, 0.2);
+    --bwm-system-tray-border-radius: 3px;
+    --bwm-system-tray-padding: 4px 8px;
+    --bwm-system-tray-margin: 0 8px;
+    
+    /* Clock - Enhanced Readability */
+    --bwm-clock-text-color: #FFFFFF;
+    --bwm-clock-font-size: 14px;
+    --bwm-clock-font-weight: 500;
+    --bwm-clock-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    --bwm-clock-background: rgba(255, 255, 255, 0.1);
+    --bwm-clock-border-radius: 3px;
+    --bwm-clock-padding: 6px 10px;
+    
+    /* === DESKTOP STYLING === */
+    
+    --bwm-desktop-background: linear-gradient(135deg,
+        var(--win7-desktop-blue) 0%,
+        rgba(46, 116, 181, 0.8) 100%);
+    --bwm-desktop-pattern: radial-gradient(circle at 20% 80%, 
+        rgba(255, 255, 255, 0.1) 0%, 
+        transparent 50%),
+        radial-gradient(circle at 80% 20%, 
+        rgba(255, 255, 255, 0.05) 0%, 
+        transparent 50%);
+    
+    /* === CONTEXT MENUS & DIALOGS === */
+    
+    /* Context Menu - Glass Effect */
+    --bwm-context-menu-background: rgba(255, 255, 255, 0.95);
+    --bwm-context-menu-border: 1px solid rgba(46, 116, 181, 0.6);
+    --bwm-context-menu-border-radius: 6px;
+    --bwm-context-menu-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    --bwm-context-menu-backdrop-filter: blur(15px) saturate(1.1);
+    
+    /* Menu Items */
+    --bwm-menu-item-padding: 8px 16px;
+    --bwm-menu-item-text-color: var(--win7-window-text);
+    --bwm-menu-item-hover-background: var(--win7-highlight);
+    --bwm-menu-item-hover-text-color: var(--win7-highlight-text);
+    --bwm-menu-item-separator: 1px solid rgba(46, 116, 181, 0.3);
+    
+    /* === SCROLLBARS - Windows 7 Style === */
+    
+    --bwm-scrollbar-width: 16px;
+    --bwm-scrollbar-track-background: rgba(240, 240, 240, 0.9);
+    --bwm-scrollbar-track-border: 1px solid rgba(180, 180, 180, 0.7);
+    --bwm-scrollbar-thumb-background: linear-gradient(90deg,
+        rgba(200, 200, 200, 0.9) 0%,
+        rgba(180, 180, 180, 0.95) 50%,
+        rgba(160, 160, 160, 0.9) 100%);
+    --bwm-scrollbar-thumb-border: 1px solid rgba(140, 140, 140, 0.8);
+    --bwm-scrollbar-thumb-border-radius: 2px;
+    --bwm-scrollbar-thumb-hover-background: linear-gradient(90deg,
+        rgba(160, 160, 160, 0.95) 0%,
+        rgba(140, 140, 140, 1) 50%,
+        rgba(120, 120, 120, 0.95) 100%);
+    
+    /* === TYPOGRAPHY === */
+    
+    --bwm-font-family: 'Segoe UI', Tahoma, sans-serif;
+    --bwm-font-size-small: 11px;
+    --bwm-font-size-normal: 13px;
+    --bwm-font-size-large: 15px;
+    --bwm-font-weight-normal: 400;
+    --bwm-font-weight-bold: 600;
+    
+    /* === ANIMATIONS & TRANSITIONS === */
+    
+    --bwm-transition-fast: 0.15s ease-out;
+    --bwm-transition-normal: 0.25s ease-out;
+    --bwm-transition-slow: 0.4s ease-out;
+    --bwm-animation-window-open: bwm-window-fade-in 0.3s ease-out;
+    --bwm-animation-window-close: bwm-window-fade-out 0.25s ease-in;
+    --bwm-animation-window-minimize: bwm-window-minimize 0.4s ease-in-out;
+    --bwm-animation-window-restore: bwm-window-restore 0.35s ease-out;
+}
+
+/* === WINDOWS 7 SPECIFIC ANIMATIONS === */
+
+@keyframes bwm-window-fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes bwm-window-fade-out {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+}
+
+@keyframes bwm-window-minimize {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.1);
+    }
+}
+
+@keyframes bwm-window-restore {
+    from {
+        opacity: 0;
+        transform: scale(0.1);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* === GLASS EFFECT UTILITIES === */
+
+.bwm-theme-windows-7 .bwm-glass-effect {
+    backdrop-filter: blur(20px) saturate(1.2);
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.bwm-theme-windows-7 .bwm-glass-effect-strong {
+    backdrop-filter: blur(30px) saturate(1.4);
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* === ACCESSIBILITY ENHANCEMENTS === */
+
+.bwm-theme-windows-7 .bwm-high-contrast {
+    --bwm-window-border: rgba(46, 116, 181, 1);
+    --bwm-titlebar-text-color: #FFFFFF;
+    --bwm-content-text-color: #000000;
+    --bwm-taskbar-button-text-color: #FFFFFF;
+    filter: contrast(1.2);
+}
+
+.bwm-theme-windows-7 .bwm-focus-visible {
+    outline: 2px solid var(--win7-highlight);
+    outline-offset: 2px;
+}
+
+/* === RESPONSIVE DESIGN === */
+
+@media (max-width: 768px) {
+    .bwm-theme-windows-7 {
+        --bwm-titlebar-height: 36px;
+        --bwm-taskbar-height: 52px;
+        --bwm-control-button-size: 26px;
+        --bwm-start-button-size: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bwm-theme-windows-7 {
+        --bwm-titlebar-height: 40px;
+        --bwm-taskbar-height: 56px;
+        --bwm-control-button-size: 30px;
+        --bwm-start-button-size: 48px;
+        --bwm-window-border-radius: 4px;
+    }
+}

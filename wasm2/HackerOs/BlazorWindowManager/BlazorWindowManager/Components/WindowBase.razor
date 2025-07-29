@@ -1,0 +1,25 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
+@implements IWindowMessageReceiver
+@implements IAsyncDisposable
+
+@* 
+WindowBase now serves primarily as a base class for windows.
+Windows that inherit from WindowBase should use WindowContent to render the complete window.
+This minimal template is only used for rare cases of direct WindowBase instantiation.
+*@
+
+@if (ChildContent != null)
+{
+    
+    @ChildContent
+}
+else
+{
+    <div class="default-window-message">
+        <p>This WindowBase instance needs content. Consider using WindowContent component or providing ChildContent.</p>
+    </div>
+}

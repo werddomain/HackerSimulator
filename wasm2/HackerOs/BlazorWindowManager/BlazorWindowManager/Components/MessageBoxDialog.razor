@@ -1,0 +1,24 @@
+@using BlazorWindowManager.Services
+@inherits DialogBase<MessageBoxResult>
+<WindowContent>
+<div class="dialog-content">
+    <div class="dialog-icon @GetIconClass()">
+        @GetIconSymbol()
+    </div>
+    
+    <div class="dialog-message">
+        @Message
+    </div>
+    
+    <div class="dialog-buttons">
+        @foreach (var button in GetButtons())
+        {
+            <button class="dialog-button @GetButtonClass(button)" 
+                    @onclick="() => OnButtonClick(button)">
+                @GetButtonText(button)
+            </button>
+        }
+    </div>
+</div>
+</WindowContent>
+

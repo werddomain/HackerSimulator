@@ -1,0 +1,41 @@
+@using BlazorWindowManager.Models
+@inherits DialogBase<string>
+
+<div class="dialog-content">
+    <div class="dialog-message">
+        @Message
+    </div>
+    
+    <div class="dialog-form">
+        <div class="dialog-form-group">
+            <label class="dialog-form-label" for="prompt-input">@InputLabel</label>
+            <input class="dialog-form-input" 
+                   id="prompt-input"
+                   type="@InputType" 
+                   @bind="InputValue" 
+                   @onkeydown="OnKeyDown"
+                   placeholder="@Placeholder"
+                   maxlength="@MaxLength"
+                   @ref="inputElement" />
+        </div>
+        
+        @if (ShowCharacterCount && MaxLength > 0)
+        {
+            <div class="character-count">
+                @(InputValue?.Length ?? 0) / @MaxLength
+            </div>
+        }
+    </div>
+    
+    <div class="dialog-buttons">
+        <button class="dialog-button primary" 
+                @onclick="OnOkClick"
+                disabled="@(!IsInputValid())">
+            OK
+        </button>
+        <button class="dialog-button" 
+                @onclick="OnCancelClick">
+            Cancel
+        </button>
+    </div>
+</div>

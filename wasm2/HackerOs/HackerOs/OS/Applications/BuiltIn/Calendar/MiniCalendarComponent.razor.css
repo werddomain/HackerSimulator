@@ -1,0 +1,111 @@
+.mini-calendar {
+    background-color: var(--card-background);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    width: 100%;
+}
+
+.mini-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.month-year-display {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.mini-calendar-navigation {
+    display: flex;
+    gap: 5px;
+}
+
+.mini-nav-button {
+    background: transparent;
+    border: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-color);
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.mini-nav-button:hover {
+    background-color: var(--hover-background);
+}
+
+.mini-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 5px;
+}
+
+.mini-weekday {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted-text-color);
+    padding: 2px 0;
+    font-weight: 500;
+}
+
+.mini-calendar-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mini-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+
+.mini-day {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 24px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.mini-day:hover {
+    background-color: var(--hover-background);
+}
+
+.mini-day.other-month {
+    color: var(--muted-text-color);
+    opacity: 0.6;
+}
+
+.mini-day.today {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.mini-day.selected {
+    background-color: var(--accent-color);
+    color: var(--accent-text-color);
+}
+
+.mini-day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    width: 4px;
+    height: 4px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+}
+
+.mini-day.selected.has-events::after {
+    background-color: var(--accent-text-color);
+}

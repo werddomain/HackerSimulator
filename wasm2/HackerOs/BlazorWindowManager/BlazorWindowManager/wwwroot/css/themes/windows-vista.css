@@ -1,0 +1,327 @@
+/* 
+ * Blazor Window Manager - Windows Vista Aero Theme
+ * Classic Windows Vista interface with Aero glass effects, transparency, and gradient styling
+ */
+
+.bwm-theme-windows-vista {
+    /* === WINDOWS VISTA AERO COLOR SCHEME === */
+    
+    /* Classic Windows Vista Aero Colors */
+    --vista-aero-blue: #1F5F99;
+    --vista-aero-light-blue: #E6F3FF;
+    --vista-aero-medium-blue: #B8D4F1;
+    --vista-aero-dark-blue: #1A4480;
+    --vista-glass-blue: rgba(31, 95, 153, 0.8);
+    --vista-glass-light-blue: rgba(230, 243, 255, 0.9);
+    --vista-window-background: rgba(255, 255, 255, 0.95);
+    --vista-window-text: #000000;
+    --vista-button-face: rgba(235, 235, 235, 0.9);
+    --vista-button-highlight: rgba(255, 255, 255, 0.8);
+    --vista-button-shadow: rgba(133, 133, 133, 0.6);
+    --vista-button-dark-shadow: rgba(96, 96, 96, 0.8);
+    --vista-active-caption: linear-gradient(180deg, 
+        rgba(185, 209, 234, 0.9) 0%, 
+        rgba(31, 95, 153, 0.85) 100%);
+    --vista-active-caption-text: #FFFFFF;
+    --vista-inactive-caption: linear-gradient(180deg, 
+        rgba(235, 235, 235, 0.8) 0%, 
+        rgba(153, 153, 153, 0.75) 100%);
+    --vista-inactive-caption-text: rgba(255, 255, 255, 0.9);
+    --vista-highlight: rgba(31, 95, 153, 0.8);
+    --vista-highlight-text: #FFFFFF;
+    --vista-desktop-blue: #1F5F99;
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container */
+    --bwm-window-background: var(--vista-window-background);
+    --bwm-window-border: rgba(31, 95, 153, 0.6);
+    --bwm-window-border-radius: 8px;
+    --bwm-window-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --bwm-window-active-border: rgba(31, 95, 153, 0.8);
+    --bwm-window-active-shadow: 
+        0 12px 48px rgba(31, 95, 153, 0.3),
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    --bwm-window-inactive-opacity: 0.85;
+    
+    /* Title Bar - Aero Glass Effect */
+    --bwm-titlebar-background: var(--vista-active-caption);
+    --bwm-titlebar-border-bottom: rgba(31, 95, 153, 0.4);
+    --bwm-titlebar-height: 30px;
+    --bwm-titlebar-padding: 6px 12px;
+    --bwm-titlebar-active-background: var(--vista-active-caption);
+    --bwm-titlebar-inactive-background: var(--vista-inactive-caption);
+    
+    /* Title Bar Text */
+    --bwm-title-color: var(--vista-active-caption-text);
+    --bwm-title-font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    --bwm-title-font-size: 12px;
+    --bwm-title-font-weight: normal;
+    --bwm-title-inactive-color: var(--vista-inactive-caption-text);
+    --bwm-title-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    
+    /* Window Controls (min, max, close buttons) */
+    --bwm-control-button-size: 22px;
+    --bwm-control-button-background: transparent;
+    --bwm-control-button-hover-background: rgba(255, 255, 255, 0.2);
+    --bwm-control-button-active-background: rgba(0, 0, 0, 0.1);
+    --bwm-control-button-border: 1px solid transparent;
+    --bwm-control-button-border-radius: 3px;
+    --bwm-control-button-color: var(--vista-active-caption-text);
+    --bwm-control-close-hover-background: rgba(232, 17, 35, 0.8);
+    --bwm-control-close-hover-color: #FFFFFF;
+    
+    /* Window Content */
+    --bwm-content-background: var(--vista-window-background);
+    --bwm-content-color: var(--vista-window-text);
+    --bwm-content-padding: 16px;
+    --bwm-content-font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    --bwm-content-font-size: 12px;
+    --bwm-content-line-height: 1.4;
+    
+    /* Resize Handles */
+    --bwm-resize-handle-color: rgba(31, 95, 153, 0.5);
+    --bwm-resize-handle-hover-color: rgba(31, 95, 153, 0.8);
+    --bwm-resize-handle-size: 6px;
+    
+    /* === TASKBAR OVERRIDES === */
+    
+    /* Taskbar Container - Glass Effect */
+    --bwm-taskbar-background: linear-gradient(180deg, 
+        rgba(31, 95, 153, 0.85) 0%, 
+        rgba(26, 68, 128, 0.9) 50%, 
+        rgba(20, 45, 80, 0.95) 100%);
+    --bwm-taskbar-border: rgba(31, 95, 153, 0.6);
+    --bwm-taskbar-height: 40px;
+    --bwm-taskbar-padding: 4px 8px;
+    --bwm-taskbar-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        0 -2px 8px rgba(0, 0, 0, 0.4);
+    
+    /* Taskbar Buttons - Glass Effect */
+    --bwm-taskbar-button-background: rgba(255, 255, 255, 0.1);
+    --bwm-taskbar-button-hover-background: rgba(255, 255, 255, 0.25);
+    --bwm-taskbar-button-active-background: rgba(255, 255, 255, 0.35);
+    --bwm-taskbar-button-border: 1px solid rgba(255, 255, 255, 0.2);
+    --bwm-taskbar-button-border-radius: 4px;
+    --bwm-taskbar-button-color: #FFFFFF;
+    --bwm-taskbar-button-padding: 6px 12px;
+    --bwm-taskbar-button-margin: 2px;
+    --bwm-taskbar-button-font-size: 11px;
+    --bwm-taskbar-button-font-weight: normal;
+    --bwm-taskbar-button-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    
+    /* Start Button - Vista Orb Style */
+    --bwm-start-button-background: radial-gradient(circle, 
+        rgba(125, 192, 67, 0.9) 0%, 
+        rgba(31, 95, 153, 0.85) 70%, 
+        rgba(20, 45, 80, 0.9) 100%);
+    --bwm-start-button-hover-background: radial-gradient(circle, 
+        rgba(140, 210, 80, 0.95) 0%, 
+        rgba(31, 95, 153, 0.9) 70%, 
+        rgba(20, 45, 80, 0.95) 100%);
+    --bwm-start-button-active-background: radial-gradient(circle, 
+        rgba(110, 175, 60, 0.85) 0%, 
+        rgba(25, 70, 120, 0.8) 70%, 
+        rgba(15, 35, 65, 0.85) 100%);
+    --bwm-start-button-border: 2px solid rgba(255, 255, 255, 0.4);
+    --bwm-start-button-border-radius: 50%;
+    --bwm-start-button-width: 56px;
+    --bwm-start-button-height: 32px;
+    --bwm-start-button-color: #FFFFFF;
+    --bwm-start-button-font-weight: bold;
+    --bwm-start-button-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    --bwm-start-button-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    
+    /* System Tray */
+    --bwm-systray-background: rgba(31, 95, 153, 0.7);
+    --bwm-systray-border: rgba(255, 255, 255, 0.2);
+    --bwm-systray-border-radius: 4px;
+    --bwm-systray-padding: 4px 8px;
+    --bwm-systray-color: #FFFFFF;
+    --bwm-systray-font-size: 11px;
+    --bwm-systray-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    
+    /* Clock */
+    --bwm-clock-background: transparent;
+    --bwm-clock-color: #FFFFFF;
+    --bwm-clock-font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    --bwm-clock-font-size: 11px;
+    --bwm-clock-font-weight: normal;
+    --bwm-clock-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --bwm-clock-padding: 4px 8px;
+    
+    /* === DIALOG OVERRIDES === */
+    
+    /* Dialog Overlay */
+    --bwm-dialog-overlay-background: rgba(0, 0, 0, 0.4);
+    --bwm-dialog-overlay-backdrop-filter: blur(2px);
+    
+    /* Dialog Container */
+    --bwm-dialog-background: var(--vista-window-background);
+    --bwm-dialog-border: rgba(31, 95, 153, 0.6);
+    --bwm-dialog-border-radius: 8px;
+    --bwm-dialog-shadow: 
+        0 16px 64px rgba(0, 0, 0, 0.5),
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    
+    /* === SNAP PREVIEW OVERRIDES === */
+    
+    /* Snap Preview */
+    --bwm-snap-preview-background: rgba(31, 95, 153, 0.3);
+    --bwm-snap-preview-border: 2px solid rgba(31, 95, 153, 0.6);
+    --bwm-snap-preview-border-radius: 4px;
+    --bwm-snap-preview-shadow: 
+        0 8px 32px rgba(31, 95, 153, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    
+    /* === DESKTOP OVERRIDES === */
+    
+    /* Desktop Area */
+    --bwm-desktop-background: linear-gradient(135deg, 
+        #1F5F99 0%, 
+        #2F4F8F 25%, 
+        #483D8B 50%, 
+        #4169E1 75%, 
+        #1F5F99 100%);
+    --bwm-desktop-background-attachment: fixed;
+    
+    /* === TYPOGRAPHY === */
+    
+    /* Base Typography */
+    --bwm-font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    --bwm-font-size: 12px;
+    --bwm-line-height: 1.4;
+    --bwm-font-weight: normal;
+    
+    /* Heading Typography */
+    --bwm-heading-font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    --bwm-heading-font-weight: 600;
+    --bwm-heading-color: var(--vista-window-text);
+    
+    /* === ANIMATION & TRANSITIONS === */
+    
+    /* Window Animations */
+    --bwm-window-transition: 
+        transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        box-shadow 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* Button Transitions */
+    --bwm-button-transition: 
+        background-color 0.15s ease-in-out,
+        border-color 0.15s ease-in-out,
+        box-shadow 0.15s ease-in-out;
+    
+    /* Hover Transitions */
+    --bwm-hover-transition: all 0.15s ease-in-out;
+    
+    /* === FOCUS STATES === */
+    
+    /* Focus Outline */
+    --bwm-focus-outline: 2px solid rgba(31, 95, 153, 0.6);
+    --bwm-focus-outline-offset: 2px;
+    --bwm-focus-box-shadow: 0 0 0 2px rgba(31, 95, 153, 0.3);
+}
+
+/* === GLASS EFFECT ENHANCEMENTS === */
+
+.bwm-theme-windows-vista .bwm-window {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.bwm-theme-windows-vista .bwm-window-titlebar {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.bwm-theme-windows-vista .bwm-taskbar {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.bwm-theme-windows-vista .bwm-dialog-overlay {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* === SPECIAL GLASS REFLECTION EFFECTS === */
+
+.bwm-theme-windows-vista .bwm-window::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, 
+        rgba(255, 255, 255, 0.2) 0%, 
+        rgba(255, 255, 255, 0.05) 50%, 
+        transparent 100%);
+    pointer-events: none;
+    border-radius: 8px 8px 0 0;
+    z-index: 1;
+}
+
+.bwm-theme-windows-vista .bwm-window-titlebar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.4) 50%, 
+        transparent 100%);
+    pointer-events: none;
+}
+
+/* === ACCESSIBILITY ENHANCEMENTS === */
+
+.bwm-theme-windows-vista .bwm-window:focus-within {
+    box-shadow: var(--bwm-window-active-shadow), var(--bwm-focus-box-shadow);
+}
+
+.bwm-theme-windows-vista .bwm-control-button:focus {
+    outline: var(--bwm-focus-outline);
+    outline-offset: var(--bwm-focus-outline-offset);
+}
+
+/* === MEDIA QUERIES FOR GLASS EFFECTS === */
+
+@media (prefers-reduced-motion: reduce) {
+    .bwm-theme-windows-vista * {
+        --bwm-window-transition: none;
+        --bwm-button-transition: none;
+        --bwm-hover-transition: none;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .bwm-theme-windows-vista {
+        --vista-window-background: #FFFFFF;
+        --vista-glass-blue: #1F5F99;
+        --vista-glass-light-blue: #E6F3FF;
+        --bwm-taskbar-background: linear-gradient(180deg, 
+            #1F5F99 0%, 
+            #1A4480 50%, 
+            #142D50 100%);
+    }
+    
+    .bwm-theme-windows-vista .bwm-window,
+    .bwm-theme-windows-vista .bwm-window-titlebar,
+    .bwm-theme-windows-vista .bwm-taskbar,
+    .bwm-theme-windows-vista .bwm-dialog-overlay {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}

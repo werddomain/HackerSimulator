@@ -4,7 +4,9 @@ let db = null;
 
 function openDb(version, upgrade){
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, version);
+    const req = (version === undefined)
+      ? indexedDB.open(DB_NAME)
+      : indexedDB.open(DB_NAME, version);
     req.onupgradeneeded = (ev) => {
       const d = req.result;
       if(!d.objectStoreNames.contains(SCHEMA_STORE)){
@@ -19,7 +21,8 @@ function openDb(version, upgrade){
 
 async function ensureDb(){
   if(db) return db;
-  db = await openDb(1, () => {});
+  // Open existing database without specifying a version to avoid downgrades
+  db = await openDb(undefined, () => {});
   return db;
 }
 

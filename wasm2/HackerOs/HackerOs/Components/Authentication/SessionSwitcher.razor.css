@@ -1,0 +1,521 @@
+.session-switcher {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    font-family: 'Courier New', monospace;
+}
+
+.session-switcher.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.session-switcher.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.session-container {
+    background-color: rgba(0, 20, 0, 0.95);
+    border: 2px solid #00ff00;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    animation: slideIn 0.3s ease-in-out;
+}
+
+.session-header {
+    background-color: rgba(0, 40, 0, 0.8);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.session-header h2 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 1.5rem;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #00ff00;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-button:hover {
+    background-color: rgba(0, 255, 0, 0.2);
+    transform: scale(1.1);
+}
+
+.sessions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 50vh;
+}
+
+.no-sessions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: #666;
+    font-style: italic;
+}
+
+.session-item {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 30, 0, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 6px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.session-item:hover {
+    background-color: rgba(0, 40, 0, 0.7);
+    border-color: rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.session-item.active {
+    background-color: rgba(0, 60, 0, 0.6);
+    border-color: rgba(0, 255, 0, 0.5);
+}
+
+.session-avatar {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 100, 0, 0.3);
+    border: 2px solid #00aa00;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.avatar-initials {
+    color: #00ff00;
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.session-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow: hidden;
+}
+
+.session-user {
+    color: #00ff00;
+    font-weight: bold;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.active-badge {
+    background-color: #00aa00;
+    color: #000;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.session-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.session-time {
+    color: #888;
+}
+
+.session-state {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    background-color: #333;
+}
+
+.session-state.active {
+    color: #00ff00;
+    background-color: rgba(0, 80, 0, 0.5);
+}
+
+.session-state.locked {
+    color: #ffaa00;
+    background-color: rgba(80, 40, 0, 0.5);
+}
+
+.session-state.expired {
+    color: #ff5555;
+    background-color: rgba(80, 0, 0, 0.5);
+}
+
+.session-state.terminated {
+    color: #888;
+    background-color: #222;
+}
+
+.session-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.session-actions button {
+    background: none;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #00aa00;
+}
+
+.session-actions button:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+    transform: scale(1.1);
+}
+
+.lock-button:hover {
+    color: #ffaa00;
+}
+
+.switch-button:hover {
+    color: #00ff00;
+}
+
+.end-button:hover {
+    color: #ff5555;
+}
+
+.session-actions-container {
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    border-top: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.new-session-button, .logout-all-button {
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.new-session-button {
+    background-color: rgba(0, 60, 0, 0.7);
+    color: #00ff00;
+    border: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.new-session-button:hover {
+    background-color: rgba(0, 80, 0, 0.8);
+    border-color: rgba(0, 255, 0, 0.5);
+}
+
+.logout-all-button {
+    background-color: rgba(60, 0, 0, 0.7);
+    color: #ff5555;
+    border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.logout-all-button:hover {
+    background-color: rgba(80, 0, 0, 0.8);
+    border-color: rgba(255, 0, 0, 0.5);
+}
+
+.error-message {
+    margin: 0 1rem 1rem;
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid #ff0000;
+    color: #ff6666;
+    padding: 0.75rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.error-icon {
+    font-style: normal;
+    font-size: 1.25rem;
+}
+
+/* New Session Modal */
+
+.new-session-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+}
+
+.modal-content {
+    background-color: rgba(0, 20, 0, 0.95);
+    border: 2px solid #00ff00;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    animation: fadeIn 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+.modal-header {
+    background-color: rgba(0, 40, 0, 0.8);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.modal-header h3 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.modal-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    color: #00cc00;
+    font-size: 0.85rem;
+}
+
+.input-group input {
+    background-color: rgba(0, 30, 0, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    padding: 0.75rem;
+    border-radius: 4px;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.2);
+}
+
+.password-input-container {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #00aa00;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: #00ff00;
+}
+
+.modal-footer {
+    padding: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    border-top: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.cancel-button, .create-button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancel-button {
+    background-color: rgba(40, 40, 40, 0.7);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cancel-button:hover {
+    background-color: rgba(60, 60, 60, 0.8);
+}
+
+.create-button {
+    background-color: rgba(0, 60, 0, 0.7);
+    color: #00ff00;
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.create-button:hover:not(:disabled) {
+    background-color: rgba(0, 80, 0, 0.8);
+}
+
+.create-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(0, 255, 0, 0.3);
+    border-radius: 50%;
+    border-top-color: #00ff00;
+    animation: spin 1s linear infinite;
+}
+
+/* Animations */
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive adjustments */
+
+@media (max-width: 600px) {
+    .session-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .session-avatar {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .session-details {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .session-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    .session-actions-container {
+        flex-direction: column;
+    }
+}
+
+/* Accessibility enhancements */
+.session-item:focus {
+    outline: 2px solid #00ff00;
+    outline-offset: 2px;
+}
+
+/* Screen reader only text */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}

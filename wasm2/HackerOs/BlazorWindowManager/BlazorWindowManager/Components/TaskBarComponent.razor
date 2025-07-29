@@ -1,0 +1,76 @@
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+@implements IDisposable
+
+
+<div class="taskbar">
+    <div class="taskbar-left">
+        @LeftContent
+    </div>
+    
+    <div class="taskbar-center">
+        <div class="window-buttons">
+            @foreach (var window in _openWindows)
+            {
+                <div class="window-button @GetWindowButtonClass(window)"
+                     @onclick="() => OnWindowButtonClick(window)"
+                     @oncontextmenu="(e) => OnWindowButtonRightClick(e, window)"
+                     @oncontextmenu:preventDefault="true"
+                     title="@window.Title">
+                    
+                    <div class="window-button-icon">
+                        @if (window.Icon != null)
+                        {
+                            @window.Icon
+                        }
+                        else
+                        {
+                            <div class="default-window-icon">📄</div>
+                        }
+                    </div>
+                    
+                    <div class="window-button-text">
+                        @GetDisplayTitle(window.Title)
+                    </div>
+                    
+                    @if (GroupedWindows && _groupedWindows.ContainsKey(GetGroupKey(window)) && _groupedWindows[GetGroupKey(window)].Count > 1)
+                    {
+                        <div class="window-group-indicator">
+                            @_groupedWindows[GetGroupKey(window)].Count
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="taskbar-right">
+        @RightContent
+        <div class="system-tray">
+            <div class="clock">
+                @DateTime.Now.ToString("HH:mm")
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_showContextMenu)
+{
+    <div class="context-menu" style="left: @(_contextMenuX)px; top: @(_contextMenuY)px" @onclick:stopPropagation="true">
+        <div class="context-menu-item" @onclick="() => PerformWindowAction(_contextMenuWindow, WindowAction.Restore)">
+            <span class="context-menu-icon">🔄</span> Restore
+        </div>
+        <div class="context-menu-item" @onclick="() => PerformWindowAction(_contextMenuWindow, WindowAction.Minimize)">
+            <span class="context-menu-icon">➖</span> Minimize
+        </div>
+        <div class="context-menu-item" @onclick="() => PerformWindowAction(_contextMenuWindow, WindowAction.Maximize)">
+            <span class="context-menu-icon">⬜</span> Maximize
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" @onclick="() => PerformWindowAction(_contextMenuWindow, WindowAction.Close)">
+            <span class="context-menu-icon">❌</span> Close
+        </div>
+    </div>
+    
+    <div class="context-menu-overlay" @onclick="CloseContextMenu"></div>
+}

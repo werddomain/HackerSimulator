@@ -1,0 +1,114 @@
+@page "/snapping-demo"
+
+<div class="snapping-demo-container">
+    <div class="demo-header">
+        <h2 class="demo-title">Window Snapping Functionality Test</h2>
+        <p class="demo-description">
+            This page demonstrates and tests all window snapping behaviors including edge snapping, 
+            zone snapping, and window-to-window magnetic snapping.
+        </p>
+    </div>
+
+    <div class="demo-controls">
+        <div class="control-group">
+            <h3>Snapping Configuration</h3>            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="SnappingService.IsEnabled" @bind:after="OnSnappingEnabledChanged" />
+                    Enable Snapping
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    Edge Sensitivity: 
+                    <input type="range" min="5" max="50" @bind="edgeSensitivity" @bind:after="OnEdgeSensitivityChanged" />
+                    <span>@edgeSensitivity px</span>
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    Zone Sensitivity: 
+                    <input type="range" min="10" max="100" @bind="zoneSensitivity" @bind:after="OnZoneSensitivityChanged" />
+                    <span>@zoneSensitivity px</span>
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="SnappingService.ShowSnapPreview" @bind:after="OnShowPreviewChanged" />
+                    Show Snap Preview
+                </label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>Test Actions</h3>
+            <button class="demo-button" @onclick="CreateTestWindow">Create Test Window</button>
+            <button class="demo-button" @onclick="CreateMultipleWindows">Create 3 Windows</button>
+            <button class="demo-button" @onclick="PositionWindowsForTesting">Position for Edge Testing</button>
+            <button class="demo-button" @onclick="ClearAllWindows">Clear All Windows</button>
+        </div>
+
+        <div class="control-group">
+            <h3>Snap Testing Instructions</h3>
+            <ol class="test-instructions">
+                <li><strong>Edge Snapping:</strong> Drag a window close to the container edges</li>
+                <li><strong>Zone Snapping:</strong> Drag to corners or edges to trigger zone previews</li>
+                <li><strong>Window-to-Window:</strong> Drag one window close to another's edges</li>
+                <li><strong>Maximize Zone:</strong> Drag to the top edge to trigger maximize preview</li>
+                <li><strong>Half-Screen Zones:</strong> Drag to left/right edges for half-screen snapping</li>
+            </ol>
+        </div>
+    </div>
+
+    <DesktopArea @ref="desktopArea" class="demo-desktop">
+        @foreach (var window in testWindows)
+        {
+            <WindowBase @key="window.Id"
+                        Id="@window.Id"
+                        Title="@window.Title"
+                        @bind-Left="window.Left"
+                        @bind-Top="window.Top"
+                        @bind-Width="window.Width"
+                        @bind-Height="window.Height"
+                        WindowState="@window.State"
+                        Resizable="true"
+                        ShowCloseButton="true"
+                        OnAfterClose="@(() => RemoveWindow(window.Id))">
+                <div class="test-window-content">
+                    <h4>@window.Title</h4>
+                    <p>Position: (@window.Left, @window.Top)</p>
+                    <p>Size: @window.Width × @window.Height</p>
+                    <p>State: @window.State</p>                    <div class="window-actions">
+                        <button @onclick="@(() => MoveWindowToCorner(window, "top-left"))">Top-Left</button>
+                        <button @onclick="@(() => MoveWindowToCorner(window, "top-right"))">Top-Right</button>
+                        <button @onclick="@(() => MoveWindowToCorner(window, "bottom-left"))">Bottom-Left</button>
+                        <button @onclick="@(() => MoveWindowToCorner(window, "bottom-right"))">Bottom-Right</button>
+                    </div>
+                </div>
+            </WindowBase>
+        }
+    </DesktopArea>
+
+    <div class="demo-status">
+        <h3>Snapping Status</h3>
+        <div class="status-grid">
+            <div class="status-item">
+                <strong>Snapping Enabled:</strong> @(SnappingService.IsEnabled ? "Yes" : "No")
+            </div>
+            <div class="status-item">
+                <strong>Edge Sensitivity:</strong> @SnappingService.EdgeSensitivity px
+            </div>
+            <div class="status-item">
+                <strong>Zone Sensitivity:</strong> @SnappingService.ZoneSensitivity px
+            </div>
+            <div class="status-item">
+                <strong>Show Preview:</strong> @(SnappingService.ShowSnapPreview ? "Yes" : "No")
+            </div>
+            <div class="status-item">
+                <strong>Active Windows:</strong> @testWindows.Count
+            </div>
+            <div class="status-item">
+                <strong>Last Snap Event:</strong> @lastSnapEvent
+            </div>
+        </div>
+    </div>
+</div>

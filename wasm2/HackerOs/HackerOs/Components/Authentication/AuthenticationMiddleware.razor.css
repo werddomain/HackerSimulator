@@ -1,0 +1,44 @@
+.authentication-middleware {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #000;
+    color: #00ff00;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(0, 255, 0, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid #00ff00;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    font-family: 'Courier New', monospace;
+    font-size: 1.5rem;
+    color: #00ff00;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

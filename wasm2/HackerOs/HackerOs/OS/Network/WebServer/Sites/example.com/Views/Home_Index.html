@@ -1,0 +1,26 @@
+<div class="hero">
+    <h2>Welcome to Example Store</h2>
+    <p>Your one-stop shop for high-quality tech products</p>
+    <a href="/products" class="btn">Shop Now</a>
+</div>
+
+<section class="featured-products">
+    <h2>Featured Products</h2>
+    <div class="product-grid">
+        @foreach (var item in ViewData["FeaturedProducts"] as IEnumerable<object>) {
+            <div class="product-card">
+                <img src="@item.ImageUrl" alt="@item.Name">
+                <h3>@item.Name</h3>
+                <p class="price">$@item.Price</p>
+                <a href="/products/@item.Id" class="btn">View Details</a>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="about-summary">
+    <h2>About Us</h2>
+    <p>Example Store is a demo site showcasing the powerful web server capabilities of HackerOS.</p>
+    <p>We offer a wide range of high-quality tech products at competitive prices.</p>
+    <a href="/about" class="btn btn-secondary">Learn More</a>
+</section>

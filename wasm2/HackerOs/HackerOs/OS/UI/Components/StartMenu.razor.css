@@ -1,0 +1,353 @@
+.start-menu {
+    position: fixed;
+    bottom: 48px; /* Position above taskbar */
+    left: 0;
+    width: 400px;
+    max-height: 700px;
+    background-color: var(--window-background-color, #1a1a1a);
+    color: var(--window-text-color, #ffffff);
+    border: 1px solid var(--border-color, #333333);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out, visibility 0s linear 0.2s;
+    z-index: 9999;
+}
+
+.start-menu.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out, visibility 0s linear 0s;
+}
+
+.start-menu-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color, #333333);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 12px;
+    border: 2px solid var(--accent-color, #0078d7);
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: var(--window-text-color, #ffffff);
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.user-action {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--secondary-text-color, #aaaaaa);
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.user-action:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--window-text-color, #ffffff);
+}
+
+.search-container {
+    position: relative;
+    margin-top: 8px;
+}
+
+.start-menu-search {
+    width: 100%;
+    padding: 8px 36px 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #333333);
+    background-color: var(--input-background-color, #2a2a2a);
+    color: var(--window-text-color, #ffffff);
+    font-size: 14px;
+}
+
+.start-menu-search:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d7);
+}
+
+.search-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--secondary-text-color, #aaaaaa);
+    cursor: pointer;
+}
+
+.search-button:hover {
+    color: var(--accent-color, #0078d7);
+}
+
+.start-menu-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.start-menu-section {
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    color: var(--secondary-text-color, #aaaaaa);
+    text-transform: uppercase;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.toggle-all-button {
+    background: transparent;
+    border: none;
+    color: var(--accent-color, #0078d7);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.app-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.app-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.app-icon img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+}
+
+.default-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-color, #0078d7);
+    color: white;
+    border-radius: 4px;
+}
+
+.app-name {
+    font-size: 12px;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.category-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.category-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--window-text-color, #ffffff);
+}
+
+.app-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-list-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.app-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.app-list-item .app-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    margin-bottom: 0;
+}
+
+.app-list-item .app-icon img {
+    width: 24px;
+    height: 24px;
+}
+
+.app-list-item .app-name {
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+}
+
+.app-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.pin-button {
+    background: transparent;
+    border: none;
+    color: var(--secondary-text-color, #aaaaaa);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+}
+
+.app-list-item:hover .pin-button {
+    opacity: 1;
+}
+
+.pin-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--window-text-color, #ffffff);
+}
+
+.pin-button.pinned {
+    opacity: 1;
+    color: var(--accent-color, #0078d7);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.empty-icon {
+    margin-bottom: 16px;
+    color: var(--secondary-text-color, #aaaaaa);
+}
+
+.empty-message {
+    font-size: 14px;
+    color: var(--secondary-text-color, #aaaaaa);
+}
+
+.system-shortcuts {
+    display: flex;
+    gap: 8px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, #333333);
+}
+
+.shortcut-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--window-text-color, #ffffff);
+    border: 1px solid var(--border-color, #333333);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.shortcut-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbar styling */
+.start-menu-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.start-menu-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.start-menu-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.start-menu-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}

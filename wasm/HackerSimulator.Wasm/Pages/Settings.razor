@@ -1,3 +1,19 @@
 @page "/settings"
+@inject NavigationManager Nav
+
 <h1>Settings</h1>
 <p>Placeholder for settings application.</p>
+
+
+<button @onclick="RunTerminal">Goto Index</button>
+
+@code {
+
+
+
+    private void RunTerminal()
+    {
+        // Logic to run the terminal process
+        Nav.NavigateTo("/", true);
+    }
+}

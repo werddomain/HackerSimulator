@@ -1,0 +1,154 @@
+@using System
+
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+
+<div class="day-view">
+    <div class="day-header">
+        <div class="time-column-header"></div>
+        <div class="day-details-header">
+            <div class="date-info">
+                <div class="weekday-name">@SelectedDate.ToString("dddd")</div>
+                <div class="date-display">@SelectedDate.ToString("MMMM d, yyyy")</div>
+            </div>
+            <div class="navigation-buttons">
+                <button class="nav-button" @onclick="NavigatePrevDay" title="Previous Day">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="nav-button" @onclick="NavigateToday" title="Today">
+                    <i class="fas fa-calendar-day"></i>
+                </button>
+                <button class="nav-button" @onclick="NavigateNextDay" title="Next Day">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="day-body">
+        <div class="all-day-section">
+            <div class="all-day-label">All day</div>
+            <div class="all-day-events">
+                @{
+                    var allDayEvents = AllDayEvents;
+                    var displayCount = Math.Min(allDayEvents.Count, 3);
+                    var remainingCount = allDayEvents.Count - displayCount;
+                }
+                
+                @for (int i = 0; i < displayCount; i++)
+                {
+                    var evt = allDayEvents[i];
+                    <div class="all-day-event"
+                         style="background-color: @evt.OriginalEvent.Color"
+                         @onclick="() => OnEventSelected.InvokeAsync(evt)">
+                        @if (evt.OriginalEvent.Reminders.Any())
+                        {
+                            <span class="reminder-indicator" title="This event has reminders">
+                                <i class="fas fa-bell"></i>
+                            </span>
+                        }
+                        @evt.OriginalEvent.Title
+                    </div>
+                }
+                
+                @if (remainingCount > 0)
+                {
+                    <div class="more-all-day-events" @onclick="ShowMoreEvents">
+                        +@remainingCount more
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <div class="time-grid">
+            <div class="time-column">
+                @foreach (var timeSlot in TimeSlots)
+                {
+                    <div class="time-slot">
+                        <div class="time-label">@timeSlot.Format("h tt")</div>
+                    </div>
+                }
+            </div>
+            
+            <div class="day-column @(IsToday ? "today-column" : "")">
+                @foreach (var timeSlot in TimeSlots)
+                {
+                    <div class="hour-cell" 
+                     @onclick="() => CreateEventAtTime(timeSlot)"
+                     data-date="@SelectedDate.ToString("yyyy-MM-ddTHH:mm:ss")"
+                     data-time="@timeSlot.ToString("HH:mm")"></div>
+                }
+                
+                @foreach (var evt in TimeEvents)
+                {
+                    <div class="event-item"
+                         id="day-event-@evt.OriginalEvent.Id"
+                         style="background-color: @evt.OriginalEvent.Color; top: @GetEventTop(evt)px; height: @GetEventHeight(evt)px;"
+                         @onclick="() => OnEventSelected.InvokeAsync(evt)"
+                         data-event-id="@evt.OriginalEvent.Id">
+                        <div class="event-time">
+                            @evt.StartTime.ToString("h:mm tt") - @evt.EndTime.ToString("h:mm tt")
+                            @if (evt.OriginalEvent.Reminders.Any())
+                            {
+                                <span class="reminder-indicator" title="This event has reminders">
+                                    <i class="fas fa-bell"></i>
+                                </span>
+                            }
+                        </div>
+                        <div class="event-title">@evt.OriginalEvent.Title</div>
+                        @if (!string.IsNullOrEmpty(evt.OriginalEvent.Location))
+                        {
+                            <div class="event-location">
+                                <i class="fas fa-map-marker-alt"></i> @evt.OriginalEvent.Location
+                            </div>
+                        }
+                    </div>
+                }
+                
+                @if (IsToday)
+                {
+                    <div class="current-time-indicator" style="top: @GetCurrentTimePosition()px">
+                        <div class="current-time-dot"></div>
+                        <div class="current-time-line"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    @if (_showMoreEventsDialog)
+    {
+        <div class="more-events-dialog">
+            <div class="more-events-header">
+                <h3>All-Day Events for @SelectedDate.ToString("MMMM d, yyyy")</h3>
+                <button class="close-button" @onclick="CloseMoreEventsDialog">×</button>
+            </div>
+            <div class="more-events-list">
+                @foreach (var evt in AllDayEvents)
+                {
+                    <div class="more-event-item all-day"
+                         style="border-left-color: @evt.OriginalEvent.Color"
+                         @onclick="() => HandleMoreEventClick(evt)">
+                        <div class="more-event-time">
+                            <span>All day</span>
+                        </div>
+                        <div class="more-event-title">
+                            @if (evt.OriginalEvent.Reminders.Any())
+                            {
+                                <span class="reminder-indicator" title="This event has reminders">
+                                    <i class="fas fa-bell"></i>
+                                </span>
+                            }
+                            @evt.OriginalEvent.Title
+                        </div>
+                        @if (!string.IsNullOrEmpty(evt.OriginalEvent.Location))
+                        {
+                            <div class="more-event-location">
+                                <i class="fas fa-map-marker-alt"></i> @evt.OriginalEvent.Location
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

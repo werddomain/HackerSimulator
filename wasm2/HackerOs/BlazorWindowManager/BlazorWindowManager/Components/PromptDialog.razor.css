@@ -1,0 +1,258 @@
+/* PromptDialog Scoped Styles - Modern/Hacker Theme */
+
+.dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+}
+
+.dialog-message {
+    font-size: 14px;
+    color: #cccccc;
+    line-height: 1.4;
+    margin-bottom: 10px;
+}
+
+.dialog-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.dialog-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dialog-form-label {
+    font-size: 12px;
+    color: #00ff41;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dialog-form-input {
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #404040;
+    border-radius: 4px;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.dialog-form-input:focus {
+    border-color: #00ff41;
+    box-shadow: 
+        0 0 10px rgba(0, 255, 65, 0.3),
+        inset 0 0 5px rgba(0, 255, 65, 0.1);
+    background: rgba(0, 255, 65, 0.05);
+}
+
+.dialog-form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dialog-form-input::placeholder {
+    color: #666666;
+    font-style: italic;
+}
+
+.character-count {
+    font-size: 10px;
+    color: #888888;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+}
+
+.character-count.over-limit {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #404040;
+}
+
+.dialog-button {
+    padding: 10px 20px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid #404040;
+    border-radius: 4px;
+    color: #cccccc;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dialog-button:hover {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    border-color: #666666;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.dialog-button.primary {
+    background: linear-gradient(180deg, #00ff41 0%, #00cc33 100%);
+    border-color: #00ff41;
+    color: #000000;
+    text-shadow: none;
+}
+
+.dialog-button.primary:hover {
+    background: linear-gradient(180deg, #33ff66 0%, #00ff41 100%);
+    box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        0 0 15px rgba(0, 255, 65, 0.4);
+}
+
+.dialog-button.primary:disabled {
+    background: linear-gradient(180deg, #404040 0%, #2a2a2a 100%);
+    border-color: #404040;
+    color: #666666;
+}
+
+/* Button animation effect */
+.dialog-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.dialog-button:hover::before {
+    left: 100%;
+}
+
+/* Validation error styling */
+.validation-error {
+    color: #ff4444;
+    font-size: 11px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.validation-error::before {
+    content: '⚠';
+    font-size: 12px;
+}
+
+/* Input validation states */
+.dialog-form-input.invalid {
+    border-color: #ff4444;
+    box-shadow: 0 0 5px rgba(255, 68, 68, 0.3);
+}
+
+.dialog-form-input.valid {
+    border-color: #00ff41;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .dialog-content {
+        padding: 15px;
+    }
+    
+    .dialog-form-input {
+        padding: 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .dialog-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .dialog-button {
+        width: 100%;
+        padding: 12px 20px;
+    }
+    
+    .dialog-message {
+        font-size: 13px;
+    }
+}
+
+/* Dark theme enhancements */
+@media (prefers-color-scheme: dark) {
+    .dialog-form-input {
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .dialog-form-input:focus {
+        background: rgba(0, 255, 65, 0.08);
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .dialog-form-input {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .dialog-form-input:focus {
+        border-color: #ffffff;
+        box-shadow: 0 0 0 2px #ffffff;
+    }
+    
+    .dialog-form-label {
+        color: #ffffff;
+    }
+    
+    .dialog-message {
+        color: #ffffff;
+    }
+    
+    .dialog-button {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .dialog-button:hover {
+        background: #333333;
+    }
+    
+    .dialog-button.primary {
+        background: #ffffff;
+        color: #000000;
+    }
+}

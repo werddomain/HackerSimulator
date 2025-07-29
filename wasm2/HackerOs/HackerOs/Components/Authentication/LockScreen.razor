@@ -1,0 +1,96 @@
+@using HackerOs.OS.Security
+@using HackerOs.OS.User.Models
+
+<div class="lock-screen @(IsVisible ? "visible" : "hidden")">
+    <div class="lock-overlay"></div>
+    <div class="lock-container">
+        <div class="lock-header">
+            <h1 class="system-title">HackerOS</h1>
+            <p class="system-subtitle">Session Locked</p>
+        </div>
+
+        <div class="user-info">
+            @if (CurrentSession?.User != null)
+            {
+                <div class="user-avatar">
+                    <span class="avatar-initials">@GetUserInitials()</span>
+                </div>
+                <div class="user-details">
+                    <h2 class="username">@CurrentSession.User.Username</h2>
+                    <p class="lock-time">Locked at @FormatLockTime()</p>
+                    <p class="lock-reason">@LockReason</p>
+                </div>
+            }
+            else
+            {
+                <div class="no-session-info">
+                    <p>No active session information available</p>
+                </div>
+            }
+        </div>
+
+        <div class="unlock-form">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-message" @onclick="ClearError">
+                    <i class="error-icon">⚠</i>
+                    <span>@ErrorMessage</span>
+                </div>
+            }
+
+            <div class="input-group">
+                <label for="unlock-password">Password:</label>
+                <div class="password-input-container">
+                    <input 
+                        id="unlock-password"
+                        type="@(ShowPassword ? "text" : "password")" 
+                        @bind="Password" 
+                        @onkeypress="HandleKeyPress"
+                        placeholder="Enter password to unlock"
+                        disabled="@IsUnlocking"
+                        autocomplete="current-password"
+                        @ref="PasswordInput" />
+                    <button 
+                        type="button" 
+                        class="password-toggle"
+                        @onclick="TogglePasswordVisibility"
+                        disabled="@IsUnlocking"
+                        title="@(ShowPassword ? "Hide password" : "Show password")">
+                        @(ShowPassword ? "👁️" : "🔒")
+                    </button>
+                </div>
+            </div>
+
+            <div class="unlock-actions">
+                <button 
+                    class="unlock-button @(IsUnlocking ? "loading" : "")"
+                    @onclick="HandleUnlock"
+                    disabled="@IsUnlocking">
+                    @if (IsUnlocking)
+                    {
+                        <span class="loading-spinner"></span>
+                        <span>Unlocking...</span>
+                    }
+                    else
+                    {
+                        <span>Unlock</span>
+                    }
+                </button>
+                
+                <button 
+                    class="logout-button"
+                    @onclick="HandleLogout"
+                    disabled="@IsUnlocking">
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="lock-footer">
+            <p>HackerOS Simulator v2.0</p>
+            <p>Session locked for security</p>
+            <p>Current time: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</p>
+            <p>Attempts remaining: @(MaxUnlockAttempts - UnlockAttempts)</p>
+        </div>
+    </div>
+</div>

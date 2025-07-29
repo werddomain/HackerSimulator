@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using HackerSimulator.Wasm.Dialogs;
 using HackerSimulator.Wasm.Core;
-using HackerSimulator.Wasm.Core;
+
 using HackerSimulator.Wasm.Shared;
 
 namespace HackerSimulator.Wasm.Apps

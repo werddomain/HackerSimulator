@@ -1,0 +1,149 @@
+.terminal-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: none;
+    display: flex;
+    flex-direction: column;
+    background-color: #000;
+    color: #fff;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.terminal-screen {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    line-height: 1.2;
+}
+
+.terminal-line {
+    white-space: pre;
+    height: calc(100% / var(--terminal-rows, 24));
+}
+
+.terminal-character {
+    display: inline-block;
+    width: calc(100% / var(--terminal-cols, 80));
+    height: 100%;
+}
+
+.terminal-character.selected {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    color: inherit !important;
+}
+
+.terminal-cursor {
+    position: absolute;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.terminal-cursor-block {
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+.terminal-cursor-underline {
+    background-color: transparent;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+    height: calc(100% - 2px) !important;
+}
+
+.terminal-cursor-bar {
+    background-color: rgba(255, 255, 255, 0.7);
+    width: 2px !important;
+}
+
+.terminal-cursor-blink {
+    animation: terminal-cursor-blink 1s step-end infinite;
+}
+
+@keyframes terminal-cursor-blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Scrollback indicators */
+.terminal-scroll-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #ffffff;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.terminal-scroll-indicator.visible {
+    opacity: 0.7;
+}
+
+.terminal-scroll-indicator:hover {
+    opacity: 0.9;
+}
+
+.scroll-up-indicator,
+.scroll-down-indicator {
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 4px;
+    pointer-events: auto;
+}
+
+.scroll-position-indicator {
+    font-size: 10px;
+    margin: 2px 0;
+}
+
+.scroll-down-indicator.active {
+    color: #00ff00;
+}
+
+/* Text styles */
+.terminal-bold {
+    font-weight: bold;
+}
+
+.terminal-italic {
+    font-style: italic;
+}
+
+.terminal-underline {
+    text-decoration: underline;
+}
+
+.terminal-strikethrough {
+    text-decoration: line-through;
+}
+
+.terminal-blink {
+    animation: terminal-text-blink 1s step-start infinite;
+}
+
+@keyframes terminal-text-blink {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.terminal-reverse {
+    filter: invert(100%);
+}
+
+.terminal-concealed {
+    visibility: hidden;
+}

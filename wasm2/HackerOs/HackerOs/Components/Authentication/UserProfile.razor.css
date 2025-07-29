@@ -1,0 +1,250 @@
+.user-profile {
+    position: relative;
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+.profile-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: rgba(0, 30, 0, 0.7);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.profile-toggle:hover {
+    background-color: rgba(0, 40, 0, 0.8);
+    border-color: rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(0, 60, 0, 0.8);
+    border: 1px solid rgba(0, 255, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00ff00;
+    font-weight: bold;
+    position: relative;
+    text-shadow: 0 0 4px rgba(0, 255, 0, 0.7);
+}
+
+.user-avatar.large {
+    width: 64px;
+    height: 64px;
+    font-size: 24px;
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.status-indicator.active {
+    background-color: #00ff00;
+    box-shadow: 0 0 4px #00ff00;
+}
+
+.status-indicator.locked {
+    background-color: #ffcc00;
+    box-shadow: 0 0 4px #ffcc00;
+}
+
+.status-indicator.expired, .status-indicator.terminated {
+    background-color: #ff3300;
+    box-shadow: 0 0 4px #ff3300;
+}
+
+.status-indicator.offline {
+    background-color: #666666;
+    box-shadow: 0 0 4px #666666;
+}
+
+.toggle-icon {
+    margin-left: 8px;
+    color: #00ff00;
+    font-size: 10px;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    width: 300px;
+    background-color: rgba(0, 20, 0, 0.95);
+    border: 2px solid #00ff00;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    z-index: 100;
+    animation: fadeIn 0.2s ease-in-out;
+    overflow: hidden;
+}
+
+.profile-header {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+    background-color: rgba(0, 40, 0, 0.5);
+}
+
+.user-info {
+    margin-left: 16px;
+}
+
+.username {
+    margin: 0;
+    padding: 0;
+    color: #00ff00;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.user-type {
+    margin: 4px 0 0 0;
+    padding: 0;
+    color: rgba(0, 255, 0, 0.7);
+    font-size: 12px;
+}
+
+.session-info {
+    padding: 16px;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    color: rgba(0, 255, 0, 0.7);
+}
+
+.info-value {
+    color: #00ff00;
+    text-align: right;
+}
+
+.info-value.active {
+    color: #00ff00;
+}
+
+.info-value.locked {
+    color: #ffcc00;
+}
+
+.info-value.expired, .info-value.terminated {
+    color: #ff3300;
+}
+
+.info-value.offline {
+    color: #666666;
+}
+
+.profile-actions {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.profile-button {
+    background-color: rgba(0, 40, 0, 0.7);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 4px;
+    color: #00ff00;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.profile-button:hover {
+    background-color: rgba(0, 60, 0, 0.8);
+    border-color: rgba(0, 255, 0, 0.5);
+}
+
+.profile-button:active {
+    transform: scale(0.98);
+}
+
+.profile-button.logout {
+    margin-top: 8px;
+    background-color: rgba(40, 0, 0, 0.7);
+    border-color: rgba(255, 0, 0, 0.3);
+    color: #ff5555;
+}
+
+.profile-button.logout:hover {
+    background-color: rgba(60, 0, 0, 0.8);
+    border-color: rgba(255, 0, 0, 0.5);
+}
+
+.button-icon {
+    margin-right: 8px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .profile-dropdown {
+        animation: none;
+    }
+    
+    .profile-button:active {
+        transform: none;
+    }
+}
+
+/* Screen reader only class */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Keyboard focus styles */
+.profile-toggle:focus-visible,
+.profile-button:focus-visible {
+    outline: 2px solid #00ff00;
+    outline-offset: 2px;
+}

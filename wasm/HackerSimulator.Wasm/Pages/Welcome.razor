@@ -1,30 +1,84 @@
 @page "/welcome"
+@using Microsoft.JSInterop
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 
-<h1 class="welcome-title">Welcome</h1>
-<p>Create the administrator account to begin using Hacker Simulator.</p>
+<div class="welcome-container">
+    <div class="code-background" id="codeBackground"></div>
+    <div class="welcome-card">
+        <h1 class="welcome-title">H4CK3R OS</h1>
+        <p class="welcome-subtitle">Create your administrator account to begin your hacking journey</p>
 
-<div class="welcome-form">
-    <input placeholder="Username" @bind="username" />
-    <input placeholder="Password" type="password" @bind="password" />
-    <button @onclick="CreateAdmin">Create</button>
+        <div class="welcome-form">
+            <input placeholder="Username" @bind="username" class="welcome-input" />
+            <input placeholder="Password" type="password" @bind="password" class="welcome-input" />
+            <button @onclick="CreateAdmin">Initialize System</button>
+        </div>
+        
+        <div class="animation-toggle">
+            <span class="@(showTypingAnimation ? "" : "active")" @onclick="() => ToggleAnimation(false)">Matrix</span>
+            <span class="@(showTypingAnimation ? "active" : "")" @onclick="() => ToggleAnimation(true)">Code</span>
+        </div>    </div>
 </div>
-
 @code {
     private string username = string.Empty;
     private string password = string.Empty;
+    private bool isLoading = false;
+    private bool showTypingAnimation = false;
+    private IJSObjectReference? module;
 
     protected override void OnInitialized()
     {
         if (Auth.HasUsers)
             Nav.NavigateTo("/login", true);
+    }   
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try {
+                module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
+                await module.InvokeVoidAsync("initializeCodeAnimation");
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"Error initializing animation: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ToggleAnimation(bool showTyping)
+    {
+        if (showTypingAnimation == showTyping) return;
+        
+        showTypingAnimation = showTyping;
+        
+        try {
+            if (module != null)
+            {
+                // Toggle animation type
+                if (showTypingAnimation)
+                {
+                    await module.InvokeVoidAsync("initializeCodeAnimation", true); // Pass true to show typing animation
+                }
+                else
+                {
+                    await module.InvokeVoidAsync("initializeCodeAnimation", false); // Pass false for matrix animation
+                }
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error toggling animation: {ex.Message}");
+        }
     }
 
     private async Task CreateAdmin()
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             return;
+        
+        isLoading = true;
         await Auth.CreateUser(username, password, 1);
         await Auth.Login(username, password);
         Nav.NavigateTo("/", true);

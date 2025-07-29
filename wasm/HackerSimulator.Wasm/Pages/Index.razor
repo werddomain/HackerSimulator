@@ -1,6 +1,56 @@
 @page "/"
-
+@inject NavigationManager Nav
+@inject AuthService Auth
 @using HackerSimulator.Wasm.Shared
+<!-- IndexPage -->
+@* <Desktop /> *@
+@if (!Auth.Initialized)
+{
+    <p>Loading...</p>
+}
+else if (!Auth.HasUsers)
+{
+    <Welcome />
+}
+else if (!Auth.IsAuthenticated)
+{
+    <Login />
+}
+else
+{
+   <MudContainer MaxWidth="MaxWidth.Small" Fixed=true>
+        <Desktop />
+        <Taskbar />
+    </MudContainer>
+    
+}
+@* <button @onclick="RunTerminal">Goto Settings</button> *@
 
-<Desktop />
+@code {
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Auth.OnAuthInitialised += (s, e) =>
+            {
+                StateHasChanged();
+            };
+            Auth.OnUserLogin += (s, e) =>
+            {
+                Dispatcher.CreateDefault().InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                });
+                // Removed duplicate StateHasChanged call
+            };
+        }
+        return Task.CompletedTask;
+    }
 
+
+    private void RunTerminal()
+    {
+        // Logic to run the terminal process
+        Nav.NavigateTo("/settings", true);
+    }
+}

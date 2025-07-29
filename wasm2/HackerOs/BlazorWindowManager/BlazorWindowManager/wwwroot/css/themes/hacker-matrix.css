@@ -1,0 +1,250 @@
+/* 
+ * Blazor Window Manager - Hacker/Matrix Theme
+ * CRT-style retro interface with green on black, perfect for hacker aesthetics
+ */
+
+.bwm-theme-hacker-matrix {
+    /* === THEME-SPECIFIC OVERRIDES === */
+    
+    /* Window Container */
+    --bwm-window-background: #0a0a0a;
+    --bwm-window-border: #00ff00;
+    --bwm-window-border-radius: 2px;
+    --bwm-window-shadow: 
+        0 0 20px rgba(0, 255, 0, 0.3),
+        0 0 40px rgba(0, 255, 0, 0.1),
+        inset 0 0 10px rgba(0, 255, 0, 0.05);
+    --bwm-window-active-border: #00ff41;
+    --bwm-window-active-shadow: 
+        0 0 30px rgba(0, 255, 65, 0.5),
+        0 0 60px rgba(0, 255, 0, 0.2),
+        inset 0 0 15px rgba(0, 255, 65, 0.1);
+    --bwm-window-inactive-opacity: 0.7;
+    
+    /* Title Bar */
+    --bwm-titlebar-background: linear-gradient(135deg, #001a00 0%, #000d00 100%);
+    --bwm-titlebar-border-bottom: #00ff00;
+    --bwm-titlebar-height: 28px;
+    --bwm-titlebar-active-background: linear-gradient(135deg, #003300 0%, #001a00 100%);
+    
+    /* Title Bar Text */
+    --bwm-title-color: #00ff41;
+    --bwm-title-font-family: 'Courier New', 'Liberation Mono', 'Consolas', monospace;
+    --bwm-title-font-size: 12px;
+    --bwm-title-font-weight: bold;
+    --bwm-title-inactive-color: #008800;
+    --bwm-title-text-shadow: 0 0 5px rgba(0, 255, 65, 0.8);
+    
+    /* Window Controls */
+    --bwm-control-button-background: rgba(0, 0, 0, 0.3);
+    --bwm-control-button-hover-background: rgba(0, 255, 0, 0.2);
+    --bwm-control-button-active-background: rgba(0, 255, 0, 0.3);
+    --bwm-control-button-border: 1px solid rgba(0, 255, 0, 0.5);
+    --bwm-control-button-border-radius: 0;
+    --bwm-control-button-color: #00ff00;
+    --bwm-control-close-hover-background: rgba(255, 0, 0, 0.3);
+    --bwm-control-close-hover-color: #ff4444;
+    
+    /* Window Content */
+    --bwm-content-background: #000000;
+    --bwm-content-color: #00ff41;
+    --bwm-content-font-family: 'Courier New', 'Liberation Mono', 'Consolas', monospace;
+    --bwm-content-font-size: 13px;
+    --bwm-content-line-height: 1.3;
+    
+    /* Taskbar */
+    --bwm-taskbar-background: linear-gradient(180deg, #001100 0%, #000800 100%);
+    --bwm-taskbar-border: #00ff00;
+    --bwm-taskbar-shadow: 
+        0 -2px 10px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(0, 255, 0, 0.2);
+    
+    /* Taskbar Buttons */
+    --bwm-taskbar-button-background: rgba(0, 0, 0, 0.6);
+    --bwm-taskbar-button-hover-background: rgba(0, 255, 0, 0.2);
+    --bwm-taskbar-button-active-background: rgba(0, 255, 0, 0.3);
+    --bwm-taskbar-button-border: 1px solid rgba(0, 255, 0, 0.4);
+    --bwm-taskbar-button-border-radius: 0;
+    --bwm-taskbar-button-color: #00ff00;
+    --bwm-taskbar-button-font-size: 11px;
+    --bwm-taskbar-button-font-weight: bold;
+    
+    /* Desktop */
+    --bwm-desktop-background: #000000;
+    --bwm-desktop-pattern: 
+        radial-gradient(circle at 1px 1px, rgba(0, 255, 0, 0.1) 1px, transparent 0),
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 255, 0, 0.03) 2px,
+            rgba(0, 255, 0, 0.03) 4px
+        );
+    --bwm-desktop-pattern-size: 20px 20px, 100% 4px;
+    
+    /* Scrollbar */
+    --bwm-scrollbar-background: rgba(0, 0, 0, 0.8);
+    --bwm-scrollbar-thumb-background: rgba(0, 255, 0, 0.6);
+    --bwm-scrollbar-thumb-hover-background: rgba(0, 255, 65, 0.8);
+}
+
+/* === THEME-SPECIFIC ENHANCEMENTS === */
+
+.bwm-theme-hacker-matrix .window-container {
+    /* Add CRT scan lines effect */
+    position: relative;
+}
+
+.bwm-theme-hacker-matrix .window-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 0, 0.03) 2px,
+        rgba(0, 255, 0, 0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.bwm-theme-hacker-matrix .window-content {
+    /* Ensure content appears above scan lines */
+    position: relative;
+    z-index: 2;
+}
+
+/* Enhanced glow effects for active windows */
+.bwm-theme-hacker-matrix .window-container.window-active {
+    animation: hackerGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes hackerGlow {
+    0% {
+        box-shadow: 
+            0 0 30px rgba(0, 255, 65, 0.5),
+            0 0 60px rgba(0, 255, 0, 0.2),
+            inset 0 0 15px rgba(0, 255, 65, 0.1);
+    }
+    100% {
+        box-shadow: 
+            0 0 40px rgba(0, 255, 65, 0.7),
+            0 0 80px rgba(0, 255, 0, 0.3),
+            inset 0 0 20px rgba(0, 255, 65, 0.15);
+    }
+}
+
+/* Terminal-style text cursor */
+.bwm-theme-hacker-matrix .window-content {
+    position: relative;
+}
+
+.bwm-theme-hacker-matrix .window-content::after {
+    content: '█';
+    color: #00ff41;
+    animation: hackerCursor 1s infinite;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+@keyframes hackerCursor {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* Enhanced button effects */
+.bwm-theme-hacker-matrix .window-controls button:hover {
+    text-shadow: 0 0 8px currentColor;
+    animation: hackerButtonGlow 0.3s ease;
+}
+
+@keyframes hackerButtonGlow {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Taskbar enhancements */
+.bwm-theme-hacker-matrix .taskbar {
+    border-top: 2px solid var(--bwm-taskbar-border);
+}
+
+.bwm-theme-hacker-matrix .window-button {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--bwm-content-font-family);
+}
+
+.bwm-theme-hacker-matrix .window-button:hover {
+    text-shadow: 0 0 5px var(--bwm-taskbar-button-color);
+}
+
+.bwm-theme-hacker-matrix .window-button.active {
+    text-shadow: 0 0 10px var(--bwm-taskbar-button-color);
+    animation: hackerActiveButton 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes hackerActiveButton {
+    0% { 
+        background-color: var(--bwm-taskbar-button-active-background);
+        box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3);
+    }
+    100% { 
+        background-color: rgba(0, 255, 0, 0.4);
+        box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.5);
+    }
+}
+
+/* Dialog modal overlay */
+.bwm-theme-hacker-matrix .modal-overlay {
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.9) 0%, rgba(0, 20, 0, 0.95) 100%);
+}
+
+/* Custom scrollbar for hacker theme */
+.bwm-theme-hacker-matrix ::-webkit-scrollbar {
+    width: var(--bwm-scrollbar-width);
+    background: var(--bwm-scrollbar-background);
+}
+
+.bwm-theme-hacker-matrix ::-webkit-scrollbar-thumb {
+    background: var(--bwm-scrollbar-thumb-background);
+    border-radius: 0;
+    border: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.bwm-theme-hacker-matrix ::-webkit-scrollbar-thumb:hover {
+    background: var(--bwm-scrollbar-thumb-hover-background);
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+/* Selection styling */
+.bwm-theme-hacker-matrix ::selection {
+    background: rgba(0, 255, 0, 0.3);
+    color: #00ff41;
+}
+
+/* Input field styling */
+.bwm-theme-hacker-matrix input,
+.bwm-theme-hacker-matrix textarea,
+.bwm-theme-hacker-matrix select {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #00ff00;
+    color: #00ff41;
+    font-family: var(--bwm-content-font-family);
+}
+
+.bwm-theme-hacker-matrix input:focus,
+.bwm-theme-hacker-matrix textarea:focus,
+.bwm-theme-hacker-matrix select:focus {
+    outline: none;
+    border-color: #00ff41;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}

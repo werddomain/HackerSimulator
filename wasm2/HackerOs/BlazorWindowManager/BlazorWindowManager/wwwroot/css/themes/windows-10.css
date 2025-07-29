@@ -1,0 +1,347 @@
+/* 
+ * Blazor Window Manager - Windows 10 Theme
+ * Modern flat design with minimalism, accent colors, and subtle shadows
+ */
+
+.bwm-theme-windows-10 {
+    /* === WINDOWS 10 FLAT DESIGN COLOR SCHEME === */
+    
+    /* Windows 10 Modern Colors */
+    --win10-accent-blue: #0078d4;
+    --win10-accent-light-blue: #429ce3;
+    --win10-accent-dark-blue: #005a9e;
+    --win10-background-light: #ffffff;
+    --win10-background-medium: #f3f3f3;
+    --win10-background-dark: #e1e1e1;
+    --win10-text-primary: #000000;
+    --win10-text-secondary: #424242;
+    --win10-text-disabled: #a6a6a6;
+    --win10-border-light: #e1e1e1;
+    --win10-border-medium: #d1d1d1;
+    --win10-border-dark: #bebebe;
+    --win10-shadow-light: rgba(0, 0, 0, 0.1);
+    --win10-shadow-medium: rgba(0, 0, 0, 0.15);
+    --win10-shadow-dark: rgba(0, 0, 0, 0.25);
+    --win10-overlay: rgba(0, 0, 0, 0.4);
+    --win10-hover-overlay: rgba(0, 0, 0, 0.05);
+    --win10-active-overlay: rgba(0, 0, 0, 0.1);
+    --win10-focus-blue: #0078d4;
+    --win10-taskbar-dark: #2f3136;
+    --win10-taskbar-darker: #232428;
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container - Flat Modern Design */
+    --bwm-window-background: var(--win10-background-light);
+    --bwm-window-border: var(--win10-border-medium);
+    --bwm-window-border-radius: 0px;
+    --bwm-window-shadow: 
+        0 8px 16px var(--win10-shadow-light),
+        0 4px 8px var(--win10-shadow-medium);
+    --bwm-window-active-border: var(--win10-accent-blue);
+    --bwm-window-active-shadow: 
+        0 12px 24px var(--win10-shadow-medium),
+        0 6px 12px var(--win10-shadow-light),
+        0 0 0 1px var(--win10-accent-blue);
+    --bwm-window-inactive-opacity: 0.9;
+    
+    /* Title Bar - Flat Design */
+    --bwm-titlebar-background: var(--win10-background-light);
+    --bwm-titlebar-text-color: var(--win10-text-primary);
+    --bwm-titlebar-height: 32px;
+    --bwm-titlebar-padding: 0 16px;
+    --bwm-titlebar-inactive-background: var(--win10-background-medium);
+    --bwm-titlebar-inactive-text-color: var(--win10-text-secondary);
+    --bwm-titlebar-border-bottom: 1px solid var(--win10-border-light);
+    --bwm-titlebar-text-shadow: none;
+    
+    /* Window Controls - Modern Flat Buttons */
+    --bwm-control-button-size: 46px;
+    --bwm-control-button-margin: 0;
+    --bwm-control-button-background: transparent;
+    --bwm-control-button-border: none;
+    --bwm-control-button-border-radius: 0px;
+    --bwm-control-button-hover-background: var(--win10-hover-overlay);
+    --bwm-control-button-active-background: var(--win10-active-overlay);
+    --bwm-control-button-text-color: var(--win10-text-primary);
+    --bwm-control-button-shadow: none;
+    
+    /* Close Button - Windows 10 Red */
+    --bwm-close-button-background: transparent;
+    --bwm-close-button-hover-background: #e81123;
+    --bwm-close-button-active-background: #c50e1f;
+    --bwm-close-button-border: none;
+    --bwm-close-button-hover-text-color: #ffffff;
+    
+    /* Content Area */
+    --bwm-content-background: var(--win10-background-light);
+    --bwm-content-text-color: var(--win10-text-primary);
+    --bwm-content-padding: 16px;
+    --bwm-content-border-radius: 0px;
+    
+    /* Resize Handles - Minimal */
+    --bwm-resize-handle-color: var(--win10-border-medium);
+    --bwm-resize-handle-hover-color: var(--win10-accent-blue);
+    --bwm-resize-handle-size: 4px;
+    --bwm-resize-corner-size: 12px;
+    
+    /* === TASKBAR STYLING === */
+    
+    /* Taskbar Container - Dark Modern */
+    --bwm-taskbar-background: var(--win10-taskbar-dark);
+    --bwm-taskbar-height: 48px;
+    --bwm-taskbar-border-top: 1px solid var(--win10-taskbar-darker);
+    --bwm-taskbar-shadow: 
+        0 -2px 8px var(--win10-shadow-light);
+    --bwm-taskbar-backdrop-filter: none;
+    
+    /* Window Buttons - Flat Design */
+    --bwm-taskbar-button-background: transparent;
+    --bwm-taskbar-button-border: none;
+    --bwm-taskbar-button-border-radius: 0px;
+    --bwm-taskbar-button-margin: 0 2px;
+    --bwm-taskbar-button-padding: 8px 12px;
+    --bwm-taskbar-button-text-color: #ffffff;
+    --bwm-taskbar-button-text-shadow: none;
+    --bwm-taskbar-button-shadow: none;
+    
+    /* Button States - Subtle Highlights */
+    --bwm-taskbar-button-hover-background: rgba(255, 255, 255, 0.1);
+    --bwm-taskbar-button-hover-border: none;
+    --bwm-taskbar-button-hover-shadow: none;
+    
+    --bwm-taskbar-button-active-background: rgba(255, 255, 255, 0.2);
+    --bwm-taskbar-button-active-border: none;
+    --bwm-taskbar-button-active-shadow: 
+        inset 0 -3px 0 var(--win10-accent-blue);
+    
+    /* Start Button - Windows 10 Style */
+    --bwm-start-button-background: transparent;
+    --bwm-start-button-border: none;
+    --bwm-start-button-border-radius: 0px;
+    --bwm-start-button-size: 48px;
+    --bwm-start-button-margin: 0;
+    --bwm-start-button-shadow: none;
+    --bwm-start-button-hover-background: rgba(255, 255, 255, 0.1);
+    --bwm-start-button-hover-shadow: none;
+    --bwm-start-button-active-background: rgba(255, 255, 255, 0.2);
+    
+    /* System Tray - Minimal Styling */
+    --bwm-system-tray-background: transparent;
+    --bwm-system-tray-border: none;
+    --bwm-system-tray-border-radius: 0px;
+    --bwm-system-tray-padding: 0 8px;
+    --bwm-system-tray-margin: 0;
+    
+    /* Clock - Clean Typography */
+    --bwm-clock-text-color: #ffffff;
+    --bwm-clock-font-size: 14px;
+    --bwm-clock-font-weight: 400;
+    --bwm-clock-text-shadow: none;
+    --bwm-clock-background: transparent;
+    --bwm-clock-border-radius: 0px;
+    --bwm-clock-padding: 12px 16px;
+    
+    /* === DESKTOP STYLING === */
+    
+    --bwm-desktop-background: linear-gradient(135deg,
+        #0078d4 0%,
+        #005a9e 100%);
+    --bwm-desktop-pattern: none;
+    
+    /* === CONTEXT MENUS & DIALOGS === */
+    
+    /* Context Menu - Flat Design */
+    --bwm-context-menu-background: var(--win10-background-light);
+    --bwm-context-menu-border: 1px solid var(--win10-border-medium);
+    --bwm-context-menu-border-radius: 0px;
+    --bwm-context-menu-shadow: 
+        0 8px 16px var(--win10-shadow-light),
+        0 4px 8px var(--win10-shadow-medium);
+    --bwm-context-menu-backdrop-filter: none;
+    
+    /* Menu Items */
+    --bwm-menu-item-padding: 12px 16px;
+    --bwm-menu-item-text-color: var(--win10-text-primary);
+    --bwm-menu-item-hover-background: var(--win10-background-medium);
+    --bwm-menu-item-hover-text-color: var(--win10-text-primary);
+    --bwm-menu-item-separator: 1px solid var(--win10-border-light);
+    
+    /* === SCROLLBARS - Windows 10 Style === */
+    
+    --bwm-scrollbar-width: 12px;
+    --bwm-scrollbar-track-background: var(--win10-background-medium);
+    --bwm-scrollbar-track-border: none;
+    --bwm-scrollbar-thumb-background: var(--win10-border-dark);
+    --bwm-scrollbar-thumb-border: none;
+    --bwm-scrollbar-thumb-border-radius: 6px;
+    --bwm-scrollbar-thumb-hover-background: var(--win10-text-secondary);
+    
+    /* === TYPOGRAPHY === */
+    
+    --bwm-font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --bwm-font-size-small: 12px;
+    --bwm-font-size-normal: 14px;
+    --bwm-font-size-large: 16px;
+    --bwm-font-weight-normal: 400;
+    --bwm-font-weight-bold: 600;
+    
+    /* === ANIMATIONS & TRANSITIONS === */
+    
+    --bwm-transition-fast: 0.1s ease-out;
+    --bwm-transition-normal: 0.2s ease-out;
+    --bwm-transition-slow: 0.3s ease-out;
+    --bwm-animation-window-open: bwm-window-scale-in 0.2s ease-out;
+    --bwm-animation-window-close: bwm-window-scale-out 0.15s ease-in;
+    --bwm-animation-window-minimize: bwm-window-slide-down 0.25s ease-in-out;
+    --bwm-animation-window-restore: bwm-window-slide-up 0.2s ease-out;
+}
+
+/* === WINDOWS 10 SPECIFIC ANIMATIONS === */
+
+@keyframes bwm-window-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes bwm-window-scale-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes bwm-window-slide-down {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}
+
+@keyframes bwm-window-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === FLAT DESIGN UTILITIES === */
+
+.bwm-theme-windows-10 .bwm-flat-button {
+    background: transparent;
+    border: 1px solid var(--win10-border-medium);
+    border-radius: 0px;
+    padding: 8px 16px;
+    transition: all var(--bwm-transition-fast);
+}
+
+.bwm-theme-windows-10 .bwm-flat-button:hover {
+    background: var(--win10-hover-overlay);
+    border-color: var(--win10-border-dark);
+}
+
+.bwm-theme-windows-10 .bwm-flat-button:active {
+    background: var(--win10-active-overlay);
+}
+
+.bwm-theme-windows-10 .bwm-accent-button {
+    background: var(--win10-accent-blue);
+    border: 1px solid var(--win10-accent-blue);
+    color: #ffffff;
+}
+
+.bwm-theme-windows-10 .bwm-accent-button:hover {
+    background: var(--win10-accent-light-blue);
+    border-color: var(--win10-accent-light-blue);
+}
+
+.bwm-theme-windows-10 .bwm-accent-button:active {
+    background: var(--win10-accent-dark-blue);
+    border-color: var(--win10-accent-dark-blue);
+}
+
+/* === ACCESSIBILITY ENHANCEMENTS === */
+
+.bwm-theme-windows-10 .bwm-high-contrast {
+    --bwm-window-border: #000000;
+    --bwm-titlebar-text-color: #000000;
+    --bwm-content-text-color: #000000;
+    --bwm-taskbar-button-text-color: #ffffff;
+}
+
+.bwm-theme-windows-10 .bwm-focus-visible {
+    outline: 2px solid var(--win10-focus-blue);
+    outline-offset: 2px;
+}
+
+/* === RESPONSIVE DESIGN === */
+
+@media (max-width: 768px) {
+    .bwm-theme-windows-10 {
+        --bwm-titlebar-height: 40px;
+        --bwm-taskbar-height: 56px;
+        --bwm-control-button-size: 40px;
+        --bwm-start-button-size: 56px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bwm-theme-windows-10 {
+        --bwm-titlebar-height: 44px;
+        --bwm-taskbar-height: 60px;
+        --bwm-control-button-size: 44px;
+        --bwm-start-button-size: 60px;
+    }
+}
+
+/* === DARK THEME VARIANT === */
+
+@media (prefers-color-scheme: dark) {
+    .bwm-theme-windows-10.bwm-auto-dark {
+        --win10-background-light: #2d2d30;
+        --win10-background-medium: #252526;
+        --win10-background-dark: #1e1e1e;
+        --win10-text-primary: #ffffff;
+        --win10-text-secondary: #cccccc;
+        --win10-text-disabled: #6d6d6d;
+        --win10-border-light: #3e3e42;
+        --win10-border-medium: #464647;
+        --win10-border-dark: #5a5a5c;
+        
+        --bwm-window-background: var(--win10-background-light);
+        --bwm-titlebar-background: var(--win10-background-light);
+        --bwm-content-background: var(--win10-background-light);
+    }
+}
+
+/* === REDUCED MOTION SUPPORT === */
+
+@media (prefers-reduced-motion: reduce) {
+    .bwm-theme-windows-10 * {
+        --bwm-transition-fast: none;
+        --bwm-transition-normal: none;
+        --bwm-transition-slow: none;
+        --bwm-animation-window-open: none;
+        --bwm-animation-window-close: none;
+        --bwm-animation-window-minimize: none;
+        --bwm-animation-window-restore: none;
+    }
+}

@@ -1,0 +1,67 @@
+@namespace HackerOs.OS.UI.Components
+
+@if (IsVisible)
+{
+    <div class="desktop-context-menu" style="left: @(X)px; top: @(Y)px;">
+        @foreach (var item in MenuItems)
+        {
+            @if (item.IsSeparator)
+            {
+                <div class="context-menu-separator"></div>
+            }
+            else
+            {
+                <div class="context-menu-item" @onclick="() => OnItemClicked(item)">
+                    @if (!string.IsNullOrEmpty(item.IconClass))
+                    {
+                        <span class="icon @item.IconClass"></span>
+                    }
+                    @item.Label
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int X { get; set; }
+
+    [Parameter]
+    public int Y { get; set; }
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public List<ContextMenuItem> MenuItems { get; set; } = new List<ContextMenuItem>();
+
+    [Parameter]
+    public EventCallback<ContextMenuItem> OnItemClick { get; set; }
+
+    protected async Task OnItemClicked(ContextMenuItem item)
+    {
+        await OnItemClick.InvokeAsync(item);
+    }
+
+    public class ContextMenuItem
+    {
+        public string Id { get; set; }
+        public string Label { get; set; }
+        public string IconClass { get; set; }
+        public bool IsSeparator { get; set; }
+        public Action Command { get; set; }        public static ContextMenuItem Separator() => new ContextMenuItem { IsSeparator = true };
+
+        public static ContextMenuItem Create(string id, string label, string? iconClass = null, Action? command = null)
+        {
+            return new ContextMenuItem
+            {
+                Id = id,
+                Label = label,
+                IconClass = iconClass,
+                IsSeparator = false,
+                Command = command
+            };
+        }
+    }
+}

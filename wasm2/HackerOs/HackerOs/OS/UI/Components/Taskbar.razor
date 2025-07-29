@@ -1,0 +1,110 @@
+@namespace HackerOs.OS.UI.Components
+@using HackerOs.OS.UI.Models
+@using HackerOs.OS.Applications
+
+<div class="taskbar">
+    <div class="taskbar-left">
+        <div class="taskbar-launcher-button" @onclick="ToggleLauncher" title="Applications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        
+        <div class="taskbar-running-apps">
+            @foreach (var app in RunningApplications)
+            {
+                <div class="taskbar-app-button @(app.IsActive ? "active" : "") 
+                          @(app.IsMinimized ? "minimized" : "") 
+                          @(app.ShowRestoredAnimation ? "restored-animation" : "")
+                          @(app.ShowMinimizedAnimation ? "minimized-animation" : "")
+                          @(app.ShowMaximizedAnimation ? "maximized-animation" : "")" 
+                     @onclick="async () => await ToggleApplication(app.Id)"
+                     @onmouseover="() => ShowAppPreview(app.Id)" 
+                     @onmouseout="() => HideAppPreview()"
+                     title="@app.Name">
+                    <img src="@app.IconPath" alt="@app.Name" />
+                    <div class="taskbar-app-indicator @(app.IsActive ? "active" : "") @(app.IsMinimized ? "minimized" : "")"></div>
+                    
+                    @if (app.IsActive)
+                    {
+                        <div class="taskbar-app-focus-indicator"></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="taskbar-right">
+        <div class="taskbar-system-tray">
+            <div class="taskbar-notification-icon" @onclick="ToggleNotificationCenter" title="Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C13.1046 22 14 21.1046 14 20H10C10 21.1046 10.8954 22 12 22Z" fill="currentColor"/>
+                    <path d="M19 17H5V10C5 6.13401 8.13401 3 12 3C15.866 3 19 6.13401 19 10V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (NotificationCount > 0)
+                {
+                    <div class="taskbar-notification-badge">@(NotificationCount > 9 ? "9+" : NotificationCount.ToString())</div>
+                }
+            </div>
+            
+            <div class="taskbar-network-icon" title="Network Status">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.5 14.5L5 18M15.5 14.5L19 18M12 12L12 18M16 8.5C16 10.7091 14.2091 12.5 12 12.5C9.79086 12.5 8 10.7091 8 8.5C8 6.29086 9.79086 4.5 12 4.5C14.2091 4.5 16 6.29086 16 8.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            
+            <div class="taskbar-battery-icon" title="Battery Status">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 10V14M18 11H20V13H18M4 7H17V17H4V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            
+            <div class="taskbar-clock" @onclick="ToggleCalendar" title="@CurrentDateTime">
+                @CurrentTime
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (IsAppPreviewVisible && CurrentPreviewApp != null)
+{
+    <div class="taskbar-app-preview" style="left: @(AppPreviewLeft)px; bottom: 50px;">
+        <div class="taskbar-app-preview-header">
+            <img src="@CurrentPreviewApp.IconPath" alt="@CurrentPreviewApp.Name" />
+            <span>@CurrentPreviewApp.Name</span>
+        </div>
+        <div class="taskbar-app-preview-content">
+            <img src="@CurrentPreviewApp.PreviewImagePath" alt="Preview" />
+        </div>
+    </div>
+}
+
+@if (IsCalendarVisible)
+{
+    <div class="taskbar-calendar">
+        <div class="calendar-header">
+            <span>@CurrentDateTime.ToString("MMMM yyyy")</span>
+            <div class="calendar-nav">
+                <button @onclick="PreviousMonth">&lt;</button>
+                <button @onclick="NextMonth">&gt;</button>
+            </div>
+        </div>
+        <div class="calendar-weekdays">
+            <div>Su</div>
+            <div>Mo</div>
+            <div>Tu</div>
+            <div>We</div>
+            <div>Th</div>
+            <div>Fr</div>
+            <div>Sa</div>
+        </div>
+        <div class="calendar-days">
+            @foreach (var day in CalendarDays)
+            {
+                <div class="@(day.IsCurrentMonth ? "calendar-day" : "calendar-day other-month") @(day.IsToday ? "today" : "")">
+                    @day.Day
+                </div>
+            }
+        </div>
+    </div>
+}

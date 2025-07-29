@@ -1,0 +1,147 @@
+/* 
+ * Blazor Window Manager - CSS Variable System for Theming
+ * This file defines all CSS custom properties used across components for consistent theming
+ */
+
+:root {
+    /* === WINDOW SYSTEM VARIABLES === */
+    
+    /* Window Container */
+    --bwm-window-background: #1a1a1a;
+    --bwm-window-border: #333;
+    --bwm-window-border-radius: 8px;
+    --bwm-window-shadow: 0 8px 32px rgba(0, 255, 0, 0.3), 0 0 0 1px rgba(0, 255, 0, 0.1);
+    --bwm-window-active-border: #00ff00;
+    --bwm-window-active-shadow: 0 12px 48px rgba(0, 255, 0, 0.5), 0 0 0 2px rgba(0, 255, 0, 0.3);
+    --bwm-window-inactive-opacity: 0.85;
+    
+    /* Title Bar */
+    --bwm-titlebar-background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+    --bwm-titlebar-border-bottom: #333;
+    --bwm-titlebar-height: 32px;
+    --bwm-titlebar-padding: 0 8px;
+    --bwm-titlebar-active-background: linear-gradient(135deg, #003300 0%, #001a00 100%);
+    
+    /* Title Bar Text */
+    --bwm-title-color: #00ff00;
+    --bwm-title-font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    --bwm-title-font-size: 13px;
+    --bwm-title-font-weight: 600;
+    --bwm-title-inactive-color: #666;
+    
+    /* Window Controls (min, max, close buttons) */
+    --bwm-control-button-size: 24px;
+    --bwm-control-button-background: transparent;
+    --bwm-control-button-hover-background: rgba(0, 255, 0, 0.1);
+    --bwm-control-button-active-background: rgba(0, 255, 0, 0.2);
+    --bwm-control-button-border: none;
+    --bwm-control-button-border-radius: 4px;
+    --bwm-control-button-color: #00ff00;
+    --bwm-control-close-hover-background: rgba(255, 0, 0, 0.2);
+    --bwm-control-close-hover-color: #ff4444;
+    
+    /* Window Content */
+    --bwm-content-background: #0d0d0d;
+    --bwm-content-color: #00ff00;
+    --bwm-content-padding: 16px;
+    --bwm-content-font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    --bwm-content-font-size: 14px;
+    --bwm-content-line-height: 1.4;
+    
+    /* Resize Handles */
+    --bwm-resize-handle-color: rgba(0, 255, 0, 0.3);
+    --bwm-resize-handle-hover-color: rgba(0, 255, 0, 0.6);
+    --bwm-resize-handle-size: 4px;
+    
+    /* === TASKBAR VARIABLES === */
+    
+    /* Taskbar Container */
+    --bwm-taskbar-background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+    --bwm-taskbar-border: #333;
+    --bwm-taskbar-height: 40px;
+    --bwm-taskbar-padding: 0 8px;
+    --bwm-taskbar-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    
+    /* Taskbar Buttons */
+    --bwm-taskbar-button-background: rgba(0, 255, 0, 0.1);
+    --bwm-taskbar-button-hover-background: rgba(0, 255, 0, 0.2);
+    --bwm-taskbar-button-active-background: rgba(0, 255, 0, 0.3);
+    --bwm-taskbar-button-border: 1px solid rgba(0, 255, 0, 0.3);
+    --bwm-taskbar-button-border-radius: 4px;
+    --bwm-taskbar-button-color: #00ff00;
+    --bwm-taskbar-button-padding: 4px 8px;
+    --bwm-taskbar-button-margin: 0 2px;
+    --bwm-taskbar-button-font-size: 12px;
+    --bwm-taskbar-button-font-weight: 500;
+    
+    /* === DIALOG VARIABLES === */
+    
+    /* Modal Overlay */
+    --bwm-modal-overlay-background: rgba(0, 0, 0, 0.7);
+    --bwm-modal-overlay-backdrop-filter: blur(3px);
+    
+    /* Dialog Styling */
+    --bwm-dialog-background: var(--bwm-window-background);
+    --bwm-dialog-border: var(--bwm-window-border);
+    --bwm-dialog-shadow: 0 16px 64px rgba(0, 255, 0, 0.4);
+    --bwm-dialog-border-radius: var(--bwm-window-border-radius);
+    
+    /* === DESKTOP VARIABLES === */
+    
+    /* Desktop Area */
+    --bwm-desktop-background: #000000;
+    --bwm-desktop-pattern: radial-gradient(circle at 1px 1px, rgba(0, 255, 0, 0.1) 1px, transparent 0);
+    --bwm-desktop-pattern-size: 20px 20px;
+    
+    /* === SNAP PREVIEW VARIABLES === */
+    
+    /* Snap Preview */
+    --bwm-snap-preview-background: rgba(0, 255, 0, 0.2);
+    --bwm-snap-preview-border: 2px solid rgba(0, 255, 0, 0.6);
+    --bwm-snap-preview-border-radius: 4px;
+    
+    /* === SCROLLBAR VARIABLES === */
+    
+    /* Custom Scrollbar */
+    --bwm-scrollbar-width: 8px;
+    --bwm-scrollbar-background: rgba(0, 0, 0, 0.3);
+    --bwm-scrollbar-thumb-background: rgba(0, 255, 0, 0.4);
+    --bwm-scrollbar-thumb-hover-background: rgba(0, 255, 0, 0.6);
+    --bwm-scrollbar-thumb-border-radius: 4px;
+    
+    /* === ANIMATION VARIABLES === */
+    
+    /* Transitions */
+    --bwm-transition-fast: 0.15s ease;
+    --bwm-transition-normal: 0.3s ease;
+    --bwm-transition-slow: 0.5s ease;
+    
+    /* Window State Animations */
+    --bwm-window-minimize-duration: 0.3s;
+    --bwm-window-maximize-duration: 0.25s;
+    --bwm-window-restore-duration: 0.25s;
+    
+    /* === COMPONENT STATES === */
+    
+    /* Focus States */
+    --bwm-focus-outline: 2px solid rgba(0, 255, 0, 0.5);
+    --bwm-focus-outline-offset: 2px;
+    
+    /* Hover States */
+    --bwm-hover-brightness: 1.1;
+    --bwm-hover-transition: var(--bwm-transition-fast);
+    
+    /* Disabled States */
+    --bwm-disabled-opacity: 0.5;
+    --bwm-disabled-cursor: not-allowed;
+    
+    /* === Z-INDEX SYSTEM === */
+    
+    --bwm-z-desktop: 0;
+    --bwm-z-window-base: 1000;
+    --bwm-z-window-active: 2000;
+    --bwm-z-dialog-overlay: 9000;
+    --bwm-z-dialog: 9100;
+    --bwm-z-taskbar: 10000;
+    --bwm-z-snap-preview: 10100;
+}

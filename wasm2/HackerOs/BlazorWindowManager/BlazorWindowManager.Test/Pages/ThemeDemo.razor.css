@@ -1,0 +1,190 @@
+/* Theme Demo Component Styles */
+.theme-demo {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--surface-primary);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-elevated);
+}
+
+.demo-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.demo-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.demo-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.demo-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.demo-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 160px;
+    justify-content: center;
+}
+
+.demo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.demo-btn:active {
+    transform: translateY(0);
+}
+
+.demo-btn.primary {
+    background: var(--accent-primary);
+    color: var(--accent-text);
+    box-shadow: var(--shadow-accent);
+}
+
+.demo-btn.primary:hover {
+    background: var(--accent-primary-hover);
+    box-shadow: var(--shadow-accent-hover);
+}
+
+.demo-btn.secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+}
+
+.demo-btn.secondary:hover {
+    border-color: var(--accent-primary);
+    background: var(--accent-primary-alpha);
+}
+
+.demo-btn.info {
+    background: var(--info-background, #3182ce);
+    color: var(--info-text, white);
+}
+
+.demo-btn.info:hover {
+    background: var(--info-background-hover, #2c5aa0);
+}
+
+.demo-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.info-card {
+    background: var(--window-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-subtle);
+}
+
+.info-card h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color-subtle);
+    padding-bottom: 0.5rem;
+}
+
+.theme-details,
+.system-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-item,
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detail-label,
+.stat-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.detail-value,
+.stat-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    background: var(--surface-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: calc(var(--border-radius) / 2);
+    border: 1px solid var(--border-color-subtle);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .theme-demo {
+        padding: 1rem;
+        margin: 0.5rem;
+    }
+    
+    .demo-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .demo-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .demo-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .demo-info {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Animation for theme changes */
+.theme-demo {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.info-card {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark theme specific adjustments */
+@media (prefers-color-scheme: dark) {
+    .demo-btn.info {
+        --info-background: #2b6cb0;
+        --info-background-hover: #2c5aa0;
+        --info-text: #e2e8f0;
+    }
+}

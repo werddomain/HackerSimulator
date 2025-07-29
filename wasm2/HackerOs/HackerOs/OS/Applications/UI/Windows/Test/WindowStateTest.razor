@@ -1,0 +1,109 @@
+@page "/test/window-state-test"
+@inherits WindowBase
+
+<div class="test-window-container">
+    <h2>Window State Test Application</h2>
+    
+    <div class="status-panel">
+        <div class="status-item">
+            <span class="status-label">Window State:</span>
+            <span class="status-value">@WindowInfo?.State</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Application State:</span>
+            <span class="status-value">@State</span>
+        </div>
+    </div>
+    
+    <div class="controls-panel">
+        <h3>Test Controls</h3>
+        <button @onclick="MinimizeAsync">Minimize Window</button>
+        <button @onclick="MaximizeAsync">Maximize Window</button>
+        <button @onclick="RestoreAsync">Restore Window</button>
+        
+        <h3>Application State Controls</h3>
+        <button @onclick="() => SetStateAsync(ApplicationState.Minimized)">Set App Minimized</button>
+        <button @onclick="() => SetStateAsync(ApplicationState.Maximized)">Set App Maximized</button>
+        <button @onclick="() => SetStateAsync(ApplicationState.Running)">Set App Running</button>
+        <button @onclick="SimulateCrash">Simulate Crash</button>
+    </div>
+    
+    <div class="log-panel">
+        <h3>Event Log</h3>
+        <div class="log-container">
+            @foreach (var logEntry in EventLog)
+            {
+                <div class="log-entry">
+                    <span class="log-time">@logEntry.Time.ToString("HH:mm:ss.fff")</span>
+                    <span class="log-message">@logEntry.Message</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .test-window-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 1rem;
+        overflow: hidden;
+    }
+    
+    .status-panel {
+        background-color: #f0f0f0;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .status-item {
+        margin-bottom: 5px;
+    }
+    
+    .status-label {
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    
+    .controls-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .controls-panel button {
+        padding: 5px 10px;
+        margin-right: 5px;
+    }
+    
+    .log-panel {
+        flex-grow: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .log-container {
+        background-color: #1e1e1e;
+        color: #ffffff;
+        border-radius: 4px;
+        padding: 10px;
+        overflow-y: auto;
+        flex-grow: 1;
+        font-family: monospace;
+    }
+    
+    .log-entry {
+        margin-bottom: 5px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    
+    .log-time {
+        color: #6a9955;
+        margin-right: 10px;
+    }
+</style>

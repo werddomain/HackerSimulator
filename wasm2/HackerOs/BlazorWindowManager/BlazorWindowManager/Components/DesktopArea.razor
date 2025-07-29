@@ -1,0 +1,11 @@
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Components
+
+<div class="desktop-area @CssClass" @ref="desktopElement" style="@GetDesktopStyle()">
+    <!-- Dynamic window rendering component -->
+    @WindowRenderer
+    
+    <!-- User-provided content -->
+    @ChildContent
+</div>

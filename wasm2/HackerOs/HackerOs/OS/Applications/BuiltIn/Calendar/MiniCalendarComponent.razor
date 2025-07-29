@@ -1,0 +1,48 @@
+@using System
+
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+
+<div class="mini-calendar">
+    <div class="mini-calendar-header">
+        <div class="month-year-display">@SelectedDate.ToString("MMMM yyyy")</div>
+        <div class="mini-calendar-navigation">
+            <button class="mini-nav-button" @onclick="NavigatePrevMonth" title="Previous Month">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="mini-nav-button" @onclick="NavigateToToday" title="Today">
+                <i class="fas fa-calendar-day"></i>
+            </button>
+            <button class="mini-nav-button" @onclick="NavigateNextMonth" title="Next Month">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="mini-calendar-weekdays">
+        @foreach (var dayName in DayNames)
+        {
+            <div class="mini-weekday">@dayName</div>
+        }
+    </div>
+    
+    <div class="mini-calendar-grid">
+        @for (int week = 0; week < Weeks.Count; week++)
+        {
+            <div class="mini-week">
+                @for (int day = 0; day < 7; day++)
+                {
+                    var date = Weeks[week][day];
+                    var isCurrentMonth = date.Month == DisplayMonth;
+                    var isToday = date.Date == DateTime.Today;
+                    var isSelected = date.Date == SelectedDate.Date;
+                    var hasEvents = HasEventsOnDate(date);
+                    
+                    <div class="mini-day @(!isCurrentMonth ? "other-month" : "") @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(hasEvents ? "has-events" : "")"
+                         @onclick="() => OnDateSelected.InvokeAsync(date)">
+                        @date.Day
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,126 @@
+@namespace HackerOs.OS.UI.Components
+@using HackerOs.OS.UI.Models
+@using HackerOs.OS.UI.Services
+
+<div class="notification-center @(_isOpen ? "open" : "")">
+    <div class="notification-header">
+        <div class="notification-title">Notifications</div>
+        <div class="notification-actions">
+            <button class="notification-clear-all" @onclick="ClearAllNotifications" title="Clear all notifications">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="notification-mark-read" @onclick="MarkAllAsRead" title="Mark all as read">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="notification-close" @onclick="CloseNotificationCenter" title="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <div class="notification-content">
+        @if (!_notifications.Any())
+        {
+            <div class="notification-empty">
+                <div class="notification-empty-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C13.1046 22 14 21.1046 14 20H10C10 21.1046 10.8954 22 12 22Z" fill="currentColor"/>
+                        <path d="M19 17H5V10C5 6.13401 8.13401 3 12 3C15.866 3 19 6.13401 19 10V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="notification-empty-text">No notifications</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var notification in _notifications)
+            {
+                <div class="notification-item @(notification.IsRead ? "read" : "")" @key="notification.Id">
+                    <div class="notification-item-icon">
+                        @if (!string.IsNullOrEmpty(notification.IconPath))
+                        {
+                            <img src="@notification.IconPath" alt="@notification.Source" />
+                        }
+                        else
+                        {
+                            <div class="notification-type-icon @notification.Type.ToString().ToLower()">
+                                @switch (notification.Type)
+                                {
+                                    case NotificationType.Info:
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        break;
+                                    case NotificationType.Warning:
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 9V13M12 17H12.01M3.07141 17.9998C1.62633 15.4384 1.52786 12.4056 2.8098 9.75882C4.09174 7.11201 6.63793 5.29144 9.5698 4.86498C12.5017 4.43852 15.4725 5.45382 17.5788 7.64122C19.6851 9.82862 20.6461 12.8857 20.166 15.8466C19.6858 18.8075 17.8171 21.3631 15.1549 22.6675C12.4926 23.9719 9.36281 23.8644 6.7908 22.3746C4.2188 20.8847 2.45953 18.1683 2.0505 15.1018" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        break;
+                                    case NotificationType.Error:
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        break;
+                                    case NotificationType.Success:
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M16 10L11 15L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        break;
+                                    case NotificationType.System:
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M18.7273 14.7273C18.6063 15.0909 18.6273 15.4818 18.7891 15.8364C18.9509 16.1909 19.2418 16.4818 19.6064 16.6364L19.6891 16.6727C20.0127 16.8218 20.2709 17.0773 20.4327 17.4C20.5945 17.7227 20.6509 18.0864 20.5945 18.4455C20.5382 18.8045 20.3709 19.1318 20.1218 19.3773C19.8727 19.6227 19.5564 19.7727 19.2182 19.8091L19.1091 19.8182C18.7455 19.8618 18.4055 20.0382 18.1564 20.3145C17.9073 20.5909 17.7673 20.9455 17.7673 21.3182C17.7673 21.6909 17.9073 22.0455 18.1564 22.3218C18.4055 22.5982 18.7455 22.7745 19.1091 22.8182L19.2182 22.8273C19.9055 22.9091 20.4945 23.3455 20.7927 24C21.0909 24.6545 21.0436 25.4364 20.6673 26.0455C20.2909 26.6545 19.6309 27 18.9091 27H18.7636C18.3909 27 18.0364 27.1455 17.7709 27.3909C17.5055 27.6364 17.3673 27.9818 17.3673 28.3364C17.3673 28.6909 17.5055 29.0364 17.7709 29.2818C18.0364 29.5273 18.3909 29.6727 18.7636 29.6727H18.9091C19.6309 29.6727 20.2909 30.0182 20.6673 30.6273C21.0436 31.2364 21.0909 32.0182 20.7927 32.6727C20.4945 33.3273 19.9055 33.7636 19.2182 33.8455L19.1091 33.8545C18.7455 33.8982 18.4055 34.0745 18.1564 34.3509C17.9073 34.6273 17.7673 34.9818 17.7673 35.3545C17.7673 35.7273 17.9073 36.0818 18.1564 36.3582C18.4055 36.6345 18.7455 36.8109 19.1091 36.8545L19.2182 36.8636C19.9055 36.9455 20.4945 37.3818 20.7927 38.0364C21.0909 38.6909 21.0436 39.4727 20.6673 40.0818C20.2909 40.6909 19.6309 41.0364 18.9091 41.0364H18.7636C18.3909 41.0364 18.0364 41.1818 17.7709 41.4273C17.5055 41.6727 17.3673 42.0182 17.3673 42.3727C17.3673 42.7273 17.5055 43.0727 17.7709 43.3182C18.0364 43.5636 18.3909 43.7091 18.7636 43.7091H18.9091" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        break;
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="notification-item-content" @onclick="() => OnNotificationClick(notification)">
+                        <div class="notification-item-header">
+                            <div class="notification-item-title">@notification.Title</div>
+                            <div class="notification-item-time">@GetTimeAgo(notification.Timestamp)</div>
+                        </div>
+                        <div class="notification-item-body">@notification.Content</div>
+                        <div class="notification-item-source">@notification.Source</div>
+                        
+                        @if (notification.Actions.Any())
+                        {
+                            <div class="notification-item-actions">
+                                @foreach (var action in notification.Actions)
+                                {
+                                    <button class="notification-action-button @(action.IsPrimary ? "primary" : "")" 
+                                            @onclick="e => OnNotificationActionClick(e, notification, action)">
+                                        @if (!string.IsNullOrEmpty(action.IconPath))
+                                        {
+                                            <img src="@action.IconPath" alt="" />
+                                        }
+                                        @action.Label
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="notification-item-dismiss" @onclick="() => DismissNotification(notification.Id)" title="Dismiss">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+

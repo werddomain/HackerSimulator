@@ -1,0 +1,43 @@
+@namespace HackerSimulator.Wasm.Apps
+@using MudBlazor
+
+<div class="setting-editor">
+<MudTable Items="Items" Dense="true" Hover="true">
+    <HeaderContent>
+        <MudTh>Key</MudTh>
+        <MudTh>Value</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><MudTextField @bind-Value="context.Key" Immediate="true" /></MudTd>
+        <MudTd><MudTextField @bind-Value="context.Value" Immediate="true" /></MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => Remove(context)" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+<MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add</MudButton>
+</div>
+
+@code {
+    [Parameter] public List<SettingItem> Items { get; set; } = new();
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private void Add()
+    {
+        Items.Add(new SettingItem());
+        Changed.InvokeAsync();
+    }
+
+    private void Remove(SettingItem kv)
+    {
+        Items.Remove(kv);
+        Changed.InvokeAsync();
+    }
+
+    public class SettingItem
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+    }
+}

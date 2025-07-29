@@ -1,0 +1,260 @@
+.notification-center {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100%;
+    background-color: var(--notification-center-bg, rgba(30, 30, 30, 0.95));
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+.notification-center.open {
+    transform: translateX(0);
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--notification-border, rgba(80, 80, 80, 0.5));
+}
+
+.notification-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--notification-title, rgba(240, 240, 240, 1));
+}
+
+.notification-actions {
+    display: flex;
+    align-items: center;
+}
+
+.notification-actions button {
+    background: transparent;
+    border: none;
+    color: var(--notification-action, rgba(200, 200, 200, 0.8));
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    margin-left: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-actions button:hover {
+    background-color: var(--notification-action-hover, rgba(80, 80, 80, 0.5));
+    color: var(--notification-action-hover-color, white);
+}
+
+.notification-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.notification-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 20px;
+    color: var(--notification-empty, rgba(150, 150, 150, 0.7));
+    text-align: center;
+}
+
+.notification-empty-icon {
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.notification-empty-text {
+    font-size: 16px;
+}
+
+.notification-item {
+    margin-bottom: 10px;
+    background-color: var(--notification-item-bg, rgba(50, 50, 50, 0.7));
+    border-radius: 6px;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--notification-item-border, rgba(100, 150, 255, 0.8));
+}
+
+.notification-item.read {
+    opacity: 0.7;
+    border-left-color: var(--notification-item-read-border, rgba(100, 100, 100, 0.5));
+}
+
+.notification-item-icon {
+    padding: 15px 0 0 15px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.notification-item-icon img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.notification-type-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-type-icon.info {
+    color: var(--notification-info, rgb(100, 150, 255));
+}
+
+.notification-type-icon.warning {
+    color: var(--notification-warning, rgb(255, 180, 50));
+}
+
+.notification-type-icon.error {
+    color: var(--notification-error, rgb(255, 80, 80));
+}
+
+.notification-type-icon.success {
+    color: var(--notification-success, rgb(80, 200, 120));
+}
+
+.notification-type-icon.system {
+    color: var(--notification-system, rgb(200, 200, 200));
+}
+
+.notification-item-content {
+    flex: 1;
+    padding: 15px;
+    cursor: pointer;
+}
+
+.notification-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 5px;
+}
+
+.notification-item-title {
+    font-weight: 500;
+    color: var(--notification-item-title, rgba(240, 240, 240, 1));
+    margin-right: 10px;
+}
+
+.notification-item-time {
+    font-size: 12px;
+    color: var(--notification-item-time, rgba(180, 180, 180, 0.7));
+    white-space: nowrap;
+}
+
+.notification-item-body {
+    margin-bottom: 8px;
+    color: var(--notification-item-body, rgba(220, 220, 220, 0.9));
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.notification-item-source {
+    font-size: 12px;
+    color: var(--notification-item-source, rgba(180, 180, 180, 0.7));
+}
+
+.notification-item-actions {
+    display: flex;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.notification-action-button {
+    background-color: var(--notification-action-button-bg, rgba(60, 60, 60, 0.8));
+    border: 1px solid var(--notification-action-button-border, rgba(100, 100, 100, 0.5));
+    color: var(--notification-action-button-text, rgba(220, 220, 220, 0.9));
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-right: 8px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.notification-action-button img {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
+}
+
+.notification-action-button:hover {
+    background-color: var(--notification-action-button-hover-bg, rgba(80, 80, 80, 0.8));
+    border-color: var(--notification-action-button-hover-border, rgba(120, 120, 120, 0.7));
+}
+
+.notification-action-button.primary {
+    background-color: var(--notification-action-primary-bg, rgba(70, 120, 200, 0.8));
+    border-color: var(--notification-action-primary-border, rgba(90, 140, 220, 0.7));
+    color: var(--notification-action-primary-text, white);
+}
+
+.notification-action-button.primary:hover {
+    background-color: var(--notification-action-primary-hover-bg, rgba(80, 130, 210, 0.9));
+    border-color: var(--notification-action-primary-hover-border, rgba(100, 150, 230, 0.8));
+}
+
+.notification-item-dismiss {
+    padding: 5px;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    cursor: pointer;
+    color: var(--notification-dismiss, rgba(180, 180, 180, 0.7));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s, background-color 0.2s;
+}
+
+.notification-item:hover .notification-item-dismiss {
+    opacity: 1;
+}
+
+.notification-item-dismiss:hover {
+    background-color: var(--notification-dismiss-hover-bg, rgba(80, 80, 80, 0.7));
+    color: var(--notification-dismiss-hover, white);
+}
+
+/* Animation for opening/closing */
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+}
+
+.notification-center.opening {
+    animation: slideIn 0.3s ease-in-out forwards;
+}
+
+.notification-center.closing {
+    animation: slideOut 0.3s ease-in-out forwards;
+}

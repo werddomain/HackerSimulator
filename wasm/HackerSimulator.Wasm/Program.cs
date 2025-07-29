@@ -26,6 +26,7 @@ namespace HackerSimulator.Wasm
             builder.Services.AddSingleton<FileSystemService>();
             builder.Services.AddSingleton<FileTypeService>();
             builder.Services.AddSingleton<FileOpsService>();
+            builder.Services.AddSingleton<SettingsService>();
 
             // Register application discovery service
             builder.Services.AddSingleton<ApplicationService>();
@@ -42,9 +43,11 @@ namespace HackerSimulator.Wasm
             builder.Services.AddSingleton<HomeController>();
             builder.Services.AddSingleton<Windows.WindowManagerService>();
             builder.Services.AddMudServices();
-
+            builder.Services.AddSingleton<ThemeService>();
+            
 
             var host = builder.Build();
+            
             // Instantiate controllers so they register with the network
             _ = host.Services.GetRequiredService<HomeController>();
 

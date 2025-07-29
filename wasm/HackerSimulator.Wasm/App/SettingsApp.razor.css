@@ -1,0 +1,17 @@
+.settings-root {
+    padding: 10px;
+    background:#1e1e1e;
+    color:#d4d4d4;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+}
+.app-select {
+    width:200px;
+    margin-bottom:10px;
+}
+.settings-tabs {
+    flex:1;
+    overflow:auto;
+}

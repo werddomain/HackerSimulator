@@ -1,0 +1,121 @@
+@page "/window-test"
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@using BlazorWindowManager.Models
+@inject WindowManagerService WindowManager
+
+<h1>Window Architecture Test</h1>
+
+<div class="test-section">
+    <h3>Dynamic Window Creation Test</h3>
+    <p>Test the new CreateWindow&lt;TComponent&gt;() method functionality.</p>
+      <div class="test-buttons mb-4">
+        <button class="btn btn-primary me-2" @onclick="CreateSampleWindow">
+            Create Sample Window
+        </button>
+        
+        <button class="btn btn-secondary me-2" @onclick="CreateAnotherSampleWindow">
+            Create Another Sample Window
+        </button>
+        
+        <button class="btn btn-success me-2" @onclick="CreateLargeSampleWindow">
+            Create Large Sample Window
+        </button>
+        
+        <button class="btn btn-danger" @onclick="CloseAllWindows">
+            Close All Windows
+        </button>
+    </div>
+</div>
+
+<div class="test-section">
+    <h3>Theme Test</h3>
+    <p>Test Windows XP theme switching functionality.</p>
+    <p><em>Theme selector will be available on the main application page.</em></p>
+</div>
+
+<div class="test-section">
+    <h3>Window Manager Status</h3>
+    <p><strong>Active Windows:</strong> @WindowManager.GetAllWindows().Count</p>
+    
+    @if (WindowManager.GetAllWindows().Any())
+    {
+        <ul>
+            @foreach (var window in WindowManager.GetAllWindows())
+            {
+                <li>@window.Title (@window.Id.ToString().Substring(0, 8)...)</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p><em>No active windows</em></p>
+    }
+</div>
+
+<div class="test-section">
+    <h3>Desktop Area</h3>
+    <p><em>Windows will be rendered in the main desktop area. Navigate to the home page to see the desktop.</em></p>
+    <p>The WindowRenderComponent is integrated into the main DesktopArea component.</p>
+</div>
+
+@code {    private void CreateSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Title", "Sample Window " + DateTime.Now.ToString("HH:mm:ss") },
+            { "Width", 400 },
+            { "Height", 300 }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<SampleWindow>(parameters);
+        StateHasChanged();
+    }      private void CreateAnotherSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Title", "Another Sample " + DateTime.Now.ToString("HH:mm:ss") },
+            { "Width", 350 },
+            { "Height", 250 }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<SampleWindow>(parameters);
+        StateHasChanged();
+    }
+      private void CreateLargeSampleWindow()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Title", "Large Sample " + DateTime.Now.ToString("HH:mm:ss") },
+            { "Width", 800 },
+            { "Height", 600 }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<SampleWindow>(parameters);
+        StateHasChanged();
+    }
+      private void CloseAllWindows()
+    {
+        var allWindows = WindowManager.GetAllWindows().ToList();
+        foreach (var window in allWindows)
+        {
+            WindowManager.UnregisterWindow(window.Id);
+        }
+        StateHasChanged();
+    }
+}
+
+<style>
+    .test-section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .test-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+</style>

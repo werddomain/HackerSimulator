@@ -1,0 +1,109 @@
+BUILD ERRORS - HackerOs Solution
+=================================
+Date: June 9, 2025
+Build Command: dotnet build HackerOs.sln
+Result: Build failed with 98 error(s) and 216 warning(s)
+
+CRITICAL ERRORS (98 total):
+===========================
+
+1. PATH ACCESS ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/FileTypeRegistry.cs(303,64): error CS0122: 'Path.NormalizePath(string)' is inaccessible due to its protection level
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(40,64): error CS0122: 'Path.NormalizePath(string)' is inaccessible due to its protection level
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(109,64): error CS0122: 'Path.NormalizePath(string)' is inaccessible due to its protection level
+
+2. MISSING PARAMETER ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(41,35): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.FileExistsAsync(string, User)'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(110,35): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.FileExistsAsync(string, User)'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/DNS/DnsResolver.cs(110,39): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.FileExistsAsync(string, User)'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/DNS/DnsResolver.cs(112,58): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.ReadAllTextAsync(string, User)'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/DNS/DnsResolver.cs(152,76): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.DirectoryExistsAsync(string, User)'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/DNS/DnsResolver.cs(157,35): error CS7036: There is no argument given that corresponds to the required parameter 'user' of 'IVirtualFileSystem.WriteAllTextAsync(string, string, User)'
+
+3. TYPE AMBIGUITY ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(47,29): error CS0104: 'Path' is an ambiguous reference between 'HackerOs.OS.IO.Utilities.Path' and 'System.IO.Path'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(69,36): error CS0104: 'Path' is an ambiguous reference between 'HackerOs.OS.IO.Utilities.Path' and 'System.IO.Path'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(120,36): error CS0104: 'Path' is an ambiguous reference between 'HackerOs.OS.IO.Utilities.Path' and 'System.IO.Path'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(153,29): error CS0104: 'Path' is an ambiguous reference between 'HackerOs.OS.IO.Utilities.Path' and 'System.IO.Path'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/WebServer/Framework/Router.cs(57,25): error CS0104: 'HttpMethod' is an ambiguous reference between 'HackerOs.OS.Network.HTTP.HttpMethod' and 'System.Net.Http.HttpMethod'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/WebServer/Framework/Router.cs(71,48): error CS0104: 'HttpMethod' is an ambiguous reference between 'HackerOs.OS.Network.HTTP.HttpMethod' and 'System.Net.Http.HttpMethod'
+
+4. TYPE CONVERSION ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(68,29): error CS0029: Cannot implicitly convert type 'string[]' to 'System.Collections.Generic.List<string>'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Applications/Extensions/FileOpenExtensions.cs(119,29): error CS0029: Cannot implicitly convert type 'string[]' to 'System.Collections.Generic.List<string>'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Shell/Shell.cs(575,28): error CS0029: Cannot implicitly convert type 'HackerOs.OS.Shell.FileRedirectionStream' to 'System.IO.Stream'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Shell/Shell.cs(580,28): error CS0029: Cannot implicitly convert type 'HackerOs.OS.Shell.FileRedirectionStream' to 'System.IO.Stream'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Shell/Shell.cs(590,16): error CS0029: Cannot implicitly convert type 'HackerOs.OS.Shell.ShellOutputRedirectionStream' to 'System.IO.Stream'
+
+5. MISSING NAMESPACE ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/WebServer/Hosting/VirtualHost.cs(328,42): error CS0234: The type or namespace name 'StringBuilder' does not exist in the namespace 'HackerOs.OS.System.Text' (are you missing an assembly reference?)
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Settings/ConfigurationBackupService.cs(355,40): error CS0234: The type or namespace name 'Security' does not exist in the namespace 'HackerOs.OS.System' (are you missing an assembly reference?)
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Net/Http/Json/JsonExtensions.cs(109,55): error CS0234: The type or namespace name 'Headers' does not exist in the namespace 'HackerOs.OS.System.Net.Http' (are you missing an assembly reference?)
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Net/Http/Json/JsonExtensions.cs(118,55): error CS0234: The type or namespace name 'Headers' does not exist in the namespace 'HackerOs.OS.System.Net.Http' (are you missing an assembly reference?)
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Net/Http/Json/JsonExtensions.cs(157,34): error CS0234: The type or namespace name 'MemoryStream' does not exist in the namespace 'HackerOs.OS.System.IO' (are you missing an assembly reference?)
+
+6. METHOD SIGNATURE ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/WebServer/Hosting/VirtualHost.cs(149,17): error CS1503: Argument 2: cannot convert from 'HackerOs.OS.Network.HTTP.HttpMethod' to 'string'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/HTTP/HttpServer.cs(280,56): error CS1501: No overload for method 'ReceiveAsync' takes 3 arguments
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/HTTP/HttpServer.cs(315,44): error CS1501: No overload for method 'SendAsync' takes 3 arguments
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/HTTP/HttpServer.cs(534,36): error CS1501: No overload for method 'SendAsync' takes 3 arguments
+
+7. MISSING PROPERTIES/METHODS:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Network/WebServer/Hosting/StaticFileHandler.cs(35,44): error CS1061: 'HttpRequest' does not contain a definition for 'Path' and no accessible extension method 'Path' accepting a first argument of type 'HttpRequest' could be found
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Shell/ShellContext.cs(60,67): error CS1061: 'IDictionary<string, string>' does not contain a definition for 'NewLine'
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/Shell/ShellContext.cs(72,67): error CS1061: 'IDictionary<string, string>' does not contain a definition for 'NewLine'
+
+8. READONLY PROPERTY ASSIGNMENT:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/ApplicationWindowManager.cs(85,17): error CS0200: Property or indexer 'WindowInfo.Id' cannot be assigned to -- it is read only
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/ApplicationWindowManager.cs(86,17): error CS0200: Property or indexer 'WindowInfo.Title' cannot be assigned to -- it is read only
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/ApplicationWindowManager.cs(87,17): error CS0200: Property or indexer 'WindowInfo.Name' cannot be assigned to -- it is read only
+
+9. JSON SERIALIZATION ISSUES:
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Text/Json/JsonSerializer.cs(44,23): error CS0037: Cannot convert null to 'JsonNamingPolicy' because it is a non-nullable value type
+   - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Text/Json/JsonSerializer.cs(77,23): error CS0037: Cannot convert null to 'JsonNamingPolicy' because it is a non-nullable value type
+
+10. USER SETTINGS ISSUES:
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/ApplicationWindow.cs(119,26): error CS1061: 'UserSettings' does not contain a definition for 'SetValue'
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/ApplicationWindow.cs(152,25): error CS1929: 'UserSettings' does not contain a definition for 'GetValue'
+
+11. THREAD CANCELLATION TOKEN ISSUES:
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Net/Http/Json/JsonExtensions.cs(19,62): error CS1503: Argument 2: cannot convert from 'HackerOs.OS.System.Threading.CancellationToken' to 'System.Threading.CancellationToken'
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/System/Net/Http/Json/JsonExtensions.cs(44,64): error CS1503: Argument 3: cannot convert from 'HackerOs.OS.System.Threading.CancellationToken' to 'System.Threading.CancellationToken'
+
+12. APPLICATION MANAGER INTERFACE ISSUES:
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/Components/ApplicationWindow.razor(55,66): error CS1061: 'IApplicationManager' does not contain a definition for 'GetApplicationContentRenderer'
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/Components/Taskbar.razor.cs(89,32): error CS1061: 'IApplicationManager' does not contain a definition for 'ApplicationStarted'
+    - /workspaces/HackerSimulator/wasm2/HackerOs/HackerOs/OS/UI/Components/Taskbar.razor.cs(90,32): error CS1061: 'IApplicationManager' does not contain a definition for 'ApplicationClosed'
+
+WARNINGS (216 total):
+=====================
+
+1. NULLABILITY WARNINGS (majority):
+   - Multiple CS8602: Dereference of a possibly null reference
+   - Multiple CS8604: Possible null reference argument
+   - Multiple CS8618: Non-nullable property must contain a non-null value when exiting constructor
+   - Multiple CS8603: Possible null reference return
+
+2. ASYNC METHOD WARNINGS:
+   - Multiple CS1998: This async method lacks 'await' operators and will run synchronously
+
+3. RAZOR COMPONENT WARNINGS:
+   - Multiple RZ10012: Found markup element with unexpected name, missing @using directive
+
+SUMMARY:
+========
+The build fails due to multiple architectural issues:
+1. Custom type system conflicts with .NET standard types
+2. Missing interface implementations and method signatures
+3. Incomplete nullable reference type handling
+4. Inconsistent async/await patterns
+5. Missing namespace imports and assembly references
+
+RECOMMENDATION:
+==============
+1. Fix namespace conflicts between custom types and .NET types
+2. Implement missing interface methods and properties
+3. Add proper null checks and nullable annotations
+4. Resolve all missing using statements
+5. Complete async method implementations
+6. Update method signatures to match interface contracts

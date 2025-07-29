@@ -13,7 +13,7 @@ namespace HackerSimulator.Wasm.Core
         public record FileTypeInfo(string App, string Icon);
 
         private readonly Dictionary<string, FileTypeInfo> _types = new(StringComparer.OrdinalIgnoreCase);
-        private readonly FileTypeInfo _default = new("texteditorapp", "📄");
+        private readonly FileTypeInfo _default = new("notepadapp", "📄");
 
         public FileTypeService()
         {
@@ -47,8 +47,8 @@ namespace HackerSimulator.Wasm.Core
 
         private void RegisterDefaults()
         {
-            Register("txt", "texteditorapp", "📝");
-            Register("md", "texteditorapp", "📝");
+            Register("txt", "notepadapp", "📝");
+            Register("md", "notepadapp", "📝");
             Register("js", "codeeditorapp", "📜");
             Register("ts", "codeeditorapp", "📜");
             Register("json", "codeeditorapp", "📊");

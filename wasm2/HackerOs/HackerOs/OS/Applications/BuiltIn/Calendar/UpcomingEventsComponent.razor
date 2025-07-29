@@ -1,0 +1,61 @@
+@using System
+
+@using HackerOs.OS.Applications.BuiltIn.Calendar
+
+<div class="upcoming-events-component">
+    @if (Events.Count == 0)
+    {
+        <div class="no-events">
+            <i class="fas fa-calendar-check"></i>
+            <p>No upcoming events</p>
+        </div>
+    }
+    else
+    {
+        <div class="upcoming-events-list">
+            @foreach (var evt in Events)
+            {
+                var isPast = evt.EndTime < DateTime.Now;
+                var isInProgress = evt.StartTime <= DateTime.Now && evt.EndTime >= DateTime.Now;
+                
+                <div class="upcoming-event @(isPast ? "past-event" : "") @(isInProgress ? "in-progress-event" : "")"
+                     @onclick="() => OnEventSelected.InvokeAsync(evt)">
+                    <div class="event-color-indicator" style="background-color: @evt.OriginalEvent.Color"></div>
+                    <div class="event-details">
+                        <div class="event-title">@evt.OriginalEvent.Title</div>
+                        <div class="event-time">
+                            @if (evt.OriginalEvent.IsAllDay)
+                            {
+                                if (evt.StartTime.Date == evt.EndTime.Date)
+                                {
+                                    <span>@evt.StartTime.ToString("MMM d") - All day</span>
+                                }
+                                else
+                                {
+                                    <span>@evt.StartTime.ToString("MMM d") - @evt.EndTime.ToString("MMM d")</span>
+                                }
+                            }
+                            else
+                            {
+                                if (evt.StartTime.Date == evt.EndTime.Date)
+                                {
+                                    <span>@evt.StartTime.ToString("MMM d, h:mm tt") - @evt.EndTime.ToString("h:mm tt")</span>
+                                }
+                                else
+                                {
+                                    <span>@evt.StartTime.ToString("MMM d, h:mm tt") - @evt.EndTime.ToString("MMM d, h:mm tt")</span>
+                                }
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(evt.OriginalEvent.Location))
+                        {
+                            <div class="event-location">
+                                <i class="fas fa-map-marker-alt"></i> @evt.OriginalEvent.Location
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

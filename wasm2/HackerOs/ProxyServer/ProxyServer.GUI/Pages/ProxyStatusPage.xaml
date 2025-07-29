@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:ProxyServer.GUI.ViewModels"
+             xmlns:controls="clr-namespace:ProxyServer.GUI.Controls"
+             x:Class="ProxyServer.GUI.Pages.ProxyStatusPage"
+             Title="Proxy Server Status"
+             x:DataType="viewmodels:ProxyServerViewModel">
+
+    <Grid RowDefinitions="Auto,*" RowSpacing="16" Padding="20">
+        <Grid Row="0" ColumnDefinitions="*,Auto">
+            <!-- Server Control Panel -->
+            <Frame Grid.Column="0" BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}" 
+                   CornerRadius="10" Padding="15" Margin="5">
+                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="5">
+                        <Label Text="WebSocket Host" FontAttributes="Bold" />
+                        <Entry Text="{Binding WebSocketHost}" IsEnabled="{Binding IsServerRunning, Converter={StaticResource InvertedBoolConverter}}" />
+                    </VerticalStackLayout>
+                    
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="5">
+                        <Label Text="WebSocket Port" FontAttributes="Bold" />
+                        <Entry Text="{Binding WebSocketPort}" Keyboard="Numeric" IsEnabled="{Binding IsServerRunning, Converter={StaticResource InvertedBoolConverter}}" />
+                    </VerticalStackLayout>
+                    
+                    <Button Grid.Row="1" Grid.Column="0" Text="Start Server" Command="{Binding StartServerCommand}" 
+                            IsVisible="{Binding IsServerRunning, Converter={StaticResource InvertedBoolConverter}}"
+                            BackgroundColor="{StaticResource Primary}" TextColor="White" />
+                    
+                    <Button Grid.Row="1" Grid.Column="1" Text="Stop Server" Command="{Binding StopServerCommand}" 
+                            IsVisible="{Binding IsServerRunning}"
+                            BackgroundColor="#E74C3C" TextColor="White" />
+                    
+                    <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding StatusMessage}"
+                           FontAttributes="Italic" HorizontalTextAlignment="Center"
+                           TextColor="{Binding IsServerRunning, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Green,Red'}" />
+                </Grid>
+            </Frame>
+
+            <!-- Statistics Summary -->
+            <Frame Grid.Column="1" BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray700}}" 
+                   CornerRadius="10" Padding="15" Margin="5" WidthRequest="250">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Statistics" FontSize="16" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Status:" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding IsServerRunning, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Running,Stopped'}"
+                               TextColor="{Binding IsServerRunning, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Green,Red'}" />
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Connections:" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding ActiveConnections}" />
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Bytes Sent:" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding TotalBytesSent, StringFormat='{0:N0} bytes'}" />
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Bytes Received:" />
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding TotalBytesReceived, StringFormat='{0:N0} bytes'}" />
+                    </Grid>
+                    
+                    <Button Text="Clear Statistics" Command="{Binding ClearStatisticsCommand}" 
+                            BackgroundColor="{StaticResource Secondary}" TextColor="White"
+                            HeightRequest="35" Margin="0,10,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>          <!-- Tab View for Connections and Logs -->
+        <controls:TabView Grid.Row="1" Margin="0,10,0,0">
+            <controls:TabItem Header="Active Connections">
+                <Grid RowDefinitions="Auto,*">
+                    <Label Text="No active connections" IsVisible="{Binding ActiveConnections, Converter={StaticResource IntToBoolConverter}, ConverterParameter='0'}"
+                           HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" Margin="0,20,0,0" />
+                    
+                    <CollectionView ItemsSource="{Binding ActiveConnectionsList}" IsVisible="{Binding ActiveConnections, Converter={StaticResource IntToBoolConverter}, ConverterParameter='!0'}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:TcpConnectionViewModel">
+                                <Frame BorderColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" 
+                                       Margin="0,5" Padding="15" CornerRadius="8">
+                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="5">
+                                            <Label Text="{Binding RemoteEndpoint}" FontSize="16" FontAttributes="Bold" />
+                                            <Label Text="{Binding ConnectionId}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                        </VerticalStackLayout>
+                                        
+                                        <Button Grid.Row="0" Grid.Column="1" Text="Disconnect" 
+                                                Command="{Binding DisconnectClientCommand, Source={RelativeSource AncestorType={x:Type viewmodels:ProxyServerViewModel}}}" 
+                                                CommandParameter="{Binding ConnectionId}"
+                                                BackgroundColor="#E74C3C" TextColor="White" />
+                                        
+                                        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="*,*,*,*" Margin="0,10,0,0">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                                <Label Text="Connected" FontSize="12" />
+                                                <Label Text="{Binding StartTime, StringFormat='{0:HH:mm:ss}'}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="Last Activity" FontSize="12" />
+                                                <Label Text="{Binding LastActivity, StringFormat='{0:HH:mm:ss}'}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            
+                                            <VerticalStackLayout Grid.Column="2" Spacing="2">
+                                                <Label Text="Sent" FontSize="12" />
+                                                <Label Text="{Binding BytesSent, StringFormat='{0:N0} bytes'}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            
+                                            <VerticalStackLayout Grid.Column="3" Spacing="2">
+                                                <Label Text="Received" FontSize="12" />
+                                                <Label Text="{Binding BytesReceived, StringFormat='{0:N0} bytes'}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>                    </CollectionView>                </Grid>
+            </controls:TabItem>
+            
+            <controls:TabItem Header="Logs">
+                <Grid RowDefinitions="*,Auto">
+                    <CollectionView ItemsSource="{Binding RecentLogEntries}" Grid.Row="0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:LogEntryViewModel">
+                                <Grid Padding="10,5" ColumnDefinitions="Auto,Auto,*,Auto">
+                                    <Label Grid.Column="0" Text="{Binding Timestamp, StringFormat='{0:HH:mm:ss}'}" FontSize="12" WidthRequest="70" />
+                                    
+                                    <Border Grid.Column="1" Padding="5,2" Margin="5,0" StrokeShape="RoundRectangle 4" 
+                                            BackgroundColor="{Binding Level, Converter={StaticResource LogLevelToColorConverter}}">
+                                        <Label Text="{Binding Level}" FontSize="10" TextColor="White" FontAttributes="Bold" />
+                                    </Border>
+                                    
+                                    <Label Grid.Column="2" Text="{Binding Message}" VerticalOptions="Center" />
+                                    
+                                    <Label Grid.Column="3" Text="{Binding Source}" FontSize="10" TextColor="{StaticResource Gray500}" 
+                                           VerticalOptions="Center" Margin="5,0,0,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    
+                    <Button Grid.Row="1" Text="Clear Logs" Command="{Binding ClearLogsCommand}" 
+                            BackgroundColor="{StaticResource Secondary}" TextColor="White"                            HorizontalOptions="End" Margin="0,10,20,0" />                </Grid>
+            </controls:TabItem>
+        </controls:TabView>
+    </Grid>
+</ContentPage>

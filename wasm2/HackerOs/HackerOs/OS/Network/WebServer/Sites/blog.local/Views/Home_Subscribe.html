@@ -1,0 +1,66 @@
+<div class="subscribe-page">
+    <h1>Subscribe to HackerOS Blog</h1>
+    
+    <div class="subscribe-content">
+        <div class="subscribe-info">
+            <h2>Why Subscribe?</h2>
+            <p>Join our growing community of HackerOS enthusiasts and stay updated with the latest:</p>
+            <ul>
+                <li>Tutorials and how-to guides</li>
+                <li>Tips for customizing your environment</li>
+                <li>Security best practices</li>
+                <li>Feature updates and news</li>
+                <li>Community projects and contributions</li>
+            </ul>
+            <p>We respect your privacy and will never share your information with third parties. You can unsubscribe at any time.</p>
+        </div>
+        
+        <div class="subscribe-form">
+            <h2>Newsletter Subscription</h2>
+            
+            {{ if (ViewData["ValidationErrors"] != null) { }}
+                <div class="validation-errors">
+                    <ul>
+                        {{ foreach (var error in (List<string>)ViewData["ValidationErrors"]) { }}
+                            <li>{{ error }}</li>
+                        {{ } }}
+                    </ul>
+                </div>
+            {{ } }}
+            
+            <form method="post" action="/subscribe">
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" name="Name" required 
+                           value="{{ ViewData["FormData"] != null ? ((SubscriptionForm)ViewData["FormData"]).Name : "" }}">
+                    {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Name")) { }}
+                        <div class="field-error">
+                            {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Name"][0] }}
+                        </div>
+                    {{ } }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Your Email</label>
+                    <input type="email" id="email" name="Email" required 
+                           value="{{ ViewData["FormData"] != null ? ((SubscriptionForm)ViewData["FormData"]).Email : "" }}">
+                    {{ if (ViewData["ValidationErrors"] != null && ((Dictionary<string, List<string>>)ViewData["ValidationErrors"]).ContainsKey("Email")) { }}
+                        <div class="field-error">
+                            {{ ((Dictionary<string, List<string>>)ViewData["ValidationErrors"])["Email"][0] }}
+                        </div>
+                    {{ } }}
+                </div>
+                
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="receiveNewsletter" name="ReceiveNewsletter" value="true" 
+                           {{ ViewData["FormData"] != null && ((SubscriptionForm)ViewData["FormData"]).ReceiveNewsletter ? "checked" : "" }}>
+                    <label for="receiveNewsletter">Yes, I want to receive weekly newsletters</label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="submit-button">Subscribe Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

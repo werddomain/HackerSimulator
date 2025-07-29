@@ -1,0 +1,172 @@
+@page "/keyboard-demo"
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+
+<div class="keyboard-demo-container">
+    <div class="demo-header">
+        <h1>🎹 Keyboard Navigation Demo</h1>
+        <p>Test and explore all keyboard navigation features of the Blazor Window Manager</p>
+    </div>
+
+    <div class="demo-content">
+        <!-- Configuration Panel -->
+        <div class="config-panel">
+            <h2>⚙️ Configuration</h2>
+            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="KeyboardNav.EnableWindowSwitcher" />
+                    Window Switcher (Ctrl+`)
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="KeyboardNav.EnableArrowKeyMovement" />
+                    Arrow Key Movement
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="KeyboardNav.EnableKeyboardShortcuts" />
+                    Keyboard Shortcuts
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    <input type="checkbox" @bind="KeyboardNav.ShowVisualFeedback" />
+                    Visual Feedback
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    Movement Step:
+                    <input type="number" @bind="KeyboardNav.MovementStepSize" min="1" max="100" />
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    Large Movement Step:
+                    <input type="number" @bind="KeyboardNav.LargeMovementStepSize" min="1" max="200" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Reference -->
+        <div class="shortcuts-panel">
+            <h2>⌨️ Keyboard Shortcuts</h2>
+            <div class="shortcuts-grid">
+                <div class="shortcut-group">
+                    <h3>Window Switching</h3>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>`</kbd> → Window Switcher
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Tab</kbd> → Cycle Next Window
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd> → Cycle Previous Window
+                    </div>
+                </div>
+
+                <div class="shortcut-group">
+                    <h3>Window Management</h3>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> → Close Window
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> → Maximize/Restore
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> → Minimize
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> → Context Menu
+                    </div>
+                </div>
+
+                <div class="shortcut-group">
+                    <h3>Window Movement</h3>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Arrow Keys</kbd> → Move Window
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Arrow Keys</kbd> → Resize Window
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Actions -->
+        <div class="actions-panel">
+            <h2>🧪 Test Actions</h2>
+            <div class="actions-grid">
+                <button class="demo-btn" @onclick="CreateTestWindow">
+                    ➕ Create Test Window
+                </button>
+                <button class="demo-btn" @onclick="CreateMultipleWindows">
+                    📋 Create Multiple Windows
+                </button>
+                <button class="demo-btn" @onclick="TestWindowSwitcher">
+                    🔄 Test Window Switcher
+                </button>
+                <button class="demo-btn" @onclick="ShowShortcutHelp">
+                    ❓ Show Keyboard Help
+                </button>
+                <button class="demo-btn" @onclick="ClearAllWindows">
+                    🗑️ Clear All Windows
+                </button>
+                <button class="demo-btn" @onclick="TestAccessibility">
+                    ♿ Test Accessibility
+                </button>
+            </div>
+        </div>
+
+        <!-- Window Information -->
+        <div class="info-panel">
+            <h2>📊 Window Information</h2>
+            <div class="window-stats">
+                <div class="stat-item">
+                    <strong>Total Windows:</strong> @totalWindows
+                </div>
+                <div class="stat-item">
+                    <strong>Active Window:</strong> @activeWindowTitle
+                </div>
+                <div class="stat-item">
+                    <strong>Window Switcher Active:</strong> @KeyboardNav.IsWindowSwitcherActive
+                </div>
+                <div class="stat-item">
+                    <strong>Focused Window:</strong> @focusedWindowInfo
+                </div>
+            </div>
+
+            @if (allWindows.Any())
+            {
+                <div class="windows-list">
+                    <h3>Window List</h3>
+                    @foreach (var window in allWindows)
+                    {
+                        <div class="window-item @(window.IsActive ? "active" : "")">
+                            <span class="window-title">@window.Title</span>
+                            <span class="window-state">@window.State</span>
+                            <span class="window-zindex">Z: @window.ZIndex</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Event Log -->
+        <div class="events-panel">
+            <h2>📝 Event Log</h2>
+            <div class="events-log">
+                @foreach (var logEntry in eventLog.AsEnumerable().Reverse().Take(10))
+                {
+                    <div class="log-entry">
+                        <span class="log-time">@logEntry.Time.ToString("HH:mm:ss")</span>
+                        <span class="log-message">@logEntry.Message</span>
+                    </div>
+                }
+            </div>
+            <button class="demo-btn small" @onclick="ClearEventLog">Clear Log</button>
+        </div>
+    </div>
+</div>

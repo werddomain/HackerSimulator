@@ -1,29 +1,58 @@
 @page "/login"
+@using Microsoft.JSInterop
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
-<h1 class="login-title">Login</h1>
-
-<div class="login-form">
-    <input placeholder="Username" @bind="username" />
-    <input placeholder="Password" type="password" @bind="password" />
-    @if (requireTotp)
-    {
-        <input placeholder="TOTP" @bind="totp" />
-    }
-    <button @onclick="DoLogin">Login</button>
+<div class="login-container">
+    <div class="code-background" id="codeBackground"></div>
+    <img class="login-logo" src="img/H4CK3R_OS-Icon.png" />
+   
+    <div class="login-card">
+        <h1 class="login-title">/Login</h1>
+        <div class="login-form">
+            <input placeholder="Username" @bind="username" class="login-input" @onkeydown="onKeyDown" />
+            <input placeholder="Password" type="password" @bind="password" class="login-input" @onkeydown="onKeyDown" />
+            @if (requireTotp)
+            {
+                <input placeholder="TOTP" @bind="totp" class="login-input" @onkeydown="onKeyDown" />
+            }
+            <button @onclick="DoLogin">Login</button>
+        </div>
+    </div>
 </div>
+
 
 @code {
     private string username = string.Empty;
     private string password = string.Empty;
     private string totp = string.Empty;
     private bool requireTotp;
-
+    IJSObjectReference? module;
     protected override void OnInitialized()
     {
-        if (!Auth.HasUsers)
-            Nav.NavigateTo("/welcome", true);
+        // if (!Auth.HasUsers)
+        //     Nav.NavigateTo("/welcome", true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/welcome-animation.js");
+            await module.InvokeVoidAsync("initializeCodeAnimation");
+        }
+    }
+
+
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module != null)
+        {
+            await module.DisposeAsync();
+        }
     }
 
     private async Task DoLogin()
@@ -31,11 +60,21 @@
         var user = await Auth.Login(username, password, totp);
         if (user != null)
         {
-            Nav.NavigateTo("/", true);
+            // Nav.NavigateTo("/", false);
         }
         else
         {
             requireTotp = true; // show totp field on failure if 2FA enabled
         }
+    }
+    private void onKeyPress(KeyboardEventArgs args)
+    {
+        if (args.Code == "Enter" || args.Code == "NumpadEnter")
+            DoLogin();
+    }
+    private async Task onKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Code == "Enter" || args.Code == "NumpadEnter")
+            await DoLogin();
     }
 }

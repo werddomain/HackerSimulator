@@ -1,0 +1,28 @@
+@using BlazorWindowManager.Components
+@inherits WindowBase
+
+<WindowContent Window="this">
+    <div class="sample-window-content">
+        <h3>Sample Window Content</h3>
+        <p>This is a demonstration of the Blazor Window Manager system.</p>
+        
+        <div class="controls">
+            <button class="btn btn-primary" @onclick="ChangeTitle">Change Title</button>
+            <button class="btn btn-secondary" @onclick="SendMessage">Send Message</button>
+            <button class="btn btn-success" @onclick="AddContent">Add Content</button>
+        </div>
+        
+        <div class="content-area">
+            @foreach (var item in ContentItems)
+            {
+                <div class="content-item">@item</div>
+            }
+        </div>
+        
+        <div class="status">
+            <small>Window ID: @Id</small><br>
+            <small>State: @CurrentState</small><br>
+            <small>Active: @IsActive</small>
+        </div>
+    </div>
+</WindowContent>

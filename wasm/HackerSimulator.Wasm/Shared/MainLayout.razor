@@ -2,14 +2,19 @@
 
 @inject AutoRunService AutoRun
 @inject AuthService Auth
+@inject ThemeService Theme
 @using HackerSimulator.Wasm.Pages
 
+<MudThemeProvider Theme="Theme.CurrentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudLayout>
 
-<div class="container">
-    <NavMenu />
-    <main>
 
-        @if (!Auth.Initialized)
+    <MudMainContent>
+        @Body
+
+        @* @if (!Auth.Initialized)
         {
             <p>Loading...</p>
         }
@@ -23,17 +28,25 @@
         }
         else
         {
-            @Body
-        }
-    </main>
-</div>
-<Taskbar />
+            <Desktop />
+            <Taskbar />
+        } *@
+    </MudMainContent>
+</MudLayout>
+
+
+
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            Auth.OnAuthInitialised += (s,e) =>
+        {
+            StateHasChanged();
+        };
+           
             await AutoRun.StartAsync();
         }
     }

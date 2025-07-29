@@ -1,20 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
 
-    <RazorCompileOnBuild>false</RazorCompileOnBuild>
-    <RazorCompileOnPublish>false</RazorCompileOnPublish>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="FontAwesome" Version="4.7.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
-    <PackageReference Include="BlazorMonaco" Version="3.3.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="MudBlazor" Version="8.6.0" />
-    <PackageReference Include="MudBlazor.ThemeManager" Version="3.0.0" />
+		<RazorCompileOnBuild>false</RazorCompileOnBuild>
+		<RazorCompileOnPublish>false</RazorCompileOnPublish>
+	</PropertyGroup>
+	<ItemGroup>
 
-  </ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.*-*" PrivateAssets="all" />
+
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="MudBlazor" Version="8.6.0" />
+		<PackageReference Include="MudBlazor.ThemeManager" Version="3.0.0" />
+		<PackageReference Include="FontAwesome" Version="4.7.0" />
+		<PackageReference Include="BlazorMonaco" Version="3.3.0" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Shared\Desktop\" />
+	</ItemGroup>
 </Project>

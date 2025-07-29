@@ -1,0 +1,334 @@
+/* 
+ * Blazor Window Manager - macOS Theme
+ * System-style buttons, refined typography, traffic light controls
+ */
+
+.bwm-theme-macos {
+    /* === MACOS SYSTEM COLOR SCHEME === */
+    
+    /* macOS Light Theme Colors */
+    --macos-background-primary: #ffffff;
+    --macos-background-secondary: #f6f6f6;
+    --macos-background-tertiary: #ebebeb;
+    --macos-text-primary: #000000;
+    --macos-text-secondary: #3c3c3c;
+    --macos-text-disabled: #86868b;
+    --macos-separator: #d1d1d6;
+    --macos-accent-blue: #007aff;
+    --macos-accent-blue-hover: #0056cc;
+    --macos-accent-blue-active: #004299;
+    
+    /* macOS Traffic Light Colors */
+    --macos-traffic-red: #ff5f57;
+    --macos-traffic-red-hover: #ff3b30;
+    --macos-traffic-yellow: #ffbd2e;
+    --macos-traffic-yellow-hover: #ff9500;
+    --macos-traffic-green: #28ca42;
+    --macos-traffic-green-hover: #30d158;
+    
+    /* macOS System Grays */
+    --macos-gray-1: #8e8e93;
+    --macos-gray-2: #aeaeb2;
+    --macos-gray-3: #c7c7cc;
+    --macos-gray-4: #d1d1d6;
+    --macos-gray-5: #e5e5ea;
+    --macos-gray-6: #f2f2f7;
+    
+    /* macOS Shadows */
+    --macos-shadow-light: rgba(0, 0, 0, 0.1);
+    --macos-shadow-medium: rgba(0, 0, 0, 0.15);
+    --macos-shadow-dark: rgba(0, 0, 0, 0.25);
+    --macos-shadow-focused: rgba(0, 122, 255, 0.3);
+    
+    /* macOS Dock/Taskbar */
+    --macos-dock-background: rgba(245, 245, 245, 0.8);
+    --macos-dock-border: rgba(0, 0, 0, 0.1);
+    --macos-dock-backdrop: blur(20px);
+    
+    /* === WINDOW SYSTEM OVERRIDES === */
+    
+    /* Window Container - macOS Style */
+    --bwm-window-background: var(--macos-background-primary);
+    --bwm-window-border: var(--macos-separator);
+    --bwm-window-border-radius: 8px;
+    --bwm-window-shadow: 
+        0 10px 25px var(--macos-shadow-light),
+        0 5px 10px var(--macos-shadow-medium);
+    --bwm-window-active-border: var(--macos-separator);
+    --bwm-window-active-shadow: 
+        0 15px 35px var(--macos-shadow-medium),
+        0 8px 15px var(--macos-shadow-light),
+        0 0 0 0.5px var(--macos-accent-blue);
+    --bwm-window-inactive-opacity: 0.95;
+    
+    /* Title Bar - macOS System Style */
+    --bwm-titlebar-background: var(--macos-background-secondary);
+    --bwm-titlebar-text-color: var(--macos-text-primary);
+    --bwm-titlebar-height: 28px;
+    --bwm-titlebar-border-bottom: 1px solid var(--macos-separator);
+    --bwm-titlebar-padding: 0 70px 0 70px; /* Space for traffic lights */
+    --bwm-titlebar-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    --bwm-titlebar-font-size: 13px;
+    --bwm-titlebar-font-weight: 500;
+    --bwm-titlebar-text-align: center;
+    --bwm-titlebar-line-height: 28px;
+    
+    /* Window Controls - Traffic Light Style */
+    --bwm-control-close-background: var(--macos-traffic-red);
+    --bwm-control-close-hover: var(--macos-traffic-red-hover);
+    --bwm-control-minimize-background: var(--macos-traffic-yellow);
+    --bwm-control-minimize-hover: var(--macos-traffic-yellow-hover);
+    --bwm-control-maximize-background: var(--macos-traffic-green);
+    --bwm-control-maximize-hover: var(--macos-traffic-green-hover);
+    --bwm-control-size: 12px;
+    --bwm-control-margin: 6px;
+    --bwm-control-border-radius: 50%;
+    --bwm-control-border: none;
+    --bwm-control-box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+    
+    /* Window Content Area */
+    --bwm-content-background: var(--macos-background-primary);
+    --bwm-content-padding: 16px;
+    --bwm-content-text-color: var(--macos-text-primary);
+    --bwm-content-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    --bwm-content-font-size: 14px;
+    --bwm-content-line-height: 1.4;
+    
+    /* Resize Handles - Subtle macOS Style */
+    --bwm-resize-handle-color: transparent;
+    --bwm-resize-handle-hover-color: var(--macos-accent-blue);
+    --bwm-resize-handle-size: 4px;
+    --bwm-resize-corner-size: 12px;
+    
+    /* Focus and Selection */
+    --bwm-focus-outline: 2px solid var(--macos-accent-blue);
+    --bwm-focus-outline-offset: -2px;
+    --bwm-selection-background: var(--macos-accent-blue);
+    --bwm-selection-text-color: white;
+    
+    /* === TASKBAR/DOCK SYSTEM === */
+    
+    /* Dock-Style Taskbar */
+    --bwm-taskbar-background: var(--macos-dock-background);
+    --bwm-taskbar-backdrop-filter: var(--macos-dock-backdrop);
+    --bwm-taskbar-border: 1px solid var(--macos-dock-border);
+    --bwm-taskbar-border-radius: 16px;
+    --bwm-taskbar-height: 60px;
+    --bwm-taskbar-padding: 8px 16px;
+    --bwm-taskbar-margin: 8px;
+    --bwm-taskbar-shadow: 
+        0 8px 25px var(--macos-shadow-light),
+        0 4px 10px var(--macos-shadow-medium);
+    
+    /* Dock Items */
+    --bwm-taskbar-item-background: transparent;
+    --bwm-taskbar-item-hover-background: rgba(0, 0, 0, 0.1);
+    --bwm-taskbar-item-active-background: var(--macos-accent-blue);
+    --bwm-taskbar-item-border-radius: 8px;
+    --bwm-taskbar-item-padding: 8px 12px;
+    --bwm-taskbar-item-margin: 2px;
+    --bwm-taskbar-item-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Dock Text */
+    --bwm-taskbar-text-color: var(--macos-text-primary);
+    --bwm-taskbar-text-active-color: white;
+    --bwm-taskbar-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    --bwm-taskbar-font-size: 12px;
+    --bwm-taskbar-font-weight: 500;
+    
+    /* === DIALOG AND MODAL OVERRIDES === */
+    
+    /* Modal Overlay */
+    --bwm-modal-overlay-background: rgba(0, 0, 0, 0.3);
+    --bwm-modal-overlay-backdrop-filter: blur(8px);
+    
+    /* Dialog Styling */
+    --bwm-dialog-background: var(--macos-background-primary);
+    --bwm-dialog-border: 1px solid var(--macos-separator);
+    --bwm-dialog-border-radius: 12px;
+    --bwm-dialog-shadow: 
+        0 25px 50px var(--macos-shadow-dark),
+        0 15px 25px var(--macos-shadow-medium);
+    
+    /* === ANIMATIONS AND TRANSITIONS === */
+    
+    /* macOS-Style Smooth Animations */
+    --bwm-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --bwm-transition-medium: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --bwm-transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Window State Transitions */
+    --bwm-minimize-transition: 0.35s cubic-bezier(0.32, 0, 0.67, 0);
+    --bwm-maximize-transition: 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --bwm-restore-transition: 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* Hover and Focus Effects */
+    --bwm-hover-scale: scale(1.02);
+    --bwm-focus-scale: scale(1.05);
+    --bwm-active-scale: scale(0.98);
+}
+
+/* === COMPONENT-SPECIFIC MACOS STYLING === */
+
+/* Traffic Light Controls Layout */
+.bwm-theme-macos .bwm-window-controls {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.bwm-theme-macos .bwm-window-control {
+    width: var(--bwm-control-size);
+    height: var(--bwm-control-size);
+    border: var(--bwm-control-border);
+    border-radius: var(--bwm-control-border-radius);
+    cursor: pointer;
+    transition: var(--bwm-transition-fast);
+    box-shadow: var(--bwm-control-box-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.bwm-theme-macos .bwm-window-control::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    opacity: 0;
+    transition: var(--bwm-transition-fast);
+}
+
+.bwm-theme-macos .bwm-window-control:hover::before {
+    opacity: 0.2;
+}
+
+.bwm-theme-macos .bwm-control-close {
+    background: var(--bwm-control-close-background);
+}
+
+.bwm-theme-macos .bwm-control-close:hover {
+    background: var(--bwm-control-close-hover);
+}
+
+.bwm-theme-macos .bwm-control-minimize {
+    background: var(--bwm-control-minimize-background);
+}
+
+.bwm-theme-macos .bwm-control-minimize:hover {
+    background: var(--bwm-control-minimize-hover);
+}
+
+.bwm-theme-macos .bwm-control-maximize {
+    background: var(--bwm-control-maximize-background);
+}
+
+.bwm-theme-macos .bwm-control-maximize:hover {
+    background: var(--bwm-control-maximize-hover);
+}
+
+/* Window Title Centering */
+.bwm-theme-macos .bwm-window-title {
+    text-align: var(--bwm-titlebar-text-align);
+    font-family: var(--bwm-titlebar-font-family);
+    font-size: var(--bwm-titlebar-font-size);
+    font-weight: var(--bwm-titlebar-font-weight);
+    padding: var(--bwm-titlebar-padding);
+    margin: 0;
+}
+
+/* Taskbar Dock Styling */
+.bwm-theme-macos .bwm-taskbar {
+    background: var(--bwm-taskbar-background);
+    backdrop-filter: var(--bwm-taskbar-backdrop-filter);
+    -webkit-backdrop-filter: var(--bwm-taskbar-backdrop-filter);
+    border: var(--bwm-taskbar-border);
+    border-radius: var(--bwm-taskbar-border-radius);
+    box-shadow: var(--bwm-taskbar-shadow);
+    margin: var(--bwm-taskbar-margin);
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bwm-theme-macos .bwm-taskbar-item {
+    background: var(--bwm-taskbar-item-background);
+    border-radius: var(--bwm-taskbar-item-border-radius);
+    padding: var(--bwm-taskbar-item-padding);
+    margin: var(--bwm-taskbar-item-margin);
+    transition: var(--bwm-taskbar-item-transition);
+    font-family: var(--bwm-taskbar-font-family);
+    font-size: var(--bwm-taskbar-font-size);
+    font-weight: var(--bwm-taskbar-font-weight);
+    color: var(--bwm-taskbar-text-color);
+    cursor: pointer;
+}
+
+.bwm-theme-macos .bwm-taskbar-item:hover {
+    background: var(--bwm-taskbar-item-hover-background);
+    transform: translateY(-2px);
+}
+
+.bwm-theme-macos .bwm-taskbar-item.active {
+    background: var(--bwm-taskbar-item-active-background);
+    color: var(--bwm-taskbar-text-active-color);
+}
+
+/* Window Focus Effects */
+.bwm-theme-macos .bwm-window:focus-within {
+    box-shadow: var(--bwm-window-active-shadow);
+}
+
+.bwm-theme-macos .bwm-window.inactive {
+    opacity: var(--bwm-window-inactive-opacity);
+}
+
+/* Smooth Animations */
+.bwm-theme-macos .bwm-window {
+    transition: 
+        transform var(--bwm-transition-medium),
+        opacity var(--bwm-transition-medium),
+        box-shadow var(--bwm-transition-fast);
+}
+
+.bwm-theme-macos .bwm-window-control {
+    transition: 
+        background-color var(--bwm-transition-fast),
+        transform var(--bwm-transition-fast);
+}
+
+.bwm-theme-macos .bwm-window-control:active {
+    transform: var(--bwm-active-scale);
+}
+
+/* Typography */
+.bwm-theme-macos {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.bwm-theme-macos h1, .bwm-theme-macos h2, .bwm-theme-macos h3,
+.bwm-theme-macos h4, .bwm-theme-macos h5, .bwm-theme-macos h6 {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 600;
+    color: var(--macos-text-primary);
+}
+
+.bwm-theme-macos p, .bwm-theme-macos span, .bwm-theme-macos div {
+    font-family: var(--bwm-content-font-family);
+    font-size: var(--bwm-content-font-size);
+    line-height: var(--bwm-content-line-height);
+    color: var(--bwm-content-text-color);
+}

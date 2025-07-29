@@ -1,0 +1,188 @@
+@inherits WindowBase
+@using HackerOs.OS.UI.Components
+@using HackerOs.OS.Applications.UI.Components
+
+<WindowContent Window="this">
+    <div class="text-editor-container">
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <button @onclick="NewDocument" title="New Document">
+                    <span class="icon">📄</span>
+                </button>
+                <button @onclick="OpenFile" title="Open File">
+                    <span class="icon">📂</span>
+                </button>
+                <button @onclick="SaveFile" title="Save">
+                    <span class="icon">💾</span>
+                </button>
+                <button @onclick="SaveFileAs" title="Save As">
+                    <span class="icon">📋</span>
+                </button>
+            </div>
+            <div class="toolbar-section">
+                <button @onclick="Undo" title="Undo">
+                    <span class="icon">↩️</span>
+                </button>
+                <button @onclick="Redo" title="Redo">
+                    <span class="icon">↪️</span>
+                </button>
+            </div>
+            <div class="toolbar-section">
+                <button @onclick="FindText" title="Find">
+                    <span class="icon">🔍</span>
+                </button>
+                <button @onclick="ReplaceText" title="Replace">
+                    <span class="icon">🔄</span>
+                </button>
+            </div>
+            <div class="toolbar-section">
+                <button @onclick="ShowStats" title="Document Statistics">
+                    <span class="icon">📊</span>
+                </button>
+                <button @onclick="ShowSettings" title="Settings">
+                    <span class="icon">⚙️</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="editor-area">
+            @if (ShowLineNumbers)
+            {
+                <div class="line-numbers">
+                    @for (int i = 1; i <= LineCount; i++)
+                    {
+                        <div class="line-number">@i</div>
+                    }
+                </div>
+            }
+            <textarea @bind="DocumentContent" 
+                      @bind:event="oninput" 
+                      @onkeydown="HandleKeyDown"
+                      class="text-content @(WordWrap ? "word-wrap" : "")"
+                      spellcheck="false"></textarea>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-info">
+                @(string.IsNullOrEmpty(CurrentFilePath) ? "Untitled" : System.IO.Path.GetFileName(CurrentFilePath))
+                @(HasUnsavedChanges ? "*" : "")
+            </div>
+            <div class="status-position">
+                Line: @CurrentLine Col: @CurrentColumn
+            </div>
+        </div>
+        
+        @if (ShowFindDialog)
+        {
+            <div class="dialog find-dialog">
+                <div class="dialog-header">
+                    <span>Find</span>
+                    <button @onclick="() => ShowFindDialog = false">✕</button>
+                </div>
+                <div class="dialog-content">
+                    <div class="input-group">
+                        <label for="search-text">Find:</label>
+                        <input id="search-text" @bind="SearchText" @bind:event="oninput" />
+                    </div>
+                    <div class="checkbox-group">
+                        <input id="case-sensitive" type="checkbox" @bind="CaseSensitive" />
+                        <label for="case-sensitive">Case sensitive</label>
+                    </div>
+                    <div class="dialog-buttons">
+                        <button @onclick="FindNext">Find Next</button>
+                        <button @onclick="FindAll">Find All</button>
+                        <button @onclick="() => ShowFindDialog = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+        
+        @if (ShowReplaceDialog)
+        {
+            <div class="dialog replace-dialog">
+                <div class="dialog-header">
+                    <span>Replace</span>
+                    <button @onclick="() => ShowReplaceDialog = false">✕</button>
+                </div>
+                <div class="dialog-content">
+                    <div class="input-group">
+                        <label for="search-text-replace">Find:</label>
+                        <input id="search-text-replace" @bind="SearchText" @bind:event="oninput" />
+                    </div>
+                    <div class="input-group">
+                        <label for="replace-text">Replace with:</label>
+                        <input id="replace-text" @bind="ReplaceText" @bind:event="oninput" />
+                    </div>
+                    <div class="checkbox-group">
+                        <input id="case-sensitive-replace" type="checkbox" @bind="CaseSensitive" />
+                        <label for="case-sensitive-replace">Case sensitive</label>
+                    </div>
+                    <div class="dialog-buttons">
+                        <button @onclick="Replace">Replace</button>
+                        <button @onclick="ReplaceAll">Replace All</button>
+                        <button @onclick="() => ShowReplaceDialog = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+        
+        @if (ShowSettingsDialog)
+        {
+            <div class="dialog settings-dialog">
+                <div class="dialog-header">
+                    <span>Settings</span>
+                    <button @onclick="() => ShowSettingsDialog = false">✕</button>
+                </div>
+                <div class="dialog-content">
+                    <div class="checkbox-group">
+                        <input id="show-line-numbers" type="checkbox" @bind="ShowLineNumbers" />
+                        <label for="show-line-numbers">Show line numbers</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input id="word-wrap" type="checkbox" @bind="WordWrap" />
+                        <label for="word-wrap">Word wrap</label>
+                    </div>
+                    <div class="input-group">
+                        <label for="tab-size">Tab size:</label>
+                        <input id="tab-size" type="number" min="1" max="8" @bind="TabSize" />
+                    </div>
+                    <div class="checkbox-group">
+                        <input id="convert-tabs" type="checkbox" @bind="ConvertTabsToSpaces" />
+                        <label for="convert-tabs">Convert tabs to spaces</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input id="auto-save" type="checkbox" @bind="AutoSave" />
+                        <label for="auto-save">Auto save</label>
+                    </div>
+                    <div class="input-group" style="@(AutoSave ? "" : "opacity: 0.5")">
+                        <label for="auto-save-interval">Interval (seconds):</label>
+                        <input id="auto-save-interval" type="number" min="5" max="3600" 
+                               @bind="AutoSaveInterval" disabled="@(!AutoSave)" />
+                    </div>
+                    <div class="dialog-buttons">
+                        <button @onclick="SaveSettings">Save</button>
+                        <button @onclick="() => ShowSettingsDialog = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+        
+        @if (ShowStatsDialog)
+        {
+            <div class="dialog stats-dialog">
+                <div class="dialog-header">
+                    <span>Document Statistics</span>
+                    <button @onclick="() => ShowStatsDialog = false">✕</button>
+                </div>
+                <div class="dialog-content">
+                    <div class="stats-content">
+                        @((MarkupString)DocumentStats.Replace("\n", "<br />"))
+                    </div>
+                    <div class="dialog-buttons">
+                        <button @onclick="() => ShowStatsDialog = false">Close</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</WindowContent>

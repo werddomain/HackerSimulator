@@ -1,0 +1,164 @@
+@page "/theme-demo"
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@inject WindowManagerService WindowManager
+@inject ThemeService ThemeService
+
+<div class="theme-demo">
+    <div class="demo-header">
+        <h2>Blazor Window Manager - Theme System Demo</h2>
+        <p>Showcasing the integrated theming system with live window management.</p>
+    </div>
+
+    <div class="demo-actions">
+        <button class="demo-btn primary" @onclick="OpenThemeSelector">
+            🎨 Open Theme Selector
+        </button>
+        <button class="demo-btn secondary" @onclick="OpenSampleWindow">
+            🪟 Open Sample Window
+        </button>
+        <button class="demo-btn secondary" @onclick="OpenDialogDemo">
+            💬 Open Dialog Demo
+        </button>
+        <button class="demo-btn info" @onclick="ShowThemeInfo">
+            ℹ️ Current Theme Info
+        </button>
+    </div>
+    <div class="demo-info">
+        <div class="info-card">
+            <h4>Current Theme</h4>
+            <div class="theme-details">
+                <div class="detail-item">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">@_currentTheme?.Name</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Category:</span>
+                    <span class="detail-value">@_currentTheme?.Category</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Type:</span>
+                    <span class="detail-value">@(_currentTheme?.IsDarkTheme == true ? "Dark" : "Light")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h4>System Status</h4>
+            <div class="system-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Open Windows:</span>
+                    <span class="stat-value">@_openWindowCount</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Available Themes:</span>
+                    <span class="stat-value">@_availableThemeCount</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <DesktopArea>
+       
+     
+    </DesktopArea>
+    <TaskBarComponent>
+      
+            <LeftContent>
+                <div class="start-menu-button">
+                    <span class="start-icon">⚡</span>
+                    <span class="start-text">START</span>
+                </div>
+            </LeftContent>
+            <RightContent>
+                <div class="system-icons">
+                    <span class="system-icon" title="Network">📶</span>
+                    <span class="system-icon" title="Volume">🔊</span>
+                    <span class="system-icon" title="Battery">🔋</span>
+                </div>
+            </RightContent>
+    </TaskBarComponent>
+
+</div>
+
+@code {
+    private ITheme? _currentTheme;
+    private int _openWindowCount = 0;
+    private int _availableThemeCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize theme information
+        _currentTheme = ThemeService.CurrentTheme;
+        _availableThemeCount = ThemeService.GetAvailableThemes().Count();
+
+        // Subscribe to theme changes
+        ThemeService.ThemeChanged += OnThemeChanged;
+
+        // Subscribe to window manager events
+        WindowManager.WindowOpened += OnWindowCountChanged;
+        WindowManager.WindowClosed += OnWindowCountChanged;
+
+        // Get initial window count
+        UpdateWindowCount();
+
+        await base.OnInitializedAsync();
+    }
+
+    private void UpdateWindowCount()
+    {
+        _openWindowCount = WindowManager.GetAllWindows().Count();
+        StateHasChanged();
+    }
+
+    private void OnWindowCountChanged(object? sender, WindowInfo e)
+    {
+        UpdateWindowCount();
+    }
+
+    private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
+    {
+        _currentTheme = e.NewTheme;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OpenThemeSelector()
+    {
+
+
+        var result = await WindowManager.OpenWindowAsync<ThemeSelector>();
+    }
+
+    private async Task OpenSampleWindow()
+    {
+
+
+        await WindowManager.OpenWindowAsync<SampleWindow>();
+    }
+
+    private async Task OpenDialogDemo()
+    {
+
+
+        await WindowManager.OpenWindowAsync<DialogDemo>();
+    }
+
+    private async Task ShowThemeInfo()
+    {
+        var themeInfo = $"Theme: {_currentTheme?.Name}\n" +
+                       $"Description: {_currentTheme?.Description}\n" +
+                       $"Category: {_currentTheme?.Category}\n" +
+                       $"Type: {(_currentTheme?.IsDarkTheme == true ? "Dark" : "Light")}\n" +
+                       $"CSS Class: {_currentTheme?.CssClass}";
+
+        // This would typically use a dialog service
+        // For now, we'll just log to console
+        Console.WriteLine($"Current Theme Information:\n{themeInfo}");
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+        WindowManager.WindowOpened -= OnWindowCountChanged;
+        WindowManager.WindowClosed -= OnWindowCountChanged;
+    }
+}

@@ -1,0 +1,26 @@
+@using BlazorWindowManager.Services
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject KeyboardNavigationService KeyboardNavigation
+@inject IJSRuntime JSRuntime
+
+@* This component initializes keyboard navigation and accessibility features *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize keyboard navigation service
+            await KeyboardNavigation.InitializeAsync();
+        }
+        
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        // Cleanup keyboard navigation service
+        await KeyboardNavigation.DisposeAsync();
+    }
+}

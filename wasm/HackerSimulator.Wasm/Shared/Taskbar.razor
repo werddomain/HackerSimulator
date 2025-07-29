@@ -4,7 +4,7 @@
 
 <div class="taskbar">
     <button class="start-button" @onclick="ToggleMenu">Start</button>
-    <StartMenu.StartMenu Visible="_menuVisible" VisibleChanged="OnMenuVisibleChanged" />
+    <StartMenu Visible="_menuVisible" VisibleChanged="OnMenuVisibleChanged" />
     @foreach (var win in _windows)
     {
         <button class="task-button @(win == _active ? "active" : "")" @onclick="() => Activate(win)">

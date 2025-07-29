@@ -1,0 +1,20 @@
+﻿@page "/"
+@using BlazorWindowManager.Components
+
+<PageTitle>Home</PageTitle>
+
+<div class="home-container">
+    <div class="desktop-info">
+        <h1>Window Manager Desktop</h1>
+        <p>This is the main desktop area where all windows will be rendered. You can create windows from the test pages and they will appear here.</p>
+        <p><strong>Navigate to:</strong></p>
+        <ul>
+            <li><a href="/window-architecture-test">Window Architecture Test</a> - Test window creation</li>
+            <li><a href="/snapping-demo">Snapping Demo</a> - Test window snapping features</li>
+            <li><a href="/keyboard-demo">Keyboard Navigation</a> - Test keyboard shortcuts</li>
+        </ul>
+    </div>
+    
+    <!-- Global Desktop Area - All windows render here -->
+    <DesktopArea Width="100%" Height="calc(100vh - 200px)" Background="#2c2c2c" ShowGrid="true" GridSize="30" CssClass="main-desktop" />
+</div>

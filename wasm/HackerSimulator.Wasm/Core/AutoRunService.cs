@@ -11,12 +11,14 @@ namespace HackerSimulator.Wasm.Core
     public class AutoRunService
     {
         private readonly IServiceProvider _services;
+        private readonly ShellService shellService;
         private bool _started;
         private AuthService? _auth;
 
-        public AutoRunService(IServiceProvider services)
+        public AutoRunService(IServiceProvider services, ShellService shellService)
         {
             _services = services;
+            this.shellService = shellService;
         }
 
         /// <summary>
@@ -30,18 +32,39 @@ namespace HackerSimulator.Wasm.Core
             _started = true;
             var fs = _services.GetRequiredService<FileSystemService>();
             await fs.InitAsync();
- var ft = _services.GetRequiredService<FileTypeService>();
+            await EnsureLinuxLayout(fs);
+
+            var ft = _services.GetRequiredService<FileTypeService>();
             ft.RegisterFromAttributes();
           
 
             _auth = _services.GetRequiredService<AuthService>();
             await _auth.InitAsync();
+            await shellService.InitAsync();
+
             _auth.OnUserLogin += OnUserLogin;
         }
 
-        private void OnUserLogin(AuthService.UserRecord user)
+        private async void OnUserLogin(object sender, AuthService.UserRecord user)
         {
-            // Placeholder for tasks after user login
+            var fs = _services.GetRequiredService<FileSystemService>();
+            var path = $"/home/{user.UserName}/.config";
+            if (!await fs.Exists($"/home/{user.UserName}"))
+            {
+                await fs.CreateDirectory($"/home/{user.UserName}");
+            }
+            if (!await fs.Exists(path))
+                await fs.CreateDirectory(path);
+        }
+
+        private static async Task EnsureLinuxLayout(FileSystemService fs)
+        {
+            string[] dirs = ["/etc", "/usr", "/usr/bin", "/home", "/home/user", "/home/user/.config"];
+            foreach (var d in dirs)
+            {
+                if (!await fs.Exists(d))
+                    await fs.CreateDirectory(d);
+            }
         }
     }
 }

@@ -1,0 +1,57 @@
+# Rapport d'erreurs de compilation
+
+**Date :** 04-06-2025 23:33  
+**Projet :** C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\.  
+**Total erreurs :** 42
+
+---
+
+## Microsoft.NET.Sdk.StaticWebAssets.Compression.targets
+**42 erreurs**
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\wwwroot\index.html [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\wwwroot\background.png [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\wwwroot\css\app.css [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\wwwroot\index.html [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\HackerOs.Host\HackerOs.Host.csproj]
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\wwwroot\background.png [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorWindowManager\BlazorWindowManager\BlazorWindowManager.csproj]
+* [x] **MSB4018:** (ligne 289) +ëchec inattendu de la t+óche "DiscoverPrecompressedAssets". [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) System.ArgumentException: An item with the same key has already been added. Key: c:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\wwwroot\css\app.css [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Collections.Generic.Dictionary`2.TryInsert(TKey key, TValue value, InsertionBehavior behavior) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.AspNetCore.StaticWebAssets.Tasks.DiscoverPrecompressedAssets.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskExecutionHost.Execute() [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+* [x] **MSB4018:** (ligne 289) at Microsoft.Build.BackEnd.TaskBuilder.ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask) [C:\Users\clefw\source\repos\HackerSimulator\wasm2\HackerOs\BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj]
+
+---
+
+## Statistiques
+* **MSB4018:** 42 occurrences

@@ -1,0 +1,201 @@
+.notepad-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: var(--background-color, #fff);
+    color: var(--text-color, #000);
+}
+
+.notepad-toolbar {
+    display: flex;
+    padding: 5px;
+    background-color: var(--toolbar-background, #f0f0f0);
+    border-bottom: 1px solid var(--border-color, #ccc);
+}
+
+.toolbar-button {
+    margin-right: 5px;
+    padding: 3px 8px;
+    background-color: var(--button-background, #e0e0e0);
+    border: 1px solid var(--border-color, #ccc);
+    color: var(--button-text-color, #333);
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.toolbar-button:hover {
+    background-color: var(--button-hover-background, #d0d0d0);
+}
+
+.toolbar-button:active {
+    background-color: var(--button-active-background, #c0c0c0);
+}
+
+.notepad-editor {
+    flex: 1;
+    overflow: hidden;
+}
+
+textarea {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    border: none;
+    resize: none;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    line-height: 1.4;
+    background-color: var(--editor-background, #fff);
+    color: var(--editor-text-color, #000);
+    outline: none;
+    overflow: auto;
+}
+
+.notepad-statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 5px;
+    font-size: 0.8em;
+    background-color: var(--statusbar-background, #f0f0f0);
+    border-top: 1px solid var(--border-color, #ccc);
+    color: var(--statusbar-text-color, #666);
+}
+
+.status-info {
+    margin-left: auto;
+}
+
+/* File dialog styles */
+.dialog-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dialog-container {
+    background-color: var(--dialog-background, #fff);
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-header {
+    padding: 8px 12px;
+    background-color: var(--dialog-header-background, #f0f0f0);
+    border-bottom: 1px solid var(--border-color, #ccc);
+    font-weight: bold;
+}
+
+.dialog-content {
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.dialog-footer {
+    padding: 8px 12px;
+    background-color: var(--dialog-footer-background, #f0f0f0);
+    border-top: 1px solid var(--border-color, #ccc);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dialog-footer button {
+    margin-left: 8px;
+    padding: 4px 12px;
+    background-color: var(--button-background, #e0e0e0);
+    border: 1px solid var(--border-color, #ccc);
+    color: var(--button-text-color, #333);
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.dialog-footer button:hover {
+    background-color: var(--button-hover-background, #d0d0d0);
+}
+
+.dialog-footer button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* File explorer styles */
+.file-explorer {
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+}
+
+.directory-path {
+    padding: 5px;
+    background-color: var(--explorer-path-background, #f5f5f5);
+    border: 1px solid var(--border-color, #ccc);
+    margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #ccc);
+    background-color: var(--explorer-background, #fff);
+}
+
+.file-entry {
+    padding: 5px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.file-entry:hover {
+    background-color: var(--explorer-hover-background, #f0f0f0);
+}
+
+.file-entry.selected {
+    background-color: var(--explorer-selected-background, #e0e0e0);
+}
+
+.file-entry i {
+    margin-right: 5px;
+}
+
+.file-entry.directory i {
+    color: var(--folder-icon-color, #ffa500);
+}
+
+.file-entry.file i {
+    color: var(--file-icon-color, #6c757d);
+}
+
+.file-name-input {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.file-name-input label {
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.file-name-input input {
+    flex: 1;
+    padding: 5px;
+    border: 1px solid var(--border-color, #ccc);
+}

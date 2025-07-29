@@ -1,0 +1,155 @@
+
+@namespace HackerOs.OS.Applications.BuiltIn.Calculator
+
+<div class="calculator-container @Mode.ToLowerInvariant()">
+    <div class="calculator-toolbar">
+        <div class="calculator-mode-toggle">
+            <button class="mode-button @(Mode == "Standard" ? "active" : "")" @onclick='() => SwitchMode("Standard")'>
+                <i class="fas fa-calculator"></i> Standard
+            </button>
+            <button class="mode-button @(Mode == "Scientific" ? "active" : "")" @onclick='() => SwitchMode("Scientific")'>
+                <i class="fas fa-square-root-alt"></i> Scientific
+            </button>
+        </div>
+        
+        <div class="calculator-memory-indicator">
+            @if (Engine.HasMemoryValue)
+            {
+                <span class="memory-active">M</span>
+            }
+        </div>
+        
+        <div class="calculator-angle-mode">
+            @if (Mode == "Scientific")
+            {
+                <button class="angle-mode-button" @onclick="ToggleAngleMode">
+                    @(Engine.IsRadianMode ? "RAD" : "DEG")
+                </button>
+            }
+        </div>
+    </div>
+    
+    <div class="calculator-display">
+        <div class="expression">@CurrentExpression</div>
+        <div class="result">@Display</div>
+    </div>
+    
+    <div class="calculator-buttons">
+        <!-- Standard calculator buttons -->
+        <div class="standard-buttons">
+            <div class="button-row">
+                <button class="calc-button memory-button" @onclick="MemoryClear">MC</button>
+                <button class="calc-button memory-button" @onclick="MemoryRecall">MR</button>
+                <button class="calc-button memory-button" @onclick="MemoryStore">MS</button>
+                <button class="calc-button memory-button" @onclick="MemoryAdd">M+</button>
+                <button class="calc-button memory-button" @onclick="MemorySubtract">M-</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button function-button" @onclick="PercentageClick">%</button>
+                <button class="calc-button function-button" @onclick="ClearEntryClick">CE</button>
+                <button class="calc-button function-button" @onclick="ClearClick">C</button>
+                <button class="calc-button function-button" @onclick="BackspaceClick">
+                    <i class="fas fa-backspace"></i>
+                </button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("1/x")'>1/x</button>
+                <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("x²")'>x²</button>
+                <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("√")'>√</button>
+                <button class="calc-button operation-button" @onclick='() => OperationClick("/")'>/</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button number-button" @onclick="() => DigitClick(7)">7</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(8)">8</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(9)">9</button>
+                <button class="calc-button operation-button" @onclick='() => OperationClick("*")'>×</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button number-button" @onclick="() => DigitClick(4)">4</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(5)">5</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(6)">6</button>
+                <button class="calc-button operation-button" @onclick='() => OperationClick("-")'>−</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button number-button" @onclick="() => DigitClick(1)">1</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(2)">2</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(3)">3</button>
+                <button class="calc-button operation-button" @onclick='() => OperationClick("+")'>+</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="calc-button function-button" @onclick="ToggleSignClick">±</button>
+                <button class="calc-button number-button" @onclick="() => DigitClick(0)">0</button>
+                <button class="calc-button function-button" @onclick="DecimalPointClick">.</button>
+                <button class="calc-button equals-button" @onclick="EqualsClick">=</button>
+            </div>
+        </div>
+        
+        <!-- Scientific calculator buttons -->
+        @if (Mode == "Scientific")
+        {
+            <div class="scientific-buttons">
+                <div class="button-row">
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("2ⁿ")'>2<sup>n</sup></button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("log")'>log</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("ln")'>ln</button>
+                </div>
+                
+                <div class="button-row">
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("(")'>(</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick(")")'>)</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("n!")'>n!</button>
+                </div>
+                
+                <div class="button-row">
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("sin")'>sin</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("cos")'>cos</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("tan")'>tan</button>
+                </div>
+                
+                <div class="button-row">
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("xʸ")'>x<sup>y</sup></button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("10ˣ")'>10<sup>x</sup></button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("eˣ")'>e<sup>x</sup></button>
+                </div>
+                
+                <div class="button-row">
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("π")'>π</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("e")'>e</button>
+                    <button class="calc-button function-button" @onclick='() => ScientificFunctionClick("mod")'>mod</button>
+                </div>
+            </div>
+        }
+    </div>
+    
+    @if (ShowHistory)
+    {
+        <div class="calculator-sidebar">
+            <div class="history-header">
+                <h3>History</h3>
+                <button class="clear-history-button" @onclick="ClearHistory">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            
+            <div class="history-list">
+                @foreach (var item in History)
+                {
+                    <div class="history-item" @onclick='() => UseHistoryItem(item)'>
+                        @item
+                    </div>
+                }
+                
+                @if (History.Count == 0)
+                {
+                    <div class="history-empty">No history yet</div>
+                }
+            </div>
+        </div>
+    }
+</div>

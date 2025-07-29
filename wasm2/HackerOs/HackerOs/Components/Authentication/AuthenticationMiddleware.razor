@@ -1,0 +1,57 @@
+@using HackerOs.OS.Core.State
+@using HackerOs.OS.Security
+@inject IAppStateService AppState
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+
+@if (IsLoading)
+{
+    <div class="authentication-middleware loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading HackerOS...</div>
+    </div>
+}
+else if (IsLocked)
+{
+    <LockScreen />
+}
+else if (!IsAuthenticated && RequireAuthentication)
+{
+    <LoginScreen />
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool RequireAuthentication { get; set; } = true;
+    
+    private bool IsLoading => AppState.IsLoading;
+    private bool IsAuthenticated => AppState.IsAuthenticated;
+    private bool IsLocked => AppState.IsLocked;
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to state changes
+        AppState.StateChanged += OnAppStateChanged;
+    }
+    
+    private void OnAppStateChanged(object? sender, AppStateChangedEventArgs e)
+    {
+        // Only trigger a rerender if relevant properties changed
+        if (e.PropertyName == nameof(AppState.IsLoading) ||
+            e.PropertyName == nameof(AppState.IsAuthenticated) ||
+            e.PropertyName == nameof(AppState.IsLocked))
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    public void Dispose()
+    {
+        // Unsubscribe from state changes
+        AppState.StateChanged -= OnAppStateChanged;
+    }
+}

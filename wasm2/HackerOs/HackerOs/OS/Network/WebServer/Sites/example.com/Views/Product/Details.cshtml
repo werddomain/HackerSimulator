@@ -1,0 +1,50 @@
+@model HackerOs.OS.Network.WebServer.Sites.example.com.Models.ProductViewModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSHTML Demo Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .product {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .product h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSHTML Support Demo</h1>
+    
+    <h2>Welcome to our CSHTML demo page</h2>
+    
+    <div class="product">
+        <h3>@Model.Name</h3>
+        <p><strong>Price:</strong> $@Model.Price</p>
+        <p><strong>Description:</strong> @Model.Description</p>
+        
+        @if (Model.IsInStock) {
+            <p><span style="color: green;">In Stock</span></p>
+        } else {
+            <p><span style="color: red;">Out of Stock</span></p>
+        }
+    </div>
+    
+    <h2>Product Categories</h2>
+    <ul>
+        @foreach (var category in Model.Categories) {
+            <li>@category.Name</li>
+        }
+    </ul>
+</body>
+</html>

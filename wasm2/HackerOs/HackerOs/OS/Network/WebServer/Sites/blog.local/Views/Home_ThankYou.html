@@ -1,0 +1,31 @@
+<div class="thank-you-page">
+    <div class="thank-you-content">
+        <div class="check-icon">
+            <img src="/img/check-circle.svg" alt="Success">
+        </div>
+        
+        <h1>Thank You for Subscribing!</h1>
+        
+        {{ if (ViewData["Subscriber"] != null) { }}
+            <p>Hello <strong>{{ ((SubscriptionForm)ViewData["Subscriber"]).Name }}</strong>, thank you for subscribing to the HackerOS Blog newsletter.</p>
+        {{ } else { }}
+            <p>Thank you for subscribing to the HackerOS Blog newsletter.</p>
+        {{ } }}
+        
+        <p>We've sent a confirmation email to your inbox. Please confirm your subscription to start receiving our updates.</p>
+        
+        <div class="what-next">
+            <h2>What's Next?</h2>
+            <ul>
+                <li>Check your email and confirm your subscription</li>
+                <li>Add our email address to your contacts to prevent our newsletters from going to spam</li>
+                <li>Explore our latest articles while you wait for the next update</li>
+            </ul>
+        </div>
+        
+        <div class="cta-buttons">
+            <a href="/" class="cta-button">Return to Home</a>
+            <a href="/tag/tutorial" class="cta-button secondary">Browse Tutorials</a>
+        </div>
+    </div>
+</div>

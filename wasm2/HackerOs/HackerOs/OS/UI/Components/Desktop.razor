@@ -1,0 +1,74 @@
+@namespace HackerOs.OS.UI.Components
+@using HackerOs.OS.UI.Models
+
+<div class="desktop-container" 
+     style="background-image: url('@BackgroundImagePath');"
+     @onclick="OnDesktopClick" 
+     @onmousedown="OnDesktopMouseDown"
+     @onmousemove="OnDesktopMouseMove"
+     @onmouseup="OnDesktopMouseUp"
+     @oncontextmenu="OnDesktopContextMenu"
+     @oncontextmenu:preventDefault>
+    
+    <div class="desktop-icon-grid">
+        @foreach (var icon in Icons)
+        {
+            <div class="desktop-icon @(icon.IsSelected ? "selected" : "")"
+                style="grid-column: @(icon.GridX + 1); grid-row: @(icon.GridY + 1);"
+                @onclick="e => OnIconClick(e, icon)"
+                @ondblclick="e => OnIconDoubleClick(e, icon)"
+                @onmousedown="e => OnIconMouseDown(e, icon)"
+                @oncontextmenu="e => OnIconContextMenu(e, icon)"
+                @oncontextmenu:preventDefault
+                @key="icon.Id">
+                <img class="icon-image" src="@icon.IconPath" alt="@icon.DisplayName" />
+                <div class="icon-label" title="@(string.IsNullOrEmpty(icon.Tooltip) ? icon.DisplayName : icon.Tooltip)">
+                    @icon.DisplayName
+                </div>
+            </div>
+        }
+    </div>
+    
+    @if (IsSelectionRectVisible)
+    {
+        <div class="selection-rectangle" 
+             style="left: @(SelectionRect.Left)px; top: @(SelectionRect.Top)px; width: @(SelectionRect.Width)px; height: @(SelectionRect.Height)px;">
+        </div>
+    }
+    
+    @if (IsContextMenuVisible)
+    {
+        <div class="desktop-context-menu" 
+             style="left: @(ContextMenuX)px; top: @(ContextMenuY)px;"
+             @onclick:stopPropagation>
+            @foreach (var item in ContextMenuItems)
+            {
+                @if (item.IsSeparator)
+                {
+                    <div class="context-menu-separator"></div>
+                }
+                else
+                {
+                    <div class="context-menu-item" @onclick="() => OnContextMenuItemClick(item)">
+                        @if (!string.IsNullOrEmpty(item.IconClass))
+                        {
+                            <span class="icon @item.IconClass"></span>
+                        }
+                        @item.Label
+                    </div>
+                }
+            }
+        </div>
+    }
+        
+    @if (IsDragging)
+    {
+        <div class="desktop-drag-overlay"></div>
+    }
+    
+    <HackerOs.OS.UI.Components.ApplicationLauncher @ref="_applicationLauncher" OnLauncherOpenChanged="OnLauncherOpenChanged" />
+    
+    <HackerOs.OS.UI.Components.Taskbar OnLauncherToggled="OnLauncherToggled" OnNotificationCenterToggled="OnNotificationCenterToggled" />
+    
+    <HackerOs.OS.UI.Components.NotificationCenter @ref="_notificationCenter" OnNotificationCenterOpenChanged="OnNotificationCenterOpenChanged" />
+</div>

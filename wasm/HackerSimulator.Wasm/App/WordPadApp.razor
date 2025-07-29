@@ -1,0 +1,17 @@
+@namespace HackerSimulator.Wasm.Apps
+@inherits HackerSimulator.Wasm.Windows.WindowBase
+
+<div class="wordpad-app">
+    <div class="toolbar">
+        <input type="text" @bind="_path" placeholder="/path/file.html" class="path-box" />
+        <button @onclick="Open">Open</button>
+        <button @onclick="Save">Save</button>
+        <button @onclick="NewDoc">New</button>
+        <button @onclick="Bold"><b>B</b></button>
+        <button @onclick="Italic"><i>I</i></button>
+        <button @onclick="Underline"><u>U</u></button>
+        <button @onclick="Bullet">• List</button>
+        <input type="color" @onchange="ChangeColor" />
+    </div>
+    <div id="@EditorId" class="editor" contenteditable="true" @ref="_editorRef"></div>
+</div>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Add StaticWebAssetBasePath to distinguish assets -->
+    <StaticWebAssetBasePath>terminaltest</StaticWebAssetBasePath>
+    <!-- Prevent duplicate static web assets -->
+    <NoCompress>true</NoCompress>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.5" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorTerminal\BlazorTerminal.csproj" />
+  </ItemGroup>
+
+  
+  
+
+</Project>

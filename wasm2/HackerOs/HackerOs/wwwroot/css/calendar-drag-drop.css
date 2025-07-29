@@ -1,0 +1,92 @@
+/* Calendar Drag and Drop Styles */
+
+/* Draggable elements */
+.calendar-draggable {
+    cursor: grab;
+}
+
+.calendar-draggable:active {
+    cursor: grabbing;
+}
+
+/* Dragging state */
+.calendar-dragging .calendar-draggable {
+    opacity: 0.6;
+}
+
+/* Drop target indicators */
+.drag-over {
+    background-color: var(--accent-color-light, rgba(52, 152, 219, 0.2)) !important;
+    border: 2px dashed var(--accent-color, #3498db) !important;
+}
+
+/* Resize handle */
+.event-resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 3px 3px;
+}
+
+.event-resize-handle:hover,
+.resizing .event-resize-handle {
+    background-color: rgba(255, 255, 255, 0.5);
+    height: 6px;
+}
+
+/* Resize feedback tooltip */
+.resize-feedback {
+    position: fixed;
+    z-index: 9999;
+    background-color: var(--tooltip-background, rgba(0, 0, 0, 0.8));
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Add data-attributes to day cells for drag/drop in month view */
+.day-cell {
+    position: relative;
+}
+
+.hour-cell {
+    position: relative;
+}
+
+/* Event interaction states */
+.day-event:hover,
+.event-item:hover {
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Dragging ghost element */
+.calendar-drag-ghost {
+    position: absolute;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Animation for event placement */
+@keyframes place-event {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.event-placed {
+    animation: place-event 0.3s ease-out;
+}
