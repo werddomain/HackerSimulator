@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Prevent duplicate static web assets -->
+    <!-- Allow duplicate output files during publish (resolves conflicts with referenced projects) -->
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
   <ItemGroup>
@@ -17,7 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
   </ItemGroup>
   
-  <!-- Additional configuration -->
+  <!-- Blazor WebAssembly runtime configuration -->
   <PropertyGroup>
     <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
