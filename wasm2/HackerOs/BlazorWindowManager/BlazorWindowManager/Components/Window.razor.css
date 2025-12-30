@@ -1,0 +1,19 @@
+/* 
+ * Window Component Scoped CSS
+ * 
+ * This component inherits most styling from WindowContent.razor.css
+ * These styles are for any Window-specific customizations
+ */
+
+/* Default message styling for empty windows */
+.default-window-message {
+    padding: 20px;
+    color: var(--content-color, #e0e0e0);
+    font-family: 'Courier New', monospace;
+    text-align: center;
+}
+
+.default-window-message p {
+    margin: 0;
+    opacity: 0.7;
+}

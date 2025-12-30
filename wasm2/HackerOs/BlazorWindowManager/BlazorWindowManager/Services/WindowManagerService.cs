@@ -114,10 +114,9 @@ public class WindowManagerService
             Parameters = parameters ?? new Dictionary<string, object>()
         };
 
-        // Ensure Id and Title are in parameters for the component
+        // Ensure Id and Name are in parameters for the component
+        // Note: Title is NOT a [Parameter] in WindowBase, it's set via SetTitle method
         windowInfo.Parameters["Id"] = id;
-        if (!windowInfo.Parameters.ContainsKey("Title"))
-            windowInfo.Parameters["Title"] = title;
         if (!string.IsNullOrEmpty(name) && !windowInfo.Parameters.ContainsKey("Name"))
             windowInfo.Parameters["Name"] = name;
 

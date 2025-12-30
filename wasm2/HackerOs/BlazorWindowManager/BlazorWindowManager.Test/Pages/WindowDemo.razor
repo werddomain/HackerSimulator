@@ -1,0 +1,145 @@
+@page "/window-demo"
+@using BlazorWindowManager.Components
+@using BlazorWindowManager.Services
+@inject WindowManagerService WindowManager
+
+<h1>Simplified Window Component Demo</h1>
+
+<div class="demo-section">
+    <h3>About the Simplified Window Component</h3>
+    <p>
+        The new <code>&lt;Window&gt;</code> component provides a simple, declarative way to create windows 
+        without needing to create custom components that inherit from <code>WindowBase</code>.
+    </p>
+    <p>
+        <strong>Simple usage (declarative):</strong>
+    </p>
+    <pre><code>&lt;Window WindowTitle="My Application"&gt;
+    &lt;p&gt;Your content goes here&lt;/p&gt;
+&lt;/Window&gt;</code></pre>
+    
+    <p>
+        <strong>With icon:</strong>
+    </p>
+    <pre><code>&lt;Window WindowTitle="My Application" WindowIcon="@@iconFragment"&gt;
+    &lt;p&gt;Your content goes here&lt;/p&gt;
+&lt;/Window&gt;
+
+@@code {
+    private RenderFragment iconFragment = @@&lt;span&gt;🖥️&lt;/span&gt;;
+}</code></pre>
+
+    <p>
+        <strong>Programmatic creation (via WindowManager):</strong>
+    </p>
+    <pre><code>var parameters = new Dictionary&lt;string, object&gt;
+{
+    { "WindowTitle", "My Application" },
+    { "InitialWidth", (double?)500 },
+    { "InitialHeight", (double?)400 }
+};
+WindowManager.CreateWindow&lt;Window&gt;(parameters);</code></pre>
+</div>
+
+<div class="demo-section">
+    <h3>Test Window Creation</h3>
+    <div class="test-buttons mb-4">
+        <button class="btn btn-primary me-2" @onclick="CreateSimpleWindow">
+            Create Simple Window
+        </button>
+        
+        <button class="btn btn-secondary me-2" @onclick="CreateWindowWithIcon">
+            Create Window with Icon
+        </button>
+        
+        <button class="btn btn-success me-2" @onclick="CreateWindowWithContent">
+            Create Window with Rich Content
+        </button>
+        
+        <button class="btn btn-danger" @onclick="CloseAllWindows">
+            Close All Windows
+        </button>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h3>Window Manager Status</h3>
+    <p><strong>Active Windows:</strong> @WindowManager.GetAllWindows().Count</p>
+    
+    @if (WindowManager.GetAllWindows().Any())
+    {
+        <ul>
+            @foreach (var window in WindowManager.GetAllWindows())
+            {
+                <li>@window.Title (@window.Id.ToString().Substring(0, 8)...)</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p><em>No active windows</em></p>
+    }
+</div>
+
+@code {
+    private int windowCounter = 0;
+
+    private void CreateSimpleWindow()
+    {
+        windowCounter++;
+        var parameters = new Dictionary<string, object>
+        {
+            { "WindowTitle", $"Simple Window {windowCounter}" },
+            { "InitialWidth", (double?)450 },
+            { "InitialHeight", (double?)300 },
+            { "InitialX", (double?)(100 + (windowCounter * 30)) },
+            { "InitialY", (double?)(100 + (windowCounter * 30)) }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<Window>(parameters);
+        StateHasChanged();
+    }
+
+    private void CreateWindowWithIcon()
+    {
+        windowCounter++;
+        var parameters = new Dictionary<string, object>
+        {
+            { "WindowTitle", $"Window with Icon {windowCounter}" },
+            { "InitialWidth", (double?)500 },
+            { "InitialHeight", (double?)350 },
+            { "InitialX", (double?)(150 + (windowCounter * 30)) },
+            { "InitialY", (double?)(150 + (windowCounter * 30)) }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<Window>(parameters);
+        StateHasChanged();
+    }
+
+    private void CreateWindowWithContent()
+    {
+        windowCounter++;
+        var parameters = new Dictionary<string, object>
+        {
+            { "WindowTitle", $"Rich Content Window {windowCounter}" },
+            { "InitialWidth", (double?)600 },
+            { "InitialHeight", (double?)450 },
+            { "InitialX", (double?)(200 + (windowCounter * 30)) },
+            { "InitialY", (double?)(200 + (windowCounter * 30)) }
+        };
+        
+        var windowInfo = WindowManager.CreateWindow<Window>(parameters);
+        StateHasChanged();
+    }
+
+    private void CloseAllWindows()
+    {
+        var allWindows = WindowManager.GetAllWindows().ToList();
+        foreach (var window in allWindows)
+        {
+            WindowManager.UnregisterWindow(window.Id);
+        }
+        windowCounter = 0;
+        StateHasChanged();
+    }
+}
