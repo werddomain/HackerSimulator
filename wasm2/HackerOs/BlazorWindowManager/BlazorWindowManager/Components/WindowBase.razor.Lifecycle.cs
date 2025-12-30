@@ -25,6 +25,14 @@ public partial class WindowBase
         {
             _windowInfo = WindowManager.RegisterWindow(this, Id, Title, Name);
         }
+        else
+        {
+            // Sync title from WindowInfo (which was set from parameters during CreateWindow)
+            if (!string.IsNullOrEmpty(_windowInfo.Title) && _windowInfo.Title != "Window")
+            {
+                title = _windowInfo.Title;
+            }
+        }
         
         // Setup JavaScript interop
         _dotNetRef = DotNetObjectReference.Create(this);

@@ -1,0 +1,43 @@
+@namespace BlazorWindowManager.Components
+@using BlazorWindowManager.Models
+@using BlazorWindowManager.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
+@inherits WindowBase
+
+@*
+Window Component - A simplified window wrapper for easy developer usage.
+
+Usage example (declarative):
+<Window WindowTitle="My Application">
+    <p>Your content goes here</p>
+</Window>
+
+Or with an icon:
+<Window WindowTitle="My Application" WindowIcon="@iconFragment">
+    <p>Your content goes here</p>
+</Window>
+
+Where:
+@code {
+    private RenderFragment iconFragment = @<span>🖥️</span>;
+}
+
+Usage example (programmatic via WindowManager):
+var parameters = new Dictionary<string, object>
+{
+    { "WindowTitle", "My Application" },
+    { "InitialWidth", (double?)500 },
+    { "InitialHeight", (double?)400 }
+};
+WindowManager.CreateWindow<Window>(parameters);
+
+Note: When creating windows programmatically, you can also use "Title" 
+in the parameters dictionary - it will be used by WindowInfo but won't 
+be passed as a component parameter (Title is not a [Parameter]).
+*@
+
+<WindowContent Window="this" Icon="@WindowIcon">
+    @ChildContent
+</WindowContent>

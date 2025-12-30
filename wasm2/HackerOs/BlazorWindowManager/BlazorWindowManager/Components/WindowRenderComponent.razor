@@ -126,10 +126,19 @@
     {
         var convertedParameters = new Dictionary<string, object>();
 
+        // List of properties that are NOT [Parameter] attributes and should not be passed to components
+        var excludedProperties = new HashSet<string> { "Title" };
+
         foreach (var parameter in parameters)
         {
             var key = parameter.Key;
             var value = parameter.Value;
+
+            // Skip properties that are not [Parameter] attributes
+            if (excludedProperties.Contains(key))
+            {
+                continue;
+            }
 
             // Convert numeric parameters that should be double? for window positioning and sizing
             if (key == "InitialX" || key == "InitialY" || key == "InitialWidth" || key == "InitialHeight")
