@@ -1,40 +1,33 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal.Test\\BlazorTerminal.Test.csproj": {}
+    "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/BlazorTerminal.Test.csproj": {}
   },
   "projects": {
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal.Test\\BlazorTerminal.Test.csproj": {
+    "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/BlazorTerminal.Test.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal.Test\\BlazorTerminal.Test.csproj",
+        "projectUniqueName": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/BlazorTerminal.Test.csproj",
         "projectName": "BlazorTerminal.Test",
-        "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal.Test\\BlazorTerminal.Test.csproj",
-        "packagesPath": "C:\\Users\\clefw\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal.Test\\obj\\",
+        "projectPath": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/BlazorTerminal.Test.csproj",
+        "packagesPath": "/home/runner/work/HackerSimulator/.codeql-scratch/dbs/csharp/working/packages",
+        "outputPath": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal.Test/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\clefw\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj": {
-                "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj"
+              "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj": {
+                "projectPath": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj"
               }
             }
           }
@@ -49,7 +42,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -67,13 +60,13 @@
             "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.5, )",
+              "version": "[9.0.11, )",
               "autoReferenced": true
             },
             "Microsoft.NET.Sdk.WebAssembly.Pack": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.5, )",
+              "version": "[10.0.1, )",
               "autoReferenced": true
             }
           },
@@ -88,12 +81,26 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.11, 9.0.11]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.11, 9.0.11]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
+              "version": "[9.0.11, 9.0.11]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {
@@ -102,29 +109,22 @@
         }
       }
     },
-    "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj": {
+    "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj": {
       "version": "1.0.0-beta1",
       "restore": {
-        "projectUniqueName": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj",
+        "projectUniqueName": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj",
         "projectName": "BlazorTerminal",
-        "projectPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\BlazorTerminal.csproj",
-        "packagesPath": "C:\\Users\\clefw\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\clefw\\source\\repos\\HackerSimulator\\wasm2\\HackerOs\\BlazorTerminal\\src\\BlazorTerminal\\obj\\",
+        "projectPath": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/BlazorTerminal.csproj",
+        "packagesPath": "/home/runner/work/HackerSimulator/.codeql-scratch/dbs/csharp/working/packages",
+        "outputPath": "/home/runner/work/HackerSimulator/HackerSimulator/wasm2/HackerOs/BlazorTerminal/src/BlazorTerminal/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\clefw\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -143,7 +143,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -165,12 +165,22 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.11, 9.0.11]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.11, 9.0.11]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

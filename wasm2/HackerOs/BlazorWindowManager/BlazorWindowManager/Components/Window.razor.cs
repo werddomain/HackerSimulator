@@ -10,7 +10,7 @@ namespace BlazorWindowManager.Components;
 /// <para>
 /// <strong>Simple Usage:</strong>
 /// <code>
-/// &lt;Window Title="My Application"&gt;
+/// &lt;Window WindowTitle="My Application"&gt;
 ///     &lt;p&gt;Your content goes here&lt;/p&gt;
 /// &lt;/Window&gt;
 /// </code>
@@ -19,7 +19,7 @@ namespace BlazorWindowManager.Components;
 /// <para>
 /// <strong>With Icon:</strong>
 /// <code>
-/// &lt;Window Title="My Application" WindowIcon="myIcon"&gt;
+/// &lt;Window WindowTitle="My Application" WindowIcon="myIcon"&gt;
 ///     &lt;p&gt;Your content goes here&lt;/p&gt;
 /// &lt;/Window&gt;
 /// 
