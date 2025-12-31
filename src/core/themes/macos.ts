@@ -79,55 +79,55 @@ export function createMacOSTheme(): Theme {
       textAlignment: 'center',
       height: '28px',
       customCss: `
-      #windows-container .window-header .window-title{
+      .windows-container .window-header .window-title{
         color: black !important;
         margin-left: 11px !important;
         font-weight: 500;
         font-size: 13px;
       } 
-        #windows-container .window {
+        .windows-container .window {
             border-radius: ${windowBorderRadius}px;
             box-shadow: 0 5px 30px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
-        #windows-container .window.active {
+        .windows-container .window.active {
             border: 1px solid rgba(0, 0, 0, 0.3);
             box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-        }        #windows-container .window-header .window-controls{
+        }        .windows-container .window-header .window-controls{
             flex-direction: row;
         }
-            #windows-container .window {
+            .windows-container .window {
             border-radius: ${windowBorderRadius}px;
             border: 1px solid rgba(0, 0, 0, 0.15);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
             overflow: hidden;
             }
-            #windows-container .window-header {
+            .windows-container .window-header {
             border-radius: ${windowBorderRadius}px ${windowBorderRadius}px 0 0;
             padding: 0 ${windowBorderRadius-8}px;
         }
-            #windows-container .window-content, 
-            #windows-container .window-content > div {
+            .windows-container .window-content,
+            .windows-container .window-content > div {
 
                 border-radius: 0 0 ${windowBorderRadius}px ${windowBorderRadius}px;
 }
             /* Style for code editor window content */
-            .app-code-editor #windows-container .window-content {
+            .app-code-editor .windows-container .window-content {
                 background-color: #1e1e1e;
                 color: #f0f0f0;
             }
             /* Style for terminal window content */
-            .app-terminal #windows-container .window-content {
+            .app-terminal .windows-container .window-content {
                 background-color: #1e1e1e;
                 color: #f0f0f0;
             }
             /* General content style for native macOS appearance */
-            #windows-container .window-content,
-            #windows-container .window {
+            .windows-container .window-content,
+            .windows-container .window {
                 background-color: #f5f5f7;
             }
-             #windows-container .window-header .window-controls .window-control {
+             .windows-container .window-header .window-controls .window-control {
             border-radius: 50%;
             /*width: 12px;
             height: 12px;*/
@@ -136,12 +136,12 @@ export function createMacOSTheme(): Theme {
             box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.15);
             transition: all 0.1s ease-in-out;
         }
-        #windows-container .window-header .window-controls {
+        .windows-container .window-header .window-controls {
             margin-left: 8px;
             display: flex;
             gap: 3px;
         }
-        #windows-container .window-header {
+        .windows-container .window-header {
             flex-direction: row-reverse;
         }        
         .window-control.window-close {
