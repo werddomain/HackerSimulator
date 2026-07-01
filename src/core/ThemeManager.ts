@@ -416,13 +416,12 @@ export class ThemeManager {
    * Make sure the themes directory exists
    */
   private async ensureThemesDirectory(): Promise<void> {
-    try {
-      // Check if directory exists
-      await this.fileSystem.stat(this.themesDirectory);
-    } catch (error) {
-      // Directory doesn't exist, create it
+    // Use exists() rather than stat() so a missing directory is treated as an
+    // expected condition instead of logging an error. The directory is created
+    // on first run when it does not yet exist.
+    const exists = await this.fileSystem.exists(this.themesDirectory);
+    if (!exists) {
       await this.fileSystem.createDirectory(this.themesDirectory, null, true);
-
     }
   }
   

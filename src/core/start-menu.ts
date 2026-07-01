@@ -93,9 +93,16 @@ export class StartMenuController {
 
   
 
-    this.os.Ready(() => {
-      // Load pinned apps from user settings
-      this.loadPinnedApps();
+    this.os.Ready(async () => {
+      // Load pinned apps from user settings. This reads from the virtual
+      // filesystem (IndexedDB), so it must only run once the OS – and in
+      // particular the filesystem – has finished initializing.
+      await this.loadPinnedApps();
+
+      // Build the pinned apps view now that the filesystem is ready. This is
+      // intentionally not done in the constructor to avoid accessing the
+      // database before it is initialized.
+      await this.buildPinedApps();
 
         // Initialize Lucide icons
     this.initIcons();
@@ -142,10 +149,11 @@ export class StartMenuController {
             }
           }
 
-          // If we have pinned apps, use them, otherwise keep the default
+          // If we have pinned apps, use them, otherwise keep the default.
+          // The actual rendering (buildPinedApps) is performed by the caller
+          // once loading is complete, so we only update the config here.
           if (newTileConfig.length > 0) {
             this.appTileConfig = newTileConfig;
-            this.buildPinedApps();
           }
         }
       }
@@ -215,7 +223,9 @@ export class StartMenuController {
     const pinnedApps = document.createElement('div');
     pinnedApps.className = 'pinned-apps';    // Add app tiles
     this.pinnedAppsEl = pinnedApps;
-    this.buildPinedApps();
+    // NOTE: Pinned apps are built later, once the OS/filesystem is ready
+    // (see the os.Ready callback in the constructor). Building them here would
+    // access the IndexedDB-backed filesystem before it is initialized.
 
     pinnedAppsView.appendChild(pinnedApps);
     content.appendChild(pinnedAppsView);
