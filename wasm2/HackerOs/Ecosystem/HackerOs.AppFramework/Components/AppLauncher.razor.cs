@@ -89,7 +89,7 @@ public partial class AppLauncher : ComponentBase, IAsyncDisposable
             }
             catch (JSDisconnectedException)
             {
-                // Circuit gone; ignore.
+                // JS runtime disconnected (app shutting down); ignore.
             }
         }
     }
@@ -108,7 +108,7 @@ public partial class AppLauncher : ComponentBase, IAsyncDisposable
             }
             catch (JSDisconnectedException)
             {
-                // Circuit gone; ignore.
+                // JS runtime disconnected (app shutting down); ignore.
             }
         }
 

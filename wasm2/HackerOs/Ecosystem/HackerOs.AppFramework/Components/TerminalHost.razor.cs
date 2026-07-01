@@ -143,7 +143,7 @@ public partial class TerminalHost : ComponentBase, IAsyncDisposable
             }
             catch (JSDisconnectedException)
             {
-                // Circuit already gone; nothing to clean up.
+                // JS runtime already disconnected (app shutting down); nothing to clean up.
             }
         }
     }

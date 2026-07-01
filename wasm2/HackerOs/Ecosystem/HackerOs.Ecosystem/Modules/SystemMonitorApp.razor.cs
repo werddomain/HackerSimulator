@@ -95,12 +95,26 @@ public partial class SystemMonitorApp
             _timer = null;
             if (_module is not null)
             {
-                // Fire and forget; the circuit may already be tearing down.
-                _ = _module.DisposeAsync().AsTask();
+                // Fire and forget; the JS runtime may already be disconnected as
+                // the application shuts down. Swallow that expected failure so the
+                // task does not raise an unobserved exception.
+                _ = DisposeModuleAsync(_module);
                 _module = null;
             }
         }
 
         base.Dispose(disposing);
+    }
+
+    private static async Task DisposeModuleAsync(IJSObjectReference module)
+    {
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // JS runtime already gone; nothing to clean up.
+        }
     }
 }

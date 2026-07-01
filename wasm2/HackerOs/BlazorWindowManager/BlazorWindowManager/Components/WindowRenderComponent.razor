@@ -1,6 +1,7 @@
 @using BlazorWindowManager.Models
 @using BlazorWindowManager.Services
 @using System.Reflection
+@using System.IO
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Extensions.DependencyInjection
@@ -100,8 +101,11 @@
             {
                 candidate = loadedAssembly.GetType(typeName);
             }
-            catch
+            catch (Exception ex) when (
+                ex is TypeLoadException or FileLoadException or BadImageFormatException or IOException)
             {
+                // The assembly could not resolve the type (for example a
+                // dynamic or partially loaded assembly); skip it.
                 candidate = null;
             }
 
@@ -120,8 +124,10 @@
             {
                 loadedTypes = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
             }
-            catch
+            catch (Exception ex) when (
+                ex is FileLoadException or BadImageFormatException or IOException)
             {
+                // Assembly types could not be enumerated; skip this assembly.
                 continue;
             }
 
