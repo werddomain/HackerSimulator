@@ -155,19 +155,30 @@ export class CodeEditorApp extends GuiApplication {
   private initMonaco(): void {
     if (!this.editorContainer) return;
     
-    // Configure Monaco workers
+    // Configure Monaco workers to use the locally bundled worker files.
+    // webpack 5 bundles each `new Worker(new URL(...))` into its own chunk,
+    // so the editor works offline and always matches the bundled Monaco
+    // version (previously these were fetched from unpkg.com@latest, which
+    // failed offline and risked version mismatches).
     (window as any).MonacoEnvironment = {
       getWorker: function(_moduleId: string, label: string) {
-        // Use a proxied worker that doesn't rely on specific worker files
-        // This is a workaround when worker files aren't properly bundled
-        const workerContent = `
-          self.MonacoEnvironment = {
-            baseUrl: 'https://unpkg.com/monaco-editor@latest/min/'
-          };
-          importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');
-        `;
-        const blob = new Blob([workerContent], { type: 'application/javascript' });
-        return new Worker(URL.createObjectURL(blob));
+        switch (label) {
+          case 'json':
+            return new Worker(new URL('monaco-editor/esm/vs/language/json/json.worker.js', import.meta.url));
+          case 'css':
+          case 'scss':
+          case 'less':
+            return new Worker(new URL('monaco-editor/esm/vs/language/css/css.worker.js', import.meta.url));
+          case 'html':
+          case 'handlebars':
+          case 'razor':
+            return new Worker(new URL('monaco-editor/esm/vs/language/html/html.worker.js', import.meta.url));
+          case 'typescript':
+          case 'javascript':
+            return new Worker(new URL('monaco-editor/esm/vs/language/typescript/ts.worker.js', import.meta.url));
+          default:
+            return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url));
+        }
       }
     };
     
