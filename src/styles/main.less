@@ -1,5 +1,7 @@
 // Main LESS file that imports all other style components
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+// Note: The "Inter" web font is loaded at runtime via a <link> tag in index.html.
+// It is intentionally not imported here so the build does not depend on fetching
+// a remote resource (which fails in offline/sandboxed environments).
 @import "variables.less";
 @import "base.less";
 @import "taskbar.less";
