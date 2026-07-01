@@ -1,0 +1,91 @@
+.sysmon {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 18px;
+    background: #05080a;
+    color: #35ff7a;
+    font-family: 'Consolas', 'Courier New', monospace;
+    overflow-y: auto;
+}
+
+.sysmon-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.sysmon-gauge {
+    display: grid;
+    grid-template-columns: 48px 1fr 90px;
+    align-items: center;
+    gap: 12px;
+}
+
+.sysmon-gauge-label {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #1f9e50;
+}
+
+.sysmon-bar {
+    height: 16px;
+    background: rgba(53, 255, 122, 0.08);
+    border: 1px solid rgba(53, 255, 122, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.sysmon-bar-fill {
+    height: 100%;
+    transition: width 0.6s ease;
+    box-shadow: 0 0 10px currentColor;
+}
+
+.sysmon-bar-fill.cpu { background: #35ff7a; color: #35ff7a; }
+.sysmon-bar-fill.mem { background: #ffd23f; color: #ffd23f; }
+.sysmon-bar-fill.net { background: #3fa9ff; color: #3fa9ff; }
+
+.sysmon-gauge-value {
+    text-align: right;
+    font-size: 13px;
+    color: #d6ffe6;
+}
+
+.sysmon-processes {
+    margin-top: 20px;
+    border-top: 1px dashed rgba(53, 255, 122, 0.25);
+    padding-top: 12px;
+}
+
+.sysmon-processes-title {
+    color: #1f9e50;
+    font-size: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.sysmon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.sysmon-table th {
+    text-align: left;
+    color: #1f9e50;
+    border-bottom: 1px solid rgba(53, 255, 122, 0.25);
+    padding: 4px 6px;
+    font-weight: 600;
+}
+
+.sysmon-table td {
+    padding: 4px 6px;
+    color: #9dffc4;
+    border-bottom: 1px solid rgba(53, 255, 122, 0.08);
+}
+
+.sysmon-ticks {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #1f9e50;
+}

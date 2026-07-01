@@ -1,0 +1,55 @@
+@inherits WindowAppBase
+@attribute [App("System Monitor", Id = "hackeros.sysmon", Icon = "\U0001F4C8", Category = "System",
+    Description = "Live view of simulated system resources", SortOrder = 20)]
+
+<WindowContent Window="this">
+    <div class="sysmon" data-testid="sysmon-app">
+        <div class="sysmon-grid">
+            <div class="sysmon-gauge">
+                <div class="sysmon-gauge-label">CPU</div>
+                <div class="sysmon-bar">
+                    <div class="sysmon-bar-fill cpu" style="width:@_cpu%"></div>
+                </div>
+                <div class="sysmon-gauge-value" data-testid="sysmon-cpu">@_cpu%</div>
+            </div>
+
+            <div class="sysmon-gauge">
+                <div class="sysmon-gauge-label">MEM</div>
+                <div class="sysmon-bar">
+                    <div class="sysmon-bar-fill mem" style="width:@_mem%"></div>
+                </div>
+                <div class="sysmon-gauge-value" data-testid="sysmon-mem">@_mem%</div>
+            </div>
+
+            <div class="sysmon-gauge">
+                <div class="sysmon-gauge-label">NET</div>
+                <div class="sysmon-bar">
+                    <div class="sysmon-bar-fill net" style="width:@_net%"></div>
+                </div>
+                <div class="sysmon-gauge-value" data-testid="sysmon-net">@_net Kb/s</div>
+            </div>
+        </div>
+
+        <div class="sysmon-processes">
+            <div class="sysmon-processes-title">// active processes</div>
+            <table class="sysmon-table">
+                <thead>
+                    <tr><th>PID</th><th>NAME</th><th>CPU</th><th>MEM</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var proc in _processes)
+                    {
+                        <tr>
+                            <td>@proc.Pid</td>
+                            <td>@proc.Name</td>
+                            <td>@proc.Cpu%</td>
+                            <td>@proc.Mem MB</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sysmon-ticks" data-testid="sysmon-ticks">samples: @_ticks</div>
+    </div>
+</WindowContent>

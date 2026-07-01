@@ -1,0 +1,56 @@
+@namespace HackerOs.AppFramework.Components
+@implements IAsyncDisposable
+@inject AppRegistry Registry
+@inject IJSRuntime JS
+
+<div class="app-launcher" @ref="_root">
+    <button type="button"
+            class="launcher-button @(_open ? "open" : string.Empty)"
+            data-testid="start-button"
+            @onclick="ToggleAsync">
+        <span class="launcher-logo">@LogoGlyph</span>
+        <span class="launcher-label">@Label</span>
+    </button>
+
+    @if (_open)
+    {
+        <div class="launcher-panel" data-testid="app-menu" role="menu">
+            <div class="launcher-panel-header">
+                <span class="launcher-panel-title">Applications</span>
+                <span class="launcher-panel-count">@Registry.LauncherApps.Count apps</span>
+            </div>
+
+            <div class="launcher-panel-body">
+                @foreach (var category in Registry.Categories)
+                {
+                    <div class="launcher-category">
+                        <div class="launcher-category-title">@category</div>
+                        <div class="launcher-category-items">
+                            @foreach (var app in AppsInCategory(category))
+                            {
+                                <button type="button"
+                                        class="launcher-app"
+                                        role="menuitem"
+                                        data-testid="app-item"
+                                        data-app-id="@app.Id"
+                                        title="@app.Description"
+                                        @onclick="() => LaunchAsync(app)">
+                                    <span class="launcher-app-icon">@app.Icon</span>
+                                    <span class="launcher-app-text">
+                                        <span class="launcher-app-name">@app.Name</span>
+                                        <span class="launcher-app-kind">@app.Kind</span>
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (Registry.LauncherApps.Count == 0)
+                {
+                    <div class="launcher-empty">No applications registered.</div>
+                }
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,111 @@
+.welcome {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 24px;
+    background: linear-gradient(160deg, #101826 0%, #0a0f1a 100%);
+    color: #e6edf3;
+    font-family: 'Segoe UI', sans-serif;
+    overflow-y: auto;
+}
+
+.welcome-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.welcome-logo {
+    font-size: 46px;
+    line-height: 1;
+}
+
+.welcome-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #58a6ff, #7ee787);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.welcome-tagline {
+    margin: 4px 0 0;
+    color: #8b949e;
+    font-size: 14px;
+}
+
+.welcome-body {
+    padding-top: 18px;
+    line-height: 1.55;
+    font-size: 14px;
+}
+
+.welcome-body code {
+    background: rgba(110, 118, 129, 0.25);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #7ee787;
+}
+
+.welcome-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 18px 0;
+    padding: 12px 16px;
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.25);
+    border-radius: 8px;
+}
+
+.welcome-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #58a6ff;
+}
+
+.welcome-stat-value {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    color: #e6edf3;
+}
+
+.welcome-actions {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0 12px;
+    flex-wrap: wrap;
+}
+
+.welcome-btn {
+    padding: 9px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e6edf3;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.welcome-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.welcome-btn.primary {
+    background: linear-gradient(90deg, #1f6feb, #238636);
+    border-color: transparent;
+}
+
+.welcome-count {
+    color: #8b949e;
+    font-size: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+}

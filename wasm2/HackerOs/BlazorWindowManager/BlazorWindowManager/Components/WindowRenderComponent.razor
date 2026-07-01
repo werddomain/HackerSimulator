@@ -1,16 +1,12 @@
 @using BlazorWindowManager.Models
 @using BlazorWindowManager.Services
+@using System.Reflection
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Extensions.DependencyInjection
 @implements IDisposable
 
 <div class="window-render-container">
-    @* Debug info *@
-    <div class="debug-info" style="position: absolute; top: 0; right: 0; background: rgba(255,0,0,0.8); color: white; padding: 5px; z-index: 9999; font-size: 12px;">
-        Windows: @_windowsToRender.Count
-    </div>
-
     @foreach (var windowInfo in _windowsToRender)
     {
         var context = GetOrCreateContext(windowInfo);
@@ -88,10 +84,52 @@
         if (type != null)
             return type;
 
-        // If not found, try without namespace
+        // If not found, try without namespace within this assembly
         var types = assembly.GetTypes().Where(t => t.Name == typeName).ToArray();
         if (types.Length > 0)
             return types[0];
+
+        // Broaden the search to every loaded assembly so that windows defined by
+        // consuming applications (for example self-registering ecosystem apps)
+        // resolve correctly instead of falling back to an empty WindowBase. Both
+        // full names and simple names are supported.
+        foreach (var loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            Type? candidate;
+            try
+            {
+                candidate = loadedAssembly.GetType(typeName);
+            }
+            catch
+            {
+                candidate = null;
+            }
+
+            if (candidate != null && typeof(ComponentBase).IsAssignableFrom(candidate))
+                return candidate;
+        }
+
+        foreach (var loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            Type[] loadedTypes;
+            try
+            {
+                loadedTypes = loadedAssembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                loadedTypes = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
+            }
+            catch
+            {
+                continue;
+            }
+
+            var match = loadedTypes.FirstOrDefault(t =>
+                t.Name == typeName && typeof(ComponentBase).IsAssignableFrom(t));
+            if (match != null)
+                return match;
+        }
 
         // Fallback to WindowBase
         return typeof(WindowBase);

@@ -1,0 +1,23 @@
+@namespace HackerOs.AppFramework.Components
+@inject AppRegistry Registry
+
+<div class="hos-desktop" data-testid="desktop">
+    <DesktopArea CssClass="hos-desktop-area" Background="@Background" ShowGrid="true" GridSize="28">
+        <div class="hos-desktop-watermark">
+            <div class="hos-watermark-title">@Title</div>
+            <div class="hos-watermark-sub">@Registry.LauncherApps.Count applications registered &middot; open the START menu</div>
+        </div>
+    </DesktopArea>
+
+    <TaskBarComponent>
+        <LeftContent>
+            <AppLauncher />
+        </LeftContent>
+        <RightContent>
+            <div class="hos-tray">
+                <span class="hos-tray-icon" title="Network">&#128246;</span>
+                <span class="hos-tray-icon" title="Secure">&#128274;</span>
+            </div>
+        </RightContent>
+    </TaskBarComponent>
+</div>

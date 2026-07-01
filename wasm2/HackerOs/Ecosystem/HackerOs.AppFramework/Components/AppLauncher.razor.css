@@ -1,0 +1,143 @@
+.app-launcher {
+    position: relative;
+    display: inline-flex;
+    height: 100%;
+    align-items: center;
+}
+
+.launcher-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 16px;
+    border: none;
+    border-right: 1px solid rgba(0, 255, 128, 0.25);
+    background: linear-gradient(180deg, #10251b 0%, #05100b 100%);
+    color: #4dff9e;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.launcher-button:hover,
+.launcher-button.open {
+    background: linear-gradient(180deg, #164a30 0%, #0a1f14 100%);
+    box-shadow: 0 0 12px rgba(0, 255, 128, 0.35) inset;
+}
+
+.launcher-logo {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.launcher-label {
+    font-size: 12px;
+}
+
+.launcher-panel {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    width: 340px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(6, 14, 10, 0.98);
+    border: 1px solid rgba(0, 255, 128, 0.35);
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 128, 0.15);
+    z-index: 10000;
+    animation: launcher-rise 0.12s ease-out;
+}
+
+@keyframes launcher-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.launcher-panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 255, 128, 0.2);
+}
+
+.launcher-panel-title {
+    color: #7dffbd;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.launcher-panel-count {
+    color: #4f7a66;
+    font-size: 11px;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.launcher-panel-body {
+    padding: 8px;
+}
+
+.launcher-category-title {
+    color: #3f8f6a;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 8px 8px 4px;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.launcher-app {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #cfeede;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.launcher-app:hover {
+    background: rgba(0, 255, 128, 0.08);
+    border-color: rgba(0, 255, 128, 0.3);
+}
+
+.launcher-app-icon {
+    font-size: 20px;
+    width: 28px;
+    text-align: center;
+}
+
+.launcher-app-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.launcher-app-name {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.launcher-app-kind {
+    font-size: 10px;
+    color: #4f7a66;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.launcher-empty {
+    padding: 24px;
+    text-align: center;
+    color: #4f7a66;
+    font-family: 'Consolas', 'Courier New', monospace;
+}

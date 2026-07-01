@@ -1,0 +1,45 @@
+@inherits WindowAppBase
+@attribute [App("Welcome", Id = "hackeros.welcome", Icon = "\U0001F44B", Category = "System",
+    Description = "Introduction to the HackerOS developer ecosystem", SortOrder = 10)]
+@inject AppRegistry Registry
+
+<WindowContent Window="this">
+    <div class="welcome" data-testid="welcome-app">
+        <header class="welcome-hero">
+            <div class="welcome-logo">@AppIcon</div>
+            <div>
+                <h1 class="welcome-title">Welcome to HackerOS</h1>
+                <p class="welcome-tagline">A modular Blazor WebAssembly desktop framework.</p>
+            </div>
+        </header>
+
+        <section class="welcome-body">
+            <p>
+                Every component that derives from <code>WindowAppBase</code> or
+                <code>TerminalAppBase</code> and is decorated with <code>[App]</code>
+                is discovered automatically, added to the <strong>START</strong> menu,
+                and shown on the taskbar &mdash; no manual registration required.
+            </p>
+
+            <div class="welcome-stat" data-testid="welcome-env">
+                <span class="welcome-stat-label">Runtime</span>
+                <span class="welcome-stat-value">@_environment</span>
+            </div>
+
+            <div class="welcome-actions">
+                <button type="button" class="welcome-btn primary"
+                        data-testid="welcome-open-shell" @onclick="OpenShell">
+                    Open Hacker Shell
+                </button>
+                <button type="button" class="welcome-btn"
+                        data-testid="welcome-open-monitor" @onclick="OpenMonitor">
+                    Open System Monitor
+                </button>
+            </div>
+
+            <p class="welcome-count" data-testid="welcome-count">
+                @Registry.LauncherApps.Count applications currently registered.
+            </p>
+        </section>
+    </div>
+</WindowContent>

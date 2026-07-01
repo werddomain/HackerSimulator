@@ -1,0 +1,12 @@
+@namespace HackerOs.AppFramework.Components
+@using BlazorTerminal.Components
+@using BlazorTerminal.Models
+
+<div class="terminal-host" @ref="_hostElement">
+    <Terminal @ref="_terminal"
+              Columns="@Columns"
+              Rows="@Rows"
+              FontSize="@FontSize"
+              CursorBlink="true"
+              OnInput="HandleInputAsync" />
+</div>
