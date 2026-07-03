@@ -1,0 +1,40 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic:
+      - generic: HackerOS
+      - generic: 3 applications registered · open the START menu
+  - generic [ref=e7]:
+    - generic [ref=e9]:
+      - button "⚡ START" [active] [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]: ⚡
+        - generic [ref=e12]: START
+      - menu [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: Applications
+          - generic [ref=e22]: 3 apps
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: Development
+            - menuitem "🖥 Hacker Shell Terminal" [ref=e27] [cursor=pointer]:
+              - generic [ref=e28]: 🖥
+              - generic [ref=e29]:
+                - generic [ref=e30]: Hacker Shell
+                - generic [ref=e31]: Terminal
+          - generic [ref=e32]:
+            - generic [ref=e33]: System
+            - generic [ref=e34]:
+              - menuitem "👋 Welcome Window" [ref=e35] [cursor=pointer]:
+                - generic [ref=e36]: 👋
+                - generic [ref=e37]:
+                  - generic [ref=e38]: Welcome
+                  - generic [ref=e39]: Window
+              - menuitem "📈 System Monitor Window" [ref=e40] [cursor=pointer]:
+                - generic [ref=e41]: 📈
+                - generic [ref=e42]:
+                  - generic [ref=e43]: System Monitor
+                  - generic [ref=e44]: Window
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic "Network" [ref=e15]: 📶
+        - generic "Secure" [ref=e16]: 🔒
+      - generic [ref=e18]: 11:52

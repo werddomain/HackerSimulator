@@ -34,11 +34,19 @@ public partial class TaskBarComponent : ComponentBase, IDisposable
 
     private List<WindowInfo> _openWindows = new();
     private Dictionary<string, List<WindowInfo>> _groupedWindows = new();
+    private List<string> _groupOrder = new();
     private bool _showContextMenu = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
     private WindowInfo? _contextMenuWindow = null;
     private Timer? _clockTimer;
+
+    // Grouped-window popup state: shown when a taskbar button represents more
+    // than one open window of the same app so the user can pick which one.
+    private bool _showGroupPopup = false;
+    private string? _groupPopupKey;
+    private double _groupPopupX = 0;
+    private double _groupPopupY = 0;
 
     private enum WindowAction
     {
@@ -114,17 +122,29 @@ public partial class TaskBarComponent : ComponentBase, IDisposable
 
     private void UpdateGroupedWindows()
     {
-        if (!GroupedWindows) return;
-
         _groupedWindows.Clear();
+        _groupOrder.Clear();
+
         foreach (var window in _openWindows)
         {
-            var groupKey = GetGroupKey(window);
-            if (!_groupedWindows.ContainsKey(groupKey))
+            // When grouping is disabled every window gets its own unique key
+            // so the render loop can treat both modes identically.
+            var groupKey = GroupedWindows ? GetGroupKey(window) : window.Id.ToString();
+
+            if (!_groupedWindows.TryGetValue(groupKey, out var group))
             {
-                _groupedWindows[groupKey] = new List<WindowInfo>();
+                group = new List<WindowInfo>();
+                _groupedWindows[groupKey] = group;
+                _groupOrder.Add(groupKey);
             }
-            _groupedWindows[groupKey].Add(window);
+
+            group.Add(window);
+        }
+
+        // Drop the popup if its group no longer exists (e.g. all instances closed).
+        if (_groupPopupKey != null && !_groupedWindows.ContainsKey(_groupPopupKey))
+        {
+            CloseGroupPopup();
         }
     }
 
@@ -134,16 +154,36 @@ public partial class TaskBarComponent : ComponentBase, IDisposable
         return !string.IsNullOrEmpty(window.Name) ? window.Name : window.Title;
     }
 
-    private string GetWindowButtonClass(WindowInfo window)
+    /// <summary>
+    /// Picks which window in a group is shown as the taskbar button's icon/title
+    /// (the active one if it belongs to the group, otherwise the most recent).
+    /// </summary>
+    private WindowInfo GetRepresentativeWindow(List<WindowInfo> group)
+    {
+        var activeId = WindowManager.GetActiveWindow()?.Id;
+        if (activeId.HasValue)
+        {
+            var active = group.FirstOrDefault(w => w.Id == activeId.Value);
+            if (active != null) return active;
+        }
+
+        return group[^1];
+    }
+
+    private string GetWindowButtonClass(List<WindowInfo> group)
     {
         var classes = new List<string>();
-        
-        if (window.State == WindowState.Minimized)
+
+        if (group.All(w => w.State == WindowState.Minimized))
             classes.Add("minimized");
-        
-        if (WindowManager.GetActiveWindow()?.Id == window.Id)
+
+        var activeId = WindowManager.GetActiveWindow()?.Id;
+        if (activeId.HasValue && group.Any(w => w.Id == activeId.Value))
             classes.Add("active");
-        
+
+        if (group.Count > 1)
+            classes.Add("grouped");
+
         return string.Join(" ", classes);
     }
 
@@ -156,10 +196,35 @@ public partial class TaskBarComponent : ComponentBase, IDisposable
             : title;
     }
 
-    private async Task OnWindowButtonClick(WindowInfo window)
+    private async Task OnWindowButtonClick(MouseEventArgs e, string groupKey)
     {
         CloseContextMenu();
-        
+
+        if (!_groupedWindows.TryGetValue(groupKey, out var group) || group.Count == 0)
+        {
+            return;
+        }
+
+        if (group.Count > 1)
+        {
+            // Multiple windows share this button; let the user pick which one
+            // instead of guessing.
+            ToggleGroupPopup(groupKey, e.ClientX, e.ClientY);
+            return;
+        }
+
+        CloseGroupPopup();
+        await FocusOrToggleWindow(group[0]);
+    }
+
+    private async Task OnGroupPopupItemClick(WindowInfo window)
+    {
+        CloseGroupPopup();
+        await FocusOrToggleWindow(window);
+    }
+
+    private async Task FocusOrToggleWindow(WindowInfo window)
+    {
         if (window.State == WindowState.Minimized)
         {
             // Restore minimized window
@@ -177,8 +242,30 @@ public partial class TaskBarComponent : ComponentBase, IDisposable
         }
     }
 
+    private void ToggleGroupPopup(string groupKey, double x, double y)
+    {
+        if (_showGroupPopup && _groupPopupKey == groupKey)
+        {
+            CloseGroupPopup();
+            return;
+        }
+
+        _groupPopupKey = groupKey;
+        _groupPopupX = x;
+        _groupPopupY = y - 160; // position the popup above the taskbar button
+        _showGroupPopup = true;
+        StateHasChanged();
+    }
+
+    private void CloseGroupPopup()
+    {
+        _showGroupPopup = false;
+        _groupPopupKey = null;
+    }
+
     private void OnWindowButtonRightClick(MouseEventArgs e, WindowInfo window)
     {
+        CloseGroupPopup();
         _contextMenuWindow = window;
         _contextMenuX = e.ClientX;
         _contextMenuY = e.ClientY - 120; // Position above taskbar

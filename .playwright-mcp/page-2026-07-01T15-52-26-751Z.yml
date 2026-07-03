@@ -1,0 +1,17 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic:
+      - generic: HackerOS
+      - generic: 3 applications registered · open the START menu
+  - generic [ref=e7]:
+    - button "⚡ START" [ref=e10] [cursor=pointer]:
+      - generic [ref=e11]: ⚡
+      - generic [ref=e12]: START
+    - generic "Welcome" [ref=e87] [cursor=pointer]:
+      - generic [ref=e89]: 📄
+      - generic [ref=e90]: Welcome
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic "Network" [ref=e15]: 📶
+        - generic "Secure" [ref=e16]: 🔒
+      - generic [ref=e18]: 11:52

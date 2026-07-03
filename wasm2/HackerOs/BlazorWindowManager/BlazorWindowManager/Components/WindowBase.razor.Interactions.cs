@@ -16,6 +16,7 @@ public partial class WindowBase
     private double _dragStartX;
     private double _dragStartY;
     private WindowBounds _dragStartBounds = new();
+    private WindowBounds? _dragContainerBounds;
     
     // Resizing state
     private bool _isResizing = false;
@@ -58,6 +59,10 @@ public partial class WindowBase
         _dragStartX = e.ClientX;
         _dragStartY = e.ClientY;
         _dragStartBounds = CurrentBounds.Clone();
+
+        // Fetch the container bounds once for the whole drag instead of on
+        // every mousemove; the reference frame doesn't change mid-drag.
+        _dragContainerBounds = await GetContainerBounds();
         
         // Setup global mouse events through JavaScript
         if (_jsModule != null && _dotNetRef != null)
@@ -129,27 +134,37 @@ public partial class WindowBase
     public async Task OnDragMove(double clientX, double clientY)
     {
         if (!_isDragging) return;
-          var deltaX = clientX - _dragStartX;
-        var deltaY = clientY - _dragStartY;
-        
-        var newBounds = _dragStartBounds.Clone();
-        newBounds.Left += deltaX;
-        newBounds.Top += deltaY;
-          // Get container bounds for snapping calculations
-        var containerBounds = await GetContainerBounds();
-        
-        // Calculate snap targets
-        var snapTarget = SnappingService.CalculateSnapTarget(Id, newBounds, containerBounds);
-        
-        // Show snap preview if a target is found
-        SnappingService.UpdateSnapPreview(snapTarget);
-        
-        // Update window position (snap will be applied on drag end)
-        CurrentBounds = newBounds;
-        WindowManager.UpdateWindowBounds(Id, newBounds);
-        
-        await OnMoving.InvokeAsync(newBounds);
-    await UpdateWindowDisplay();
+
+        // Raw mousemove events can fire far more often than the UI needs to
+        // repaint (sometimes 100+ times/sec). Throttle the expensive part
+        // (snap calculation + full re-render) to roughly the screen refresh
+        // rate instead of doing it on every single event.
+        await PerformanceService.ThrottleAsync($"window-drag-{Id}", async () =>
+        {
+            var deltaX = clientX - _dragStartX;
+            var deltaY = clientY - _dragStartY;
+
+            var newBounds = _dragStartBounds.Clone();
+            newBounds.Left += deltaX;
+            newBounds.Top += deltaY;
+
+            // Reuse the container bounds captured when the drag started
+            // instead of an async JS interop round-trip on every move.
+            var containerBounds = _dragContainerBounds ?? await GetContainerBounds();
+
+            // Calculate snap targets
+            var snapTarget = SnappingService.CalculateSnapTarget(Id, newBounds, containerBounds);
+
+            // Show snap preview if a target is found
+            SnappingService.UpdateSnapPreview(snapTarget);
+
+            // Update window position (snap will be applied on drag end)
+            CurrentBounds = newBounds;
+            WindowManager.UpdateWindowBounds(Id, newBounds);
+
+            await OnMoving.InvokeAsync(newBounds);
+            await UpdateWindowDisplay();
+        });
     }
     
     /// <summary>
@@ -163,7 +178,7 @@ public partial class WindowBase
             _isDragging = false;
             
             // Apply snapping if enabled
-            var containerBounds = await GetContainerBounds();
+            var containerBounds = _dragContainerBounds ?? await GetContainerBounds();
             var snappedBounds = SnappingService.ApplySnapping(Id, CurrentBounds, containerBounds);
             
             // If snapping occurred, update the window position
@@ -177,6 +192,7 @@ public partial class WindowBase
             
             // Hide snap preview
             SnappingService.HideSnapPreview();
+            _dragContainerBounds = null;
             
             await OnMoved.InvokeAsync(CurrentBounds);
         }
@@ -189,20 +205,25 @@ public partial class WindowBase
     public async Task OnResizeMove(double clientX, double clientY)
     {
         if (!_isResizing) return;
-        
-        var deltaX = clientX - _dragStartX;
-        var deltaY = clientY - _dragStartY;
-        
-        var newBounds = CalculateNewBounds(_dragStartBounds, deltaX, deltaY, _resizeDirection);
-        
-        // Apply size constraints
-        ApplySizeConstraints(newBounds);
-        
-        CurrentBounds = newBounds;
-        WindowManager.UpdateWindowBounds(Id, newBounds);
-        
-        await OnResizing.InvokeAsync(newBounds);
-        await UpdateWindowDisplay();
+
+        // Same throttling rationale as OnDragMove: avoid a full re-render for
+        // every single raw mousemove event during a resize.
+        await PerformanceService.ThrottleAsync($"window-resize-{Id}", async () =>
+        {
+            var deltaX = clientX - _dragStartX;
+            var deltaY = clientY - _dragStartY;
+
+            var newBounds = CalculateNewBounds(_dragStartBounds, deltaX, deltaY, _resizeDirection);
+
+            // Apply size constraints
+            ApplySizeConstraints(newBounds);
+
+            CurrentBounds = newBounds;
+            WindowManager.UpdateWindowBounds(Id, newBounds);
+
+            await OnResizing.InvokeAsync(newBounds);
+            await UpdateWindowDisplay();
+        });
     }
     
     /// <summary>

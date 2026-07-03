@@ -536,6 +536,12 @@ public class WindowManagerService
     /// <returns>Task that completes when the operation is done</returns>
     public async Task<bool> MinimizeWindowAsync(Guid windowId)
     {
+        if (GetWindow(windowId)?.ComponentRef is WindowBase window)
+        {
+            await window.Minimize();
+            return true;
+        }
+
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Minimized));
     }
 
@@ -546,6 +552,12 @@ public class WindowManagerService
     /// <returns>Task that completes when the operation is done</returns>
     public async Task<bool> MaximizeWindowAsync(Guid windowId)
     {
+        if (GetWindow(windowId)?.ComponentRef is WindowBase window)
+        {
+            await window.Maximize();
+            return true;
+        }
+
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Maximized));
     }
 
@@ -556,6 +568,12 @@ public class WindowManagerService
     /// <returns>Task that completes when the operation is done</returns>
     public async Task<bool> RestoreWindowAsync(Guid windowId)
     {
+        if (GetWindow(windowId)?.ComponentRef is WindowBase window)
+        {
+            await window.Restore();
+            return true;
+        }
+
         return await Task.Run(() => UpdateWindowState(windowId, WindowState.Normal));
     }
 

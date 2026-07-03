@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36121.58
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11919.86 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs", "HackerOs\HackerOs.csproj", "{D475C4CA-E29A-4BD9-81F5-E05899B802E3}"
 EndProject
@@ -18,6 +18,17 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorTerminal.Test", "BlazorTerminal\src\BlazorTerminal.Test\BlazorTerminal.Test.csproj", "{528A0353-5DCA-10BF-0817-C9B00353E486}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Host", "HackerOs.Host\HackerOs.Host.csproj", "{A999F402-2104-425C-819E-67BACDCE4531}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ecosystem", "Ecosystem", "{0A07BA5C-4796-40AB-8DB6-0E982B65BCFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.AppFramework", "Ecosystem\HackerOs.AppFramework\HackerOs.AppFramework.csproj", "{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Ecosystem", "Ecosystem\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj", "{00868E2D-0725-0846-EC44-7779890B4556}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{CBAF517F-12D7-44B7-A5DA-0E6E2E1B53F6}"
+	ProjectSection(SolutionItems) = preProject
+		Ecosystem\docs\app-framework.md = Ecosystem\docs\app-framework.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -101,6 +112,30 @@ Global
 		{A999F402-2104-425C-819E-67BACDCE4531}.Release|x64.Build.0 = Release|Any CPU
 		{A999F402-2104-425C-819E-67BACDCE4531}.Release|x86.ActiveCfg = Release|Any CPU
 		{A999F402-2104-425C-819E-67BACDCE4531}.Release|x86.Build.0 = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|x64.Build.0 = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Debug|x86.Build.0 = Debug|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|x64.ActiveCfg = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|x64.Build.0 = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|x86.ActiveCfg = Release|Any CPU
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815}.Release|x86.Build.0 = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|x64.Build.0 = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Debug|x86.Build.0 = Debug|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|x64.ActiveCfg = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|x64.Build.0 = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|x86.ActiveCfg = Release|Any CPU
+		{00868E2D-0725-0846-EC44-7779890B4556}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -110,6 +145,9 @@ Global
 		{5F5FAC25-8C58-427F-95B8-4007122061B9} = {BDB42DCC-EB07-49BD-B1EE-3BCC5E700061}
 		{8E7DBA30-2C14-858D-FEAB-DF3DE592E639} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{528A0353-5DCA-10BF-0817-C9B00353E486} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{0A2382E8-97A7-7F5E-6E59-7A8DD9A85815} = {0A07BA5C-4796-40AB-8DB6-0E982B65BCFE}
+		{00868E2D-0725-0846-EC44-7779890B4556} = {0A07BA5C-4796-40AB-8DB6-0E982B65BCFE}
+		{CBAF517F-12D7-44B7-A5DA-0E6E2E1B53F6} = {0A07BA5C-4796-40AB-8DB6-0E982B65BCFE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {001BB1C6-5ED7-4941-B190-846DF09ACC57}

@@ -1,0 +1,51 @@
+.hos-desktop {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.hos-desktop ::deep .hos-desktop-area {
+    position: absolute;
+    inset: 0 0 40px 0;
+}
+
+.hos-desktop-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.hos-watermark-title {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: rgba(0, 255, 128, 0.12);
+    text-shadow: 0 0 30px rgba(0, 255, 128, 0.15);
+}
+
+.hos-watermark-sub {
+    margin-top: 8px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: rgba(0, 255, 128, 0.28);
+}
+
+.hos-tray {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+}
+
+.hos-tray-icon {
+    font-size: 15px;
+    cursor: default;
+    opacity: 0.8;
+}
