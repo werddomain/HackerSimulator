@@ -155,7 +155,8 @@ function matchesShortcut(key, currentModifiers, shortcut) {
 }
 
 /**
- * Check if the user is in a typing context (input, textarea, contenteditable)
+ * Check if the user is in a typing context (input, textarea, contenteditable,
+ * or a custom keyboard-driven surface like a terminal emulator).
  * @param {Element} element 
  * @returns {boolean}
  */
@@ -163,10 +164,19 @@ function isTypingContext(element) {
     if (!element) return false;
     
     const tagName = element.tagName.toLowerCase();
-    return tagName === 'input' || 
-           tagName === 'textarea' || 
-           element.contentEditable === 'true' ||
-           element.hasAttribute('contenteditable');
+    if (tagName === 'input' ||
+        tagName === 'textarea' ||
+        element.contentEditable === 'true' ||
+        element.hasAttribute('contenteditable')) {
+        return true;
+    }
+
+    // Custom widgets (e.g. the BlazorTerminal component) render a focusable
+    // container with tabindex="0" instead of a native input element. Treat
+    // any such element as a typing context so global window-manager
+    // shortcuts (Ctrl+Tab, Ctrl+Shift+W, Ctrl+Arrow, ...) don't hijack
+    // keystrokes meant for the widget.
+    return element.classList.contains('terminal-container');
 }
 
 /**

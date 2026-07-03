@@ -7,6 +7,13 @@
 /**
  * Moves keyboard focus to the terminal surface so the user can start typing
  * immediately after an application launches.
+ *
+ * The window that hosts the terminal can still be animating into place (see
+ * the `windowAppear` CSS animation) or settling its layout right after this
+ * component's first render, so a single synchronous `.focus()` call can
+ * silently lose the race and leave the terminal impossible to type into
+ * until the user clicks it manually. Retry across a few animation frames
+ * until the element actually reports itself as the active element.
  * @param {HTMLElement} host The terminal-host container element.
  */
 export function focusTerminal(host) {
@@ -17,5 +24,23 @@ export function focusTerminal(host) {
     // The BlazorTerminal component renders a focusable container with
     // tabindex="0"; focus it (or the host as a fallback).
     const focusable = host.querySelector('.terminal-container') ?? host;
-    focusable.focus({ preventScroll: true });
+
+    const maxAttempts = 10;
+    let attempts = 0;
+
+    const tryFocus = () => {
+        attempts++;
+
+        if (document.activeElement === focusable) {
+            return;
+        }
+
+        focusable.focus({ preventScroll: true });
+
+        if (document.activeElement !== focusable && attempts < maxAttempts) {
+            requestAnimationFrame(tryFocus);
+        }
+    };
+
+    tryFocus();
 }

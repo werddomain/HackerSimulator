@@ -31,10 +31,11 @@
         </div>
         
         <!-- Window Controls -->
-        <div class="window-controls">
+        <div class="window-controls" @onmousedown:stopPropagation="true">
             <button class="window-control-btn minimize-btn" 
                     @onclick="MinimizeWindow"
                     @onclick:preventDefault="true"
+                    @onclick:stopPropagation="true"
                     title="Minimize"
                     aria-label="Minimize window"
                     tabindex="0">
@@ -44,6 +45,7 @@
             <button class="window-control-btn maximize-btn" 
                     @onclick="ToggleMaximize"
                     @onclick:preventDefault="true"
+                    @onclick:stopPropagation="true"
                     title="@(Window.CurrentState == WindowState.Maximized ? "Restore" : "Maximize")"
                     aria-label="@(Window.CurrentState == WindowState.Maximized ? "Restore window" : "Maximize window")"
                     tabindex="0">
@@ -53,6 +55,7 @@
             <button class="window-control-btn close-btn" 
                     @onclick="CloseWindow"
                     @onclick:preventDefault="true"
+                    @onclick:stopPropagation="true"
                     title="Close"
                     aria-label="Close window"
                     tabindex="0">

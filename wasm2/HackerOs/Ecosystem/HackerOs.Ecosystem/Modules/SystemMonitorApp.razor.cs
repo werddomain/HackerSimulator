@@ -32,20 +32,23 @@ public partial class SystemMonitorApp
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (firstRender)
         {
-            return;
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./Modules/SystemMonitorApp.razor.js");
+
+            await SampleAsync();
+
+            // Mimic a real monitor with a periodic refresh.
+            _timer = new System.Threading.Timer(
+                _ => _ = InvokeAsync(SampleAsync), null,
+                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         }
 
-        _module = await JS.InvokeAsync<IJSObjectReference>(
-            "import", "./Modules/SystemMonitorApp.razor.js");
-
-        await SampleAsync();
-
-        // Mimic a real monitor with a periodic refresh.
-        _timer = new System.Threading.Timer(
-            _ => _ = InvokeAsync(SampleAsync), null,
-            TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        // IMPORTANT: WindowAppBase/WindowBase relies on OnAfterRenderAsync to load
+        // its own JS interop module (drag/resize/etc.). Skipping this call breaks
+        // window dragging and resizing for this app.
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     private async Task SampleAsync()

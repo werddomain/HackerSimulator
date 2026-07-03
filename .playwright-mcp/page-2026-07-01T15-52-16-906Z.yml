@@ -1,0 +1,53 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - dialog "Welcome" [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e48]: 👋
+        - generic [ref=e49]: Welcome
+        - generic [ref=e50]:
+          - button "Minimize window" [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: −
+          - button "Maximize window" [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]: □
+          - button "Close window" [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]: ×
+      - main [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: 👋
+            - generic [ref=e61]:
+              - heading "Welcome to HackerOS" [level=1] [ref=e62]
+              - paragraph [ref=e63]: A modular Blazor WebAssembly desktop framework.
+          - generic [ref=e64]:
+            - paragraph [ref=e65]:
+              - text: Every component that derives from
+              - code [ref=e66]: WindowAppBase
+              - text: or
+              - code [ref=e67]: TerminalAppBase
+              - text: and is decorated with
+              - code [ref=e68]: "[App]"
+              - text: is discovered automatically, added to the
+              - strong [ref=e69]: START
+              - text: menu, and shown on the taskbar — no manual registration required.
+            - generic [ref=e70]:
+              - generic [ref=e71]: Runtime
+              - generic [ref=e72]: Blazor WebAssembly · Win32 · 16 logical cores
+            - generic [ref=e73]:
+              - button "Open Hacker Shell" [ref=e74] [cursor=pointer]
+              - button "Open System Monitor" [ref=e75] [cursor=pointer]
+            - paragraph [ref=e76]: 3 applications currently registered.
+    - generic:
+      - generic: HackerOS
+      - generic: 3 applications registered · open the START menu
+  - generic [ref=e7]:
+    - button "⚡ START" [ref=e10] [cursor=pointer]:
+      - generic [ref=e11]: ⚡
+      - generic [ref=e12]: START
+    - generic "Welcome" [ref=e87] [cursor=pointer]:
+      - generic [ref=e89]: 📄
+      - generic [ref=e90]: Welcome
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic "Network" [ref=e15]: 📶
+        - generic "Secure" [ref=e16]: 🔒
+      - generic [ref=e18]: 11:52

@@ -10,18 +10,21 @@
     
     <div class="taskbar-center">
         <div class="window-buttons">
-            @foreach (var window in _openWindows)
+            @foreach (var groupKey in _groupOrder)
             {
-                <div class="window-button @GetWindowButtonClass(window)"
-                     @onclick="() => OnWindowButtonClick(window)"
-                     @oncontextmenu="(e) => OnWindowButtonRightClick(e, window)"
+                var group = _groupedWindows[groupKey];
+                var representative = GetRepresentativeWindow(group);
+
+                <div class="window-button @GetWindowButtonClass(group)"
+                     @onclick="(e) => OnWindowButtonClick(e, groupKey)"
+                     @oncontextmenu="(e) => OnWindowButtonRightClick(e, representative)"
                      @oncontextmenu:preventDefault="true"
-                     title="@window.Title">
+                     title="@representative.Title">
                     
                     <div class="window-button-icon">
-                        @if (window.Icon != null)
+                        @if (representative.Icon != null)
                         {
-                            @window.Icon
+                            @representative.Icon
                         }
                         else
                         {
@@ -30,13 +33,13 @@
                     </div>
                     
                     <div class="window-button-text">
-                        @GetDisplayTitle(window.Title)
+                        @GetDisplayTitle(representative.Title)
                     </div>
                     
-                    @if (GroupedWindows && _groupedWindows.ContainsKey(GetGroupKey(window)) && _groupedWindows[GetGroupKey(window)].Count > 1)
+                    @if (group.Count > 1)
                     {
                         <div class="window-group-indicator">
-                            @_groupedWindows[GetGroupKey(window)].Count
+                            @group.Count
                         </div>
                     }
                 </div>
@@ -73,4 +76,33 @@
     </div>
     
     <div class="context-menu-overlay" @onclick="CloseContextMenu"></div>
+}
+
+@if (_showGroupPopup && _groupPopupKey != null && _groupedWindows.TryGetValue(_groupPopupKey, out var popupGroup))
+{
+    <div class="group-popup" style="left: @(_groupPopupX)px; top: @(_groupPopupY)px" @onclick:stopPropagation="true">
+        @foreach (var window in popupGroup)
+        {
+            <div class="group-popup-item @(WindowManager.GetActiveWindow()?.Id == window.Id ? "active" : "")"
+                 @onclick="() => OnGroupPopupItemClick(window)">
+                <div class="group-popup-icon">
+                    @if (window.Icon != null)
+                    {
+                        @window.Icon
+                    }
+                    else
+                    {
+                        <div class="default-window-icon">📄</div>
+                    }
+                </div>
+                <div class="group-popup-text">@GetDisplayTitle(window.Title)</div>
+                @if (window.State == WindowState.Minimized)
+                {
+                    <span class="group-popup-state">minimized</span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="context-menu-overlay" @onclick="CloseGroupPopup"></div>
 }
