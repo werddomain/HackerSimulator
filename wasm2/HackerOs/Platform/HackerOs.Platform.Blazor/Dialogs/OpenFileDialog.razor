@@ -1,0 +1,111 @@
+@namespace HackerOs.Platform.Blazor.Dialogs
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+
+<section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@TitleId"
+         tabindex="-1" @onkeydown="HandleKeyDown">
+    <header>
+        <MudIcon Icon="@Icons.Material.Filled.FolderOpen" />
+        <h2 id="@TitleId">@(Presentation.Request.Title ?? "Open file")</h2>
+    </header>
+
+    @if (Presentation.Request.Filters.Count > 1)
+    {
+        <label class="filter-control">
+            <span>File type</span>
+            <select value="@_filterIndex" @onchange="ChangeFilter">
+                @for (int index = 0; index < Presentation.Request.Filters.Count; index++)
+                {
+                    <option value="@index">@Presentation.Request.Filters[index].DisplayName</option>
+                }
+            </select>
+        </label>
+    }
+
+    <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
+                          InitialDirectory="@(Presentation.Request.InitialDirectory ?? VirtualPath.Parse("/"))"
+                          AllowFileSelection="true"
+                          AllowDirectorySelection="false"
+                          AllowMultipleSelection="@Presentation.Request.AllowMultiple"
+                          FileFilter="MatchesFilter"
+                          SelectionChanged="UpdateSelection" />
+
+    <footer>
+        <span class="selection-summary" aria-live="polite">@SelectionSummary</span>
+        <button type="button" class="secondary" @onclick="Cancel">Cancel</button>
+        <button type="button" class="primary" disabled="@(_selection.Count == 0)" @onclick="Open">Open</button>
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets the active open-file presentation.</summary>
+    [Parameter, EditorRequired]
+    public OpenFileDialogPresentation Presentation { get; set; } = null!;
+
+    /// <summary>Gets or sets the owning session coordinator.</summary>
+    [Parameter, EditorRequired]
+    public FileDialogCoordinator Coordinator { get; set; } = null!;
+
+    private readonly string _titleId = $"open-file-title-{Guid.NewGuid():N}";
+    private IReadOnlyList<VirtualPath> _selection = [];
+    private int _filterIndex;
+
+    private string TitleId => _titleId;
+    private string SelectionSummary => _selection.Count switch
+    {
+        0 => "No file selected",
+        1 => _selection[0].Value,
+        _ => $"{_selection.Count} files selected",
+    };
+
+    private void UpdateSelection(IReadOnlyList<VirtualPath> selection) => _selection = selection;
+
+    private void ChangeFilter(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out int index)
+            && index >= 0
+            && index < Presentation.Request.Filters.Count)
+        {
+            _filterIndex = index;
+            _selection = [];
+        }
+    }
+
+    private bool MatchesFilter(FileSystemDirectoryItem entry)
+    {
+        if (Presentation.Request.Filters.Count == 0)
+        {
+            return true;
+        }
+
+        FileDialogFilter filter = Presentation.Request.Filters[_filterIndex];
+        bool extensionMatches = filter.Extensions.Any(
+            extension => entry.Name.Value.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        bool mediaTypeMatches = entry.Metadata is FileMetadata file
+            && filter.MediaTypes.Contains(file.MediaType, StringComparer.OrdinalIgnoreCase);
+        return (filter.Extensions.Count == 0 && filter.MediaTypes.Count == 0)
+            || extensionMatches
+            || mediaTypeMatches;
+    }
+
+    private void Open()
+    {
+        if (_selection.Count > 0)
+        {
+            Coordinator.SelectOpen(Presentation.Id, _selection);
+        }
+    }
+
+    private void Cancel() => Coordinator.Cancel(Presentation.Id);
+
+    private void HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Cancel();
+        }
+    }
+}

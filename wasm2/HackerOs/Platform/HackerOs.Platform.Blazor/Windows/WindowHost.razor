@@ -1,0 +1,78 @@
+@namespace HackerOs.Platform.Blazor.Windows
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Web
+
+<article class="@HostClass"
+         style="@GeometryStyle"
+         role="dialog"
+         aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
+         aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
+         aria-labelledby="@TitleId"
+         inert="@IsInteractionBlocked"
+         data-window-id="@Window.Id"
+         data-window-x="@Window.Bounds.X"
+         data-window-y="@Window.Bounds.Y"
+         data-window-width="@Window.Bounds.Width"
+         data-window-height="@Window.Bounds.Height"
+         data-window-z="@Window.ZOrder"
+         hidden="@(Window.VisualState == WindowVisualState.Minimized)"
+         @onpointerdown="FocusAsync">
+    <WindowChrome Window="Window"
+                  TitleId="TitleId"
+                  OnFocus="OnFocus"
+                  OnMinimize="OnMinimize"
+                  OnToggleMaximize="OnToggleMaximize"
+                  OnClose="OnClose"
+                  OnGesture="OnGesture" />
+    <div class="window-content">
+        @ChildContent
+    </div>
+</article>
+
+@code {
+    /// <summary>Gets or sets the authoritative snapshot rendered by this host.</summary>
+    [Parameter, EditorRequired]
+    public WindowRuntimeState Window { get; set; } = null!;
+
+    /// <summary>Gets or sets the app content rendered inside the chrome.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the focus request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnFocus { get; set; }
+
+    /// <summary>Gets or sets the minimize request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnMinimize { get; set; }
+
+    /// <summary>Gets or sets the maximize/restore request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnToggleMaximize { get; set; }
+
+    /// <summary>Gets or sets the close request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnClose { get; set; }
+
+    /// <summary>Gets or sets the pointer gesture command callback.</summary>
+    [Parameter]
+    public EventCallback<WindowCommand> OnGesture { get; set; }
+
+    /// <summary>Gets or sets whether an owner-modal child blocks this host.</summary>
+    [Parameter]
+    public bool IsInteractionBlocked { get; set; }
+
+    private string TitleId => $"window-title-{Window.Id.Value:N}";
+
+    private string GeometryStyle => FormattableString.Invariant(
+        $"top:{Window.Bounds.Y}px;left:{Window.Bounds.X}px;width:{Window.Bounds.Width}px;height:{Window.Bounds.Height}px;z-index:{Window.ZOrder}");
+
+    private string HostClass => string.Join(
+        ' ',
+        "window-host",
+        Window.IsFocused ? "is-focused" : "is-background",
+        Window.VisualState == WindowVisualState.Maximized ? "is-maximized" : "is-normal");
+
+    private Task FocusAsync(PointerEventArgs _) =>
+        IsInteractionBlocked ? Task.CompletedTask : OnFocus.InvokeAsync(Window.Id);
+}

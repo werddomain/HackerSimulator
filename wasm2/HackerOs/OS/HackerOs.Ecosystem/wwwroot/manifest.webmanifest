@@ -1,0 +1,10 @@
+{
+  "name": "HackerOS",
+  "short_name": "HackerOS",
+  "id": "./",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#101417",
+  "theme_color": "#03173d",
+  "prefer_related_applications": false
+}

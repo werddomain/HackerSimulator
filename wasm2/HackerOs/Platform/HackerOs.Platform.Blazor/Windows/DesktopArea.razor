@@ -1,0 +1,57 @@
+@namespace HackerOs.Platform.Blazor.Windows
+
+<main class="desktop-area" aria-label="Desktop workspace">
+    <div class="desktop-grid" aria-hidden="true"></div>
+    <section class="window-layer" aria-label="Open windows">
+        @foreach (WindowRuntimeState window in Windows)
+        {
+            <WindowHost Window="window"
+                        IsInteractionBlocked="@IsBlocked(window.Id)"
+                        OnFocus="OnFocus"
+                        OnMinimize="OnMinimize"
+                        OnToggleMaximize="OnToggleMaximize"
+                        OnClose="OnClose"
+                        OnGesture="OnGesture">
+                @if (WindowContent is not null)
+                {
+                    @WindowContent(window)
+                }
+            </WindowHost>
+        }
+    </section>
+</main>
+
+@code {
+    /// <summary>Gets or sets stable window snapshots ordered back-to-front.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<WindowRuntimeState> Windows { get; set; } = [];
+
+    /// <summary>Gets or sets content rendered for each window snapshot.</summary>
+    [Parameter]
+    public RenderFragment<WindowRuntimeState>? WindowContent { get; set; }
+
+    /// <summary>Gets or sets the focus request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnFocus { get; set; }
+
+    /// <summary>Gets or sets the minimize request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnMinimize { get; set; }
+
+    /// <summary>Gets or sets the maximize/restore request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnToggleMaximize { get; set; }
+
+    /// <summary>Gets or sets the close request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnClose { get; set; }
+
+    /// <summary>Gets or sets the pointer gesture command callback.</summary>
+    [Parameter]
+    public EventCallback<WindowCommand> OnGesture { get; set; }
+
+    private bool IsBlocked(WindowId id) => Windows.Any(window =>
+        window.Modality == WindowModality.OwnerModal
+        && window.OwnerId == id
+        && window.VisualState != WindowVisualState.Minimized);
+}

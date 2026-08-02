@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    P1-GATE-004: every shipping (non-test) project is analyzed for trim/AOT-unsafe reflection
+    now, before any host publishes it, so warnings surface as regular build errors instead of
+    being deferred to a future WASM publish step.
+  -->
+  <PropertyGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+</Project>
