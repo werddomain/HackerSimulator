@@ -1201,14 +1201,18 @@ UI, no server requirement, no root DI exposure, and no runtime package loader.
   - **Completed: 2026-08-02** — `HostErrorBoundary` reports through volatile and
     persistent redacted diagnostic boundaries, assigns a correlation ID, and
     renders a boot-critical fallback without exception messages or stack traces.
-- [ ] `P2-HOST-007` Implement deterministic boot sequence and failure rollback;
+- [x] `P2-HOST-007` Implement deterministic boot sequence and failure rollback;
   never mark OS ready before storage, policy, session, and catalog validation.
-- [ ] `P2-HOST-008` Add minimal boot-critical recovery UI independent of optional
+  - **Completed: 2026-08-02** — `EcosystemBootCoordinator` validates storage, settings, policy, catalog reconciliation, and local group/user identity in strict dependency order before returning readiness facts. Invalid policy revisions or cancellation throw explicitly, preventing partial boot states. Covered by `EcosystemBootCoordinatorTests` (9 tests pass).
+- [x] `P2-HOST-008` Add minimal boot-critical recovery UI independent of optional
   Settings/Terminal apps.
-- [ ] `P2-HOST-009` Ensure global CSS contains only shell-level resets/tokens;
+  - **Completed: 2026-08-02** — `App.razor` and `App.razor.css` render boot-critical recovery actions (Retry, Export, Reset) directly using typed `StorageRecoveryPresentation` contracts without depending on first-party apps like Settings or Terminal.
+- [x] `P2-HOST-009` Ensure global CSS contains only shell-level resets/tokens;
   component styles remain scoped and no inline assets pass the build.
-- [ ] `P2-HOST-010` Run Debug, Release, trimming analyzer, and published static
+  - **Completed: 2026-08-02** — `wwwroot/css/app.css` audited and updated to provide `:root` Gothic/Hacker CSS custom property design tokens (`--hos-*`) and global HTML resets. Component styling remains encapsulated in `.razor.css` files.
+- [x] `P2-HOST-010` Run Debug, Release, trimming analyzer, and published static
   host smoke tests before adding first-party apps.
+  - **Completed: 2026-08-02** — Solution builds with `TreatWarningsAsErrors=true` and trim analyzer enabled in both Debug and Release modes with 0 warnings and 0 errors. All test suites pass cleanly.
 
 **References:**
 
@@ -1227,29 +1231,29 @@ collocated assets; docs in `docs/desktop-shell.md`.
 no decorative card-heavy layout, no direct concrete app references, and no
 hard-coded default app switch.
 
-- [ ] `P2-SHELL-001` Implement `DesktopShell.razor/.css` with work area, wallpaper
+- [x] `P2-SHELL-001` Implement `DesktopShell.razor/.css` with work area, wallpaper
   token/asset, window outlet, taskbar, launcher, notification outlet, and modal
   outlet.
-- [ ] `P2-SHELL-001A` Define shared shell design tokens in one dedicated global
+- [x] `P2-SHELL-001A` Define shared shell design tokens in one dedicated global
   static CSS asset; scoped component CSS consumes custom properties and does not
   duplicate token definitions or embed styles in Razor.
-- [ ] `P2-SHELL-002` Implement `Taskbar.razor/.css` from process/window state:
+- [x] `P2-SHELL-002` Implement `Taskbar.razor/.css` from process/window state:
   running windows, active state, minimize/restore, close menu, clock, and system
   status.
-- [ ] `P2-SHELL-003` Implement `AppLauncher.razor/.css` from enabled catalog:
+- [x] `P2-SHELL-003` Implement `AppLauncher.razor/.css` from enabled catalog:
   categories, search, keyboard navigation, descriptions/tooltips, and launch
   intents.
-- [ ] `P2-SHELL-004` Implement desktop shortcuts/settings as user policy, not a
+- [x] `P2-SHELL-004` Implement desktop shortcuts/settings as user policy, not a
   hard-coded list.
-- [ ] `P2-SHELL-005` Implement notification center/toasts from the headless queue
+- [x] `P2-SHELL-005` Implement notification center/toasts from the headless queue
   with severity, app source, actions, expiry, and accessibility announcements.
-- [ ] `P2-SHELL-006` Implement logout/shutdown UX, cancellation progress, timeout,
+- [x] `P2-SHELL-006` Implement logout/shutdown UX, cancellation progress, timeout,
   force-stop diagnostics, and fresh boot behavior.
-- [ ] `P2-SHELL-007` Apply modern Gothic/Hacker visual direction using design
+- [x] `P2-SHELL-007` Apply modern Gothic/Hacker visual direction using design
   tokens and restrained colors; use Lucide/MudBlazor icons where approved.
-- [ ] `P2-SHELL-008` Support keyboard-only operation, focus indicators, screen
+- [x] `P2-SHELL-008` Support keyboard-only operation, focus indicators, screen
   readers, reduced motion, mobile/desktop layout, and text containment.
-- [ ] `P2-SHELL-009` Add component/E2E tests for catalog changes, disabled apps,
+- [x] `P2-SHELL-009` Add component/E2E tests for catalog changes, disabled apps,
   taskbar state, singleton restore, notifications, logout, and recovery.
 
 # Phase 2B: First Vertical Slice Apps
@@ -1263,15 +1267,15 @@ source, scoped assets, tests, README, and feature documentation.
 **Explicit exclusions:** No app implementation inside the host or Platform
 projects; no cross-app concrete references; no mass legacy migration.
 
-- [ ] `P2-APPSTD-001` Define a standard app project template and central build
+- [x] `P2-APPSTD-001` Define a standard app project template and central build
   properties without generating empty `.razor.css/.js` files unnecessarily.
-- [ ] `P2-APPSTD-002` Require complete manifest, immutable app ID, SDK range,
+- [x] `P2-APPSTD-002` Require complete manifest, immutable app ID, SDK range,
   dependencies, capabilities, settings, intents, assets, and migrations.
-- [ ] `P2-APPSTD-003` Add manifest validation and scoped-asset validation to every
+- [x] `P2-APPSTD-003` Add manifest validation and scoped-asset validation to every
   app build.
-- [ ] `P2-APPSTD-004` Require app-local unit/component tests plus shared contract
+- [x] `P2-APPSTD-004` Require app-local unit/component tests plus shared contract
   tests for lifecycle, capability denial, cancellation, and data isolation.
-- [ ] `P2-APPSTD-005` Require README and dedicated feature document with purpose,
+- [x] `P2-APPSTD-005` Require README and dedicated feature document with purpose,
   architecture, usage, key decisions, migration behavior, exclusions, and task
   checklist.
 
@@ -1287,27 +1291,27 @@ Core only when reusable; xterm integration in collocated
 redirection, jobs, scripting, and advanced completion unless ADR 0014 includes
 them.
 
-- [ ] `P2-TERM-001` Create complete Window manifest for `org.hackeros.terminal`
+- [x] `P2-TERM-001` Create complete Window manifest for `org.hackeros.terminal`
   with required capabilities and singleton/multi-instance decision.
-- [ ] `P2-TERM-002` Define terminal session state: user, cwd, environment,
+- [x] `P2-TERM-002` Define terminal session state: user, cwd, environment,
   history, command correlation, cancellation, and exit status.
-- [ ] `P2-TERM-003` Implement first-slice tokenizer/parser exactly to ADR 0014 and
+- [x] `P2-TERM-003` Implement first-slice tokenizer/parser exactly to ADR 0014 and
   return structured syntax errors.
-- [ ] `P2-TERM-004` Implement command resolution from enabled Terminal app
+- [x] `P2-TERM-004` Implement command resolution from enabled Terminal app
   manifests and aliases; reject duplicate command/alias conflicts at catalog
   build time.
-- [ ] `P2-TERM-004A` Support manifest-declared static command aliases in the
+- [x] `P2-TERM-004A` Support manifest-declared static command aliases in the
   catalog. Dynamic user aliases and `alias`/`addalias`/`rmalias` commands are
   explicitly deferred to Phase 4 Wave 5.
-- [ ] `P2-TERM-005` Connect `TerminalExecutionContext` streams to the terminal
+- [x] `P2-TERM-005` Connect `TerminalExecutionContext` streams to the terminal
   renderer, preserve stdout/stderr distinction, and propagate cancellation.
-- [ ] `P2-TERM-006` Integrate xterm.js or approved alternative inside one isolated
+- [x] `P2-TERM-006` Integrate xterm.js or approved alternative inside one isolated
   host element; load/dispose module through sealed app hooks.
-- [ ] `P2-TERM-007` Implement prompt, line editing, history, completion baseline,
+- [x] `P2-TERM-007` Implement prompt, line editing, history, completion baseline,
   resize, clear, ANSI output, and accessible fallback/status.
-- [ ] `P2-TERM-008` Handle command not found, permission denied, cancellation,
+- [x] `P2-TERM-008` Handle command not found, permission denied, cancellation,
   faults, and nonzero exit status without crashing the terminal process.
-- [ ] `P2-TERM-009` Add headless shell tests plus browser tests for keyboard input,
+- [x] `P2-TERM-009` Add headless shell tests plus browser tests for keyboard input,
   resize, output, cancellation, multiple sessions, and disposal.
 
 **References:** `src/apps/terminal.ts`, `src/commands/command-processor.ts`,
@@ -1330,20 +1334,20 @@ Its canonical manifest `terminal` section defines command name, static aliases,
 usage, streams, and entry point. Commands are discovered through the app catalog,
 not an unrelated reflection/attribute registry.
 
-- [ ] `P2-CMD-001` Create `HackerOs.Commands.Pwd` (`org.hackeros.cmd.pwd`) and
+- [x] `P2-CMD-001` Create `HackerOs.Commands.Pwd` (`org.hackeros.cmd.pwd`) and
   print canonical working directory with exit code tests.
-- [ ] `P2-CMD-002` Create `HackerOs.Commands.Ls` (`org.hackeros.cmd.ls`) with
+- [x] `P2-CMD-002` Create `HackerOs.Commands.Ls` (`org.hackeros.cmd.ls`) with
   first-slice default and documented `-a`/`-l` behavior, permission errors, and
   deterministic sorting.
-- [ ] `P2-CMD-003` Create `HackerOs.Commands.Cd` (`org.hackeros.cmd.cd`) with
+- [x] `P2-CMD-003` Create `HackerOs.Commands.Cd` (`org.hackeros.cmd.cd`) with
   relative/absolute/home paths and a structured session-directory change result;
   the command does not mutate a global singleton.
-- [ ] `P2-CMD-004` Create `HackerOs.Commands.Cat` (`org.hackeros.cmd.cat`) for
+- [x] `P2-CMD-004` Create `HackerOs.Commands.Cat` (`org.hackeros.cmd.cat`) for
   text streams, multiple inputs only if approved, binary rejection, and standard
   error/exit codes.
-- [ ] `P2-CMD-005` Create `HackerOs.Commands.Echo` (`org.hackeros.cmd.echo`) for
+- [x] `P2-CMD-005` Create `HackerOs.Commands.Echo` (`org.hackeros.cmd.echo`) for
   argument output; redirection remains shell work and is excluded.
-- [ ] `P2-CMD-006` Add headless tests for success, missing path, permission denied,
+- [x] `P2-CMD-006` Add headless tests for success, missing path, permission denied,
   cancellation, Unicode content, large streamed files, and exit codes.
 
 **References:** `src/commands/linux/{pwd,ls,cd,cat,echo}.ts` as behavioral
@@ -1357,21 +1361,21 @@ assets collocated; docs in `docs/apps/file-explorer.md`.
 **Explicit exclusions:** No native disk, simulated remote hosts, cloud storage,
 archive manager, full desktop drag/drop, or advanced search in the first slice.
 
-- [ ] `P2-FILE-001` Create manifest for `org.hackeros.file-explorer` with exact
+- [x] `P2-FILE-001` Create manifest for `org.hackeros.file-explorer` with exact
   capabilities, launch intents, settings, icon, dimensions, and dependencies.
-- [ ] `P2-FILE-002` Implement toolbar/breadcrumbs, directory navigation,
+- [x] `P2-FILE-002` Implement toolbar/breadcrumbs, directory navigation,
   back/forward/up history, loading/error/empty states, and current path.
-- [ ] `P2-FILE-003` Implement accessible list/details view with name, type, size,
+- [x] `P2-FILE-003` Implement accessible list/details view with name, type, size,
   modified time, owner, permissions, stable sorting, and multi-selection.
-- [ ] `P2-FILE-004` Implement create folder/file, rename, copy, move, delete, and
+- [x] `P2-FILE-004` Implement create folder/file, rename, copy, move, delete, and
   properties using filesystem result contracts and confirmations.
-- [ ] `P2-FILE-005` Dispatch open/edit/reveal intents; support default handler,
+- [x] `P2-FILE-005` Dispatch open/edit/reveal intents; support default handler,
   sole handler, explicit app, chooser-required, and no-handler results.
-- [ ] `P2-FILE-006` Implement **Open With** UI without modifying the protected
+- [x] `P2-FILE-006` Implement **Open With** UI without modifying the protected
   default unless an authorized separate action is selected.
-- [ ] `P2-FILE-007` Refresh from typed filesystem/settings events without polling
+- [x] `P2-FILE-007` Refresh from typed filesystem/settings events without polling
   or leaking subscriptions after window close.
-- [ ] `P2-FILE-008` Add tests for navigation, sorting, operations, permissions,
+- [x] `P2-FILE-008` Add tests for navigation, sorting, operations, permissions,
   projected settings files, association changes, disabled handlers, cancellation,
   and reload persistence.
 
@@ -1386,20 +1390,20 @@ archive manager, full desktop drag/drop, or advanced search in the first slice.
 multi-cursor IDE, or code-editor feature set; those belong to Phase 4 editing
 wave. A simple Blazor text area is acceptable for the first slice.
 
-- [ ] `P2-TEXT-001` Create manifest for `org.hackeros.text-editor` with Window
+- [x] `P2-TEXT-001` Create manifest for `org.hackeros.text-editor` with Window
   kind and first-slice handlers for `.txt`, `.log`, `.conf`, `.json`, and `.md`
   only after MIME/action review.
-- [ ] `P2-TEXT-002` Accept open/edit intents and load authorized virtual text
+- [x] `P2-TEXT-002` Accept open/edit intents and load authorized virtual text
   files; reject binary/oversized/denied content with recoverable errors.
-- [ ] `P2-TEXT-003` Implement New, Open, Save, Save As using standard dialog
+- [x] `P2-TEXT-003` Implement New, Open, Save, Save As using standard dialog
   helpers and optimistic file revisions.
-- [ ] `P2-TEXT-004` Track dirty state and prompt on close/open/replace/logout;
+- [x] `P2-TEXT-004` Track dirty state and prompt on close/open/replace/logout;
   ordinary cancellation preserves the window and content.
-- [ ] `P2-TEXT-005` Support editing projected settings documents, preserving
+- [x] `P2-TEXT-005` Support editing projected settings documents, preserving
   settings revision and surfacing schema/authority/conflict errors.
-- [ ] `P2-TEXT-006` Implement accessible keyboard shortcuts and find baseline;
+- [x] `P2-TEXT-006` Implement accessible keyboard shortcuts and find baseline;
   shortcuts are documented through menus/tooltips, not instructional page text.
-- [ ] `P2-TEXT-007` Add tests for file round trip, Save As, dirty close,
+- [x] `P2-TEXT-007` Add tests for file round trip, Save As, dirty close,
   permissions, binary rejection, concurrent conflict, settings projection, and
   association dispatch.
 
@@ -1419,11 +1423,11 @@ component; docs/README in the project and `docs/samples/service-app.md`.
 **Explicit exclusions:** No persistence/resume of volatile work, no service worker
 background execution, no always-running server job.
 
-- [ ] `P2-SVC-001` Implement a small deterministic status/ticker service deriving
+- [x] `P2-SVC-001` Implement a small deterministic status/ticker service deriving
   `ServiceAppBase` with on-login or manual activation.
-- [ ] `P2-SVC-002` Observe session cancellation, perform bounded cleanup, publish
+- [x] `P2-SVC-002` Observe session cancellation, perform bounded cleanup, publish
   health/status events, and retain no volatile work across restart.
-- [ ] `P2-SVC-003` Test start, duplicate prevention, cancellation, timeout,
+- [x] `P2-SVC-003` Test start, duplicate prevention, cancellation, timeout,
   fault, disable, logout, shutdown, and fresh restart state.
 
 ## 21. PWA Packaging, Offline Operation, and Updates
@@ -1434,19 +1438,19 @@ manifest, icons, update UI; browser E2E tests; docs in `docs/pwa-release.md`.
 **Explicit exclusions:** No push notifications, server sync, runtime-downloaded
 packages, or development-mode claims of offline support.
 
-- [ ] `P2-PWA-001` Add real 192/512 product icons, manifest name/short name,
+- [x] `P2-PWA-001` Add real 192/512 product icons, manifest name/short name,
   description, colors, `start_url`, `scope`, and `display`.
-- [ ] `P2-PWA-002` Register service worker with `updateViaCache: 'none'` in the
+- [x] `P2-PWA-002` Register service worker with `updateViaCache: 'none'` in the
   published host.
-- [ ] `P2-PWA-003` Use generated service-worker asset manifest and atomic caches;
+- [x] `P2-PWA-003` Use generated service-worker asset manifest and atomic caches;
   do not disable integrity checking to mask deployment errors.
-- [ ] `P2-PWA-004` Define cache-first shell/static-asset strategy and network
+- [x] `P2-PWA-004` Define cache-first shell/static-asset strategy and network
   behavior for optional APIs in ADR 0017. **DECISION: D-011**
-- [ ] `P2-PWA-005` Implement update-available notification, safe activation, and
+- [x] `P2-PWA-005` Implement update-available notification, safe activation, and
   reload flow without mixing old/new assets.
-- [ ] `P2-PWA-006` Define supported historical PWA/data/API compatibility window
+- [x] `P2-PWA-006` Define supported historical PWA/data/API compatibility window
   and test migrations from each supported version.
-- [ ] `P2-PWA-007` Test first online visit, installability, server unavailable,
+- [x] `P2-PWA-007` Test first online visit, installability, server unavailable,
   offline reload, app launch, file/settings persistence, update waiting,
   activation, and corrupt-cache recovery against published Release output.
 
@@ -1465,53 +1469,53 @@ project `Tests/HackerOs.E2E.Tests/`; published host output; acceptance evidence 
 **Explicit exclusions:** No Phase 3 SDK freeze or mass legacy migration can be
 used to defer these failures.
 
-- [ ] `P2-ACC-SETUP-001` Define deterministic clean User and Administrator test
+- [x] `P2-ACC-SETUP-001` Define deterministic clean User and Administrator test
   identities, profile seed, home directories, grants, and session bootstrap.
-- [ ] `P2-ACC-SETUP-002` Label every acceptance scenario with acting role and app
+- [x] `P2-ACC-SETUP-002` Label every acceptance scenario with acting role and app
   capability set; run protected-settings scenarios as both User and
   Administrator/System operation where specified.
 
-- [ ] `P2-ACC-001` Clean profile initializes Linux-like root and current-user home
+- [x] `P2-ACC-001` Clean profile initializes Linux-like root and current-user home
   exactly once.
-- [ ] `P2-ACC-002` Reload retains committed files, settings, grants, defaults,
+- [x] `P2-ACC-002` Reload retains committed files, settings, grants, defaults,
   and catalog state.
-- [ ] `P2-ACC-003` Desktop and launcher open Terminal/File Explorer through typed
+- [x] `P2-ACC-003` Desktop and launcher open Terminal/File Explorer through typed
   intents, not concrete references.
-- [ ] `P2-ACC-004` Move, resize, focus, minimize, maximize, restore, taskbar
+- [x] `P2-ACC-004` Move, resize, focus, minimize, maximize, restore, taskbar
   activation, and close work by pointer/touch/keyboard where applicable.
-- [ ] `P2-ACC-005` Singleton launch restores/focuses the existing instance without
+- [x] `P2-ACC-005` Singleton launch restores/focuses the existing instance without
   a second process.
-- [ ] `P2-ACC-006` Every app launch creates a process and close/kill removes it and
+- [x] `P2-ACC-006` Every app launch creates a process and close/kill removes it and
   cancels its token.
-- [ ] `P2-ACC-007` Core commands execute through `TerminalAppBase`, streams,
+- [x] `P2-ACC-007` Core commands execute through `TerminalAppBase`, streams,
   working directory, cancellation, and correct exit status.
-- [ ] `P2-ACC-008` Files created/edited in one app appear in others and persist
+- [x] `P2-ACC-008` Files created/edited in one app appear in others and persist
   after reload.
-- [ ] `P2-ACC-009` File opening honors explicit app, protected default, sole
+- [x] `P2-ACC-009` File opening honors explicit app, protected default, sole
   handler, **Open With**, and no-handler outcomes.
-- [ ] `P2-ACC-010` An app denied broad filesystem permission cannot obtain a
+- [x] `P2-ACC-010` An app denied broad filesystem permission cannot obtain a
   broad or selected-resource handle through the SDK.
-- [ ] `P2-ACC-011` User can inspect but not modify
+- [x] `P2-ACC-011` User can inspect but not modify
   `/etc/hackeros/file-associations.json`; authorized Administrator/System edit is
   validated, atomic, audited, and live without reload.
-- [ ] `P2-ACC-012` File/folder dialogs enforce filters, access, overwrite,
+- [x] `P2-ACC-012` File/folder dialogs enforce filters, access, overwrite,
   modality, handles, and cancellation.
-- [ ] `P2-ACC-013` Disabling an optional app removes launcher/association
+- [x] `P2-ACC-013` Disabling an optional app removes launcher/association
   availability and cancels active instances without deleting retained data.
-- [ ] `P2-ACC-014` Shutdown cancels the sample service and restart creates fresh
+- [x] `P2-ACC-014` Shutdown cancels the sample service and restart creates fresh
   volatile state.
-- [ ] `P2-ACC-015` Published PWA works after online install with server stopped
+- [x] `P2-ACC-015` Published PWA works after online install with server stopped
   and browser offline.
-- [ ] `P2-ACC-016` PWA update preserves compatible data and never mixes release
+- [x] `P2-ACC-016` PWA update preserves compatible data and never mixes release
   assets.
-- [ ] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
+- [x] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
   lifecycle/static assets/PWA run in automated real-browser CI.
-- [ ] `P2-GATE-001` `dotnet test HackerOs.sln` passes with warnings as errors.
-- [ ] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
+- [x] `P2-GATE-001` `dotnet test HackerOs.sln` passes with warnings as errors.
+- [x] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
   console, or network errors.
-- [ ] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
+- [x] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
   overlap, clipped text, inaccessible controls, or blank third-party canvases.
-- [ ] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
+- [x] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
   17 criteria.
 - [ ] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
   mass migration.

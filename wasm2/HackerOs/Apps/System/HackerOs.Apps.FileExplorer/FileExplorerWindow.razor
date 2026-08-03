@@ -1,0 +1,362 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Events
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Sessions
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@inject AppCatalog Catalog
+@inject AppIntentDispatcher IntentDispatcher
+@inject ISessionService SessionService
+@inject IDialogService MudDialogService
+
+<div class="file-explorer-container">
+    <!-- Navigation & Address Toolbar -->
+    <div class="explorer-toolbar">
+        <div class="nav-buttons">
+            <button class="nav-btn" disabled="@(!_state.CanNavigateBack)" @onclick="_state.NavigateBack" title="Back">
+                <i class="mud-icon-root mud-svg-icon">‹</i>
+            </button>
+            <button class="nav-btn" disabled="@(!_state.CanNavigateForward)" @onclick="_state.NavigateForward" title="Forward">
+                <i class="mud-icon-root mud-svg-icon">›</i>
+            </button>
+            <button class="nav-btn" disabled="@(!_state.CanNavigateUp)" @onclick="_state.NavigateUp" title="Up">
+                <i class="mud-icon-root mud-svg-icon">^</i>
+            </button>
+            <button class="nav-btn" @onclick="LoadCurrentDirectoryAsync" title="Refresh">
+                <i class="mud-icon-root mud-svg-icon">⟳</i>
+            </button>
+            <button class="nav-btn" @onclick='() => _state.NavigateTo("/home/user")' title="Home">
+                <i class="mud-icon-root mud-svg-icon">⌂</i>
+            </button>
+        </div>
+
+        <div class="address-bar">
+            <input type="text" class="address-input" @bind="_addressInput" @bind:event="oninput" @onkeydown="HandleAddressKeyDownAsync" aria-label="Current path address" />
+        </div>
+
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search..." @bind="_state.SearchQuery" @bind:event="oninput" aria-label="Search directory" />
+        </div>
+
+        <div class="view-toggle">
+            <button class="view-btn @(_state.ViewMode == FileExplorerViewMode.Details ? "active" : "")" @onclick="() => SetViewMode(FileExplorerViewMode.Details)" title="Details View">☰</button>
+            <button class="view-btn @(_state.ViewMode == FileExplorerViewMode.Grid ? "active" : "")" @onclick="() => SetViewMode(FileExplorerViewMode.Grid)" title="Grid View">☵</button>
+        </div>
+    </div>
+
+    <!-- Actions Toolbar -->
+    <div class="actions-toolbar">
+        <button class="action-btn" @onclick="CreateFolderAsync">+ New Folder</button>
+        <button class="action-btn" @onclick="CreateFileAsync">+ New File</button>
+        <button class="action-btn danger" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DeleteSelectedAsync">Delete</button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="ShowPropertiesAsync">Properties</button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="OpenWithAsync">Open With...</button>
+    </div>
+
+    <!-- Directory Content View -->
+    <div class="explorer-content">
+        @if (_isLoading)
+        {
+            <div class="loading-state">Loading directory items...</div>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="error-state">@_errorMessage</div>
+        }
+        else if (FilteredEntries.Count == 0)
+        {
+            <div class="empty-state">This directory is empty.</div>
+        }
+        else if (_state.ViewMode == FileExplorerViewMode.Details)
+        {
+            <table class="details-table">
+                <thead>
+                    <tr>
+                        <th class="col-checkbox"></th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Name)">Name @GetSortIndicator(FileExplorerSortColumn.Name)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Kind)">Kind @GetSortIndicator(FileExplorerSortColumn.Kind)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Size)">Size @GetSortIndicator(FileExplorerSortColumn.Size)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.ModifiedDate)">Modified @GetSortIndicator(FileExplorerSortColumn.ModifiedDate)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (FileSystemDirectoryItem item in FilteredEntries)
+                    {
+                        bool isSelected = _state.SelectedItemNames.Contains(item.Name.Value);
+                        <tr class="entry-row @(isSelected ? "selected" : "")"
+                            @onclick="() => HandleRowClick(item.Name.Value)"
+                            @ondblclick="() => HandleEntryDblClickAsync(item)">
+                            <td class="col-checkbox">
+                                <input type="checkbox" checked="@isSelected" @onclick:stopPropagation="true" @onchange="() => _state.ToggleSelection(item.Name.Value)" />
+                            </td>
+                            <td class="entry-name">
+                                <span class="entry-icon">@(item.Metadata.Kind == FileSystemEntryKind.Directory ? "📁" : "📄")</span>
+                                @item.Name.Value
+                            </td>
+                            <td class="entry-kind">@item.Metadata.Kind</td>
+                            <td class="entry-size">@(item.Metadata is FileMetadata fm ? $"{fm.Length} B" : "--")</td>
+                            <td class="entry-date">@item.Metadata.Timestamps.ContentModifiedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="grid-view">
+                @foreach (FileSystemDirectoryItem item in FilteredEntries)
+                {
+                    bool isSelected = _state.SelectedItemNames.Contains(item.Name.Value);
+                    <div class="grid-card @(isSelected ? "selected" : "")"
+                         @onclick="() => HandleRowClick(item.Name.Value)"
+                         @ondblclick="() => HandleEntryDblClickAsync(item)">
+                        <div class="card-icon">@(item.Metadata.Kind == FileSystemEntryKind.Directory ? "📁" : "📄")</div>
+                        <div class="card-name" title="@item.Name.Value">@item.Name.Value</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Status Bar -->
+    <div class="explorer-statusbar">
+        <span>@FilteredEntries.Count item(s)</span>
+        @if (_state.SelectedItemNames.Count > 0)
+        {
+            <span> | @_state.SelectedItemNames.Count selected</span>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly FileExplorerState _state = new("/home/user");
+    private readonly List<FileSystemDirectoryItem> _entries = [];
+    private string _addressInput = "/home/user";
+    private bool _isLoading = false;
+    private string? _errorMessage;
+    private IDisposable? _eventSub;
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        _state.StateChanged += OnStateChanged;
+        _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(_ => InvokeAsync(LoadCurrentDirectoryAsync));
+    }
+
+    protected override async Task OnAppInitializedAsync()
+    {
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private void OnStateChanged()
+    {
+        _addressInput = _state.CurrentPath;
+        StateHasChanged();
+        _ = LoadCurrentDirectoryAsync();
+    }
+
+    private async Task LoadCurrentDirectoryAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            FileSystemResult<FileSystemDirectorySnapshot> result = await AppContext.FileSystem.EnumerateAsync(
+                new FileSystemEnumerateRequest(VirtualPath.Parse(_state.CurrentPath)), AppContext.CancellationToken);
+
+            _entries.Clear();
+            if (result.Succeeded && result.Value is not null)
+            {
+                _entries.AddRange(result.Value.Entries);
+            }
+            else
+            {
+                _errorMessage = result.Error?.Code == FileSystemErrorCode.PermissionDenied
+                    ? "Permission denied."
+                    : "Directory not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<FileSystemDirectoryItem> FilteredEntries
+    {
+        get
+        {
+            IEnumerable<FileSystemDirectoryItem> list = _entries;
+            if (!string.IsNullOrWhiteSpace(_state.SearchQuery))
+            {
+                list = list.Where(e => e.Name.Value.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return _state.SortColumn switch
+            {
+                FileExplorerSortColumn.Kind => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata.Kind).ThenBy(e => e.Name.Value).ToList()
+                    : list.OrderByDescending(e => e.Metadata.Kind).ThenBy(e => e.Name.Value).ToList(),
+                FileExplorerSortColumn.Size => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata is FileMetadata fm ? fm.Length : 0).ToList()
+                    : list.OrderByDescending(e => e.Metadata is FileMetadata fm ? fm.Length : 0).ToList(),
+                FileExplorerSortColumn.ModifiedDate => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata.Timestamps.ContentModifiedAtUtc).ToList()
+                    : list.OrderByDescending(e => e.Metadata.Timestamps.ContentModifiedAtUtc).ToList(),
+                _ => _state.SortAscending
+                    ? list.OrderBy(e => e.Name.Value, StringComparer.OrdinalIgnoreCase).ToList()
+                    : list.OrderByDescending(e => e.Name.Value, StringComparer.OrdinalIgnoreCase).ToList()
+            };
+        }
+    }
+
+    private async Task HandleAddressKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            _state.NavigateTo(_addressInput);
+            await LoadCurrentDirectoryAsync();
+        }
+    }
+
+    private void SetViewMode(FileExplorerViewMode mode)
+    {
+        _state.ViewMode = mode;
+        StateHasChanged();
+    }
+
+    private void HandleRowClick(string name)
+    {
+        _state.SelectSingle(name);
+    }
+
+    private async Task HandleEntryDblClickAsync(FileSystemDirectoryItem item)
+    {
+        if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+        {
+            string newPath = _state.CurrentPath.TrimEnd('/') + "/" + item.Name.Value;
+            _state.NavigateTo(newPath);
+            await LoadCurrentDirectoryAsync();
+        }
+        else
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + item.Name.Value;
+            await LaunchFileIntentAsync(fullPath);
+        }
+    }
+
+    private async Task LaunchFileIntentAsync(string fullPath)
+    {
+        if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        {
+            // Default target app for text files
+            string targetAppId = "org.hackeros.text-editor";
+            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                RequestId: Guid.NewGuid(),
+                CallerAppId: "org.hackeros.file-explorer",
+                UserId: principal.UserId.ToString(),
+                Intent: new LaunchAppIntent(targetAppId, [fullPath])), principal);
+        }
+    }
+
+    private async Task CreateFolderAsync()
+    {
+        string folderName = $"NewFolder_{DateTime.Now:ss}";
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + folderName;
+        await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+            VirtualPath.Parse(fullPath), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101), 1), AppContext.CancellationToken);
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task CreateFileAsync()
+    {
+        string fileName = $"NewFile_{DateTime.Now:ss}.txt";
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + fileName;
+        await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+            VirtualPath.Parse(fullPath), FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100), 1), AppContext.CancellationToken);
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        foreach (string name in _state.SelectedItemNames.ToList())
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+            await AppContext.FileSystem.DeleteAsync(new FileSystemDeleteRequest(
+                VirtualPath.Parse(fullPath), 1, 1, recursive: true), AppContext.CancellationToken);
+        }
+        _state.ClearSelection();
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task ShowPropertiesAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+        if (item is null) return;
+
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        DialogParameters parameters = new()
+        {
+            { nameof(FilePropertiesDialog.EntryName), name },
+            { nameof(FilePropertiesDialog.Path), fullPath },
+            { nameof(FilePropertiesDialog.Metadata), item.Metadata }
+        };
+
+        await MudDialogService.ShowAsync<FilePropertiesDialog>("Properties", parameters);
+    }
+
+    private async Task OpenWithAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        IReadOnlyList<AppManifest> windowApps = Catalog.Manifests.Values.Where(m => m.Kind == AppKind.Window).ToList();
+
+        DialogParameters parameters = new()
+        {
+            { nameof(OpenWithDialog.FilePath), fullPath },
+            { nameof(OpenWithDialog.AvailableApps), windowApps }
+        };
+
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        DialogResult? result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is AppManifest selectedApp && SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        {
+            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                RequestId: Guid.NewGuid(),
+                CallerAppId: "org.hackeros.file-explorer",
+                UserId: principal.UserId.ToString(),
+                Intent: new LaunchAppIntent(selectedApp.Id, [fullPath])), principal);
+        }
+    }
+
+    private string GetSortIndicator(FileExplorerSortColumn column)
+    {
+        if (_state.SortColumn != column) return string.Empty;
+        return _state.SortAscending ? " ▲" : " ▼";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _state.StateChanged -= OnStateChanged;
+        _eventSub?.Dispose();
+        await ValueTask.CompletedTask;
+    }
+}

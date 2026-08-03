@@ -1,0 +1,85 @@
+.terminal-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--hos-bg-base, #0d1114);
+    color: var(--hos-accent, #42d392);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.88rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.terminal-output {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.welcome-banner {
+    margin-bottom: 0.5rem;
+    color: var(--hos-accent, #42d392);
+}
+
+.ascii-art {
+    margin: 0 0 0.4rem;
+    font-size: 0.7rem;
+    line-height: 1.1;
+}
+
+.output-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.45;
+}
+
+.line-prompt {
+    color: var(--hos-text-secondary, #a8bac4);
+    user-select: none;
+}
+
+.line-stdout {
+    color: var(--hos-text-primary, #f4f7f8);
+}
+
+.line-stderr,
+.line-error {
+    color: var(--hos-error, #ff9a91);
+}
+
+.line-system {
+    color: var(--hos-warning, #d5a84f);
+}
+
+.input-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.input-prompt {
+    color: var(--hos-accent, #42d392);
+    font-weight: 600;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.terminal-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--hos-text-primary, #f4f7f8);
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+    padding: 0;
+}

@@ -37,16 +37,30 @@ public sealed class EcosystemBootCoordinator
     /// <summary>
     /// Validates every critical persistent subsystem in dependency order and returns enabled users.
     /// No volatile session or app lifecycle state is started by this operation.
+    /// Throws if storage, policy, session, or catalog validation fails.
     /// </summary>
     public async ValueTask<EcosystemBootResult> BootAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Step 1: Storage Root Validation
         await _fileSystemBootstrapper.EnsureRootAsync(cancellationToken).ConfigureAwait(false);
+
+        // Step 2: Settings & Policy Validation
         await _settings.InitializeAsync(cancellationToken).ConfigureAwait(false);
         long policyRevision = await _grants.GetCurrentPolicyRevisionAsync(cancellationToken)
             .ConfigureAwait(false);
+        if (policyRevision < 0)
+        {
+            throw new InvalidOperationException($"Invalid persistent policy revision ({policyRevision}). Storage may be corrupted.");
+        }
+
+        // Step 3: Catalog Reconciliation & Validation
         IReadOnlyList<PersistedAppCatalogEntry> catalog = await _catalog.ReconcileAsync(
             selectedManifests: [],
             cancellationToken).ConfigureAwait(false);
+
+        // Step 4: Identity & Group Repository Validation
         await _groups.FindByNameAsync(LocalLoginName.Parse("administrators"), cancellationToken)
             .ConfigureAwait(false);
         IReadOnlyList<LocalUser> users = await _users.GetAllAsync(cancellationToken).ConfigureAwait(false);

@@ -1,0 +1,35 @@
+.gothic-dialog {
+    background: var(--hos-bg-elevated, #161b22) !important;
+    color: var(--hos-text-primary, #f0f6fc) !important;
+    border: 1px solid var(--hos-border-glow, rgba(66, 211, 146, 0.3)) !important;
+    min-width: 320px;
+}
+
+.openwith-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.openwith-subtitle {
+    font-size: 0.9rem;
+    color: var(--hos-text-secondary, #a8bac4);
+}
+
+.app-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.app-name {
+    color: var(--hos-text-primary, #f0f6fc);
+    font-weight: 600;
+}
+
+.app-id {
+    color: var(--hos-text-muted, #6e7681);
+    font-size: 0.8rem;
+    font-family: var(--hos-font-mono, monospace);
+}

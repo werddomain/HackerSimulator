@@ -68,7 +68,7 @@ folder.
 - [x] `P2-HOST-004` Validate the DI graph.
 - [x] `P2-HOST-005` Implement host boot states.
 - [x] `P2-HOST-006` Add the host error boundary and reporting.
-- [ ] `P2-HOST-007` Implement deterministic boot and rollback.
-- [ ] `P2-HOST-008` Add independent recovery UI.
-- [ ] `P2-HOST-009` Enforce shell-global versus scoped CSS ownership.
-- [ ] `P2-HOST-010` Validate Debug, Release, trimming, and published static smoke.
+- [x] `P2-HOST-007` Implement deterministic boot sequence and failure rollback in `EcosystemBootCoordinator.cs`.
+- [x] `P2-HOST-008` Add independent recovery UI and recovery actions in `App.razor`.
+- [x] `P2-HOST-009` Enforce shell-global versus scoped CSS ownership and `:root` design tokens in `app.css`.
+- [x] `P2-HOST-010` Validate Debug, Release, trimming, and published static smoke tests with 0 warnings and 0 errors.

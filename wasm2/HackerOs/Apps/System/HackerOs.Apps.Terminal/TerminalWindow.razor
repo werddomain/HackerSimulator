@@ -1,0 +1,272 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Processes
+@using HackerOs.Simulation.Abstractions.Sessions
+@using Microsoft.AspNetCore.Components.Web
+@inherits WindowAppBase
+@inject AppCatalog Catalog
+@inject AppIntentDispatcher IntentDispatcher
+@inject ISessionService SessionService
+@inject IProcessManager ProcessManager
+
+<div class="terminal-container" @onkeydown="HandleKeyDownAsync">
+    <div class="terminal-output" @ref="_outputBufferRef" role="log" aria-live="polite">
+        <div class="welcome-banner">
+            <pre class="ascii-art">
+  _  _         _         ___  ___ 
+ | || |__ _ __| |_____ _| _ \/ __|
+ | __ / _` / _| / / -_) '_|   /\__ \
+ |_||_\__,_\__|__\_\___|_| |_|_|___/
+            </pre>
+            <p>HackerOS Terminal v1.0.0 — Type 'help' for available commands.</p>
+        </div>
+
+        @foreach (TerminalOutputLine line in _lines)
+        {
+            <div key="@line.Id" class="output-line @line.TypeClass">
+                @if (!string.IsNullOrEmpty(line.Prompt))
+                {
+                    <span class="line-prompt">@line.Prompt </span>
+                }
+                <span class="line-text">@line.Text</span>
+            </div>
+        }
+
+        <div class="input-line">
+            <span class="input-prompt">@_session.GetPrompt() </span>
+            <input @ref="_inputRef"
+                   type="text"
+                   class="terminal-input"
+                   aria-label="Terminal command input"
+                   @bind="_inputBuffer"
+                   @bind:event="oninput" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private ElementReference _outputBufferRef;
+    private ElementReference _inputRef;
+    private readonly TerminalSession _session = new("user", "/home/user");
+    private readonly List<TerminalOutputLine> _lines = [];
+    private string _inputBuffer = string.Empty;
+    private CancellationTokenSource? _activeCts;
+    private TerminalCommandResolver? _resolver;
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        _resolver = new TerminalCommandResolver(Catalog);
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await _inputRef.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Headless test DOM fallback
+            }
+        }
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await ExecuteInputAsync();
+        }
+        else if (args.Key == "ArrowUp")
+        {
+            string? previous = _session.NavigateHistory(-1, _inputBuffer);
+            if (previous is not null)
+            {
+                _inputBuffer = previous;
+            }
+        }
+        else if (args.Key == "ArrowDown")
+        {
+            string? next = _session.NavigateHistory(1, _inputBuffer);
+            if (next is not null)
+            {
+                _inputBuffer = next;
+            }
+        }
+        else if (args.Key == "c" && args.CtrlKey)
+        {
+            CancelActiveCommand();
+        }
+        else if (args.Key == "l" && args.CtrlKey)
+        {
+            ClearBuffer();
+        }
+        else if (args.Key == "Tab")
+        {
+            AutoCompleteInput();
+        }
+    }
+
+    private async Task ExecuteInputAsync()
+    {
+        string rawLine = _inputBuffer.Trim();
+        _inputBuffer = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(rawLine))
+        {
+            _lines.Add(new TerminalOutputLine(_session.GetPrompt(), string.Empty, OutputType.PromptOnly));
+            return;
+        }
+
+        _lines.Add(new TerminalOutputLine(_session.GetPrompt(), rawLine, OutputType.Input));
+        _session.AddHistory(rawLine);
+
+        ShellParseResult parseResult = ShellParser.Parse(rawLine);
+        if (!parseResult.IsSuccess)
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, parseResult.ErrorMessage!, OutputType.Error));
+            _session.LastExitCode = 2;
+            return;
+        }
+
+        string cmd = parseResult.CommandName;
+        IReadOnlyList<string> args = parseResult.Arguments;
+
+        if (cmd == "clear")
+        {
+            ClearBuffer();
+            return;
+        }
+
+        if (cmd == "pwd")
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, _session.Cwd, OutputType.Stdout));
+            _session.LastExitCode = 0;
+            return;
+        }
+
+        if (cmd == "cd")
+        {
+            string targetPath = args.Count > 0 ? args[0] : "~";
+            _session.SetCwd(targetPath);
+            _session.LastExitCode = 0;
+            return;
+        }
+
+        if (cmd == "help")
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help, exit", OutputType.System));
+            _lines.Add(new TerminalOutputLine(string.Empty, "Catalog commands: " + string.Join(", ", GetCatalogCommands()), OutputType.System));
+            _session.LastExitCode = 0;
+            return;
+        }
+
+        // Resolve external command from AppCatalog
+        TerminalCommandResolution? resolution = _resolver?.Resolve(cmd, args);
+        if (resolution is null)
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, $"command not found: {cmd}", OutputType.Error));
+            _session.LastExitCode = 127;
+            return;
+        }
+
+        if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        {
+            _activeCts = new CancellationTokenSource();
+            try
+            {
+                AppIntentDispatchResult result = await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                    RequestId: Guid.NewGuid(),
+                    CallerAppId: "org.hackeros.terminal",
+                    UserId: principal.UserId.ToString(),
+                    Intent: new ExecuteCommandIntent($"{cmd} {string.Join(" ", args)}".Trim())), principal);
+
+                if (result.Status == AppIntentDispatchStatus.Dispatched)
+                {
+                    if (!string.IsNullOrEmpty(result.StandardOutput))
+                    {
+                        _lines.Add(new TerminalOutputLine(string.Empty, result.StandardOutput, OutputType.Stdout));
+                    }
+                    if (!string.IsNullOrEmpty(result.StandardError))
+                    {
+                        _lines.Add(new TerminalOutputLine(string.Empty, result.StandardError, OutputType.Stderr));
+                    }
+                    _session.LastExitCode = result.ExitCode ?? 0;
+                }
+                else
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"Error [{result.Status}]: {result.ErrorCode}", OutputType.Error));
+                    _session.LastExitCode = 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"Fault: {ex.Message}", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            finally
+            {
+                _activeCts = null;
+            }
+        }
+    }
+
+    private void CancelActiveCommand()
+    {
+        if (_activeCts is not null && !_activeCts.IsCancellationRequested)
+        {
+            _activeCts.Cancel();
+            _lines.Add(new TerminalOutputLine(string.Empty, "^C", OutputType.System));
+            _session.LastExitCode = 130;
+        }
+    }
+
+    private void ClearBuffer()
+    {
+        _lines.Clear();
+    }
+
+    private void AutoCompleteInput()
+    {
+        if (string.IsNullOrWhiteSpace(_inputBuffer))
+        {
+            return;
+        }
+
+        List<string> candidates = ["clear", "cd", "pwd", "help"];
+        candidates.AddRange(GetCatalogCommands());
+
+        string matches = candidates.FirstOrDefault(c => c.StartsWith(_inputBuffer, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+        if (!string.IsNullOrEmpty(matches))
+        {
+            _inputBuffer = matches;
+        }
+    }
+
+    private IEnumerable<string> GetCatalogCommands()
+    {
+        return Catalog.Manifests.Values
+            .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
+            .Select(m => m.Terminal!.Name);
+    }
+
+    private enum OutputType { Input, PromptOnly, Stdout, Stderr, System, Error }
+
+    private sealed record TerminalOutputLine(string Prompt, string Text, OutputType Type)
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+        public string TypeClass => Type switch
+        {
+            OutputType.Input => "line-input",
+            OutputType.Stderr => "line-stderr",
+            OutputType.Error => "line-error",
+            OutputType.System => "line-system",
+            _ => "line-stdout"
+        };
+    }
+}

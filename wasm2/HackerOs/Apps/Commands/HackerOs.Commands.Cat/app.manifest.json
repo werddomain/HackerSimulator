@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.cmd.cat",
+  "name": "cat",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Concatenate files and print on the standard output",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Cat.dll",
+    "type": "HackerOs.Commands.Cat.CatCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.02,
+    "burstMemoryWeight": 0.1,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.3,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "cat",
+    "aliases": [],
+    "usage": "cat [file ...]"
+  }
+}

@@ -1,0 +1,75 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Simulation.Abstractions.Notifications
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Simulation.Abstractions.Time
+@inject INotificationQueue NotificationQueue
+@inject ISessionService SessionService
+@inject ISimulationClock SimulationClock
+
+<div class="notification-overlay" aria-live="polite" aria-atomic="true">
+    @foreach (Notification notification in ActiveNotifications)
+    {
+        string severityClass = notification.Severity switch
+        {
+            NotificationSeverity.Error => "is-error",
+            NotificationSeverity.Warning => "is-warning",
+            NotificationSeverity.Success => "is-success",
+            _ => "is-info"
+        };
+
+        <article key="@notification.Id.ToString()"
+                 class="notification-toast @severityClass"
+                 role="status">
+            <header class="toast-header">
+                <span class="severity-badge">@notification.Severity</span>
+                <span class="source-app">@notification.SourceAppId</span>
+                <button type="button"
+                        class="toast-dismiss"
+                        aria-label="Dismiss notification"
+                        @onclick="() => DismissNotification(notification.Id)">
+                    ×
+                </button>
+            </header>
+            <div class="toast-body">
+                <h4 class="toast-title">@notification.Title</h4>
+                <p class="toast-message">@notification.Message</p>
+                @if (notification.Actions.Count > 0)
+                {
+                    <div class="toast-actions">
+                        @foreach (NotificationAction action in notification.Actions)
+                        {
+                            <button type="button"
+                                    class="action-btn"
+                                    @onclick="() => DismissNotification(notification.Id)">
+                                @action.Label
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </article>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnNotificationDismissed { get; set; }
+
+    private IReadOnlyList<Notification> ActiveNotifications
+    {
+        get
+        {
+            LocalUserId userId = SessionService.CurrentPrincipal?.UserId ?? default;
+            return NotificationQueue.GetActive(userId, SimulationClock.UtcNow);
+        }
+    }
+
+    private async Task DismissNotification(NotificationId id)
+    {
+        NotificationQueue.Dismiss(id);
+        if (OnNotificationDismissed.HasDelegate)
+        {
+            await OnNotificationDismissed.InvokeAsync();
+        }
+    }
+}

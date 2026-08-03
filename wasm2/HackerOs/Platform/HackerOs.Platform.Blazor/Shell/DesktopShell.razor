@@ -1,0 +1,146 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Platform.Blazor.Windows
+@using HackerOs.Platform.Core.Discovery
+@using HackerOs.Platform.Core.Lifecycle
+@using HackerOs.Simulation.Abstractions.Notifications
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Simulation.Abstractions.Time
+@using Microsoft.AspNetCore.Components.Web
+@inject WindowRuntime WindowRuntime
+@inject INotificationQueue NotificationQueue
+@inject AppLifecycleOrchestrator Orchestrator
+@inject ISessionService SessionService
+@inject ISimulationClock SimulationClock
+
+<div class="desktop-shell" @onkeydown="HandleShellKeyDown">
+    <div class="desktop-workspace">
+        <DesktopArea Windows="WindowRuntime.Windows"
+                     OnFocus="HandleFocus"
+                     OnMinimize="HandleMinimize"
+                     OnToggleMaximize="HandleToggleMaximize"
+                     OnClose="HandleClose"
+                     OnGesture="HandleGesture">
+            <WindowContent Context="window">
+                @if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                {
+                    <WindowAppRenderer Window="window" Descriptor="descriptor" AppContext="context" />
+                }
+                else
+                {
+                    <div class="window-content-placeholder">@window.Title</div>
+                }
+            </WindowContent>
+        </DesktopArea>
+    </div>
+
+    @if (_isLauncherOpen)
+    {
+        <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" />
+    }
+
+    <NotificationCenter OnNotificationDismissed="StateHasChanged" />
+
+    @if (_isLogoutOpen)
+    {
+        <LogoutDialog OnClose="CloseLogout" OnLoggedOut="HandleLoggedOutAsync" />
+    }
+
+    <Taskbar IsLauncherOpen="_isLauncherOpen"
+             IsNotificationsOpen="_isNotificationsDrawerOpen"
+             UnreadNotificationCount="UnreadNotificationCount"
+             OnToggleLauncher="ToggleLauncher"
+             OnToggleNotifications="ToggleNotifications"
+             OnRequestLogout="OpenLogout" />
+</div>
+
+@code {
+    private bool _isLauncherOpen;
+    private bool _isNotificationsDrawerOpen;
+    private bool _isLogoutOpen;
+
+    [Parameter]
+    public EventCallback OnLoggedOut { get; set; }
+
+    private int UnreadNotificationCount => NotificationQueue.GetActive(
+        SessionService.CurrentPrincipal?.UserId ?? default,
+        SimulationClock.UtcNow).Count;
+
+    private void ToggleLauncher()
+    {
+        _isLauncherOpen = !_isLauncherOpen;
+        _isNotificationsDrawerOpen = false;
+    }
+
+    private void CloseLauncher()
+    {
+        _isLauncherOpen = false;
+    }
+
+    private void ToggleNotifications()
+    {
+        _isNotificationsDrawerOpen = !_isNotificationsDrawerOpen;
+        _isLauncherOpen = false;
+    }
+
+    private void OpenLogout()
+    {
+        _isLogoutOpen = true;
+        _isLauncherOpen = false;
+        _isNotificationsDrawerOpen = false;
+    }
+
+    private void CloseLogout()
+    {
+        _isLogoutOpen = false;
+    }
+
+    private async Task HandleLoggedOutAsync()
+    {
+        _isLogoutOpen = false;
+        if (OnLoggedOut.HasDelegate)
+        {
+            await OnLoggedOut.InvokeAsync();
+        }
+    }
+
+    private void HandleAppSelected(AppManifest manifest)
+    {
+        _isLauncherOpen = false;
+    }
+
+    private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));
+    private void HandleMinimize(WindowId id) => WindowRuntime.Apply(new MinimizeWindowCommand(id));
+    private void HandleToggleMaximize(WindowId id)
+    {
+        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window is not null)
+        {
+            if (window.VisualState == WindowVisualState.Maximized)
+            {
+                WindowRuntime.Apply(new RestoreWindowCommand(id));
+            }
+            else
+            {
+                WindowRuntime.Apply(new MaximizeWindowCommand(id));
+            }
+        }
+    }
+
+    private void HandleClose(WindowId id) => WindowRuntime.Apply(new RequestWindowCloseCommand(id));
+    private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
+
+    private void HandleShellKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            if (_isLauncherOpen)
+            {
+                _isLauncherOpen = false;
+            }
+            else if (_isNotificationsDrawerOpen)
+            {
+                _isNotificationsDrawerOpen = false;
+            }
+        }
+    }
+}

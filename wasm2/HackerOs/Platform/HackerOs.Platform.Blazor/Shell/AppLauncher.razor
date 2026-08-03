@@ -1,0 +1,188 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Sessions
+@using Microsoft.AspNetCore.Components.Web
+@inject AppCatalog Catalog
+@inject AppIntentDispatcher IntentDispatcher
+@inject ISessionService SessionService
+
+<div class="launcher-popover" role="dialog" aria-label="Application launcher" @onkeydown="HandleKeyDownAsync">
+    <header class="launcher-header">
+        <div class="search-box">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input @ref="_searchInputRef"
+                   type="text"
+                   class="search-input"
+                   placeholder="Search applications..."
+                   aria-label="Search applications"
+                   @bind="_searchQuery"
+                   @bind:event="oninput" />
+        </div>
+    </header>
+
+    <div class="launcher-body">
+        <nav class="category-tabs" role="tablist" aria-label="Application categories">
+            @foreach (string category in _categories)
+            {
+                bool isSelected = StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, category);
+                <button type="button"
+                        role="tab"
+                        class="tab-item @(isSelected ? "is-active" : "")"
+                        aria-selected="@isSelected.ToString().ToLowerInvariant()"
+                        @onclick="() => SelectCategory(category)">
+                    @category
+                </button>
+            }
+        </nav>
+
+        <div class="app-grid" role="listbox" aria-label="Available applications">
+            @if (FilteredApps.Count == 0)
+            {
+                <div class="empty-state" role="status">No applications match your search.</div>
+            }
+            else
+            {
+                @for (int index = 0; index < FilteredApps.Count; index++)
+                {
+                    AppManifest app = FilteredApps[index];
+                    bool isSelected = index == _selectedIndex;
+                    int currentIndex = index;
+                    <button type="button"
+                            role="option"
+                            class="app-card @(isSelected ? "is-focused" : "")"
+                            aria-selected="@isSelected.ToString().ToLowerInvariant()"
+                            @onclick="() => LaunchAppAsync(app)"
+                            @onmouseenter="() => SetSelectedIndex(currentIndex)">
+                        <div class="app-icon-container" aria-hidden="true">
+                            <span class="app-icon">🖥️</span>
+                        </div>
+                        <div class="app-details">
+                            <div class="app-title">@app.Name</div>
+                            <div class="app-description">@app.Description</div>
+                        </div>
+                    </button>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private ElementReference _searchInputRef;
+    private string _searchQuery = string.Empty;
+    private string _selectedCategory = "All";
+    private int _selectedIndex = 0;
+    private readonly string[] _categories = ["All", "System", "Utilities", "Games"];
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<AppManifest> OnAppSelected { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await _searchInputRef.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Element may not be focusable in headless DOM tests
+            }
+        }
+    }
+
+    private IReadOnlyList<AppManifest> FilteredApps
+    {
+        get
+        {
+            IEnumerable<AppManifest> apps = Catalog.Manifests.Values;
+
+            if (!string.IsNullOrWhiteSpace(_selectedCategory) && !StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, "All"))
+            {
+                apps = apps.Where(app => StringComparer.OrdinalIgnoreCase.Equals(app.Kind.ToString(), _selectedCategory));
+            }
+
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                apps = apps.Where(app =>
+                    app.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    app.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    app.Id.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return [.. apps.OrderBy(app => app.Name, StringComparer.OrdinalIgnoreCase)];
+        }
+    }
+
+    private void SelectCategory(string category)
+    {
+        _selectedCategory = category;
+        _selectedIndex = 0;
+    }
+
+    private void SetSelectedIndex(int index)
+    {
+        _selectedIndex = index;
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        IReadOnlyList<AppManifest> apps = FilteredApps;
+        if (args.Key == "Escape")
+        {
+            await CloseAsync();
+        }
+        else if (args.Key == "ArrowDown")
+        {
+            if (apps.Count > 0)
+            {
+                _selectedIndex = (_selectedIndex + 1) % apps.Count;
+            }
+        }
+        else if (args.Key == "ArrowUp")
+        {
+            if (apps.Count > 0)
+            {
+                _selectedIndex = (_selectedIndex - 1 + apps.Count) % apps.Count;
+            }
+        }
+        else if (args.Key == "Enter")
+        {
+            if (_selectedIndex >= 0 && _selectedIndex < apps.Count)
+            {
+                await LaunchAppAsync(apps[_selectedIndex]);
+            }
+        }
+    }
+
+    private async Task LaunchAppAsync(AppManifest app)
+    {
+        if (OnAppSelected.HasDelegate)
+        {
+            await OnAppSelected.InvokeAsync(app);
+        }
+        else if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        {
+            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                RequestId: Guid.NewGuid(),
+                CallerAppId: "org.hackeros.shell",
+                UserId: principal.UserId.ToString(),
+                Intent: new LaunchAppIntent(app.Id, [])), principal);
+        }
+
+        await CloseAsync();
+    }
+
+    private async Task CloseAsync()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

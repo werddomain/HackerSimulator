@@ -64,6 +64,24 @@ public sealed class AppLifecycleOrchestrator
     /// <summary>Gets the enablement registry so callers can check status without a separate wire-up.</summary>
     public IAppEnablementRegistry Enablement => _enablement;
 
+    /// <summary>Attempts to resolve the active descriptor and context for a running process.</summary>
+    public bool TryGetRunningInstance(ProcessId pid, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
+    {
+        lock (_sync)
+        {
+            if (_running.TryGetValue(pid, out RunningInstance? instance))
+            {
+                descriptor = instance.Descriptor;
+                context = instance.Context;
+                return true;
+            }
+        }
+
+        descriptor = null;
+        context = null;
+        return false;
+    }
+
     /// <summary>
     /// Launches one catalog app. For a singleton <see cref="AppKind.Window"/> app that already has
     /// an active process, focuses the existing instance instead of starting a new one

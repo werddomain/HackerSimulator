@@ -352,8 +352,16 @@ canonical settings document under `/etc/hackeros/policy.config`.
   app launch, command execution, capability-checked filesystem/settings
   gateway use, service shutdown, disable, and logout compose end to end
   (`P1-GATE-003`).
-- [ ] Implement the platform window runtime and modal file dialog renderer.
-- [ ] Scaffold the PWA host only after the headless Phase 1 gate passes.
+- [x] Implement the platform window runtime and modal file dialog renderer (`P2-WIN`, `P2-DLG`).
+- [x] Scaffold and complete the PWA host composition root, boot coordinator, error boundary, recovery UI, global CSS tokens, and Release trim analyzer smoke tests (`P2-HOST-001` through `P2-HOST-010`).
+- [x] Implement Desktop Shell, Taskbar, App Launcher, Notification Center, and Session Logout UX (`P2-SHELL-001` through `P2-SHELL-009`).
+- [x] Establish Phase 2B App Project Standard (`P2-APPSTD-001` through `P2-APPSTD-005`) and implement the Terminal application (`org.hackeros.terminal`) under `Apps/System/HackerOs.Apps.Terminal/` (`P2-TERM-001` through `P2-TERM-009`).
+- [x] Implement Core Terminal Command Apps (`pwd`, `ls`, `cd`, `cat`, `echo`) under `Apps/Commands/` (`P2-CMD-001` through `P2-CMD-006`).
+- [x] Implement File Explorer Application (`org.hackeros.file-explorer`) under `Apps/System/HackerOs.Apps.FileExplorer/` (`P2-FEX-001` through `P2-FEX-009`).
+- [x] Implement Text Editor Window App (`org.hackeros.text-editor`) under `Apps/System/HackerOs.Apps.TextEditor/` (`P2-TEXT-001` through `P2-TEXT-007`).
+- [x] Implement First Session Service App (`org.hackeros.samples.service-app`) under `Apps/Samples/HackerOs.Samples.ServiceApp/` (`P2-SVC-001` through `P2-SVC-003`).
+- [x] Implement PWA Packaging, Offline Operation, and Updates (`OS/HackerOs.Ecosystem/wwwroot/`) (`P2-PWA-001` through `P2-PWA-007`).
+- [x] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-004`). Evidence matrix published in `docs/phase-2-acceptance.md`. Awaiting `P2-GATE-005` user approval.
 
 ## Validation
 

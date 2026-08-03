@@ -1,0 +1,22 @@
+.desktop-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at center, rgba(66, 211, 146, 0.04) 0%, transparent 70%),
+        linear-gradient(rgba(66, 211, 146, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(66, 211, 146, 0.02) 1px, transparent 1px),
+        var(--hos-bg-base, #101417);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+    color: var(--hos-text-primary, #f4f7f8);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+}
+
+.desktop-workspace {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}

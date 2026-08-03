@@ -1,5 +1,6 @@
-﻿@using HackerOs.App.Abstractions
+@using HackerOs.App.Abstractions
 @using HackerOs.Infrastructure.Browser.Recovery
+@using HackerOs.Platform.Blazor.Shell
 @using HackerOs.Platform.Core.Sessions
 @using HackerOs.Simulation.Abstractions.Recovery
 @using HackerOs.Simulation.Abstractions.Sessions
@@ -73,14 +74,7 @@
             </section>
             break;
         case EcosystemHostView.Desktop:
-            <section class="desktop-placeholder" aria-labelledby="desktop-title">
-                <header>
-                    <div class="boot-mark" aria-hidden="true">H_</div>
-                    <span>@SessionService.CurrentPrincipal?.DisplayName</span>
-                </header>
-                <h1 id="desktop-title">HackerOS desktop</h1>
-                <p>The local session is active.</p>
-            </section>
+            <DesktopShell OnLoggedOut="HandleLoggedOut" />
             break;
         case EcosystemHostView.Recovery:
             <section class="recovery-surface" aria-labelledby="recovery-title">
@@ -209,5 +203,11 @@
         SetupPassword = string.Empty;
         SetupPasswordConfirmation = string.Empty;
         LoginPassword = string.Empty;
+    }
+
+    private void HandleLoggedOut()
+    {
+        State.BeginInitialization();
+        _ = InitializeAsync();
     }
 }
