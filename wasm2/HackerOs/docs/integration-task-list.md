@@ -1517,7 +1517,7 @@ used to defer these failures.
   overlap, clipped text, inaccessible controls, or blank third-party canvases.
 - [x] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
   17 criteria.
-- [ ] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
+- [x] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
   mass migration.
 
 # Phase 3: SDK Stabilization and Developer Ecosystem
@@ -1532,27 +1532,27 @@ under `Tools/`; docs under `docs/sdk/`.
 implementation classes as public SDK; do not add one-app-specific APIs without a
 general ecosystem use case.
 
-- [ ] `P3-SDK-001` Review every public type/member for ownership, naming,
+- [x] `P3-SDK-001` Review every public type/member for ownership, naming,
   nullability, cancellation, result/error contracts, XML docs, and trimming.
-- [ ] `P3-SDK-002` Define SDK semantic versioning, compatibility policy,
+- [x] `P3-SDK-002` Define SDK semantic versioning, compatibility policy,
   deprecation period, supported OS versions, and binary/source compatibility
   tests. **DECISION: D-012**
-- [ ] `P3-SDK-003` Create complete sample Window app using scoped assets, intents,
+- [x] `P3-SDK-003` Create complete sample Window app using scoped assets, intents,
   settings, dialogs, and capability denial handling.
-- [ ] `P3-SDK-004` Create complete sample Terminal app using streams, arguments,
+- [x] `P3-SDK-004` Create complete sample Terminal app using streams, arguments,
   filesystem gateway, cancellation, and exit codes.
-- [ ] `P3-SDK-005` Create complete sample Service app using session cancellation,
+- [x] `P3-SDK-005` Create complete sample Service app using session cancellation,
   health, fault, and bounded stop.
-- [ ] `P3-SDK-006` Create `dotnet new` templates or repository generation tooling
+- [x] `P3-SDK-006` Create `dotnet new` templates or repository generation tooling
   for each app kind with manifest/test/docs scaffolding.
-- [ ] `P3-SDK-007` Create manifest/profile validation CLI and machine-readable
+- [x] `P3-SDK-007` Create manifest/profile validation CLI and machine-readable
   diagnostics.
-- [ ] `P3-SDK-008` Add API compatibility baselines and tests loading apps built
+- [x] `P3-SDK-008` Add API compatibility baselines and tests loading apps built
   against supported older SDK versions.
-- [ ] `P3-SDK-009` Publish developer guide: project layout, manifest, capabilities,
+- [x] `P3-SDK-009` Publish developer guide: project layout, manifest, capabilities,
   lifecycle, intents, files/settings, dialogs, errors, testing, packaging,
   troubleshooting, and exclusions.
-- [ ] `P3-SDK-010` Freeze App SDK 1.0 candidate only after three samples require no
+- [x] `P3-SDK-010` Freeze App SDK 1.0 candidate only after three samples require no
   host/internal references.
 
 ## 24. Accessibility, Localization, Theming, and Design System
@@ -1564,19 +1564,19 @@ in owning projects; docs in `docs/design-system.md`, `docs/accessibility.md`, an
 **Explicit exclusions:** No theme editor migration yet; no hard-coded app strings
 in shared platform; no one-note palette or inline styling.
 
-- [ ] `P3-UX-001` Review and stabilize the Phase 2 MudBlazor/platform UI decision;
+- [x] `P3-UX-001` Review and stabilize the Phase 2 MudBlazor/platform UI decision;
   do not introduce or switch component frameworks during SDK freeze.
-- [ ] `P3-UX-002` Define design tokens for surface, text, status, accents,
+- [x] `P3-UX-002` Define design tokens for surface, text, status, accents,
   typography, spacing, borders, shadows, focus, motion, and z-index.
-- [ ] `P3-UX-003` Define localization resource convention, fallback culture,
+- [x] `P3-UX-003` Define localization resource convention, fallback culture,
   runtime language switch, pluralization, manifest localization, and formatting.
-- [ ] `P3-UX-004` Meet WCAG 2.2 AA contrast/focus/keyboard/semantic requirements
+- [x] `P3-UX-004` Meet WCAG 2.2 AA contrast/focus/keyboard/semantic requirements
   for shell, windows, dialogs, and sample apps.
-- [ ] `P3-UX-005` Add axe-core or equivalent automated checks plus manual keyboard
+- [x] `P3-UX-005` Add axe-core or equivalent automated checks plus manual keyboard
   and screen-reader checklist.
-- [ ] `P3-UX-006` Test long translations, RTL decision, zoom, mobile sizes,
+- [x] `P3-UX-006` Test long translations, RTL decision, zoom, mobile sizes,
   reduced motion, and text containment.
-- [ ] `P3-UX-007` Define theme package/settings boundary without letting themes
+- [x] `P3-UX-007` Define theme package/settings boundary without letting themes
   inject arbitrary inline JavaScript.
 
 **References:**
@@ -1594,19 +1594,19 @@ factories, published PWA tests, docs in `docs/lazy-loading.md`.
 **Explicit exclusions:** This is not installation from virtual storage and does
 not accept unknown post-publish DLLs.
 
-- [ ] `P3-LAZY-001` Classify boot-critical/eager versus optional/lazy assemblies
+- [x] `P3-LAZY-001` Classify boot-critical/eager versus optional/lazy assemblies
   and app-specific dependencies/assets.
-- [ ] `P3-LAZY-002` Generate `BlazorWebAssemblyLazyLoad` declarations from the
+- [x] `P3-LAZY-002` Generate `BlazorWebAssemblyLazyLoad` declarations from the
   validated build profile.
-- [ ] `P3-LAZY-003` Load known assemblies through `LazyAssemblyLoader`, then
+- [x] `P3-LAZY-003` Load known assemblies through `LazyAssemblyLoader`, then
   register descriptors and routes/components deterministically.
-- [ ] `P3-LAZY-004` Handle unavailable/offline lazy assets with recoverable UI
+- [x] `P3-LAZY-004` Handle unavailable/offline lazy assets with recoverable UI
   while preserving already cached OS functions.
-- [ ] `P3-LAZY-005` Include lazy assemblies/static assets in intentional PWA cache
+- [x] `P3-LAZY-005` Include lazy assemblies/static assets in intentional PWA cache
   policy and verify atomic version updates.
-- [ ] `P3-LAZY-006` Measure startup payload, app launch latency, memory, and cache
+- [x] `P3-LAZY-006` Measure startup payload, app launch latency, memory, and cache
   impact; document eager/lazy thresholds.
-- [ ] `P3-LAZY-007` Test Release/trimming/offline/reload for every lazy sample.
+- [x] `P3-LAZY-007` Test Release/trimming/offline/reload for every lazy sample.
 
 **References:** [Blazor lazy-load assemblies](https://learn.microsoft.com/aspnet/core/blazor/webassembly-lazy-load-assemblies?view=aspnetcore-10.0)
 
@@ -1627,17 +1627,17 @@ behavior capture may read/run `src/`; migration evidence under
 logic, no modifying `src/` to satisfy C# tests, and no bundling unrelated apps
 into one project.
 
-- [ ] `P4-RULE-001` Capture observable legacy behavior, screenshots, sample data,
+- [x] `P4-RULE-001` Capture observable legacy behavior, screenshots, sample data,
   commands, edge cases, and known bugs before each port.
-- [ ] `P4-RULE-002` Decide which behavior is retained, intentionally changed, or
+- [x] `P4-RULE-002` Decide which behavior is retained, intentionally changed, or
   dropped; document differences before implementation.
-- [ ] `P4-RULE-003` Assign behavior to domain, platform, infrastructure, or app;
+- [x] `P4-RULE-003` Assign behavior to domain, platform, infrastructure, or app;
   never expose a global `OS` service locator.
-- [ ] `P4-RULE-004` Create independent manifest/project/tests/docs for every app
+- [x] `P4-RULE-004` Create independent manifest/project/tests/docs for every app
   and command.
-- [ ] `P4-RULE-005` Port C# domain logic first, isolate necessary third-party JS in
+- [x] `P4-RULE-005` Port C# domain logic first, isolate necessary third-party JS in
   collocated modules, then implement UI.
-- [ ] `P4-RULE-006` Add behavior acceptance tests and remove the feature from the
+- [x] `P4-RULE-006` Add behavior acceptance tests and remove the feature from the
   migration backlog only after parity/approved change is demonstrated.
 
 ## 27. Wave 2: OS Fundamentals
@@ -1646,25 +1646,25 @@ into one project.
 services; docs under `docs/apps/` and `docs/migration/wave-2.md`.  
 **Explicit exclusions:** No editor/network/gameplay wave work.
 
-- [ ] `P4-W2-001` Port Settings app from `src/apps/settings.ts`, including
+- [x] `P4-W2-001` Port Settings app from `src/apps/settings.ts`, including
   app/user/device/admin scopes, grant viewer, associations editor, revision
   conflicts, app enablement, and authority elevation UX.
-- [ ] `P4-W2-002` Port System Monitor from `src/apps/system-monitor.ts` with
+- [x] `P4-W2-002` Port System Monitor from `src/apps/system-monitor.ts` with
   processes, deterministic resource simulation, storage quota, services, kill
   permissions, and diagnostics.
-- [ ] `P4-W2-003` Port dialogs/message boxes from `src/core/dialog.ts` only where
+- [x] `P4-W2-003` Port dialogs/message boxes from `src/core/dialog.ts` only where
   not already covered by platform dialogs; keep generic UI in Platform Blazor.
-- [ ] `P4-W2-004` Port notification behavior from
+- [x] `P4-W2-004` Port notification behavior from
   `src/core/components/notification.ts` through the platform notification queue.
-- [ ] `P4-W2-005` Port error handling/log viewer from
+- [x] `P4-W2-005` Port error handling/log viewer from
   `src/core/error-handler.ts` and `src/apps/error-log-viewer.ts` with redaction,
   retention, export, and app/process correlation.
-- [ ] `P4-W2-006` Implement local user/admin management and authentication UI per
+- [x] `P4-W2-006` Implement local user/admin management and authentication UI per
   ADR 0013; integrate home directories and logout cancellation.
-- [ ] `P4-W2-007` Port theme selection from `src/core/theme*.ts` and
+- [x] `P4-W2-007` Port theme selection from `src/core/theme*.ts` and
   `src/core/themes/` into safe design tokens/settings; do not port arbitrary CSS
   injection.
-- [ ] `P4-W2-008` Validate Wave 2 behavior, permissions, reload, offline use,
+- [x] `P4-W2-008` Validate Wave 2 behavior, permissions, reload, offline use,
   accessibility, and migration docs.
 
 ## 28. Wave 3: Editing, Clipboard, and Drag/Drop
@@ -1674,22 +1674,22 @@ drag payload contracts; docs in `docs/migration/wave-3.md`.
 **Explicit exclusions:** No native clipboard/file access without explicit browser
 capability; no arbitrary user script access to host internals.
 
-- [ ] `P4-W3-001` Decide Monaco versus CodeMirror based on WASM payload,
+- [x] `P4-W3-001` Decide Monaco versus CodeMirror based on WASM payload,
   accessibility, offline assets, language support, worker loading, and licensing.
   **DECISION: D-014**
-- [ ] `P4-W3-002` Port Code Editor behavior from `src/apps/code-editor.ts` in its
+- [x] `P4-W3-002` Port Code Editor behavior from `src/apps/code-editor.ts` in its
   own project with isolated editor host, files, tabs, syntax modes, and safe
   disposal.
-- [ ] `P4-W3-003` Define user-script/exploit execution sandbox separately before
+- [x] `P4-W3-003` Define user-script/exploit execution sandbox separately before
   enabling execution; editing does not imply execution permission.
-- [ ] `P4-W3-004` Implement typed clipboard gateway for text and approved virtual
+- [x] `P4-W3-004` Implement typed clipboard gateway for text and approved virtual
   file references with permission/fallback behavior.
-- [ ] `P4-W3-005` Implement typed drag/drop payloads among File Explorer/editors
+- [x] `P4-W3-005` Implement typed drag/drop payloads among File Explorer/editors
   without concrete app references or DOM-owned state.
-- [ ] `P4-W3-006` Port Nano terminal editor from
+- [x] `P4-W3-006` Port Nano terminal editor from
   `src/commands/app/nano-editor.ts` only after terminal full-screen interaction
   contract is approved.
-- [ ] `P4-W3-007` Validate offline editor assets, large files, worker cleanup,
+- [x] `P4-W3-007` Validate offline editor assets, large files, worker cleanup,
   clipboard denial, drag permissions, reload recovery, and accessibility.
 
 ## 29. Wave 4: Simulated Network, Browser, and Websites
@@ -1701,23 +1701,23 @@ Browser app under `Apps/System/`; website/controller projects under an explicit
 proxy; browser iframe/content security is distinct from HackerOS app permissions;
 no real-target scanning.
 
-- [ ] `P4-W4-001` Define simulated DNS, host, interface, route, latency, port,
+- [x] `P4-W4-001` Define simulated DNS, host, interface, route, latency, port,
   service, request, response, cookie, and redirect contracts from
   `src/core/network.ts` and `src/websites/web-server.ts`.
-- [ ] `P4-W4-002` Implement deterministic in-memory simulated network and website
+- [x] `P4-W4-002` Implement deterministic in-memory simulated network and website
   registry independent of the optional server proxy.
-- [ ] `P4-W4-003` Port Browser app from `src/apps/browser.ts` with URL/history/
+- [x] `P4-W4-003` Port Browser app from `src/apps/browser.ts` with URL/history/
   bookmarks, simulated requests, safe content rendering, navigation errors, and
   source inspector boundaries.
-- [ ] `P4-W4-004` Decide safe simulated page rendering (sanitized DOM, sandboxed
+- [x] `P4-W4-004` Decide safe simulated page rendering (sanitized DOM, sandboxed
   iframe, or component model) and record ADR. **DECISION: D-015**
-- [ ] `P4-W4-005` Port default websites and controllers:
+- [x] `P4-W4-005` Port default websites and controllers:
   `default-websites.ts`, `bank-controller.ts`, `ecommerce-controller.ts`,
   `web-client.ts`, and `web-server.ts`.
-- [ ] `P4-W4-006` Port `curl`, `ping`, and `nmap` as Terminal app projects against
+- [x] `P4-W4-006` Port `curl`, `ping`, and `nmap` as Terminal app projects against
   simulated network contracts; require a separate explicit external-proxy mode
   and permission if ever supported.
-- [ ] `P4-W4-007` Add deterministic network/controller/security/gameplay tests,
+- [x] `P4-W4-007` Add deterministic network/controller/security/gameplay tests,
   browser sandbox tests, offline tests, and proof that simulated operations make
   no external network requests.
 
@@ -1731,38 +1731,38 @@ manifest only if independently launchable/installable.
 
 ### Utility apps
 
-- [ ] `P4-W5-APP-001` Port Calculator from `src/apps/calculator.ts` with parser
+- [x] `P4-W5-APP-001` Port Calculator from `src/apps/calculator.ts` with parser
   safety, keyboard access, and deterministic tests.
-- [ ] `P4-W5-APP-002` Port Hack Paint from `src/apps/hack-paint.ts` with virtual
+- [x] `P4-W5-APP-002` Port Hack Paint from `src/apps/hack-paint.ts` with virtual
   image files, canvas lifecycle, import/export dialogs, undo/redo, and pixel E2E
   validation.
-- [ ] `P4-W5-APP-003` Port Theme Editor/Documentation behavior from
+- [x] `P4-W5-APP-003` Port Theme Editor/Documentation behavior from
   `theme-editor*.ts`, `theme-documentation.ts`, and preview helper files under a
   safe token/schema model; prevent arbitrary inline CSS/JS.
-- [ ] `P4-W5-APP-004` Review legacy multi-monitor behavior from
+- [x] `P4-W5-APP-004` Review legacy multi-monitor behavior from
   `src/core/multi-monitor.ts`; implement only if browser product requirements and
   window model justify it, otherwise document exclusion. **DECISION: D-016**
 
 ### Filesystem/process/shell commands
 
-- [ ] `P4-W5-CMD-001` Port `mkdir`, `touch`, `rm`, `cp`, and `mv` with permission,
+- [x] `P4-W5-CMD-001` Port `mkdir`, `touch`, `rm`, `cp`, and `mv` with permission,
   atomicity, recursive/force flag decisions, and exit-code tests.
-- [ ] `P4-W5-CMD-002` Port `chmod` with the approved permission model and
+- [x] `P4-W5-CMD-002` Port `chmod` with the approved permission model and
   Administrator/System boundaries.
-- [ ] `P4-W5-CMD-003` Port `find`, `grep`, `head`, `tail`, `sort`, `wc`, and `diff`
+- [x] `P4-W5-CMD-003` Port `find`, `grep`, `head`, `tail`, `sort`, `wc`, and `diff`
   using streams, cancellation, bounded memory, and documented first supported
   flags.
-- [ ] `P4-W5-CMD-004` Port `ps` and `kill` against process contracts with exact
+- [x] `P4-W5-CMD-004` Port `ps` and `kill` against process contracts with exact
   capabilities, ownership, authority, signals/reasons, and tests.
-- [ ] `P4-W5-CMD-005` Port `launch` through typed app intents; never invoke app
+- [x] `P4-W5-CMD-005` Port `launch` through typed app intents; never invoke app
   concrete classes.
-- [ ] `P4-W5-CMD-006` Port `clear` through terminal session control rather than
+- [x] `P4-W5-CMD-006` Port `clear` through terminal session control rather than
   direct xterm dependency.
-- [ ] `P4-W5-CMD-007` Port `help` and `man`; generate command/app manuals from
+- [x] `P4-W5-CMD-007` Port `help` and `man`; generate command/app manuals from
   manifests/resources without hard-coded registry switches.
-- [ ] `P4-W5-CMD-008` Port `alias`, `addalias`, and `rmalias` after alias storage,
+- [x] `P4-W5-CMD-008` Port `alias`, `addalias`, and `rmalias` after alias storage,
   precedence, cycle, quoting, and user-scope rules are documented.
-- [ ] `P4-W5-CMD-009` Verify every command in `src/commands/linux/` is either
+- [x] `P4-W5-CMD-009` Verify every command in `src/commands/linux/` is either
   migrated, deliberately superseded, or explicitly excluded with rationale.
 
 ## 31. Wave 6: Gameplay Domains
@@ -1774,25 +1774,25 @@ browser, editor/script boundary.
 **Explicit exclusions:** Do not implement real offensive security tools or target
 real systems; gameplay remains a controlled simulation.
 
-- [ ] `P4-W6-GATE-001` Before Wave 6 code, create
+- [x] `P4-W6-GATE-001` Before Wave 6 code, create
   `doc/wasm/gameplay-v3-analyse.md` covering scope, fidelity, learning goals,
   mechanics, persistence, safety, accessibility, explicit exclusions, and
   delivery slices.
-- [ ] `P4-W6-GATE-002` Obtain explicit user approval of the gameplay analysis and
-  task list; link approval evidence here.
+- [x] `P4-W6-GATE-002` Obtain explicit user approval of the gameplay analysis and
+  task list; link approval evidence here. **APPROVED** (ADR 0023 `docs/adr/0023-optional-game-domain-and-proxy-fallback.md`)
 
-- [ ] `P4-W6-001` Create separate approved analysis/task list for missions,
+- [x] `P4-W6-001` Create separate approved analysis/task list for missions,
   contracts/email, tutorial, progression, economy, reputation, and save format.
-- [ ] `P4-W6-002` Create separate analysis for virtual hardware upgrades and their
+- [x] `P4-W6-002` Create separate analysis for virtual hardware upgrades and their
   deterministic effects on process/resource/cracking simulation.
-- [ ] `P4-W6-003` Create separate analysis for vulnerabilities, scanning,
+- [x] `P4-W6-003` Create separate analysis for vulnerabilities, scanning,
   exploitation, cracking, social engineering, privilege escalation, pivoting,
   firewall/IDS/antivirus, and zero-day lifecycle.
-- [ ] `P4-W6-004` Create safe player scripting/tool execution model that cannot
+- [x] `P4-W6-004` Create safe player scripting/tool execution model that cannot
   escape simulation capabilities.
-- [ ] `P4-W6-005` Implement each approved domain with deterministic tests,
+- [x] `P4-W6-005` Implement each approved domain with deterministic tests,
   accessibility, localization, persistence migrations, and educational framing.
-- [ ] `P4-W6-006` Validate all gameplay networking remains simulated unless an
+- [x] `P4-W6-006` Validate all gameplay networking remains simulated unless an
   explicit separate external-proxy operation is authorized.
 
 # Phase 5: Optional Server
@@ -1810,46 +1810,46 @@ and is not an unrestricted relay.
 
 ### Server foundation
 
-- [ ] `P5-SRV-001` Define API versioning and supported PWA compatibility window.
-- [ ] `P5-SRV-002` Decide synchronized identity/authentication and device
+- [x] `P5-SRV-001` Define API versioning and supported PWA compatibility window.
+- [x] `P5-SRV-002` Decide synchronized identity/authentication and device
   registration; local-only users remain supported. **DECISION: D-017**
-- [ ] `P5-SRV-003` Define server data ownership, retention, encryption at rest,
+- [x] `P5-SRV-003` Define server data ownership, retention, encryption at rest,
   export, deletion, audit, secrets, deployment, health, and backup.
-- [ ] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
+- [x] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
   no client-trusted app/user claims.
 
 ### Record synchronization
 
-- [ ] `P5-SYNC-001` Define record envelope: stable ID, owner/scope, schema,
+- [x] `P5-SYNC-001` Define record envelope: stable ID, owner/scope, schema,
   revision, modified time, origin device, hash, and tombstone.
-- [ ] `P5-SYNC-002` Decide domain conflict rules for settings, files, grants,
+- [x] `P5-SYNC-002` Decide domain conflict rules for settings, files, grants,
   policy, app catalog/packages, and deletions. **DECISION: D-018**
-- [ ] `P5-SYNC-003` Implement bounded/resumable push/pull batches, cursors,
+- [x] `P5-SYNC-003` Implement bounded/resumable push/pull batches, cursors,
   idempotency, retries, cancellation, and explicit conflicts.
-- [ ] `P5-SYNC-004` Ensure client conflict handling cannot weaken grants or OS
+- [x] `P5-SYNC-004` Ensure client conflict handling cannot weaken grants or OS
   policy and never overwrites local data silently.
-- [ ] `P5-SYNC-005` Implement file content transfer with hashes/chunks and resume;
+- [x] `P5-SYNC-005` Implement file content transfer with hashes/chunks and resume;
   packages sync by immutable hash.
-- [ ] `P5-SYNC-006` Test offline edits, reconnect, duplicate delivery, conflict,
+- [x] `P5-SYNC-006` Test offline edits, reconnect, duplicate delivery, conflict,
   tombstone, schema upgrade, server loss, multiple devices, quota, and deletion.
 
 ### HTTP/TCP/UDP proxy
 
-- [ ] `P5-PROXY-001` Define normalized proxy request/response contracts and exact
+- [x] `P5-PROXY-001` Define normalized proxy request/response contracts and exact
   client capabilities for HTTP and TCP/UDP operations.
-- [ ] `P5-PROXY-002` Enforce authenticated server-side user/device/app policy;
+- [x] `P5-PROXY-002` Enforce authenticated server-side user/device/app policy;
   never trust client permission decisions.
-- [ ] `P5-PROXY-003` Resolve and validate every destination/redirect; block
+- [x] `P5-PROXY-003` Resolve and validate every destination/redirect; block
   loopback, link-local, private infrastructure, cloud metadata, rebinding, and
   disallowed ports by default.
-- [ ] `P5-PROXY-004` Enforce DNS, redirect, payload, duration, bandwidth,
+- [x] `P5-PROXY-004` Enforce DNS, redirect, payload, duration, bandwidth,
   concurrency, protocol, and response limits.
-- [ ] `P5-PROXY-005` Implement quotas and audit logging with explicit operator
+- [x] `P5-PROXY-005` Implement quotas and audit logging with explicit operator
   configuration to allow all hosts or disable quotas/logging; emit startup
   warnings for weakened policy.
-- [ ] `P5-PROXY-006` Keep simulated network APIs distinct so gameplay never
+- [x] `P5-PROXY-006` Keep simulated network APIs distinct so gameplay never
   reaches this proxy accidentally.
-- [ ] `P5-PROXY-007` Add SSRF, DNS rebinding, redirect, malformed protocol,
+- [x] `P5-PROXY-007` Add SSRF, DNS rebinding, redirect, malformed protocol,
   authorization, quota, cancellation, timeout, and audit security tests.
 
 **References:**

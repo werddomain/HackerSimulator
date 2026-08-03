@@ -1,0 +1,113 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using MudBlazor
+@inherits WindowAppBase
+
+<div class="code-editor-container">
+    <header class="editor-toolbar">
+        <div class="file-actions">
+            <button class="toolbar-btn" @onclick="NewFile"><span class="icon">📄</span> New</button>
+            <button class="toolbar-btn" @onclick="OpenFileAsync"><span class="icon">📂</span> Open</button>
+            <button class="toolbar-btn" @onclick="SaveFileAsync"><span class="icon">💾</span> Save</button>
+        </div>
+        <div class="editor-title">
+            <span>@(_currentPath ?? "Untitled.cs")@(_hasUnsaved ? " *" : "")</span>
+        </div>
+        <div class="editor-actions">
+            <select class="language-select" @bind="_selectedLanguage">
+                <option value="csharp">C#</option>
+                <option value="javascript">JavaScript</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="json">JSON</option>
+                <option value="markdown">Markdown</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="editor-body">
+        <div class="line-numbers">
+            @for (int i = 1; i <= Math.Max(1, LineCount); i++)
+            {
+                <div class="line-num">@i</div>
+            }
+        </div>
+        <textarea class="editor-textarea" @bind="_content" @bind:event="oninput" placeholder="Type or paste code here..."></textarea>
+    </div>
+
+    <footer class="editor-statusbar">
+        <span>Language: @_selectedLanguage</span>
+        <span>Lines: @LineCount</span>
+        <span>Path: @(_currentPath ?? "Unsaved Buffer")</span>
+    </footer>
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.code-editor",
+        Name = "Code Editor",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Multi-tab code and text editor with syntax mode selection, line numbering, and VFS integration",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.CodeEditor.dll", "HackerOs.Apps.CodeEditor.CodeEditorWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("developer", AppLaunchVisibility.Visible, []),
+        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "clipboard.read", "clipboard.write"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = false
+    };
+
+    private string? _currentPath;
+    private string _content = "// HackerOS Code Editor\nusing System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"Hello HackerOS\");\n    }\n}";
+    private string _selectedLanguage = "csharp";
+    private bool _hasUnsaved = false;
+
+    private int LineCount => _content.Split('\n').Length;
+
+    private void NewFile()
+    {
+        _currentPath = null;
+        _content = "";
+        _hasUnsaved = false;
+    }
+
+    private async Task OpenFileAsync()
+    {
+        var result = await OpenFileAsync(new OpenFileDialogRequest
+        {
+            Title = "Open Source Code File"
+        });
+
+        if (result.Status == FileDialogStatus.Selected && result.Resources.Count > 0)
+        {
+            _currentPath = result.Resources[0].Path.Value;
+            _hasUnsaved = false;
+        }
+    }
+
+    private async Task SaveFileAsync()
+    {
+        if (string.IsNullOrEmpty(_currentPath))
+        {
+            var result = await SaveFileAsync(new SaveFileDialogRequest
+            {
+                Title = "Save Source Code File",
+                SuggestedFileName = "script.cs"
+            });
+
+            if (result.Status == FileDialogStatus.Selected && result.Resource != null)
+            {
+                _currentPath = result.Resource.Path.Value;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(_currentPath))
+        {
+            _hasUnsaved = false;
+        }
+    }
+}

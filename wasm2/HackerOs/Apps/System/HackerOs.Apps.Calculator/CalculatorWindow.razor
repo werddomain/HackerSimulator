@@ -1,0 +1,71 @@
+@using HackerOs.AppSdk.Blazor
+@using Microsoft.AspNetCore.Components.Web
+@inherits WindowAppBase
+
+<div class="calculator-root" tabindex="0" @onkeydown="HandleKeyDown">
+    <!-- Display -->
+    <div class="calculator-display" role="status" aria-live="polite">
+        <div class="calculator-previous-operand">
+            @if (!string.IsNullOrEmpty(_engine.PreviousValue) && !string.IsNullOrEmpty(_engine.Operator))
+            {
+                <span>@_engine.PreviousValue @_engine.Operator</span>
+            }
+        </div>
+        <div class="calculator-current-operand" id="calc-display-current">
+            @_engine.CurrentValue
+        </div>
+    </div>
+
+    <!-- Keypad -->
+    <div class="calculator-buttons">
+        <button id="calc-mc" class="calc-btn mem" @onclick="_engine.MemoryClear">MC</button>
+        <button id="calc-mr" class="calc-btn mem" @onclick="_engine.MemoryRecall">MR</button>
+        <button id="calc-mplus" class="calc-btn mem" @onclick="_engine.MemoryAdd">M+</button>
+        <button id="calc-mminus" class="calc-btn mem" @onclick="_engine.MemorySubtract">M-</button>
+        <button id="calc-c" class="calc-btn clear" @onclick="_engine.Clear">C</button>
+        <button id="calc-ac" class="calc-btn clear" @onclick="_engine.AllClear">AC</button>
+
+        <button id="calc-7" class="calc-btn num" @onclick='() => Dig("7")'>7</button>
+        <button id="calc-8" class="calc-btn num" @onclick='() => Dig("8")'>8</button>
+        <button id="calc-9" class="calc-btn num" @onclick='() => Dig("9")'>9</button>
+        <button id="calc-div" class="calc-btn op" @onclick='() => Op("/")'>/</button>
+        <button id="calc-sqr" class="calc-btn func" @onclick="_engine.Square">x²</button>
+
+        <button id="calc-4" class="calc-btn num" @onclick='() => Dig("4")'>4</button>
+        <button id="calc-5" class="calc-btn num" @onclick='() => Dig("5")'>5</button>
+        <button id="calc-6" class="calc-btn num" @onclick='() => Dig("6")'>6</button>
+        <button id="calc-mul" class="calc-btn op" @onclick='() => Op("*")'>*</button>
+        <button id="calc-sqrt" class="calc-btn func" @onclick="_engine.SquareRoot">√</button>
+
+        <button id="calc-1" class="calc-btn num" @onclick='() => Dig("1")'>1</button>
+        <button id="calc-2" class="calc-btn num" @onclick='() => Dig("2")'>2</button>
+        <button id="calc-3" class="calc-btn num" @onclick='() => Dig("3")'>3</button>
+        <button id="calc-sub" class="calc-btn op" @onclick='() => Op("-")'>-</button>
+        <button id="calc-pct" class="calc-btn func" @onclick="_engine.Percentage">%</button>
+
+        <button id="calc-0" class="calc-btn num" @onclick='() => Dig("0")'>0</button>
+        <button id="calc-dot" class="calc-btn num" @onclick="_engine.InputDecimal">.</button>
+        <button id="calc-neg" class="calc-btn func" @onclick="_engine.Negate">±</button>
+        <button id="calc-add" class="calc-btn op" @onclick='() => Op("+")'>+</button>
+        <button id="calc-eq" class="calc-btn equals" @onclick="_engine.HandleEquals">=</button>
+    </div>
+</div>
+
+@code {
+    private readonly CalculatorEngine _engine = new();
+
+    private void Dig(string digit) => _engine.InputDigit(digit);
+    private void Op(string op) => _engine.HandleOperator(op);
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        var key = e.Key;
+        if (key.Length == 1 && key[0] >= '0' && key[0] <= '9') _engine.InputDigit(key);
+        else if (key == ".") _engine.InputDecimal();
+        else if (key is "+" or "-" or "*" or "/") _engine.HandleOperator(key);
+        else if (key is "Enter" or "=") _engine.HandleEquals();
+        else if (key == "Escape") _engine.AllClear();
+        else if (key == "Backspace") _engine.Clear();
+        else if (key == "%") _engine.Percentage();
+    }
+}

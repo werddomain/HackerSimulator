@@ -1,0 +1,98 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using MudBlazor
+@inherits WindowAppBase
+
+<div class="settings-window-container">
+    <header class="settings-header">
+        <span class="settings-header-title">HackerOS System Settings</span>
+    </header>
+
+    <div class="settings-body">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs">
+            <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
+                <div class="setting-group">
+                    <h4>Color Theme</h4>
+                    <p class="setting-desc">Select modern gothic system accent color token.</p>
+                    <div class="accent-options">
+                        <button class="accent-btn accent-green" @onclick='() => ChangeAccent("green")'>Green</button>
+                        <button class="accent-btn accent-cyan" @onclick='() => ChangeAccent("cyan")'>Cyan</button>
+                        <button class="accent-btn accent-purple" @onclick='() => ChangeAccent("purple")'>Purple</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h4>Animations</h4>
+                    <MudSwitch T="bool" Value="@_animationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary" Label="Enable desktop transitions and micro-animations" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="File Associations" Icon="@Icons.Material.Filled.Extension">
+                <div class="setting-group">
+                    <h4>File Association Policy</h4>
+                    <p class="setting-desc">Configure default applications per extension.</p>
+                    <div class="associations-list">
+                        <div class="assoc-row"><span>.txt</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
+                        <div class="assoc-row"><span>.json</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
+                        <div class="assoc-row"><span>.md</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Capability Grants" Icon="@Icons.Material.Filled.Security">
+                <div class="setting-group">
+                    <h4>Granted Application Capabilities</h4>
+                    <p class="setting-desc">Active security grants for current session.</p>
+                    <div class="grants-list">
+                        @foreach (string cap in Manifest.Capabilities)
+                        {
+                            <div class="grant-tag">✓ @cap</div>
+                        }
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="About System" Icon="@Icons.Material.Filled.Info">
+                <div class="system-info-box">
+                    <div class="info-line"><span>OS Version:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
+                    <div class="info-line"><span>Runtime:</span> <strong>.NET 10.0 WebAssembly</strong></div>
+                    <div class="info-line"><span>Architecture:</span> <strong>C# Kernel / Scoped CSS / MudBlazor</strong></div>
+                    <div class="info-line"><span>User ID:</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>
+                    <div class="info-line"><span>Authority:</span> <strong>@(AppContext?.UserAuthority.ToString() ?? "User")</strong></div>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.settings",
+        Name = "Settings",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "System control panel for user preferences, appearance, file associations, capabilities, and device configuration",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.Settings.dll", "HackerOs.Apps.Settings.SettingsWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
+        Capabilities = ["settings.read", "settings.write", "settings.system.read", "settings.system.write", "file-associations.read", "file-associations.write", "process.list"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = true
+    };
+
+    private bool _animationsEnabled = true;
+    private string _activeAccent = "green";
+
+    private void ChangeAccent(string accent)
+    {
+        _activeAccent = accent;
+    }
+
+    private void ToggleAnimations(bool value)
+    {
+        _animationsEnabled = value;
+    }
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.samples.window-app",
+  "name": "Sample Window App",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Complete sample Window application demonstrating App SDK features, scoped assets, intents, settings, and dialogs",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Samples.WindowApp.dll",
+    "type": "HackerOs.Samples.WindowApp.SampleWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "dialogs.file-open",
+    "dialogs.file-save",
+    "settings.read",
+    "settings.write"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.1,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": true
+}

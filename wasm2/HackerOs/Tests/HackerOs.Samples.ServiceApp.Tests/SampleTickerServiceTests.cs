@@ -104,24 +104,27 @@ public sealed class SampleTickerServiceTests
         using (CancellationTokenSource cts1 = new())
         {
             Task task1 = service.RunAsync(context, cts1.Token);
-            await Task.Delay(30);
+            await Task.Delay(50);
             cts1.Cancel();
             await task1;
         }
 
         await service.StopAsync(ServiceStopReason.Logout, CancellationToken.None);
+        Assert.Equal(0, service.TickCount);
 
         // Session 2 – fresh start
         using (CancellationTokenSource cts2 = new())
         {
             Task task2 = service.RunAsync(context, cts2.Token);
-            await Task.Delay(30);
+            await Task.Delay(50);
             cts2.Cancel();
             await task2;
         }
 
-        // Assert – tick count on session 2 runs fresh
-        Assert.True(service.IsStopping);
+        await service.StopAsync(ServiceStopReason.Logout, CancellationToken.None);
+
+        // Assert – tick count on session 2 runs fresh and resets
+        Assert.Equal(0, service.TickCount);
     }
 
     // ──────────────────────────── Test Mocks / Stubs ─────────────────────────────

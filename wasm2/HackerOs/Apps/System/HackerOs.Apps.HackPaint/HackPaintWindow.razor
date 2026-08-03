@@ -1,0 +1,118 @@
+@using HackerOs.AppSdk.Blazor
+@using Microsoft.AspNetCore.Components.Web
+@inherits WindowAppBase
+
+<div class="paint-root">
+    <!-- Toolbar -->
+    <div class="paint-toolbar">
+        <div class="tool-group">
+            <button id="paint-btn-new"  class="paint-btn" @onclick="NewDoc">New</button>
+            <button id="paint-btn-undo" class="paint-btn" disabled="@(!_state.CanUndo)" @onclick="_state.Undo">Undo</button>
+            <button id="paint-btn-redo" class="paint-btn" disabled="@(!_state.CanRedo)" @onclick="_state.Redo">Redo</button>
+        </div>
+
+        <div class="tool-group">
+            <button id="paint-btn-rotate" class="paint-btn" @onclick="_state.Rotate90">Rotate 90&deg;</button>
+            <button id="paint-btn-grid"   class="paint-btn @(_state.ShowGrid ? "active" : "")" @onclick="_state.ToggleGrid">Grid</button>
+            <button id="paint-btn-crop"   class="paint-btn @(_state.CropMode ? "active" : "")" @onclick="_state.ToggleCropMode">Crop</button>
+            <button id="paint-btn-pan"    class="paint-btn @(_state.PanMode ? "active" : "")"  @onclick="_state.TogglePanMode">Pan</button>
+        </div>
+
+        <div class="tool-group">
+            <button id="paint-btn-zoomin"  class="paint-btn" @onclick="_state.ZoomIn">Zoom +</button>
+            <button id="paint-btn-zoomout" class="paint-btn" @onclick="_state.ZoomOut">Zoom -</button>
+            <span class="zoom-label">@((int)(_state.Scale * 100))%</span>
+        </div>
+
+        <div class="tool-group">
+            <label for="paint-color" class="tool-label">Color:</label>
+            <input id="paint-color" type="color" class="color-picker" @bind="_state.ActiveColor" />
+
+            <label for="paint-size" class="tool-label">Size:</label>
+            <input id="paint-size" type="range" class="size-range" min="1" max="50" @bind="_state.BrushSize" />
+            <span class="size-label">@_state.BrushSize px</span>
+        </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <div class="paint-viewport @(_state.ShowGrid ? "grid-overlay" : "")">
+        <div class="canvas-frame">
+            <svg class="paint-svg-canvas"
+                 width="@_state.Width"
+                 height="@_state.Height"
+                 @onmousedown="StartDraw"
+                 @onmousemove="Draw"
+                 @onmouseup="StopDraw"
+                 @onmouseleave="StopDraw">
+                <rect width="100%" height="100%" fill="#ffffff" />
+                @foreach (var stroke in _strokes)
+                {
+                    <polyline points="@stroke.Points"
+                              stroke="@stroke.Color"
+                              stroke-width="@stroke.Size"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              fill="none" />
+                }
+                @if (_currentStroke is not null)
+                {
+                    <polyline points="@_currentStroke.Points"
+                              stroke="@_currentStroke.Color"
+                              stroke-width="@_currentStroke.Size"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              fill="none" />
+                }
+            </svg>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="paint-statusbar">
+        <span>Canvas: @_state.Width &times; @_state.Height px</span>
+        <span>Tool: @(_state.CropMode ? "Crop" : _state.PanMode ? "Pan" : "Brush")</span>
+        <span>Strokes: @_strokes.Count</span>
+    </div>
+</div>
+
+@code {
+    private readonly PaintCanvasState _state = new();
+    private bool _isDrawing;
+    private StrokeModel? _currentStroke;
+    private readonly List<StrokeModel> _strokes = [];
+
+    private sealed record StrokeModel(string Color, int Size, string Points);
+
+    private void NewDoc()
+    {
+        _strokes.Clear();
+        _state.NewDocument(800, 600);
+    }
+
+    private void StartDraw(MouseEventArgs e)
+    {
+        if (_state.PanMode || _state.CropMode) return;
+        _isDrawing = true;
+        string pt = $"{e.OffsetX:F0},{e.OffsetY:F0}";
+        _currentStroke = new StrokeModel(_state.ActiveColor, _state.BrushSize, pt);
+    }
+
+    private void Draw(MouseEventArgs e)
+    {
+        if (!_isDrawing || _currentStroke is null) return;
+        string newPt = $" {e.OffsetX:F0},{e.OffsetY:F0}";
+        _currentStroke = _currentStroke with { Points = _currentStroke.Points + newPt };
+    }
+
+    private void StopDraw()
+    {
+        if (!_isDrawing) return;
+        _isDrawing = false;
+        if (_currentStroke is not null)
+        {
+            _strokes.Add(_currentStroke);
+            _currentStroke = null;
+            _state.PushHistory(PaintCanvasState.CreateBlankBuffer(_state.Width, _state.Height, 0, 0, 0, 255));
+        }
+    }
+}

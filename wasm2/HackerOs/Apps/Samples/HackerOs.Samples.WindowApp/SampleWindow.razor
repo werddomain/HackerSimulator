@@ -1,0 +1,126 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Simulation.Abstractions
+@using HackerOs.Simulation.Abstractions.FileSystem
+@inherits WindowAppBase
+
+<div class="sample-window-container">
+    <header class="sample-window-header">
+        <span class="sample-window-title">Sample Window App (SDK 1.0)</span>
+    </header>
+
+    <div class="sample-window-body">
+        <section class="sample-section">
+            <h3>File Dialogs & VFS Gateway</h3>
+            <div class="button-row">
+                <button class="sample-btn" @onclick="OpenFileAsync">Open File...</button>
+                <button class="sample-btn" @onclick="SaveFileAsync">Save As...</button>
+            </div>
+            <div class="output-box">@_fileStatus</div>
+        </section>
+
+        <section class="sample-section">
+            <h3>Capability Check</h3>
+            <div class="button-row">
+                <button class="sample-btn" @onclick="TestCapabilityAccessAsync">Test Private Storage</button>
+            </div>
+            <div class="output-box">@_capabilityStatus</div>
+        </section>
+    </div>
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.samples.window-app",
+        Name = "Sample Window App",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Complete sample Window application",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Samples.WindowApp.dll", "HackerOs.Samples.WindowApp.SampleWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
+        Capabilities = [AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = true
+    };
+
+    private string _fileStatus = "No file operation performed.";
+    private string _capabilityStatus = "Click button to test capability access.";
+
+    private async Task OpenFileAsync()
+    {
+        try
+        {
+            OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
+            {
+                Title = "Open Sample File",
+                Filters = [new FileDialogFilter("Text files", [".txt", ".json", ".md"], ["text/plain", "application/json"])]
+            });
+
+            if (result.Status == FileDialogStatus.Selected && result.Resources.Count > 0)
+            {
+                _fileStatus = $"Selected: {result.Resources[0].Path}";
+            }
+            else
+            {
+                _fileStatus = "File selection cancelled.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _fileStatus = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SaveFileAsync()
+    {
+        try
+        {
+            SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
+            {
+                Title = "Save Sample File",
+                SuggestedFileName = "sample.txt",
+                DefaultExtension = ".txt"
+            });
+
+            if (result.Status == FileDialogStatus.Selected && result.Resource is not null)
+            {
+                _fileStatus = $"Save destination: {result.Resource.Path}";
+            }
+            else
+            {
+                _fileStatus = "Save cancelled.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _fileStatus = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task TestCapabilityAccessAsync()
+    {
+        try
+        {
+            VirtualPath privatePath = VirtualPath.Parse("/etc/hackeros/protected.conf");
+            FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(new FileSystemReadRequest(privatePath));
+
+            if (result.Succeeded)
+            {
+                _capabilityStatus = "Access granted to system path.";
+            }
+            else
+            {
+                _capabilityStatus = $"Capability denied or error: {result.Error?.Code}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _capabilityStatus = $"Exception: {ex.Message}";
+        }
+    }
+}

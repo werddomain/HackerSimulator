@@ -86,6 +86,24 @@ public static class AppCapabilities
     /// <summary>Start, stop, or query session-scoped service apps other than the caller.</summary>
     public const string ServicesManage = "services.manage";
 
+    /// <summary>
+    /// Read from the simulated network: perform DNS lookups, host enumeration,
+    /// port scans, and navigate to simulated websites. Never makes real network calls.
+    /// </summary>
+    public const string NetworkSimulatedRead = "network.simulated.read";
+
+    /// <summary>
+    /// Send simulated HTTP POST requests and modify simulated network state
+    /// (e.g., submit forms to simulated websites).
+    /// Never makes real network calls.
+    /// </summary>
+    public const string NetworkSimulatedWrite = "network.simulated.write";
+
+    /// <summary>
+    /// Access the Game Domain engine, missions, hardware upgrades, and simulated security state.
+    /// </summary>
+    public const string GameplayDomainAccess = "gameplay.domain.access";
+
     private static readonly FrozenSet<string> KnownIdentifiers = new[]
     {
         FileSystemPrivateRead,
@@ -112,7 +130,10 @@ public static class AppCapabilities
         WindowsManage,
         ClipboardRead,
         ClipboardWrite,
-        ServicesManage
+        ServicesManage,
+        NetworkSimulatedRead,
+        NetworkSimulatedWrite,
+        GameplayDomainAccess
     }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>Gets the capabilities that require a window-hosting app because they render modal UI.</summary>

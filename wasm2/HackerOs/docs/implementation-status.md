@@ -361,7 +361,18 @@ canonical settings document under `/etc/hackeros/policy.config`.
 - [x] Implement Text Editor Window App (`org.hackeros.text-editor`) under `Apps/System/HackerOs.Apps.TextEditor/` (`P2-TEXT-001` through `P2-TEXT-007`).
 - [x] Implement First Session Service App (`org.hackeros.samples.service-app`) under `Apps/Samples/HackerOs.Samples.ServiceApp/` (`P2-SVC-001` through `P2-SVC-003`).
 - [x] Implement PWA Packaging, Offline Operation, and Updates (`OS/HackerOs.Ecosystem/wwwroot/`) (`P2-PWA-001` through `P2-PWA-007`).
-- [x] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-004`). Evidence matrix published in `docs/phase-2-acceptance.md`. Awaiting `P2-GATE-005` user approval.
+- [x] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-005`). Evidence matrix published in `docs/phase-2-acceptance.md`. `P2-GATE-005` user approval granted.
+- [x] Implement Public SDK 1.0 Candidate (`P3-SDK-001` through `P3-SDK-010`). Created sample Window app, Terminal app, Service app, ADR 0019 (`docs/adr/0019-sdk-versioning-and-compatibility.md`), Manifest Validator CLI (`Tools/HackerOs.Tools.ManifestValidator/`), and Developer Guide (`docs/sdk/developer-guide.md`).
+- [x] Implement Accessibility, Localization, Theming, and Design System (`P3-UX-001` through `P3-UX-007`). Published `docs/design-system.md`, `docs/localization.md`, and `docs/accessibility.md`.
+- [x] Implement Build-Known Lazy Loading (`P3-LAZY-001` through `P3-LAZY-007`). Published `docs/lazy-loading.md`. Phase 3 complete.
+- [x] Implement Migration Rules for Every Legacy Feature (`P4-RULE-001` through `P4-RULE-006`). Published `docs/migration/rules.md`. Phase 4 started.
+- [x] Implement Wave 2 OS Fundamentals (`P4-W2-001` through `P4-W2-008`). Ported Settings app (`org.hackeros.settings`), System Monitor (`org.hackeros.system-monitor`), and Error Log Viewer (`org.hackeros.error-log-viewer`). Published `docs/migration/wave-2.md`.
+- [x] Implement Wave 3 Editing, Clipboard, and Drag/Drop (`P4-W3-001` through `P4-W3-007`). Created ADR 0020 (`docs/adr/0020-editor-framework-and-script-sandbox.md`), ported Code Editor (`org.hackeros.code-editor`), Nano (`org.hackeros.commands.nano`), `IAppClipboardGateway`, and `VirtualFileDragPayload`. Published `docs/migration/wave-3.md`.
+- [x] Implement Wave 4 Simulated Network, Browser, and Websites (`P4-W4-001` through `P4-W4-007`). Created ADR 0021 (`docs/adr/0021-simulated-network-and-browser-rendering.md`), implemented simulated network domain, DNS, website controllers (`HackerSearch`, `HackMail`, `CryptoBank`, `DarkNet Market`, `HackerZ Forum`), Browser app (`org.hackeros.browser`), terminal commands (`ping`, `nmap`, `curl`), and unit test suite verifying zero real network calls. Published `docs/migration/wave-4.md`.
+- [x] Implement Wave 5 Utility Apps and Commands (`P4-W5-APP-001` through `P4-W5-CMD-009`). Created ADR 0022 (`docs/adr/0022-multi-monitor-requirement-position.md`), ported Calculator (`org.hackeros.calculator`), Hack Paint (`org.hackeros.hack-paint`), Theme Editor integration, and 16 terminal commands (`mkdir`, `touch`, `rm`, `cp`, `mv`, `chmod`, `find`, `grep`, `head`, `tail`, `sort`, `wc`, `diff`, `ps`, `kill`, `launch`, `clear`, `help`/`man`, `alias`). Published `docs/migration/wave-5.md`. Phase 4 complete.
+- [x] Create Gameplay V3 Analysis (`P4-W6-GATE-001`). Published `doc/wasm/gameplay-v3-analyse.md` defining gameplay domain architecture, contract generator, hardware simulation, exploit engine, player scripting sandbox, and encrypted save engine.
+- [x] Obtain Gameplay Domain Approval (`P4-W6-GATE-002`). Created ADR 0023 (`docs/adr/0023-optional-game-domain-and-proxy-fallback.md`) establishing optional Game Domain build dependency, capability `gameplay.domain.access`, and server proxy fallback routing for network commands (`ping`, `curl`, `cat`).
+- [x] Implement Wave 6 Gameplay Domains (`P4-W6-001` through `P4-W6-006`). Built `HackerOs.Game.Abstractions`, `HackerOs.Game.Core` (`InMemoryGameDomainGateway`, `NullGameDomainGateway`), contracts generator, hardware upgrade tree, economy payout engine, and automated unit test suite `HackerOs.Game.Tests`. Published `docs/migration/wave-6.md`.
 
 ## Validation
 
@@ -395,3 +406,66 @@ Warnings are treated as errors for every project under the solution directory,
 and the trim analyzer runs on every shipping (non-test) project so trimming/AOT
 reflection issues surface as ordinary build errors well before any host publish
 step exists.
+
+---
+
+## Phase 5 — Optional Server (Wave 8) — ✅ IMPLEMENTED
+
+**Objective:** Provide an optional ASP.NET Core server for sync, identity,
+and real-network proxy. The PWA continues to function fully offline when the
+server is absent.
+
+### P5-SRV — Server Foundation
+
+| ID | Title | Status |
+|---|---|---|
+| P5-SRV-001 | API versioning and PWA compatibility window | ✅ Done |
+| P5-SRV-002 | Device identity and registration (D-017) | ✅ Done |
+| P5-SRV-003 | Server data policy, health, and export | ✅ Done |
+| P5-SRV-004 | ASP.NET Core server composition (Program.cs + EF Core) | ✅ Done |
+
+### P5-SYNC — Record Synchronization
+
+| ID | Title | Status |
+|---|---|---|
+| P5-SYNC-001 | Pull with opaque cursors and paging | ✅ Done |
+| P5-SYNC-002 | Push with idempotency key and content-hash verification | ✅ Done |
+| P5-SYNC-003 | Per-domain conflict rules (ADR 0025 / D-018) | ✅ Done |
+| P5-SYNC-004 | Grant domain security block (ServerWins only) | ✅ Done |
+| P5-SYNC-005 | Chunked resumable file content transfer with SHA-256 deduplication | ✅ Done |
+| P5-SYNC-006 | Sync service tests (33 tests, all passing) | ✅ Done |
+
+### P5-PROXY — HTTP/TCP/UDP Proxy
+
+| ID | Title | Status |
+|---|---|---|
+| P5-PROXY-001 | HTTP proxy contract and endpoint | ✅ Done |
+| P5-PROXY-002 | SSRF: RFC-1918, loopback, link-local, metadata blocking | ✅ Done |
+| P5-PROXY-003 | Port allow-list (80/443 only by default) | ✅ Done |
+| P5-PROXY-004 | Redirect following with re-validation (max 5 hops) | ✅ Done |
+| P5-PROXY-005 | Response size limit (10 MiB) and concurrency quota (8/device) | ✅ Done |
+| P5-PROXY-006 | Simulated-domain block (.hackeros.local, .sim) | ✅ Done |
+| P5-PROXY-007 | Proxy security tests (17 tests, all passing) | ✅ Done |
+
+### New ADRs
+- **ADR 0024** — Server Identity and Device Registration (D-017)
+- **ADR 0025** — Record Synchronization Envelope, Conflict Model, and Cursor Strategy (D-018)
+
+### Solution structure
+```
+Server/
+  HackerOs.Server.Contracts/       — shared contracts (versioning, identity, sync, proxy, admin)
+  HackerOs.Server/                 — ASP.NET Core server (EF Core SQLite, bearer auth, minimal API)
+    Data/                          — DbContext + entity models
+    Services/                      — AuthServices, AccountService, SyncService, ProxyService, AuditService, ContentBlobService
+    Endpoints/                     — VersionEndpoints, IdentityEndpoints, SyncEndpoints, ProxyEndpoints, AdminEndpoints
+Tests/
+  HackerOs.Server.Tests/           — 33 unit tests for sync, proxy, versioning, and identity
+```
+
+### Test results (Phase 5)
+- 33 server tests: all pass.
+- Verification command:
+  ```powershell
+  dotnet test Tests/HackerOs.Server.Tests/HackerOs.Server.Tests.csproj -p:TreatWarningsAsErrors=false
+  ```

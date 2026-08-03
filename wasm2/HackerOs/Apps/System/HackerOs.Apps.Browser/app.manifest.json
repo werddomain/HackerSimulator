@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.browser",
+  "name": "Browser",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Simulated web browser for navigating the HackerOS virtual network",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.Browser.dll",
+    "type": "HackerOs.Apps.Browser.BrowserWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "internet",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "network.simulated.read",
+    "network.simulated.write",
+    "settings.read",
+    "settings.write"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.05,
+    "burstCpuWeight": 0.25,
+    "baselineMemoryWeight": 0.08,
+    "burstMemoryWeight": 0.3,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.05,
+    "baselineNetworkIoWeight": 0.05,
+    "burstNetworkIoWeight": 0.2
+  },
+  "singleInstancePerUser": false
+}

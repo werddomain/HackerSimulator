@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.mkdir",
+  "name": "mkdir",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Create virtual filesystem directories",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Mkdir.dll",
+    "type": "HackerOs.Commands.Mkdir.MkdirCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.write"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "mkdir",
+    "aliases": [],
+    "usage": "mkdir [-p] <directory...>"
+  },
+  "singleInstancePerUser": false
+}

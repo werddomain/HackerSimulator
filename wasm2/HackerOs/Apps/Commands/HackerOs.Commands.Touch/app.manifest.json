@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.touch",
+  "name": "touch",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Change file timestamps or create empty files",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Touch.dll",
+    "type": "HackerOs.Commands.Touch.TouchCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.write"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "touch",
+    "aliases": [],
+    "usage": "touch <file...>"
+  },
+  "singleInstancePerUser": false
+}

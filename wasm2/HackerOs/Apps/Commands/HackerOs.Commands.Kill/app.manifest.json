@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.kill",
+  "name": "kill",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Send a signal to a process or terminate it",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Kill.dll",
+    "type": "HackerOs.Commands.Kill.KillCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "process.manage"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "kill",
+    "aliases": [],
+    "usage": "kill [-9] <pid...>"
+  },
+  "singleInstancePerUser": false
+}

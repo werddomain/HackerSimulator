@@ -1,0 +1,96 @@
+.code-editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--hackeros-surface-bg, #0d1117);
+    color: var(--hackeros-text-primary, #c9d1d9);
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--hackeros-header-bg, #161b22);
+    border-bottom: 1px solid var(--hackeros-border, #30363d);
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.toolbar-btn {
+    background-color: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+
+    &:hover { background-color: #30363d; }
+}
+
+.editor-title {
+    font-weight: bold;
+    color: #58a6ff;
+}
+
+.language-select {
+    background-color: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.editor-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background-color: #0d1117;
+}
+
+.line-numbers {
+    width: 44px;
+    background-color: #161b22;
+    border-right: 1px solid #30363d;
+    padding: 8px 0;
+    user-select: none;
+    text-align: right;
+    color: #484f58;
+}
+
+.line-num {
+    padding-right: 8px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.editor-textarea {
+    flex: 1;
+    background-color: transparent;
+    color: #c9d1d9;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 8px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: pre;
+    overflow: auto;
+}
+
+.editor-statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 12px;
+    background-color: #161b22;
+    border-top: 1px solid #30363d;
+    font-size: 11px;
+    color: #8b949e;
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.code-editor",
+  "name": "Code Editor",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Multi-tab code and text editor with syntax mode selection, line numbering, and VFS integration",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.CodeEditor.dll",
+    "type": "HackerOs.Apps.CodeEditor.CodeEditorWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "developer",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "dialogs.file-open",
+    "dialogs.file-save",
+    "clipboard.read",
+    "clipboard.write"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.1,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": false
+}

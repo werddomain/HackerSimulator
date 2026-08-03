@@ -1,0 +1,95 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core.Network
+@using HackerOs.Simulation.Abstractions.Network
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@inherits WindowAppBase
+@inject ISimulatedNetworkService NetworkService
+
+<div class="browser-root">
+    <!-- Address / Navigation Toolbar -->
+    <div class="browser-toolbar">
+        <div class="nav-buttons">
+            <button id="browser-btn-back"    class="nav-btn" disabled="@(!CanGoBack)"    @onclick="GoBack"    title="Back (Alt+Left)">&#8592;</button>
+            <button id="browser-btn-forward" class="nav-btn" disabled="@(!CanGoForward)" @onclick="GoForward" title="Forward (Alt+Right)">&#8594;</button>
+            <button id="browser-btn-refresh" class="nav-btn" @onclick="RefreshAsync"     title="Refresh (F5)">&#8635;</button>
+            <button id="browser-btn-home"    class="nav-btn" @onclick="NavigateHomeAsync" title="Home">&#8962;</button>
+        </div>
+
+        <div class="address-bar">
+            <input id="browser-address-input"
+                   type="text"
+                   class="address-input"
+                   value="@_urlInputValue"
+                   @oninput="OnUrlInputChanged"
+                   @onkeydown="HandleAddressKeyDownAsync"
+                   aria-label="URL address bar"
+                   spellcheck="false" />
+        </div>
+
+        <button id="browser-btn-navigate" class="go-btn" @onclick="NavigateToCurrentInputAsync" title="Navigate">Go</button>
+
+        <button id="browser-btn-bookmarks" class="nav-btn" @onclick="ToggleBookmarksAsync" title="Bookmarks">&#9733;</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="browser-content">
+
+        @if (_isLoading)
+        {
+            <div class="browser-loading" role="status" aria-live="polite">
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                <span class="loading-label">Loading @_currentUrl&hellip;</span>
+            </div>
+        }
+        else if (_networkError is not null)
+        {
+            <div class="browser-error-page" role="alert">
+                <div class="error-icon">&#9888;</div>
+                <h1 class="error-title">Cannot Reach This Site</h1>
+                <p class="error-url">@_currentUrl</p>
+                <p class="error-code">@_networkError</p>
+                <p class="error-hint">Check the address for typos or verify the simulated host is reachable.</p>
+                <button class="action-btn" @onclick="RefreshAsync">Try Again</button>
+            </div>
+        }
+        else if (_currentPage is not null)
+        {
+            <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" />
+        }
+        else
+        {
+            <!-- New-tab placeholder -->
+            <div class="browser-new-tab">
+                <h1 class="new-tab-title">HackerOS Browser</h1>
+                <p class="new-tab-subtitle">Type a URL in the address bar to begin browsing the simulated network.</p>
+                <div class="new-tab-bookmarks">
+                    @foreach (var (label, url) in DefaultBookmarks)
+                    {
+                        <button class="bookmark-chip" id="browser-bookmark-@label.Replace(" ", "-").ToLowerInvariant()"
+                                @onclick="() => NavigateToAsync(url)">
+                            @label
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Status Bar -->
+    <div class="browser-statusbar" aria-live="polite">
+        @if (_isLoading)
+        {
+            <span>Connecting to @_currentUrl&hellip;</span>
+        }
+        else if (_networkError is not null)
+        {
+            <span class="status-error">@_networkError</span>
+        }
+        else if (_currentPage is not null)
+        {
+            <span>&#10003; @_finalUrl</span>
+        }
+    </div>
+</div>

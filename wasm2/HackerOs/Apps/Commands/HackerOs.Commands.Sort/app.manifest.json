@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.sort",
+  "name": "sort",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Sort lines of text files",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Sort.dll",
+    "type": "HackerOs.Commands.Sort.SortCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.08,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "sort",
+    "aliases": [],
+    "usage": "sort [-r] [-n] [-u] [file...]"
+  },
+  "singleInstancePerUser": false
+}

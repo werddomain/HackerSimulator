@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.ping",
+  "name": "ping",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Simulated network ping command — tests reachability of a simulated host",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Ping.dll",
+    "type": "HackerOs.Commands.Ping.PingCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "network",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "network.simulated.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "ping",
+    "aliases": [],
+    "usage": "ping <hostname|ip>"
+  },
+  "singleInstancePerUser": false
+}

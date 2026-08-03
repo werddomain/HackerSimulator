@@ -1,0 +1,133 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using MudBlazor
+@inherits WindowAppBase
+
+<div class="sysmon-container">
+    <header class="sysmon-header">
+        <span class="sysmon-title">HackerOS Task & System Monitor</span>
+        <button class="sysmon-btn" @onclick="RefreshAsync">Refresh</button>
+    </header>
+
+    <div class="sysmon-body">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="sysmon-tabs">
+            <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">CPU Usage</span>
+                        <span class="metric-val">@_cpuPercent%</span>
+                        <MudProgressLinear Color="Color.Success" Value="@_cpuPercent" Class="mt-2" />
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Memory Usage</span>
+                        <span class="metric-val">@_ramPercent%</span>
+                        <MudProgressLinear Color="Color.Info" Value="@_ramPercent" Class="mt-2" />
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Disk Storage</span>
+                        <span class="metric-val">@_diskPercent%</span>
+                        <MudProgressLinear Color="Color.Warning" Value="@_diskPercent" Class="mt-2" />
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Processes" Icon="@Icons.Material.Filled.List">
+                <div class="proc-toolbar">
+                    <button class="sysmon-btn btn-danger" @onclick="KillSelectedProcessAsync" disabled="@(_selectedPid == null)">End Process</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="sysmon-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>App ID</th>
+                                <th>Status</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var proc in _activeProcesses)
+                            {
+                                <tr class="@(proc.Pid == _selectedPid ? "selected" : "")" @onclick="() => SelectProcess(proc.Pid)">
+                                    <td>@proc.Pid</td>
+                                    <td>@proc.Name</td>
+                                    <td>@proc.AppId</td>
+                                    <td><span class="status-badge">Running</span></td>
+                                    <td>@proc.MemoryMb MB</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Hardware & System Info" Icon="@Icons.Material.Filled.Memory">
+                <div class="info-card">
+                    <div class="info-row"><span>Host OS:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
+                    <div class="info-row"><span>Kernel:</span> <strong>5.15.0-hackeros-wasm</strong></div>
+                    <div class="info-row"><span>Memory Total:</span> <strong>16 GB Virtual RAM</strong></div>
+                    <div class="info-row"><span>Storage Allocation:</span> <strong>500 GB IndexedDB VFS</strong></div>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.system-monitor",
+        Name = "System Monitor",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "System resource performance monitoring, process manager, memory usage, and background service diagnostics",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.SystemMonitor.dll", "HackerOs.Apps.SystemMonitor.SystemMonitorWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
+        Capabilities = ["process.list", "process.manage", "services.manage"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = true
+    };
+
+    private double _cpuPercent = 12.5;
+    private double _ramPercent = 28.4;
+    private double _diskPercent = 42.0;
+    private long? _selectedPid;
+
+    private readonly List<ProcessDisplayItem> _activeProcesses = new()
+    {
+        new ProcessDisplayItem(1, "system-kernel", "org.hackeros.kernel", 64),
+        new ProcessDisplayItem(10, "desktop-shell", "org.hackeros.shell", 128),
+        new ProcessDisplayItem(101, "terminal", "org.hackeros.terminal", 45),
+        new ProcessDisplayItem(102, "file-explorer", "org.hackeros.file-explorer", 52),
+        new ProcessDisplayItem(201, "system-monitor", "org.hackeros.system-monitor", 38)
+    };
+
+    private void SelectProcess(long pid)
+    {
+        _selectedPid = pid;
+    }
+
+    private Task KillSelectedProcessAsync()
+    {
+        if (_selectedPid != null)
+        {
+            _activeProcesses.RemoveAll(p => p.Pid == _selectedPid);
+            _selectedPid = null;
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task RefreshAsync()
+    {
+        _cpuPercent = Math.Round(10.0 + Random.Shared.NextDouble() * 15.0, 1);
+        _ramPercent = Math.Round(25.0 + Random.Shared.NextDouble() * 10.0, 1);
+        return Task.CompletedTask;
+    }
+
+    private record ProcessDisplayItem(long Pid, string Name, string AppId, int MemoryMb);
+}

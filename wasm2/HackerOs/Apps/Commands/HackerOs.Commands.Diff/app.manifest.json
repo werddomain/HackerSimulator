@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.diff",
+  "name": "diff",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Compare files line by line",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Diff.dll",
+    "type": "HackerOs.Commands.Diff.DiffCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "diff",
+    "aliases": [],
+    "usage": "diff [-u] <file1> <file2>"
+  },
+  "singleInstancePerUser": false
+}

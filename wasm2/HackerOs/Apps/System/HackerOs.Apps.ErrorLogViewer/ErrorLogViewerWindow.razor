@@ -1,0 +1,101 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using MudBlazor
+@inherits WindowAppBase
+
+<div class="logviewer-container">
+    <header class="logviewer-header">
+        <span class="logviewer-title">HackerOS System Error & Diagnostic Log Viewer</span>
+        <div class="logviewer-actions">
+            <button class="logviewer-btn" @onclick="ClearLogs">Clear Logs</button>
+        </div>
+    </header>
+
+    <div class="logviewer-body">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="logviewer-tabs">
+            <MudTabPanel Text="All Logs" Icon="@Icons.Material.Filled.List">
+                @RenderLogTable(_entries)
+            </MudTabPanel>
+
+            <MudTabPanel Text="Errors" Icon="@Icons.Material.Filled.Error">
+                @RenderLogTable(_entries.Where(e => e.Level == "Error").ToList())
+            </MudTabPanel>
+
+            <MudTabPanel Text="Warnings" Icon="@Icons.Material.Filled.Warning">
+                @RenderLogTable(_entries.Where(e => e.Level == "Warning").ToList())
+            </MudTabPanel>
+
+            <MudTabPanel Text="Info" Icon="@Icons.Material.Filled.Info">
+                @RenderLogTable(_entries.Where(e => e.Level == "Information").ToList())
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.error-log-viewer",
+        Name = "Error Log Viewer",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "System diagnostic error log viewer, stack trace inspector, and event log manager",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.ErrorLogViewer.dll", "HackerOs.Apps.ErrorLogViewer.ErrorLogViewerWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
+        Capabilities = ["settings.system.read", "process.list"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = true
+    };
+
+    private RenderFragment RenderLogTable(List<LogEntryDisplayItem> items) => __builder =>
+    {
+        <div class="table-wrapper">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Level</th>
+                        <th>Source App</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (items.Count == 0)
+                    {
+                        <tr><td colspan="4" class="empty-msg">No diagnostic log entries recorded.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var entry in items)
+                        {
+                            <tr class="@entry.Level.ToLowerInvariant()">
+                                <td>@entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td><span class="badge @entry.Level.ToLowerInvariant()">@entry.Level</span></td>
+                                <td>@entry.SourceApp</td>
+                                <td>@entry.Message</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    };
+
+    private readonly List<LogEntryDisplayItem> _entries = new()
+    {
+        new LogEntryDisplayItem(DateTime.UtcNow.AddMinutes(-12), "Information", "org.hackeros.shell", "Desktop shell session initialized successfully."),
+        new LogEntryDisplayItem(DateTime.UtcNow.AddMinutes(-8), "Warning", "org.hackeros.terminal", "Command 'unknown-cmd' not found in system path."),
+        new LogEntryDisplayItem(DateTime.UtcNow.AddMinutes(-3), "Error", "org.hackeros.file-explorer", "Access denied attempting to mutate protected file /etc/hackeros/file-associations.json.")
+    };
+
+    private void ClearLogs()
+    {
+        _entries.Clear();
+    }
+
+    private record LogEntryDisplayItem(DateTime Timestamp, string Level, string SourceApp, string Message);
+}
