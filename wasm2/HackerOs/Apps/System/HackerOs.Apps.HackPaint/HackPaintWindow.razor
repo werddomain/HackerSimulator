@@ -1,118 +1,111 @@
 @using HackerOs.AppSdk.Blazor
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @inherits WindowAppBase
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
 
 <div class="paint-root">
-    <!-- Toolbar -->
     <div class="paint-toolbar">
         <div class="tool-group">
-            <button id="paint-btn-new"  class="paint-btn" @onclick="NewDoc">New</button>
-            <button id="paint-btn-undo" class="paint-btn" disabled="@(!_state.CanUndo)" @onclick="_state.Undo">Undo</button>
-            <button id="paint-btn-redo" class="paint-btn" disabled="@(!_state.CanRedo)" @onclick="_state.Redo">Redo</button>
+            <button id="paint-btn-new" class="paint-btn" @onclick="NewDocumentAsync">New</button>
+            <button id="paint-btn-undo" class="paint-btn" disabled="@(!_state.CanUndo)" @onclick="UndoAsync">Undo</button>
+            <button id="paint-btn-redo" class="paint-btn" disabled="@(!_state.CanRedo)" @onclick="RedoAsync">Redo</button>
         </div>
-
         <div class="tool-group">
-            <button id="paint-btn-rotate" class="paint-btn" @onclick="_state.Rotate90">Rotate 90&deg;</button>
-            <button id="paint-btn-grid"   class="paint-btn @(_state.ShowGrid ? "active" : "")" @onclick="_state.ToggleGrid">Grid</button>
-            <button id="paint-btn-crop"   class="paint-btn @(_state.CropMode ? "active" : "")" @onclick="_state.ToggleCropMode">Crop</button>
-            <button id="paint-btn-pan"    class="paint-btn @(_state.PanMode ? "active" : "")"  @onclick="_state.TogglePanMode">Pan</button>
+            <button id="paint-btn-rotate" class="paint-btn" @onclick="RotateAsync">Rotate 90&deg;</button>
+            <button id="paint-btn-grid" class="paint-btn @(_state.ShowGrid ? "active" : "")" @onclick="ToggleGridAsync">Grid</button>
+            <button id="paint-btn-crop" class="paint-btn @(_state.CropMode ? "active" : "")" @onclick="ToggleCrop">Crop</button>
+            <button id="paint-btn-pan" class="paint-btn @(_state.PanMode ? "active" : "")" @onclick="TogglePan">Pan</button>
         </div>
-
         <div class="tool-group">
-            <button id="paint-btn-zoomin"  class="paint-btn" @onclick="_state.ZoomIn">Zoom +</button>
-            <button id="paint-btn-zoomout" class="paint-btn" @onclick="_state.ZoomOut">Zoom -</button>
+            <button class="paint-btn" @onclick="ZoomIn">Zoom +</button><button class="paint-btn" @onclick="ZoomOut">Zoom -</button>
             <span class="zoom-label">@((int)(_state.Scale * 100))%</span>
         </div>
-
         <div class="tool-group">
-            <label for="paint-color" class="tool-label">Color:</label>
-            <input id="paint-color" type="color" class="color-picker" @bind="_state.ActiveColor" />
-
-            <label for="paint-size" class="tool-label">Size:</label>
-            <input id="paint-size" type="range" class="size-range" min="1" max="50" @bind="_state.BrushSize" />
+            <label for="paint-color" class="tool-label">Color:</label><input id="paint-color" type="color" class="color-picker" @bind="_state.ActiveColor" />
+            <label for="paint-size" class="tool-label">Size:</label><input id="paint-size" type="range" class="size-range" min="1" max="50" @bind="_state.BrushSize" />
             <span class="size-label">@_state.BrushSize px</span>
         </div>
     </div>
-
-    <!-- Canvas Container -->
     <div class="paint-viewport @(_state.ShowGrid ? "grid-overlay" : "")">
         <div class="canvas-frame">
-            <svg class="paint-svg-canvas"
-                 width="@_state.Width"
-                 height="@_state.Height"
-                 @onmousedown="StartDraw"
-                 @onmousemove="Draw"
-                 @onmouseup="StopDraw"
-                 @onmouseleave="StopDraw">
-                <rect width="100%" height="100%" fill="#ffffff" />
-                @foreach (var stroke in _strokes)
-                {
-                    <polyline points="@stroke.Points"
-                              stroke="@stroke.Color"
-                              stroke-width="@stroke.Size"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              fill="none" />
-                }
-                @if (_currentStroke is not null)
-                {
-                    <polyline points="@_currentStroke.Points"
-                              stroke="@_currentStroke.Color"
-                              stroke-width="@_currentStroke.Size"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              fill="none" />
-                }
-            </svg>
+            <canvas @ref="_canvas" class="paint-canvas" width="@_state.Width" height="@_state.Height" aria-label="Hack Paint drawing canvas"
+                    @onpointerdown="StartDrawAsync" @onpointermove="DrawAsync" @onpointerup="StopDrawAsync" @onpointercancel="StopDrawAsync"></canvas>
         </div>
     </div>
-
-    <!-- Status Bar -->
-    <div class="paint-statusbar">
-        <span>Canvas: @_state.Width &times; @_state.Height px</span>
-        <span>Tool: @(_state.CropMode ? "Crop" : _state.PanMode ? "Pan" : "Brush")</span>
-        <span>Strokes: @_strokes.Count</span>
-    </div>
+    <div class="paint-statusbar"><span>Canvas: @_state.Width &times; @_state.Height px</span><span>Tool: @(_state.CropMode ? "Crop" : _state.PanMode ? "Pan" : "Brush")</span></div>
 </div>
 
 @code {
     private readonly PaintCanvasState _state = new();
-    private bool _isDrawing;
-    private StrokeModel? _currentStroke;
-    private readonly List<StrokeModel> _strokes = [];
+    private ElementReference _canvas;
+    private IJSObjectReference? _module;
+    private bool _drawing;
+    private int _lastX;
+    private int _lastY;
+    private (int X, int Y)? _cropStart;
+    private bool _panning;
 
-    private sealed record StrokeModel(string Color, int Size, string Points);
-
-    private void NewDoc()
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
-        _strokes.Clear();
-        _state.NewDocument(800, 600);
+        if (firstRender) _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/HackerOs.Apps.HackPaint/HackPaintWindow.razor.js");
+        await RenderCanvasAsync();
     }
 
-    private void StartDraw(MouseEventArgs e)
+    private async Task StartDrawAsync(PointerEventArgs args)
     {
-        if (_state.PanMode || _state.CropMode) return;
-        _isDrawing = true;
-        string pt = $"{e.OffsetX:F0},{e.OffsetY:F0}";
-        _currentStroke = new StrokeModel(_state.ActiveColor, _state.BrushSize, pt);
-    }
-
-    private void Draw(MouseEventArgs e)
-    {
-        if (!_isDrawing || _currentStroke is null) return;
-        string newPt = $" {e.OffsetX:F0},{e.OffsetY:F0}";
-        _currentStroke = _currentStroke with { Points = _currentStroke.Points + newPt };
-    }
-
-    private void StopDraw()
-    {
-        if (!_isDrawing) return;
-        _isDrawing = false;
-        if (_currentStroke is not null)
+        if (_state.PanMode)
         {
-            _strokes.Add(_currentStroke);
-            _currentStroke = null;
-            _state.PushHistory(PaintCanvasState.CreateBlankBuffer(_state.Width, _state.Height, 0, 0, 0, 255));
+            _panning = true; _lastX = (int)args.OffsetX; _lastY = (int)args.OffsetY;
+            await _module!.InvokeVoidAsync("capturePointer", _canvas, args.PointerId);
+            return;
         }
+        if (_state.CropMode)
+        {
+            _cropStart = ((int)args.OffsetX, (int)args.OffsetY);
+            await _module!.InvokeVoidAsync("capturePointer", _canvas, args.PointerId);
+            return;
+        }
+        _drawing = true; _lastX = (int)args.OffsetX; _lastY = (int)args.OffsetY;
+        await _module!.InvokeVoidAsync("capturePointer", _canvas, args.PointerId);
+        _state.DrawLine(_lastX, _lastY, _lastX, _lastY); await RenderCanvasAsync();
     }
+    private async Task DrawAsync(PointerEventArgs args)
+    {
+        if (_panning)
+        {
+            var panX = (int)args.OffsetX; var panY = (int)args.OffsetY;
+            _state.PanBy(panX - _lastX, panY - _lastY); _lastX = panX; _lastY = panY;
+            await ApplyViewportAsync();
+            return;
+        }
+        if (!_drawing) return;
+        var x = (int)args.OffsetX; var y = (int)args.OffsetY;
+        _state.DrawLine(_lastX, _lastY, x, y); _lastX = x; _lastY = y;
+        await RenderCanvasAsync();
+    }
+    private async Task StopDrawAsync(PointerEventArgs args)
+    {
+        _drawing = false; _panning = false;
+        await _module!.InvokeVoidAsync("releasePointer", _canvas, args.PointerId);
+        if (_cropStart is not { } start) return;
+        _cropStart = null;
+        var endX = (int)args.OffsetX;
+        var endY = (int)args.OffsetY;
+        _state.Crop(Math.Min(start.X, endX), Math.Min(start.Y, endY), Math.Abs(endX - start.X) + 1, Math.Abs(endY - start.Y) + 1);
+        await RenderCanvasAsync();
+    }
+    private async Task NewDocumentAsync() { _state.NewDocument(800, 600); await RenderCanvasAsync(); }
+    private async Task UndoAsync() { _state.Undo(); await RenderCanvasAsync(); }
+    private async Task RedoAsync() { _state.Redo(); await RenderCanvasAsync(); }
+    private async Task RotateAsync() { _state.Rotate90(); await RenderCanvasAsync(); }
+    private async Task ToggleGridAsync() { _state.ToggleGrid(); await InvokeAsync(StateHasChanged); }
+    private void ToggleCrop() { _state.ToggleCropMode(); }
+    private void TogglePan() { _state.TogglePanMode(); }
+    private async Task ZoomIn() { _state.ZoomIn(); await ApplyViewportAsync(); }
+    private async Task ZoomOut() { _state.ZoomOut(); await ApplyViewportAsync(); }
+    private async ValueTask RenderCanvasAsync() { if (_module is not null) await _module.InvokeVoidAsync("renderRgba", _canvas, _state.Width, _state.Height, _state.GetCurrentBuffer()); }
+    private async ValueTask ApplyViewportAsync() { if (_module is not null) await _module.InvokeVoidAsync("setViewport", _canvas, _state.PanX, _state.PanY, _state.Scale); }
+    public async ValueTask DisposeAsync() { if (_module is not null) await _module.DisposeAsync(); }
 }

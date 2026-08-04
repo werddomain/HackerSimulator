@@ -14,6 +14,14 @@
     <!-- Publish as a self-contained single-file for easy operator deployment. -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
+    <!--
+      The optional ASP.NET Core/EF Core server is intentionally not trimmed.
+      EF Core explicitly requires unreferenced code, while the WASM client and
+      shared contracts continue to use the repository-wide trim analyzer.
+    -->
+    <IsTrimmable>false</IsTrimmable>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <PublishTrimmed>false</PublishTrimmed>
     <!-- Inline the server ADR decision: D-017, D-018 implemented here. -->
   </PropertyGroup>
 
@@ -23,14 +31,17 @@
 
   <ItemGroup>
     <!-- SQLite for portable single-file server deployment; can be swapped for PostgreSQL. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Pin a patched native SQLite build instead of the vulnerable transitive floor. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <!-- Scalar for OpenAPI documentation UI. -->
-    <PackageReference Include="Scalar.AspNetCore" Version="2.5.10" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
     <!-- OpenAPI document generation (required for AddOpenApi/MapOpenApi). -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
   </ItemGroup>
 
 </Project>

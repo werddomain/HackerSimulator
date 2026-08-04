@@ -6,7 +6,7 @@
       <_HackerOsRazorSource Include="$(MSBuildProjectDirectory)/**/*.razor"
                             Exclude="$(MSBuildProjectDirectory)/bin/**;$(MSBuildProjectDirectory)/obj/**" />
       <_HackerOsRazorViolation Include="@(_HackerOsRazorSource)"
-          Condition="'%(_HackerOsRazorSource.FullPath)' != '' and '%(_HackerOsRazorSource.Filename)%(_HackerOsRazorSource.Extension)' != 'WindowHost.razor' and $([System.Text.RegularExpressions.Regex]::IsMatch($([System.IO.File]::ReadAllText('%(_HackerOsRazorSource.FullPath)')), '(?is)&lt;\s*(style|script)\b|\sstyle\s*=|(?&lt;!@)(?-i:\bon[a-z][a-z0-9_-]*)\s*='))" />
+          Condition="'%(_HackerOsRazorSource.FullPath)' != '' and $([System.Text.RegularExpressions.Regex]::IsMatch($([System.IO.File]::ReadAllText('%(_HackerOsRazorSource.FullPath)')), '(?is)&lt;\s*(style|script)\b|\sstyle\s*=|(?&lt;!@)(?-i:\bon[a-z][a-z0-9_-]*)\s*='))" />
     </ItemGroup>
 
     <Error Condition="'@(_HackerOsRazorViolation)' != ''"

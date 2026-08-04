@@ -1,8 +1,8 @@
-# HackerOS Accessibility & WCAG 2.2 AA Compliance Guide
+# HackerOS Accessibility Evidence and WCAG 2.2 AA Checklist
 
 ## Overview
 
-HackerOS is designed to meet **WCAG 2.2 Level AA** accessibility standards across the Desktop Shell, window runtime, file dialogs, MudBlazor platform wrappers, and first-party applications.
+HackerOS targets **WCAG 2.2 Level AA**. This document records the intended contract separately from evidence that has actually been collected. It is not a blanket conformance claim.
 
 ---
 
@@ -43,9 +43,13 @@ HackerOS is designed to meet **WCAG 2.2 Level AA** accessibility standards acros
 
 ## 2. Automated & Manual Accessibility Testing
 
-1. **Automated E2E Check:** Playwright E2E test suite incorporates `@axe-core/playwright` audits to verify 0 accessibility violations during shell and app launches.
-2. **Keyboard Checklist:**
-   - [x] Launch Terminal via Start Menu using `Tab` + `Enter`.
-   - [x] Move window using Keyboard shortcuts (`Alt+F7` + Arrow keys).
-   - [x] Close modal dialog using `Escape`.
-   - [x] Navigate File Explorer tree using `Up`/`Down`/`Right`/`Left` arrow keys.
+1. **Automated representative check:** `IndexedDbBrowserContractTests.Representative_platform_surfaces_have_no_axe_violations` uses `Deque.AxeCore.Playwright` 4.12.0 and currently verifies that the idle desktop, a window, a dialog, the full-screen Terminal renderer, and the local CodeMirror surface contain no serious or critical axe findings. Moderate findings are still reported by axe and are not treated as resolved.
+2. **Required expanded automation:** The launcher, taskbar, complete Terminal window, File Explorer, Text Editor, Settings, complete Code Editor window, and Hack Paint still need dedicated scans. Keyboard order/traps/restoration, Escape behavior, 200% zoom, mobile layout, long text, reduced motion, and RTL also require executable coverage.
+3. **Human evidence checklist:** These items remain unchecked until a person performs the steps and records the browser/OS/assistive-technology versions and artifacts.
+   - [ ] Launch Terminal from the Start menu using only `Tab`, arrow keys, and `Enter`.
+   - [ ] Move and resize a window with the documented keyboard commands and confirm a visible focus indicator throughout.
+   - [ ] Open a modal dialog, verify focus cannot escape it, close it with `Escape`, and confirm focus returns to the invoking control.
+   - [ ] Navigate the File Explorer tree using `Up`, `Down`, `Right`, and `Left` and verify state changes are announced.
+   - [ ] Complete a screen-reader pass over the desktop, launcher, taskbar, window chrome, dialogs, and each first-party app.
+
+Store Playwright traces, screenshots, console output, and network logs under `artifacts/playwright/`. Store human test notes and screen-reader recordings under `artifacts/accessibility/manual/<date>/`. Do not check a human-evidence item from automated output alone.

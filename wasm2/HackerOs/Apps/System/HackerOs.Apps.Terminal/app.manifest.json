@@ -20,10 +20,10 @@
   },
   "capabilities": [
     "apps.launch",
-    "filesystem.read",
-    "filesystem.write",
-    "process.read",
-    "process.write",
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "process.list",
+    "process.manage",
     "notifications.post",
     "settings.read",
     "settings.write"

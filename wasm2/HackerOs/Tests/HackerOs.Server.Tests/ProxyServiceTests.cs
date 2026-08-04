@@ -2,6 +2,7 @@ using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Server.Data;
 using HackerOs.Server.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using Xunit;
 
 namespace HackerOs.Server.Tests;
@@ -19,6 +20,7 @@ public sealed class ProxyServiceTests : IDisposable
     private readonly AuditService _audit;
     private readonly FakeHttpMessageHandler _fakeHandler;
     private readonly IHttpClientFactory _factory;
+    private readonly ProxyConnectionPinAccessor _connectionPin;
 
     private static readonly Guid AccountId = Guid.NewGuid();
     private static readonly Guid DeviceId = Guid.NewGuid();
@@ -30,9 +32,24 @@ public sealed class ProxyServiceTests : IDisposable
             .Options;
         _db = new HackerOsServerDbContext(options);
         _audit = new AuditService(_db);
-        _fakeHandler = new FakeHttpMessageHandler();
+        _db.Devices.Add(new DeviceEntity
+        {
+            DeviceId = DeviceId,
+            AccountId = AccountId,
+            DeviceName = "Proxy test device",
+            DeviceFingerprint = Guid.NewGuid().ToString("N"),
+            RegisteredUtc = DateTimeOffset.UtcNow
+        });
+        _db.SaveChanges();
+        _connectionPin = new ProxyConnectionPinAccessor();
+        _fakeHandler = new FakeHttpMessageHandler(_connectionPin);
         _factory = new FakeHttpClientFactory(_fakeHandler);
-        _proxy = new ProxyService(_factory, _audit, _db);
+        _proxy = new ProxyService(
+            _factory,
+            _audit,
+            _db,
+            new FakeProxyAddressResolver(IPAddress.Parse("93.184.216.34")),
+            _connectionPin);
     }
 
     public void Dispose() => _db.Dispose();
@@ -52,6 +69,7 @@ public sealed class ProxyServiceTests : IDisposable
     [InlineData("http://172.16.0.1/")]          // RFC-1918 Class B
     [InlineData("http://192.168.1.1/")]         // RFC-1918 Class C
     [InlineData("http://169.254.169.254/")]     // AWS metadata endpoint
+    [InlineData("http://[::ffff:127.0.0.1]/")]  // IPv4-mapped IPv6 loopback
     public async Task BlockedAddress_Throws_WithBlockedAddressCode(string url)
     {
         // These addresses are blocked even when the port is allowed.
@@ -95,6 +113,55 @@ public sealed class ProxyServiceTests : IDisposable
         Assert.Empty(policy.OperatorWeakeningWarnings);
     }
 
+    [Fact]
+    public async Task DeviceOwnedByAnotherAccount_IsRejectedBeforeTransport()
+    {
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteHttpRequestAsync(Guid.NewGuid(), DeviceId,
+                BuildRequest("https://example.com/"), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.CapabilityDenied, ex.ErrorCode);
+        Assert.Equal(0, _fakeHandler.SendCount);
+    }
+
+    [Fact]
+    public async Task RevokedDevice_IsRejectedBeforeTransport()
+    {
+        var device = await _db.Devices.SingleAsync();
+        device.IsRevoked = true;
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+                BuildRequest("https://example.com/"), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.CapabilityDenied, ex.ErrorCode);
+        Assert.Equal(0, _fakeHandler.SendCount);
+    }
+
+    [Theory]
+    [InlineData("ftp://example.com/")]
+    [InlineData("file:///etc/passwd")]
+    public async Task UnsupportedScheme_IsRejected(string target)
+    {
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+                BuildRequest(target), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.MalformedRequest, ex.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidatedAddress_IsPinnedDuringTransport_AndClearedAfterward()
+    {
+        var response = await _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+            BuildRequest("https://example.com/"), CancellationToken.None);
+
+        Assert.Equal(200, response.StatusCode);
+        Assert.Equal(IPAddress.Parse("93.184.216.34"), _fakeHandler.ObservedPin);
+        Assert.Null(_connectionPin.Address);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private static ProxyHttpRequest BuildRequest(string url) =>
@@ -114,16 +181,29 @@ public sealed class ProxyServiceTests : IDisposable
 /// Fake HTTP handler that always returns 200 OK with an empty body.
 /// Used to prevent real network calls in proxy tests.
 /// </summary>
-public sealed class FakeHttpMessageHandler : HttpMessageHandler
+public sealed class FakeHttpMessageHandler(IProxyConnectionPinAccessor connectionPin) : HttpMessageHandler
 {
+    public int SendCount { get; private set; }
+    public IPAddress? ObservedPin { get; private set; }
+
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        SendCount++;
+        ObservedPin = connectionPin.Address;
         return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
             Content = new ByteArrayContent([])
         });
     }
+}
+
+/// <summary>Deterministic resolver that prevents unit tests from touching real DNS.</summary>
+public sealed class FakeProxyAddressResolver(params IPAddress[] addresses) : IProxyAddressResolver
+{
+    public Task<IReadOnlyList<IPAddress>> ResolveAsync(string host, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<IPAddress>>(
+            IPAddress.TryParse(host, out var literal) ? [literal] : addresses);
 }
 
 /// <summary>

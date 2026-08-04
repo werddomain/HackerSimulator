@@ -15,7 +15,7 @@ namespace HackerOs.Server.Services;
 ///   - Blocked ports: 0–79, 81–442, 444–65535 unless explicitly allow-listed.
 ///   - Max redirects: 5 (server follows; client sees final URL).
 ///   - Simulated domain suffixes (.hackeros.local, .sim) → always 403.
-///   - DNS rebinding: resolve once pre-request, verify address has not changed post-TTL.
+///   - DNS rebinding: validate every DNS answer and pin the selected address for the socket connect.
 /// </summary>
 public interface IProxyService
 {
@@ -43,9 +43,17 @@ public sealed class ProxyService : IProxyService
         (IPAddress.Parse("127.0.0.0"), 8),
         (IPAddress.Parse("169.254.0.0"), 16),     // link-local / cloud metadata
         (IPAddress.Parse("100.64.0.0"), 10),       // CGNAT
+        (IPAddress.Parse("0.0.0.0"), 8),           // unspecified/current network
+        (IPAddress.Parse("192.0.2.0"), 24),        // documentation
+        (IPAddress.Parse("198.18.0.0"), 15),       // benchmark testing
+        (IPAddress.Parse("198.51.100.0"), 24),     // documentation
+        (IPAddress.Parse("203.0.113.0"), 24),      // documentation
+        (IPAddress.Parse("224.0.0.0"), 4),         // multicast/reserved
+        (IPAddress.Parse("::"), 128),              // IPv6 unspecified
         (IPAddress.Parse("::1"), 128),             // IPv6 loopback
         (IPAddress.Parse("fe80::"), 10),           // IPv6 link-local
         (IPAddress.Parse("fc00::"), 7),            // IPv6 ULA
+        (IPAddress.Parse("ff00::"), 8),             // IPv6 multicast
     ];
 
     private const int MaxRedirectHops = 5;
@@ -55,29 +63,42 @@ public sealed class ProxyService : IProxyService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAuditService _audit;
     private readonly HackerOsServerDbContext _db;
+    private readonly IProxyAddressResolver _addressResolver;
+    private readonly IProxyConnectionPinAccessor _connectionPin;
 
     // Simple in-memory concurrency tracker per device.
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, int>
         _activeCounts = new();
 
     /// <inheritdoc />
-    public ProxyService(IHttpClientFactory httpClientFactory, IAuditService audit, HackerOsServerDbContext db)
+    public ProxyService(
+        IHttpClientFactory httpClientFactory,
+        IAuditService audit,
+        HackerOsServerDbContext db,
+        IProxyAddressResolver addressResolver,
+        IProxyConnectionPinAccessor connectionPin)
     {
         _httpClientFactory = httpClientFactory;
         _audit = audit;
         _db = db;
+        _addressResolver = addressResolver;
+        _connectionPin = connectionPin;
     }
 
     /// <inheritdoc />
     public async Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Guid accountId, Guid deviceId, ProxyHttpRequest request, CancellationToken ct)
     {
+        // Authenticate against durable server state rather than trusting token
+        // identifiers after a device is revoked or moved to another account.
+        await ValidateDeviceOwnershipAsync(accountId, deviceId, ct);
+
         // ── 1. Validate target ────────────────────────────────────────────────
         if (!Uri.TryCreate(request.TargetUrl, UriKind.Absolute, out var targetUri))
             throw new ProxyRequestException(ProxyErrorCode.MalformedRequest, "Target URL is not a valid absolute URI.");
 
+        ValidateRequest(request, targetUri);
         ValidateSimulatedDomain(targetUri.Host);
-        await ValidateAddressAsync(targetUri.Host, targetUri.Port, ct);
 
         // ── 2. Enforce concurrency quota ──────────────────────────────────────
         var current = _activeCounts.AddOrUpdate(deviceId, 1, (_, v) => v + 1);
@@ -136,9 +157,15 @@ public sealed class ProxyService : IProxyService
         {
             while (true)
             {
+                var pinnedAddress = await ResolveAndValidateAddressAsync(
+                    currentUri.Host, currentUri.Port, cts.Token);
                 var httpRequest = BuildHttpRequest(request, currentUri);
                 lastResponse?.Dispose();
-                lastResponse = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                using (_connectionPin.Push(pinnedAddress))
+                {
+                    lastResponse = await client.SendAsync(
+                        httpRequest, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                }
 
                 if (IsRedirect(lastResponse.StatusCode) && redirectHops < MaxRedirectHops)
                 {
@@ -148,7 +175,7 @@ public sealed class ProxyService : IProxyService
 
                     // SSRF: re-validate the redirect target.
                     ValidateSimulatedDomain(currentUri.Host);
-                    await ValidateAddressAsync(currentUri.Host, currentUri.Port, cts.Token);
+                    ValidateRequest(request, currentUri);
 
                     redirectHops++;
                     continue;
@@ -224,7 +251,8 @@ public sealed class ProxyService : IProxyService
         }
     }
 
-    private static async Task ValidateAddressAsync(string host, int port, CancellationToken ct)
+    private async Task<IPAddress> ResolveAndValidateAddressAsync(
+        string host, int port, CancellationToken ct)
     {
         // Validate port.
         if (port > 0 && !AllowedPorts.Contains(port))
@@ -235,7 +263,7 @@ public sealed class ProxyService : IProxyService
         IPAddress[] addresses;
         try
         {
-            addresses = await Dns.GetHostAddressesAsync(host, ct);
+            addresses = [.. await _addressResolver.ResolveAsync(host, ct)];
         }
         catch (Exception ex)
         {
@@ -243,16 +271,59 @@ public sealed class ProxyService : IProxyService
                 $"DNS resolution failed for '{host}': {ex.Message}");
         }
 
+        if (addresses.Length == 0)
+            throw new ProxyRequestException(ProxyErrorCode.MalformedRequest,
+                $"DNS resolution returned no addresses for '{host}'.");
+
         foreach (var address in addresses)
         {
             if (IsBlockedAddress(address))
                 throw new ProxyRequestException(ProxyErrorCode.BlockedAddress,
                     $"Resolved address {address} for '{host}' is in a blocked range.");
         }
+
+        // Sorting avoids resolver-order-dependent behavior while preserving both
+        // IPv4 and IPv6 validation. The chosen address is pinned for ConnectCallback.
+        return addresses.OrderBy(static address => address.ToString(), StringComparer.Ordinal).First();
+    }
+
+    private async Task ValidateDeviceOwnershipAsync(Guid accountId, Guid deviceId, CancellationToken ct)
+    {
+        var authorized = await _db.Devices.AsNoTracking().AnyAsync(
+            device => device.DeviceId == deviceId
+                && device.AccountId == accountId
+                && !device.IsRevoked,
+            ct);
+
+        if (!authorized)
+            throw new ProxyRequestException(ProxyErrorCode.CapabilityDenied,
+                "The authenticated device is not registered to this account or has been revoked.");
+    }
+
+    private static void ValidateRequest(ProxyHttpRequest request, Uri targetUri)
+    {
+        if (request.Protocol is not ProxyProtocol.Http)
+            throw new ProxyRequestException(ProxyErrorCode.MalformedRequest,
+                "This endpoint accepts only the HTTP proxy protocol.");
+
+        if (targetUri.Scheme is not ("http" or "https"))
+            throw new ProxyRequestException(ProxyErrorCode.MalformedRequest,
+                "Only HTTP and HTTPS target URLs are supported.");
+
+        if (string.IsNullOrWhiteSpace(request.AppId) || request.AppId.Length > 256)
+            throw new ProxyRequestException(ProxyErrorCode.CapabilityDenied,
+                "A valid registered application identifier is required.");
+
+        if (request.BodyBytes < 0 || request.BodyBytes > MaxResponseBytes)
+            throw new ProxyRequestException(ProxyErrorCode.PayloadTooLarge,
+                $"Request body metadata exceeds the {MaxResponseBytes / 1024 / 1024} MiB limit.");
     }
 
     private static bool IsBlockedAddress(IPAddress address)
     {
+        if (address.IsIPv4MappedToIPv6)
+            address = address.MapToIPv4();
+
         foreach (var (network, prefixLength) in BlockedRanges)
         {
             if (address.AddressFamily == network.AddressFamily && IsInSubnet(address, network, prefixLength))

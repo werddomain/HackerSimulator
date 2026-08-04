@@ -39,6 +39,8 @@ builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IContentBlobService, ContentBlobService>();
+builder.Services.AddSingleton<IProxyAddressResolver, SystemProxyAddressResolver>();
+builder.Services.AddSingleton<IProxyConnectionPinAccessor, ProxyConnectionPinAccessor>();
 
 // ── HTTP client for proxy outbound requests ───────────────────────────────────
 // The proxy service uses a named client with strict socket timeouts.
@@ -46,14 +48,31 @@ builder.Services.AddHttpClient("proxy", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(35); // slightly > max proxy duration
 })
-.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+.ConfigurePrimaryHttpMessageHandler(services => new SocketsHttpHandler
 {
     // Never follow redirects automatically — the proxy service handles them manually
     // so it can enforce the server-side redirect limit and DNS rebinding check.
     AllowAutoRedirect = false,
     ConnectTimeout = TimeSpan.FromSeconds(10),
     // Disable automatic decompression to pass content hashes correctly.
-    AutomaticDecompression = System.Net.DecompressionMethods.None
+    AutomaticDecompression = System.Net.DecompressionMethods.None,
+    ConnectCallback = async (context, cancellationToken) =>
+    {
+        var pin = services.GetRequiredService<IProxyConnectionPinAccessor>().Address
+            ?? throw new InvalidOperationException("A proxy connection was attempted without a validated address pin.");
+        var socket = new System.Net.Sockets.Socket(pin.AddressFamily, System.Net.Sockets.SocketType.Stream,
+            System.Net.Sockets.ProtocolType.Tcp);
+        try
+        {
+            await socket.ConnectAsync(new System.Net.IPEndPoint(pin, context.DnsEndPoint.Port), cancellationToken);
+            return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 });
 
 // ── Authentication — Bearer token ─────────────────────────────────────────────

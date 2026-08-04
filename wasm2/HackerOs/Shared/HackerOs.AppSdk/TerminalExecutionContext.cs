@@ -15,6 +15,7 @@ public sealed class TerminalExecutionContext
     /// <param name="standardError">Command standard error stream.</param>
     /// <param name="workingDirectory">Current virtual filesystem directory.</param>
     /// <param name="environment">Read-only shell environment for this execution.</param>
+    /// <param name="fullScreen">Optional renderer-independent alternate-screen session.</param>
     public TerminalExecutionContext(
         IAppExecutionContext app,
         IReadOnlyList<string> arguments,
@@ -22,7 +23,8 @@ public sealed class TerminalExecutionContext
         TextWriter standardOutput,
         TextWriter standardError,
         string workingDirectory,
-        IReadOnlyDictionary<string, string> environment)
+        IReadOnlyDictionary<string, string> environment,
+        IFullScreenTerminalSession? fullScreen = null)
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -39,6 +41,7 @@ public sealed class TerminalExecutionContext
         StandardError = standardError;
         WorkingDirectory = workingDirectory;
         Environment = environment;
+        FullScreen = fullScreen;
     }
 
     /// <summary>Gets the scoped application execution context.</summary>
@@ -61,4 +64,9 @@ public sealed class TerminalExecutionContext
 
     /// <summary>Gets the read-only environment variables for this execution.</summary>
     public IReadOnlyDictionary<string, string> Environment { get; }
+
+    /// <summary>
+    /// Gets the optional full-screen terminal session. Ordinary stream commands can ignore it.
+    /// </summary>
+    public IFullScreenTerminalSession? FullScreen { get; }
 }

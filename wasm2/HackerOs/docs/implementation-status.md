@@ -9,6 +9,36 @@ The exhaustive remaining work, maintenance rules, decisions, problems, and phase
 gates are maintained in `docs/integration-task-list.md`. This status file remains
 the concise implemented-state summary.
 
+## 2026-08-03 integration-audit remediation
+
+The audit baseline was reproduced before remediation. Server trimming/package
+diagnostics, a stale Nano test, and two real-browser window tests prevented a
+green Release solution. The first remediation wave is now verified:
+
+- The optional ASP.NET Core/EF Core server has a documented server-only no-trim
+  policy; WASM and shared shipping libraries retain trim analysis.
+- Server dependencies are pinned to non-vulnerable compatible versions, restore
+  is warning-free, and `dotnet list HackerOs.sln package --vulnerable
+  --include-transitive --no-restore` reports no vulnerable packages.
+- `WindowHost` no longer contains a Razor inline-style attribute or validator
+  exception. An invalid fixture proves the build rejects inline Razor assets.
+- Keyed window identity and deterministic cumulative pointer deltas repair all
+  edge/corner resizing and pointer focus/z-order behavior.
+- `dotnet build HackerOs.sln --configuration Release --no-restore` passes with
+  0 warnings and 0 errors. This includes trim-safe manifest validation and the
+  corrected Browser app lifecycle hooks.
+- `dotnet test HackerOs.sln --configuration Release --no-build` passes 615
+  tests with 0 failed and 0 skipped. The three window browser scenarios also
+  pass three consecutive Release repetitions without product-level retries.
+- The trimmed Release ecosystem publish succeeds, the Terminal and Nano
+  manifests validate through the trim-safe CLI, the production Razor scan is
+  clean, and the transitive vulnerability scan reports no vulnerable packages.
+
+Published-PWA, lazy-loading, full accessibility, prototype-app, and expanded
+server security/recovery claims remain reopened until their audit matrices are
+implemented and pass. CI configuration was replaced but remains an external
+evidence gate until GitHub executes it successfully.
+
 ## Current milestone
 
 Phase 1 has started with a headless contracts slice. No Blazor host, browser
@@ -367,9 +397,9 @@ canonical settings document under `/etc/hackeros/policy.config`.
 - [x] Implement Build-Known Lazy Loading (`P3-LAZY-001` through `P3-LAZY-007`). Published `docs/lazy-loading.md`. Phase 3 complete.
 - [x] Implement Migration Rules for Every Legacy Feature (`P4-RULE-001` through `P4-RULE-006`). Published `docs/migration/rules.md`. Phase 4 started.
 - [x] Implement Wave 2 OS Fundamentals (`P4-W2-001` through `P4-W2-008`). Ported Settings app (`org.hackeros.settings`), System Monitor (`org.hackeros.system-monitor`), and Error Log Viewer (`org.hackeros.error-log-viewer`). Published `docs/migration/wave-2.md`.
-- [x] Implement Wave 3 Editing, Clipboard, and Drag/Drop (`P4-W3-001` through `P4-W3-007`). Created ADR 0020 (`docs/adr/0020-editor-framework-and-script-sandbox.md`), ported Code Editor (`org.hackeros.code-editor`), Nano (`org.hackeros.commands.nano`), `IAppClipboardGateway`, and `VirtualFileDragPayload`. Published `docs/migration/wave-3.md`.
+- [ ] Complete Wave 3 Editing, Clipboard, and Drag/Drop (`P4-W3-001` through `P4-W3-007`). ADR 0020, the clipboard gateway, and drag payload exist. Nano is revalidated with its full-screen contract, VFS editor, Blazor Terminal adapter, lifecycle propagation, and browser key/render/cleanup evidence. Code Editor now has local CodeMirror 6, C# tab/document models, VFS-backed recovery, platform whole-window dirty-close protection, 20 focused tests, Chromium interaction/disposal, and axe evidence. A real rendered reload test plus published/offline integration remain open. Hack Paint remains a separate reopened Wave 5 item.
 - [x] Implement Wave 4 Simulated Network, Browser, and Websites (`P4-W4-001` through `P4-W4-007`). Created ADR 0021 (`docs/adr/0021-simulated-network-and-browser-rendering.md`), implemented simulated network domain, DNS, website controllers (`HackerSearch`, `HackMail`, `CryptoBank`, `DarkNet Market`, `HackerZ Forum`), Browser app (`org.hackeros.browser`), terminal commands (`ping`, `nmap`, `curl`), and unit test suite verifying zero real network calls. Published `docs/migration/wave-4.md`.
-- [x] Implement Wave 5 Utility Apps and Commands (`P4-W5-APP-001` through `P4-W5-CMD-009`). Created ADR 0022 (`docs/adr/0022-multi-monitor-requirement-position.md`), ported Calculator (`org.hackeros.calculator`), Hack Paint (`org.hackeros.hack-paint`), Theme Editor integration, and 16 terminal commands (`mkdir`, `touch`, `rm`, `cp`, `mv`, `chmod`, `find`, `grep`, `head`, `tail`, `sort`, `wc`, `diff`, `ps`, `kill`, `launch`, `clear`, `help`/`man`, `alias`). Published `docs/migration/wave-5.md`. Phase 4 complete.
+- [ ] Complete Wave 5 Utility Apps and Commands (`P4-W5-APP-001` through `P4-W5-CMD-009`). Calculator, Theme Editor integration, and terminal commands are implemented. Hack Paint is reopened: its core now has authoritative RGBA history, pixel drawing, crop, and rotation tests, but canvas rendering, image/VFS round trips, browser dialogs, and Playwright pixel evidence remain outstanding.
 - [x] Create Gameplay V3 Analysis (`P4-W6-GATE-001`). Published `doc/wasm/gameplay-v3-analyse.md` defining gameplay domain architecture, contract generator, hardware simulation, exploit engine, player scripting sandbox, and encrypted save engine.
 - [x] Obtain Gameplay Domain Approval (`P4-W6-GATE-002`). Created ADR 0023 (`docs/adr/0023-optional-game-domain-and-proxy-fallback.md`) establishing optional Game Domain build dependency, capability `gameplay.domain.access`, and server proxy fallback routing for network commands (`ping`, `curl`, `cat`).
 - [x] Implement Wave 6 Gameplay Domains (`P4-W6-001` through `P4-W6-006`). Built `HackerOs.Game.Abstractions`, `HackerOs.Game.Core` (`InMemoryGameDomainGateway`, `NullGameDomainGateway`), contracts generator, hardware upgrade tree, economy payout engine, and automated unit test suite `HackerOs.Game.Tests`. Published `docs/migration/wave-6.md`.
@@ -409,7 +439,7 @@ step exists.
 
 ---
 
-## Phase 5 — Optional Server (Wave 8) — ✅ IMPLEMENTED
+## Phase 5 — Optional Server (Wave 8) — ⚠️ AUDIT REMEDIATION IN PROGRESS
 
 **Objective:** Provide an optional ASP.NET Core server for sync, identity,
 and real-network proxy. The PWA continues to function fully offline when the
@@ -429,23 +459,23 @@ server is absent.
 | ID | Title | Status |
 |---|---|---|
 | P5-SYNC-001 | Pull with opaque cursors and paging | ✅ Done |
-| P5-SYNC-002 | Push with idempotency key and content-hash verification | ✅ Done |
-| P5-SYNC-003 | Per-domain conflict rules (ADR 0025 / D-018) | ✅ Done |
-| P5-SYNC-004 | Grant domain security block (ServerWins only) | ✅ Done |
-| P5-SYNC-005 | Chunked resumable file content transfer with SHA-256 deduplication | ✅ Done |
-| P5-SYNC-006 | Sync service tests (33 tests, all passing) | ✅ Done |
+| P5-SYNC-002 | Push with durable idempotency and content-hash verification | ⬜ Reopened: idempotency is not restart-safe |
+| P5-SYNC-003 | Per-domain conflict rules (ADR 0025 / D-018) | ⬜ Reopened for ownership/conflict evidence |
+| P5-SYNC-004 | Grant domain security block (ServerWins only) | ⬜ Reopened for complete authorization evidence |
+| P5-SYNC-005 | Chunked resumable file content transfer with SHA-256 deduplication | ⬜ Reopened for restart/resume evidence |
+| P5-SYNC-006 | Complete sync integration/security matrix | ⬜ Reopened |
 
 ### P5-PROXY — HTTP/TCP/UDP Proxy
 
 | ID | Title | Status |
 |---|---|---|
 | P5-PROXY-001 | HTTP proxy contract and endpoint | ✅ Done |
-| P5-PROXY-002 | SSRF: RFC-1918, loopback, link-local, metadata blocking | ✅ Done |
-| P5-PROXY-003 | Port allow-list (80/443 only by default) | ✅ Done |
-| P5-PROXY-004 | Redirect following with re-validation (max 5 hops) | ✅ Done |
-| P5-PROXY-005 | Response size limit (10 MiB) and concurrency quota (8/device) | ✅ Done |
-| P5-PROXY-006 | Simulated-domain block (.hackeros.local, .sim) | ✅ Done |
-| P5-PROXY-007 | Proxy security tests (17 tests, all passing) | ✅ Done |
+| P5-PROXY-002 | Authenticated device/app policy and SSRF blocking | ⬜ Partial: account/device ownership and revocation enforced; app registration/grants absent |
+| P5-PROXY-003 | Pinned address validation and port allow-list | ⬜ Partial: validated address is pinned; full rebinding/redirect integration matrix outstanding |
+| P5-PROXY-004 | Redirect and resource limits | ⬜ Partial: redirect, payload, duration, concurrency and protocol limits exist; bandwidth policy absent |
+| P5-PROXY-005 | Quotas, audit and explicit operator weakening | ⬜ Partial: concurrency and audit exist; durable quotas/configuration warnings absent |
+| P5-PROXY-006 | Simulated-domain isolation | ⬜ Reopened for end-to-end evidence |
+| P5-PROXY-007 | Complete proxy security suite | ⬜ Partial: focused server suite passes 39 tests; required integration cases remain |
 
 ### New ADRs
 - **ADR 0024** — Server Identity and Device Registration (D-017)
@@ -460,12 +490,16 @@ Server/
     Services/                      — AuthServices, AccountService, SyncService, ProxyService, AuditService, ContentBlobService
     Endpoints/                     — VersionEndpoints, IdentityEndpoints, SyncEndpoints, ProxyEndpoints, AdminEndpoints
 Tests/
-  HackerOs.Server.Tests/           — 33 unit tests for sync, proxy, versioning, and identity
+  HackerOs.Server.Tests/           — focused unit tests for sync, proxy, versioning, and identity
 ```
 
+The 2026-08-03 focused server run passes 39 tests. That total is evidence for the
+current unit suite only and does not close the reopened Phase 5 integration gates.
+See `docs/server-security.md` for the implemented boundary and remaining work.
+
 ### Test results (Phase 5)
-- 33 server tests: all pass.
+- 39 focused server tests pass; the expanded integration matrix remains open.
 - Verification command:
   ```powershell
-  dotnet test Tests/HackerOs.Server.Tests/HackerOs.Server.Tests.csproj -p:TreatWarningsAsErrors=false
-  ```
+  dotnet test Tests/HackerOs.Server.Tests/HackerOs.Server.Tests.csproj --configuration Release --no-restore
+  ```

@@ -1,0 +1,576 @@
+# Plan de plateforme et d’interface Mobile
+
+**Statut :** proposition fonctionnelle et technique  
+**Modes initiaux :** `desktop`, `mobile`  
+**Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
+manifeste ou du catalogue
+
+## 1. Objectif
+
+Ajouter un mode Mobile complet à HackerOS tout en conservant le mode Desktop.
+Une application pourra supporter une ou plusieurs plateformes et utiliser soit un
+point d’entrée partagé, soit un point d’entrée distinct par plateforme, dans un
+manifeste unique et avec un seul `AppId`.
+
+Le mode Mobile doit :
+
+- afficher une seule application plein écran à la fois ;
+- remplacer la taskbar Desktop par une barre de navigation inspirée d’Android
+  comportant Triangle/Back, Cercle/Home et Carré/Recent ;
+- offrir une pile de navigation cohérente ;
+- fournir au Terminal un clavier virtuel HackerOS sans ouvrir le clavier natif du
+  téléphone ;
+- filtrer les applications incompatibles avec la plateforme active ;
+- permettre de passer explicitement entre Desktop et Mobile ;
+- mémoriser le choix par appareil ;
+- utiliser la détection du navigateur tant qu’aucun choix explicite n’a été
+  enregistré.
+
+Le bouton Back dans la barre de menu propre à l’application est une fonctionnalité
+Desktop seulement. Sur Mobile, la navigation Back est fournie par le triangle de
+la barre système.
+
+## 2. Vocabulaire
+
+- **Plateforme :** environnement de présentation logique tel que `desktop` ou
+  `mobile`. Ce n’est pas le système d’exploitation réel du téléphone.
+- **Mode actif :** plateforme actuellement sélectionnée par le shell HackerOS.
+- **Détection automatique :** plateforme suggérée par les capacités rapportées par
+  le navigateur lorsqu’aucune préférence explicite n’existe.
+- **Point d’entrée de plateforme :** assembly et type utilisés pour lancer une
+  application sur une ou plusieurs plateformes.
+- **Back applicatif :** demande typée permettant à l’application active de revenir
+  à son état interne précédent.
+- **Home :** retour à l’accueil Mobile sans terminer automatiquement l’application.
+- **Recent :** surface affichant les applications/fenêtres mobiles récentes.
+
+## 3. Modèle de plateformes extensible
+
+### 3.1 Ne pas utiliser un enum fermé
+
+Introduire un identifiant validé, par exemple `AppPlatformId`, contenant une chaîne
+normalisée :
+
+- minuscules ASCII ;
+- segments séparés par `-` si nécessaire ;
+- longueur bornée ;
+- valeurs initiales connues : `desktop` et `mobile`.
+
+Le catalogue des plateformes connues appartient au système de policy/build, pas à
+un `switch` compilé dans chaque application. Ajouter une troisième plateforme
+doit principalement nécessiter :
+
+1. l’enregistrement de son identifiant et de ses capacités de shell ;
+2. une implémentation de shell ;
+3. des points d’entrée d’applications compatibles ;
+4. des tests et un profil de build.
+
+Les manifestes existants ne doivent pas devenir invalides simplement parce qu’une
+nouvelle plateforme est ajoutée.
+
+### 3.2 Capacités décrites par la plateforme
+
+Une plateforme enregistrée expose un descripteur tel que :
+
+- identifiant ;
+- famille de shell ;
+- support des fenêtres flottantes ;
+- nombre de surfaces principales visibles ;
+- support move/resize/minimize/maximize ;
+- type de navigation système ;
+- présence d’une barre d’application ;
+- stratégie de clavier ;
+- contraintes de viewport et safe areas.
+
+Le code applicatif interroge ces capacités par contrat lorsqu’il doit adapter un
+composant partagé. Il ne doit pas multiplier les tests directs
+`if (platform == mobile)` lorsqu’une capacité exprime mieux le besoin.
+
+## 4. Manifeste unique et points d’entrée multiples
+
+### 4.1 Forme proposée
+
+Faire évoluer le schéma de manifeste vers une collection de points d’entrée. Une
+entrée peut couvrir une ou plusieurs plateformes :
+
+```json
+{
+  "id": "org.hackeros.example",
+  "kind": "window",
+  "platform": {
+    "supported": ["desktop", "mobile"],
+    "entryPoints": [
+      {
+        "platforms": ["desktop", "mobile"],
+        "assembly": "HackerOs.Apps.Example.dll",
+        "type": "HackerOs.Apps.Example.SharedExampleApp"
+      }
+    ]
+  }
+}
+```
+
+Application utilisant deux composants distincts avec le même `AppId` :
+
+```json
+{
+  "id": "org.hackeros.example",
+  "kind": "window",
+  "platform": {
+    "supported": ["desktop", "mobile"],
+    "entryPoints": [
+      {
+        "platforms": ["desktop"],
+        "assembly": "HackerOs.Apps.Example.dll",
+        "type": "HackerOs.Apps.Example.DesktopExampleApp"
+      },
+      {
+        "platforms": ["mobile"],
+        "assembly": "HackerOs.Apps.Example.dll",
+        "type": "HackerOs.Apps.Example.MobileExampleApp"
+      }
+    ]
+  }
+}
+```
+
+Une application Desktop seulement déclare uniquement `desktop`. Elle n’apparaît
+pas lorsque `mobile` est actif. La règle est symétrique pour une application
+Mobile seulement.
+
+### 4.2 Règles de validation
+
+- `supported` contient au moins une plateforme connue par le profil de build.
+- Chaque plateforme supportée est couverte par exactement un point d’entrée.
+- Un point d’entrée peut couvrir plusieurs plateformes.
+- Deux points d’entrée ne peuvent pas couvrir la même plateforme pour le même
+  manifeste, afin d’éviter une résolution ambiguë.
+- Un point d’entrée ne peut référencer une plateforme absente de `supported`.
+- Tous les points d’entrée doivent correspondre au `kind` déclaré et respecter les
+  mêmes règles de base/visibilité/trimming.
+- L’identité, la version, les permissions, les settings, les associations et les
+  données appartiennent au manifeste/AppId commun, pas à chaque point d’entrée.
+- Les ressources peuvent être communes ou ciblées par plateforme avec une
+  déclaration explicite.
+- Les dépendances doivent être résolues pour la plateforme active ; une dépendance
+  obligatoire indisponible rend l’application indisponible sur cette plateforme.
+
+### 4.3 Compatibilité et migration
+
+- Introduire une nouvelle version du schéma de manifeste.
+- Migrer l’ancien champ `entryPoint` vers une entrée couvrant `desktop` par défaut.
+- Fournir une erreur claire si un ancien manifeste est lancé en Mobile sans
+  déclaration compatible.
+- Mettre à jour le JSON Schema, le contexte `System.Text.Json`, les fixtures, le
+  validateur CLI, les templates et les guides SDK.
+- Ne pas maintenir durablement deux sources de vérité indépendantes
+  (`entryPoint` et `entryPoints`). La compatibilité de lecture peut être
+  temporaire, mais la sérialisation canonique utilise le nouveau modèle.
+
+## 5. Résolution du point d’entrée
+
+Ajouter un service indépendant du shell, par exemple
+`IAppPlatformEntryPointResolver` :
+
+```text
+Manifest + plateforme active
+  -> validation de compatibilité
+  -> point d’entrée unique
+  -> découverte du type
+  -> descripteur effectif
+  -> lancement
+```
+
+Le catalogue conserve une identité d’application unique. Il ne doit pas créer deux
+applications cataloguées pour les variantes Desktop et Mobile.
+
+La résolution par plateforme intervient avant :
+
+- l’affichage dans le launcher ;
+- la sélection d’un handler de fichier ;
+- la résolution d’un intent ;
+- le chargement lazy d’une assembly ;
+- la création d’un processus et d’une surface ;
+- le contrôle singleton.
+
+Conséquences attendues :
+
+- une application incompatible n’apparaît pas dans le launcher actif ;
+- elle n’est pas proposée dans Open With ;
+- un intent explicite vers celle-ci retourne un résultat typé
+  `PlatformUnsupported` ;
+- ses services peuvent être traités séparément si leur point d’entrée n’est pas une
+  surface UI et si le manifeste les déclare compatibles ;
+- le même `AppId` conserve settings, grants, associations et données lors d’un
+  changement de plateforme.
+
+## 6. Sélection et persistance du mode OS
+
+### 6.1 Modèle de préférence
+
+Persister une préférence par appareil :
+
+```text
+UiPlatformPreference
+  SelectionSource: Auto | Explicit
+  ExplicitPlatformId: string?     # requis seulement pour Explicit
+  LastResolvedPlatformId: string  # diagnostic, pas source d’autorité
+  Revision
+```
+
+Cette préférence doit être stockée dans un document de settings device-scoped du
+shell système, par exemple sous l’AppId protégé `org.hackeros.shell`. Elle ne doit
+pas suivre l’utilisateur en roaming, car le choix est propre au device/navigateur.
+
+### 6.2 Détection automatique
+
+Créer `IPlatformEnvironmentProbe` derrière une implémentation Browser. La décision
+automatique combine des signaux plutôt que la seule largeur :
+
+- viewport et écran rapportés ;
+- pointer coarse/fine ;
+- présence de hover ;
+- touch points ;
+- mode PWA/standalone ;
+- user-agent client hints lorsque disponibles, utilisés comme indice et non comme
+  autorité unique.
+
+La politique retourne un résultat motivé et journalisable. Exemple :
+
+```text
+mobile si environnement tactile/coarse sans hover et largeur logique sous le seuil
+desktop autrement
+```
+
+Les seuils sont configurables et testés. Un redimensionnement ponctuel d’une
+fenêtre Desktop ne doit pas être confondu avec un changement d’appareil.
+
+### 6.3 Changement explicite
+
+Le mode peut être changé dans Settings et, éventuellement, dans une action rapide
+du shell. Lors d’un changement explicite :
+
+1. valider que la plateforme cible est installée et activée ;
+2. prévenir les applications UI et demander confirmation pour les états sales ;
+3. annuler proprement les opérations de surface en cours ;
+4. arrêter les instances UI avec une raison typée `PlatformChanged` ;
+5. conserver les services compatibles qui ne dépendent pas du shell, ou les
+   redémarrer si leur contrat l’exige ;
+6. persister la préférence device-scoped de façon atomique ;
+7. reconstruire le shell cible ;
+8. résoudre à nouveau le launcher, les associations et les points d’entrée ;
+9. afficher Home sur Mobile ou le bureau sur Desktop.
+
+Ne pas remplacer à chaud le type de composant d’une instance existante. Une
+instance Desktop et une instance Mobile peuvent partager le même `AppId`, mais le
+changement de point d’entrée passe par un arrêt/re-lancement contrôlé afin de
+respecter le cycle de vie et les ressources.
+
+Fournir une action « Utiliser la détection automatique » qui supprime l’override
+explicite et revient au résultat du navigateur.
+
+## 7. Shell Mobile
+
+### 7.1 Fenêtres plein écran
+
+En Mobile :
+
+- une seule surface principale est visible ;
+- ses bounds correspondent à la work area entre safe areas, barre système et
+  clavier virtuel éventuel ;
+- déplacement, redimensionnement, minimisation par chrome, maximisation et
+  restauration sont indisponibles ;
+- les dialogues sont plein écran ou présentés comme feuilles modales adaptées ;
+- les fenêtres secondaires appartenant à l’application sont représentées dans la
+  pile de navigation plutôt que comme fenêtres flottantes lorsque possible ;
+- l’état processus et lifecycle reste géré par le même noyau.
+
+Le moteur exportable ne doit pas simuler une fenêtre 1280x720 réduite. Le mode de
+présentation doit appliquer une vraie politique `SingleFullScreenSurface`.
+
+### 7.2 Barre système inspirée d’Android
+
+Créer `MobileSystemNavigationBar.razor` et son fichier CSS collocaté. La barre est
+fixée en bas, respecte `env(safe-area-inset-bottom)` et expose trois boutons avec
+labels accessibles :
+
+- **Triangle — Back** ;
+- **Cercle — Home** ;
+- **Carré — Recent**.
+
+L’inspiration visuelle correspond à la navigation Android classique, sans copier
+des assets propriétaires. Utiliser des formes CSS/SVG appartenant au projet,
+dimensionnées pour une cible tactile d’au moins 44×44 CSS pixels.
+
+### 7.3 Sémantique Back
+
+Ordre de traitement du triangle Mobile :
+
+1. fermer ou revenir dans le dialogue/modal système supérieur s’il est annulable ;
+2. appeler le handler Back de l’application active si elle expose explicitement ce
+   support et peut revenir ;
+3. revenir à l’entrée précédente de la pile de navigation de l’application ou du
+   shell ;
+4. si aucun état précédent n’existe, fermer/retirer la surface active selon sa
+   politique de fermeture et revenir à Home ;
+5. à Home sans historique, ne rien faire et produire un retour accessible discret.
+
+Le Back ne doit pas contourner une confirmation de données non sauvegardées.
+
+### 7.4 Sémantique Home
+
+- Masquer la surface active et afficher l’accueil Mobile.
+- Ne pas terminer automatiquement le processus.
+- Publier un événement de blur/background dans la session OS.
+- Respecter la politique de suspension simulée et les limites de ressources.
+- Un nouvel appui sur l’icône de l’application restaure son instance singleton ou
+  en crée une selon son manifeste.
+
+### 7.5 Sémantique Recent
+
+- Afficher les instances UI récentes compatibles avec la plateforme active.
+- Présenter un aperçu sûr, le titre et l’icône sans exposer de contenu sensible
+  lorsqu’une application demande la protection des previews.
+- Permettre activation et fermeture avec confirmation éventuelle.
+- Ne pas confondre Recent avec la liste de tous les processus/services.
+- Exclure les applications devenues incompatibles ou désactivées après une mise à
+  jour de policy.
+
+## 8. Contrat Back applicatif
+
+Ajouter un contrat SDK sans dépendance au composant de shell, par exemple :
+
+```csharp
+public interface IAppBackHandler
+{
+    bool CanNavigateBack { get; }
+    ValueTask<AppBackResult> NavigateBackAsync(
+        AppBackRequest request,
+        CancellationToken cancellationToken);
+}
+```
+
+Le résultat est typé : `Handled`, `NotHandled`, `Blocked`, `ConfirmationRequired`
+ou `Faulted`. Les changements de `CanNavigateBack` sont observables afin que le
+shell mette à jour ses contrôles sans polling.
+
+Le manifeste déclare explicitement le support Back pour chaque point d’entrée ou
+pour l’application partagée. La découverte valide que le type implémente le
+contrat annoncé.
+
+### Desktop
+
+- Si l’application déclare Back, afficher un bouton Back dans sa barre de menu ou
+  barre applicative Desktop.
+- Le bouton est désactivé lorsque `CanNavigateBack` est faux.
+- Il n’est pas ajouté au chrome système des applications qui ne le déclarent pas.
+- Le raccourci clavier documenté utilise le même contrat.
+
+### Mobile
+
+- Ne pas dupliquer le bouton Back dans la barre applicative.
+- Le triangle système appelle le même contrat.
+- Une application peut rendre sa propre navigation interne, mais ne doit pas
+  masquer ou intercepter silencieusement la barre système.
+
+## 9. Terminal et clavier virtuel Mobile
+
+### 9.1 Principe
+
+Sur Mobile, le Terminal utilise un clavier virtuel HackerOS intégré à sa surface.
+Le clavier natif du téléphone ne doit pas s’ouvrir pour la zone terminal.
+
+Créer une abstraction de saisie terminal commune afin que clavier physique,
+clavier virtuel et tests produisent les mêmes événements typés vers la session.
+
+### 9.2 Fonctionnalités minimales
+
+Le clavier virtuel doit fournir :
+
+- disposition lettres/chiffres ;
+- disposition symboles utile au shell (`/`, `-`, `_`, `.`, `|`, `>`, `<`, `~`,
+  `*`, quotes et backslash) ;
+- Shift et verrouillage de majuscules ;
+- Ctrl, Alt/Meta selon la politique du terminal ;
+- Escape, Tab, Enter et Backspace ;
+- flèches directionnelles, Home/End et Page Up/Page Down ;
+- raccourcis utiles comme Ctrl+C, Ctrl+D, Ctrl+L et Ctrl+R ;
+- état visuel des modificateurs ;
+- labels accessibles et retour tactile/visuel configurable ;
+- répétition bornée pour Backspace et flèches ;
+- internationalisation des labels sans changer les caractères du shell.
+
+### 9.3 Intégration navigateur
+
+- La surface terminal ne doit pas dépendre d’un `<input>` texte qui déclenche le
+  clavier natif.
+- Utiliser `inputmode="none"`, focus programmatique et interop minimale seulement
+  si les moteurs mobiles l’exigent ; tester réellement Chrome Android et la
+  politique Safari/iOS retenue.
+- Prévoir un fallback explicite si un navigateur force tout de même son clavier,
+  sans créer deux sources de saisie concurrentes.
+- Quand le clavier HackerOS apparaît, recalculer la work area du terminal et son
+  nombre de lignes/colonnes sans recouvrir le prompt.
+- Les changements d’orientation et safe areas déclenchent un événement de resize
+  terminal borné et annulable.
+- Le clavier ne doit jamais recevoir ou conserver le contenu sensible hors de la
+  session active.
+
+### 9.4 Desktop
+
+Le Terminal Desktop conserve clavier physique et comportement actuel. Un clavier
+virtuel facultatif peut être exposé comme outil d’accessibilité, mais il n’est pas
+activé automatiquement.
+
+## 10. Cycle de vie et données lors du changement de plateforme
+
+- Le changement de plateforme ne change jamais `AppId`.
+- Les grants, settings, données privées et associations restent associés à
+  l’application commune.
+- Les settings de présentation propres à une plateforme utilisent des clés ou
+  documents distincts sous le même AppId.
+- La géométrie Desktop n’est pas appliquée en Mobile.
+- L’historique Recent Mobile n’est pas interprété comme un placement de fenêtre
+  Desktop.
+- Les intents et fichiers en attente sont conservés seulement si leur contrat est
+  sérialisable et si le point d’entrée cible les accepte.
+- Les états volatils de composant ne sont pas transférés implicitement entre deux
+  types d’entrée. Une application peut fournir une migration/reconstruction
+  explicite via son modèle persistant.
+- Si une application active ne supporte pas la plateforme cible, demander une
+  confirmation si elle contient un état sale, puis l’arrêter et la retirer des
+  surfaces visibles.
+
+## 11. Accessibilité, orientation et responsive design
+
+- Respecter WCAG 2.2 AA, zoom et tailles de texte utilisateur.
+- Cibles tactiles d’au moins 44×44 CSS pixels.
+- Navigation utilisable avec lecteur d’écran et clavier externe.
+- Annoncer les changements Home/Recent/Back et le changement de plateforme.
+- Supporter portrait et paysage sans recouvrir contenu, dialogues ou terminal.
+- Utiliser les safe-area insets pour appareils avec encoche ou barre système.
+- Ne pas supposer une largeur fixe ni identifier Mobile uniquement par user-agent.
+- Tester les textes longs, traductions, RTL selon la décision produit, contraste,
+  mouvement réduit et grossissement 200/400 %.
+
+## 12. Sécurité et autorité
+
+- Changer le mode de présentation est un setting device-scoped autorisé à
+  l’utilisateur du device ; modifier les plateformes installées/activées reste une
+  opération Administrateur/System.
+- Une application ne peut pas forcer le mode global sans intent/capability dédié et
+  confirmation utilisateur.
+- L’identifiant de plateforme fourni par le navigateur n’accorde aucune capacité.
+- Une variante Mobile n’obtient pas plus de permissions que la variante Desktop du
+  même AppId.
+- Les previews Recent respectent les contenus sensibles.
+- Le clavier terminal ne doit pas injecter de commandes autrement que par le flux
+  d’entrée typé de la session active.
+- Le routage de point d’entrée valide toujours assembly, type, AppId, kind,
+  plateforme, profil de build et compatibilité SDK avant instanciation.
+
+## 13. Tests requis
+
+### Manifestes et catalogue
+
+- point d’entrée unique couvrant Desktop et Mobile ;
+- deux points d’entrée distincts sous le même AppId ;
+- application Desktop seulement cachée en Mobile et inversement ;
+- couverture manquante, doublon ou plateforme inconnue rejetés ;
+- troisième plateforme fictive enregistrée sans modification du parseur ;
+- résolution d’intents, associations et dépendances selon la plateforme ;
+- compatibilité/migration des manifestes historiques.
+
+### Mode OS
+
+- premier démarrage Auto Desktop et Auto Mobile ;
+- choix explicite persisté par device ;
+- retour à Auto ;
+- changement de plateforme avec applications propres ou sales ;
+- services compatibles et incompatibles ;
+- reconstruction après reload ;
+- absence de fuite d’état entre deux devices/utilisateurs.
+
+### Shell Mobile
+
+- surface toujours plein écran en portrait/paysage ;
+- aucun drag/resize/chrome Desktop actif ;
+- Back : dialogue, app, historique, fermeture et Home ;
+- Home conserve le processus selon sa policy ;
+- Recent active et ferme les bonnes instances ;
+- safe areas, lecteur d’écran, clavier externe et focus ;
+- disparition immédiate des applications incompatibles/désactivées.
+
+### Terminal Mobile
+
+- aucun clavier natif à l’ouverture et au focus ;
+- saisie lettres, symboles et modificateurs ;
+- Ctrl+C, Ctrl+D, Tab, Escape, flèches et répétition ;
+- redimensionnement du viewport lorsque le clavier apparaît ;
+- orientation, reconnexion, annulation et fermeture ;
+- commandes ordinaires et applications terminal full-screen ;
+- absence de double événement entre clavier physique et virtuel.
+
+### Navigateur/PWA
+
+- Chrome Android réel ou émulation documentée ;
+- stratégie et preuves Safari/iOS selon la matrice supportée ;
+- installation PWA, reload hors ligne et update ;
+- persistance du mode par device ;
+- changement Desktop/Mobile sans mélange d’assets ou de points d’entrée ;
+- console et réseau sans erreur.
+
+## 14. Plan d’implémentation
+
+- [ ] `MOB-001` Créer `AppPlatformId` et le registre extensible de plateformes.
+- [ ] `MOB-002` Définir les descripteurs de capacités de plateforme et les contrats
+  du shell.
+- [ ] `MOB-003` Faire évoluer le manifeste vers plusieurs points d’entrée couvrant
+  une ou plusieurs plateformes.
+- [ ] `MOB-004` Mettre à jour JSON Schema, sérialisation source-generated,
+  validation, fixtures, CLI et templates.
+- [ ] `MOB-005` Implémenter `IAppPlatformEntryPointResolver` et l’intégrer à la
+  découverte, au catalogue, aux intents et aux associations.
+- [ ] `MOB-006` Ajouter la préférence `Auto | Explicit` device-scoped et sa
+  migration.
+- [ ] `MOB-007` Implémenter `IPlatformEnvironmentProbe` Browser avec raisons de
+  décision testables.
+- [ ] `MOB-008` Implémenter le changement contrôlé de shell et la raison d’arrêt
+  `PlatformChanged`.
+- [ ] `MOB-009` Créer le shell Mobile à surface unique plein écran.
+- [ ] `MOB-010` Créer `MobileSystemNavigationBar.razor/.css` avec Back/Home/Recent.
+- [ ] `MOB-011` Implémenter la pile de navigation et la surface Recent.
+- [ ] `MOB-012` Ajouter `IAppBackHandler`, ses événements et la validation de
+  manifeste.
+- [ ] `MOB-013` Ajouter le bouton Back Desktop uniquement aux applications qui le
+  déclarent.
+- [ ] `MOB-014` Ajouter les variantes Desktop/Mobile de référence sous un AppId
+  commun et une application à point d’entrée partagé.
+- [ ] `MOB-015` Implémenter le clavier virtuel HackerOS du Terminal Mobile.
+- [ ] `MOB-016` Adapter le viewport terminal, les safe areas et l’orientation.
+- [ ] `MOB-017` Ajouter tests unitaires, composants, Playwright, accessibilité et
+  PWA pour la matrice complète.
+- [ ] `MOB-018` Mettre à jour SDK, guide développeur, manifests existants, ADRs,
+  liste d’intégration et documentation utilisateur.
+
+## 15. Définition de complétion
+
+Le support Mobile est terminé lorsque :
+
+- une application commune fonctionne avec un seul point d’entrée sur Desktop et
+  Mobile ;
+- une seconde application utilise deux points d’entrée sous un même AppId ;
+- les applications incompatibles sont absentes de toutes les surfaces de
+  découverte et retournent une erreur typée en lancement explicite ;
+- une troisième plateforme factice peut être enregistrée et résolue sans modifier
+  le format de manifeste ;
+- le choix explicite est persisté par device et Auto suit la détection navigateur ;
+- le passage Desktop/Mobile respecte cycle de vie, états sales et données ;
+- les applications Mobile sont toujours plein écran ;
+- Triangle, Cercle et Carré implémentent exactement Back, Home et Recent ;
+- le Back applicatif est explicite, testable et affiché dans la barre d’application
+  Desktop seulement ;
+- le Terminal Mobile fonctionne avec le clavier HackerOS sans clavier natif ;
+- la matrice unit/component/browser/PWA/accessibilité passe en Release ;
+- tous les manifestes, guides SDK et documents d’architecture sont synchronisés.
+

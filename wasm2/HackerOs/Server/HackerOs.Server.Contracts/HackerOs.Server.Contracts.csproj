@@ -14,11 +14,6 @@
     <AnalysisMode>Recommended</AnalysisMode>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Source-generated JSON serialization for contracts; no reflection at runtime. -->
-    <PackageReference Include="System.Text.Json" Version="10.0.0" />
-  </ItemGroup>
-
   <!-- No reference to HackerOs.App.Abstractions or platform projects intentionally:
        this library must remain independently deployable on the server host. -->
 

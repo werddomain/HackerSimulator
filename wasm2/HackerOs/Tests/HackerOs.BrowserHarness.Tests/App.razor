@@ -26,6 +26,14 @@
     {
         <WindowBrowserScenario />
     }
+    else if (IsTerminalFullScreenScenario)
+    {
+        <TerminalFullScreenBrowserScenario />
+    }
+    else if (IsCodeEditorScenario)
+    {
+        <CodeEditorBrowserScenario />
+    }
     else
     {
         <h1>HackerOS IndexedDB contract harness</h1>
@@ -41,6 +49,8 @@
     private bool _started;
     private bool IsWindowScenario => new Uri(Navigation.Uri).Query.Contains("scenario=window", StringComparison.Ordinal);
     private bool IsDialogScenario => new Uri(Navigation.Uri).Query.Contains("scenario=dialog", StringComparison.Ordinal);
+    private bool IsTerminalFullScreenScenario => new Uri(Navigation.Uri).Query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal);
+    private bool IsCodeEditorScenario => new Uri(Navigation.Uri).Query.Contains("scenario=code-editor", StringComparison.Ordinal);
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -55,7 +65,9 @@
         {
             string query = new Uri(Navigation.Uri).Query;
             if (query.Contains("scenario=window", StringComparison.Ordinal)
-                || query.Contains("scenario=dialog", StringComparison.Ordinal))
+                || query.Contains("scenario=dialog", StringComparison.Ordinal)
+                || query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal)
+                || query.Contains("scenario=code-editor", StringComparison.Ordinal))
             {
                 return;
             }

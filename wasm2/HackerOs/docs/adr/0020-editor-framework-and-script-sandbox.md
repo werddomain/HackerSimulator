@@ -34,6 +34,19 @@ We must evaluate editor framework options (Monaco vs CodeMirror) based on payloa
    - Internal drag-and-drop operations utilize strongly typed records (`VirtualFileDragPayload`, `VirtualFolderDragPayload`).
 
 ## Consequences
-- PWA initial bundle size remains small (<400 KB added).
+- The checked-in minified CodeMirror bundle is 585,094 bytes. It remains absent
+  from the initial PWA download only after the separately reopened build-known
+  lazy-loading design is integrated and verified; no smaller initial-payload
+  claim is made before that evidence exists.
 - Security is preserved: malicious user scripts edited in the OS cannot compromise host state.
 - Automated unit tests verify editor manifests, VFS open/save contracts, and permission bounds.
+
+## Implementation evidence (2026-08-03)
+
+The editor uses exact packages pinned by
+`Apps/System/HackerOs.Apps.CodeEditor/package-lock.json` and a checked-in local
+bundle produced by esbuild. `CodeEditorDocument`, `CodeEditorSession`, and
+`CodeEditorFileService` keep documents, tabs, permissions, VFS persistence, and
+recovery data in C#. The collocated JavaScript boundary owns only CodeMirror DOM
+creation, language reconfiguration, focus, content callbacks, and disposal.
+See `docs/code-editor.md` for passed evidence and remaining host integration.

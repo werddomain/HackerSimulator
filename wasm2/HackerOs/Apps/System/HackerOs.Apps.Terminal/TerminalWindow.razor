@@ -1,18 +1,30 @@
 @using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Core
 @using HackerOs.Platform.Core.Intents
 @using HackerOs.Simulation.Abstractions.Processes
 @using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @inherits WindowAppBase
+@implements IAsyncDisposable
 @inject AppCatalog Catalog
 @inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
 @inject IProcessManager ProcessManager
+@inject IJSRuntime JavaScript
 
-<div class="terminal-container" @onkeydown="HandleKeyDownAsync">
-    <div class="terminal-output" @ref="_outputBufferRef" role="log" aria-live="polite">
+<div class="terminal-container" @ref="_terminalContainerRef" @onkeydown="HandleKeyDownAsync">
+    @if (_isFullScreen)
+    {
+        <TerminalScreen @ref="_screenComponent"
+                        Frame="_fullScreenFrame"
+                        OnKey="HandleFullScreenKeyAsync" />
+    }
+    else
+    {
+        <div class="terminal-output" @ref="_outputBufferRef" role="log" aria-live="polite">
         <div class="welcome-banner">
             <pre class="ascii-art">
   _  _         _         ___  ___ 
@@ -43,17 +55,26 @@
                    @bind="_inputBuffer"
                    @bind:event="oninput" />
         </div>
-    </div>
+        </div>
+    }
 </div>
 
 @code {
     private ElementReference _outputBufferRef;
     private ElementReference _inputRef;
+    private ElementReference _terminalContainerRef;
+    private TerminalScreen? _screenComponent;
     private readonly TerminalSession _session = new("user", "/home/user");
     private readonly List<TerminalOutputLine> _lines = [];
     private string _inputBuffer = string.Empty;
     private CancellationTokenSource? _activeCts;
     private TerminalCommandResolver? _resolver;
+    private TerminalFullScreenSession? _fullScreenSession;
+    private TerminalScreenFrame? _fullScreenFrame;
+    private bool _isFullScreen;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _resizeObserver;
+    private DotNetObjectReference<TerminalWindow>? _dotNetReference;
 
     protected override void OnAppInitialized()
     {
@@ -73,11 +94,40 @@
             {
                 // Headless test DOM fallback
             }
+
+            try
+            {
+                _dotNetReference = DotNetObjectReference.Create(this);
+                _module = await JavaScript.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.Terminal/TerminalWindow.razor.js");
+                _resizeObserver = await _module.InvokeAsync<IJSObjectReference>(
+                    "observeTerminal", _terminalContainerRef, _dotNetReference);
+            }
+            catch (Exception)
+            {
+                // Headless test DOM and unavailable-JS fallback retain the safe 80x24 viewport.
+            }
+        }
+
+        if (_isFullScreen)
+        {
+            try
+            {
+                if (_screenComponent is not null)
+                    await _screenComponent.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Headless test DOM fallback.
+            }
         }
     }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
+        if (_isFullScreen)
+            return;
+
         if (args.Key == "Enter")
         {
             await ExecuteInputAsync();
@@ -110,6 +160,12 @@
         {
             AutoCompleteInput();
         }
+    }
+
+    private Task HandleFullScreenKeyAsync(TerminalKeyEvent keyEvent)
+    {
+        _fullScreenSession?.TryPostKey(keyEvent);
+        return Task.CompletedTask;
     }
 
     private async Task ExecuteInputAsync()
@@ -178,13 +234,17 @@
         if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
         {
             _activeCts = new CancellationTokenSource();
+            _fullScreenSession = new TerminalFullScreenSession(ApplyFullScreenStateAsync);
             try
             {
                 AppIntentDispatchResult result = await IntentDispatcher.DispatchAsync(new AppIntentRequest(
                     RequestId: Guid.NewGuid(),
                     CallerAppId: "org.hackeros.terminal",
                     UserId: principal.UserId.ToString(),
-                    Intent: new ExecuteCommandIntent($"{cmd} {string.Join(" ", args)}".Trim())), principal);
+                    Intent: new ExecuteCommandIntent($"{cmd} {string.Join(" ", args)}".Trim())),
+                    principal,
+                    _fullScreenSession,
+                    _activeCts.Token);
 
                 if (result.Status == AppIntentDispatchStatus.Dispatched)
                 {
@@ -211,6 +271,8 @@
             }
             finally
             {
+                await _fullScreenSession.DisposeAsync();
+                _fullScreenSession = null;
                 _activeCts = null;
             }
         }
@@ -254,6 +316,38 @@
             .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
             .Select(m => m.Terminal!.Name);
     }
+
+    /// <summary>Receives character-cell dimensions from the collocated resize observer.</summary>
+    [JSInvokable]
+    public void UpdateTerminalViewport(int columns, int rows)
+    {
+        if (columns < 1 || rows < 3)
+            return;
+        _fullScreenSession?.UpdateViewport(columns, rows);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _activeCts?.Cancel();
+        if (_fullScreenSession is not null)
+            await _fullScreenSession.DisposeAsync();
+        if (_resizeObserver is not null)
+            await _resizeObserver.DisposeAsync();
+        if (_module is not null)
+            await _module.DisposeAsync();
+        _dotNetReference?.Dispose();
+        _activeCts?.Dispose();
+    }
+
+    private Task ApplyFullScreenStateAsync(TerminalScreenFrame? frame, bool active) =>
+        InvokeAsync(() =>
+        {
+            _fullScreenFrame = frame;
+            _isFullScreen = active;
+            StateHasChanged();
+        });
+
 
     private enum OutputType { Input, PromptOnly, Stdout, Stderr, System, Error }
 

@@ -156,6 +156,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<FileDialogServiceFactory>(provider => new FileDialogServiceFactory(
             provider.GetRequiredService<IFileSystemSelectedResourceHandleRegistry>()));
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
+        services.AddSingleton<WindowCloseGuardRegistry>();
+        services.AddSingleton<WindowCloseCoordinator>();
 
         return services;
     }

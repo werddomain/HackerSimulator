@@ -9,6 +9,8 @@
 @inject WindowRuntime WindowRuntime
 @inject INotificationQueue NotificationQueue
 @inject AppLifecycleOrchestrator Orchestrator
+@inject WindowCloseCoordinator CloseCoordinator
+@inject WindowCloseGuardRegistry CloseGuards
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 
@@ -23,7 +25,10 @@
             <WindowContent Context="window">
                 @if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
                 {
-                    <WindowAppRenderer Window="window" Descriptor="descriptor" AppContext="context" />
+                    <WindowAppRenderer Window="window"
+                                       Descriptor="descriptor"
+                                       AppContext="context"
+                                       CloseGuards="CloseGuards" />
                 }
                 else
                 {
@@ -126,7 +131,13 @@
         }
     }
 
-    private void HandleClose(WindowId id) => WindowRuntime.Apply(new RequestWindowCloseCommand(id));
+    private async Task HandleClose(WindowId id)
+    {
+        await CloseCoordinator.CloseAsync(
+            id,
+            cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken));
+        StateHasChanged();
+    }
     private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
 
     private void HandleShellKeyDown(KeyboardEventArgs args)

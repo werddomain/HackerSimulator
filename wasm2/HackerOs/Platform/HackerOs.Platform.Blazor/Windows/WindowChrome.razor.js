@@ -15,8 +15,14 @@ export function attachWindowGestures(root, dotNetReference) {
 
         const mode = target.dataset.windowGesture;
         const edge = target.dataset.resizeEdge ?? null;
-        let previousX = event.clientX;
-        let previousY = event.clientY;
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const host = root.closest("[data-window-id]");
+        const originX = Number(host?.dataset.windowX ?? 0);
+        const originY = Number(host?.dataset.windowY ?? 0);
+        const originWidth = Number(host?.dataset.windowWidth ?? 0);
+        const originHeight = Number(host?.dataset.windowHeight ?? 0);
+        let invocationQueue = Promise.resolve();
         try {
             target.setPointerCapture(event.pointerId);
         } catch (error) {
@@ -27,11 +33,19 @@ export function attachWindowGestures(root, dotNetReference) {
         event.preventDefault();
 
         const onPointerMove = moveEvent => {
-            const deltaX = moveEvent.clientX - previousX;
-            const deltaY = moveEvent.clientY - previousY;
-            previousX = moveEvent.clientX;
-            previousY = moveEvent.clientY;
-            void dotNetReference.invokeMethodAsync("ReportPointerDeltaAsync", mode, edge, deltaX, deltaY);
+            const deltaX = moveEvent.clientX - startX;
+            const deltaY = moveEvent.clientY - startY;
+            invocationQueue = invocationQueue.then(() =>
+                dotNetReference.invokeMethodAsync(
+                    "ReportPointerDeltaAsync",
+                    mode,
+                    edge,
+                    deltaX,
+                    deltaY,
+                    originX,
+                    originY,
+                    originWidth,
+                    originHeight));
         };
 
         const finish = finishEvent => {

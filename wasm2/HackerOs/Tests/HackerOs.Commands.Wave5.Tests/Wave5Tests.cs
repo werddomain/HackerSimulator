@@ -79,6 +79,56 @@ public sealed class Wave5Tests
         Assert.Equal(50, state.Height);
     }
 
+    [Fact]
+    public void PaintCanvasState_DrawUndoRedo_RestoresActualPixels()
+    {
+        var state = new PaintCanvasState();
+        state.NewDocument(16, 16);
+        var before = state.GetCurrentBuffer();
+
+        state.DrawLine(2, 2, 2, 2, "#ff0000", 1);
+        var painted = state.GetCurrentBuffer();
+        Assert.NotEqual(before, painted);
+        Assert.Equal((byte)255, painted[(2 * 16 + 2) * 4]);
+
+        state.Undo();
+        Assert.Equal(before, state.GetCurrentBuffer());
+        state.Redo();
+        Assert.Equal(painted, state.GetCurrentBuffer());
+    }
+
+    [Fact]
+    public void PaintCanvasState_CropAndRotate_PreservePixelContent()
+    {
+        var state = new PaintCanvasState();
+        state.NewDocument(16, 16);
+        state.DrawLine(3, 4, 3, 4, "#0000ff", 1);
+        state.Crop(2, 3, 4, 5);
+
+        Assert.Equal(4, state.Width);
+        Assert.Equal(5, state.Height);
+        Assert.Equal((byte)255, state.GetCurrentBuffer()[(1 * 4 + 1) * 4 + 2]);
+
+        state.Rotate90();
+        Assert.Equal(5, state.Width);
+        Assert.Equal(4, state.Height);
+        Assert.Contains((byte)255, state.GetCurrentBuffer());
+    }
+
+    [Fact]
+    public void PaintCanvasState_Pan_DoesNotMutatePixelsOrHistory()
+    {
+        var state = new PaintCanvasState();
+        state.NewDocument(16, 16);
+        var pixels = state.GetCurrentBuffer();
+        state.PanBy(12, -4);
+
+        Assert.Equal(12, state.PanX);
+        Assert.Equal(-4, state.PanY);
+        Assert.False(state.CanUndo);
+        Assert.Equal(pixels, state.GetCurrentBuffer());
+    }
+
     // ── Command Unit Tests ────────────────────────────────────────────────
 
     [Fact]

@@ -83,7 +83,13 @@ public sealed class AppIntentDispatcher
     /// <summary>Dispatches one intent request on behalf of an authenticated principal.</summary>
     /// <param name="request">Caller app, acting user, and typed intent.</param>
     /// <param name="principal">Authenticated principal the request runs as. Must match <paramref name="request"/>'s user.</param>
-    public async ValueTask<AppIntentDispatchResult> DispatchAsync(AppIntentRequest request, AuthenticatedPrincipal principal)
+    /// <param name="fullScreen">Optional alternate-screen renderer supplied to an executed Terminal command.</param>
+    /// <param name="cancellationToken">Cancels command execution without affecting unrelated intents.</param>
+    public async ValueTask<AppIntentDispatchResult> DispatchAsync(
+        AppIntentRequest request,
+        AuthenticatedPrincipal principal,
+        IFullScreenTerminalSession? fullScreen = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(principal);
@@ -96,7 +102,8 @@ public sealed class AppIntentDispatcher
         {
             LaunchAppIntent launch => await DispatchLaunchAsync(request, launch, principal),
             OpenFileIntent openFile => await DispatchOpenFileAsync(request, openFile, principal),
-            ExecuteCommandIntent execute => await DispatchExecuteCommandAsync(request, execute, principal),
+            ExecuteCommandIntent execute => await DispatchExecuteCommandAsync(
+                request, execute, principal, fullScreen, cancellationToken),
             RevealFileIntent => new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched),
             ShowAppSettingsIntent showSettings => DispatchShowSettings(showSettings),
             _ => new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.unknown")
@@ -153,7 +160,11 @@ public sealed class AppIntentDispatcher
     }
 
     private async ValueTask<AppIntentDispatchResult> DispatchExecuteCommandAsync(
-        AppIntentRequest request, ExecuteCommandIntent intent, AuthenticatedPrincipal principal)
+        AppIntentRequest request,
+        ExecuteCommandIntent intent,
+        AuthenticatedPrincipal principal,
+        IFullScreenTerminalSession? fullScreen,
+        CancellationToken cancellationToken)
     {
         if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
         {
@@ -185,7 +196,8 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.Disabled, ErrorCode: "intent.execute-command.disabled");
         }
 
-        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(target.Id, principal, arguments));
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(
+            new AppLaunchRequest(target.Id, principal, arguments), fullScreen, cancellationToken);
         return ToDispatchResult(launch);
     }
 

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using HackerOs.App.Abstractions;
-using HackerOs.Platform.Core.Discovery;
 
 namespace HackerOs.Tools.ManifestValidator;
 
@@ -25,7 +24,8 @@ public static class Program
         try
         {
             string json = File.ReadAllText(manifestPath);
-            AppManifest? manifest = JsonSerializer.Deserialize<AppManifest>(json, AppManifestJsonSerializerOptions.Default);
+            AppManifest? manifest = JsonSerializer.Deserialize(
+                json, ManifestValidatorJsonContext.Default.AppManifest);
 
             if (manifest is null)
             {
@@ -33,23 +33,36 @@ public static class Program
                 return 1;
             }
 
-            IReadOnlyList<AppCatalogError> errors = AppManifestValidation.Validate(manifest);
-            if (errors.Count == 0)
+            // Source-generated deserialization assigns null for omitted interface-typed
+            // collection properties. Normalize those optional fields before validation;
+            // explicit nulls are treated the same as an omitted optional collection.
+            manifest = manifest with
+            {
+                Localizations = manifest.Localizations ?? [],
+                Capabilities = manifest.Capabilities ?? [],
+                Intents = manifest.Intents ?? [],
+                Dependencies = manifest.Dependencies ?? [],
+                Assets = manifest.Assets ?? [],
+                FileHandlers = manifest.FileHandlers ?? []
+            };
+
+            ManifestValidationResult validation = AppManifestValidator.Validate(manifest);
+            if (validation.IsValid)
             {
                 Console.WriteLine($"[OK] Manifest '{manifest.Id}' v{manifest.Version} is VALID.");
                 return 0;
             }
 
-            Console.Error.WriteLine($"[INVALID] Manifest '{manifestPath}' has {errors.Count} validation error(s):");
-            foreach (AppCatalogError error in errors)
+            Console.Error.WriteLine($"[INVALID] Manifest '{manifestPath}' has {validation.Errors.Count} validation error(s):");
+            foreach (ManifestValidationError error in validation.Errors)
             {
-                Console.Error.WriteLine($"  - [{error.Code}] {error.Message}");
+                Console.Error.WriteLine($"  - [{error.Code}] {error.Path}: {error.Message}");
             }
             return 1;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR] Exception validating manifest: {ex.Message}");
+            Console.Error.WriteLine($"[ERROR] Exception validating manifest: {ex}");
             return 1;
         }
     }

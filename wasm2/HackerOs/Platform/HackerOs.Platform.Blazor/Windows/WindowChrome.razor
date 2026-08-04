@@ -111,27 +111,39 @@
         await _module.InvokeVoidAsync("attachWindowGestures", _interactionLayer, _selfReference);
     }
 
-    /// <summary>Converts one browser-reported pointer delta into an authoritative C# command.</summary>
+    /// <summary>Converts a cumulative browser-reported pointer delta into an authoritative C# command.</summary>
     [JSInvokable]
-    public async Task ReportPointerDeltaAsync(string mode, string? edge, double deltaX, double deltaY)
+    public async Task ReportPointerDeltaAsync(
+        string mode,
+        string? edge,
+        double deltaX,
+        double deltaY,
+        double originX,
+        double originY,
+        double originWidth,
+        double originHeight)
     {
         if (Window.VisualState != WindowVisualState.Normal)
         {
             return;
         }
 
-        await OnFocus.InvokeAsync(Window.Id);
+        // Capture identity before awaiting focus because focus changes z-order
+        // and therefore rerenders the ordered window collection.
+        WindowId gestureWindowId = Window.Id;
+        WindowBounds origin = new(originX, originY, originWidth, originHeight);
+        await OnFocus.InvokeAsync(gestureWindowId);
         if (string.Equals(mode, "move", StringComparison.Ordinal))
         {
             await OnGesture.InvokeAsync(new MoveWindowCommand(
-                Window.Id,
-                Window.Bounds.X + deltaX,
-                Window.Bounds.Y + deltaY));
+                gestureWindowId,
+                origin.X + deltaX,
+                origin.Y + deltaY));
             return;
         }
 
-        WindowBounds resized = Resize(edge, deltaX, deltaY);
-        await OnGesture.InvokeAsync(new ResizeWindowCommand(Window.Id, resized));
+        WindowBounds resized = Resize(origin, edge, deltaX, deltaY);
+        await OnGesture.InvokeAsync(new ResizeWindowCommand(gestureWindowId, resized));
     }
 
     /// <inheritdoc />
@@ -152,12 +164,16 @@
         _selfReference?.Dispose();
     }
 
-    private WindowBounds Resize(string? edge, double deltaX, double deltaY)
+    private static WindowBounds Resize(
+        WindowBounds origin,
+        string? edge,
+        double deltaX,
+        double deltaY)
     {
-        double x = Window.Bounds.X;
-        double y = Window.Bounds.Y;
-        double width = Window.Bounds.Width;
-        double height = Window.Bounds.Height;
+        double x = origin.X;
+        double y = origin.Y;
+        double width = origin.Width;
+        double height = origin.Height;
         string resizeEdge = edge ?? string.Empty;
 
         if (resizeEdge.Contains("left", StringComparison.Ordinal))

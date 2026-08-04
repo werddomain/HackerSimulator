@@ -18,4 +18,13 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 
+  <Target Name="ValidateCodeEditorAssets" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('package-lock.json')"
+           Text="Code Editor requires the pinned package-lock.json for reproducible CodeMirror assets." />
+    <Error Condition="!Exists('wwwroot/codemirror.bundle.js')"
+           Text="CodeMirror bundle is missing. Run npm ci and npm run build in the Code Editor project." />
+    <Error Condition="!Exists('wwwroot/codemirror.bundle.LICENSE.txt')"
+           Text="CodeMirror third-party license notice is missing." />
+  </Target>
+
 </Project>

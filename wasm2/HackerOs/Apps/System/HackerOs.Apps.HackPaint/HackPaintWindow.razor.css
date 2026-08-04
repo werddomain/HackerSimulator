@@ -113,7 +113,7 @@
     border: 1px solid #444;
 }
 
-.paint-svg-canvas {
+.paint-canvas {
     display: block;
     cursor: crosshair;
 }

@@ -5,7 +5,8 @@
     <section class="window-layer" aria-label="Open windows">
         @foreach (WindowRuntimeState window in Windows)
         {
-            <WindowHost Window="window"
+            <WindowHost @key="window.Id"
+                        Window="window"
                         IsInteractionBlocked="@IsBlocked(window.Id)"
                         OnFocus="OnFocus"
                         OnMinimize="OnMinimize"

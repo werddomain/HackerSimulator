@@ -64,7 +64,7 @@ public static class IdentityEndpoints
             var response = await accounts.LoginAsync(request, ct);
             return Results.Json(response, IdentityContractsJsonContext.Default.LoginResponse);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Results.Unauthorized();
         }

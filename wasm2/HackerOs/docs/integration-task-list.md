@@ -176,6 +176,9 @@ app is implied by these completed tasks.
 - [x] `BASE-009` Define `WindowAppBase` with sealed lifecycle hooks.
 - [x] `BASE-010` Define typed file-open, file-save, and folder-select contracts.
 - [x] `BASE-011` Enforce collocated Razor assets at build time.
+  - **Revalidated: 2026-08-03.** Removed the `WindowHost.razor` exemption and
+    projected C# geometry through a collocated module. The invalid Razor fixture
+    proves an inline style fails the build; the repository Razor scan is clean.
 - [x] `BASE-012` Validate the baseline with 58 passing tests and zero diagnostics.
 
 **References:**
@@ -1063,6 +1066,9 @@ until the browser repository contract is ready.
 - [x] `P2-WIN-013` Add rendered tests and Playwright real-pointer tests for drag,
   all resize edges, focus, z-order, min/max/restore, taskbar restore, keyboard,
   touch emulation, modality, close, and viewport changes.
+  - **Revalidated: 2026-08-03.** Stable keyed window identity and cumulative
+    gesture deltas fixed resize/focus races. All three browser window scenarios
+    passed three consecutive Release runs without retries.
   - **Completed: 2026-08-02** — Chrome proves direct background-window focus
     plus drag, all eight resize edges/corners, touch/pen Pointer Events,
     min/max/restore, keyboard controls, taskbar restore, owner modality, close,
@@ -1450,7 +1456,7 @@ packages, or development-mode claims of offline support.
   reload flow without mixing old/new assets.
 - [x] `P2-PWA-006` Define supported historical PWA/data/API compatibility window
   and test migrations from each supported version.
-- [x] `P2-PWA-007` Test first online visit, installability, server unavailable,
+- [ ] `P2-PWA-007` Test first online visit, installability, server unavailable,
   offline reload, app launch, file/settings persistence, update waiting,
   activation, and corrupt-cache recovery against published Release output.
 
@@ -1504,20 +1510,24 @@ used to defer these failures.
   availability and cancels active instances without deleting retained data.
 - [x] `P2-ACC-014` Shutdown cancels the sample service and restart creates fresh
   volatile state.
-- [x] `P2-ACC-015` Published PWA works after online install with server stopped
+- [ ] `P2-ACC-015` Published PWA works after online install with server stopped
   and browser offline.
-- [x] `P2-ACC-016` PWA update preserves compatible data and never mixes release
+- [ ] `P2-ACC-016` PWA update preserves compatible data and never mixes release
   assets.
-- [x] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
+- [ ] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
   lifecycle/static assets/PWA run in automated real-browser CI.
 - [x] `P2-GATE-001` `dotnet test HackerOs.sln` passes with warnings as errors.
-- [x] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
+  - **Revalidated: 2026-08-03.** Standalone Release build passed with 0 warnings
+    and 0 errors; the subsequent `--no-build` solution run passed 615 tests with
+    no failures or skips. The package vulnerability scan reported no vulnerable
+    packages.
+- [ ] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
   console, or network errors.
-- [x] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
+- [ ] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
   overlap, clipped text, inaccessible controls, or blank third-party canvases.
-- [x] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
+- [ ] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
   17 criteria.
-- [x] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
+- [ ] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
   mass migration.
 
 # Phase 3: SDK Stabilization and Developer Ecosystem
@@ -1570,11 +1580,11 @@ in shared platform; no one-note palette or inline styling.
   typography, spacing, borders, shadows, focus, motion, and z-index.
 - [x] `P3-UX-003` Define localization resource convention, fallback culture,
   runtime language switch, pluralization, manifest localization, and formatting.
-- [x] `P3-UX-004` Meet WCAG 2.2 AA contrast/focus/keyboard/semantic requirements
+- [ ] `P3-UX-004` Meet WCAG 2.2 AA contrast/focus/keyboard/semantic requirements
   for shell, windows, dialogs, and sample apps.
-- [x] `P3-UX-005` Add axe-core or equivalent automated checks plus manual keyboard
+- [ ] `P3-UX-005` Add axe-core or equivalent automated checks plus manual keyboard
   and screen-reader checklist.
-- [x] `P3-UX-006` Test long translations, RTL decision, zoom, mobile sizes,
+- [ ] `P3-UX-006` Test long translations, RTL decision, zoom, mobile sizes,
   reduced motion, and text containment.
 - [x] `P3-UX-007` Define theme package/settings boundary without letting themes
   inject arbitrary inline JavaScript.
@@ -1594,19 +1604,19 @@ factories, published PWA tests, docs in `docs/lazy-loading.md`.
 **Explicit exclusions:** This is not installation from virtual storage and does
 not accept unknown post-publish DLLs.
 
-- [x] `P3-LAZY-001` Classify boot-critical/eager versus optional/lazy assemblies
+- [ ] `P3-LAZY-001` Classify boot-critical/eager versus optional/lazy assemblies
   and app-specific dependencies/assets.
-- [x] `P3-LAZY-002` Generate `BlazorWebAssemblyLazyLoad` declarations from the
+- [ ] `P3-LAZY-002` Generate `BlazorWebAssemblyLazyLoad` declarations from the
   validated build profile.
-- [x] `P3-LAZY-003` Load known assemblies through `LazyAssemblyLoader`, then
+- [ ] `P3-LAZY-003` Load known assemblies through `LazyAssemblyLoader`, then
   register descriptors and routes/components deterministically.
-- [x] `P3-LAZY-004` Handle unavailable/offline lazy assets with recoverable UI
+- [ ] `P3-LAZY-004` Handle unavailable/offline lazy assets with recoverable UI
   while preserving already cached OS functions.
-- [x] `P3-LAZY-005` Include lazy assemblies/static assets in intentional PWA cache
+- [ ] `P3-LAZY-005` Include lazy assemblies/static assets in intentional PWA cache
   policy and verify atomic version updates.
-- [x] `P3-LAZY-006` Measure startup payload, app launch latency, memory, and cache
+- [ ] `P3-LAZY-006` Measure startup payload, app launch latency, memory, and cache
   impact; document eager/lazy thresholds.
-- [x] `P3-LAZY-007` Test Release/trimming/offline/reload for every lazy sample.
+- [ ] `P3-LAZY-007` Test Release/trimming/offline/reload for every lazy sample.
 
 **References:** [Blazor lazy-load assemblies](https://learn.microsoft.com/aspnet/core/blazor/webassembly-lazy-load-assemblies?view=aspnetcore-10.0)
 
@@ -1677,9 +1687,18 @@ capability; no arbitrary user script access to host internals.
 - [x] `P4-W3-001` Decide Monaco versus CodeMirror based on WASM payload,
   accessibility, offline assets, language support, worker loading, and licensing.
   **DECISION: D-014**
-- [x] `P4-W3-002` Port Code Editor behavior from `src/apps/code-editor.ts` in its
+- [ ] `P4-W3-002` Port Code Editor behavior from `src/apps/code-editor.ts` in its
   own project with isolated editor host, files, tabs, syntax modes, and safe
   disposal.
+  - **Progress 2026-08-03 — SUBSTANTIAL PARTIAL:** exact-version CodeMirror 6 is
+    bundled locally behind a collocated module. C# owns independent documents,
+    tab order, syntax modes, 1 MiB limits, dirty close decisions, recovery
+    snapshots, scoped VFS reads, optimistic atomic writes, Save As, and typed
+    denial/conflict outcomes. Twenty focused editor tests plus Chromium edit/mode/
+    disposal and axe evidence pass. The dynamic host registers a whole-window
+    close guard and recovery now persists through the app-scoped VFS. Real
+    rendered reload proof and published/offline full-app VFS evidence remain open;
+    see `docs/code-editor.md`.
 - [x] `P4-W3-003` Define user-script/exploit execution sandbox separately before
   enabling execution; editing does not imply execution permission.
 - [x] `P4-W3-004` Implement typed clipboard gateway for text and approved virtual
@@ -1688,8 +1707,18 @@ capability; no arbitrary user script access to host internals.
   without concrete app references or DOM-owned state.
 - [x] `P4-W3-006` Port Nano terminal editor from
   `src/commands/app/nano-editor.ts` only after terminal full-screen interaction
-  contract is approved.
-- [x] `P4-W3-007` Validate offline editor assets, large files, worker cleanup,
+  contract is approved. **Revalidated 2026-08-03:** added the public
+  renderer-independent alternate-screen/frame/key/cursor/cancellation contracts
+  and a bounded VFS-backed editor core with edit, save, Save As, dirty-exit, and
+  cleanup behavior. The lifecycle/intent path now transports the optional
+  session, and the per-window Blazor adapter renders frames, maps browser keys,
+  reports viewport changes, and restores the regular screen on cancellation or
+  exit. Evidence: `NanoCommandTests` (5), `TerminalFullScreenSessionTests`,
+  `AppIntentDispatcherTests.Execute_command_passes_full_screen_session_through_dispatch_and_lifecycle`,
+  `AppIntentDispatcherTests.Cancelling_full_screen_command_returns_shell_exit_130_and_restores_screen`,
+  and
+  `IndexedDbBrowserContractTests.Terminal_full_screen_adapter_edits_and_restores_the_regular_screen`.
+- [ ] `P4-W3-007` Validate offline editor assets, large files, worker cleanup,
   clipboard denial, drag permissions, reload recovery, and accessibility.
 
 ## 29. Wave 4: Simulated Network, Browser, and Websites
@@ -1733,7 +1762,7 @@ manifest only if independently launchable/installable.
 
 - [x] `P4-W5-APP-001` Port Calculator from `src/apps/calculator.ts` with parser
   safety, keyboard access, and deterministic tests.
-- [x] `P4-W5-APP-002` Port Hack Paint from `src/apps/hack-paint.ts` with virtual
+- [ ] `P4-W5-APP-002` Port Hack Paint from `src/apps/hack-paint.ts` with virtual
   image files, canvas lifecycle, import/export dialogs, undo/redo, and pixel E2E
   validation.
 - [x] `P4-W5-APP-003` Port Theme Editor/Documentation behavior from
@@ -1815,7 +1844,7 @@ and is not an unrestricted relay.
   registration; local-only users remain supported. **DECISION: D-017**
 - [x] `P5-SRV-003` Define server data ownership, retention, encryption at rest,
   export, deletion, audit, secrets, deployment, health, and backup.
-- [x] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
+- [ ] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
   no client-trusted app/user claims.
 
 ### Record synchronization
@@ -1824,32 +1853,32 @@ and is not an unrestricted relay.
   revision, modified time, origin device, hash, and tombstone.
 - [x] `P5-SYNC-002` Decide domain conflict rules for settings, files, grants,
   policy, app catalog/packages, and deletions. **DECISION: D-018**
-- [x] `P5-SYNC-003` Implement bounded/resumable push/pull batches, cursors,
+- [ ] `P5-SYNC-003` Implement bounded/resumable push/pull batches, cursors,
   idempotency, retries, cancellation, and explicit conflicts.
-- [x] `P5-SYNC-004` Ensure client conflict handling cannot weaken grants or OS
+- [ ] `P5-SYNC-004` Ensure client conflict handling cannot weaken grants or OS
   policy and never overwrites local data silently.
-- [x] `P5-SYNC-005` Implement file content transfer with hashes/chunks and resume;
+- [ ] `P5-SYNC-005` Implement file content transfer with hashes/chunks and resume;
   packages sync by immutable hash.
-- [x] `P5-SYNC-006` Test offline edits, reconnect, duplicate delivery, conflict,
+- [ ] `P5-SYNC-006` Test offline edits, reconnect, duplicate delivery, conflict,
   tombstone, schema upgrade, server loss, multiple devices, quota, and deletion.
 
 ### HTTP/TCP/UDP proxy
 
 - [x] `P5-PROXY-001` Define normalized proxy request/response contracts and exact
   client capabilities for HTTP and TCP/UDP operations.
-- [x] `P5-PROXY-002` Enforce authenticated server-side user/device/app policy;
+- [ ] `P5-PROXY-002` Enforce authenticated server-side user/device/app policy;
   never trust client permission decisions.
-- [x] `P5-PROXY-003` Resolve and validate every destination/redirect; block
+- [ ] `P5-PROXY-003` Resolve and validate every destination/redirect; block
   loopback, link-local, private infrastructure, cloud metadata, rebinding, and
   disallowed ports by default.
-- [x] `P5-PROXY-004` Enforce DNS, redirect, payload, duration, bandwidth,
+- [ ] `P5-PROXY-004` Enforce DNS, redirect, payload, duration, bandwidth,
   concurrency, protocol, and response limits.
-- [x] `P5-PROXY-005` Implement quotas and audit logging with explicit operator
+- [ ] `P5-PROXY-005` Implement quotas and audit logging with explicit operator
   configuration to allow all hosts or disable quotas/logging; emit startup
   warnings for weakened policy.
-- [x] `P5-PROXY-006` Keep simulated network APIs distinct so gameplay never
+- [ ] `P5-PROXY-006` Keep simulated network APIs distinct so gameplay never
   reaches this proxy accidentally.
-- [x] `P5-PROXY-007` Add SSRF, DNS rebinding, redirect, malformed protocol,
+- [ ] `P5-PROXY-007` Add SSRF, DNS rebinding, redirect, malformed protocol,
   authorization, quota, cancellation, timeout, and audit security tests.
 
 **References:**
@@ -2050,6 +2079,7 @@ and update all blocked tasks.
 | P-009 | Open | Runtime assemblies share one .NET process and are not malicious-code isolated. | Permissions/packages | Keep trusted/reviewed policy; resolve D-020 before stronger claims. |
 | P-010 | Open | Optional server sync conflicts and proxy threat model are undecided. | Phase 5 | Resolve D-017/D-018 and threat model before implementation. |
 | P-012 | Resolved 2026-08-02 | Settings definitions/services exposed only projected `VirtualPath`, but the IndexedDB schema requires a structured `SettingsDocumentKey` for identity, ownership partitioning, and rebuildable indexes. | P2-IDB-007, persistent settings/filesystem projection | `SettingsDocumentDefinition` now carries its canonical key; all existing definitions and projection/authorization tests were updated without changing path-based caller APIs. |
+| P-013 | Open 2026-08-03 | Integration audit reproduced a non-green Release solution, two failing real-browser window contracts, a Razor validation bypass, and unsupported PWA/lazy/accessibility/app/server completion claims. | BASE-011; Phase 2 gates; P3 lazy/accessibility; Code Editor/Nano/Hack Paint; server sync/proxy | Execute `docs/integration-audit-remediation.md`; recheck each task only after its complete executable evidence passes. |
 
 ## 39.1 Task List Stewardship
 

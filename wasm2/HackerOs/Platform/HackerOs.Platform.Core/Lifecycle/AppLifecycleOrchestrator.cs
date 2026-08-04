@@ -89,7 +89,12 @@ public sealed class AppLifecycleOrchestrator
     /// they represent one command execution rather than a persistent instance.
     /// </summary>
     /// <param name="request">Target app, acting principal, and launch arguments.</param>
-    public async Task<AppLaunchResult> LaunchAsync(AppLaunchRequest request)
+    /// <param name="fullScreen">Optional alternate-screen session available only to Terminal apps.</param>
+    /// <param name="cancellationToken">Cancels this launch or synchronous command execution.</param>
+    public async Task<AppLaunchResult> LaunchAsync(
+        AppLaunchRequest request,
+        IFullScreenTerminalSession? fullScreen = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -127,7 +132,8 @@ public sealed class AppLifecycleOrchestrator
         {
             return descriptor.Manifest.Kind switch
             {
-                AppKind.Terminal => await RunTerminalAsync(descriptor, process, context, request.Arguments),
+                AppKind.Terminal => await RunTerminalAsync(
+                    descriptor, process, context, request.Arguments, fullScreen, cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(process, context)
             };
@@ -325,7 +331,12 @@ public sealed class AppLifecycleOrchestrator
             "explicit host assembly allowlist, never scanned; see P1-GATE-004 for the tracked follow-up " +
             "to add matching trim root descriptors once a host publish step exists.")]
     private async Task<AppLaunchResult> RunTerminalAsync(
-        AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context, IReadOnlyList<string> arguments)
+        AppDescriptor descriptor,
+        ProcessRecord process,
+        IAppExecutionContext context,
+        IReadOnlyList<string> arguments,
+        IFullScreenTerminalSession? fullScreen,
+        CancellationToken cancellationToken)
     {
         _processManager.MarkRunning(process.Pid);
 
@@ -333,10 +344,27 @@ public sealed class AppLifecycleOrchestrator
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
+        using CancellationTokenSource executionCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, cancellationToken);
         TerminalExecutionContext terminalContext = new(
-            context, arguments, stdin, stdout, stderr, "/", new Dictionary<string, string>(StringComparer.Ordinal));
+            context,
+            arguments,
+            stdin,
+            stdout,
+            stderr,
+            "/",
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            fullScreen);
 
-        int exitCode = await app.ExecuteAsync(terminalContext, context.CancellationToken);
+        int exitCode;
+        try
+        {
+            exitCode = await app.ExecuteAsync(terminalContext, executionCancellation.Token);
+        }
+        catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested)
+        {
+            exitCode = 130;
+        }
         ProcessRecord stopped = _processManager.Complete(process.Pid, exitCode);
         return new AppLaunchResult(
             AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString());

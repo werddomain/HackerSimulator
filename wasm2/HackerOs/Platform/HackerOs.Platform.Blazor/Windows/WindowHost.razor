@@ -1,9 +1,11 @@
 @namespace HackerOs.Platform.Blazor.Windows
-@using System.Globalization
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 
 <article class="@HostClass"
-         style="@GeometryStyle"
+         @ref="_hostElement"
          role="dialog"
          aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
          aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
@@ -63,9 +65,8 @@
     public bool IsInteractionBlocked { get; set; }
 
     private string TitleId => $"window-title-{Window.Id.Value:N}";
-
-    private string GeometryStyle => FormattableString.Invariant(
-        $"top:{Window.Bounds.Y}px;left:{Window.Bounds.X}px;width:{Window.Bounds.Width}px;height:{Window.Bounds.Height}px;z-index:{Window.ZOrder}");
+    private ElementReference _hostElement;
+    private IJSObjectReference? _module;
 
     private string HostClass => string.Join(
         ' ',
@@ -75,4 +76,44 @@
 
     private Task FocusAsync(PointerEventArgs _) =>
         IsInteractionBlocked ? Task.CompletedTask : OnFocus.InvokeAsync(Window.Id);
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/HackerOs.Platform.Blazor/Windows/WindowHost.razor.js");
+        }
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync(
+                "projectWindowGeometry",
+                _hostElement,
+                Window.Bounds.X,
+                Window.Bounds.Y,
+                Window.Bounds.Width,
+                Window.Bounds.Height,
+                Window.ZOrder);
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
 }

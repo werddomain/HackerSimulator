@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using Deque.AxeCore.Playwright;
 using Microsoft.Playwright;
 
 namespace HackerOs.E2E.Tests;
@@ -24,13 +25,15 @@ public sealed class IndexedDbBrowserContractTests
             await using IBrowser browser = await playwright.Chromium.LaunchAsync(
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
+            page.Console += (_, message) => Console.WriteLine($"browser console [{message.Type}]: {message.Text}");
+            page.PageError += (_, error) => Console.WriteLine($"browser page error: {error}");
             List<string> failures = [];
             page.Console += (_, message) =>
             {
                 if (message.Type == "error") failures.Add($"console: {message.Text}");
             };
-            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=dialog");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Save existing file" }).ClickAsync();
             ILocator saveDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Save report" });
@@ -88,9 +91,8 @@ public sealed class IndexedDbBrowserContractTests
             {
                 if (message.Type == "error") failures.Add($"console: {message.Text}");
             };
-            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
-
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=dialog");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
             ILocator owner = page.Locator("[data-app-id='org.hackeros.browser.dialog-owner']").Locator("xpath=ancestor::article");
             await owner.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             ILocator trigger = page.GetByRole(AriaRole.Button, new() { Name = "Open filtered files" });
@@ -230,6 +232,8 @@ public sealed class IndexedDbBrowserContractTests
             await using IBrowser browser = await playwright.Chromium.LaunchAsync(
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
+            page.Console += (_, message) => Console.WriteLine($"browser console [{message.Type}]: {message.Text}");
+            page.PageError += (_, error) => Console.WriteLine($"browser page error: {error}");
 
             foreach ((string edge, string x, string y, string width, string height) in cases)
             {
@@ -245,8 +249,8 @@ public sealed class IndexedDbBrowserContractTests
                     }
                     """);
                 await page.WaitForFunctionAsync(
-                    "expected => document.querySelector('[data-app-id=\"org.hackeros.browser.primary\"]')?.closest('article')?.dataset.windowWidth === expected",
-                    width);
+                    "expected => { const data = document.querySelector('[data-app-id=\"org.hackeros.browser.primary\"]')?.closest('article')?.dataset; return data?.windowX === expected.x && data?.windowY === expected.y && data?.windowWidth === expected.width && data?.windowHeight === expected.height; }",
+                    new { x, y, width, height });
 
                 Assert.Equal(x, await primary.GetAttributeAsync("data-window-x"));
                 Assert.Equal(y, await primary.GetAttributeAsync("data-window-y"));
@@ -280,11 +284,12 @@ public sealed class IndexedDbBrowserContractTests
             List<string> failures = [];
             page.Console += (_, message) =>
             {
+                Console.WriteLine($"browser console [{message.Type}]: {message.Text}");
                 if (message.Type == "error") failures.Add($"console: {message.Text}");
             };
-            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
-
+            page.PageError += (_, error) => failures.Add($"page: {error}");
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=window");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
             ILocator scenario = page.Locator(".window-browser-scenario");
             await scenario.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             ILocator primary = page.Locator("[data-app-id='org.hackeros.browser.primary']").Locator("xpath=ancestor::article");
@@ -718,6 +723,139 @@ public sealed class IndexedDbBrowserContractTests
         throw new InvalidOperationException("The browser harness did not become ready.", lastFailure);
     }
 
+    /// <summary>Verifies full-screen key mapping, rendering, focus, editing, and cleanup in Chromium.</summary>
+    [Fact]
+    public async Task Terminal_full_screen_adapter_edits_and_restores_the_regular_screen()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+            List<string> failures = [];
+            page.Console += (_, message) =>
+            {
+                if (message.Type == "error") failures.Add($"console: {message.Text}");
+            };
+            page.PageError += (_, error) => failures.Add($"page: {error}");
+
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=terminal-full-screen");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
+            ILocator screen = page.Locator("[data-terminal-full-screen]");
+            await screen.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            Assert.Equal("textbox", await screen.GetAttributeAsync("role"));
+            Assert.Equal("Interactive terminal editor test", await screen.GetAttributeAsync("aria-label"));
+
+            await screen.PressAsync("a");
+            await screen.PressAsync("b");
+            await screen.PressAsync("Backspace");
+            await screen.PressAsync("c");
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#terminal-full-screen-result')?.textContent === 'ac'");
+            Assert.Contains("ac", await screen.InnerTextAsync(), StringComparison.Ordinal);
+
+            await screen.PressAsync("Control+x");
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#terminal-full-screen-result')?.dataset.status === 'exited'");
+            Assert.Equal(0, await page.Locator("[data-terminal-full-screen]").CountAsync());
+            Assert.Empty(failures);
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
+    /// <summary>Verifies the locally bundled CodeMirror editor, C# state callback, mode switch, and disposal.</summary>
+    [Fact]
+    public async Task Code_editor_local_bundle_edits_switches_mode_and_disposes_cleanly()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+            List<string> failures = [];
+            page.Console += (_, message) =>
+            {
+                if (message.Type == "error") failures.Add($"console: {message.Text}");
+            };
+            page.PageError += (_, error) => failures.Add($"page: {error}");
+
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=code-editor");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
+            ILocator editor = page.Locator(".cm-editor");
+            await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            ILocator content = page.Locator(".cm-content");
+            Assert.Equal("textbox", await content.GetAttributeAsync("role"));
+
+            await content.FillAsync("const answer = 42;");
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#code-editor-result')?.textContent === 'const answer = 42;'");
+            Assert.Equal("edited", await page.Locator("#code-editor-result").GetAttributeAsync("data-status"));
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Use JSON mode" }).ClickAsync();
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#code-editor-result')?.dataset.mode === 'Json'");
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Dispose editor" }).ClickAsync();
+            await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            Assert.Equal("disposed", await page.Locator("#code-editor-result").GetAttributeAsync("data-status"));
+            Assert.Empty(failures);
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
+    /// <summary>Runs axe-core against the representative shell, window, and dialog surfaces.</summary>
+    [Fact]
+    public async Task Representative_platform_surfaces_have_no_axe_violations()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+
+            foreach (string scenario in new[] { "idle", "window", "dialog", "terminal-full-screen", "code-editor" })
+            {
+                await NavigateWhenReadyAsync(page, $"{address}/?scenario={scenario}");
+                var result = await page.RunAxe();
+                var blocking = result.Violations?
+                    .Where(item => string.Equals(item.Impact, "serious", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(item.Impact, "critical", StringComparison.OrdinalIgnoreCase))
+                    .ToArray() ?? [];
+                Assert.True(
+                    blocking.Length == 0,
+                    $"serious/critical axe violations for '{scenario}': {string.Join(", ", blocking.Select(item => item.Id))}");
+            }
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
     private static Process StartHarness(string solutionDirectory, string address)
     {
         ProcessStartInfo startInfo = new("dotnet")
@@ -730,6 +868,8 @@ public sealed class IndexedDbBrowserContractTests
         };
         startInfo.ArgumentList.Add("run");
         startInfo.ArgumentList.Add("--no-build");
+        startInfo.ArgumentList.Add("--configuration");
+        startInfo.ArgumentList.Add("Release");
         startInfo.ArgumentList.Add("--project");
         startInfo.ArgumentList.Add("Tests/HackerOs.BrowserHarness.Tests/HackerOs.BrowserHarness.Tests.csproj");
         startInfo.ArgumentList.Add("--urls");

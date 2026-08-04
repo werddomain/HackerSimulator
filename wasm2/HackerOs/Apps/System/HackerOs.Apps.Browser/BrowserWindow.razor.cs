@@ -51,16 +51,14 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
-    protected override void OnInitialized()
+    protected override void OnAppInitialized()
     {
-        base.OnInitialized();
         // Navigate home asynchronously after first render
     }
 
     /// <inheritdoc/>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
             await NavigateToAsync(HomeUrl);
     }

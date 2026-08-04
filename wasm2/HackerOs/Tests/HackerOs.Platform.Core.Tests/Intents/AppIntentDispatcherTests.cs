@@ -84,6 +84,51 @@ public sealed class AppIntentDispatcherTests
     }
 
     [Fact]
+    public async Task Execute_command_passes_full_screen_session_through_dispatch_and_lifecycle()
+    {
+        Fixture fixture = new(FullScreenManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        TestFullScreenTerminal screen = new(new TerminalKeyEvent(TerminalKey.Character, "k"));
+        AppIntentRequest request = new(
+            Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(),
+            new ExecuteCommandIntent("screen"));
+
+        AppIntentDispatchResult result = await fixture.Dispatcher.DispatchAsync(
+            request, principal, screen, CancellationToken.None);
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"k{Environment.NewLine}", result.StandardOutput);
+        Assert.True(screen.Entered);
+        Assert.True(screen.Left);
+        Assert.NotNull(screen.Frame);
+    }
+
+    [Fact]
+    public async Task Cancelling_full_screen_command_returns_shell_exit_130_and_restores_screen()
+    {
+        Fixture fixture = new(FullScreenManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        TestFullScreenTerminal screen = new();
+        using CancellationTokenSource cancellation = new();
+        AppIntentRequest request = new(
+            Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(),
+            new ExecuteCommandIntent("screen wait"));
+
+        ValueTask<AppIntentDispatchResult> pending = fixture.Dispatcher.DispatchAsync(
+            request, principal, screen, cancellation.Token);
+        await screen.EnteredSignal.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cancellation.Cancel();
+        AppIntentDispatchResult result = await pending;
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal(130, result.ExitCode);
+        Assert.True(screen.Left);
+    }
+
+    [Fact]
     public async Task An_unknown_command_name_returns_not_found()
     {
         Fixture fixture = new(EchoManifest());
@@ -177,6 +222,22 @@ public sealed class AppIntentDispatcherTests
         FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"])]
     };
 
+    private static AppManifest FullScreenManifest() => new()
+    {
+        Id = "org.hackeros.screen",
+        Name = "Screen",
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "Exercises full-screen command dispatch.",
+        Kind = AppKind.Terminal,
+        EntryPoint = new AppEntryPointManifest(
+            "HackerOs.Platform.Core.Tests", typeof(FullScreenTerminalApp).FullName!),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
+        Resources = AppResourceProfileManifest.None,
+        Terminal = new TerminalCommandManifest("screen", [], "screen [wait]")
+    };
+
     private static AppManifest TextEditorManifest() => new()
     {
         Id = "org.hackeros.texteditor",
@@ -198,6 +259,74 @@ public sealed class AppIntentDispatcherTests
         {
             await context.StandardOutput.WriteLineAsync(string.Join(' ', context.Arguments).AsMemory(), cancellationToken);
             return 0;
+        }
+    }
+
+    private sealed class FullScreenTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(
+            TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            IFullScreenTerminalSession screen = context.FullScreen
+                ?? throw new InvalidOperationException("A full-screen session is required.");
+            await screen.EnterAlternateScreenAsync(CancellationToken.None);
+            try
+            {
+                await screen.RenderAsync(
+                    new TerminalScreenFrame(["screen"], new TerminalCursor(0, 0)),
+                    cancellationToken);
+                if (context.Arguments.Contains("wait", StringComparer.Ordinal))
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                    return 0;
+                }
+
+                TerminalKeyEvent key = await screen.ReadKeyAsync(cancellationToken);
+                await context.StandardOutput.WriteLineAsync(key.Text);
+                return 0;
+            }
+            finally
+            {
+                await screen.LeaveAlternateScreenAsync(CancellationToken.None);
+            }
+        }
+    }
+
+    private sealed class TestFullScreenTerminal(params TerminalKeyEvent[] keys) : IFullScreenTerminalSession
+    {
+        private readonly Queue<TerminalKeyEvent> _keys = new(keys);
+        public TerminalViewport Viewport { get; } = TerminalViewport.Create(80, 24);
+        public bool Entered { get; private set; }
+        public bool Left { get; private set; }
+        public TerminalScreenFrame? Frame { get; private set; }
+        public TaskCompletionSource EnteredSignal { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask EnterAlternateScreenAsync(CancellationToken cancellationToken = default)
+        {
+            Entered = true;
+            EnteredSignal.TrySetResult();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask RenderAsync(
+            TerminalScreenFrame frame, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Frame = frame;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<TerminalKeyEvent> ReadKeyAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(_keys.Dequeue());
+        }
+
+        public ValueTask LeaveAlternateScreenAsync(CancellationToken cancellationToken = default)
+        {
+            Left = true;
+            return ValueTask.CompletedTask;
         }
     }
 

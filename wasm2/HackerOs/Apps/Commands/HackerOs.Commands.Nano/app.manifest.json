@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "publisherId": "pub.hackeros",
   "description": "Terminal interactive text editor command",
-  "kind": "terminal-command",
+  "kind": "terminal",
   "entryPoint": {
     "assembly": "HackerOs.Commands.Nano.dll",
     "type": "HackerOs.Commands.Nano.NanoCommand"
@@ -31,6 +31,11 @@
     "burstStorageIoWeight": 0.0,
     "baselineNetworkIoWeight": 0.0,
     "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "nano",
+    "aliases": [],
+    "usage": "nano [file]"
   },
   "singleInstancePerUser": false
 }
