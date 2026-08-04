@@ -5,7 +5,7 @@
 @using HackerOs.Simulation.Abstractions.Notifications
 @using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.Simulation.Abstractions.Time
-@using Microsoft.AspNetCore.Components.Web
+@implements IDisposable
 @inject WindowRuntime WindowRuntime
 @inject WindowLaunchCoordinator LaunchCoordinator
 @inject INotificationQueue NotificationQueue
@@ -162,6 +162,16 @@
     }
     private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
 
+    protected override void OnInitialized()
+    {
+        WindowRuntime.StateChanged += OnWindowRuntimeStateChanged;
+    }
+
+    private void OnWindowRuntimeStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private void HandleShellKeyDown(KeyboardEventArgs args)
     {
         if (args.Key == "Escape")
@@ -175,5 +185,10 @@
                 _isNotificationsDrawerOpen = false;
             }
         }
+    }
+
+    public void Dispose()
+    {
+        WindowRuntime.StateChanged -= OnWindowRuntimeStateChanged;
     }
 }

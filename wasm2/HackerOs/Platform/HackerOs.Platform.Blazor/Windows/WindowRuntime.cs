@@ -8,6 +8,9 @@ public sealed class WindowRuntime
     private WindowBounds _workArea;
     private int _nextZOrder;
 
+    /// <summary>Event raised whenever window state or active windows change.</summary>
+    public event Action? StateChanged;
+
     /// <summary>Creates a runtime for the supplied desktop work area.</summary>
     public WindowRuntime(WindowBounds workArea) => _workArea = workArea;
 
@@ -22,22 +25,32 @@ public sealed class WindowRuntime
         && window.VisualState != WindowVisualState.Minimized);
 
     /// <summary>Applies one command atomically and returns ordered facts describing the change.</summary>
-    public IReadOnlyList<WindowEvent> Apply(WindowCommand command) => command switch
+    public IReadOnlyList<WindowEvent> Apply(WindowCommand command)
     {
-        CreateWindowCommand create => Create(create.InitialState),
-        FocusWindowCommand focus => Focus(focus.WindowId),
-        MoveWindowCommand move => Move(move),
-        ResizeWindowCommand resize => Resize(resize),
-        MinimizeWindowCommand minimize => ChangeVisualState(minimize.WindowId, WindowVisualState.Minimized),
-        MaximizeWindowCommand maximize => ChangeVisualState(maximize.WindowId, WindowVisualState.Maximized),
-        RestoreWindowCommand restore => ChangeVisualState(restore.WindowId, WindowVisualState.Normal),
-        RequestWindowCloseCommand close => RequestClose(close.WindowId),
-        CancelWindowCloseCommand close => CancelClose(close.WindowId),
-        ForceWindowCloseCommand close => ForceClose(close.WindowId),
-        ChangeViewportCommand viewport => ChangeViewport(viewport.WorkArea),
-        null => throw new ArgumentNullException(nameof(command)),
-        _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown window command."),
-    };
+        IReadOnlyList<WindowEvent> events = command switch
+        {
+            CreateWindowCommand create => Create(create.InitialState),
+            FocusWindowCommand focus => Focus(focus.WindowId),
+            MoveWindowCommand move => Move(move),
+            ResizeWindowCommand resize => Resize(resize),
+            MinimizeWindowCommand minimize => ChangeVisualState(minimize.WindowId, WindowVisualState.Minimized),
+            MaximizeWindowCommand maximize => ChangeVisualState(maximize.WindowId, WindowVisualState.Maximized),
+            RestoreWindowCommand restore => ChangeVisualState(restore.WindowId, WindowVisualState.Normal),
+            RequestWindowCloseCommand close => RequestClose(close.WindowId),
+            CancelWindowCloseCommand close => CancelClose(close.WindowId),
+            ForceWindowCloseCommand close => ForceClose(close.WindowId),
+            ChangeViewportCommand viewport => ChangeViewport(viewport.WorkArea),
+            null => throw new ArgumentNullException(nameof(command)),
+            _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown window command."),
+        };
+
+        if (events.Count > 0)
+        {
+            StateChanged?.Invoke();
+        }
+
+        return events;
+    }
 
     private IReadOnlyList<WindowEvent> Create(WindowRuntimeState initialState)
     {

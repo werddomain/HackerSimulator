@@ -82,8 +82,14 @@
 
     protected override void OnInitialized()
     {
+        WindowRuntime.StateChanged += OnWindowRuntimeStateChanged;
         UpdateTimeDisplay();
         ScheduleNextClockUpdate();
+    }
+
+    private void OnWindowRuntimeStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private void ScheduleNextClockUpdate()
@@ -148,6 +154,7 @@
 
     public void Dispose()
     {
+        WindowRuntime.StateChanged -= OnWindowRuntimeStateChanged;
         _clockSubscription?.Dispose();
         _clockSubscription = null;
     }
