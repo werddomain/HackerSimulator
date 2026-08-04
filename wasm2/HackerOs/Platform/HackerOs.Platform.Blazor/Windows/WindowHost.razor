@@ -10,14 +10,15 @@
          aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
          aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
          aria-labelledby="@TitleId"
-         inert="@IsInteractionBlocked"
+         inert="@(IsInteractionBlocked ? true : null)"
          data-window-id="@Window.Id"
          data-window-x="@Window.Bounds.X"
          data-window-y="@Window.Bounds.Y"
          data-window-width="@Window.Bounds.Width"
          data-window-height="@Window.Bounds.Height"
          data-window-z="@Window.ZOrder"
-         hidden="@(Window.VisualState == WindowVisualState.Minimized)"
+         style="position: absolute; top: @(Window.Bounds.Y)px; left: @(Window.Bounds.X)px; width: @(Window.Bounds.Width)px; height: @(Window.Bounds.Height)px; z-index: @Window.ZOrder; --window-x: @(Window.Bounds.X)px; --window-y: @(Window.Bounds.Y)px; --window-width: @(Window.Bounds.Width)px; --window-height: @(Window.Bounds.Height)px; --window-z: @Window.ZOrder;"
+         hidden="@(Window.VisualState == WindowVisualState.Minimized ? true : null)"
          @onpointerdown="FocusAsync">
     <WindowChrome Window="Window"
                   TitleId="TitleId"
@@ -89,14 +90,21 @@
 
         if (_module is not null)
         {
-            await _module.InvokeVoidAsync(
-                "projectWindowGeometry",
-                _hostElement,
-                Window.Bounds.X,
-                Window.Bounds.Y,
-                Window.Bounds.Width,
-                Window.Bounds.Height,
-                Window.ZOrder);
+            try
+            {
+                await _module.InvokeVoidAsync(
+                    "projectWindowGeometry",
+                    _hostElement,
+                    Window.Bounds.X,
+                    Window.Bounds.Y,
+                    Window.Bounds.Width,
+                    Window.Bounds.Height,
+                    Window.ZOrder);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WindowHost] Failed to project window geometry: {ex.Message}");
+            }
         }
     }
 

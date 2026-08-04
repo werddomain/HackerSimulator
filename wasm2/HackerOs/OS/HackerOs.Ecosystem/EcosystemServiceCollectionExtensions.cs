@@ -29,7 +29,9 @@ using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
+using HackerOs.AppSdk.Blazor;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 
 namespace HackerOs.Ecosystem;
 
@@ -48,6 +50,9 @@ public static class EcosystemServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddLogging();
+        services.AddMudServices();
+
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ISimulationClock>(_ => new ManualSimulationClock(
             DateTimeOffset.UtcNow,
@@ -63,6 +68,7 @@ public static class EcosystemServiceCollectionExtensions
             1024));
         services.AddSingleton<IPersistentDiagnosticRepository>(provider =>
             provider.GetRequiredService<IndexedDbDiagnosticRepository>());
+
         services.AddSingleton<HostExceptionReporter>();
         services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
         services.AddSingleton<INotificationQueue>(_ => new InMemoryNotificationQueue(100));
@@ -160,6 +166,14 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IEventBus>()));
         services.AddSingleton<FileDialogServiceFactory>(provider => new FileDialogServiceFactory(
             provider.GetRequiredService<IFileSystemSelectedResourceHandleRegistry>()));
+        services.AddScoped<IFileDialogService>(provider =>
+        {
+            ISessionService sessionService = provider.GetRequiredService<ISessionService>();
+            FileDialogServiceFactory factory = provider.GetRequiredService<FileDialogServiceFactory>();
+            SessionId sessionId = sessionService.CurrentPrincipal?.SessionId ?? SessionId.FromGuid(Guid.Empty);
+            return factory.Create(sessionId);
+        });
+        services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
         services.AddSingleton<WindowLaunchCoordinator>();
         services.AddSingleton<WindowCloseGuardRegistry>();

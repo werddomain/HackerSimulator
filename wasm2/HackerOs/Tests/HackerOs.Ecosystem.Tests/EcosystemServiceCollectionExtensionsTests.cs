@@ -18,6 +18,7 @@ using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Time;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 
@@ -29,6 +30,7 @@ public sealed class EcosystemServiceCollectionExtensionsTests
     public async Task AddHackerOsEcosystem_resolves_complete_synchronous_graph()
     {
         ServiceCollection services = new();
+        services.AddSingleton<NavigationManager, TestNavigationManager>();
         services.AddSingleton<IJSRuntime, NonInvokedJsRuntime>();
         services.AddHackerOsEcosystem();
 
@@ -69,5 +71,13 @@ public sealed class EcosystemServiceCollectionExtensionsTests
             CancellationToken cancellationToken,
             object?[]? args) =>
             throw new InvalidOperationException("DI graph validation must not invoke browser storage.");
+    }
+
+    private sealed class TestNavigationManager : NavigationManager
+    {
+        public TestNavigationManager()
+        {
+            Initialize("http://localhost/", "http://localhost/");
+        }
     }
 }

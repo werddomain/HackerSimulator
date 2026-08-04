@@ -3,6 +3,9 @@
  * placing a dynamic style attribute in Razor source.
  */
 export function projectWindowGeometry(element, x, y, width, height, zOrder) {
+    if (!element || !element.style) {
+        return;
+    }
     element.style.setProperty("--window-x", `${x}px`);
     element.style.setProperty("--window-y", `${y}px`);
     element.style.setProperty("--window-width", `${width}px`);

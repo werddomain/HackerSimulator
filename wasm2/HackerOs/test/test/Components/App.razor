@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+@using Microsoft.AspNetCore.Components.Web
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,15 +8,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
-   
     <ImportMap />
-   
-    <HeadOutlet />
+
+    <!-- MudBlazor Styles -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <!-- HackerOS Global CSS Design System & Scoped CSS Bundles -->
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="stylesheet" href="@Assets["HackerOs.Ecosystem.styles.css"]" />
+    <link rel="stylesheet" href="_content/HackerOs.Platform.Blazor/HackerOs.Platform.Blazor.bundle.scp.css" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["test.styles.css"]" />
+
+    <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 </head>
 
 <body>
-    <Routes />
+    <HackerOs.Ecosystem.App @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)"/>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <!-- MudBlazor Script -->
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script>
+        if ('serviceWorker' in navigator && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+            navigator.serviceWorker.register('_content/HackerOs.Ecosystem/service-worker.js', { updateViaCache: 'none' })
+                .then(registration => {
+                    registration.onupdatefound = () => {
+                        const installingWorker = registration.installing;
+                        if (installingWorker) {
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    window.dispatchEvent(new CustomEvent('hackeros-pwa-update-available', {
+                                        detail: { registration }
+                                    }));
+                                }
+                            };
+                        }
+                    };
+                })
+                .catch(err => console.warn('Service worker registration failed:', err));
+
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        } else if ('serviceWorker' in navigator) {
+            // Unregister any stale service workers in development mode to prevent STATUS_ACCESS_VIOLATION crashes
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>

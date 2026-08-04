@@ -91,7 +91,7 @@ public sealed class AppExecutionContextFactory
 
         return new AppExecutionContext(
             manifest,
-            instanceId ?? Guid.NewGuid(),
+            instanceId ?? process.AppInstanceId.Value,
             userId,
             principal.Authority,
             grantedCapabilities,

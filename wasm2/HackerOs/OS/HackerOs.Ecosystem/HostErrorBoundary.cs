@@ -16,5 +16,6 @@ public sealed class HostErrorBoundary : ErrorBoundary
     protected override async Task OnErrorAsync(Exception exception)
     {
         CorrelationId = await Reporter.ReportAsync(exception, "component-render");
+        Console.Error.WriteLine($"[HostErrorBoundary] Unhandled failure (CorrelationId: {CorrelationId}):\n{exception}");
     }
 }

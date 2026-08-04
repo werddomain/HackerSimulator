@@ -13,7 +13,7 @@ public interface IWindowAppFrameworkLifecycle
     Task OnAfterRenderAsync(WindowAppBase app, bool firstRender);
 }
 
-internal sealed class NullWindowAppFrameworkLifecycle : IWindowAppFrameworkLifecycle
+public sealed class NullWindowAppFrameworkLifecycle : IWindowAppFrameworkLifecycle
 {
     public static NullWindowAppFrameworkLifecycle Instance { get; } = new();
 

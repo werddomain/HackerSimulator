@@ -1,11 +1,30 @@
 using HackerOs.Ecosystem;
+using HackerOs.Platform.Blazor.LazyLoading;
 using test.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseDefaultServiceProvider(options =>
+{
+    options.ValidateScopes = false;
+    options.ValidateOnBuild = false;
+});
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddSingleton<IBuildKnownAssemblyTransport, WebAssemblyLazyAssemblyTransport>();
+builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
+    BuildKnownLazyAssemblies.Names,
+    provider.GetRequiredService<IBuildKnownAssemblyTransport>()));
+builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
+    BuildKnownLazyApps.Catalog,
+    provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
+builder.Services.AddHackerOsEcosystem(
+    BuildKnownLazyApps.Catalog,
+    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
+    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
 
 var app = builder.Build();
 
@@ -26,8 +45,10 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
+app.MapRazorComponents<test.Components.App>()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(HackerOs.Ecosystem._Imports).Assembly);
+    .AddAdditionalAssemblies(
+        typeof(HackerOs.Ecosystem.App).Assembly,
+        typeof(HackerOs.Platform.Blazor.Shell.DesktopShell).Assembly);
 
 app.Run();

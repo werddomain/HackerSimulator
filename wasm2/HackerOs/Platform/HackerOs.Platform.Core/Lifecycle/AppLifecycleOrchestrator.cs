@@ -147,7 +147,7 @@ public sealed class AppLifecycleOrchestrator
             ResourceProfile.None));
 
         IAppExecutionContext context = _contextFactory.Create(
-            descriptor.Manifest, request.Principal, process, grantedCapabilities);
+            descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value);
 
         try
         {

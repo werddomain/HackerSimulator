@@ -307,8 +307,6 @@ public sealed class IndexedDbBrowserContractTests
             float renderedX = float.Parse((await primary.GetAttributeAsync("data-window-x"))!, System.Globalization.CultureInfo.InvariantCulture);
             float renderedY = float.Parse((await primary.GetAttributeAsync("data-window-y"))!, System.Globalization.CultureInfo.InvariantCulture);
             var movedBox = (await primary.BoundingBoxAsync())!;
-            string projection = await primary.EvaluateAsync<string>(
-                "element => JSON.stringify({ inline: element.getAttribute('style'), top: getComputedStyle(element).top, left: getComputedStyle(element).left, position: getComputedStyle(element).position })");
             Assert.InRange(movedBox.X, renderedX - 0.5F, renderedX + 0.5F);
             Assert.InRange(movedBox.Y, renderedY - 0.5F, renderedY + 0.5F);
             int primaryZ = int.Parse((await primary.GetAttributeAsync("data-window-z"))!);
@@ -331,7 +329,7 @@ public sealed class IndexedDbBrowserContractTests
             Assert.Equal("960", await primary.GetAttributeAsync("data-window-width"));
             await primary.GetByLabel("Restore").ClickAsync();
             Assert.Equal("410", await primary.GetAttributeAsync("data-window-width"));
-            Assert.Empty(failures);
+            Assert.True(failures.Count == 0, $"Page failures ({failures.Count}):\n" + string.Join("\n", failures));
         }
         finally
         {

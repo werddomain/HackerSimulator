@@ -4,10 +4,12 @@
 @using HackerOs.Platform.Core.Sessions
 @using HackerOs.Simulation.Abstractions.Recovery
 @using HackerOs.Simulation.Abstractions.Sessions
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @inject ILocalUserRepository UserRepository
 @inject ILocalGroupRepository GroupRepository
 @inject ISessionService SessionService
 @inject EcosystemBootCoordinator BootCoordinator
+@inject IWebAssemblyHostEnvironment HostEnvironment
 
 <main class="ecosystem-host">
     @if (State.UpdateAvailable)
@@ -100,12 +102,16 @@
                 break;
         }
         </ChildContent>
-        <ErrorContent>
+        <ErrorContent Context="exception">
             <section class="fatal-surface" aria-labelledby="boundary-fatal-title">
                 <div class="boot-mark" aria-hidden="true">H_</div>
                 <h1 id="boundary-fatal-title">HackerOS encountered an error</h1>
                 <p>The failure was recorded without exposing sensitive details.</p>
                 <code>Correlation: @ErrorBoundary?.CorrelationId</code>
+                @if (HostEnvironment.IsDevelopment())
+                {
+                    <pre class="fatal-details">@exception.ToString()</pre>
+                }
             </section>
         </ErrorContent>
     </HostErrorBoundary>

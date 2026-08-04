@@ -16,8 +16,10 @@ public abstract class WindowAppBase : ComponentBase
     private Guid? _boundInstanceId;
 
     [Inject]
-    private IWindowAppFrameworkLifecycle FrameworkLifecycle { get; set; } =
-        NullWindowAppFrameworkLifecycle.Instance;
+    private IWindowAppFrameworkLifecycle? FrameworkLifecycle { get; set; }
+
+    private IWindowAppFrameworkLifecycle EffectiveFrameworkLifecycle =>
+        FrameworkLifecycle ?? NullWindowAppFrameworkLifecycle.Instance;
 
     /// <summary>Gets or sets the execution context assigned by the window host.</summary>
     [Parameter]
@@ -64,7 +66,7 @@ public abstract class WindowAppBase : ComponentBase
     /// <inheritdoc />
     protected sealed override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await FrameworkLifecycle.OnAfterRenderAsync(this, firstRender);
+        await EffectiveFrameworkLifecycle.OnAfterRenderAsync(this, firstRender);
         await OnAppAfterRenderAsync(firstRender);
     }
 
