@@ -27,7 +27,7 @@ green Release solution. The first remediation wave is now verified:
 - `dotnet build HackerOs.sln --configuration Release --no-restore` passes with
   0 warnings and 0 errors. This includes trim-safe manifest validation and the
   corrected Browser app lifecycle hooks.
-- `dotnet test HackerOs.sln --configuration Release --no-build` passes 615
+- `dotnet test HackerOs.sln --configuration Release --no-build` passes 622
   tests with 0 failed and 0 skipped. The three window browser scenarios also
   pass three consecutive Release repetitions without product-level retries.
 - The trimmed Release ecosystem publish succeeds, the Terminal and Nano
@@ -391,10 +391,10 @@ canonical settings document under `/etc/hackeros/policy.config`.
 - [x] Implement Text Editor Window App (`org.hackeros.text-editor`) under `Apps/System/HackerOs.Apps.TextEditor/` (`P2-TEXT-001` through `P2-TEXT-007`).
 - [x] Implement First Session Service App (`org.hackeros.samples.service-app`) under `Apps/Samples/HackerOs.Samples.ServiceApp/` (`P2-SVC-001` through `P2-SVC-003`).
 - [x] Implement PWA Packaging, Offline Operation, and Updates (`OS/HackerOs.Ecosystem/wwwroot/`) (`P2-PWA-001` through `P2-PWA-007`).
-- [x] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-005`). Evidence matrix published in `docs/phase-2-acceptance.md`. `P2-GATE-005` user approval granted.
+- [ ] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-005`). The evidence matrix exists, but published-PWA, accessibility, CI, and explicit approval gates remain reopened in `docs/phase-2-acceptance.md`.
 - [x] Implement Public SDK 1.0 Candidate (`P3-SDK-001` through `P3-SDK-010`). Created sample Window app, Terminal app, Service app, ADR 0019 (`docs/adr/0019-sdk-versioning-and-compatibility.md`), Manifest Validator CLI (`Tools/HackerOs.Tools.ManifestValidator/`), and Developer Guide (`docs/sdk/developer-guide.md`).
 - [x] Implement Accessibility, Localization, Theming, and Design System (`P3-UX-001` through `P3-UX-007`). Published `docs/design-system.md`, `docs/localization.md`, and `docs/accessibility.md`.
-- [x] Implement Build-Known Lazy Loading (`P3-LAZY-001` through `P3-LAZY-007`). Published `docs/lazy-loading.md`. Phase 3 complete.
+- [ ] Implement Build-Known Lazy Loading (`P3-LAZY-001` through `P3-LAZY-007`). Hack Paint is declared as the first lazy assembly and has a typed, coalescing browser loader; deterministic descriptor registration and published/offline evidence remain open.
 - [x] Implement Migration Rules for Every Legacy Feature (`P4-RULE-001` through `P4-RULE-006`). Published `docs/migration/rules.md`. Phase 4 started.
 - [x] Implement Wave 2 OS Fundamentals (`P4-W2-001` through `P4-W2-008`). Ported Settings app (`org.hackeros.settings`), System Monitor (`org.hackeros.system-monitor`), and Error Log Viewer (`org.hackeros.error-log-viewer`). Published `docs/migration/wave-2.md`.
 - [ ] Complete Wave 3 Editing, Clipboard, and Drag/Drop (`P4-W3-001` through `P4-W3-007`). ADR 0020, the clipboard gateway, and drag payload exist. Nano is revalidated with its full-screen contract, VFS editor, Blazor Terminal adapter, lifecycle propagation, and browser key/render/cleanup evidence. Code Editor now has local CodeMirror 6, C# tab/document models, VFS-backed recovery, platform whole-window dirty-close protection, 20 focused tests, Chromium interaction/disposal, and axe evidence. A real rendered reload test plus published/offline integration remain open. Hack Paint remains a separate reopened Wave 5 item.
@@ -452,7 +452,7 @@ server is absent.
 | P5-SRV-001 | API versioning and PWA compatibility window | ✅ Done |
 | P5-SRV-002 | Device identity and registration (D-017) | ✅ Done |
 | P5-SRV-003 | Server data policy, health, and export | ✅ Done |
-| P5-SRV-004 | ASP.NET Core server composition (Program.cs + EF Core) | ✅ Done |
+| P5-SRV-004 | ASP.NET Core server composition (Program.cs + EF Core) | ✅ Done — documented configuration, schema bootstrap, health, authenticated ownership, and bounded backup/restore are integrated |
 
 ### P5-SYNC — Record Synchronization
 
@@ -475,7 +475,7 @@ server is absent.
 | P5-PROXY-004 | Redirect and resource limits | ⬜ Partial: redirect, payload, duration, concurrency and protocol limits exist; bandwidth policy absent |
 | P5-PROXY-005 | Quotas, audit and explicit operator weakening | ⬜ Partial: concurrency and audit exist; durable quotas/configuration warnings absent |
 | P5-PROXY-006 | Simulated-domain isolation | ⬜ Reopened for end-to-end evidence |
-| P5-PROXY-007 | Complete proxy security suite | ⬜ Partial: focused server suite passes 39 tests; required integration cases remain |
+| P5-PROXY-007 | Complete proxy security suite | ⬜ Partial: focused server suite passes 40 tests; required integration cases remain |
 
 ### New ADRs
 - **ADR 0024** — Server Identity and Device Registration (D-017)

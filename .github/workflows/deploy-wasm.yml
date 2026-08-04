@@ -42,6 +42,18 @@ jobs:
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         run: dotnet build HackerOs.sln --configuration Release --no-restore
 
+      - name: Verify production Razor assets
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        shell: pwsh
+        run: |
+          $matches = rg --pcre2 -n '<style|<script|\sstyle\s*=|(?<!@)\bon[a-z][a-z0-9_-]*\s*=' . -g '*.razor' -g '!Tests/RazorAssetValidation.Invalid/**'
+          if ($LASTEXITCODE -eq 0) {
+            $matches
+            throw 'Forbidden inline Razor asset markup was found.'
+          }
+          if ($LASTEXITCODE -eq 1) { exit 0 }
+          throw 'Razor source scan failed.'
+
       - name: Install Playwright Chromium
         run: pwsh wasm2/HackerOs/Tests/HackerOs.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 

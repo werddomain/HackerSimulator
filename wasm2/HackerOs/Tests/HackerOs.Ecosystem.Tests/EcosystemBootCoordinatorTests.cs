@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Settings;
+using HackerOs.Platform.Core;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.JSInterop;
 
@@ -13,6 +14,7 @@ public sealed class EcosystemBootCoordinatorTests
     private readonly IndexedDbSettingsDocumentService _settings;
     private readonly FakeCapabilityGrantRepository _grants = new();
     private readonly FakeAppCatalogRepository _catalog = new();
+    private readonly AppCatalog _selectedCatalog = CreateEmptyCatalog();
     private readonly FakeLocalGroupRepository _groups = new();
     private readonly FakeLocalUserRepository _users = new();
 
@@ -27,17 +29,19 @@ public sealed class EcosystemBootCoordinatorTests
     public void Constructor_validates_arguments()
     {
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            null!, _settings, _grants, _catalog, _groups, _users));
+            null!, _settings, _grants, _catalog, _selectedCatalog, _groups, _users));
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            _fsBootstrapper, null!, _grants, _catalog, _groups, _users));
+            _fsBootstrapper, null!, _grants, _catalog, _selectedCatalog, _groups, _users));
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            _fsBootstrapper, _settings, null!, _catalog, _groups, _users));
+            _fsBootstrapper, _settings, null!, _catalog, _selectedCatalog, _groups, _users));
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            _fsBootstrapper, _settings, _grants, null!, _groups, _users));
+            _fsBootstrapper, _settings, _grants, null!, _selectedCatalog, _groups, _users));
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            _fsBootstrapper, _settings, _grants, _catalog, null!, _users));
+            _fsBootstrapper, _settings, _grants, _catalog, null!, _groups, _users));
         Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
-            _fsBootstrapper, _settings, _grants, _catalog, _groups, null!));
+            _fsBootstrapper, _settings, _grants, _catalog, _selectedCatalog, null!, _users));
+        Assert.Throws<ArgumentNullException>(() => new EcosystemBootCoordinator(
+            _fsBootstrapper, _settings, _grants, _catalog, _selectedCatalog, _groups, null!));
     }
 
     [Fact]
@@ -48,6 +52,7 @@ public sealed class EcosystemBootCoordinatorTests
             _settings,
             _grants,
             _catalog,
+            _selectedCatalog,
             _groups,
             _users);
 
@@ -61,6 +66,24 @@ public sealed class EcosystemBootCoordinatorTests
     }
 
     [Fact]
+    public async Task BootAsync_reconciles_the_host_selected_catalog()
+    {
+        EcosystemBootCoordinator bootCoordinator = new(
+            _fsBootstrapper,
+            _settings,
+            _grants,
+            _catalog,
+            BuildKnownLazyApps.Catalog,
+            _groups,
+            _users);
+
+        await bootCoordinator.BootAsync();
+
+        Assert.Equal(10, _catalog.SelectedManifests.Count);
+        Assert.Contains(_catalog.SelectedManifests, manifest => manifest.Id == "org.hackeros.hack-paint");
+    }
+
+    [Fact]
     public async Task BootAsync_throws_when_policy_revision_is_invalid()
     {
         EcosystemBootCoordinator bootCoordinator = new(
@@ -68,6 +91,7 @@ public sealed class EcosystemBootCoordinatorTests
             _settings,
             _grants,
             _catalog,
+            _selectedCatalog,
             _groups,
             _users);
 
@@ -83,6 +107,7 @@ public sealed class EcosystemBootCoordinatorTests
             _settings,
             _grants,
             _catalog,
+            _selectedCatalog,
             _groups,
             _users);
 
@@ -110,6 +135,9 @@ public sealed class EcosystemBootCoordinatorTests
             return new ValueTask<TValue>(default(TValue)!);
         }
     }
+
+    private static AppCatalog CreateEmptyCatalog() =>
+        Assert.IsType<AppCatalog>(AppCatalog.Build([]).Catalog);
 
     private sealed class TestJsObjectReference : IJSObjectReference
     {
@@ -161,10 +189,15 @@ public sealed class EcosystemBootCoordinatorTests
 
     private sealed class FakeAppCatalogRepository : IPersistentAppCatalogRepository
     {
+        public IReadOnlyList<AppManifest> SelectedManifests { get; private set; } = [];
+
         public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReconcileAsync(
             IEnumerable<AppManifest> selectedManifests,
-            CancellationToken cancellationToken = default) =>
-            new(new List<PersistedAppCatalogEntry>());
+            CancellationToken cancellationToken = default)
+        {
+            SelectedManifests = [.. selectedManifests];
+            return new(new List<PersistedAppCatalogEntry>());
+        }
 
         public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReadAllAsync(
             CancellationToken cancellationToken = default) =>

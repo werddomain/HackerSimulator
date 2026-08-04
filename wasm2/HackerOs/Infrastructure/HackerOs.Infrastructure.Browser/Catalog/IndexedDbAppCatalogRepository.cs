@@ -49,10 +49,13 @@ public sealed class IndexedDbAppCatalogRepository : IPersistentAppCatalogReposit
 
         foreach (CatalogRecord retained in existing.Where(record => !selectedIds.Contains(record.AppId)))
         {
-            operations.Add(new IndexedDbOperation(
-                "put",
-                HackerOsIndexedDbSchema.CatalogStoreName,
-                Value: retained with { EnabledFlag = 0 }));
+            if (retained.EnabledFlag != 0)
+            {
+                operations.Add(new IndexedDbOperation(
+                    "put",
+                    HackerOsIndexedDbSchema.CatalogStoreName,
+                    Value: retained with { EnabledFlag = 0 }));
+            }
         }
 
         foreach (AppManifest manifest in selected)
@@ -60,10 +63,14 @@ public sealed class IndexedDbAppCatalogRepository : IPersistentAppCatalogReposit
             int enabledFlag = existingById.TryGetValue(manifest.Id, out CatalogRecord? prior)
                 ? prior.EnabledFlag
                 : 1;
-            operations.Add(new IndexedDbOperation(
-                "put",
-                HackerOsIndexedDbSchema.CatalogStoreName,
-                Value: CatalogRecord.FromDomain(manifest, enabledFlag)));
+            CatalogRecord selectedRecord = CatalogRecord.FromDomain(manifest, enabledFlag);
+            if (prior is null || prior != selectedRecord)
+            {
+                operations.Add(new IndexedDbOperation(
+                    "put",
+                    HackerOsIndexedDbSchema.CatalogStoreName,
+                    Value: selectedRecord));
+            }
         }
 
         if (operations.Count > 0)

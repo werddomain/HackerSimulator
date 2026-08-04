@@ -659,10 +659,11 @@ public sealed class IndexedDbBrowserContractTests
                     browserFailures.Add($"console: {message.Text}");
                 }
             };
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=idle");
+            // Startup probing may intentionally encounter a refused connection;
+            // collect only failures after the harness has become reachable.
             page.RequestFailed += (_, request) =>
                 browserFailures.Add($"network: {request.Method} {request.Url}");
-
-            await NavigateWhenReadyAsync(page, $"{address}/?scenario=idle");
             await page.GetByRole(AriaRole.Heading, new() { Name = "Control surface" }).WaitForAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Actions" }).ClickAsync();
             await page.GetByRole(AriaRole.Menuitem, new() { Name = "Audit storage" }).ClickAsync();
@@ -821,6 +822,48 @@ public sealed class IndexedDbBrowserContractTests
         }
     }
 
+    /// <summary>Verifies the published browser harness renders one RGBA image model through draw, history, crop, and pan.</summary>
+    [Fact]
+    public async Task Hack_paint_canvas_draws_undoes_redoes_crops_and_pans()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+            List<string> failures = [];
+            page.Console += (_, message) => { if (message.Type == "error") failures.Add($"console: {message.Text}"); };
+            page.PageError += (_, error) => failures.Add($"page: {error}");
+
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=hack-paint");
+            ILocator canvas = page.Locator("#hack-paint-canvas");
+            await canvas.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await page.WaitForFunctionAsync("() => document.querySelector('#hack-paint-result')?.dataset.status === 'ready'");
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Draw pixel" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('#hack-paint-result')?.dataset.status === 'drawn'");
+            Assert.Equal(255, await page.EvaluateAsync<int>("() => document.querySelector('#hack-paint-canvas').getContext('2d').getImageData(2, 2, 1, 1).data[0]"));
+            await page.GetByRole(AriaRole.Button, new() { Name = "Undo" }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "Redo" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('#hack-paint-result')?.dataset.status === 'redone'");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Crop" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('#hack-paint-result')?.dataset.size === '8x8'");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Pan" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('#hack-paint-result')?.dataset.pan === '5,-3'");
+            Assert.Empty(failures);
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
     /// <summary>Runs axe-core against the representative shell, window, and dialog surfaces.</summary>
     [Fact]
     public async Task Representative_platform_surfaces_have_no_axe_violations()
@@ -837,7 +880,7 @@ public sealed class IndexedDbBrowserContractTests
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
 
-            foreach (string scenario in new[] { "idle", "window", "dialog", "terminal-full-screen", "code-editor" })
+            foreach (string scenario in new[] { "idle", "window", "dialog", "terminal-full-screen", "code-editor", "hack-paint" })
             {
                 await NavigateWhenReadyAsync(page, $"{address}/?scenario={scenario}");
                 var result = await page.RunAxe();

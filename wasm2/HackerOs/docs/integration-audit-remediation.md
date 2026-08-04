@@ -2,7 +2,7 @@
 
 **Status:** Remediation in progress  
 **Audit date:** 2026-08-03  
-**Last progress update:** 2026-08-03  
+**Last progress update:** 2026-08-04
 **Target solution:** `wasm2/HackerOs/HackerOs.sln`  
 **Source plan:** `wasm2/HackerOs/docs/integration-task-list.md`  
 **Architecture reference:** `doc/wasm/wasm-v3-migration-analyse.md`
@@ -17,7 +17,7 @@ closing their remaining evidence gates.
 ### Verified complete in this pass
 
 - [x] Standalone .NET 10 Release build: 0 warnings and 0 errors.
-- [x] Standalone Release solution test: 615 passed, 0 failed, 0 skipped.
+- [x] Standalone Release solution test: 622 passed, 0 failed, 0 skipped.
 - [x] Trimmed `HackerOs.Ecosystem` Release publish succeeds.
 - [x] Transitive vulnerability scan reports no vulnerable packages.
 - [x] All window resize/focus scenarios pass, including three repeated runs of
@@ -45,7 +45,8 @@ closing their remaining evidence gates.
   Blazor tests, Chromium interaction, and axe evidence pass. Real component
   reload proof plus published/offline full-app integration remain open.
 - Axe 4.12.0 scans representative desktop/window/dialog, full-screen Terminal,
-  and local CodeMirror surfaces for serious and critical findings. Full app
+  local CodeMirror, and Hack Paint canvas surfaces for serious and critical
+  findings. Full app
   coverage and human assistive-technology evidence remain outstanding.
 - Proxy requests now verify durable device ownership/revocation, validate every
   DNS answer, block special-use and IPv4-mapped addresses, and pin the selected
@@ -114,7 +115,7 @@ proof that runtime behavior has been implemented or tested.
   - **Acceptance:** `dotnet test HackerOs.sln --configuration Release` exits zero
     with warnings treated as errors and with no failed test project.
   - **Evidence 2026-08-03:** standalone Release build completed with 0 warnings
-    and 0 errors; the subsequent `--no-build` run passed 615 tests with 0 failed
+    and 0 errors; the subsequent `--no-build` run passed 622 tests with 0 failed
     and 0 skipped. Server trimming is explicitly disabled only for the EF Core
     executable; WASM/shared shipping projects retain trim analysis. Package scan
     reports no vulnerable dependencies.
@@ -207,7 +208,8 @@ proof that runtime behavior has been implemented or tested.
     and all required jobs pass on a clean runner.
   - **Progress 2026-08-03 — PARTIAL:** `.github/workflows/deploy-wasm.yml` now
     restores, builds, tests, scans, publishes, installs Playwright, and retains
-    diagnostics for the .NET 10 `wasm2/HackerOs/HackerOs.sln`. Awaiting an actual
+    diagnostics for the .NET 10 `wasm2/HackerOs/HackerOs.sln`. It also performs
+    the production Razor source scan before browser execution. Awaiting an actual
     successful GitHub runner execution; published-PWA coverage is still absent.
 
 - [ ] **C-003 — Repair the Phase 2 evidence matrix.**
@@ -228,9 +230,8 @@ proof that runtime behavior has been implemented or tested.
 
 - [ ] **D-001 — Implement real build-known lazy assembly loading.**
   - Reopen `P3-LAZY-001` through `P3-LAZY-007`.
-  - `docs/lazy-loading.md` describes `BlazorWebAssemblyLazyLoad` and
-    `LazyAssemblyLoader.LoadAssembliesAsync`, but the host project and code do not
-    currently use them.
+  - The first optional assembly is now declared and loadable; the remaining
+    catalog-to-lifecycle registration and published-browser proof are still open.
   - Classify eager and lazy assemblies in the actual host build.
   - Load optional app assemblies on first launch, then perform discovery safely.
   - Add recoverable UI for unavailable assets and preserve deterministic
@@ -240,6 +241,17 @@ proof that runtime behavior has been implemented or tested.
   - **Acceptance:** published output demonstrates that lazy assemblies are absent
     from initial eager loading and are fetched/loaded once on demand, including
     offline-from-cache behavior.
+  - **Progress 2026-08-04 — PARTIAL:** `BuildKnownAssemblyLoaderRegistry`
+    permits only declared assembly names, coalesces concurrent requests, and
+    returns typed missing/cancelled/failed outcomes. The WASM host declares
+    Hack Paint with `BlazorWebAssemblyLazyLoad`, registers a transport backed by
+    `LazyAssemblyLoader`, and its trimmed Release publish places Hack Paint in
+    `lazyAssembly` rather than the eager resource list. Thirty-three focused platform
+    tests pass, including caller cancellation that does not cancel the shared
+    load. The host now supplies an immutable Hack Paint catalog and a descriptor
+    registry to the lifecycle; first launch loads, validates, and registers the
+    descriptor once. Published-browser fetch/reload, offline cache, and
+    corrupt/missing-asset recovery remain open.
 
 - [ ] **D-002 — Add real automated accessibility verification.**
   - Reopen at least `P3-UX-005`; reevaluate `P3-UX-004` and `P3-UX-006`.
@@ -326,23 +338,36 @@ proof that runtime behavior has been implemented or tested.
     and crop/rotation regressions. Crop mode now applies its pointer selection to
     that document. Pan is renderer-only view state and has a regression proving
     it cannot mutate pixels or history. Image codecs, VFS/browser dialogs,
-    touch/browser pixel evidence, and export remain open, so this
+    `IndexedDbBrowserContractTests.Hack_paint_canvas_draws_undoes_redoes_crops_and_pans`
+    passes in Chromium, proving rendered pixels through draw/history/crop/pan.
+    Image codecs, VFS/browser dialogs, touch/full-app pixel evidence, and export
+    remain open, so this
     task is deliberately unchecked.
 
 ### Wave F — Complete and harden the optional server
 
-- [ ] **F-001 — Restore server build and deployment correctness.**
-  - Reopen `P5-SRV-004` while the server cannot build cleanly.
+- [x] **F-001 — Restore server build and deployment correctness.**
+  - `P5-SRV-004` is rechecked and complete.
   - Resolve trimming and serialization diagnostics with supported patterns or
     document an explicit server trimming decision distinct from the WASM client.
   - Verify authentication, authorization, configuration, health, persistence,
     migration, and backup behavior in integration tests.
   - **Acceptance:** server and server tests build with warnings as errors, start
     from documented configuration, and pass integration tests.
-  - **Progress 2026-08-03 — PARTIAL:** the server builds cleanly, uses the
-    approved server-only no-trim policy, and the focused server suite passes 39
-    tests. Configuration/startup, migration, persistence, backup, and restore
-    integration coverage remains incomplete.
+  - **Completed 2026-08-04:** the server builds cleanly, uses the
+    approved server-only no-trim policy, and the focused server suite passes 40
+    tests. A framework-dependent, non-trimmed Release publish now succeeds to
+    `artifacts/server-publish`; it starts, migrates its SQLite schema, and returns
+    a healthy `/health` response. Explicit `[FromBody]` binding repairs the
+    previous startup crash on `DELETE /api/account`.
+    `ServerStartupIntegrationTests.Startup_MigratesSqliteDatabase_AndReportsHealthy`
+    now starts the composed host using the documented
+    `HACKEROS_ConnectionStrings__HackerOsDb` override, migrates that isolated
+    SQLite database, rejects anonymous account access, and checks `/health`.
+    It also creates a bounded snapshot, verifies a subsequent write is removed
+    by restore, and rejects traversal. It also proves both anonymous rejection
+    and a server-issued authenticated account-data request. The stubbed
+    export/deletion lifecycle remains separate `P5-SRV-003` work.
 
 - [ ] **F-002 — Enforce authenticated app/user/device proxy policy.**
   - Reopen `P5-PROXY-002` and dependent proxy tasks.
@@ -404,7 +429,6 @@ the following tasks:
 - `P3-LAZY-001` through `P3-LAZY-007`
 - `P4-W3-002`, `P4-W3-006`, `P4-W3-007`
 - `P4-W5-APP-002`
-- `P5-SRV-004`
 - `P5-SYNC-003` through `P5-SYNC-006`
 - `P5-PROXY-002` through `P5-PROXY-007`
 
@@ -494,7 +518,7 @@ verification after repository changes.
 
 ## 8. Latest executable evidence
 
-Evidence collected on 2026-08-03 from `wasm2/HackerOs/`:
+Evidence collected on 2026-08-04 from `wasm2/HackerOs/`:
 
 ```text
 dotnet restore HackerOs.sln
@@ -504,16 +528,19 @@ dotnet build HackerOs.sln --configuration Release --no-restore
   PASS — 0 warnings, 0 errors
 
 dotnet test HackerOs.sln --configuration Release --no-build
-  PASS — 615 passed, 0 failed, 0 skipped
+  PASS — 622 passed, 0 failed, 0 skipped
 
 dotnet publish OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj --configuration Release --no-restore
   PASS — trimmed Release output produced
+
+dotnet publish Server/HackerOs.Server/HackerOs.Server.csproj --configuration Release --no-restore --output artifacts/server-publish
+  PASS — non-trimmed optional-server publish produced; local startup migration and GET /health returned 200 healthy
 
 dotnet list HackerOs.sln package --vulnerable --include-transitive --no-restore
   PASS — no vulnerable packages reported
 
 dotnet test Tests/HackerOs.Server.Tests/HackerOs.Server.Tests.csproj --configuration Release --no-restore
-  PASS — 39 passed, 0 failed, 0 skipped
+  PASS — 40 passed, 0 failed, 0 skipped (includes startup migration and health integration test)
 
 dotnet test Tests/HackerOs.Commands.Nano.Tests/HackerOs.Commands.Nano.Tests.csproj --configuration Release --no-restore
   PASS — 5 passed, 0 failed, 0 skipped

@@ -60,18 +60,44 @@ public sealed class IndexedDbSettingsDocumentServiceTests
                 module.Invocations.Last().Arguments[4]));
     }
 
+    [Fact]
+    public async Task InitializeAsync_seeds_all_definitions_in_one_transaction()
+    {
+        SettingsDocumentKey secondKey = SettingsDocumentKey.ForAppUser("org.hackeros.editor", "second-user");
+        VirtualPath secondPath = SettingsDocumentPathFactory.GetProjectionPath(secondKey);
+        ScriptedJsObjectReference module = new(
+            [ResultElement("{\"added\":true}"), ResultElement("{\"added\":true}")]);
+        await using IndexedDbSettingsDocumentService service = new(
+            new FakeJsRuntime(module),
+            [CreateDefinition(Path, Key), CreateDefinition(secondPath, secondKey)]);
+
+        await service.InitializeAsync();
+
+        JsInvocation transaction = Assert.Single(
+            module.Invocations,
+            invocation => invocation.Identifier == "executeTransaction");
+        IReadOnlyList<IndexedDbOperation> operations =
+            Assert.IsAssignableFrom<IReadOnlyList<IndexedDbOperation>>(transaction.Arguments[4]);
+        Assert.Equal(2, operations.Count);
+        Assert.All(operations, operation => Assert.Equal("addIfAbsent", operation.Kind));
+    }
+
     private static IndexedDbSettingsDocumentService CreateService(IJSObjectReference module) => new(
         new FakeJsRuntime(module),
-        [new SettingsDocumentDefinition(
-            Path,
-            Key,
+        [CreateDefinition(Path, Key)]);
+
+    private static SettingsDocumentDefinition CreateDefinition(
+        VirtualPath path,
+        SettingsDocumentKey key) => new(
+            path,
+            key,
             "initial",
             "text/plain",
             "settings.read",
             "settings.write",
             AppAuthority.User,
             AppAuthority.User,
-            new AcceptAllValidator())]);
+            new AcceptAllValidator());
 
     private static AppOperationContext CreateContext() => new()
     {
@@ -82,6 +108,8 @@ public sealed class IndexedDbSettingsDocumentServiceTests
     };
 
     private static JsonElement[] Result(string json) => [JsonDocument.Parse(json).RootElement.Clone()];
+
+    private static JsonElement ResultElement(string json) => JsonDocument.Parse(json).RootElement.Clone();
 
     private sealed class AcceptAllValidator : ISettingsDocumentValidator
     {

@@ -17,6 +17,7 @@
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
   </ItemGroup>
 
 </Project>

@@ -29,6 +29,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly AppExecutionContextFactory _contextFactory;
     private readonly ISettingsDocumentService _settings;
     private readonly IEventBus? _eventBus;
+    private readonly IAppDescriptorLoader? _descriptorLoader;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -49,7 +50,8 @@ public sealed class AppLifecycleOrchestrator
         ICapabilityGrantRepository grants,
         AppExecutionContextFactory contextFactory,
         ISettingsDocumentService settings,
-        IEventBus? eventBus = null)
+        IEventBus? eventBus = null,
+        IAppDescriptorLoader? descriptorLoader = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -59,6 +61,7 @@ public sealed class AppLifecycleOrchestrator
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus;
+        _descriptorLoader = descriptorLoader;
     }
 
     /// <summary>Gets the enablement registry so callers can check status without a separate wire-up.</summary>
@@ -98,7 +101,25 @@ public sealed class AppLifecycleOrchestrator
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!_descriptors.TryGetValue(request.AppId, out AppDescriptor? descriptor))
+        if (!_descriptors.TryGetValue(request.AppId, out AppDescriptor? descriptor)
+            && _descriptorLoader is not null)
+        {
+            AppDescriptorLoadResult loaded = await _descriptorLoader
+                .EnsureAvailableAsync(request.AppId, cancellationToken)
+                .ConfigureAwait(false);
+            if (loaded.Status != AppDescriptorLoadStatus.Available
+                || !_descriptors.TryGetValue(request.AppId, out descriptor))
+            {
+                return new AppLaunchResult(
+                    AppLaunchStatus.NotFound,
+                    ErrorCode: loaded.Status == AppDescriptorLoadStatus.Unavailable
+                        ? "lifecycle.app.asset-unavailable"
+                        : "lifecycle.app.not-found",
+                    ErrorMessage: loaded.Detail);
+            }
+        }
+
+        if (descriptor is null)
         {
             return new AppLaunchResult(AppLaunchStatus.NotFound, ErrorCode: "lifecycle.app.not-found");
         }
@@ -135,7 +156,7 @@ public sealed class AppLifecycleOrchestrator
                 AppKind.Terminal => await RunTerminalAsync(
                     descriptor, process, context, request.Arguments, fullScreen, cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
-                _ => StartWindow(process, context)
+                _ => StartWindow(descriptor, process, context)
             };
         }
         catch (Exception ex)
@@ -412,7 +433,7 @@ public sealed class AppLifecycleOrchestrator
         }
     }
 
-    private AppLaunchResult StartWindow(ProcessRecord process, IAppExecutionContext context)
+    private AppLaunchResult StartWindow(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
     {
         // Rendering a Window app's component belongs to the future Platform Blazor window
         // runtime (Phase 2A); Section 8 only establishes the process/context the runtime will
@@ -422,7 +443,7 @@ public sealed class AppLifecycleOrchestrator
         lock (_sync)
         {
             _running[process.Pid] = new RunningInstance(
-                _descriptors[process.AppId], context, ServiceInstance: null, RunTask: null);
+                descriptor, context, ServiceInstance: null, RunTask: null);
         }
 
         return new AppLaunchResult(AppLaunchStatus.Launched, running, context);

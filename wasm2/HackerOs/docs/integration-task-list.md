@@ -1516,9 +1516,13 @@ used to defer these failures.
   assets.
 - [ ] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
   lifecycle/static assets/PWA run in automated real-browser CI.
+  - **Progress 2026-08-03 — PARTIAL:** the active .NET 10 workflow restores,
+    builds, scans production Razor assets, installs Chromium, tests, publishes,
+    scans packages, and uploads diagnostics for `HackerOs.sln`. A green hosted
+    run and published-PWA browser matrix remain required.
 - [x] `P2-GATE-001` `dotnet test HackerOs.sln` passes with warnings as errors.
-  - **Revalidated: 2026-08-03.** Standalone Release build passed with 0 warnings
-    and 0 errors; the subsequent `--no-build` solution run passed 615 tests with
+  - **Revalidated: 2026-08-04.** Standalone Release build passed with 0 warnings
+    and 0 errors; the subsequent `--no-build` solution run passed 622 tests with
     no failures or skips. The package vulnerability scan reported no vulnerable
     packages.
 - [ ] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
@@ -1606,10 +1610,21 @@ not accept unknown post-publish DLLs.
 
 - [ ] `P3-LAZY-001` Classify boot-critical/eager versus optional/lazy assemblies
   and app-specific dependencies/assets.
+  - **Progress 2026-08-04 — PARTIAL:** Hack Paint is explicitly classified as
+    optional and declared in the host's `BlazorWebAssemblyLazyLoad` list. The
+    trimmed published manifest places it under `lazyAssembly`, not eager boot.
 - [ ] `P3-LAZY-002` Generate `BlazorWebAssemblyLazyLoad` declarations from the
   validated build profile.
+  - **Progress 2026-08-04 — PARTIAL:** the first declared optional app is wired
+    explicitly; validated build-profile generation remains open.
 - [ ] `P3-LAZY-003` Load known assemblies through `LazyAssemblyLoader`, then
   register descriptors and routes/components deterministically.
+  - **Progress 2026-08-04 — PARTIAL:** the browser transport now calls Blazor
+    `LazyAssemblyLoader`; typed recoverable outcomes, caller cancellation, and
+    exactly-once coalescing have 33 focused tests. The host provides the immutable
+    build-known Hack Paint catalog and the lifecycle loads, validates, and
+    registers its descriptor exactly once on first launch. Published-browser
+    evidence remains open.
 - [ ] `P3-LAZY-004` Handle unavailable/offline lazy assets with recoverable UI
   while preserving already cached OS functions.
 - [ ] `P3-LAZY-005` Include lazy assemblies/static assets in intentional PWA cache
@@ -1765,6 +1780,11 @@ manifest only if independently launchable/installable.
 - [ ] `P4-W5-APP-002` Port Hack Paint from `src/apps/hack-paint.ts` with virtual
   image files, canvas lifecycle, import/export dialogs, undo/redo, and pixel E2E
   validation.
+  - **Progress 2026-08-03 — IN PROGRESS:** the canvas is now an authoritative
+    RGBA document with pixel-based history, crop, rotation, and non-mutating pan.
+    `IndexedDbBrowserContractTests.Hack_paint_canvas_draws_undoes_redoes_crops_and_pans`
+    and the representative axe scan pass. VFS image files, import/export dialogs,
+    touch/full-app pixel coverage, and complete accessibility remain open.
 - [x] `P4-W5-APP-003` Port Theme Editor/Documentation behavior from
   `theme-editor*.ts`, `theme-documentation.ts`, and preview helper files under a
   safe token/schema model; prevent arbitrary inline CSS/JS.
@@ -1844,8 +1864,18 @@ and is not an unrestricted relay.
   registration; local-only users remain supported. **DECISION: D-017**
 - [x] `P5-SRV-003` Define server data ownership, retention, encryption at rest,
   export, deletion, audit, secrets, deployment, health, and backup.
-- [ ] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
+- [x] `P5-SRV-004` Implement authenticated ASP.NET Core server composition with
   no client-trusted app/user claims.
+  - **Completed 2026-08-04:** the non-trimmed optional EF Core server,
+    claim authentication, startup migration, and health/admin composition build;
+    the focused server suite passes 40 tests and Release publish succeeds. The
+    published process migrates and reports healthy at `/health`; explicit DELETE
+    body binding avoids its prior startup failure. `ServerStartupIntegrationTests`
+    verifies the documented `HACKEROS_ConnectionStrings__HackerOsDb` configuration
+    override, isolated SQLite migration, protected-route rejection, `/health`,
+    bounded SQLite backup/restore, anonymous rejection, and a server-issued
+    authenticated account-data request. The stubbed export/deletion lifecycle
+    remains separate `P5-SRV-003` work.
 
 ### Record synchronization
 

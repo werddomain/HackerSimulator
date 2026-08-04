@@ -61,6 +61,23 @@ public sealed class IndexedDbAppCatalogRepositoryTests
         Assert.Empty(module.Invocations);
     }
 
+    [Fact]
+    public async Task Reconcile_does_not_rewrite_an_unchanged_catalog_snapshot()
+    {
+        AppManifest manifest = LoadCanonicalManifest();
+        FakeIndexedDbModule module = new();
+        await using IndexedDbAppCatalogRepository repository = new(new FakeJsRuntime(module));
+
+        await repository.ReconcileAsync([manifest]);
+        int writesAfterFirstReconciliation = module.Invocations.Count(invocation => invocation.Mode == "readwrite");
+        await repository.ReconcileAsync([manifest]);
+
+        Assert.Equal(1, writesAfterFirstReconciliation);
+        Assert.Equal(
+            writesAfterFirstReconciliation,
+            module.Invocations.Count(invocation => invocation.Mode == "readwrite"));
+    }
+
     private static AppManifest LoadCanonicalManifest()
     {
         string? directory = AppContext.BaseDirectory;

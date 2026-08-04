@@ -43,8 +43,8 @@ HackerOS targets **WCAG 2.2 Level AA**. This document records the intended contr
 
 ## 2. Automated & Manual Accessibility Testing
 
-1. **Automated representative check:** `IndexedDbBrowserContractTests.Representative_platform_surfaces_have_no_axe_violations` uses `Deque.AxeCore.Playwright` 4.12.0 and currently verifies that the idle desktop, a window, a dialog, the full-screen Terminal renderer, and the local CodeMirror surface contain no serious or critical axe findings. Moderate findings are still reported by axe and are not treated as resolved.
-2. **Required expanded automation:** The launcher, taskbar, complete Terminal window, File Explorer, Text Editor, Settings, complete Code Editor window, and Hack Paint still need dedicated scans. Keyboard order/traps/restoration, Escape behavior, 200% zoom, mobile layout, long text, reduced motion, and RTL also require executable coverage.
+1. **Automated representative check:** `IndexedDbBrowserContractTests.Representative_platform_surfaces_have_no_axe_violations` uses `Deque.AxeCore.Playwright` 4.12.0 and currently verifies that the idle desktop, a window, a dialog, the full-screen Terminal renderer, the local CodeMirror surface, and the Hack Paint canvas surface contain no serious or critical axe findings. Moderate findings are still reported by axe and are not treated as resolved.
+2. **Required expanded automation:** The launcher, taskbar, complete Terminal window, File Explorer, Text Editor, Settings, complete Code Editor window, and the complete Hack Paint app still need dedicated scans. Keyboard order/traps/restoration, Escape behavior, 200% zoom, mobile layout, long text, reduced motion, and RTL also require executable coverage.
 3. **Human evidence checklist:** These items remain unchecked until a person performs the steps and records the browser/OS/assistive-technology versions and artifacts.
    - [ ] Launch Terminal from the Start menu using only `Tab`, arrow keys, and `Enter`.
    - [ ] Move and resize a window with the documented keyboard commands and confirm a visible focus indicator throughout.

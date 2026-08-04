@@ -147,16 +147,20 @@ public sealed class IndexedDbSettingsDocumentService : ISettingsDocumentService,
             }
 
             await _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken).ConfigureAwait(false);
-            foreach (DefinitionState state in _definitions.Values)
+            IndexedDbOperation[] seedOperations =
+            [
+                .. _definitions.Values.Select(state => new IndexedDbOperation(
+                    "addIfAbsent",
+                    HackerOsIndexedDbSchema.SettingsStoreName,
+                    Key: state.Id,
+                    Value: SettingsRecord.Create(state, state.Definition.InitialContent, 1)))
+            ];
+            if (seedOperations.Length > 0)
             {
                 await _adapter.ExecuteAsync(
                     TransactionBoundary,
                     IndexedDbTransactionMode.ReadWrite,
-                    [new IndexedDbOperation(
-                        "addIfAbsent",
-                        HackerOsIndexedDbSchema.SettingsStoreName,
-                        Key: state.Id,
-                        Value: SettingsRecord.Create(state, state.Definition.InitialContent, 1))],
+                    seedOperations,
                     cancellationToken).ConfigureAwait(false);
             }
 

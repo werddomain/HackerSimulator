@@ -11,7 +11,7 @@ This report documents the completion of **Wave 5** (Utility Applications, Filesy
 | Task ID | Component Name | Legacy Source | C# Project / Location | Test Coverage | Status |
 |---|---|---|---|---|---|
 | `P4-W5-APP-001` | Calculator | `src/apps/calculator.ts` | `Apps/System/HackerOs.Apps.Calculator/` | `CalculatorEngine` arithmetic, memory & sqrt tests | **MIGRATED** |
-| `P4-W5-APP-002` | Hack Paint | `src/apps/hack-paint.ts` | `Apps/System/HackerOs.Apps.HackPaint/` | 14 Wave 5 tests, including authoritative RGBA pixel history, crop, rotation, undo, redo, and non-mutating pan | **REOPENED / IN PROGRESS** — canvas now renders the authoritative model with pointer capture; VFS/image round trips, dialogs, and pixel E2E remain |
+| `P4-W5-APP-002` | Hack Paint | `src/apps/hack-paint.ts` | `Apps/System/HackerOs.Apps.HackPaint/` | 14 Wave 5 tests plus Chromium `Hack_paint_canvas_draws_undoes_redoes_crops_and_pans` | **REOPENED / IN PROGRESS** — canvas now renders the authoritative model with pointer capture; VFS/image round trips, dialogs, and full-app pixel E2E remain |
 | `P4-W5-APP-003` | Theme Editor / Doc | `src/core/themes/` | `Apps/System/HackerOs.Apps.Settings/` | Design system & ThemeSettings integration | **MIGRATED** |
 | `P4-W5-APP-004` | Multi-Monitor Position | `src/core/multi-monitor.ts` | `docs/adr/0022-multi-monitor-requirement-position.md` | ADR 0022 (DECISION: D-016 Explicit Exclusion) | **MIGRATED** |
 | `P4-W5-CMD-001` | `mkdir`, `touch`, `rm`, `cp`, `mv` | `src/commands/` | `Apps/Commands/HackerOs.Commands.{Mkdir,Touch,Rm,Cp,Mv}/` | FileSystem gateway integration tests | **MIGRATED** |

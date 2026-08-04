@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +18,12 @@
     <ProjectReference Include="..\..\Infrastructure\HackerOs.Infrastructure.Browser\HackerOs.Infrastructure.Browser.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Optional first-party app: included in the published PWA cache, but absent from eager boot. -->
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.HackPaint.dll" />
   </ItemGroup>
 
   <ItemGroup>

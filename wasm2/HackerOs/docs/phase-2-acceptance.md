@@ -28,13 +28,13 @@ instead of executable acceptance evidence.
 | `P2-ACC-014` | Shutdown cancels sample background service and restart creates fresh volatile state | System | `Phase2AcceptanceTests.P2_ACC_013_P2_ACC_014_DisablingApp_And_ShutdownServiceCancellation` | **PASSED** |
 | `P2-ACC-015` | Published PWA works after online install with server stopped and browser offline | User | Published-browser matrix not yet implemented | **REOPENED** |
 | `P2-ACC-016` | PWA update preserves compatible data and never mixes release assets | User | Two-release published-browser update evidence not yet implemented | **REOPENED** |
-| `P2-ACC-017` | Unit/contract tests remain browser-free where designed; browser E2E runs in automated CI | Developer / CI | Active CI still requires .NET 10 solution replacement and a passing run | **REOPENED** |
+| `P2-ACC-017` | Unit/contract tests remain browser-free where designed; browser E2E runs in automated CI | Developer / CI | Active .NET 10 workflow restores, builds, Razor-scans, installs Chromium, tests, publishes, scans packages, and retains diagnostics; a hosted green run and published-PWA matrix remain required | **REOPENED** |
 
 ---
 
 ## Exit Gate Verification (`P2-GATE-001` through `P2-GATE-005`)
 
-1. **`P2-GATE-001` — PASSED:** after `dotnet build HackerOs.sln --configuration Release --no-restore` completed with 0 warnings and 0 errors, `dotnet test HackerOs.sln --configuration Release --no-build` passed 615 tests with 0 failed and 0 skipped on 2026-08-03.
+1. **`P2-GATE-001` — PASSED:** after `dotnet build HackerOs.sln --configuration Release --no-restore` completed with 0 warnings and 0 errors, `dotnet test HackerOs.sln --configuration Release --no-build` passed 622 tests with 0 failed and 0 skipped on 2026-08-04.
 2. **`P2-GATE-002` — REOPENED:** final published PWA/static-asset verification remains outstanding.
 3. **`P2-GATE-003` — REOPENED:** complete automated accessibility and manual assistive-technology evidence remains outstanding.
 4. **`P2-GATE-004` — REOPENED:** criteria 015–017 do not yet have passing published/CI evidence.

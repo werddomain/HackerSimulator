@@ -25,7 +25,7 @@ Nano reads through the app-scoped VFS gateway, enforces a 1 MiB UTF-8 limit, mai
 - [x] Verify Save As, denied capability, dirty confirmation, cancellation, and resize through focused deterministic tests.
 
 `P4-W3-006` was rechecked on 2026-08-03 after the complete Release solution passed
-615 tests. Focused evidence is `NanoCommandTests` (5),
+618 tests. Focused evidence is `NanoCommandTests` (5),
 `TerminalFullScreenSessionTests`, the full-screen cases in
 `AppIntentDispatcherTests`, and
 `IndexedDbBrowserContractTests.Terminal_full_screen_adapter_edits_and_restores_the_regular_screen`.

@@ -14,6 +14,8 @@ pointer gestures but never own state.
 - `WindowCommand` records describe requested transitions.
 - `WindowEvent` records describe completed transitions in deterministic order.
 - `WindowRuntime` atomically applies commands and exposes snapshots back-to-front.
+- `WindowLaunchCoordinator` projects successful lifecycle process launches into
+  visible windows and restores/focuses existing singleton windows.
 
 The model reuses `ProcessId` and `AppInstanceId` from Simulation Abstractions. It
 contains no `RenderFragment`, component reference, MudBlazor type, DOM element,
@@ -42,6 +44,12 @@ Create one `WindowRuntime` for a desktop work area, submit one command at a time
 render `Windows`, and route emitted events to lifecycle/taskbar integrations.
 Callers must not keep a second mutable window model.
 
+The desktop shell launches through `AppLifecycleOrchestrator`, then passes the
+manifest and successful `AppLaunchResult` to `WindowLaunchCoordinator`. A new
+window uses the process's `ProcessId` and `AppInstanceId`, so the desktop,
+taskbar, lifecycle, and close coordinator all refer to the same simulated OS
+process.
+
 ## Key Decisions
 
 - State snapshots are immutable and browser-independent.
@@ -63,6 +71,7 @@ Callers must not keep a second mutable window model.
 - [x] `P2-WIN-010` Coordinate confirmation, process cancellation, and removal.
 - [x] `P2-WIN-011` Enforce owner-modal blocking and deterministic focus return.
 - [x] `P2-WIN-012` Persist eligible geometry in `AppUserDevice` settings only.
+- [x] Project successful launcher results into desktop and taskbar window state.
 
 ## Browser geometry projection
 

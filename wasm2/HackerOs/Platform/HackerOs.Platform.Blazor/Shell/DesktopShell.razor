@@ -7,6 +7,7 @@
 @using HackerOs.Simulation.Abstractions.Time
 @using Microsoft.AspNetCore.Components.Web
 @inject WindowRuntime WindowRuntime
+@inject WindowLaunchCoordinator LaunchCoordinator
 @inject INotificationQueue NotificationQueue
 @inject AppLifecycleOrchestrator Orchestrator
 @inject WindowCloseCoordinator CloseCoordinator
@@ -45,6 +46,11 @@
 
     <NotificationCenter OnNotificationDismissed="StateHasChanged" />
 
+    @if (!string.IsNullOrEmpty(_launchError))
+    {
+        <aside class="lazy-launch-error" role="alert">@_launchError</aside>
+    }
+
     @if (_isLogoutOpen)
     {
         <LogoutDialog OnClose="CloseLogout" OnLoggedOut="HandleLoggedOutAsync" />
@@ -62,6 +68,7 @@
     private bool _isLauncherOpen;
     private bool _isNotificationsDrawerOpen;
     private bool _isLogoutOpen;
+    private string? _launchError;
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
@@ -108,9 +115,24 @@
         }
     }
 
-    private void HandleAppSelected(AppManifest manifest)
+    private async Task HandleAppSelected(AppManifest manifest)
     {
         _isLauncherOpen = false;
+        if (SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal)
+        {
+            return;
+        }
+
+        AppLaunchResult result = await Orchestrator.LaunchAsync(
+            new AppLaunchRequest(manifest.Id, principal, []));
+        if (result.IsSuccess)
+        {
+            LaunchCoordinator.Present(manifest, result);
+        }
+        _launchError = result.IsSuccess
+            ? null
+            : result.ErrorMessage ?? result.ErrorCode ?? "The optional app could not be loaded.";
+        StateHasChanged();
     }
 
     private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));

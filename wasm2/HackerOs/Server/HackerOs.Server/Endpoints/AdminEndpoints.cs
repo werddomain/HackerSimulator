@@ -2,6 +2,7 @@ using HackerOs.Server.Contracts.Admin;
 using HackerOs.Server.Data;
 using HackerOs.Server.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace HackerOs.Server.Endpoints;
@@ -106,7 +107,7 @@ public static class AdminEndpoints
     }
 
     private static IResult DeleteAccountAsync(
-        DeleteAccountRequest request, ClaimsPrincipal user)
+        [FromBody] DeleteAccountRequest request, ClaimsPrincipal user)
     {
         if (request.ConfirmationPhrase != "DELETE MY ACCOUNT")
             return Results.BadRequest(new { error = "CONFIRMATION_REQUIRED" });

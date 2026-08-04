@@ -40,7 +40,11 @@ public static class EcosystemServiceCollectionExtensions
     /// Adds persistent browser infrastructure and the process-wide simulation services.
     /// Asynchronous storage reconciliation and session startup remain boot responsibilities.
     /// </summary>
-    public static IServiceCollection AddHackerOsEcosystem(this IServiceCollection services)
+    public static IServiceCollection AddHackerOsEcosystem(
+        this IServiceCollection services,
+        AppCatalog? catalog = null,
+        Func<IServiceProvider, IReadOnlyDictionary<string, AppDescriptor>>? descriptorProvider = null,
+        Func<IServiceProvider, IAppDescriptorLoader?>? descriptorLoaderProvider = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
@@ -114,7 +118,7 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IndexedDbAppCatalogRepository>());
         services.AddSingleton<EcosystemBootCoordinator>();
 
-        services.AddSingleton(_ => CreateEmptyCatalog());
+        services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
         services.AddSingleton<AppEnablementRegistry>(provider =>
             new AppEnablementRegistry(provider.GetRequiredService<AppCatalog>()));
         services.AddSingleton<IAppEnablementRegistry>(provider =>
@@ -134,13 +138,14 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISettingsDocumentService>()));
         services.AddSingleton<AppLifecycleOrchestrator>(provider => new AppLifecycleOrchestrator(
             provider.GetRequiredService<AppCatalog>(),
-            new Dictionary<string, AppDescriptor>(StringComparer.Ordinal),
+            descriptorProvider?.Invoke(provider) ?? new Dictionary<string, AppDescriptor>(StringComparer.Ordinal),
             provider.GetRequiredService<AppEnablementRegistry>(),
             provider.GetRequiredService<IProcessManager>(),
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<AppExecutionContextFactory>(),
             provider.GetRequiredService<ISettingsDocumentService>(),
-            provider.GetRequiredService<IEventBus>()));
+            provider.GetRequiredService<IEventBus>(),
+            descriptorLoaderProvider?.Invoke(provider)));
         services.AddSingleton<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
@@ -156,6 +161,7 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<FileDialogServiceFactory>(provider => new FileDialogServiceFactory(
             provider.GetRequiredService<IFileSystemSelectedResourceHandleRegistry>()));
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
+        services.AddSingleton<WindowLaunchCoordinator>();
         services.AddSingleton<WindowCloseGuardRegistry>();
         services.AddSingleton<WindowCloseCoordinator>();
 

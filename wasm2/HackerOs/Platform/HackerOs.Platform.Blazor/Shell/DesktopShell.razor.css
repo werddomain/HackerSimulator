@@ -20,3 +20,17 @@
     position: relative;
     overflow: hidden;
 }
+
+.lazy-launch-error {
+    position: absolute;
+    right: 1rem;
+    bottom: 4.5rem;
+    z-index: 5000;
+    max-width: min(32rem, calc(100vw - 2rem));
+    padding: 0.8rem 1rem;
+    border: 1px solid #ff5f6d;
+    border-radius: 0.35rem;
+    background: rgba(34, 10, 14, 0.96);
+    color: #ffd7dc;
+    box-shadow: 0 0 1.25rem rgba(255, 70, 90, 0.22);
+}

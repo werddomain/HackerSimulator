@@ -15,11 +15,8 @@ Core platform framework assemblies load eagerly during boot, while non-critical 
 | `HackerOs.AppSdk.dll` / `HackerOs.AppSdk.Blazor.dll` | **Eager** | Base execution context & component contracts. |
 | `HackerOs.Platform.Core.dll` / `HackerOs.Platform.Blazor.dll` | **Eager** | Desktop shell, process manager, VFS router, event bus. |
 | `HackerOs.Ecosystem.dll` | **Eager** | Host composition root & PWA shell. |
-| `HackerOs.Apps.Terminal.dll` | **Eager** | Primary OS entry point and shell command handler. |
-| `HackerOs.Apps.FileExplorer.dll` | **Lazy** | Desktop file manager application loaded on first intent. |
-| `HackerOs.Apps.TextEditor.dll` | **Lazy** | Desktop text editor window app loaded on file open intent. |
-| `HackerOs.Samples.WindowApp.dll` | **Lazy** | Optional sample window application. |
-| `HackerOs.Samples.ServiceApp.dll` | **Eager** | AutoStart background ticker service. |
+| Browser, Calculator, Code Editor, Error Log Viewer, File Explorer, Hack Paint, Settings, System Monitor, Terminal, and Text Editor | **Lazy** | Their canonical manifests are embedded in the host catalog and each assembly loads on first launch. |
+| Sample applications | **Not selected** | Samples remain test and SDK examples rather than installed system apps. |
 
 ---
 
@@ -29,26 +26,44 @@ Lazy assemblies are declared in the WebAssembly host project file:
 
 ```xml
 <ItemGroup>
-  <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.FileExplorer.dll" />
+  <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Browser.dll" />
+  <!-- The remaining first-party system app assemblies are declared here too. -->
   <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.TextEditor.dll" />
-  <BlazorWebAssemblyLazyLoad Include="HackerOs.Samples.WindowApp.dll" />
 </ItemGroup>
 ```
+
+The same project embeds each system app's canonical `app.manifest.json`.
+`BuildKnownLazyApps` deserializes those resources into the immutable runtime
+catalog, avoiding a second hand-maintained manifest model in the host.
 
 ---
 
 ## 3. Dynamic Runtime Loading & Discovery
 
-When an app launch intent is dispatched (`LaunchAppIntent` / `OpenFileIntent`):
-1. `AppLifecycleOrchestrator` checks if the application assembly is loaded.
-2. If lazy, `LazyAssemblyLoader.LoadAssembliesAsync(["HackerOs.Apps.TextEditor.dll"])` fetches the assembly asynchronously.
-3. Upon completion, `AppEntryPointDiscovery` resolves the descriptor and instantiates the Blazor component or process.
+`WebAssemblyLazyAssemblyTransport` invokes Blazor's
+`LazyAssemblyLoader.LoadAssembliesAsync` through `BuildKnownAssemblyLoaderRegistry`.
+`BuildKnownLazyAppDescriptorRegistry` then validates the requested manifest
+against exactly the assembly loaded for that app and makes its descriptor available to
+`AppLifecycleOrchestrator` before launch. Both assembly loading and descriptor
+discovery coalesce concurrent first-launch requests; unknown app IDs and assets
+remain typed recoverable outcomes. Published-browser offline/reload evidence
+remains an open audit item.
 
 ---
 
 ## 4. Offline Failure Handling & Recovery UI
 
-If an assembly fails to load (e.g. network timeout or offline without cache):
-- The orchestrator displays a non-modal error toast or fallback error dialog: `"Failed to load application 'Text Editor'. Please check network connection."`
-- The operating system shell remains 100% active and functional.
-- Cached assemblies continue operating normally.
+The registry returns `Missing`, `Cancelled`, and `Failed` outcomes without
+destabilizing the shell. The shell-level recoverable UI and offline cached-load
+browser matrix remain open audit items.
+
+## Task Status
+
+- [x] Embed all ten first-party system manifests in the runnable host catalog.
+- [x] Declare all ten first-party system assemblies as build-known lazy assets.
+- [x] Coalesce first-load requests and register a validated descriptor with the
+  app lifecycle before launch.
+- [x] Reconcile the selected in-memory catalog into persistent browser storage
+  during boot.
+- [ ] Prove published-browser first fetch, offline cached launch, reload, and
+  corrupt/missing-asset recovery for every lazy app.

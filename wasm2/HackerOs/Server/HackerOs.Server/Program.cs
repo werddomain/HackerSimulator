@@ -20,10 +20,11 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables(prefix: "HACKEROS_");
+// WebApplication.CreateBuilder already loads appsettings.json, the environment
+// variant, standard environment variables, and command-line arguments. Add only
+// the documented HACKEROS_ override layer so deployments can use scoped variables
+// without re-adding JSON sources after host/test configuration.
+builder.Configuration.AddEnvironmentVariables(prefix: "HACKEROS_");
 
 // ── Database ──────────────────────────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("HackerOsDb")
@@ -39,6 +40,7 @@ builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IContentBlobService, ContentBlobService>();
+builder.Services.AddSingleton<IServerDatabaseBackupService, ServerDatabaseBackupService>();
 builder.Services.AddSingleton<IProxyAddressResolver, SystemProxyAddressResolver>();
 builder.Services.AddSingleton<IProxyConnectionPinAccessor, ProxyConnectionPinAccessor>();
 
@@ -114,7 +116,20 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<HackerOsServerDbContext>();
-    await db.Database.MigrateAsync();
+    // The server currently ships its model without generated EF migrations.
+    // MigrateAsync is a no-op in that state, so a fresh SQLite file would look
+    // connectable while containing no application tables. Use EnsureCreated for
+    // this migration-free bootstrap; once migrations are introduced, the normal
+    // migration path becomes authoritative.
+    string[] migrations = db.Database.GetMigrations().ToArray();
+    if (migrations.Length == 0)
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
 }
 
 // ── Endpoint groups ───────────────────────────────────────────────────────────
@@ -125,3 +140,9 @@ app.MapProxyEndpoints();      // POST /api/proxy/http, GET /api/proxy/policy
 app.MapAdminEndpoints();      // GET /health, GET /api/account/data-summary, ...
 
 await app.RunAsync();
+
+/// <summary>
+/// Public application entry point marker used by the server integration tests.
+/// The runtime behavior remains defined by the top-level program above.
+/// </summary>
+public partial class Program;

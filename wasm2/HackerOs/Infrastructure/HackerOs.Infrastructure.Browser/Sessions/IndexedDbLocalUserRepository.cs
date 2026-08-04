@@ -232,16 +232,25 @@ public sealed partial class IndexedDbLocalUserRepository : ILocalUserRepository,
 
     private sealed record LocalCredentialRecord(
         [property: JsonPropertyName("kdfIdentifier")] string KdfIdentifier,
-        [property: JsonPropertyName("salt")] byte[] Salt,
+        [property: JsonPropertyName("salt")] string Salt,
         [property: JsonPropertyName("iterations")] int Iterations,
-        [property: JsonPropertyName("verifier")] byte[] Verifier)
+        [property: JsonPropertyName("verifier")] string Verifier)
     {
         internal static LocalCredentialRecord FromDomain(LocalPasswordCredential credential) =>
-            new(credential.KdfIdentifier, credential.Salt, credential.Iterations, credential.Verifier);
+            new(
+                credential.KdfIdentifier,
+                Convert.ToBase64String(credential.Salt),
+                credential.Iterations,
+                Convert.ToBase64String(credential.Verifier));
 
-        internal LocalPasswordCredential ToDomain() => new(KdfIdentifier, Salt, Iterations, Verifier);
+        internal LocalPasswordCredential ToDomain() => new(
+            KdfIdentifier,
+            Convert.FromBase64String(Salt),
+            Iterations,
+            Convert.FromBase64String(Verifier));
     }
 
     [JsonSerializable(typeof(LocalUserRecord))]
+    [JsonSerializable(typeof(LocalCredentialRecord))]
     private sealed partial class LocalUserJsonContext : JsonSerializerContext;
 }
