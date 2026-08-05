@@ -1,4 +1,5 @@
 @using HackerOs.App.Abstractions
+@using HackerOs.Infrastructure.Browser.Interop
 @using HackerOs.Infrastructure.Browser.Recovery
 @using HackerOs.Platform.Blazor.Shell
 @using HackerOs.Platform.Core.Sessions
@@ -10,6 +11,7 @@
 @inject ISessionService SessionService
 @inject EcosystemBootCoordinator BootCoordinator
 @inject IWebAssemblyHostEnvironment HostEnvironment
+@inject WebCryptoPasswordHasher PasswordHasher
 
 <main class="ecosystem-host">
     @if (State.UpdateAvailable)
@@ -167,12 +169,15 @@
             LocalLoginName groupName = LocalLoginName.Parse("administrators");
             LocalGroup group = await GroupRepository.FindByNameAsync(groupName)
                 ?? await GroupRepository.CreateGroupAsync(groupName);
+            LocalPasswordCredential credential = await LocalPasswordHasher.CreateAsync(
+                SetupPassword,
+                asyncHasher: (pwd, salt, iter, len, ct) => PasswordHasher.DeriveKeyAsync(pwd, salt, iter, len, ct));
             await UserRepository.CreateUserAsync(
                 loginName,
                 SetupDisplayName,
                 AppAuthority.Administrator,
                 group.Id,
-                credential: LocalPasswordHasher.Create(SetupPassword));
+                credential: credential);
             State.BeginLoginProgress();
             StateHasChanged();
             await Task.Delay(50);

@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.Catalog;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Diagnostics;
+using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Policy;
 using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
@@ -102,15 +103,23 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IFileSystemService, FileSystemService>();
         services.AddTransient<FileSystemSeeder>();
 
+        services.AddSingleton<WebCryptoPasswordHasher>(provider =>
+            new WebCryptoPasswordHasher(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<ILoginProgressTracker, LoginProgressTracker>();
-        services.AddSingleton<ISessionService>(provider => new LocalSessionService(
-            provider.GetRequiredService<ILocalUserRepository>(),
-            provider.GetRequiredService<FileSystemSeeder>(),
-            provider.GetRequiredService<IEventBus>(),
-            provider.GetRequiredService<IAuditLog>(),
-            InstallationId.FromGuid(Guid.NewGuid()),
-            DeviceId.FromGuid(Guid.NewGuid()),
-            progressTracker: provider.GetRequiredService<ILoginProgressTracker>()));
+        services.AddSingleton<ISessionService>(provider =>
+        {
+            WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
+            return new LocalSessionService(
+                provider.GetRequiredService<ILocalUserRepository>(),
+                provider.GetRequiredService<FileSystemSeeder>(),
+                provider.GetRequiredService<IEventBus>(),
+                provider.GetRequiredService<IAuditLog>(),
+                InstallationId.FromGuid(Guid.NewGuid()),
+                DeviceId.FromGuid(Guid.NewGuid()),
+                progressTracker: provider.GetRequiredService<ILoginProgressTracker>(),
+                asyncHasher: (password, salt, iterations, length, ct) =>
+                    hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
+        });
         services.AddSingleton<IProcessManager>(provider =>
             new InMemoryProcessManager(
                 provider.GetRequiredService<ISimulationClock>(),

@@ -32,6 +32,41 @@ public sealed class LocalPasswordHasherTests
         LocalPasswordCredential credential = new("future-kdf-v2", [1, 2, 3, 4], 100, [5, 6, 7, 8]);
         Assert.False(LocalPasswordHasher.Verify("hunter2", credential));
     }
+
+    [Fact]
+    public async Task CreateAsync_and_VerifyAsync_work_with_custom_delegate()
+    {
+        bool delegateCalled = false;
+        ValueTask<byte[]> CustomHasher(string pwd, byte[] salt, int iter, int len, CancellationToken ct)
+        {
+            delegateCalled = true;
+            return ValueTask.FromResult(new byte[len]);
+        }
+
+        LocalPasswordCredential credential = await LocalPasswordHasher.CreateAsync("hunter2", iterations: 100, asyncHasher: CustomHasher);
+        Assert.True(delegateCalled);
+
+        delegateCalled = false;
+        bool verified = await LocalPasswordHasher.VerifyAsync("hunter2", credential, asyncHasher: CustomHasher);
+        Assert.True(delegateCalled);
+        Assert.True(verified);
+    }
+
+    [Fact]
+    public async Task CreateAsync_and_VerifyAsync_fallback_gracefully_when_delegate_throws()
+    {
+        ValueTask<byte[]> FailingHasher(string pwd, byte[] salt, int iter, int len, CancellationToken ct)
+        {
+            throw new InvalidOperationException("JS Disconnected");
+        }
+
+        LocalPasswordCredential credential = await LocalPasswordHasher.CreateAsync("hunter2", iterations: 100, asyncHasher: FailingHasher);
+        Assert.NotNull(credential);
+        Assert.Equal(100, credential.Iterations);
+
+        bool verified = await LocalPasswordHasher.VerifyAsync("hunter2", credential, asyncHasher: FailingHasher);
+        Assert.True(verified);
+    }
 }
 
 public sealed class InMemoryLocalUserRepositoryTests

@@ -32,6 +32,7 @@ public sealed class LocalSessionService : ISessionService
     /// <param name="installationId">Identifier of the HackerOS installation/profile hosting this session.</param>
     /// <param name="deviceId">Identifier of the physical/browser device hosting this session.</param>
     /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+    private readonly KeyDerivationAsyncDelegate? _asyncHasher;
     private readonly ILoginProgressTracker _progressTracker;
 
     /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
@@ -43,6 +44,7 @@ public sealed class LocalSessionService : ISessionService
     /// <param name="deviceId">Identifier of the physical/browser device hosting this session.</param>
     /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <param name="progressTracker">Optional tracker used to report login step progress.</param>
+    /// <param name="asyncHasher">Optional asynchronous key derivation delegate (e.g. Web Crypto API interop).</param>
     public LocalSessionService(
         ILocalUserRepository users,
         FileSystemSeeder homeSeeder,
@@ -51,7 +53,8 @@ public sealed class LocalSessionService : ISessionService
         InstallationId installationId,
         DeviceId deviceId,
         Func<DateTimeOffset>? clock = null,
-        ILoginProgressTracker? progressTracker = null)
+        ILoginProgressTracker? progressTracker = null,
+        KeyDerivationAsyncDelegate? asyncHasher = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _homeSeeder = homeSeeder ?? throw new ArgumentNullException(nameof(homeSeeder));
@@ -61,6 +64,7 @@ public sealed class LocalSessionService : ISessionService
         _deviceId = deviceId;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _progressTracker = progressTracker ?? NullLoginProgressTracker.Instance;
+        _asyncHasher = asyncHasher;
     }
 
     /// <inheritdoc />
@@ -113,7 +117,8 @@ public sealed class LocalSessionService : ISessionService
                     throw new InvalidOperationException($"User '{loginName}' is disabled.");
                 }
 
-                if (user.Credential is { } credential && !LocalPasswordHasher.Verify(password ?? string.Empty, credential))
+                if (user.Credential is { } credential
+                    && !await LocalPasswordHasher.VerifyAsync(password ?? string.Empty, credential, _asyncHasher, cancellationToken).ConfigureAwait(false))
                 {
                     RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Denied);
                     throw new InvalidOperationException("Invalid credentials.");
