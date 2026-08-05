@@ -25,7 +25,12 @@ public sealed class WindowCloseCoordinator
         Func<CancellationToken, ValueTask<bool>>? confirmAsync = null,
         CancellationToken cancellationToken = default)
     {
-        WindowRuntimeState window = _runtime.Windows.Single(item => item.Id == windowId);
+        WindowRuntimeState? window = _runtime.Windows.FirstOrDefault(item => item.Id == windowId);
+        if (window is null)
+        {
+            return [];
+        }
+
         List<WindowEvent> events = [.. _runtime.Apply(new RequestWindowCloseCommand(windowId))];
 
         if (confirmAsync is not null && !await confirmAsync(cancellationToken))

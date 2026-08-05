@@ -102,13 +102,15 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IFileSystemService, FileSystemService>();
         services.AddTransient<FileSystemSeeder>();
 
+        services.AddSingleton<ILoginProgressTracker, LoginProgressTracker>();
         services.AddSingleton<ISessionService>(provider => new LocalSessionService(
             provider.GetRequiredService<ILocalUserRepository>(),
             provider.GetRequiredService<FileSystemSeeder>(),
             provider.GetRequiredService<IEventBus>(),
             provider.GetRequiredService<IAuditLog>(),
             InstallationId.FromGuid(Guid.NewGuid()),
-            DeviceId.FromGuid(Guid.NewGuid())));
+            DeviceId.FromGuid(Guid.NewGuid()),
+            progressTracker: provider.GetRequiredService<ILoginProgressTracker>()));
         services.AddSingleton<IProcessManager>(provider =>
             new InMemoryProcessManager(
                 provider.GetRequiredService<ISimulationClock>(),

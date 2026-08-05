@@ -32,6 +32,17 @@ public sealed class LocalSessionService : ISessionService
     /// <param name="installationId">Identifier of the HackerOS installation/profile hosting this session.</param>
     /// <param name="deviceId">Identifier of the physical/browser device hosting this session.</param>
     /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+    private readonly ILoginProgressTracker _progressTracker;
+
+    /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
+    /// <param name="users">Repository used to look up and authenticate local users.</param>
+    /// <param name="homeSeeder">Seeder that provisions a freshly authenticated user's home directory.</param>
+    /// <param name="eventBus">Bus used to publish session lifecycle events.</param>
+    /// <param name="auditLog">Audit log used to record login/logout/shutdown operations.</param>
+    /// <param name="installationId">Identifier of the HackerOS installation/profile hosting this session.</param>
+    /// <param name="deviceId">Identifier of the physical/browser device hosting this session.</param>
+    /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+    /// <param name="progressTracker">Optional tracker used to report login step progress.</param>
     public LocalSessionService(
         ILocalUserRepository users,
         FileSystemSeeder homeSeeder,
@@ -39,7 +50,8 @@ public sealed class LocalSessionService : ISessionService
         IAuditLog auditLog,
         InstallationId installationId,
         DeviceId deviceId,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        ILoginProgressTracker? progressTracker = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _homeSeeder = homeSeeder ?? throw new ArgumentNullException(nameof(homeSeeder));
@@ -48,6 +60,7 @@ public sealed class LocalSessionService : ISessionService
         _installationId = installationId;
         _deviceId = deviceId;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _progressTracker = progressTracker ?? NullLoginProgressTracker.Instance;
     }
 
     /// <inheritdoc />
@@ -79,28 +92,42 @@ public sealed class LocalSessionService : ISessionService
             State = SessionState.Starting;
         }
 
+        _progressTracker.Reset();
+        _progressTracker.SetTotalSteps(3);
+
         try
         {
-            LocalUser? user = await _users.FindByLoginNameAsync(loginName, cancellationToken);
-            if (user is null)
+            LocalUser? user;
+            using (_progressTracker.BeginStep("Loading Profile"))
             {
-                RecordAudit(loginName.Value, "session.login", loginName.Value, AuditOutcome.Denied);
-                throw new InvalidOperationException($"No local user '{loginName}'.");
+                user = await _users.FindByLoginNameAsync(loginName, cancellationToken);
+                if (user is null)
+                {
+                    RecordAudit(loginName.Value, "session.login", loginName.Value, AuditOutcome.Denied);
+                    throw new InvalidOperationException($"No local user '{loginName}'.");
+                }
+
+                if (!user.Enabled)
+                {
+                    RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Denied);
+                    throw new InvalidOperationException($"User '{loginName}' is disabled.");
+                }
+
+                if (user.Credential is { } credential && !LocalPasswordHasher.Verify(password ?? string.Empty, credential))
+                {
+                    RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Denied);
+                    throw new InvalidOperationException("Invalid credentials.");
+                }
             }
 
-            if (!user.Enabled)
+            await Task.Yield();
+
+            using (_progressTracker.BeginStep("Ensure data integrity"))
             {
-                RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Denied);
-                throw new InvalidOperationException($"User '{loginName}' is disabled.");
+                await _homeSeeder.SeedAsync(user.LoginName.Value, user.PrimaryGroupId.ToString(), cancellationToken);
             }
 
-            if (user.Credential is { } credential && !LocalPasswordHasher.Verify(password ?? string.Empty, credential))
-            {
-                RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Denied);
-                throw new InvalidOperationException("Invalid credentials.");
-            }
-
-            await _homeSeeder.SeedAsync(user.LoginName.Value, user.PrimaryGroupId.ToString(), cancellationToken);
+            await Task.Yield();
 
             SessionId sessionId = SessionId.FromGuid(Guid.NewGuid());
             List<LocalGroupId> groupIds = [user.PrimaryGroupId, .. user.AdditionalGroupIds];
@@ -116,15 +143,18 @@ public sealed class LocalSessionService : ISessionService
                 _deviceId,
                 _clock());
 
-            lock (_gate)
+            using (_progressTracker.BeginStep("Starting Session"))
             {
-                _rootTokenSource = new CancellationTokenSource();
-                _principal = principal;
-                State = SessionState.Active;
-            }
+                lock (_gate)
+                {
+                    _rootTokenSource = new CancellationTokenSource();
+                    _principal = principal;
+                    State = SessionState.Active;
+                }
 
-            _eventBus.Publish(new SessionActivatedEvent(sessionId, user.Id, principal.AuthenticatedAtUtc));
-            RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Success);
+                _eventBus.Publish(new SessionActivatedEvent(sessionId, user.Id, principal.AuthenticatedAtUtc));
+                RecordAudit(user.Id.ToString(), "session.login", loginName.Value, AuditOutcome.Success);
+            }
 
             return principal;
         }

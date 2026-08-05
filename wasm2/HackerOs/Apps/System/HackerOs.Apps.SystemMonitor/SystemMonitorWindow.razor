@@ -1,15 +1,24 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core.Lifecycle
+@using HackerOs.Simulation.Abstractions.Events
+@using HackerOs.Simulation.Abstractions.Processes
+@using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@implements IDisposable
 @inherits WindowAppBase
+@inject IProcessManager? ProcessManager
+@inject AppLifecycleOrchestrator? Orchestrator
+@inject IEventBus? EventBus
+
 
 <div class="sysmon-container">
     <header class="sysmon-header">
-        <span class="sysmon-title">HackerOS Task & System Monitor</span>
-        <button class="sysmon-btn" @onclick="RefreshAsync">Refresh</button>
+        <span class="sysmon-title">HackerOS Task & System Monitor </span>
+        <button class="sysmon-btn" @onclick="@RefreshAsync">Refresh</button>
     </header>
-
+    
     <div class="sysmon-body">
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="sysmon-tabs">
             <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
@@ -50,7 +59,8 @@
                         <tbody>
                             @foreach (var proc in _activeProcesses)
                             {
-                                <tr class="@(proc.Pid == _selectedPid ? "selected" : "")" @onclick="() => SelectProcess(proc.Pid)">
+                                long processId = proc.Pid;
+                                <tr class="@(proc.Pid == _selectedPid ? "selected" : "")" @onclick="@(() => SelectProcess(processId))">
                                     <td>@proc.Pid</td>
                                     <td>@proc.Name</td>
                                     <td>@proc.AppId</td>
@@ -97,36 +107,132 @@
     private double _ramPercent = 28.4;
     private double _diskPercent = 42.0;
     private long? _selectedPid;
-
-    private readonly List<ProcessDisplayItem> _activeProcesses = new()
+    private IDisposable? _eventSubscription;
+    private List<ProcessDisplayItem> _activeProcesses = [];
+    int count = 0;
+    protected override void OnAppInitialized()
     {
-        new ProcessDisplayItem(1, "system-kernel", "org.hackeros.kernel", 64),
-        new ProcessDisplayItem(10, "desktop-shell", "org.hackeros.shell", 128),
-        new ProcessDisplayItem(101, "terminal", "org.hackeros.terminal", 45),
-        new ProcessDisplayItem(102, "file-explorer", "org.hackeros.file-explorer", 52),
-        new ProcessDisplayItem(201, "system-monitor", "org.hackeros.system-monitor", 38)
-    };
-
-    private void SelectProcess(long pid)
-    {
-        _selectedPid = pid;
+         
+        LoadProcesses();
+        if (EventBus is not null)
+        {
+            _eventSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+        }
+        
     }
 
-    private Task KillSelectedProcessAsync()
+    private void OnProcessStateChanged(ProcessStateChangedEvent e)
     {
-        if (_selectedPid != null)
+        LoadProcesses();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadProcesses()
+    {
+        if (ProcessManager is not null)
         {
-            _activeProcesses.RemoveAll(p => p.Pid == _selectedPid);
+            IReadOnlyList<ProcessRecord> processes = ProcessManager.GetActiveProcesses();
+            if (processes.Count > 0)
+            {
+                _activeProcesses = processes.Select(p => new ProcessDisplayItem(
+                    p.Pid.Value,
+                    GetProcessName(p.AppId),
+                    p.AppId,
+                    GetSimulatedMemory(p.AppId)
+                )).ToList();
+
+                if (_selectedPid.HasValue && !_activeProcesses.Any(p => p.Pid == _selectedPid.Value))
+                {
+                    _selectedPid = null;
+                }
+                return;
+            }
+        }
+
+        _activeProcesses =
+        [
+            new ProcessDisplayItem(1, "system-kernel", "org.hackeros.kernel", 64),
+            new ProcessDisplayItem(10, "desktop-shell", "org.hackeros.shell", 128),
+            new ProcessDisplayItem(101, "terminal", "org.hackeros.terminal", 45),
+            new ProcessDisplayItem(102, "file-explorer", "org.hackeros.file-explorer", 52),
+            new ProcessDisplayItem(201, "system-monitor", "org.hackeros.system-monitor", 38)
+        ];
+
+        if (_selectedPid.HasValue && !_activeProcesses.Any(p => p.Pid == _selectedPid.Value))
+        {
             _selectedPid = null;
         }
-        return Task.CompletedTask;
+    }
+    
+    private void SelectProcess(long? pid)
+    {
+        _selectedPid = pid;
+        StateHasChanged();
+    }
+
+    private async Task KillSelectedProcessAsync()
+    {
+        if (_selectedPid.HasValue)
+        {
+            long pidToKill = _selectedPid.Value;
+            _selectedPid = null;
+
+            ProcessId pid = ProcessId.FromInt64(pidToKill);
+            if (Orchestrator is not null)
+            {
+                await Orchestrator.StopAsync(pid, ProcessExitReason.Killed);
+            }
+            else if (ProcessManager is not null)
+            {
+                ProcessManager.Kill(pid, ProcessExitReason.Killed);
+            }
+
+            LoadProcesses();
+            StateHasChanged();
+        }
     }
 
     private Task RefreshAsync()
     {
         _cpuPercent = Math.Round(10.0 + Random.Shared.NextDouble() * 15.0, 1);
         _ramPercent = Math.Round(25.0 + Random.Shared.NextDouble() * 10.0, 1);
+        LoadProcesses();
         return Task.CompletedTask;
+    }
+
+    private static string GetProcessName(string appId) => appId switch
+    {
+        "org.hackeros.kernel" => "system-kernel",
+        "org.hackeros.shell" => "desktop-shell",
+        "org.hackeros.terminal" => "terminal",
+        "org.hackeros.file-explorer" => "file-explorer",
+        "org.hackeros.system-monitor" => "system-monitor",
+        "org.hackeros.calculator" => "calculator",
+        "org.hackeros.code-editor" => "code-editor",
+        "org.hackeros.hackpaint" => "hackpaint",
+        "org.hackeros.text-editor" => "text-editor",
+        "org.hackeros.browser" => "browser",
+        "org.hackeros.settings" => "settings",
+        _ => appId.Split('.').LastOrDefault() ?? appId
+    };
+
+    private static int GetSimulatedMemory(string appId) => appId switch
+    {
+        "org.hackeros.kernel" => 64,
+        "org.hackeros.shell" => 128,
+        "org.hackeros.browser" => 180,
+        "org.hackeros.code-editor" => 95,
+        "org.hackeros.hackpaint" => 85,
+        "org.hackeros.file-explorer" => 52,
+        "org.hackeros.terminal" => 45,
+        "org.hackeros.calculator" => 32,
+        "org.hackeros.system-monitor" => 38,
+        _ => 40
+    };
+
+    public void Dispose()
+    {
+        _eventSubscription?.Dispose();
     }
 
     private record ProcessDisplayItem(long Pid, string Name, string AppId, int MemoryMb);

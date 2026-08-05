@@ -30,6 +30,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    
     <ProjectReference Include="..\..\OS\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />

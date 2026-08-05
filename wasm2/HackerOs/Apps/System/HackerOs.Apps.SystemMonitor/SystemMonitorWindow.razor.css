@@ -26,18 +26,36 @@
     color: #c9d1d9;
     border: 1px solid #30363d;
     border-radius: 4px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
 
-    &:hover { background-color: #30363d; }
-    &.btn-danger {
-        background-color: #3c1e1e;
-        color: #f85149;
-        border-color: #8b2828;
+.sysmon-btn:hover {
+    background-color: #30363d;
+}
 
-        &:hover { background-color: #4e2626; }
-        &:disabled { opacity: 0.5; cursor: not-allowed; }
-    }
+.sysmon-btn.btn-danger {
+    background-color: #8b2828;
+    color: #ffffff;
+    border-color: #a83232;
+    box-shadow: 0 0 8px rgba(248, 81, 73, 0.3);
+}
+
+.sysmon-btn.btn-danger:hover {
+    background-color: #b83232;
+    border-color: #d83a3a;
+}
+
+.sysmon-btn.btn-danger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background-color: #21262d;
+    color: #484f58;
+    border-color: #30363d;
+    box-shadow: none;
 }
 
 .sysmon-body {
@@ -94,7 +112,7 @@
 }
 
 .sysmon-table th, .sysmon-table td {
-    padding: 8px 12px;
+    padding: 10px 14px;
     text-align: left;
     border-bottom: 1px solid #21262d;
 }
@@ -102,12 +120,26 @@
 .sysmon-table th {
     background-color: #1c2128;
     color: #8b949e;
+    font-weight: 600;
 }
 
 .sysmon-table tr {
     cursor: pointer;
-    &:hover { background-color: #21262d; }
-    &.selected { background-color: #1f385c; }
+    transition: background-color 0.15s ease;
+}
+
+.sysmon-table tr:hover {
+    background-color: #21262d;
+}
+
+.sysmon-table tr.selected {
+    background-color: #1f385c !important;
+}
+
+.sysmon-table tr.selected td {
+    background-color: #1f385c !important;
+    color: #ffffff !important;
+    font-weight: 600;
 }
 
 .status-badge {
@@ -132,4 +164,6 @@
     border-bottom: 1px solid #21262d;
 }
 
-.info-row span { color: #8b949e; }
+.info-row span {
+    color: #8b949e;
+}

@@ -37,6 +37,9 @@ public sealed class EcosystemHostState
         View = Users.Count == 0 ? EcosystemHostView.FirstRun : EcosystemHostView.Login;
     }
 
+    /// <summary>Shows the login progress transition screen during session initialization.</summary>
+    public void BeginLoginProgress() => View = EcosystemHostView.LoginProgress;
+
     /// <summary>Shows the desktop only after session activation succeeds.</summary>
     public void CompleteLogin() => View = EcosystemHostView.Desktop;
 
@@ -72,6 +75,8 @@ public enum EcosystemHostView
     FirstRun,
     /// <summary>Existing local users may authenticate.</summary>
     Login,
+    /// <summary>Session startup progress is displayed.</summary>
+    LoginProgress,
     /// <summary>An authenticated session may use the desktop shell.</summary>
     Desktop,
     /// <summary>A typed storage failure blocks ordinary startup.</summary>

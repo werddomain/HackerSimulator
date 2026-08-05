@@ -62,6 +62,18 @@ public sealed class AppLifecycleOrchestrator
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus;
         _descriptorLoader = descriptorLoader;
+        _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+    }
+
+    private void OnProcessStateChanged(ProcessStateChangedEvent e)
+    {
+        if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
+        {
+            lock (_sync)
+            {
+                _running.Remove(e.Pid);
+            }
+        }
     }
 
     /// <summary>Gets the enablement registry so callers can check status without a separate wire-up.</summary>

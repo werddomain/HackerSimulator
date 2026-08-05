@@ -5,6 +5,8 @@
 @using HackerOs.Simulation.Abstractions.Notifications
 @using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.Simulation.Abstractions.Time
+@using HackerOs.Simulation.Abstractions.Events
+@using HackerOs.Simulation.Abstractions.Processes
 @implements IDisposable
 @inject WindowRuntime WindowRuntime
 @inject WindowLaunchCoordinator LaunchCoordinator
@@ -14,6 +16,7 @@
 @inject WindowCloseGuardRegistry CloseGuards
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
+@inject IEventBus EventBus
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -162,13 +165,30 @@
     }
     private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
 
+    private IDisposable? _processSubscription;
+
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += OnWindowRuntimeStateChanged;
+        _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
     private void OnWindowRuntimeStateChanged()
     {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnProcessStateChanged(ProcessStateChangedEvent e)
+    {
+        if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
+        {
+            WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.ProcessId == e.Pid);
+            if (matchingWindow is not null)
+            {
+                WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+            }
+        }
+
         InvokeAsync(StateHasChanged);
     }
 
@@ -190,5 +210,6 @@
     public void Dispose()
     {
         WindowRuntime.StateChanged -= OnWindowRuntimeStateChanged;
+        _processSubscription?.Dispose();
     }
 }

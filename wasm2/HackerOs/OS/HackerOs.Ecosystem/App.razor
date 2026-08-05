@@ -75,6 +75,9 @@
                 </form>
             </section>
             break;
+        case EcosystemHostView.LoginProgress:
+            <LoginProgressScreen />
+            break;
         case EcosystemHostView.Desktop:
             <DesktopShell OnLoggedOut="HandleLoggedOut" />
             break;
@@ -170,12 +173,16 @@
                 AppAuthority.Administrator,
                 group.Id,
                 credential: LocalPasswordHasher.Create(SetupPassword));
+            State.BeginLoginProgress();
+            StateHasChanged();
+            await Task.Delay(50);
             await SessionService.LoginAsync(loginName, SetupPassword);
             ClearPasswords();
             State.CompleteLogin();
         }
         catch (Exception exception) when (exception is FormatException or InvalidOperationException)
         {
+            State.CompleteIdentityLoad(State.Users);
             FormError = exception.Message;
         }
         finally
@@ -190,12 +197,16 @@
         IsSubmitting = true;
         try
         {
+            State.BeginLoginProgress();
+            StateHasChanged();
+            await Task.Delay(50);
             await SessionService.LoginAsync(LocalLoginName.Parse(SelectedLogin), LoginPassword);
             ClearPasswords();
             State.CompleteLogin();
         }
         catch (Exception exception) when (exception is FormatException or InvalidOperationException)
         {
+            State.CompleteIdentityLoad(State.Users);
             FormError = "The local credentials were not accepted.";
         }
         finally

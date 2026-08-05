@@ -169,19 +169,31 @@ public sealed class WindowRuntime
 
     private IReadOnlyList<WindowEvent> RequestClose(WindowId id)
     {
-        _ = Get(id);
+        if (!_windows.ContainsKey(id))
+        {
+            return [];
+        }
+
         return _pendingClose.Add(id) ? [new WindowCloseRequestedEvent(id)] : [];
     }
 
     private IReadOnlyList<WindowEvent> CancelClose(WindowId id)
     {
-        _ = Get(id);
+        if (!_windows.ContainsKey(id))
+        {
+            return [];
+        }
+
         return _pendingClose.Remove(id) ? [new WindowCloseCancelledEvent(id)] : [];
     }
 
     private IReadOnlyList<WindowEvent> ForceClose(WindowId id)
     {
-        WindowRuntimeState current = Get(id);
+        if (!_windows.TryGetValue(id, out WindowRuntimeState? current))
+        {
+            return [];
+        }
+
         _windows.Remove(id);
         bool wasRequested = _pendingClose.Remove(id);
         List<WindowEvent> events = [new WindowClosedEvent(id, !wasRequested)];
