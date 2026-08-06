@@ -1,4 +1,7 @@
+using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -24,16 +27,10 @@ public sealed class LocalSessionService : ISessionService
     private CancellationTokenSource? _rootTokenSource;
     private AuthenticatedPrincipal? _principal;
 
-    /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
-    /// <param name="users">Repository used to look up and authenticate local users.</param>
-    /// <param name="homeSeeder">Seeder that provisions a freshly authenticated user's home directory.</param>
-    /// <param name="eventBus">Bus used to publish session lifecycle events.</param>
-    /// <param name="auditLog">Audit log used to record login/logout/shutdown operations.</param>
-    /// <param name="installationId">Identifier of the HackerOS installation/profile hosting this session.</param>
-    /// <param name="deviceId">Identifier of the physical/browser device hosting this session.</param>
-    /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     private readonly KeyDerivationAsyncDelegate? _asyncHasher;
     private readonly ILoginProgressTracker _progressTracker;
+    private readonly ICapabilityGrantRepository? _grantRepository;
+    private readonly AppCatalog? _catalog;
 
     /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
     /// <param name="users">Repository used to look up and authenticate local users.</param>
@@ -45,6 +42,8 @@ public sealed class LocalSessionService : ISessionService
     /// <param name="clock">Clock used for event/audit timestamps; defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <param name="progressTracker">Optional tracker used to report login step progress.</param>
     /// <param name="asyncHasher">Optional asynchronous key derivation delegate (e.g. Web Crypto API interop).</param>
+    /// <param name="grantRepository">Optional capability grant repository used to seed user capability grants on login.</param>
+    /// <param name="catalog">Optional app catalog containing app manifests with declared capabilities.</param>
     public LocalSessionService(
         ILocalUserRepository users,
         FileSystemSeeder homeSeeder,
@@ -54,7 +53,9 @@ public sealed class LocalSessionService : ISessionService
         DeviceId deviceId,
         Func<DateTimeOffset>? clock = null,
         ILoginProgressTracker? progressTracker = null,
-        KeyDerivationAsyncDelegate? asyncHasher = null)
+        KeyDerivationAsyncDelegate? asyncHasher = null,
+        ICapabilityGrantRepository? grantRepository = null,
+        AppCatalog? catalog = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _homeSeeder = homeSeeder ?? throw new ArgumentNullException(nameof(homeSeeder));
@@ -65,6 +66,8 @@ public sealed class LocalSessionService : ISessionService
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _progressTracker = progressTracker ?? NullLoginProgressTracker.Instance;
         _asyncHasher = asyncHasher;
+        _grantRepository = grantRepository;
+        _catalog = catalog;
     }
 
     /// <inheritdoc />
@@ -130,6 +133,14 @@ public sealed class LocalSessionService : ISessionService
             using (_progressTracker.BeginStep("Ensure data integrity"))
             {
                 await _homeSeeder.SeedAsync(user.LoginName.Value, user.PrimaryGroupId.ToString(), cancellationToken);
+                if (_grantRepository is not null && _catalog is not null)
+                {
+                    string userId = user.Id.ToString();
+                    foreach (AppManifest manifest in _catalog.Manifests.Values)
+                    {
+                        CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(_grantRepository, manifest, userId);
+                    }
+                }
             }
 
             await Task.Yield();

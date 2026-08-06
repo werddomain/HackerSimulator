@@ -73,12 +73,14 @@ public sealed class AppExecutionContextFactory
         ArgumentNullException.ThrowIfNull(grantedCapabilities);
 
         string userId = principal.UserId.ToString();
+        string userName = principal.LoginName.Value;
         string[] groupIds = [.. principal.GroupIds.Select(g => g.ToString())];
 
         AppOperationContext operationContext = new()
         {
             AppId = manifest.Id,
             UserId = userId,
+            UserName = userName,
             UserAuthority = principal.Authority,
             GrantedCapabilities = grantedCapabilities,
             IsSystemOperation = false

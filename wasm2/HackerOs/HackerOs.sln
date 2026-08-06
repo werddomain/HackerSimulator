@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.8.12009.203 stable
+VisualStudioVersion = 18.8.12009.203
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{4F52FD11-658E-A102-6CD3-7D7C16FFA15B}"
 EndProject
@@ -186,6 +186,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Game.Tests", "Tests\HackerOs.Game.Tests\HackerOs.Game.Tests.csproj", "{A07E973F-49A4-4982-BC3E-59783FB9660F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test\test.csproj", "{371B3223-1184-434D-926E-28D9FC7588FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Apps.Diagnostic", "Apps\System\HackerOs.Apps.Diagnostic\HackerOs.Apps.Diagnostic.csproj", "{1B986D57-6657-451C-8316-768F1204FD2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1157,6 +1159,18 @@ Global
 		{371B3223-1184-434D-926E-28D9FC7588FA}.Release|x64.Build.0 = Release|Any CPU
 		{371B3223-1184-434D-926E-28D9FC7588FA}.Release|x86.ActiveCfg = Release|Any CPU
 		{371B3223-1184-434D-926E-28D9FC7588FA}.Release|x86.Build.0 = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|x64.Build.0 = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Debug|x86.Build.0 = Debug|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|x64.ActiveCfg = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|x64.Build.0 = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|x86.ActiveCfg = Release|Any CPU
+		{1B986D57-6657-451C-8316-768F1204FD2C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1245,6 +1259,7 @@ Global
 		{1D36450C-A89C-4602-8011-82C4088AA67F} = {4F52FD11-658E-A102-6CD3-7D7C16FFA15B}
 		{A07E973F-49A4-4982-BC3E-59783FB9660F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{371B3223-1184-434D-926E-28D9FC7588FA} = {37F61B1F-7B2D-C70A-2176-B3B271E5A998}
+		{1B986D57-6657-451C-8316-768F1204FD2C} = {905B2783-9C43-92DA-30E4-6F9E435459FB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {339AC3E9-0C3E-4CCF-BC46-C1938BC52847}

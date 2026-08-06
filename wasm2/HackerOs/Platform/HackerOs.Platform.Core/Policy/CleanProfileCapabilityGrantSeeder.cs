@@ -34,12 +34,22 @@ public static class CleanProfileCapabilityGrantSeeder
         List<CapabilityGrantMutationResult> results = [];
         foreach (string capability in manifest.Capabilities)
         {
-            results.Add(repository.Grant(
+            CapabilityPolicyEvaluation evaluation = repository.Evaluate(
                 manifest.Id,
                 userId,
                 capability,
-                CapabilityGrantSource.BuildProfile,
-                AppAuthority.System));
+                AppAuthority.System,
+                AppAuthority.User);
+
+            if (!evaluation.Granted)
+            {
+                results.Add(repository.Grant(
+                    manifest.Id,
+                    userId,
+                    capability,
+                    CapabilityGrantSource.BuildProfile,
+                    AppAuthority.System));
+            }
         }
 
         return results;

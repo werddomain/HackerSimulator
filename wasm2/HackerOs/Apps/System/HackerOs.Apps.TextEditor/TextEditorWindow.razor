@@ -142,6 +142,21 @@
         StateHasChanged();
     }
 
+    private string GetParentDirectory(VirtualPath? path)
+    {
+        if (path is { } p)
+        {
+            string val = p.Value;
+            int lastSlash = val.LastIndexOf('/');
+            if (lastSlash > 0)
+            {
+                return val[..lastSlash];
+            }
+        }
+
+        return $"/home/{AppContext.UserId}";
+    }
+
     /// <summary>
     /// Displays the standard file-open dialog and loads the selected file (P2-TEXT-003).
     /// </summary>
@@ -149,9 +164,11 @@
     {
         if (!await ConfirmDiscardDirtyAsync()) return;
 
+        string defaultDir = GetParentDirectory(_doc.Path);
         OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
         {
             Title = "Open Text File",
+            InitialDirectory = VirtualPath.Parse(defaultDir),
             Filters =
             [
                 new FileDialogFilter("Text files", [".txt", ".log", ".conf", ".json", ".md"],
@@ -262,9 +279,11 @@
     /// </summary>
     private async Task SaveAsAsync()
     {
+        string defaultDir = GetParentDirectory(_doc.Path);
         SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
         {
             Title = "Save Text File",
+            InitialDirectory = VirtualPath.Parse(defaultDir),
             SuggestedFileName = _doc.Title != "Untitled" ? _doc.Title : "untitled.txt",
             DefaultExtension = ".txt",
             Filters =

@@ -147,10 +147,11 @@ public sealed class FileSystemPathResolver(IFileSystemMountRouter router) : IFil
             return true;
         }
 
-        FileSystemAccess access = string.Equals(
-            metadata.OwnerId,
-            context.OperationContext.UserId,
-            StringComparison.Ordinal)
+        bool isOwner = string.Equals(metadata.OwnerId, context.OperationContext.UserId, StringComparison.Ordinal)
+            || (!string.IsNullOrWhiteSpace(context.OperationContext.UserName)
+                && string.Equals(metadata.OwnerId, context.OperationContext.UserName, StringComparison.Ordinal));
+
+        FileSystemAccess access = isOwner
             ? metadata.Permissions.Owner
             : context.GroupIds.Contains(metadata.GroupId)
                 ? metadata.Permissions.Group

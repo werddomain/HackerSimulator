@@ -80,6 +80,10 @@
     {
         base.OnAppInitialized();
         _resolver = new TerminalCommandResolver(Catalog);
+        if (SessionService.CurrentPrincipal is { } principal)
+        {
+            _session.InitializeUser(principal.LoginName.Value, principal.HomePath);
+        }
     }
 
     protected override async Task OnAppAfterRenderAsync(bool firstRender)

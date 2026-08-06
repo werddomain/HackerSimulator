@@ -22,6 +22,8 @@
     "apps.launch",
     "filesystem.user-home.read",
     "filesystem.user-home.write",
+    "filesystem.system.read",
+    "filesystem.system.write",
     "dialogs.file-open",
     "dialogs.file-save",
     "dialogs.folder-select"

@@ -24,7 +24,23 @@ public sealed class TerminalSession
     }
 
     /// <summary>Gets the acting session user name.</summary>
-    public string Username { get; }
+    public string Username { get; private set; }
+
+    /// <summary>Re-initializes the session username and working directory for an authenticated user.</summary>
+    public void InitializeUser(string username, string homePath)
+    {
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            Username = username;
+            _environment["USER"] = username;
+        }
+
+        if (!string.IsNullOrWhiteSpace(homePath))
+        {
+            _environment["HOME"] = homePath;
+            SetCwd(homePath);
+        }
+    }
 
     /// <summary>Gets the current working directory.</summary>
     public string Cwd { get; private set; }

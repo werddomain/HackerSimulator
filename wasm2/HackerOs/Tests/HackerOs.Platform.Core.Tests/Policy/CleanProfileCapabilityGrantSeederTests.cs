@@ -57,6 +57,24 @@ public sealed class CleanProfileCapabilityGrantSeederTests
         Assert.Equal(CapabilityPolicyEvaluationReason.Missing, evaluation.Reason);
     }
 
+    [Fact]
+    public void Seeding_is_idempotent_when_called_multiple_times()
+    {
+        CapabilityGrantRepository repository = new();
+        AppManifest manifest = CreateManifest([
+            AppCapabilities.FileSystemUserSelectedRead,
+            AppCapabilities.FileSystemUserSelectedWrite
+        ]);
+
+        IReadOnlyList<CapabilityGrantMutationResult> firstPass =
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+        IReadOnlyList<CapabilityGrantMutationResult> secondPass =
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+
+        Assert.Equal(2, firstPass.Count);
+        Assert.Empty(secondPass);
+    }
+
     private static AppManifest CreateManifest(IReadOnlyList<string> capabilities) => new()
     {
         Id = "org.hackeros.sample-app",

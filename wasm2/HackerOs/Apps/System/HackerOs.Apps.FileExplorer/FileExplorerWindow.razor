@@ -30,7 +30,7 @@
             <button class="nav-btn" @onclick="LoadCurrentDirectoryAsync" title="Refresh">
                 <i class="mud-icon-root mud-svg-icon">⟳</i>
             </button>
-            <button class="nav-btn" @onclick='() => _state.NavigateTo("/home/user")' title="Home">
+            <button class="nav-btn" @onclick='() => _state.NavigateTo(GetHomePath())' title="Home">
                 <i class="mud-icon-root mud-svg-icon">⌂</i>
             </button>
         </div>
@@ -134,16 +134,22 @@
 </div>
 
 @code {
-    private readonly FileExplorerState _state = new("/home/user");
+    private FileExplorerState _state = default!;
     private readonly List<FileSystemDirectoryItem> _entries = [];
-    private string _addressInput = "/home/user";
+    private string _addressInput = string.Empty;
+    private string _lastLoadedPath = string.Empty;
     private bool _isLoading = false;
     private string? _errorMessage;
     private IDisposable? _eventSub;
 
+    private string GetHomePath() => SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
+
     protected override void OnAppInitialized()
     {
         base.OnAppInitialized();
+        string homePath = GetHomePath();
+        _state = new FileExplorerState(homePath);
+        _addressInput = homePath;
         _state.StateChanged += OnStateChanged;
         _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(_ => InvokeAsync(LoadCurrentDirectoryAsync));
     }
@@ -157,13 +163,18 @@
     {
         _addressInput = _state.CurrentPath;
         StateHasChanged();
-        _ = LoadCurrentDirectoryAsync();
+        
+        if (_lastLoadedPath != _state.CurrentPath)
+        {
+            _ = LoadCurrentDirectoryAsync();
+        }
     }
 
     private async Task LoadCurrentDirectoryAsync()
     {
         _isLoading = true;
         _errorMessage = null;
+        _lastLoadedPath = _state.CurrentPath;
         StateHasChanged();
 
         try

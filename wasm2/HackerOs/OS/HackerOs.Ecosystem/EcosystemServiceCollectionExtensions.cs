@@ -118,7 +118,9 @@ public static class EcosystemServiceCollectionExtensions
                 DeviceId.FromGuid(Guid.NewGuid()),
                 progressTracker: provider.GetRequiredService<ILoginProgressTracker>(),
                 asyncHasher: (password, salt, iterations, length, ct) =>
-                    hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
+                    hasher.DeriveKeyAsync(password, salt, iterations, length, ct),
+                grantRepository: provider.GetService<ICapabilityGrantRepository>(),
+                catalog: provider.GetService<AppCatalog>());
         });
         services.AddSingleton<IProcessManager>(provider =>
             new InMemoryProcessManager(

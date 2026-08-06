@@ -509,25 +509,30 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemAuthorizationContext context,
         bool isWrite)
     {
-        string privateRoot = $"/home/{context.OperationContext.UserId}/.config/apps/{context.OperationContext.AppId}";
-        if (IsWithin(path, privateRoot))
+        string userId = context.OperationContext.UserId;
+        string? username = context.OperationContext.UserName;
+
+        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}/.config/apps/{context.OperationContext.AppId}"))
         {
-            return isWrite
-                ? AppCapabilities.FileSystemPrivateWrite
-                : AppCapabilities.FileSystemPrivateRead;
+            return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
         }
 
-        string homeRoot = $"/home/{context.OperationContext.UserId}";
-        if (IsWithin(path, homeRoot))
+        if (IsWithin(path, $"/home/{userId}/.config/apps/{context.OperationContext.AppId}"))
         {
-            return isWrite
-                ? AppCapabilities.FileSystemUserHomeWrite
-                : AppCapabilities.FileSystemUserHomeRead;
+            return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
         }
 
-        return isWrite
-            ? AppCapabilities.FileSystemSystemWrite
-            : AppCapabilities.FileSystemSystemRead;
+        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}"))
+        {
+            return isWrite ? AppCapabilities.FileSystemUserHomeWrite : AppCapabilities.FileSystemUserHomeRead;
+        }
+
+        if (IsWithin(path, $"/home/{userId}"))
+        {
+            return isWrite ? AppCapabilities.FileSystemUserHomeWrite : AppCapabilities.FileSystemUserHomeRead;
+        }
+
+        return isWrite ? AppCapabilities.FileSystemSystemWrite : AppCapabilities.FileSystemSystemRead;
     }
 
     private static bool IsSystemPath(VirtualPath path) =>

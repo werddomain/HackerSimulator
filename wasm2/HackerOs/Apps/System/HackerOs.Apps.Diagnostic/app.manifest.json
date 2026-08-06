@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.diagnostic",
+  "name": "IndexedDB Diagnostic",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "System Diagnostic and IndexedDB Inspector for HackerOS storage inspection and file path resolution",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.Diagnostic.dll",
+    "type": "HackerOs.Apps.Diagnostic.DiagnosticWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "system",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "dialogs.file-save",
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "clipboard.write",
+    "settings.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.15,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": true
+}

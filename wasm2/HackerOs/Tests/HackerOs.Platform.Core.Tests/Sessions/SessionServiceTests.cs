@@ -1,7 +1,9 @@
 using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
@@ -261,6 +263,49 @@ public sealed class LocalSessionServiceTests
 
         Assert.Contains(fixture.AuditLog.Entries, e => e.Action == "session.login" && e.Outcome == AuditOutcome.Denied);
         Assert.Contains(fixture.AuditLog.Entries, e => e.Action == "session.login" && e.Outcome == AuditOutcome.Success);
+    }
+
+    [Fact]
+    public async Task Login_seeds_declared_app_capabilities_for_authenticated_user()
+    {
+        Fixture fixture = new();
+        CapabilityGrantRepository grants = new();
+        AppManifest manifest = new()
+        {
+            Id = "org.hackeros.text-editor",
+            Name = "Text Editor",
+            Version = "1.0.0",
+            PublisherId = "org.hackeros",
+            Description = "Test Editor",
+            Kind = AppKind.Window,
+            EntryPoint = new AppEntryPointManifest("HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextEditorWindow"),
+            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
+            Resources = AppResourceProfileManifest.None,
+            Capabilities = [AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead]
+        };
+        AppCatalogBuildResult catalogBuild = AppCatalog.Build([manifest]);
+        Assert.NotNull(catalogBuild.Catalog);
+
+        LocalSessionService service = new(
+            fixture.Users,
+            new FileSystemSeeder(fixture.FileSystem, new FixedTimeProvider(DateTimeOffset.UtcNow)),
+            fixture.EventBus,
+            fixture.AuditLog,
+            InstallationId.FromGuid(Guid.NewGuid()),
+            DeviceId.FromGuid(Guid.NewGuid()),
+            grantRepository: grants,
+            catalog: catalogBuild.Catalog);
+
+        AuthenticatedPrincipal principal = await service.LoginAsync(fixture.AliceLoginName, "hunter2");
+
+        CapabilityPolicyEvaluation fileSave = grants.Evaluate(
+            "org.hackeros.text-editor", principal.UserId.ToString(), AppCapabilities.DialogFileSave, AppAuthority.User, AppAuthority.User);
+        CapabilityPolicyEvaluation homeRead = grants.Evaluate(
+            "org.hackeros.text-editor", principal.UserId.ToString(), AppCapabilities.FileSystemUserHomeRead, AppAuthority.User, AppAuthority.User);
+
+        Assert.True(fileSave.Granted);
+        Assert.True(homeRead.Granted);
     }
 
     private sealed class Fixture

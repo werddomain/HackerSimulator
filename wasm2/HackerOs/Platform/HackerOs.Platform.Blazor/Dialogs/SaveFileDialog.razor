@@ -12,7 +12,7 @@
     </header>
 
     <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
-                          InitialDirectory="@(Presentation.Request.InitialDirectory ?? VirtualPath.Parse("/"))"
+                          InitialDirectory="@EffectiveInitialDirectory"
                           AllowFileSelection="false"
                           DirectoryChanged="DirectoryChanged" />
 
@@ -57,6 +57,9 @@
     private string? _error;
     private bool _checking;
 
+    private VirtualPath EffectiveInitialDirectory =>
+        Presentation.Request.InitialDirectory ?? VirtualPath.Parse($"/home/{Presentation.UserId}");
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
@@ -64,6 +67,8 @@
         {
             _fileName = Presentation.Request.SuggestedFileName ?? string.Empty;
         }
+
+        _directory = EffectiveInitialDirectory;
     }
 
     private void DirectoryChanged(FileSystemDirectorySnapshot snapshot) => _directory = snapshot.Path;

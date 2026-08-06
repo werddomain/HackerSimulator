@@ -44,7 +44,9 @@ public sealed class FileSystemAuthorizer : IFileSystemAuthorizer
         FileSystemEntryMetadata metadata,
         FileSystemAuthorizationContext context)
     {
-        if (string.Equals(metadata.OwnerId, context.OperationContext.UserId, StringComparison.Ordinal))
+        if (string.Equals(metadata.OwnerId, context.OperationContext.UserId, StringComparison.Ordinal)
+            || (!string.IsNullOrWhiteSpace(context.OperationContext.UserName)
+                && string.Equals(metadata.OwnerId, context.OperationContext.UserName, StringComparison.Ordinal)))
         {
             return metadata.Permissions.Owner;
         }

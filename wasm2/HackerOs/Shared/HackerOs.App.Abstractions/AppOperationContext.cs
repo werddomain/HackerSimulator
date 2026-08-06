@@ -12,8 +12,11 @@ public sealed record AppOperationContext
     /// <summary>Gets the application on whose behalf the operation runs.</summary>
     public required string AppId { get; init; }
 
-    /// <summary>Gets the authenticated acting user.</summary>
+    /// <summary>Gets the authenticated acting user identifier.</summary>
     public required string UserId { get; init; }
+
+    /// <summary>Gets the authenticated acting username/login name.</summary>
+    public string? UserName { get; init; }
 
     /// <summary>Gets the acting user's authority.</summary>
     public required AppAuthority UserAuthority { get; init; }
