@@ -5,7 +5,11 @@
 @using HackerOs.Simulation.Abstractions.Events
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.AppSdk.Blazor.Interop
+@using System.IO.Compression
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
@@ -13,6 +17,7 @@
 @inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
 @inject IDialogService MudDialogService
+@inject IJSRuntime JSRuntime
 
 <div class="file-explorer-container">
     <!-- Navigation & Address Toolbar -->
@@ -56,6 +61,10 @@
         <button class="action-btn danger" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DeleteSelectedAsync">Delete</button>
         <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="ShowPropertiesAsync">Properties</button>
         <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="OpenWithAsync">Open With...</button>
+        
+        <InputFile id="fileInput" OnChange="UploadFilesAsync" multiple hidden />
+        <label for="fileInput" class="action-btn">Upload</label>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DownloadSelectedAsync">Download</button>
     </div>
 
     <!-- Directory Content View -->
@@ -141,6 +150,7 @@
     private bool _isLoading = false;
     private string? _errorMessage;
     private IDisposable? _eventSub;
+    private BrowserFileDownloader? _downloader;
 
     private string GetHomePath() => SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
 
@@ -156,6 +166,8 @@
 
     protected override async Task OnAppInitializedAsync()
     {
+        _state = new FileExplorerState();
+        _downloader = new BrowserFileDownloader(JSRuntime);
         await LoadCurrentDirectoryAsync();
     }
 
@@ -300,6 +312,141 @@
         await LoadCurrentDirectoryAsync();
     }
 
+    private async Task UploadFilesAsync(InputFileChangeEventArgs e)
+    {
+        foreach (IBrowserFile file in e.GetMultipleFiles())
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + file.Name;
+            VirtualPath path = VirtualPath.Parse(fullPath);
+
+            FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(path), AppContext.CancellationToken);
+            long expectedRevision = 1;
+            if (!stat.Succeeded && stat.Error?.Code == FileSystemErrorCode.NotFound)
+            {
+                FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
+                    new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100), 1),
+                    AppContext.CancellationToken);
+                
+                if (!createResult.Succeeded) continue;
+            }
+            else if (stat.Succeeded)
+            {
+                expectedRevision = stat.Value!.Metadata.Revision;
+            }
+            else
+            {
+                continue;
+            }
+
+            BrowserFileContentSource source = new BrowserFileContentSource(file);
+            await AppContext.FileSystem.WriteAsync(
+                new FileSystemWriteRequest(path, expectedRevision), 
+                source, 
+                AppContext.CancellationToken);
+        }
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task DownloadSelectedAsync()
+    {
+        if (_downloader is null) return;
+
+        if (_state.SelectedItemNames.Count == 1)
+        {
+            string name = _state.SelectedItemNames.First();
+            FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+            if (item is null) return;
+            
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+            VirtualPath path = VirtualPath.Parse(fullPath);
+
+            if (item.Metadata.Kind == FileSystemEntryKind.File)
+            {
+                FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
+                    new FileSystemReadRequest(path), AppContext.CancellationToken);
+                if (result.Succeeded && result.Value is not null)
+                {
+                    await using FileSystemContentReadHandle handle = result.Value;
+                    await _downloader.DownloadFileFromStreamAsync(name, handle.Content);
+                }
+            }
+            else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+            {
+                using var ms = new MemoryStream();
+                using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                {
+                    await AddDirectoryToZipAsync(archive, path, name);
+                }
+                ms.Position = 0;
+                await _downloader.DownloadFileFromStreamAsync(name + ".zip", ms);
+            }
+        }
+        else if (_state.SelectedItemNames.Count > 1)
+        {
+            using var ms = new MemoryStream();
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            {
+                foreach (string name in _state.SelectedItemNames)
+                {
+                    FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+                    if (item is null) continue;
+
+                    string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+                    VirtualPath path = VirtualPath.Parse(fullPath);
+
+                    if (item.Metadata.Kind == FileSystemEntryKind.File)
+                    {
+                        await AddFileToZipAsync(archive, path, name);
+                    }
+                    else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                    {
+                        await AddDirectoryToZipAsync(archive, path, name);
+                    }
+                }
+            }
+            ms.Position = 0;
+            await _downloader.DownloadFileFromStreamAsync("Archive.zip", ms);
+        }
+    }
+
+    private async Task AddFileToZipAsync(ZipArchive archive, VirtualPath filePath, string entryName)
+    {
+        FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
+            new FileSystemReadRequest(filePath), AppContext.CancellationToken);
+        
+        if (result.Succeeded && result.Value is not null)
+        {
+            await using FileSystemContentReadHandle handle = result.Value;
+            ZipArchiveEntry zipEntry = archive.CreateEntry(entryName);
+            using Stream entryStream = zipEntry.Open();
+            await handle.Content.CopyToAsync(entryStream);
+        }
+    }
+
+    private async Task AddDirectoryToZipAsync(ZipArchive archive, VirtualPath dirPath, string currentZipPath)
+    {
+        FileSystemResult<FileSystemDirectorySnapshot> result = await AppContext.FileSystem.EnumerateAsync(
+            new FileSystemEnumerateRequest(dirPath), AppContext.CancellationToken);
+            
+        if (result.Succeeded && result.Value is not null)
+        {
+            foreach (FileSystemDirectoryItem item in result.Value.Entries)
+            {
+                VirtualPath childPath = VirtualPath.Parse(dirPath.Value.TrimEnd('/') + "/" + item.Name.Value);
+                string zipEntryPath = currentZipPath + "/" + item.Name.Value;
+                
+                if (item.Metadata.Kind == FileSystemEntryKind.File)
+                {
+                    await AddFileToZipAsync(archive, childPath, zipEntryPath);
+                }
+                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                {
+                    await AddDirectoryToZipAsync(archive, childPath, zipEntryPath);
+                }
+            }
+        }
+    }
+
     private async Task DeleteSelectedAsync()
     {
         foreach (string name in _state.SelectedItemNames.ToList())
@@ -368,6 +515,9 @@
     {
         _state.StateChanged -= OnStateChanged;
         _eventSub?.Dispose();
-        await ValueTask.CompletedTask;
+        if (_downloader != null)
+        {
+            await _downloader.DisposeAsync();
+        }
     }
 }
