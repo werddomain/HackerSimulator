@@ -54,7 +54,7 @@
         }
         else if (_currentPage is not null)
         {
-            <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" />
+            <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" OnSubmit="HandleFormSubmitAsync" />
         }
         else
         {

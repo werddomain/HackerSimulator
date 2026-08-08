@@ -11,7 +11,6 @@ public sealed class ErrorLogViewerWindowTests
         AppManifest manifest = ErrorLogViewerWindow.StaticManifest;
         Assert.Equal(AppKind.Window, manifest.Kind);
         Assert.True(manifest.SingleInstancePerUser);
-        Assert.Contains(AppCapabilities.SettingsSystemRead, manifest.Capabilities);
-        Assert.Contains(AppCapabilities.ProcessList, manifest.Capabilities);
+        Assert.Contains(AppCapabilities.DiagnosticsRead, manifest.Capabilities);
     }
 }

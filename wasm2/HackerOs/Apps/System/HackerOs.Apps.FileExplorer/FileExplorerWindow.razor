@@ -1,7 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Core
-@using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.Simulation.Abstractions.Events
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Sessions
@@ -14,9 +14,8 @@
 @inherits WindowAppBase
 @implements IAsyncDisposable
 @inject AppCatalog Catalog
-@inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
-@inject IDialogService MudDialogService
+@inject MudBlazor.IDialogService MudDialogService
 @inject IJSRuntime JSRuntime
 
 <div class="file-explorer-container">
@@ -58,6 +57,7 @@
     <div class="actions-toolbar">
         <button class="action-btn" @onclick="CreateFolderAsync">+ New Folder</button>
         <button class="action-btn" @onclick="CreateFileAsync">+ New File</button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="RenameSelectedAsync">Rename</button>
         <button class="action-btn danger" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DeleteSelectedAsync">Delete</button>
         <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="ShowPropertiesAsync">Properties</button>
         <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="OpenWithAsync">Open With...</button>
@@ -166,7 +166,6 @@
 
     protected override async Task OnAppInitializedAsync()
     {
-        _state = new FileExplorerState();
         _downloader = new BrowserFileDownloader(JSRuntime);
         await LoadCurrentDirectoryAsync();
     }
@@ -282,34 +281,187 @@
 
     private async Task LaunchFileIntentAsync(string fullPath)
     {
-        if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        AppIntentOpenFileResult result;
+        try
         {
-            // Default target app for text files
-            string targetAppId = "org.hackeros.text-editor";
-            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
-                RequestId: Guid.NewGuid(),
-                CallerAppId: "org.hackeros.file-explorer",
-                UserId: principal.UserId.ToString(),
-                Intent: new LaunchAppIntent(targetAppId, [fullPath])), principal);
+            result = await AppContext.Intents.OpenFileAsync(VirtualPath.Parse(fullPath));
         }
+        catch (AppGatewayAccessDeniedException)
+        {
+            _errorMessage = "You don't have permission to open files.";
+            StateHasChanged();
+            return;
+        }
+
+        switch (result.Outcome)
+        {
+            case AppIntentOpenFileOutcome.Opened:
+                break;
+            case AppIntentOpenFileOutcome.ChooserRequired:
+                await ShowOpenWithChooserAsync(fullPath, result.CandidateAppIds ?? []);
+                break;
+            case AppIntentOpenFileOutcome.NoHandler:
+                _errorMessage = "No application is registered to open this file.";
+                StateHasChanged();
+                break;
+            default:
+                _errorMessage = $"Could not open file: {result.ErrorCode}";
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private async Task ShowOpenWithChooserAsync(string fullPath, IReadOnlyList<string> candidateAppIds)
+    {
+        IReadOnlyList<AppManifest> candidates = candidateAppIds
+            .Select(id => Catalog.Manifests.GetValueOrDefault(id))
+            .Where(manifest => manifest is not null)
+            .Select(manifest => manifest!)
+            .ToList();
+
+        DialogParameters parameters = new()
+        {
+            { nameof(OpenWithDialog.FilePath), fullPath },
+            { nameof(OpenWithDialog.AvailableApps), candidates }
+        };
+
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        DialogResult? dialogResult = await dialog.Result;
+
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is AppManifest selectedApp)
+        {
+            await LaunchWithAsync(selectedApp.Id, fullPath);
+        }
+    }
+
+    private async Task LaunchWithAsync(string appId, string fullPath)
+    {
+        try
+        {
+            await AppContext.Intents.LaunchAsync(appId, [fullPath]);
+        }
+        catch (AppGatewayAccessDeniedException)
+        {
+            _errorMessage = "You don't have permission to launch applications.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task<long> GetDirectoryRevisionAsync(VirtualPath dirPath)
+    {
+        FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(dirPath), AppContext.CancellationToken);
+        return stat.Succeeded && stat.Value is not null ? stat.Value.Metadata.Revision : 1;
+    }
+
+    private async Task<long> GetEntryRevisionAsync(VirtualPath entryPath)
+    {
+        FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(entryPath), AppContext.CancellationToken);
+        return stat.Succeeded && stat.Value is not null ? stat.Value.Metadata.Revision : 1;
     }
 
     private async Task CreateFolderAsync()
     {
-        string folderName = $"NewFolder_{DateTime.Now:ss}";
-        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + folderName;
-        await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
-            VirtualPath.Parse(fullPath), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101), 1), AppContext.CancellationToken);
-        await LoadCurrentDirectoryAsync();
+        TextInputDialogResult result = await base.TextInput(
+            title: "New Folder",
+            content: "Enter the name of the new folder:",
+            defaultValue: "New Folder",
+            placeholder: "Folder name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string folderName = result.Value.Trim();
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + folderName;
+            FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+                VirtualPath.Parse(fullPath), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)), AppContext.CancellationToken);
+            if (creation.Succeeded)
+            {
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
+                    ? $"'{folderName}' already exists."
+                    : "Could not create the folder.";
+                StateHasChanged();
+            }
+        }
     }
 
     private async Task CreateFileAsync()
     {
-        string fileName = $"NewFile_{DateTime.Now:ss}.txt";
-        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + fileName;
-        await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
-            VirtualPath.Parse(fullPath), FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100), 1), AppContext.CancellationToken);
-        await LoadCurrentDirectoryAsync();
+        TextInputDialogResult result = await base.TextInput(
+            title: "New File",
+            content: "Enter the name of the new file:",
+            defaultValue: "NewFile.txt",
+            placeholder: "File name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string fileName = result.Value.Trim();
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + fileName;
+            FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+                VirtualPath.Parse(fullPath), FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)), AppContext.CancellationToken);
+            if (creation.Succeeded)
+            {
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
+                    ? $"'{fileName}' already exists."
+                    : "Could not create the file.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RenameSelectedAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+        if (item is null) return;
+
+        string currentFullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        VirtualPath sourcePath = VirtualPath.Parse(currentFullPath);
+
+        TextInputDialogResult result = await base.TextInput(
+            title: item.Metadata.Kind == FileSystemEntryKind.Directory ? "Rename Folder" : "Rename File",
+            content: $"Enter new name for '{name}':",
+            defaultValue: name,
+            placeholder: "New name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string newName = result.Value.Trim();
+            if (newName.Equals(name, StringComparison.Ordinal)) return;
+
+            string destinationFullPath = _state.CurrentPath.TrimEnd('/') + "/" + newName;
+            VirtualPath destinationPath = VirtualPath.Parse(destinationFullPath);
+            VirtualPath parentPath = VirtualPath.Parse(_state.CurrentPath);
+
+            long entryRevision = await GetEntryRevisionAsync(sourcePath);
+            long parentRevision = await GetDirectoryRevisionAsync(parentPath);
+
+            FileSystemMutationResult moveResult = await AppContext.FileSystem.MoveAsync(
+                new FileSystemMoveRequest(sourcePath, destinationPath, entryRevision, parentRevision, parentRevision),
+                AppContext.CancellationToken);
+
+            if (moveResult.Succeeded)
+            {
+                _state.ClearSelection();
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = moveResult.Transaction.Error is not null
+                    ? $"Failed to rename: {moveResult.Transaction.Error.Code}"
+                    : "Failed to rename entry.";
+            }
+        }
     }
 
     private async Task UploadFilesAsync(InputFileChangeEventArgs e)
@@ -320,28 +472,26 @@
             VirtualPath path = VirtualPath.Parse(fullPath);
 
             FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(path), AppContext.CancellationToken);
-            long expectedRevision = 1;
             if (!stat.Succeeded && stat.Error?.Code == FileSystemErrorCode.NotFound)
             {
                 FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
-                    new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100), 1),
+                    new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
                     AppContext.CancellationToken);
-                
+
                 if (!createResult.Succeeded) continue;
             }
-            else if (stat.Succeeded)
-            {
-                expectedRevision = stat.Value!.Metadata.Revision;
-            }
-            else
+            else if (!stat.Succeeded)
             {
                 continue;
             }
 
+            // Unconditional write: an upload always replaces whatever is at this path
+            // with the freshly selected file — there is no "revision the browser read
+            // before editing" to protect here the way there is for a text editor.
             BrowserFileContentSource source = new BrowserFileContentSource(file);
             await AppContext.FileSystem.WriteAsync(
-                new FileSystemWriteRequest(path, expectedRevision), 
-                source, 
+                new FileSystemWriteRequest(path),
+                source,
                 AppContext.CancellationToken);
         }
         await LoadCurrentDirectoryAsync();
@@ -449,11 +599,17 @@
 
     private async Task DeleteSelectedAsync()
     {
+        VirtualPath parentPath = VirtualPath.Parse(_state.CurrentPath);
+        long parentRevision = await GetDirectoryRevisionAsync(parentPath);
+
         foreach (string name in _state.SelectedItemNames.ToList())
         {
             string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+            VirtualPath entryPath = VirtualPath.Parse(fullPath);
+            long entryRevision = await GetEntryRevisionAsync(entryPath);
+
             await AppContext.FileSystem.DeleteAsync(new FileSystemDeleteRequest(
-                VirtualPath.Parse(fullPath), 1, 1, recursive: true), AppContext.CancellationToken);
+                entryPath, entryRevision, parentRevision, recursive: true), AppContext.CancellationToken);
         }
         _state.ClearSelection();
         await LoadCurrentDirectoryAsync();
@@ -495,13 +651,9 @@
         IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
         DialogResult? result = await dialog.Result;
 
-        if (result is not null && !result.Canceled && result.Data is AppManifest selectedApp && SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        if (result is not null && !result.Canceled && result.Data is AppManifest selectedApp)
         {
-            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
-                RequestId: Guid.NewGuid(),
-                CallerAppId: "org.hackeros.file-explorer",
-                UserId: principal.UserId.ToString(),
-                Intent: new LaunchAppIntent(selectedApp.Id, [fullPath])), principal);
+            await LaunchWithAsync(selectedApp.Id, fullPath);
         }
     }
 

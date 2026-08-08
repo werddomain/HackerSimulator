@@ -1,8 +1,11 @@
 using HackerOs.Ecosystem;
 using HackerOs.Platform.Blazor.LazyLoading;
+using test;
 using test.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton(TestHarnessOptions.FromArgs(args));
 
 builder.Host.UseDefaultServiceProvider(options =>
 {

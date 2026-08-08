@@ -150,6 +150,21 @@ public interface IAppLoggingGateway
     void Log(DiagnosticSeverity severity, string message, IReadOnlyDictionary<string, string>? properties = null);
 }
 
+/// <summary>
+/// Provides one app instance's authorized read access to system diagnostic log entries,
+/// requiring <see cref="AppCapabilities.DiagnosticsRead"/>.
+/// </summary>
+public interface IAppDiagnosticsGateway
+{
+    /// <summary>Gets every retained diagnostic entry, oldest first.</summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsRead"/>.</exception>
+    IReadOnlyList<DiagnosticEntry> Entries { get; }
+
+    /// <summary>Discards every retained diagnostic entry.</summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsClear"/>.</exception>
+    void Clear();
+}
+
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>
 public interface IAppClockGateway
 {
@@ -191,4 +206,81 @@ public interface IAppProcessGateway
     /// <summary>Immediately force-stops one process; requires <see cref="AppCapabilities.ProcessManage"/> unless it is the app's own process.</summary>
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies management of another app's process.</exception>
     ProcessRecord Kill(ProcessId pid, ProcessExitReason reason = ProcessExitReason.Killed);
+}
+
+/// <summary>Identifies the stable outcome of one <see cref="IAppIntentGateway.LaunchAsync"/> request.</summary>
+public enum AppIntentLaunchOutcome
+{
+    /// <summary>The target app was launched, or an existing single-instance was focused.</summary>
+    Launched,
+
+    /// <summary>No catalog app matches the requested target ID.</summary>
+    NotFound,
+
+    /// <summary>The resolved target app is currently disabled.</summary>
+    Disabled,
+
+    /// <summary>The resolved target's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one <see cref="IAppIntentGateway.LaunchAsync"/> request.</summary>
+/// <param name="Outcome">Stable launch outcome.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+public sealed record AppIntentLaunchResult(AppIntentLaunchOutcome Outcome, string? ErrorCode = null);
+
+/// <summary>Identifies the stable outcome of one <see cref="IAppIntentGateway.OpenFileAsync"/> request.</summary>
+public enum AppIntentOpenFileOutcome
+{
+    /// <summary>A handler was resolved (explicit preference, configured default, or sole candidate) and launched.</summary>
+    Opened,
+
+    /// <summary>Multiple enabled apps can handle this file; the caller must show a chooser and retry via <see cref="IAppIntentGateway.LaunchAsync"/>.</summary>
+    ChooserRequired,
+
+    /// <summary>No enabled app declares handling this file.</summary>
+    NoHandler,
+
+    /// <summary>The resolved target's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one <see cref="IAppIntentGateway.OpenFileAsync"/> request.</summary>
+/// <param name="Outcome">Stable resolution outcome.</param>
+/// <param name="CandidateAppIds">Every candidate app ID considered, populated only for <see cref="AppIntentOpenFileOutcome.ChooserRequired"/>.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+public sealed record AppIntentOpenFileResult(
+    AppIntentOpenFileOutcome Outcome,
+    IReadOnlyList<string>? CandidateAppIds = null,
+    string? ErrorCode = null);
+
+/// <summary>
+/// Provides one app instance's authorized ability to launch another installed application or
+/// open a file, per <see cref="AppCapabilities.AppsLaunch"/>. This is the single, kernel-owned
+/// entry point for "run something" -- launching an app outright, opening a file with its
+/// resolved default handler, or opening a file with one specific app -- so that responsibility
+/// never needs to be reimplemented by individual apps (e.g. a file manager only ever calls this
+/// gateway; it never resolves handlers or starts processes itself).
+/// </summary>
+public interface IAppIntentGateway
+{
+    /// <summary>
+    /// Requests that another installed app be launched with the given arguments. Passing a file
+    /// path as an argument (e.g. from an "Open With" picker) opens that file with exactly the
+    /// requested app, bypassing file-association resolution.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentLaunchResult> LaunchAsync(
+        string appId, IReadOnlyList<string> arguments, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests that a file be opened using the system's file-association resolution (an
+    /// administrator-configured default, then any manifest-declared candidate). Never guesses:
+    /// when more than one app can handle the file, returns <see cref="AppIntentOpenFileOutcome.ChooserRequired"/>
+    /// with every candidate so the caller can show a picker and open with an explicit choice via
+    /// <see cref="LaunchAsync"/>.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentOpenFileResult> OpenFileAsync(
+        VirtualPath path, CancellationToken cancellationToken = default);
 }

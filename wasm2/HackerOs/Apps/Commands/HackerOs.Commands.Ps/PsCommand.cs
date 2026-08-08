@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Commands.Ps;
 
@@ -29,32 +30,51 @@ public sealed class PsCommand : TerminalAppBase
 
     public PsCommand(AppManifest manifest) : base(manifest) { }
 
-    public override async ValueTask<int> ExecuteAsync(
+    public override ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        context.StandardOutput.WriteLine("  PID TTY          TIME CMD");
-        context.StandardOutput.WriteLine($"    1 pts/0    00:00:00 init");
-        context.StandardOutput.WriteLine($"   42 pts/0    00:00:01 hackeros-shell");
+        bool allUsers = false;
+        bool userFormat = false;
+        foreach (var arg in context.Arguments)
+        {
+            if (arg == "-a") allUsers = true;
+            else if (arg == "-u") userFormat = true;
+        }
 
+        IReadOnlyList<ProcessRecord> processes;
         try
         {
-            var processes = context.App.Processes.ListProcesses();
-            foreach (var proc in processes)
-            {
-                string pid = proc.Pid.Value.ToString().PadLeft(5);
-                string name = proc.AppId;
-                context.StandardOutput.WriteLine($"{pid} pts/0    00:00:00 {name}");
-            }
+            processes = context.App.Processes.ListProcesses();
         }
-        catch
+        catch (Exception exception)
         {
-            // If process gateway throws in test harness without mock
+            context.StandardError.WriteLine($"ps: {exception.Message}");
+            return ValueTask.FromResult(1);
         }
 
-        return 0;
+        DateTimeOffset now = context.App.Clock.UtcNow;
+        IEnumerable<ProcessRecord> visible = allUsers
+            ? processes
+            : processes.Where(p => p.SessionId == context.App.SessionId);
+
+        context.StandardOutput.WriteLine(userFormat ? "USER       PID STAT     TIME CMD" : "  PID STAT     TIME CMD");
+
+        foreach (var proc in visible.OrderBy(p => p.Pid.Value))
+        {
+            string pid = proc.Pid.Value.ToString().PadLeft(5);
+            string stat = proc.State.ToString().PadRight(8);
+            TimeSpan elapsed = proc.StartedAtUtc is { } started ? now - started : TimeSpan.Zero;
+            string time = elapsed.ToString(@"hh\:mm\:ss");
+
+            context.StandardOutput.WriteLine(userFormat
+                ? $"{proc.UserId,-10} {pid} {stat} {time} {proc.AppId}"
+                : $"{pid} {stat} {time} {proc.AppId}");
+        }
+
+        return ValueTask.FromResult(0);
     }
 }

@@ -1,5 +1,7 @@
 using HackerOs.Platform.Core.Diagnostics;
+using HackerOs.Platform.Core.Events;
 using HackerOs.Simulation.Abstractions.Diagnostics;
+using HackerOs.Simulation.Abstractions.Events;
 
 namespace HackerOs.Platform.Core.Tests.Diagnostics;
 
@@ -15,6 +17,18 @@ public sealed class BoundedDiagnosticSinkTests
         sink.Record(Entry("third"));
 
         Assert.Equal(["second", "third"], sink.Entries.Select(e => e.Message));
+    }
+
+    [Fact]
+    public void Clear_discards_every_retained_entry()
+    {
+        BoundedDiagnosticSink sink = new(maxEntries: 10);
+        sink.Record(Entry("first"));
+        sink.Record(Entry("second"));
+
+        sink.Clear();
+
+        Assert.Empty(sink.Entries);
     }
 
     [Fact]
@@ -46,6 +60,28 @@ public sealed class BoundedDiagnosticSinkTests
 
     private static DiagnosticEntry Entry(string message) => new(
         DateTimeOffset.UnixEpoch, DiagnosticSeverity.Information, "test", message, Guid.NewGuid());
+}
+
+public sealed class EventPublishingDiagnosticSinkTests
+{
+    [Fact]
+    public void Clear_delegates_to_the_inner_sink_and_publishes_a_cleared_event()
+    {
+        BoundedDiagnosticSink inner = new(maxEntries: 10);
+        InMemoryEventBus eventBus = new();
+        EventPublishingDiagnosticSink sink = new(inner, eventBus);
+        sink.Record(new DiagnosticEntry(
+            DateTimeOffset.UnixEpoch, DiagnosticSeverity.Information, "test", "hello", Guid.NewGuid()));
+
+        List<DiagnosticLogClearedEvent> observed = [];
+        using IDisposable subscription = eventBus.Subscribe<DiagnosticLogClearedEvent>(observed.Add);
+
+        sink.Clear();
+
+        Assert.Empty(inner.Entries);
+        Assert.Empty(sink.Entries);
+        Assert.Single(observed);
+    }
 }
 
 public sealed class BoundedAuditLogTests

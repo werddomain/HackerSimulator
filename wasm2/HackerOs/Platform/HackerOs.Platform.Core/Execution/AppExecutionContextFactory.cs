@@ -5,6 +5,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Platform.Core.Intents;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -29,8 +30,16 @@ public sealed class AppExecutionContextFactory
     private readonly IDiagnosticSink _diagnostics;
     private readonly ISimulationClock _clock;
     private readonly IProcessManager _processManager;
+    private readonly Func<AppIntentDispatcher>? _intentDispatcherProvider;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
+    /// <param name="intentDispatcherProvider">
+    /// Lazily resolves the app-intent dispatcher for the <see cref="IAppExecutionContext.Intents"/>
+    /// gateway. Resolved lazily (not injected eagerly) because <see cref="AppIntentDispatcher"/>
+    /// depends on the app lifecycle orchestrator, which itself depends on this factory to create
+    /// execution contexts for newly launched processes -- an eager dependency here would be
+    /// circular. Pass <see langword="null"/> (e.g. in tests) to leave app-launch unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -39,7 +48,8 @@ public sealed class AppExecutionContextFactory
         INotificationQueue notifications,
         IDiagnosticSink diagnostics,
         ISimulationClock clock,
-        IProcessManager processManager)
+        IProcessManager processManager,
+        Func<AppIntentDispatcher>? intentDispatcherProvider = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -49,6 +59,7 @@ public sealed class AppExecutionContextFactory
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
+        _intentDispatcherProvider = intentDispatcherProvider;
     }
 
     /// <summary>
@@ -91,6 +102,10 @@ public sealed class AppExecutionContextFactory
 
         CancellationToken cancellationToken = _processManager.GetCancellationToken(process.Pid);
 
+        IAppIntentGateway intents = _intentDispatcherProvider is not null
+            ? new AppIntentGateway(_intentDispatcherProvider, manifest.Id, userId, principal)
+            : UnsupportedIntentGateway.Instance;
+
         return new AppExecutionContext(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -106,7 +121,24 @@ public sealed class AppExecutionContextFactory
             new AppEventGateway(_eventBus),
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id),
+            new AppDiagnosticsGateway(_diagnostics, capabilities),
             new AppClockGateway(_clock),
-            new AppProcessGateway(_processManager, capabilities, process.Pid));
+            new AppProcessGateway(_processManager, capabilities, process.Pid),
+            intents);
+    }
+
+    private sealed class UnsupportedIntentGateway : IAppIntentGateway
+    {
+        public static readonly UnsupportedIntentGateway Instance = new();
+
+        public ValueTask<AppIntentLaunchResult> LaunchAsync(
+            string appId, IReadOnlyList<string> arguments, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
+
+        public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
+            VirtualPath path, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
     }
 }

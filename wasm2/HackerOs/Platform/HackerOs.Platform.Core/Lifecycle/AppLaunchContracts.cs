@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -12,11 +13,17 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// these become <see cref="TerminalExecutionContext.Arguments"/>.
 /// </param>
 /// <param name="ParentPid">Optional parent process, when launched as a child of another process.</param>
+/// <param name="WorkingDirectory">
+/// Initial virtual working directory for a <see cref="HackerOs.App.Abstractions.AppKind.Terminal"/>
+/// launch (e.g. the invoking shell's current directory); defaults to the principal's home when
+/// omitted, instead of always starting at the filesystem root.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
     IReadOnlyList<string> Arguments,
-    ProcessId? ParentPid = null);
+    ProcessId? ParentPid = null,
+    VirtualPath? WorkingDirectory = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

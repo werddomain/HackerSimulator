@@ -20,6 +20,7 @@ using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Time;
+using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
@@ -31,7 +32,9 @@ using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 
 namespace HackerOs.Ecosystem;
@@ -61,7 +64,10 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<ISimulationRandom>(_ => new SeededSimulationRandom(1));
 
         services.AddSingleton<IDiagnosticRedactor>(_ => new SensitiveKeyDiagnosticRedactor());
-        services.AddSingleton<IDiagnosticSink>(_ => new BoundedDiagnosticSink(1024));
+        services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
+        services.AddSingleton<IDiagnosticSink>(provider => new EventPublishingDiagnosticSink(
+            new BoundedDiagnosticSink(1024),
+            provider.GetRequiredService<IEventBus>()));
         services.AddSingleton<IAuditLog>(_ => new BoundedAuditLog(512));
         services.AddSingleton<IndexedDbDiagnosticRepository>(provider => new IndexedDbDiagnosticRepository(
             provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
@@ -69,9 +75,22 @@ public static class EcosystemServiceCollectionExtensions
             1024));
         services.AddSingleton<IPersistentDiagnosticRepository>(provider =>
             provider.GetRequiredService<IndexedDbDiagnosticRepository>());
+        services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
+            provider.GetRequiredService<IDiagnosticSink>(),
+            provider.GetRequiredService<IPersistentDiagnosticRepository>(),
+            provider.GetRequiredService<ISimulationClock>()));
+        // Keep this provider scoped to HackerOS's own log categories: the ASP.NET Core host
+        // (Kestrel, hosting lifetime, HTTPS redirection, etc.) also resolves every registered
+        // ILoggerProvider, and its framework-internal chatter isn't a HackerOS diagnostic event
+        // -- and on the server side, IJSRuntime can't reach a real IndexedDB, so every one of
+        // those entries would otherwise fail to persist.
+        services.AddLogging(builder =>
+        {
+            builder.AddFilter<HackerOsDiagnosticLoggerProvider>("Microsoft", LogLevel.None);
+            builder.AddFilter<HackerOsDiagnosticLoggerProvider>("System", LogLevel.None);
+        });
 
         services.AddSingleton<HostExceptionReporter>();
-        services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
         services.AddSingleton<INotificationQueue>(_ => new InMemoryNotificationQueue(100));
 
         services.AddSingleton<IndexedDbLocalUserRepository>();
@@ -150,7 +169,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<INotificationQueue>(),
             provider.GetRequiredService<IDiagnosticSink>(),
             provider.GetRequiredService<ISimulationClock>(),
-            provider.GetRequiredService<IProcessManager>()));
+            provider.GetRequiredService<IProcessManager>(),
+            // Resolved lazily: AppIntentDispatcher depends (transitively, via AppLifecycleOrchestrator)
+            // on this very factory, so eagerly injecting it here would be circular.
+            intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>()));
         services.AddSingleton<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
@@ -179,18 +201,29 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IEventBus>()));
         services.AddSingleton<FileDialogServiceFactory>(provider => new FileDialogServiceFactory(
             provider.GetRequiredService<IFileSystemSelectedResourceHandleRegistry>()));
-        services.AddScoped<IFileDialogService>(provider =>
+        services.AddScoped<FileDialogCoordinator>(provider =>
         {
             ISessionService sessionService = provider.GetRequiredService<ISessionService>();
             FileDialogServiceFactory factory = provider.GetRequiredService<FileDialogServiceFactory>();
             SessionId sessionId = sessionService.CurrentPrincipal?.SessionId ?? SessionId.FromGuid(Guid.Empty);
-            return factory.Create(sessionId);
+            return (FileDialogCoordinator)factory.Create(sessionId);
         });
+        services.AddScoped<IFileDialogService>(provider => provider.GetRequiredService<FileDialogCoordinator>());
+        services.AddScoped<DialogCoordinator>(provider => new DialogCoordinator(
+            provider.GetRequiredService<IFileDialogService>()));
+        services.AddScoped<IDialogService>(provider => provider.GetRequiredService<DialogCoordinator>());
         services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
         services.AddSingleton<WindowLaunchCoordinator>();
         services.AddSingleton<WindowCloseGuardRegistry>();
         services.AddSingleton<WindowCloseCoordinator>();
+        services.AddScoped<FileDialogWindowAdapter>(provider => new FileDialogWindowAdapter(
+            provider.GetRequiredService<FileDialogCoordinator>(),
+            provider.GetRequiredService<WindowRuntime>(),
+            provider.GetRequiredService<DialogCoordinator>()));
+        services.AddSingleton<TestDemoFixtureSeeder>();
+
+        services.AddSingleton<IIconCatalog, IconCatalog>();
 
         return services;
     }
@@ -204,6 +237,7 @@ public static class EcosystemServiceCollectionExtensions
     private static SettingsDocumentDefinition[] CreateSystemSettingsDefinitions() =>
     [
         PolicySettingsDocuments.CreateDefinition(),
-        FileAssociationSettingsDocuments.CreateDefinition()
+        FileAssociationSettingsDocuments.CreateDefinition(),
+        HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition()
     ];
 }

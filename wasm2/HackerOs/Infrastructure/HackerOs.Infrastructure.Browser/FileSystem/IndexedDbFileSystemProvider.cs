@@ -183,7 +183,7 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
                 return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.NotDirectory, parentPath);
             }
 
-            if (parent.Revision != request.ExpectedParentRevision)
+            if (request.ExpectedParentRevision is { } expectedParentRevision && parent.Revision != expectedParentRevision)
             {
                 return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.RevisionConflict, parentPath);
             }
@@ -249,7 +249,7 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
                 return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.NotFile, request.Path);
             }
 
-            if (entry.Revision != request.ExpectedRevision)
+            if (request.ExpectedRevision is { } expectedRevision && entry.Revision != expectedRevision)
             {
                 return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.RevisionConflict, request.Path);
             }

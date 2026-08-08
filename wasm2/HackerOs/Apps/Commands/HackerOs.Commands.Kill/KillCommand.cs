@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Commands.Kill;
@@ -37,6 +38,7 @@ public sealed class KillCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
+        bool forceKill = context.Arguments.Any(a => a is "-9" or "-KILL" or "-SIGKILL");
         var pids = context.Arguments.Where(a => !a.StartsWith('-')).ToList();
         if (pids.Count == 0)
         {
@@ -54,18 +56,26 @@ public sealed class KillCommand : TerminalAppBase
                 continue;
             }
 
+            var pid = ProcessId.FromInt64(pidVal);
             try
             {
-                var pid = ProcessId.FromInt64(pidVal);
-                var record = context.App.Processes.Kill(pid);
-                if (record is null)
+                if (forceKill)
                 {
-                    context.StandardError.WriteLine($"kill: ({pidVal}) - No such process");
-                    status = 1;
+                    context.App.Processes.Kill(pid);
+                }
+                else
+                {
+                    await context.App.Processes.StopAsync(pid, TimeSpan.FromSeconds(5), cancellationToken: cancellationToken);
                 }
             }
-            catch
+            catch (KeyNotFoundException)
             {
+                context.StandardError.WriteLine($"kill: ({pidVal}) - No such process");
+                status = 1;
+            }
+            catch (AppGatewayAccessDeniedException exception)
+            {
+                context.StandardError.WriteLine($"kill: ({pidVal}) - {exception.Message}");
                 status = 1;
             }
         }

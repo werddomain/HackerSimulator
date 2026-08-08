@@ -62,10 +62,19 @@ public sealed class ChmodCommand : TerminalAppBase
         foreach (var target in targets)
         {
             var resolved = ResolvePath(context.WorkingDirectory, target);
+            var entryStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(resolved)), cancellationToken);
+            if (!entryStat.Succeeded || entryStat.Value is null)
+            {
+                context.StandardError.WriteLine($"chmod: cannot access '{target}': No such file or directory");
+                status = 1;
+                continue;
+            }
+
             var req = new FileSystemSetPermissionsRequest(
                 path: VirtualPath.Parse(resolved),
                 permissions: FileSystemPermissions.FromMode(modeBits),
-                expectedRevision: 0);
+                expectedRevision: entryStat.Value.Metadata.Revision);
 
             var result = await context.App.FileSystem.SetPermissionsAsync(req, cancellationToken);
             if (!result.Succeeded)

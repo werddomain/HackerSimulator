@@ -1,0 +1,201 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Icons
+@using Microsoft.JSInterop
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@inject IIconCatalog Catalog
+@inject IJSRuntime JS
+
+<div class="iconviewer-container">
+    <header class="iconviewer-header">
+        <span class="iconviewer-title">HackerOS Icon Library</span>
+        <input class="iconviewer-search"
+               type="search"
+               placeholder="Search icons by name..."
+               value="@_query"
+               @oninput="OnQueryChanged" />
+        <span class="iconviewer-count">@_totalMatching @(_totalMatching == 1 ? "icon" : "icons")</span>
+    </header>
+
+    <nav class="iconviewer-libnav" role="tablist" aria-label="Icon library filter">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary is null)" class="@LibraryButtonClass(null)" @onclick="() => SetLibrary(null)">
+            All (@_countAll)
+        </button>
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Bootstrap)" class="@LibraryButtonClass(IconLibrary.Bootstrap)" @onclick="() => SetLibrary(IconLibrary.Bootstrap)">
+            Bootstrap (@_countBootstrap)
+        </button>
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.FontAwesome)" class="@LibraryButtonClass(IconLibrary.FontAwesome)" @onclick="() => SetLibrary(IconLibrary.FontAwesome)">
+            Font Awesome (@_countFontAwesome)
+        </button>
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Lucide)" class="@LibraryButtonClass(IconLibrary.Lucide)" @onclick="() => SetLibrary(IconLibrary.Lucide)">
+            Lucide (@_countLucide)
+        </button>
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.SimpleIcons)" class="@LibraryButtonClass(IconLibrary.SimpleIcons)" @onclick="() => SetLibrary(IconLibrary.SimpleIcons)">
+            Simple Icons (@_countSimpleIcons)
+        </button>
+    </nav>
+
+    <div class="iconviewer-body">
+        <div class="iconviewer-grid">
+            @foreach (IconDescriptor icon in _visible)
+            {
+                <button type="button"
+                        class="iconviewer-tile @(IsSelected(icon) ? "selected" : "")"
+                        title="@icon.DisplayName"
+                        @onclick="() => SelectIcon(icon)">
+                    <HackerIcon Icon="icon" Size="28" />
+                    <span class="iconviewer-tile-name">@icon.Name</span>
+                </button>
+            }
+        </div>
+
+        @if (_visible.Count == 0)
+        {
+            <p class="iconviewer-empty">No icons match "@_query".</p>
+        }
+        @if (_visible.Count < _totalMatching)
+        {
+            <button type="button" class="iconviewer-loadmore" @onclick="ShowMore">
+                Show more (@(_totalMatching - _visible.Count) remaining)
+            </button>
+        }
+    </div>
+
+    @if (_selected is { } selected)
+    {
+        <aside class="iconviewer-detail" aria-label="Selected icon details">
+            <button type="button" class="iconviewer-detail-close" aria-label="Close details" @onclick="() => SelectIcon(null)">&times;</button>
+            <HackerIcon Icon="selected" Size="56" />
+            <h3>@selected.DisplayName</h3>
+            <dl>
+                <dt>Library</dt>
+                <dd>@selected.Library@(selected.Variant is null ? "" : $" ({selected.Variant})")</dd>
+                <dt>Name</dt>
+                <dd>@selected.Name</dd>
+            </dl>
+            <label for="iconviewer-snippet">Razor usage</label>
+            <input id="iconviewer-snippet"
+                   class="iconviewer-snippet"
+                   readonly
+                   value="@RazorSnippet(selected)"
+                   @ref="_snippetInputRef"
+                   @onclick="SelectSnippetText"
+                   @onfocus="SelectSnippetText" />
+            <p class="iconviewer-hint">Click the snippet, then Ctrl+C (Cmd+C) to copy.</p>
+        </aside>
+    }
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.icon-viewer",
+        Name = "Icon Viewer",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Browse, search, and copy usage snippets for every icon bundled with HackerOS: Bootstrap Icons, Font Awesome, Lucide, and Simple Icons",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.IconViewer.dll", "HackerOs.Apps.IconViewer.IconViewerWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
+        Capabilities = [],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = false
+    };
+
+    private const int PageSize = 200;
+
+    private string _query = string.Empty;
+    private IconLibrary? _activeLibrary;
+    private int _take = PageSize;
+    private List<IconDescriptor> _visible = [];
+    private int _totalMatching;
+    private IconDescriptor? _selected;
+    private IJSObjectReference? _module;
+    private ElementReference _snippetInputRef;
+
+    private int _countAll;
+    private int _countBootstrap;
+    private int _countFontAwesome;
+    private int _countLucide;
+    private int _countSimpleIcons;
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        _countAll = Catalog.Count();
+        _countBootstrap = Catalog.Count(IconLibrary.Bootstrap);
+        _countFontAwesome = Catalog.Count(IconLibrary.FontAwesome);
+        _countLucide = Catalog.Count(IconLibrary.Lucide);
+        _countSimpleIcons = Catalog.Count(IconLibrary.SimpleIcons);
+        Recompute();
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/HackerOs.Apps.IconViewer/select-text.js");
+        }
+    }
+
+    private void OnQueryChanged(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+        _take = PageSize;
+        Recompute();
+    }
+
+    private void SetLibrary(IconLibrary? library)
+    {
+        _activeLibrary = library;
+        _take = PageSize;
+        Recompute();
+    }
+
+    private void ShowMore()
+    {
+        _take += PageSize;
+        Recompute();
+    }
+
+    private void SelectIcon(IconDescriptor? icon)
+    {
+        _selected = icon;
+    }
+
+    private bool IsSelected(IconDescriptor icon) =>
+        _selected is { } selected && selected.Library == icon.Library && selected.Name == icon.Name;
+
+    private void Recompute()
+    {
+        IReadOnlyList<IconDescriptor> matches = Catalog.Search(_query, _activeLibrary, maxResults: 20_000);
+        _totalMatching = matches.Count;
+        _visible = [.. matches.Take(_take)];
+    }
+
+    private string LibraryButtonClass(IconLibrary? library) =>
+        _activeLibrary == library ? "active" : string.Empty;
+
+    private static string RazorSnippet(IconDescriptor icon) =>
+        $"<HackerIcon Library=\"IconLibrary.{icon.Library}\" Name=\"{icon.Name}\" />";
+
+    private async Task SelectSnippetText()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("selectText", _snippetInputRef);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+}

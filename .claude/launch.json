@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hackeros-test-harness",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--configuration", "Release", "--project", "wasm2/HackerOs/test/test/test.csproj", "--urls", "http://127.0.0.1:5251"],
+      "port": 5251
+    }
+  ]
+}

@@ -154,6 +154,7 @@ public sealed class SampleTickerServiceTests
         public IAppEventGateway Events { get; }
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging { get; }
+        public IAppDiagnosticsGateway Diagnostics => throw new NotImplementedException();
         public IAppClockGateway Clock { get; }
         public IAppProcessGateway Processes => throw new NotImplementedException();
     }

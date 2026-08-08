@@ -265,6 +265,7 @@ public sealed class Wave4NetworkTests
         public IAppEventGateway Events => throw new NotImplementedException();
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging => throw new NotImplementedException();
+        public IAppDiagnosticsGateway Diagnostics => throw new NotImplementedException();
         public IAppClockGateway Clock => throw new NotImplementedException();
         public IAppProcessGateway Processes => throw new NotImplementedException();
     }

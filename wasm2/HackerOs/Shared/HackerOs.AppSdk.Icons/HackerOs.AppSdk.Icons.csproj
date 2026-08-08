@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Data\bootstrap-icons.json" LogicalName="HackerOs.AppSdk.Icons.Data.bootstrap-icons.json" />
+    <EmbeddedResource Include="Data\font-awesome.json" LogicalName="HackerOs.AppSdk.Icons.Data.font-awesome.json" />
+    <EmbeddedResource Include="Data\lucide.json" LogicalName="HackerOs.AppSdk.Icons.Data.lucide.json" />
+    <EmbeddedResource Include="Data\simple-icons.json" LogicalName="HackerOs.AppSdk.Icons.Data.simple-icons.json" />
+  </ItemGroup>
+
+</Project>

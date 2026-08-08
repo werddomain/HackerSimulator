@@ -104,6 +104,12 @@ public static class AppCapabilities
     /// </summary>
     public const string GameplayDomainAccess = "gameplay.domain.access";
 
+    /// <summary>Read structured diagnostic log entries recorded across the system.</summary>
+    public const string DiagnosticsRead = "diagnostics.read";
+
+    /// <summary>Clear structured diagnostic log entries recorded across the system.</summary>
+    public const string DiagnosticsClear = "diagnostics.clear";
+
     private static readonly FrozenSet<string> KnownIdentifiers = new[]
     {
         FileSystemPrivateRead,
@@ -133,7 +139,9 @@ public static class AppCapabilities
         ServicesManage,
         NetworkSimulatedRead,
         NetworkSimulatedWrite,
-        GameplayDomainAccess
+        GameplayDomainAccess,
+        DiagnosticsRead,
+        DiagnosticsClear
     }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>Gets the capabilities that require a window-hosting app because they render modal UI.</summary>

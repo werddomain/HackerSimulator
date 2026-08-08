@@ -1,8 +1,14 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.Infrastructure.Browser.Schema
+@using HackerOs.Platform.Core
+@using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
+@implements IAsyncDisposable
+@inject AppCatalog Catalog
+@inject IJSRuntime JS
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -30,11 +36,19 @@
             <MudTabPanel Text="File Associations" Icon="@Icons.Material.Filled.Extension">
                 <div class="setting-group">
                     <h4>File Association Policy</h4>
-                    <p class="setting-desc">Configure default applications per extension.</p>
+                    <p class="setting-desc">Default applications per extension, from installed apps' declared file handlers.</p>
                     <div class="associations-list">
-                        <div class="assoc-row"><span>.txt</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
-                        <div class="assoc-row"><span>.json</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
-                        <div class="assoc-row"><span>.md</span> <strong>Text Editor (org.hackeros.text-editor)</strong></div>
+                        @if (_fileHandlers.Count == 0)
+                        {
+                            <div class="assoc-row"><span>No file handlers are currently registered.</span></div>
+                        }
+                        else
+                        {
+                            @foreach ((string extension, string appName) in _fileHandlers)
+                            {
+                                <div class="assoc-row"><span>@extension</span> <strong>@appName</strong></div>
+                            }
+                        }
                     </div>
                 </div>
             </MudTabPanel>
@@ -60,9 +74,82 @@
                     <div class="info-line"><span>User ID:</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>
                     <div class="info-line"><span>Authority:</span> <strong>@(AppContext?.UserAuthority.ToString() ?? "User")</strong></div>
                 </div>
+
+                <div class="setting-group danger-zone">
+                    <h4>Danger Zone</h4>
+                    <p class="setting-desc">
+                        Reset HackerOS to its factory state. This permanently clears the local IndexedDB
+                        database — all accounts, files, sessions, and settings — and restores your account
+                        to its default configuration. This action cannot be undone.
+                    </p>
+                    <button class="btn-danger" @onclick="OpenResetDialog">
+                        Reset to Factory Settings
+                    </button>
+                </div>
             </MudTabPanel>
         </MudTabs>
     </div>
+
+    @if (_isResetDialogOpen)
+    {
+        <div class="modal-backdrop" @onclick="CancelReset">
+            <div class="reset-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="reset-title"
+                 @onclick:stopPropagation>
+                <header class="dialog-header">
+                    <div class="reset-mark" aria-hidden="true">⚠</div>
+                    <h2 id="reset-title">Reset to Factory Settings</h2>
+                </header>
+
+                <div class="dialog-body">
+                    <p>
+                        This will permanently delete the entire local <code>@HackerOsIndexedDbSchema.DatabaseName</code>
+                        IndexedDB database, including:
+                    </p>
+                    <ul class="reset-affected-list">
+                        <li>All local user accounts and sessions</li>
+                        <li>All files and folders</li>
+                        <li>All application and account settings (restored to defaults)</li>
+                        <li>All capability grants and audit history</li>
+                    </ul>
+                    <p>HackerOS will reload afterward as if freshly installed.</p>
+
+                    <label class="confirm-label" for="reset-confirm-input">
+                        Type <strong>RESET</strong> to confirm:
+                    </label>
+                    <input id="reset-confirm-input"
+                           class="confirm-input"
+                           type="text"
+                           autocomplete="off"
+                           disabled="@_isResetting"
+                           @bind="_confirmText"
+                           @bind:event="oninput" />
+
+                    @if (!string.IsNullOrEmpty(_resetErrorMessage))
+                    {
+                        <p class="dialog-error" role="alert">@_resetErrorMessage</p>
+                    }
+                </div>
+
+                <footer class="dialog-footer">
+                    <button type="button"
+                            class="btn-secondary"
+                            disabled="@_isResetting"
+                            @onclick="CancelReset">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn-danger"
+                            disabled="@(_isResetting || !IsConfirmed)"
+                            @onclick="ConfirmResetAsync">
+                        @(_isResetting ? "Resetting..." : "Reset to Factory Settings")
+                    </button>
+                </footer>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -83,16 +170,147 @@
         SingleInstancePerUser = true
     };
 
+    private const string ResetConfirmPhrase = "RESET";
+
     private bool _animationsEnabled = true;
     private string _activeAccent = "green";
+    private AppearancePersistenceService? _appearance;
+    private IJSObjectReference? _module;
+    private List<(string Extension, string AppName)> _fileHandlers = [];
 
-    private void ChangeAccent(string accent)
+    private bool _isResetDialogOpen;
+    private bool _isResetting;
+    private string _confirmText = string.Empty;
+    private string? _resetErrorMessage;
+
+    private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
+
+    protected override async Task OnAppInitializedAsync()
     {
-        _activeAccent = accent;
+        _appearance = new AppearancePersistenceService(AppContext.Settings);
+        AppearanceSettings current = await _appearance.ReadAsync(AppContext.CancellationToken);
+        _activeAccent = current.Accent;
+        _animationsEnabled = current.AnimationsEnabled;
+
+        _fileHandlers = [.. Catalog.Manifests.Values
+            .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
+                handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
+            .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
     }
 
-    private void ToggleAnimations(bool value)
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.Settings/SettingsWindow.razor.js");
+                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
+                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
+            }
+            catch (Exception)
+            {
+                // Headless test DOM and unavailable-JS fallback: preferences still persist,
+                // just without a live visual application in this environment.
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+
+    private async Task ChangeAccent(string accent)
+    {
+        string previous = _activeAccent;
+        _activeAccent = accent;
+        StateHasChanged();
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("applyAccent", accent);
+        }
+
+        if (_appearance is null || !await _appearance.WriteAsync(accent, _animationsEnabled, AppContext.CancellationToken))
+        {
+            _activeAccent = previous;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAccent", previous);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAnimations(bool value)
+    {
+        bool previous = _animationsEnabled;
         _animationsEnabled = value;
+        StateHasChanged();
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("applyAnimations", value);
+        }
+
+        if (_appearance is null || !await _appearance.WriteAsync(_activeAccent, value, AppContext.CancellationToken))
+        {
+            _animationsEnabled = previous;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAnimations", previous);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void OpenResetDialog()
+    {
+        _isResetDialogOpen = true;
+        _confirmText = string.Empty;
+        _resetErrorMessage = null;
+    }
+
+    private void CancelReset()
+    {
+        if (_isResetting)
+        {
+            return;
+        }
+
+        _isResetDialogOpen = false;
+        _confirmText = string.Empty;
+        _resetErrorMessage = null;
+    }
+
+    private async Task ConfirmResetAsync()
+    {
+        if (!IsConfirmed || _isResetting)
+        {
+            return;
+        }
+
+        _isResetting = true;
+        _resetErrorMessage = null;
+
+        try
+        {
+            await using IJSObjectReference module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/HackerOs.Infrastructure.Browser/indexedDb.js");
+            await module.InvokeVoidAsync("deleteDatabase", HackerOsIndexedDbSchema.DatabaseName);
+
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            _resetErrorMessage = $"Reset failed: {ex.Message}";
+            _isResetting = false;
+        }
     }
 }

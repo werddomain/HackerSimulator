@@ -30,6 +30,10 @@ public abstract class WindowAppBase : ComponentBase
     [Inject]
     protected IFileDialogService FileDialogs { get; set; } = default!;
 
+    /// <summary>Gets or sets the ecosystem-owned dialog service.</summary>
+    [Inject]
+    protected IDialogService Dialogs { get; set; } = default!;
+
     /// <summary>Gets the validated window app manifest.</summary>
     protected AppManifest Manifest => AppContext.Manifest;
 
@@ -75,7 +79,7 @@ public abstract class WindowAppBase : ComponentBase
         OpenFileDialogRequest request,
         CancellationToken cancellationToken = default)
     {
-        EnsureDialogService();
+        EnsureFileDialogService();
         return FileDialogs.OpenFileAsync(AppContext, request, cancellationToken);
     }
 
@@ -84,7 +88,7 @@ public abstract class WindowAppBase : ComponentBase
         SaveFileDialogRequest request,
         CancellationToken cancellationToken = default)
     {
-        EnsureDialogService();
+        EnsureFileDialogService();
         return FileDialogs.SaveFileAsync(AppContext, request, cancellationToken);
     }
 
@@ -93,8 +97,48 @@ public abstract class WindowAppBase : ComponentBase
         SelectFolderDialogRequest request,
         CancellationToken cancellationToken = default)
     {
-        EnsureDialogService();
+        EnsureFileDialogService();
         return FileDialogs.SelectFolderAsync(AppContext, request, cancellationToken);
+    }
+
+    /// <summary>Displays a message box dialog.</summary>
+    protected ValueTask<MessageBoxDialogResult> MessageBox(
+        string title,
+        string content,
+        MessageBoxType dialogType = MessageBoxType.Ok,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureBasicDialogService();
+        return Dialogs.MessageBoxAsync(
+            AppContext,
+            new MessageBoxDialogRequest
+            {
+                Title = title,
+                Content = content,
+                DialogType = dialogType
+            },
+            cancellationToken);
+    }
+
+    /// <summary>Displays a text input dialog.</summary>
+    protected ValueTask<TextInputDialogResult> TextInput(
+        string title,
+        string content,
+        string? defaultValue = null,
+        string? placeholder = null,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureBasicDialogService();
+        return Dialogs.TextInputAsync(
+            AppContext,
+            new TextInputDialogRequest
+            {
+                Title = title,
+                Content = content,
+                DefaultValue = defaultValue,
+                Placeholder = placeholder
+            },
+            cancellationToken);
     }
 
     /// <summary>Runs app-specific synchronous initialization.</summary>
@@ -151,12 +195,31 @@ public abstract class WindowAppBase : ComponentBase
         _boundInstanceId = AppContext.InstanceId;
     }
 
-    private void EnsureDialogService()
+    private void EnsureFileDialogService()
     {
         ValidateContext();
+        if (FileDialogs is null && Dialogs is not null)
+        {
+            FileDialogs = Dialogs;
+        }
+
         if (FileDialogs is null)
         {
             throw new InvalidOperationException("The window host must provide IFileDialogService.");
+        }
+    }
+
+    private void EnsureBasicDialogService()
+    {
+        ValidateContext();
+        if (Dialogs is null && FileDialogs is IDialogService dialogs)
+        {
+            Dialogs = dialogs;
+        }
+
+        if (Dialogs is null)
+        {
+            throw new InvalidOperationException("The window host must provide IDialogService.");
         }
     }
 }

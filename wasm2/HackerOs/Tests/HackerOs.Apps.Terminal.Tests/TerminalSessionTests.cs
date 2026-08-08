@@ -43,6 +43,20 @@ public sealed class TerminalSessionTests
     }
 
     [Fact]
+    public void ResolvePath_ComputesTargetWithoutMutatingCwd()
+    {
+        TerminalSession session = new("user", "/home/user");
+
+        Assert.Equal("/home/user/projects", session.ResolvePath("projects"));
+        Assert.Equal("/etc", session.ResolvePath("/etc"));
+        Assert.Equal("/home", session.ResolvePath(".."));
+        Assert.Equal("/home/user", session.ResolvePath("~"));
+
+        // None of the above should have changed the actual working directory.
+        Assert.Equal("/home/user", session.Cwd);
+    }
+
+    [Fact]
     public void TerminalSession_manages_command_history_navigation()
     {
         TerminalSession session = new("user", "/home/user");

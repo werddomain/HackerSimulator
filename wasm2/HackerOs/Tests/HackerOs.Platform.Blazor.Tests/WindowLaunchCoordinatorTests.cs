@@ -51,6 +51,55 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.True(window.IsFocused);
     }
 
+    [Fact]
+    public void Present_process_overload_creates_window_for_window_app()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest();
+        ProcessRecord process = CreateProcess();
+
+        bool presented = coordinator.Present(manifest, process);
+
+        Assert.True(presented);
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.Equal(manifest.Id, window.AppId);
+        Assert.Equal(process.Pid, window.ProcessId);
+    }
+
+    [Fact]
+    public void Present_process_overload_focuses_existing_window_instead_of_duplicating()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest();
+        ProcessRecord process = CreateProcess();
+        coordinator.Present(manifest, process);
+        WindowId windowId = Assert.Single(runtime.Windows).Id;
+        runtime.Apply(new MinimizeWindowCommand(windowId));
+
+        bool presented = coordinator.Present(manifest, process);
+
+        Assert.True(presented);
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.Equal(WindowVisualState.Normal, window.VisualState);
+        Assert.True(window.IsFocused);
+    }
+
+    [Fact]
+    public void Present_process_overload_ignores_non_window_apps()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest() with { Kind = AppKind.Terminal };
+        ProcessRecord process = CreateProcess();
+
+        bool presented = coordinator.Present(manifest, process);
+
+        Assert.False(presented);
+        Assert.Empty(runtime.Windows);
+    }
+
     private static AppManifest CreateManifest() => new()
     {
         Id = "org.hackeros.test-window",

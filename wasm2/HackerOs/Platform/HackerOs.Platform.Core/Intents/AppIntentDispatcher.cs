@@ -197,7 +197,8 @@ public sealed class AppIntentDispatcher
         }
 
         AppLaunchResult launch = await _orchestrator.LaunchAsync(
-            new AppLaunchRequest(target.Id, principal, arguments), fullScreen, cancellationToken);
+            new AppLaunchRequest(target.Id, principal, arguments, WorkingDirectory: intent.WorkingDirectory),
+            fullScreen, cancellationToken);
         return ToDispatchResult(launch);
     }
 

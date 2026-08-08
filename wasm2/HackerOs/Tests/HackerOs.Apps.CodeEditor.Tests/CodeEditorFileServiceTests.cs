@@ -161,7 +161,7 @@ public sealed class CodeEditorFileServiceTests
             await using Stream stream = await content.OpenReadAsync(cancellationToken);
             using MemoryStream copy = new();
             await stream.CopyToAsync(copy, cancellationToken);
-            long revision = request.ExpectedRevision + 1;
+            long revision = (request.ExpectedRevision ?? 0) + 1;
             Entry entry = new(copy.ToArray(), revision, false);
             _entries[request.Path.Value] = entry;
             FileSystemEntrySnapshot snapshot = FileSnapshot(request.Path, entry);

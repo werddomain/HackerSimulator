@@ -74,7 +74,10 @@
     font-size: 11px;
     font-weight: bold;
 
+    &.critical { background-color: #4e1e1e; color: #ff7b72; }
     &.error { background-color: #4e1e1e; color: #f85149; }
     &.warning { background-color: #463212; color: #d29922; }
     &.information { background-color: #1a3854; color: #58a6ff; }
+    &.debug { background-color: #21262d; color: #8b949e; }
+    &.trace { background-color: #21262d; color: #6e7681; }
 }

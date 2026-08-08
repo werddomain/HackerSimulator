@@ -28,6 +28,14 @@
     "settings.write",
     "notifications.post"
   ],
+  "fileHandlers": [
+    {
+      "mediaType": "text/plain",
+      "extensions": [".txt", ".md", ".log", ".json", ".csv", ".ini", ".conf", ".cfg", ".yml", ".yaml", ".xml", ".env"],
+      "actions": ["open", "edit"],
+      "priority": 0
+    }
+  ],
   "resources": {
     "baselineCpuWeight": 0.02,
     "burstCpuWeight": 0.1,

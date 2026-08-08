@@ -48,13 +48,27 @@ public sealed class TouchCommand : TerminalAppBase
         foreach (var path in paths)
         {
             var resolved = ResolvePath(context.WorkingDirectory, path);
+            var parentStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(resolved))), cancellationToken);
+            if (!parentStat.Succeeded || parentStat.Value is null)
+            {
+                context.StandardError.WriteLine($"touch: cannot touch '{path}': No such file or directory");
+                status = 1;
+                continue;
+            }
+
             var req = new FileSystemCreateRequest(
                 path: VirtualPath.Parse(resolved),
                 kind: FileSystemEntryKind.File,
                 permissions: FileSystemPermissions.FromMode(0b110_100_100),
-                expectedParentRevision: 0);
+                expectedParentRevision: parentStat.Value.Metadata.Revision);
 
-            await context.App.FileSystem.CreateAsync(req, cancellationToken);
+            var result = await context.App.FileSystem.CreateAsync(req, cancellationToken);
+            if (!result.Succeeded && result.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
+            {
+                context.StandardError.WriteLine($"touch: cannot touch '{path}': {result.Transaction.Error?.Code.ToString() ?? "Operation failed"}");
+                status = 1;
+            }
         }
 
         return status;
@@ -62,4 +76,10 @@ public sealed class TouchCommand : TerminalAppBase
 
     private static string ResolvePath(string cwd, string path) =>
         path.StartsWith('/') ? path : (cwd.TrimEnd('/') + "/" + path).Replace("//", "/");
+
+    private static string GetParentPath(string canonicalPath)
+    {
+        int lastSlash = canonicalPath.LastIndexOf('/');
+        return lastSlash <= 0 ? "/" : canonicalPath[..lastSlash];
+    }
 }

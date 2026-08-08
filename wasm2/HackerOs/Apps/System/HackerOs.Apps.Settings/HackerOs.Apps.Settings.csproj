@@ -16,6 +16,8 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Infrastructure\HackerOs.Infrastructure.Browser\HackerOs.Infrastructure.Browser.csproj" />
+    <ProjectReference Include="..\..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
   </ItemGroup>
 
 </Project>

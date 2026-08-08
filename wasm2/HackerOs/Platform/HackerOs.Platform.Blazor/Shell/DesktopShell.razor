@@ -1,6 +1,8 @@
 @using HackerOs.App.Abstractions
+@using HackerOs.Platform.Blazor.Dialogs
 @using HackerOs.Platform.Blazor.Windows
 @using HackerOs.Platform.Core.Discovery
+@using HackerOs.Platform.Core.FileSystem
 @using HackerOs.Platform.Core.Lifecycle
 @using HackerOs.Simulation.Abstractions.Notifications
 @using HackerOs.Simulation.Abstractions.Sessions
@@ -12,11 +14,16 @@
 @inject WindowLaunchCoordinator LaunchCoordinator
 @inject INotificationQueue NotificationQueue
 @inject AppLifecycleOrchestrator Orchestrator
+@inject IProcessManager ProcessManager
 @inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject IEventBus EventBus
+@inject FileDialogCoordinator FileDialogCoordinator
+@inject DialogCoordinator DialogCoordinator
+@inject FileDialogWindowAdapter FileDialogAdapter
+@inject TestDemoFixtureSeeder TestDemoSeeder
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -27,7 +34,27 @@
                      OnClose="HandleClose"
                      OnGesture="HandleGesture">
             <WindowContent Context="window">
-                @if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                @if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is OpenFileDialogPresentation openPresentation)
+                {
+                    <OpenFileDialog Presentation="openPresentation" Coordinator="FileDialogCoordinator" />
+                }
+                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is SaveFileDialogPresentation savePresentation)
+                {
+                    <SaveFileDialog Presentation="savePresentation" Coordinator="FileDialogCoordinator" />
+                }
+                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is SelectFolderDialogPresentation folderPresentation)
+                {
+                    <FolderSelectDialog Presentation="folderPresentation" Coordinator="FileDialogCoordinator" />
+                }
+                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActiveBasicPresentation is MessageBoxPresentation messageBoxPresentation)
+                {
+                    <MessageBoxDialog Presentation="messageBoxPresentation" Coordinator="DialogCoordinator" />
+                }
+                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActiveBasicPresentation is TextInputPresentation textInputPresentation)
+                {
+                    <TextInputDialog Presentation="textInputPresentation" Coordinator="DialogCoordinator" />
+                }
+                else if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
                 {
                     <WindowAppRenderer Window="window"
                                        Descriptor="descriptor"
@@ -65,6 +92,19 @@
              OnToggleLauncher="ToggleLauncher"
              OnToggleNotifications="ToggleNotifications"
              OnRequestLogout="OpenLogout" />
+
+    @if (TestDemoEnabled)
+    {
+        <div class="e2e-test-demo-panel">
+            <button type="button" id="btn-test-demo" @onclick="RunTestDemoAsync" disabled="@_testDemoRunning">
+                @(_testDemoRunning ? "Seeding…" : "Test Demo")
+            </button>
+            @if (_testDemoStatus is not null)
+            {
+                <output id="test-demo-status" role="status">@_testDemoStatus</output>
+            }
+        </div>
+    }
 </div>
 
 @code {
@@ -75,6 +115,17 @@
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
+
+    /// <summary>
+    /// Shows the E2E-only "Test Demo" fixture-seeding control. Must only ever be set
+    /// true by a trusted, out-of-band signal from the test harness (see
+    /// docs/e2e-test-demo-mode.md) — never reachable from a normal app launch.
+    /// </summary>
+    [Parameter]
+    public bool TestDemoEnabled { get; set; }
+
+    private bool _testDemoRunning;
+    private string? _testDemoStatus;
 
     private int UnreadNotificationCount => NotificationQueue.GetActive(
         SessionService.CurrentPrincipal?.UserId ?? default,
@@ -158,6 +209,13 @@
 
     private async Task HandleClose(WindowId id)
     {
+        if (FileDialogAdapter.IsDialogWindow(id))
+        {
+            FileDialogAdapter.Cancel(id);
+            StateHasChanged();
+            return;
+        }
+
         await CloseCoordinator.CloseAsync(
             id,
             cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken));
@@ -165,11 +223,44 @@
     }
     private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
 
+    private async Task RunTestDemoAsync()
+    {
+        if (!TestDemoEnabled || _testDemoRunning)
+        {
+            return;
+        }
+
+        if (SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal)
+        {
+            _testDemoStatus = "Error: no signed-in user.";
+            return;
+        }
+
+        _testDemoRunning = true;
+        _testDemoStatus = null;
+        StateHasChanged();
+        try
+        {
+            string root = await TestDemoSeeder.SeedAsync(principal);
+            _testDemoStatus = $"Seeded:{root}";
+        }
+        catch (Exception exception)
+        {
+            _testDemoStatus = $"Error:{exception.Message}";
+        }
+        finally
+        {
+            _testDemoRunning = false;
+            StateHasChanged();
+        }
+    }
+
     private IDisposable? _processSubscription;
 
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += OnWindowRuntimeStateChanged;
+        FileDialogAdapter.Changed += OnWindowRuntimeStateChanged;
         _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -186,6 +277,21 @@
             if (matchingWindow is not null)
             {
                 WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+            }
+        }
+        else if (e.NewState == ProcessState.Running)
+        {
+            // A window-kind app can reach Running via any caller that goes through
+            // AppLifecycleOrchestrator.LaunchAsync -- not just this shell's own app launcher
+            // (e.g. another app opening a file through IAppIntentGateway.OpenFileAsync). The
+            // orchestrator only owns process state, not window presentation, so this shell
+            // presents any such process itself; Present() is a no-op if it was already
+            // presented directly (e.g. by HandleAppSelected).
+            if (Orchestrator.TryGetRunningInstance(e.Pid, out AppDescriptor? descriptor, out _)
+                && descriptor.Manifest.Kind == AppKind.Window
+                && ProcessManager.TryGetActive(e.Pid, out ProcessRecord process))
+            {
+                LaunchCoordinator.Present(descriptor.Manifest, process);
             }
         }
 
@@ -210,6 +316,7 @@
     public void Dispose()
     {
         WindowRuntime.StateChanged -= OnWindowRuntimeStateChanged;
+        FileDialogAdapter.Changed -= OnWindowRuntimeStateChanged;
         _processSubscription?.Dispose();
     }
 }

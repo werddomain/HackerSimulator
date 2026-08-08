@@ -55,6 +55,15 @@ public sealed class BoundedDiagnosticSink : IDiagnosticSink
         }
     }
 
+    /// <inheritdoc />
+    public void Clear()
+    {
+        lock (_gate)
+        {
+            _entries.Clear();
+        }
+    }
+
     private static class RedactionApplier
     {
         public static DiagnosticEntry Apply(DiagnosticEntry entry, IDiagnosticRedactor redactor)

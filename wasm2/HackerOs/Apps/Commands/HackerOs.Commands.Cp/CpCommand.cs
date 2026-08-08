@@ -59,11 +59,29 @@ public sealed class CpCommand : TerminalAppBase
             var srcPath = ResolvePath(context.WorkingDirectory, src);
             var destPath = ResolvePath(context.WorkingDirectory, dest);
 
+            var srcStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(srcPath)), cancellationToken);
+            if (!srcStat.Succeeded || srcStat.Value is null)
+            {
+                context.StandardError.WriteLine($"cp: cannot stat '{src}': No such file or directory");
+                status = 1;
+                continue;
+            }
+
+            var destParentStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(destPath))), cancellationToken);
+            if (!destParentStat.Succeeded || destParentStat.Value is null)
+            {
+                context.StandardError.WriteLine($"cp: cannot create '{dest}': No such file or directory");
+                status = 1;
+                continue;
+            }
+
             var req = new FileSystemCopyRequest(
                 sourcePath: VirtualPath.Parse(srcPath),
                 destinationPath: VirtualPath.Parse(destPath),
-                expectedEntryRevision: 0,
-                expectedDestinationParentRevision: 0);
+                expectedEntryRevision: srcStat.Value.Metadata.Revision,
+                expectedDestinationParentRevision: destParentStat.Value.Metadata.Revision);
 
             var result = await context.App.FileSystem.CopyAsync(req, cancellationToken);
             if (!result.Succeeded)
@@ -78,4 +96,10 @@ public sealed class CpCommand : TerminalAppBase
 
     private static string ResolvePath(string cwd, string path) =>
         path.StartsWith('/') ? path : (cwd.TrimEnd('/') + "/" + path).Replace("//", "/");
+
+    private static string GetParentPath(string canonicalPath)
+    {
+        int lastSlash = canonicalPath.LastIndexOf('/');
+        return lastSlash <= 0 ? "/" : canonicalPath[..lastSlash];
+    }
 }

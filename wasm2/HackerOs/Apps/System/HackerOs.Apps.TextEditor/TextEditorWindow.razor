@@ -1,10 +1,15 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
-@inject IDialogService MudDialogService
+@implements IAsyncDisposable
+@inject MudBlazor.IDialogService MudDialogService
+@inject ISessionService SessionService
+@inject IJSRuntime JavaScript
 
 <div class="editor-container" @ref="_editorContainerRef" @onkeydown="HandleGlobalKeyDownAsync" tabindex="0">
     <!-- Menu Bar -->
@@ -41,8 +46,8 @@
                    type="text"
                    class="find-input"
                    placeholder="Search…"
-                   @bind="_findQuery"
-                   @bind:event="oninput"
+                   value="@_findQuery"
+                   @oninput="HandleFindQueryChangedAsync"
                    @onkeydown="HandleFindKeyDown"
                    aria-label="Search text" />
             <span class="find-match-count">@FindMatchSummary</span>
@@ -100,6 +105,7 @@
     private string _findQuery = string.Empty;
     private int _findIndex = -1;
     private bool _conflictDetected = false;
+    private IJSObjectReference? _module;
 
     /// <summary>
     /// Optional initial file path. When supplied by the window host (e.g. via an
@@ -125,6 +131,31 @@
         if (!string.IsNullOrWhiteSpace(LaunchFilePath))
         {
             await LoadFileAsync(VirtualPath.Parse(LaunchFilePath));
+        }
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JavaScript.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.TextEditor/TextEditorWindow.razor.js");
+            }
+            catch (Exception)
+            {
+                // Headless test DOM and unavailable-JS fallback: find still works, just without
+                // visual selection/scroll.
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
         }
     }
 
@@ -154,7 +185,7 @@
             }
         }
 
-        return $"/home/{AppContext.UserId}";
+        return SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
     }
 
     /// <summary>
@@ -244,7 +275,7 @@
             using StreamReader reader = new(handle.Content, leaveOpen: true);
             string content = await reader.ReadToEndAsync(AppContext.CancellationToken);
 
-            _doc.CompleteLoading(content, handle.Descriptor.MediaType, handle.Entry.Metadata.Timestamps.ContentModifiedAtUtc.Ticks);
+            _doc.CompleteLoading(content, handle.Descriptor.MediaType, handle.Entry.Metadata.Revision);
             _conflictDetected = false;
         }
         catch (OperationCanceledException)
@@ -280,6 +311,7 @@
     private async Task SaveAsAsync()
     {
         string defaultDir = GetParentDirectory(_doc.Path);
+        
         SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
         {
             Title = "Save Text File",
@@ -323,7 +355,7 @@
 
             if (result.Succeeded && result.Entry is not null)
             {
-                _doc.CompleteSave(path, result.Entry.Metadata.Timestamps.ContentModifiedAtUtc.Ticks);
+                _doc.CompleteSave(path, result.Entry.Metadata.Revision);
                 _conflictDetected = false;
             }
             else if (result.Transaction.Error?.Code == FileSystemErrorCode.RevisionConflict)
@@ -426,41 +458,61 @@
         }
     }
 
-    private int CountMatches()
+    private List<int> GetMatchIndexes() => TextEditorFindEngine.FindMatches(_doc.Content, _findQuery);
+
+    private int CountMatches() => GetMatchIndexes().Count;
+
+    private async Task HandleFindQueryChangedAsync(ChangeEventArgs args)
     {
-        if (string.IsNullOrEmpty(_findQuery) || string.IsNullOrEmpty(_doc.Content)) return 0;
-        int count = 0;
-        int idx = 0;
-        while ((idx = _doc.Content.IndexOf(_findQuery, idx, StringComparison.OrdinalIgnoreCase)) >= 0)
+        _findQuery = args.Value as string ?? string.Empty;
+        List<int> indexes = GetMatchIndexes();
+        _findIndex = indexes.Count > 0 ? 0 : -1;
+        StateHasChanged();
+        await HighlightCurrentMatchAsync(indexes);
+    }
+
+    private async Task FindNext()
+    {
+        List<int> indexes = GetMatchIndexes();
+        _findIndex = TextEditorFindEngine.Next(_findIndex, indexes.Count);
+        StateHasChanged();
+        await HighlightCurrentMatchAsync(indexes);
+    }
+
+    private async Task FindPrev()
+    {
+        List<int> indexes = GetMatchIndexes();
+        _findIndex = TextEditorFindEngine.Previous(_findIndex, indexes.Count);
+        StateHasChanged();
+        await HighlightCurrentMatchAsync(indexes);
+    }
+
+    /// <summary>Selects and scrolls to the current match in the live textarea, best-effort.</summary>
+    private async Task HighlightCurrentMatchAsync(List<int>? indexes = null)
+    {
+        indexes ??= GetMatchIndexes();
+        if (_module is null || _findIndex < 0 || _findIndex >= indexes.Count)
         {
-            count++;
-            idx += _findQuery.Length;
+            return;
         }
-        return count;
+
+        int start = indexes[_findIndex];
+        int end = start + _findQuery.Length;
+        try
+        {
+            await _module.InvokeVoidAsync("selectRange", _textAreaRef, start, end);
+        }
+        catch (Exception)
+        {
+            // Headless test DOM and unavailable-JS fallback: matching still works, just
+            // without visual selection/scroll.
+        }
     }
 
-    private void FindNext()
+    private async Task HandleFindKeyDown(KeyboardEventArgs args)
     {
-        if (string.IsNullOrEmpty(_findQuery)) return;
-        int total = CountMatches();
-        if (total == 0) { _findIndex = -1; return; }
-        _findIndex = (_findIndex + 1) % total;
-        StateHasChanged();
-    }
-
-    private void FindPrev()
-    {
-        if (string.IsNullOrEmpty(_findQuery)) return;
-        int total = CountMatches();
-        if (total == 0) { _findIndex = -1; return; }
-        _findIndex = (_findIndex - 1 + total) % total;
-        StateHasChanged();
-    }
-
-    private void HandleFindKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter" && !args.ShiftKey) FindNext();
-        else if (args.Key == "Enter" && args.ShiftKey) FindPrev();
+        if (args.Key == "Enter" && !args.ShiftKey) await FindNext();
+        else if (args.Key == "Enter" && args.ShiftKey) await FindPrev();
         else if (args.Key == "Escape") ToggleFindBar();
     }
 

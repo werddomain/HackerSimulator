@@ -71,7 +71,17 @@ All colors, surfaces, borders, and status indicators are controlled via CSS cust
 
 ---
 
-## 3. Theme Boundary Security (DECISION: D-013)
+## 3. Icons
+
+Icons (Bootstrap Icons, Font Awesome, Lucide, Simple Icons, and MudBlazor's bundled
+Material Design set) render as inline SVG colored via inherited `fill`/`stroke:
+currentColor` — never a hardcoded fill color — so every icon automatically matches
+the surrounding text color and adapts to theme changes with no per-icon work. Use the
+`HackerIcon` component (`HackerOs.AppSdk.Icons`) rather than raw `<svg>` markup or an
+icon font; see [`icon-library.md`](icon-library.md). Default size is 20px; use larger
+sizes (e.g. 28–56px) sparingly, for emphasis in detail panels or empty states.
+
+## 4. Theme Boundary Security (DECISION: D-013)
 
 Themes in HackerOS customize visual appearance by altering CSS Custom Properties and JSON color values in `/etc/hackeros/theme.json`.
 - **PROHIBITED:** Themes are data-only and static CSS assets. Themes CANNOT inject arbitrary JavaScript scripts, dynamic code, or unverified executable bundles into the browser runtime context.

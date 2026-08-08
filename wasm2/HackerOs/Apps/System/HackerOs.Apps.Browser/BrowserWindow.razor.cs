@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Core.Network;
@@ -140,6 +141,78 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         }
 
         await NavigateToAsync(href);
+    }
+
+    // ── Form submission (login/generic forms rendered by SimulatedPageRenderer) ──
+
+    private async Task HandleFormSubmitAsync((string PostPath, ImmutableDictionary<string, string> FormBody) submission)
+    {
+        string url = ResolveSubmitUrl(submission.PostPath);
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _networkError = null;
+        StateHasChanged();
+
+        await Task.Run(() =>
+        {
+            SimulatedHttpResponse response = NetworkService.Post(url, submission.FormBody, _cookieJar);
+            InvokeAsync(async () =>
+            {
+                _isLoading = false;
+
+                if (response.IsRedirect && response.RedirectUrl is not null)
+                {
+                    await NavigateToAsync(response.RedirectUrl);
+                    return;
+                }
+
+                if (response.Page is not null)
+                {
+                    _finalUrl = url;
+                    _currentPage = response.Page;
+                    _urlInputValue = _finalUrl;
+                    PushHistory(_finalUrl);
+                }
+                else
+                {
+                    _networkError = $"Request failed with status {response.StatusCode}.";
+                }
+                StateHasChanged();
+            });
+        });
+    }
+
+    private string ResolveSubmitUrl(string postPath) => ResolveSubmitUrl(_finalUrl, postPath);
+
+    /// <summary>
+    /// Resolves a form's relative or absolute post path against the current page's URL. Pure
+    /// (no instance state) so it can be unit-tested without rendering the component.
+    /// </summary>
+    public static string ResolveSubmitUrl(string finalUrl, string postPath)
+    {
+        if (string.IsNullOrEmpty(finalUrl))
+        {
+            return string.Empty;
+        }
+
+        if (!postPath.StartsWith('/'))
+        {
+            return postPath;
+        }
+
+        try
+        {
+            Uri baseUri = new(finalUrl);
+            return $"{baseUri.Scheme}://{baseUri.Host}{postPath}";
+        }
+        catch (UriFormatException)
+        {
+            return string.Empty;
+        }
     }
 
     // ── Address bar input ────────────────────────────────────────────────

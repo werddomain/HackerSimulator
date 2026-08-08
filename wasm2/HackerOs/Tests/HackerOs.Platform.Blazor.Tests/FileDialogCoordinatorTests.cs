@@ -151,6 +151,7 @@ public sealed class FileDialogCoordinatorTests
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
         public IAppLoggingGateway Logging => throw new NotSupportedException();
+        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
         public IAppClockGateway Clock => throw new NotSupportedException();
         public IAppProcessGateway Processes => throw new NotSupportedException();
     }

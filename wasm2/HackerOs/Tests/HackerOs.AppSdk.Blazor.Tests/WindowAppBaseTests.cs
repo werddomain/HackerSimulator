@@ -65,7 +65,7 @@ public sealed class WindowAppBaseTests
     [Fact]
     public async Task File_dialog_helpers_delegate_with_the_bound_app_context()
     {
-        FakeFileDialogService dialogs = new();
+        FakeDialogService dialogs = new();
         TestWindowApp app = CreateWindowApp(dialogs: dialogs);
         OpenFileDialogRequest request = new()
         {
@@ -80,9 +80,46 @@ public sealed class WindowAppBaseTests
         Assert.Equal(FileDialogStatus.Cancelled, result.Status);
     }
 
+    [Fact]
+    public async Task Message_box_helper_delegates_to_dialog_service()
+    {
+        FakeDialogService dialogs = new();
+        TestWindowApp app = CreateWindowApp(dialogs: dialogs);
+
+        MessageBoxDialogResult result = await app.InvokeMessageBoxAsync(
+            "Confirmation", "Voulez-vous vraiment effacer ce fichier?", MessageboxType.YesNo);
+
+        Assert.Same(app.AppContext, dialogs.LastContext);
+        Assert.NotNull(dialogs.LastMessageBoxRequest);
+        Assert.Equal("Confirmation", dialogs.LastMessageBoxRequest.Title);
+        Assert.Equal("Voulez-vous vraiment effacer ce fichier?", dialogs.LastMessageBoxRequest.Content);
+        Assert.Equal(MessageBoxType.YesNo, dialogs.LastMessageBoxRequest.DialogType);
+        Assert.Equal(MessageBoxResult.Yes, result.Result);
+        Assert.Equal(MessageboxResult.Yes.Value, result.Result);
+    }
+
+    [Fact]
+    public async Task Text_input_helper_delegates_to_dialog_service()
+    {
+        FakeDialogService dialogs = new();
+        TestWindowApp app = CreateWindowApp(dialogs: dialogs);
+
+        TextInputDialogResult result = await app.InvokeTextInputAsync(
+            "Rename", "Enter new name:", "DefaultName", "Placeholder");
+
+        Assert.Same(app.AppContext, dialogs.LastContext);
+        Assert.NotNull(dialogs.LastTextInputRequest);
+        Assert.Equal("Rename", dialogs.LastTextInputRequest.Title);
+        Assert.Equal("Enter new name:", dialogs.LastTextInputRequest.Content);
+        Assert.Equal("DefaultName", dialogs.LastTextInputRequest.DefaultValue);
+        Assert.Equal("Placeholder", dialogs.LastTextInputRequest.Placeholder);
+        Assert.Equal(TextInputStatus.Submitted, result.Status);
+        Assert.Equal("SubmittedText", result.Value);
+    }
+
     private static TestWindowApp CreateWindowApp(
         AppKind kind = AppKind.Window,
-        IFileDialogService? dialogs = null)
+        IDialogService? dialogs = null)
     {
         AppManifest manifest = new()
         {
@@ -98,15 +135,17 @@ public sealed class WindowAppBaseTests
             Resources = AppResourceProfileManifest.None
         };
 
-        TestWindowApp app = new(dialogs ?? new FakeFileDialogService());
+        FakeDialogService fakeService = dialogs as FakeDialogService ?? new FakeDialogService();
+        TestWindowApp app = new(fakeService);
         app.BindContext(new TestExecutionContext(manifest));
         return app;
     }
 
     private sealed class TestWindowApp : WindowAppBase
     {
-        public TestWindowApp(IFileDialogService dialogs)
+        public TestWindowApp(IDialogService dialogs)
         {
+            Dialogs = dialogs;
             FileDialogs = dialogs;
         }
 
@@ -123,13 +162,20 @@ public sealed class WindowAppBaseTests
         public ValueTask<OpenFileDialogResult> InvokeOpenFileAsync(OpenFileDialogRequest request) =>
             base.OpenFileAsync(request);
 
+        public ValueTask<MessageBoxDialogResult> InvokeMessageBoxAsync(
+            string title, string content, MessageBoxType dialogType) =>
+            base.MessageBox(title, content, dialogType);
+
+        public ValueTask<TextInputDialogResult> InvokeTextInputAsync(
+            string title, string content, string? defaultValue = null, string? placeholder = null) =>
+            base.TextInput(title, content, defaultValue, placeholder);
+
         protected override Task OnAppAfterRenderAsync(bool firstRender)
         {
             AfterRenderCalled = firstRender;
             AfterRenderCallback?.Invoke();
             return Task.CompletedTask;
         }
-
     }
 
     private sealed class TestFrameworkLifecycle(List<string> calls) : IWindowAppFrameworkLifecycle
@@ -143,11 +189,15 @@ public sealed class WindowAppBaseTests
         }
     }
 
-    private sealed class FakeFileDialogService : IFileDialogService
+    private sealed class FakeDialogService : IDialogService
     {
         public IAppExecutionContext? LastContext { get; private set; }
 
         public OpenFileDialogRequest? LastOpenRequest { get; private set; }
+
+        public MessageBoxDialogRequest? LastMessageBoxRequest { get; private set; }
+
+        public TextInputDialogRequest? LastTextInputRequest { get; private set; }
 
         public ValueTask<OpenFileDialogResult> OpenFileAsync(
             IAppExecutionContext context,
@@ -170,6 +220,26 @@ public sealed class WindowAppBaseTests
             SelectFolderDialogRequest request,
             CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(new SelectFolderDialogResult(FileDialogStatus.Cancelled, null));
+
+        public ValueTask<MessageBoxDialogResult> MessageBoxAsync(
+            IAppExecutionContext context,
+            MessageBoxDialogRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastContext = context;
+            LastMessageBoxRequest = request;
+            return ValueTask.FromResult(new MessageBoxDialogResult(MessageBoxResult.Yes));
+        }
+
+        public ValueTask<TextInputDialogResult> TextInputAsync(
+            IAppExecutionContext context,
+            TextInputDialogRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastContext = context;
+            LastTextInputRequest = request;
+            return ValueTask.FromResult(new TextInputDialogResult(TextInputStatus.Submitted, "SubmittedText"));
+        }
     }
 
     private sealed class TestExecutionContext(AppManifest manifest) : IAppExecutionContext
@@ -201,6 +271,8 @@ public sealed class WindowAppBaseTests
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
 
         public IAppLoggingGateway Logging => throw new NotSupportedException();
+
+        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
 
         public IAppClockGateway Clock => throw new NotSupportedException();
 

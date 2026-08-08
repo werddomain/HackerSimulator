@@ -1,0 +1,62 @@
+.message-box-dialog {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    padding: 1.25rem;
+    box-sizing: border-box;
+    color: #d4f8e8;
+    background: #0d1819;
+    border: 1px solid #55d6a1;
+    box-shadow: 0 1.25rem 4rem #000b;
+}
+
+.message-box-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow-y: auto;
+}
+
+.message-box-content {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #d4f8e8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.message-box-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    padding-top: 0.9rem;
+}
+
+button {
+    min-width: 5rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.88rem;
+    color: #d4f8e8;
+    background: #132522;
+    border: 1px solid #315249;
+    cursor: pointer;
+}
+
+button.primary {
+    color: #07100d;
+    background: #55d6a1;
+    border-color: #55d6a1;
+}
+
+button:hover {
+    filter: brightness(1.15);
+}
+
+button:active {
+    filter: brightness(0.9);
+}

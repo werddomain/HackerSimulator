@@ -244,24 +244,10 @@ public sealed class Wave5Tests
         Assert.Contains("PING(1)", stdout.ToString());
     }
 
-    [Fact]
-    public async Task AliasCommand_AddsAndPrintsAliases()
-    {
-        var cmd = new AliasCommand(AliasCommand.StaticManifest);
-        using var stdin = new StringReader("");
-        using var stdout = new StringWriter();
-        using var stderr = new StringWriter();
-
-        var ctx = CreateContext(["myalias=echo hi"], stdin, stdout, stderr);
-        int exitCode = await cmd.ExecuteAsync(ctx, CancellationToken.None);
-
-        Assert.Equal(0, exitCode);
-
-        using var stdout2 = new StringWriter();
-        var ctx2 = CreateContext(["myalias"], stdin, stdout2, stderr);
-        await cmd.ExecuteAsync(ctx2, CancellationToken.None);
-        Assert.Contains("alias myalias='echo hi'", stdout2.ToString());
-    }
+    // AliasCommand now persists through the real filesystem gateway (see AliasCommandTests.cs,
+    // which uses HackerOs.Tests.Support's FakeAppFileSystemGateway) instead of an in-memory
+    // dictionary, so it needs a FileSystem-capable context that this file's FileSystem-less
+    // StubAppExecutionContext cannot provide.
 
     // ── Helper ─────────────────────────────────────────────────────────────
 
@@ -301,6 +287,7 @@ public sealed class Wave5Tests
         public IAppEventGateway Events => throw new NotImplementedException();
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging => throw new NotImplementedException();
+        public IAppDiagnosticsGateway Diagnostics => throw new NotImplementedException();
         public IAppClockGateway Clock => throw new NotImplementedException();
         public IAppProcessGateway Processes => throw new NotImplementedException();
     }

@@ -14,8 +14,9 @@ Core platform framework assemblies load eagerly during boot, while non-critical 
 | `HackerOs.App.Abstractions.dll` | **Eager** | Required for type system, manifests, and capability checking. |
 | `HackerOs.AppSdk.dll` / `HackerOs.AppSdk.Blazor.dll` | **Eager** | Base execution context & component contracts. |
 | `HackerOs.Platform.Core.dll` / `HackerOs.Platform.Blazor.dll` | **Eager** | Desktop shell, process manager, VFS router, event bus. |
+| `HackerOs.AppSdk.Icons.dll` | **Eager** | Referenced directly by `HackerOs.Ecosystem` for `IIconCatalog` DI registration; see ADR 0026 for why this isn't (yet) declared lazy despite its ~2.3 MB brotli size. |
 | `HackerOs.Ecosystem.dll` | **Eager** | Host composition root & PWA shell. |
-| Browser, Calculator, Code Editor, Error Log Viewer, File Explorer, Hack Paint, Settings, System Monitor, Terminal, and Text Editor | **Lazy** | Their canonical manifests are embedded in the host catalog and each assembly loads on first launch. |
+| Browser, Calculator, Code Editor, Error Log Viewer, File Explorer, Hack Paint, Icon Viewer, Settings, System Monitor, Terminal, and Text Editor | **Lazy** | Their canonical manifests are embedded in the host catalog and each assembly loads on first launch. |
 | Sample applications | **Not selected** | Samples remain test and SDK examples rather than installed system apps. |
 
 ---

@@ -33,6 +33,11 @@ directory. Blazor components will use collocated `.razor`, `.razor.css`, and
 
 ## Documentation
 
+[`docs/README.md`](docs/README.md) is the full documentation index, organized
+by audience (start here, building an app, platform core, built-in apps,
+optional server, ADRs, migration history). The list below is a short curated
+subset:
+
 - `docs/integration-task-list.md`: exhaustive remaining integration plan and
     execution source of truth.
 - `docs/implementation-status.md`: migration progress and next gate.
@@ -40,4 +45,6 @@ directory. Blazor components will use collocated `.razor`, `.razor.css`, and
 - `docs/settings-system.md`: canonical settings and filesystem projection.
 - `docs/app-catalog.md`: deterministic manifest and dependency catalog.
 - `docs/blazor-app-sdk.md`: window lifecycle, dialogs, and scoped assets.
+- `docs/hosting-model.md`: the three host projects (Ecosystem, test debug
+    harness, optional Server) and the future Server-as-host direction.
 - `docs/adr/`: accepted architecture decisions.

@@ -19,8 +19,8 @@
     "iconAssetPaths": []
   },
   "capabilities": [
-    "settings.system.read",
-    "process.list"
+    "diagnostics.read",
+    "diagnostics.clear"
   ],
   "resources": {
     "baselineCpuWeight": 0.02,

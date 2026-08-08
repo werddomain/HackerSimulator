@@ -72,11 +72,16 @@ public sealed class DiffCommand : TerminalAppBase
         using var reader1 = new StreamReader(res1.Value.Content);
         using var reader2 = new StreamReader(res2.Value.Content);
 
-        var lines1 = (await reader1.ReadToEndAsync(cancellationToken)).Split('\n');
-        var lines2 = (await reader2.ReadToEndAsync(cancellationToken)).Split('\n');
+        string[] lines1 = TrimTrailingEmptyLine(
+            (await reader1.ReadToEndAsync(cancellationToken)).Split('\n').Select(l => l.TrimEnd('\r')).ToArray());
+        string[] lines2 = TrimTrailingEmptyLine(
+            (await reader2.ReadToEndAsync(cancellationToken)).Split('\n').Select(l => l.TrimEnd('\r')).ToArray());
 
-        bool differed = false;
-        int max = Math.Max(lines1.Length, lines2.Length);
+        List<DiffHunk> hunks = ComputeHunks(lines1, lines2);
+        if (hunks.Count == 0)
+        {
+            return 0;
+        }
 
         if (unified)
         {
@@ -84,43 +89,154 @@ public sealed class DiffCommand : TerminalAppBase
             context.StandardOutput.WriteLine($"+++ {files[1]}");
         }
 
-        for (int i = 0; i < max; i++)
+        foreach (DiffHunk hunk in hunks)
         {
-            string l1 = i < lines1.Length ? lines1[i].TrimEnd('\r') : "";
-            string l2 = i < lines2.Length ? lines2[i].TrimEnd('\r') : "";
-
-            if (i >= lines1.Length)
+            if (unified)
             {
-                differed = true;
-                context.StandardOutput.WriteLine(unified ? $"+{l2}" : $"> {l2}");
-            }
-            else if (i >= lines2.Length)
-            {
-                differed = true;
-                context.StandardOutput.WriteLine(unified ? $"-{l1}" : $"< {l1}");
-            }
-            else if (l1 != l2)
-            {
-                differed = true;
-                if (unified)
+                int a1 = hunk.RemovedCount > 0 ? hunk.StartA + 1 : hunk.StartA;
+                int b1 = hunk.AddedCount > 0 ? hunk.StartB + 1 : hunk.StartB;
+                context.StandardOutput.WriteLine(
+                    $"@@ -{FormatUnifiedRange(a1, hunk.RemovedCount)} +{FormatUnifiedRange(b1, hunk.AddedCount)} @@");
+                foreach (string removed in hunk.Removed)
                 {
-                    context.StandardOutput.WriteLine($"@@ -{i + 1} +{i + 1} @@");
-                    context.StandardOutput.WriteLine($"-{l1}");
-                    context.StandardOutput.WriteLine($"+{l2}");
+                    context.StandardOutput.WriteLine($"-{removed}");
                 }
-                else
+                foreach (string added in hunk.Added)
                 {
-                    context.StandardOutput.WriteLine($"{i + 1}c{i + 1}");
-                    context.StandardOutput.WriteLine($"< {l1}");
-                    context.StandardOutput.WriteLine("---");
-                    context.StandardOutput.WriteLine($"> {l2}");
+                    context.StandardOutput.WriteLine($"+{added}");
+                }
+            }
+            else if (hunk.RemovedCount > 0 && hunk.AddedCount > 0)
+            {
+                context.StandardOutput.WriteLine(
+                    $"{FormatRange(hunk.StartA + 1, hunk.StartA + hunk.RemovedCount)}c{FormatRange(hunk.StartB + 1, hunk.StartB + hunk.AddedCount)}");
+                foreach (string removed in hunk.Removed)
+                {
+                    context.StandardOutput.WriteLine($"< {removed}");
+                }
+                context.StandardOutput.WriteLine("---");
+                foreach (string added in hunk.Added)
+                {
+                    context.StandardOutput.WriteLine($"> {added}");
+                }
+            }
+            else if (hunk.RemovedCount > 0)
+            {
+                context.StandardOutput.WriteLine(
+                    $"{FormatRange(hunk.StartA + 1, hunk.StartA + hunk.RemovedCount)}d{hunk.StartB}");
+                foreach (string removed in hunk.Removed)
+                {
+                    context.StandardOutput.WriteLine($"< {removed}");
+                }
+            }
+            else
+            {
+                context.StandardOutput.WriteLine(
+                    $"{hunk.StartA}a{FormatRange(hunk.StartB + 1, hunk.StartB + hunk.AddedCount)}");
+                foreach (string added in hunk.Added)
+                {
+                    context.StandardOutput.WriteLine($"> {added}");
                 }
             }
         }
 
-        return differed ? 1 : 0;
+        return 1;
     }
 
     private static string ResolvePath(string cwd, string path) =>
         path.StartsWith('/') ? path : (cwd.TrimEnd('/') + "/" + path).Replace("//", "/");
+
+    private static string[] TrimTrailingEmptyLine(string[] lines) =>
+        lines.Length > 0 && lines[^1].Length == 0 ? lines[..^1] : lines;
+
+    private static string FormatRange(int start, int end) => start == end ? $"{start}" : $"{start},{end}";
+
+    private static string FormatUnifiedRange(int start, int count) =>
+        count == 1 ? $"{start}" : $"{start},{count}";
+
+    private enum DiffOpKind { Equal, Delete, Insert }
+
+    private readonly record struct DiffOp(DiffOpKind Kind);
+
+    private sealed record DiffHunk(int StartA, int StartB, List<string> Removed, List<string> Added)
+    {
+        public int RemovedCount => Removed.Count;
+        public int AddedCount => Added.Count;
+    }
+
+    /// <summary>
+    /// Computes a minimal edit script via longest-common-subsequence backtracking, then groups
+    /// consecutive insert/delete operations into hunks, matching classic <c>diff</c> semantics
+    /// instead of comparing files by raw line index.
+    /// </summary>
+    private static List<DiffHunk> ComputeHunks(string[] a, string[] b)
+    {
+        int n = a.Length, m = b.Length;
+        int[,] lcs = new int[n + 1, m + 1];
+        for (int i = n - 1; i >= 0; i--)
+        {
+            for (int j = m - 1; j >= 0; j--)
+            {
+                lcs[i, j] = a[i] == b[j] ? lcs[i + 1, j + 1] + 1 : Math.Max(lcs[i + 1, j], lcs[i, j + 1]);
+            }
+        }
+
+        List<DiffOp> ops = [];
+        int x = 0, y = 0;
+        while (x < n && y < m)
+        {
+            if (a[x] == b[y])
+            {
+                ops.Add(new DiffOp(DiffOpKind.Equal));
+                x++;
+                y++;
+            }
+            else if (lcs[x + 1, y] >= lcs[x, y + 1])
+            {
+                ops.Add(new DiffOp(DiffOpKind.Delete));
+                x++;
+            }
+            else
+            {
+                ops.Add(new DiffOp(DiffOpKind.Insert));
+                y++;
+            }
+        }
+        while (x < n) { ops.Add(new DiffOp(DiffOpKind.Delete)); x++; }
+        while (y < m) { ops.Add(new DiffOp(DiffOpKind.Insert)); y++; }
+
+        List<DiffHunk> hunks = [];
+        int aPos = 0, bPos = 0, opIndex = 0;
+        while (opIndex < ops.Count)
+        {
+            if (ops[opIndex].Kind == DiffOpKind.Equal)
+            {
+                aPos++;
+                bPos++;
+                opIndex++;
+                continue;
+            }
+
+            int startA = aPos, startB = bPos;
+            List<string> removed = [];
+            List<string> added = [];
+            while (opIndex < ops.Count && ops[opIndex].Kind != DiffOpKind.Equal)
+            {
+                if (ops[opIndex].Kind == DiffOpKind.Delete)
+                {
+                    removed.Add(a[aPos]);
+                    aPos++;
+                }
+                else
+                {
+                    added.Add(b[bPos]);
+                    bPos++;
+                }
+                opIndex++;
+            }
+            hunks.Add(new DiffHunk(startA, startB, removed, added));
+        }
+
+        return hunks;
+    }
 }

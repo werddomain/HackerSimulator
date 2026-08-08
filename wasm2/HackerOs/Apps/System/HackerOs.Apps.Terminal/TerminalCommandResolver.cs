@@ -50,4 +50,11 @@ public sealed class TerminalCommandResolver
 
         return null;
     }
+
+    /// <summary>Gets every registered terminal command manifest, ordered by command name.</summary>
+    public IReadOnlyList<AppManifest> GetTerminalCommands() =>
+        _catalog.Manifests.Values
+            .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
+            .OrderBy(m => m.Terminal!.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 }

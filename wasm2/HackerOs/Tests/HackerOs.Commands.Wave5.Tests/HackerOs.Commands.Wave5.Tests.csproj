@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Alias\HackerOs.Commands.Alias.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Chmod\HackerOs.Commands.Chmod.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Clear\HackerOs.Commands.Clear.csproj" />

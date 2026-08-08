@@ -1,0 +1,53 @@
+@using HackerOs.AppSdk.Blazor
+
+<div class="message-box-dialog" role="dialog" aria-modal="true">
+    <div class="message-box-body">
+        <p class="message-box-content">@Presentation.Request.Content</p>
+    </div>
+    <footer class="message-box-actions">
+        @switch (Presentation.Request.DialogType)
+        {
+            case MessageBoxType.Ok:
+                <button type="button" class="primary" @onclick="HandleOk">OK</button>
+                break;
+            case MessageBoxType.OkCancel:
+                <button type="button" class="primary" @onclick="HandleOk">OK</button>
+                <button type="button" @onclick="HandleCancel">Cancel</button>
+                break;
+            case MessageBoxType.YesNo:
+                <button type="button" class="primary" @onclick="HandleYes">Yes</button>
+                <button type="button" @onclick="HandleNo">No</button>
+                break;
+            case MessageBoxType.OkCancelRetry:
+                <button type="button" class="primary" @onclick="HandleOk">OK</button>
+                <button type="button" @onclick="HandleRetry">Retry</button>
+                <button type="button" @onclick="HandleCancel">Cancel</button>
+                break;
+            case MessageBoxType.YesNoCancel:
+                <button type="button" class="primary" @onclick="HandleYes">Yes</button>
+                <button type="button" @onclick="HandleNo">No</button>
+                <button type="button" @onclick="HandleCancel">Cancel</button>
+                break;
+            case MessageBoxType.RetryCancel:
+                <button type="button" class="primary" @onclick="HandleRetry">Retry</button>
+                <button type="button" @onclick="HandleCancel">Cancel</button>
+                break;
+        }
+    </footer>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public MessageBoxPresentation Presentation { get; set; } = default!;
+
+    [Parameter]
+    [EditorRequired]
+    public DialogCoordinator Coordinator { get; set; } = default!;
+
+    private void HandleOk() => Coordinator.SelectMessageBox(Presentation.Id, MessageBoxResult.Ok);
+    private void HandleCancel() => Coordinator.SelectMessageBox(Presentation.Id, MessageBoxResult.Cancel);
+    private void HandleYes() => Coordinator.SelectMessageBox(Presentation.Id, MessageBoxResult.Yes);
+    private void HandleNo() => Coordinator.SelectMessageBox(Presentation.Id, MessageBoxResult.No);
+    private void HandleRetry() => Coordinator.SelectMessageBox(Presentation.Id, MessageBoxResult.Retry);
+}

@@ -166,7 +166,8 @@ public sealed class AppLifecycleOrchestrator
             return descriptor.Manifest.Kind switch
             {
                 AppKind.Terminal => await RunTerminalAsync(
-                    descriptor, process, context, request.Arguments, fullScreen, cancellationToken),
+                    descriptor, process, context, request.Arguments, request.Principal, request.WorkingDirectory,
+                    fullScreen, cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
@@ -368,6 +369,8 @@ public sealed class AppLifecycleOrchestrator
         ProcessRecord process,
         IAppExecutionContext context,
         IReadOnlyList<string> arguments,
+        AuthenticatedPrincipal principal,
+        VirtualPath? workingDirectory,
         IFullScreenTerminalSession? fullScreen,
         CancellationToken cancellationToken)
     {
@@ -385,8 +388,8 @@ public sealed class AppLifecycleOrchestrator
             stdin,
             stdout,
             stderr,
-            "/",
-            new Dictionary<string, string>(StringComparer.Ordinal),
+            workingDirectory?.Value ?? principal.HomePath,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = principal.HomePath },
             fullScreen);
 
         int exitCode;
@@ -447,16 +450,17 @@ public sealed class AppLifecycleOrchestrator
 
     private AppLaunchResult StartWindow(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
     {
-        // Rendering a Window app's component belongs to the future Platform Blazor window
-        // runtime (Phase 2A); Section 8 only establishes the process/context the runtime will
-        // later attach to. Marking the process Running now reflects that it is alive, independent
-        // of whether anything is currently rendering it.
-        ProcessRecord running = _processManager.MarkRunning(process.Pid);
+        // Register the running instance before marking the process Running: MarkRunning
+        // publishes ProcessStateChangedEvent synchronously, and subscribers (e.g. the Blazor
+        // window runtime presenting a new window) call TryGetRunningInstance in reaction to
+        // that same event, so the entry must already be visible by the time it fires.
         lock (_sync)
         {
             _running[process.Pid] = new RunningInstance(
                 descriptor, context, ServiceInstance: null, RunTask: null);
         }
+
+        ProcessRecord running = _processManager.MarkRunning(process.Pid);
 
         return new AppLaunchResult(AppLaunchStatus.Launched, running, context);
     }

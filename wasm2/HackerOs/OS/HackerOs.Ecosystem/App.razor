@@ -1,5 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.Infrastructure.Browser.Interop
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
 @using HackerOs.Infrastructure.Browser.Recovery
 @using HackerOs.Platform.Blazor.Shell
 @using HackerOs.Platform.Core.Sessions
@@ -14,6 +16,10 @@
 @inject WebCryptoPasswordHasher PasswordHasher
 
 <main class="ecosystem-host">
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
     @if (State.UpdateAvailable)
     {
         <aside class="update-notice" role="status">
@@ -81,7 +87,7 @@
             <LoginProgressScreen />
             break;
         case EcosystemHostView.Desktop:
-            <DesktopShell OnLoggedOut="HandleLoggedOut" />
+            <DesktopShell OnLoggedOut="HandleLoggedOut" TestDemoEnabled="@TestDemoEnabled" />
             break;
         case EcosystemHostView.Recovery:
             <section class="recovery-surface" aria-labelledby="recovery-title">
@@ -123,6 +129,15 @@
 </main>
 
 @code {
+    /// <summary>
+    /// Enables the E2E-only "Test Demo" fixture-seeding control on the desktop shell.
+    /// Set by the hosting page from a trusted, out-of-band signal (e.g. a CLI flag on
+    /// the test harness process) — never something an end user's normal launch can set.
+    /// See docs/e2e-test-demo-mode.md.
+    /// </summary>
+    [Parameter]
+    public bool TestDemoEnabled { get; set; }
+
     private HostErrorBoundary? ErrorBoundary { get; set; }
     private EcosystemHostState State { get; } = new();
     private string SetupLogin { get; set; } = string.Empty;

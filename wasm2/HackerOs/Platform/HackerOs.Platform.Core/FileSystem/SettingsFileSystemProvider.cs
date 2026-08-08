@@ -153,8 +153,9 @@ public sealed class SettingsFileSystemProvider : IFileSystemProvider
             return Cancelled(FileSystemOperation.Write, request.Path);
         }
 
+        long expectedRevision = request.ExpectedRevision ?? await ResolveCurrentRevisionAsync(request.Path, context, cancellationToken);
         SettingsWriteResult write = await _projection.WriteFileAsync(
-            new SettingsWriteRequest(request.Path, candidate, request.ExpectedRevision),
+            new SettingsWriteRequest(request.Path, candidate, expectedRevision),
             context.OperationContext,
             cancellationToken);
         if (write.Status != SettingsWriteStatus.Success)
@@ -168,6 +169,14 @@ public sealed class SettingsFileSystemProvider : IFileSystemProvider
             NextTransactionId(),
             [entry.Metadata.Id]);
         return new FileSystemMutationResult(transaction, entry);
+    }
+
+    /// <summary>Reads a settings document's current revision for an unconditional write.</summary>
+    private async Task<long> ResolveCurrentRevisionAsync(
+        VirtualPath path, FileSystemAuthorizationContext context, CancellationToken cancellationToken)
+    {
+        SettingsReadResult read = await _projection.ReadFileAsync(path, context.OperationContext, cancellationToken);
+        return read.Document?.Revision ?? 1;
     }
 
     /// <inheritdoc />

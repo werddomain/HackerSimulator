@@ -23,7 +23,27 @@ public sealed class WindowLaunchCoordinator
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(launch);
 
-        if (!launch.IsSuccess || manifest.Kind != AppKind.Window || launch.Process is not ProcessRecord process)
+        if (!launch.IsSuccess || launch.Process is not ProcessRecord process)
+        {
+            return false;
+        }
+
+        return Present(manifest, process);
+    }
+
+    /// <summary>
+    /// Creates a desktop window for a process already confirmed running, or focuses its existing
+    /// window. Used to project window-app launches that were dispatched by policy code with no
+    /// direct route back to this UI-owned coordinator (e.g. another app opening a file via
+    /// <c>IAppIntentGateway</c>), reacting instead to the process's own state transition.
+    /// </summary>
+    /// <returns><see langword="true"/> when a window is now visible or focused.</returns>
+    public bool Present(AppManifest manifest, ProcessRecord process)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(process);
+
+        if (manifest.Kind != AppKind.Window)
         {
             return false;
         }

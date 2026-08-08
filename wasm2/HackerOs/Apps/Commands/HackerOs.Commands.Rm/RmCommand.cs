@@ -58,10 +58,25 @@ public sealed class RmCommand : TerminalAppBase
         foreach (var target in targets)
         {
             var resolved = ResolvePath(context.WorkingDirectory, target);
+            var entryStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(resolved)), cancellationToken);
+            var parentStat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(resolved))), cancellationToken);
+
+            if (!entryStat.Succeeded || entryStat.Value is null || !parentStat.Succeeded || parentStat.Value is null)
+            {
+                if (!force)
+                {
+                    context.StandardError.WriteLine($"rm: cannot remove '{target}': No such file or directory");
+                    status = 1;
+                }
+                continue;
+            }
+
             var req = new FileSystemDeleteRequest(
                 path: VirtualPath.Parse(resolved),
-                expectedEntryRevision: 0,
-                expectedParentRevision: 0,
+                expectedEntryRevision: entryStat.Value.Metadata.Revision,
+                expectedParentRevision: parentStat.Value.Metadata.Revision,
                 recursive: recursive);
 
             var result = await context.App.FileSystem.DeleteAsync(req, cancellationToken);
@@ -77,4 +92,10 @@ public sealed class RmCommand : TerminalAppBase
 
     private static string ResolvePath(string cwd, string path) =>
         path.StartsWith('/') ? path : (cwd.TrimEnd('/') + "/" + path).Replace("//", "/");
+
+    private static string GetParentPath(string canonicalPath)
+    {
+        int lastSlash = canonicalPath.LastIndexOf('/');
+        return lastSlash <= 0 ? "/" : canonicalPath[..lastSlash];
+    }
 }

@@ -3,6 +3,8 @@
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Core
 @using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Diagnostics
+@using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Processes
 @using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
@@ -12,7 +14,6 @@
 @inject AppCatalog Catalog
 @inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
-@inject IProcessManager ProcessManager
 @inject IJSRuntime JavaScript
 
 <div class="terminal-container" @ref="_terminalContainerRef" @onkeydown="HandleKeyDownAsync">
@@ -197,6 +198,25 @@
         string cmd = parseResult.CommandName;
         IReadOnlyList<string> args = parseResult.Arguments;
 
+        if (cmd is "rmalias" or "unalias")
+        {
+            args = ["-r", .. args];
+            cmd = "alias";
+        }
+        else if (cmd != "alias" && SessionService.CurrentPrincipal is AuthenticatedPrincipal aliasPrincipal)
+        {
+            string? expansion = await TryResolveAliasAsync(aliasPrincipal.HomePath, cmd);
+            if (expansion is not null)
+            {
+                ShellParseResult expanded = ShellParser.Parse($"{expansion} {string.Join(" ", args)}".Trim());
+                if (expanded.IsSuccess)
+                {
+                    cmd = expanded.CommandName;
+                    args = expanded.Arguments;
+                }
+            }
+        }
+
         if (cmd == "clear")
         {
             ClearBuffer();
@@ -213,15 +233,51 @@
         if (cmd == "cd")
         {
             string targetPath = args.Count > 0 ? args[0] : "~";
-            _session.SetCwd(targetPath);
-            _session.LastExitCode = 0;
+            string resolvedPath = _session.ResolvePath(targetPath);
+            var stat = await AppContext.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(resolvedPath)), AppContext.CancellationToken);
+
+            if (!stat.Succeeded || stat.Value is null)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"cd: {targetPath}: No such file or directory", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            else if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"cd: {targetPath}: Not a directory", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            else
+            {
+                _session.SetCwd(targetPath);
+                _session.LastExitCode = 0;
+            }
             return;
         }
 
         if (cmd == "help")
         {
-            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help, exit", OutputType.System));
+            if (args.Count > 0)
+            {
+                AppManifest? target = _resolver?.GetTerminalCommands()
+                    .FirstOrDefault(m => string.Equals(m.Terminal!.Name, args[0], StringComparison.OrdinalIgnoreCase));
+                if (target is null)
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"help: no manual entry for '{args[0]}'", OutputType.Error));
+                    _session.LastExitCode = 1;
+                }
+                else
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"{target.Terminal!.Name} - {target.Description}", OutputType.System));
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"usage: {target.Terminal.Usage}", OutputType.System));
+                    _session.LastExitCode = 0;
+                }
+                return;
+            }
+
+            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help", OutputType.System));
             _lines.Add(new TerminalOutputLine(string.Empty, "Catalog commands: " + string.Join(", ", GetCatalogCommands()), OutputType.System));
+            _lines.Add(new TerminalOutputLine(string.Empty, "Type 'help <command>' for usage.", OutputType.System));
             _session.LastExitCode = 0;
             return;
         }
@@ -230,6 +286,7 @@
         TerminalCommandResolution? resolution = _resolver?.Resolve(cmd, args);
         if (resolution is null)
         {
+            AppContext.Logging.Log(DiagnosticSeverity.Warning, $"Command '{cmd}' not found in system path.");
             _lines.Add(new TerminalOutputLine(string.Empty, $"command not found: {cmd}", OutputType.Error));
             _session.LastExitCode = 127;
             return;
@@ -245,7 +302,8 @@
                     RequestId: Guid.NewGuid(),
                     CallerAppId: "org.hackeros.terminal",
                     UserId: principal.UserId.ToString(),
-                    Intent: new ExecuteCommandIntent($"{cmd} {string.Join(" ", args)}".Trim())),
+                    Intent: new ExecuteCommandIntent(
+                        $"{cmd} {string.Join(" ", args)}".Trim(), VirtualPath.Parse(_session.Cwd))),
                     principal,
                     _fullScreenSession,
                     _activeCts.Token);
@@ -312,6 +370,40 @@
         {
             _inputBuffer = matches;
         }
+    }
+
+    private async Task<string?> TryResolveAliasAsync(string home, string name)
+    {
+        VirtualPath aliasFilePath = VirtualPath.Parse($"{home.TrimEnd('/')}/.hackeros/aliases");
+        var stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(aliasFilePath), AppContext.CancellationToken);
+        if (!stat.Succeeded || stat.Value is null)
+        {
+            return null;
+        }
+
+        var read = await AppContext.FileSystem.ReadAsync(new FileSystemReadRequest(aliasFilePath), AppContext.CancellationToken);
+        if (!read.Succeeded || read.Value is null)
+        {
+            return null;
+        }
+
+        using StreamReader reader = new(read.Value.Content);
+        string content = await reader.ReadToEndAsync(AppContext.CancellationToken);
+        foreach (string rawLine in content.Split('\n'))
+        {
+            string line = rawLine.TrimEnd('\r').Trim();
+            int eqIdx = line.IndexOf('=');
+            if (eqIdx <= 0)
+            {
+                continue;
+            }
+            if (string.Equals(line[..eqIdx], name, StringComparison.Ordinal))
+            {
+                return line[(eqIdx + 1)..];
+            }
+        }
+
+        return null;
     }
 
     private IEnumerable<string> GetCatalogCommands()

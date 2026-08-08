@@ -162,13 +162,18 @@ public sealed record FileSystemCreateRequest
     /// <param name="path">Canonical destination path.</param>
     /// <param name="kind">Entry kind to create.</param>
     /// <param name="permissions">Initial mode-based permissions.</param>
-    /// <param name="expectedParentRevision">Required destination-parent revision.</param>
+    /// <param name="expectedParentRevision">
+    /// Required destination-parent revision, or <see langword="null"/> to create
+    /// unconditionally regardless of the parent's current revision. Pass a revision
+    /// only when the caller genuinely needs to detect a concurrent structural change
+    /// (e.g. a sibling was added or removed since it last listed the directory).
+    /// </param>
     /// <param name="symbolicLinkTarget">Required target only for a symbolic link.</param>
     public FileSystemCreateRequest(
         VirtualPath path,
         FileSystemEntryKind kind,
         FileSystemPermissions permissions,
-        long expectedParentRevision,
+        long? expectedParentRevision = null,
         string? symbolicLinkTarget = null)
     {
         FileSystemContractGuard.ValidatePath(path, nameof(path));
@@ -205,8 +210,11 @@ public sealed record FileSystemCreateRequest
     /// <summary>Gets the initial mode-based permissions.</summary>
     public FileSystemPermissions Permissions { get; }
 
-    /// <summary>Gets the required destination-parent revision.</summary>
-    public long ExpectedParentRevision { get; }
+    /// <summary>
+    /// Gets the required destination-parent revision, or <see langword="null"/> when
+    /// the create is unconditional.
+    /// </summary>
+    public long? ExpectedParentRevision { get; }
 
     /// <summary>Gets the symbolic-link target, when creating a link.</summary>
     public string? SymbolicLinkTarget { get; }
@@ -217,8 +225,14 @@ public sealed record FileSystemWriteRequest
 {
     /// <summary>Initializes a validated file-content write request.</summary>
     /// <param name="path">Canonical file path.</param>
-    /// <param name="expectedRevision">Required current file revision.</param>
-    public FileSystemWriteRequest(VirtualPath path, long expectedRevision)
+    /// <param name="expectedRevision">
+    /// Required current file revision, or <see langword="null"/> to overwrite
+    /// unconditionally regardless of the file's current revision. Pass a revision only
+    /// when the caller genuinely needs to detect a concurrent edit (e.g. an editor that
+    /// must warn the user before clobbering a change made elsewhere since it loaded the
+    /// file).
+    /// </param>
+    public FileSystemWriteRequest(VirtualPath path, long? expectedRevision = null)
     {
         FileSystemContractGuard.ValidatePath(path, nameof(path));
         FileSystemContractGuard.ValidateRevision(expectedRevision, nameof(expectedRevision));
@@ -229,8 +243,11 @@ public sealed record FileSystemWriteRequest
     /// <summary>Gets the canonical file path.</summary>
     public VirtualPath Path { get; }
 
-    /// <summary>Gets the required current file revision.</summary>
-    public long ExpectedRevision { get; }
+    /// <summary>
+    /// Gets the required current file revision, or <see langword="null"/> when the
+    /// write is unconditional.
+    /// </summary>
+    public long? ExpectedRevision { get; }
 }
 
 /// <summary>Requests an atomic move or rename within one provider.</summary>
@@ -429,6 +446,15 @@ internal static class FileSystemContractGuard
 
     internal static void ValidateRevision(long revision, string parameterName) =>
         ArgumentOutOfRangeException.ThrowIfLessThan(revision, 1, parameterName);
+
+    /// <summary>Validates an optional revision precondition; <see langword="null"/> (unconditional) is always valid.</summary>
+    internal static void ValidateRevision(long? revision, string parameterName)
+    {
+        if (revision is { } value)
+        {
+            ValidateRevision(value, parameterName);
+        }
+    }
 
     internal static void ValidateLinkBehavior(FileSystemLinkBehavior behavior, string parameterName)
     {

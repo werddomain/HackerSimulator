@@ -62,9 +62,32 @@ public interface IAppExecutionContext
     /// <summary>Gets this instance's structured diagnostic logging gateway.</summary>
     IAppLoggingGateway Logging { get; }
 
+    /// <summary>Gets this instance's authorized diagnostic-log read gateway.</summary>
+    IAppDiagnosticsGateway Diagnostics { get; }
+
     /// <summary>Gets this instance's read-only deterministic simulation clock gateway.</summary>
     IAppClockGateway Clock { get; }
 
     /// <summary>Gets this instance's authorized process/job gateway.</summary>
     IAppProcessGateway Processes { get; }
+
+    /// <summary>
+    /// Gets this instance's authorized ability to launch another installed application.
+    /// Defaults to an unsupported gateway so existing <see cref="IAppExecutionContext"/>
+    /// implementations that predate this member keep compiling; the trusted platform factory
+    /// overrides it with a real implementation.
+    /// </summary>
+    IAppIntentGateway Intents => new UnsupportedAppIntentGateway();
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Intents"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppIntentGateway : IAppIntentGateway
+{
+    public ValueTask<AppIntentLaunchResult> LaunchAsync(
+        string appId, IReadOnlyList<string> arguments, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an Intents gateway.");
+
+    public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
+        VirtualPath path, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an Intents gateway.");
 }

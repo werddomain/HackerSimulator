@@ -160,7 +160,7 @@ public sealed class InMemoryFileSystemRepository : IFileSystemProvider
                     parentPath));
             }
 
-            if (parent.Revision != request.ExpectedParentRevision)
+            if (request.ExpectedParentRevision is { } expectedParentRevision && parent.Revision != expectedParentRevision)
             {
                 return ValueTask.FromResult(MutationFailure(
                     FileSystemOperation.Create,
@@ -242,7 +242,7 @@ public sealed class InMemoryFileSystemRepository : IFileSystemProvider
                 return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.NotFile, request.Path);
             }
 
-            if (record.Revision != request.ExpectedRevision)
+            if (request.ExpectedRevision is { } expectedRevision && record.Revision != expectedRevision)
             {
                 return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.RevisionConflict, request.Path);
             }

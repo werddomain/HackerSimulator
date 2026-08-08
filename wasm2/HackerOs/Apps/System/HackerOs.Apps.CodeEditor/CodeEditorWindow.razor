@@ -9,7 +9,7 @@
 @implements IAsyncDisposable
 @implements IWindowCloseGuard
 @inject IJSRuntime JavaScript
-@inject IDialogService MudDialogService
+@inject MudBlazor.IDialogService MudDialogService
 
 <section class="code-editor" @onkeydown="HandleShortcutAsync" aria-label="Code Editor">
     <header class="editor-toolbar">

@@ -20,7 +20,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Each test spins up its own dotnet build+run of the shared test/test harness
+         project; running test classes in parallel makes them race on that project's
+         shared obj/bin output and randomly fails with file-lock build errors. -->
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\test\test\test.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
   </ItemGroup>
 
 </Project>

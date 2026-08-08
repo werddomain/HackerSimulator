@@ -97,23 +97,29 @@ public sealed class TerminalSession
             return;
         }
 
+        Cwd = ResolvePath(path);
+    }
+
+    /// <summary>
+    /// Resolves a <c>cd</c>-style target (absolute, <c>..</c>, <c>~</c>, or relative) against the
+    /// current working directory, without mutating <see cref="Cwd"/>.
+    /// </summary>
+    public string ResolvePath(string path)
+    {
         if (path.StartsWith('/'))
         {
-            Cwd = NormalizePath(path);
+            return NormalizePath(path);
         }
-        else if (path == "..")
+        if (path == "..")
         {
             int lastSlash = Cwd.LastIndexOf('/');
-            Cwd = lastSlash > 0 ? Cwd[..lastSlash] : "/";
+            return lastSlash > 0 ? Cwd[..lastSlash] : "/";
         }
-        else if (path == "~")
+        if (path == "~")
         {
-            Cwd = _environment.TryGetValue("HOME", out string? home) ? home : "/home/user";
+            return _environment.TryGetValue("HOME", out string? home) ? home : "/home/user";
         }
-        else
-        {
-            Cwd = NormalizePath($"{Cwd.TrimEnd('/')}/{path}");
-        }
+        return NormalizePath($"{Cwd.TrimEnd('/')}/{path}");
     }
 
     /// <summary>Sets or updates an environment variable.</summary>

@@ -87,7 +87,16 @@ public interface IDiagnosticSink
 
     /// <summary>Gets every retained entry, oldest first.</summary>
     IReadOnlyList<DiagnosticEntry> Entries { get; }
+
+    /// <summary>Discards every retained entry.</summary>
+    void Clear();
 }
+
+/// <summary>Published each time a <see cref="DiagnosticEntry"/> is recorded, for live subscribers.</summary>
+public sealed record DiagnosticEntryRecordedEvent(DiagnosticEntry Entry);
+
+/// <summary>Published each time the diagnostic log is cleared, for live subscribers.</summary>
+public sealed record DiagnosticLogClearedEvent(DateTimeOffset AtUtc);
 
 /// <summary>Persists structured diagnostic entries through an asynchronous durable boundary.</summary>
 public interface IPersistentDiagnosticRepository

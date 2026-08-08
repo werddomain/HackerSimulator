@@ -15,6 +15,7 @@ HackerOS applications must be created in dedicated assemblies referencing only t
 | `HackerOs.App.Abstractions` | All Applications | Manifests, Capabilities, Authorities, `VirtualPath`, Result/Error types |
 | `HackerOs.AppSdk` | Terminal & Service Apps | `AppBase`, `TerminalAppBase`, `ServiceAppBase`, `TerminalExecutionContext` |
 | `HackerOs.AppSdk.Blazor` | Window Applications | `WindowAppBase`, `IFileDialogService`, Scoped CSS support, MudBlazor wrappers |
+| `HackerOs.AppSdk.Icons` | Any Application, or the OS shell | `IIconCatalog`, `HackerIcon`, five icon libraries as themeable inline SVG |
 
 ---
 
@@ -100,6 +101,27 @@ public class MyServiceApp : ServiceAppBase
   ]
 }
 ```
+
+---
+
+## Icons
+
+Any app (window, terminal-adjacent tooling, or the OS shell) can draw a themeable
+inline-SVG icon from Bootstrap Icons, Font Awesome, Lucide, or Simple Icons by
+referencing `HackerOs.AppSdk.Icons` and using the `HackerIcon` component:
+
+```razor
+@using HackerOs.AppSdk.Icons
+
+<HackerIcon Library="IconLibrary.Bootstrap" Name="house" Size="20" />
+```
+
+Material Design icons don't need this package at all — use MudBlazor's own bundled
+`Icons.Material.Filled.*` constants directly in any app that already references
+MudBlazor. See [`../icon-library.md`](../icon-library.md) for the full guide
+(searching via `IIconCatalog`, licensing/attribution, and how to regenerate the
+bundled icon data), and the "Icon Viewer" app (`docs/apps/icon-viewer.md`) to browse
+every available icon interactively.
 
 ---
 

@@ -1,3 +1,4 @@
+@using System.Collections.Immutable
 @using HackerOs.Simulation.Abstractions.Network
 @using Microsoft.AspNetCore.Components
 
@@ -28,6 +29,31 @@
     /// within the rendered page. The string value is the href target.
     /// </summary>
     [Parameter] public EventCallback<string> OnNavigate { get; set; }
+
+    /// <summary>
+    /// Raised when the user submits a login or generic form within the rendered page, carrying
+    /// the form's relative post path and the field values entered so far.
+    /// </summary>
+    [Parameter] public EventCallback<(string PostPath, ImmutableDictionary<string, string> FormBody)> OnSubmit { get; set; }
+
+    private readonly Dictionary<string, string> _fieldValues = new(StringComparer.Ordinal);
+    private SimulatedPage? _lastPage;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastPage, Page))
+        {
+            _fieldValues.Clear();
+            _lastPage = Page;
+        }
+    }
+
+    private string GetFieldValue(string id) => _fieldValues.TryGetValue(id, out string? value) ? value : string.Empty;
+
+    private void SetFieldValue(string id, ChangeEventArgs args) => _fieldValues[id] = args.Value as string ?? string.Empty;
+
+    private async Task HandleSubmitAsync(string postPath) =>
+        await OnSubmit.InvokeAsync((postPath, _fieldValues.ToImmutableDictionary(StringComparer.Ordinal)));
 
     private RenderFragment RenderSection(SimulatedPageSection section) => section switch
     {
@@ -116,14 +142,16 @@
             {
                 <h3 class="sim-form-title">@f.Title</h3>
             }
-            <form class="sim-form-body" @onsubmit:preventDefault="true">
+            <form class="sim-form-body" @onsubmit="() => HandleSubmitAsync(f.PostPath)" @onsubmit:preventDefault="true">
                 <div class="sim-field">
                     <label for="sim-username">@f.UsernameLabel</label>
-                    <input id="sim-username" type="text"     class="sim-input" autocomplete="username" />
+                    <input id="sim-username" type="text"     class="sim-input" autocomplete="username"
+                           value='@GetFieldValue("username")' @oninput='e => SetFieldValue("username", e)' />
                 </div>
                 <div class="sim-field">
                     <label for="sim-password">@f.PasswordLabel</label>
-                    <input id="sim-password" type="password" class="sim-input" autocomplete="current-password" />
+                    <input id="sim-password" type="password" class="sim-input" autocomplete="current-password"
+                           value='@GetFieldValue("password")' @oninput='e => SetFieldValue("password", e)' />
                 </div>
                 <button type="submit" class="sim-submit-btn">@f.SubmitLabel</button>
             </form>
@@ -137,7 +165,7 @@
             {
                 <h3 class="sim-form-title">@f.Title</h3>
             }
-            <form class="sim-form-body" @onsubmit:preventDefault="true">
+            <form class="sim-form-body" @onsubmit="() => HandleSubmitAsync(f.PostPath)" @onsubmit:preventDefault="true">
                 @foreach (var field in f.Fields)
                 {
                     <div class="sim-field">
@@ -149,7 +177,9 @@
                                type="@field.InputType"
                                class="sim-input @(field.InputType == "search" ? "sim-input-search" : "")"
                                placeholder="@(field.Placeholder ?? "")"
-                               required="@field.Required" />
+                               required="@field.Required"
+                               value="@GetFieldValue(field.Id)"
+                               @oninput="e => SetFieldValue(field.Id, e)" />
                     </div>
                 }
                 <button type="submit" class="sim-submit-btn">@f.SubmitLabel</button>
