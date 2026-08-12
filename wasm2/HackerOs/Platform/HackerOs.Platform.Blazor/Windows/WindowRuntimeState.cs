@@ -1,4 +1,5 @@
 using HackerOs.Simulation.Abstractions.Processes;
+using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.Platform.Blazor.Windows;
 
@@ -40,7 +41,9 @@ public sealed record WindowRuntimeState
         WindowConstraints constraints,
         WindowModality modality = WindowModality.Modeless,
         WindowId? ownerId = null,
-        bool isFocused = false)
+        bool isFocused = false,
+        RenderFragment? content = null,
+        Func<Task>? onRequestClose = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -79,6 +82,8 @@ public sealed record WindowRuntimeState
         Modality = modality;
         OwnerId = ownerId;
         IsFocused = isFocused;
+        Content = content;
+        OnRequestClose = onRequestClose;
     }
 
     /// <summary>Gets the window identity.</summary>
@@ -122,4 +127,18 @@ public sealed record WindowRuntimeState
 
     /// <summary>Gets whether this window currently owns keyboard focus.</summary>
     public bool IsFocused { get; }
+
+    /// <summary>
+    /// Gets the content rendered inside the window chrome in place of the running app instance.
+    /// Set by whoever creates a non-app window (e.g. a dialog projection) so the desktop shell
+    /// never needs to know that window's type.
+    /// </summary>
+    public RenderFragment? Content { get; }
+
+    /// <summary>
+    /// Gets the delegate invoked instead of the normal close-guard flow when the user requests
+    /// this window be closed. Lets a dialog window route "close" to its own cancel/dismiss logic
+    /// without the desktop shell special-casing it.
+    /// </summary>
+    public Func<Task>? OnRequestClose { get; }
 }

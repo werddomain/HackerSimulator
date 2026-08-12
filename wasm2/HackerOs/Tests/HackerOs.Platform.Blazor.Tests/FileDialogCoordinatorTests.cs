@@ -122,6 +122,64 @@ public sealed class FileDialogCoordinatorTests
         Assert.True(Assert.Single(windows.Windows, window => window.Id == ownerId).IsFocused);
     }
 
+    [Fact]
+    public async Task Independent_owners_get_concurrent_dialogs_without_blocking_unrelated_windows()
+    {
+        RecordingHandleRegistry handles = new();
+        using FileDialogCoordinator coordinator = new(TestSessionId, handles);
+        TestExecutionContext contextA = new(TestSessionId, allowCapabilities: true);
+        TestExecutionContext contextB = new(TestSessionId, allowCapabilities: true);
+        TestExecutionContext contextC = new(TestSessionId, allowCapabilities: true);
+        WindowRuntime windows = new(new WindowBounds(0, 0, 1200, 800));
+
+        WindowId ownerAId = WindowId.FromGuid(Guid.Parse("51000000-0000-0000-0000-000000000001"));
+        WindowId ownerBId = WindowId.FromGuid(Guid.Parse("51000000-0000-0000-0000-000000000002"));
+        WindowId ownerCId = WindowId.FromGuid(Guid.Parse("51000000-0000-0000-0000-000000000003"));
+        CreateOwnerWindow(windows, ownerAId, contextA, new WindowBounds(0, 0, 400, 300));
+        CreateOwnerWindow(windows, ownerBId, contextB, new WindowBounds(500, 0, 400, 300));
+        CreateOwnerWindow(windows, ownerCId, contextC, new WindowBounds(0, 400, 400, 300));
+
+        Task<OpenFileDialogResult> pendingA = coordinator.OpenFileAsync(contextA, new OpenFileDialogRequest()).AsTask();
+        Task<SelectFolderDialogResult> pendingB = coordinator.SelectFolderAsync(contextB, new SelectFolderDialogRequest()).AsTask();
+
+        using FileDialogWindowAdapter adapter = new(coordinator, windows);
+
+        WindowRuntimeState modalA = Assert.Single(windows.Windows, w => w.OwnerId == ownerAId);
+        WindowRuntimeState modalB = Assert.Single(windows.Windows, w => w.OwnerId == ownerBId);
+        Assert.True(windows.IsInteractionBlocked(ownerAId));
+        Assert.True(windows.IsInteractionBlocked(ownerBId));
+        Assert.False(windows.IsInteractionBlocked(ownerCId));
+        Assert.DoesNotContain(windows.Windows, w => w.OwnerId == ownerCId);
+
+        VirtualPath path = VirtualPath.Parse("/home/user/file.txt");
+        Assert.True(coordinator.SelectOpen(modalA.Id.Value, [path]));
+        Assert.Equal(path, Assert.Single((await pendingA).Resources).Path);
+        Assert.DoesNotContain(windows.Windows, w => w.Id == modalA.Id);
+        Assert.False(windows.IsInteractionBlocked(ownerAId));
+        Assert.True(windows.IsInteractionBlocked(ownerBId));
+        Assert.Contains(windows.Windows, w => w.Id == modalB.Id);
+
+        VirtualPath folder = VirtualPath.Parse("/home/user");
+        Assert.True(coordinator.SelectFolder(modalB.Id.Value, folder));
+        Assert.Equal(folder, (await pendingB).Resource?.Path);
+        Assert.DoesNotContain(windows.Windows, w => w.Id == modalB.Id);
+        Assert.False(windows.IsInteractionBlocked(ownerBId));
+    }
+
+    private static void CreateOwnerWindow(WindowRuntime windows, WindowId ownerId, TestExecutionContext context, WindowBounds bounds) =>
+        windows.Apply(new CreateWindowCommand(new WindowRuntimeState(
+            ownerId,
+            context.Manifest.Id,
+            context.ProcessId,
+            AppInstanceId.FromGuid(context.InstanceId),
+            "Owner",
+            null,
+            bounds,
+            null,
+            0,
+            WindowVisualState.Normal,
+            new WindowConstraints(true, 320, 240))));
+
     private sealed class TestExecutionContext(SessionId sessionId, bool allowCapabilities) : IAppExecutionContext
     {
         public AppManifest Manifest { get; } = new()

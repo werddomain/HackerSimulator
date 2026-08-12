@@ -94,6 +94,23 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
         }
     }
 
+    /// <summary>Gets the oldest still-pending request for one owning app instance, independent of other owners.</summary>
+    public FileDialogPresentation? ActiveRequestFor(ProcessId processId, Guid appInstanceId)
+    {
+        lock (_gate)
+        {
+            for (LinkedListNode<PendingDialog>? node = _pending.First; node is not null; node = node.Next)
+            {
+                if (node.Value.Presentation.ProcessId == processId && node.Value.Presentation.AppInstanceId == appInstanceId)
+                {
+                    return node.Value.Presentation;
+                }
+            }
+
+            return null;
+        }
+    }
+
     /// <inheritdoc />
     public ValueTask<OpenFileDialogResult> OpenFileAsync(
         IAppExecutionContext context,
@@ -231,7 +248,9 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            activeChanged = _pending.Count == 0;
+            activeChanged = !_pending.Any(queued =>
+                queued.Presentation.ProcessId == presentation.ProcessId
+                && queued.Presentation.AppInstanceId == presentation.AppInstanceId);
             pending.Node = _pending.AddLast(pending);
             pending.CancellationRegistration = cancellationToken.Register(
                 static state => ((CancellationState)state!).Coordinator.Cancel(((CancellationState)state).RequestId),
@@ -264,7 +283,7 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
             }
 
             pending = node.Value;
-            activeChanged = node == _pending.First;
+            activeChanged = IsOwnerHead(node);
             _pending.Remove(node);
         }
 
@@ -287,6 +306,21 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
             FileDialogPresentation? active = _pending.First?.Value.Presentation;
             return active?.Id == requestId ? active : null;
         }
+    }
+
+    /// <summary>Gets whether no earlier queued item shares this node's owning app instance.</summary>
+    private static bool IsOwnerHead(LinkedListNode<PendingDialog> node)
+    {
+        for (LinkedListNode<PendingDialog>? scan = node.List!.First; scan != node; scan = scan!.Next)
+        {
+            if (scan!.Value.Presentation.ProcessId == node.Value.Presentation.ProcessId
+                && scan.Value.Presentation.AppInstanceId == node.Value.Presentation.AppInstanceId)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private FileSystemSelectedResourceHandle Issue(

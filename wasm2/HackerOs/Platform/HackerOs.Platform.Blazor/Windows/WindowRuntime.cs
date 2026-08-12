@@ -296,5 +296,7 @@ public sealed class WindowRuntime
             state.Constraints,
             state.Modality,
             state.OwnerId,
-            isFocused ?? state.IsFocused);
+            isFocused ?? state.IsFocused,
+            state.Content,
+            state.OnRequestClose);
 }

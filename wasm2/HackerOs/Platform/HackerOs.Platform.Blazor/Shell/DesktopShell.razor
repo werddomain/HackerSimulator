@@ -20,8 +20,6 @@
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject IEventBus EventBus
-@inject FileDialogCoordinator FileDialogCoordinator
-@inject DialogCoordinator DialogCoordinator
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
 
@@ -34,25 +32,9 @@
                      OnClose="HandleClose"
                      OnGesture="HandleGesture">
             <WindowContent Context="window">
-                @if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is OpenFileDialogPresentation openPresentation)
+                @if (window.Content is not null)
                 {
-                    <OpenFileDialog Presentation="openPresentation" Coordinator="FileDialogCoordinator" />
-                }
-                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is SaveFileDialogPresentation savePresentation)
-                {
-                    <SaveFileDialog Presentation="savePresentation" Coordinator="FileDialogCoordinator" />
-                }
-                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActivePresentation is SelectFolderDialogPresentation folderPresentation)
-                {
-                    <FolderSelectDialog Presentation="folderPresentation" Coordinator="FileDialogCoordinator" />
-                }
-                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActiveBasicPresentation is MessageBoxPresentation messageBoxPresentation)
-                {
-                    <MessageBoxDialog Presentation="messageBoxPresentation" Coordinator="DialogCoordinator" />
-                }
-                else if (FileDialogAdapter.IsDialogWindow(window.Id) && FileDialogAdapter.ActiveBasicPresentation is TextInputPresentation textInputPresentation)
-                {
-                    <TextInputDialog Presentation="textInputPresentation" Coordinator="DialogCoordinator" />
+                    @window.Content
                 }
                 else if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
                 {
@@ -209,9 +191,10 @@
 
     private async Task HandleClose(WindowId id)
     {
-        if (FileDialogAdapter.IsDialogWindow(id))
+        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window?.OnRequestClose is { } onRequestClose)
         {
-            FileDialogAdapter.Cancel(id);
+            await onRequestClose();
             StateHasChanged();
             return;
         }

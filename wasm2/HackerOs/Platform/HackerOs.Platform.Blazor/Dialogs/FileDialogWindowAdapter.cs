@@ -1,15 +1,21 @@
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions.Processes;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 
 namespace HackerOs.Platform.Blazor.Dialogs;
 
-/// <summary>Projects active platform basic and file dialogs into owner-modal windows.</summary>
+/// <summary>
+/// Projects active platform basic and file dialogs into owner-modal windows, one per owning
+/// window rather than one system-wide slot, so independent windows can each have their own
+/// active dialog at the same time.
+/// </summary>
 public sealed class FileDialogWindowAdapter : IDisposable
 {
     private readonly FileDialogCoordinator _fileCoordinator;
     private readonly DialogCoordinator? _basicCoordinator;
     private readonly WindowRuntime _windows;
-    private WindowId? _dialogWindowId;
+    private readonly Dictionary<Guid, WindowId> _projected = [];
     private bool _disposed;
 
     /// <summary>Creates an adapter over session dialog coordinators and their window runtime.</summary>
@@ -34,39 +40,8 @@ public sealed class FileDialogWindowAdapter : IDisposable
     /// <summary>Raised after the adapter changes the window runtime.</summary>
     public event Action? Changed;
 
-    /// <summary>Gets the file presentation currently projected into a modal window.</summary>
-    public FileDialogPresentation? ActivePresentation => _dialogWindowId is null
-        ? null
-        : _fileCoordinator.ActiveRequest;
-
-    /// <summary>Gets the basic presentation currently projected into a modal window.</summary>
-    public DialogPresentation? ActiveBasicPresentation => _dialogWindowId is null
-        ? null
-        : _basicCoordinator?.ActiveRequest;
-
-    /// <summary>Gets whether a window is the active platform file or basic dialog.</summary>
-    public bool IsDialogWindow(WindowId windowId) => _dialogWindowId == windowId;
-
-    /// <summary>Cancels a close request for the active dialog as an ordinary user outcome.</summary>
-    public bool Cancel(WindowId windowId)
-    {
-        if (_dialogWindowId != windowId)
-        {
-            return false;
-        }
-
-        if (_fileCoordinator.ActiveRequest is { } filePresentation)
-        {
-            return _fileCoordinator.Cancel(filePresentation.Id);
-        }
-
-        if (_basicCoordinator?.ActiveRequest is { } basicPresentation)
-        {
-            return _basicCoordinator.Cancel(basicPresentation.Id);
-        }
-
-        return false;
-    }
+    /// <summary>Gets whether a window is a projected platform file or basic dialog.</summary>
+    public bool IsDialogWindow(WindowId windowId) => _projected.ContainsValue(windowId);
 
     /// <inheritdoc />
     public void Dispose()
@@ -91,39 +66,25 @@ public sealed class FileDialogWindowAdapter : IDisposable
             return;
         }
 
-        bool changed = CloseProjectedWindow();
-
-        if (_fileCoordinator.ActiveRequest is FileDialogPresentation filePresentation)
+        IReadOnlyList<WindowRuntimeState> windows = _windows.Windows;
+        Dictionary<(ProcessId ProcessId, Guid AppInstanceId), Guid> desiredByOwner = [];
+        foreach ((ProcessId processId, Guid appInstanceId) in windows
+            .Select(window => (window.ProcessId, window.AppInstanceId.Value))
+            .Distinct())
         {
-            WindowRuntimeState? owner = FindOwner(filePresentation.ProcessId, filePresentation.AppInstanceId);
-            if (owner is null)
+            if (_fileCoordinator.ActiveRequestFor(processId, appInstanceId) is FileDialogPresentation filePresentation)
             {
-                _fileCoordinator.Cancel(filePresentation.Id);
-                return;
+                desiredByOwner[(processId, appInstanceId)] = filePresentation.Id;
             }
-
-            CreateWindow(filePresentation.Id, filePresentation.AppId, filePresentation.ProcessId, owner, FileTitle(filePresentation), (720, 560));
-            changed = true;
-        }
-        else if (_basicCoordinator?.ActiveRequest is DialogPresentation basicPresentation)
-        {
-            WindowRuntimeState? owner = FindOwner(basicPresentation.ProcessId, basicPresentation.AppInstanceId);
-            if (owner is null)
+            else if (_basicCoordinator?.ActiveRequestFor(processId, appInstanceId) is DialogPresentation basicPresentation)
             {
-                _basicCoordinator.Cancel(basicPresentation.Id);
-                return;
+                desiredByOwner[(processId, appInstanceId)] = basicPresentation.Id;
             }
-
-            (int width, int height) dimensions = basicPresentation switch
-            {
-                MessageBoxPresentation => (460, 220),
-                TextInputPresentation => (480, 240),
-                _ => (480, 240)
-            };
-
-            CreateWindow(basicPresentation.Id, basicPresentation.AppId, basicPresentation.ProcessId, owner, BasicTitle(basicPresentation), dimensions);
-            changed = true;
         }
+
+        HashSet<Guid> desiredRequestIds = [.. desiredByOwner.Values];
+        bool changed = RemoveStaleWindows(desiredRequestIds);
+        changed |= CreateMissingWindows(desiredByOwner);
 
         if (changed)
         {
@@ -131,20 +92,107 @@ public sealed class FileDialogWindowAdapter : IDisposable
         }
     }
 
-    private WindowRuntimeState? FindOwner(ProcessId processId, Guid appInstanceIdGuid) =>
-        _windows.Windows.SingleOrDefault(window =>
-            window.ProcessId == processId
-            && window.AppInstanceId == AppInstanceId.FromGuid(appInstanceIdGuid));
+    private bool RemoveStaleWindows(HashSet<Guid> desiredRequestIds)
+    {
+        bool changed = false;
+        foreach (Guid requestId in _projected.Keys.Where(id => !desiredRequestIds.Contains(id)).ToArray())
+        {
+            WindowId windowId = _projected[requestId];
+            _projected.Remove(requestId);
+            if (_windows.Windows.Any(window => window.Id == windowId))
+            {
+                _windows.Apply(new ForceWindowCloseCommand(windowId));
+            }
+
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private bool CreateMissingWindows(Dictionary<(ProcessId ProcessId, Guid AppInstanceId), Guid> desiredByOwner)
+    {
+        bool changed = false;
+        foreach (((ProcessId processId, Guid appInstanceId), Guid requestId) in desiredByOwner)
+        {
+            if (_projected.ContainsKey(requestId))
+            {
+                continue;
+            }
+
+            WindowRuntimeState? owner = FindOwner(processId, appInstanceId);
+            if (owner is null)
+            {
+                CancelRequest(requestId);
+                continue;
+            }
+
+            if (_fileCoordinator.ActiveRequestFor(processId, appInstanceId) is FileDialogPresentation filePresentation
+                && filePresentation.Id == requestId)
+            {
+                CreateFileDialogWindow(filePresentation, owner);
+                changed = true;
+            }
+            else if (_basicCoordinator?.ActiveRequestFor(processId, appInstanceId) is DialogPresentation basicPresentation
+                && basicPresentation.Id == requestId)
+            {
+                CreateBasicDialogWindow(basicPresentation, owner);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private WindowRuntimeState? FindOwner(ProcessId processId, Guid appInstanceIdGuid) => _windows.Windows
+        .Where(window => window.ProcessId == processId && window.AppInstanceId == AppInstanceId.FromGuid(appInstanceIdGuid))
+        .OrderByDescending(window => window.ZOrder)
+        .FirstOrDefault();
+
+    private void CreateFileDialogWindow(FileDialogPresentation presentation, WindowRuntimeState owner)
+    {
+        WindowId dialogId = WindowId.FromGuid(presentation.Id);
+        RenderFragment content = BuildFileDialogContent(presentation);
+        Func<Task> onRequestClose = () =>
+        {
+            _fileCoordinator.Cancel(presentation.Id);
+            return Task.CompletedTask;
+        };
+
+        CreateWindow(dialogId, presentation.Id, presentation.AppId, presentation.ProcessId, owner, FileTitle(presentation), (720, 560), content, onRequestClose);
+    }
+
+    private void CreateBasicDialogWindow(DialogPresentation presentation, WindowRuntimeState owner)
+    {
+        WindowId dialogId = WindowId.FromGuid(presentation.Id);
+        RenderFragment content = BuildBasicDialogContent(presentation);
+        Func<Task> onRequestClose = () =>
+        {
+            _basicCoordinator!.Cancel(presentation.Id);
+            return Task.CompletedTask;
+        };
+
+        (int width, int height) dimensions = presentation switch
+        {
+            MessageBoxPresentation => (460, 220),
+            TextInputPresentation => (480, 240),
+            _ => (480, 240)
+        };
+
+        CreateWindow(dialogId, presentation.Id, presentation.AppId, presentation.ProcessId, owner, BasicTitle(presentation), dimensions, content, onRequestClose);
+    }
 
     private void CreateWindow(
+        WindowId dialogId,
         Guid requestId,
         string appId,
         ProcessId processId,
         WindowRuntimeState owner,
         string title,
-        (int width, int height) dimensions)
+        (int width, int height) dimensions,
+        RenderFragment content,
+        Func<Task> onRequestClose)
     {
-        WindowId dialogId = WindowId.FromGuid(requestId);
         WindowRuntimeState state = new(
             dialogId,
             appId,
@@ -158,26 +206,70 @@ public sealed class FileDialogWindowAdapter : IDisposable
             WindowVisualState.Normal,
             new WindowConstraints(isResizable: false, minWidth: 320, minHeight: 180),
             WindowModality.OwnerModal,
-            owner.Id);
+            owner.Id,
+            isFocused: false,
+            content: content,
+            onRequestClose: onRequestClose);
         _windows.Apply(new CreateWindowCommand(state));
-        _dialogWindowId = dialogId;
+        _projected[requestId] = dialogId;
     }
 
-    private bool CloseProjectedWindow()
+    private void CancelRequest(Guid requestId)
     {
-        if (_dialogWindowId is not WindowId dialogId)
+        if (_fileCoordinator.ActiveRequest?.Id == requestId)
         {
-            return false;
+            _fileCoordinator.Cancel(requestId);
         }
-
-        _dialogWindowId = null;
-        if (_windows.Windows.Any(window => window.Id == dialogId))
+        else if (_basicCoordinator?.ActiveRequest?.Id == requestId)
         {
-            _windows.Apply(new ForceWindowCloseCommand(dialogId));
+            _basicCoordinator.Cancel(requestId);
         }
-
-        return true;
     }
+
+    private RenderFragment BuildFileDialogContent(FileDialogPresentation presentation) => presentation switch
+    {
+        OpenFileDialogPresentation open => builder =>
+        {
+            builder.OpenComponent<OpenFileDialog>(0);
+            builder.AddAttribute(1, nameof(OpenFileDialog.Presentation), open);
+            builder.AddAttribute(2, nameof(OpenFileDialog.Coordinator), _fileCoordinator);
+            builder.CloseComponent();
+        },
+        SaveFileDialogPresentation save => builder =>
+        {
+            builder.OpenComponent<SaveFileDialog>(0);
+            builder.AddAttribute(1, nameof(SaveFileDialog.Presentation), save);
+            builder.AddAttribute(2, nameof(SaveFileDialog.Coordinator), _fileCoordinator);
+            builder.CloseComponent();
+        },
+        SelectFolderDialogPresentation folder => builder =>
+        {
+            builder.OpenComponent<FolderSelectDialog>(0);
+            builder.AddAttribute(1, nameof(FolderSelectDialog.Presentation), folder);
+            builder.AddAttribute(2, nameof(FolderSelectDialog.Coordinator), _fileCoordinator);
+            builder.CloseComponent();
+        },
+        _ => throw new NotSupportedException($"Unsupported file dialog presentation '{presentation.GetType()}'."),
+    };
+
+    private RenderFragment BuildBasicDialogContent(DialogPresentation presentation) => presentation switch
+    {
+        MessageBoxPresentation messageBox => builder =>
+        {
+            builder.OpenComponent<MessageBoxDialog>(0);
+            builder.AddAttribute(1, nameof(MessageBoxDialog.Presentation), messageBox);
+            builder.AddAttribute(2, nameof(MessageBoxDialog.Coordinator), _basicCoordinator);
+            builder.CloseComponent();
+        },
+        TextInputPresentation textInput => builder =>
+        {
+            builder.OpenComponent<TextInputDialog>(0);
+            builder.AddAttribute(1, nameof(TextInputDialog.Presentation), textInput);
+            builder.AddAttribute(2, nameof(TextInputDialog.Coordinator), _basicCoordinator);
+            builder.CloseComponent();
+        },
+        _ => throw new NotSupportedException($"Unsupported dialog presentation '{presentation.GetType()}'."),
+    };
 
     private static string FileTitle(FileDialogPresentation presentation) => presentation switch
     {

@@ -26,17 +26,9 @@
                  OnClose="Close"
                  OnGesture="Apply">
         <WindowContent Context="window">
-            @if (_adapter.IsDialogWindow(window.Id) && _adapter.ActivePresentation is OpenFileDialogPresentation presentation)
+            @if (window.Content is not null)
             {
-                <OpenFileDialog Presentation="presentation" Coordinator="_coordinator" />
-            }
-            else if (_adapter.IsDialogWindow(window.Id) && _adapter.ActivePresentation is SaveFileDialogPresentation savePresentation)
-            {
-                <SaveFileDialog Presentation="savePresentation" Coordinator="_coordinator" />
-            }
-            else if (_adapter.IsDialogWindow(window.Id) && _adapter.ActivePresentation is SelectFolderDialogPresentation folderPresentation)
-            {
-                <FolderSelectDialog Presentation="folderPresentation" Coordinator="_coordinator" />
+                @window.Content
             }
             else
             {
@@ -143,15 +135,19 @@
     private Task Focus(WindowId id) => Apply(new FocusWindowCommand(id));
     private Task Ignore(WindowId id) => Task.CompletedTask;
 
-    private Task Close(WindowId id)
+    private async Task Close(WindowId id)
     {
-        if (!_adapter.Cancel(id))
+        WindowRuntimeState? window = _runtime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window?.OnRequestClose is { } onRequestClose)
+        {
+            await onRequestClose();
+        }
+        else
         {
             _runtime.Apply(new ForceWindowCloseCommand(id));
         }
 
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private Task Apply(WindowCommand command)
