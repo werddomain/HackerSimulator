@@ -46,6 +46,26 @@ composants de shell restent liés au domaine HackerOS. La barre des tâches est 
 fortement couplée que le moteur de fenêtres et doit passer par des contrats
 d’adaptation.
 
+### 2.1 Changement récent : contenu générique et dialogues (2026-08)
+
+Un couplage supplémentaire, absent de la rédaction initiale de ce document, existe
+dans `Platform/HackerOs.Platform.Blazor/Dialogs/` : `FileDialogCoordinator`,
+`DialogCoordinator` et `FileDialogWindowAdapter` créent des fenêtres owner-modal via
+`WindowRuntime.Apply(new CreateWindowCommand(...))`, exactement comme
+`WindowLaunchCoordinator` le fait pour les applications. Ces dialogues (sélection de
+fichier, boîtes de message, saisie de texte) restent spécifiques à HackerOS
+(système de fichiers virtuel, capacités) et ne font pas partie du périmètre exporté.
+
+Ce couplage a toutefois motivé une extension générique déjà en place :
+`WindowRuntimeState` porte désormais `Content` (`RenderFragment?`) et
+`OnRequestClose` (`Func<Task>?`). `DesktopShell.razor` ne connaît plus les types de
+dialogues concrets ; il rend `window.Content` lorsqu’il est fourni, et route la
+fermeture demandée par l’utilisateur vers `window.OnRequestClose` quand il existe. Ce
+mécanisme générique — pas les dialogues eux-mêmes — fait partie du moteur exporté (voir
+3.3) : n’importe quel hôte peut désormais créer une fenêtre dont le contenu et la
+logique de fermeture sont fournis par l’appelant, sans que le moteur ait besoin d’un
+cas spécial par type de fenêtre.
+
 ## 3. Architecture cible
 
 ### 3.1 Projets proposés
@@ -71,6 +91,12 @@ Samples/
 Les noms pourront être ajustés avant création, mais les frontières de dépendances
 doivent être conservées.
 
+`HackerOs.sln` est un fichier `.sln` classique (pas au format XML `slnx`) : chaque
+nouveau projet doit être ajouté explicitement via `dotnet sln add`, avec une entrée
+`GlobalSection(ProjectConfigurationPlatforms)` et, si on le range dans un dossier de
+solution existant (`Shared`, `Platform`, `Tests`, `Samples`), une entrée
+`GlobalSection(NestedProjects)`. Aucune découverte automatique n’a lieu.
+
 ### 3.2 `HackerOs.Windowing.Abstractions`
 
 Bibliothèque .NET sans dépendance Blazor, MudBlazor, navigateur ou hôte HackerOS.
@@ -79,13 +105,20 @@ Elle doit contenir :
 
 - `WindowId` et les identifiants d’owner génériques ;
 - `WindowBounds`, `WindowConstraints` et `WindowVisualState` ;
-- les descriptions immuables de titre, icône et contenu logique ;
+- les descriptions immuables de titre, icône et contenu logique — le contenu logique
+  est un `RenderFragment` fourni par l’appelant (voir 2.1 et 3.3), pas un contrat
+  opaque : la librairie exportée est de toute façon toujours consommée depuis Blazor,
+  donc ce type n’ajoute aucun couplage réel à un hôte non-Blazor ;
 - les commandes et événements de fenêtres ;
 - les contrats de fermeture, confirmation et activation ;
 - les contrats de source d’éléments pour la barre des tâches ;
 - les contrats de commandes de barre : activer, réduire, restaurer, fermer,
   afficher l’accueil ou ouvrir une surface fournie par l’hôte ;
 - des contrats de thème sous forme de noms de tokens, jamais de CSS arbitraire.
+
+Le projet `Shared/HackerOs.AppSdk.Icons` existe déjà et fournit un modèle d’identité
+d’icône indépendant du rendu ; les contrats d’icônes de fenêtre et de barre des tâches
+doivent le réutiliser plutôt que d’en recréer un.
 
 Les identités propres à HackerOS (`ProcessId`, `AppInstanceId`, `AppId`) ne doivent
 pas être obligatoires dans le moteur exportable. Utiliser un identifiant de
@@ -106,8 +139,12 @@ Bibliothèque headless contenant :
 - état sérialisable facultatif de géométrie ;
 - événements déterministes observables par l’hôte.
 
-Elle dépend uniquement de `HackerOs.Windowing.Abstractions`. Elle ne doit contenir
-ni composant Razor, ni `RenderFragment`, ni MudBlazor, ni interop JavaScript.
+Elle dépend de `HackerOs.Windowing.Abstractions` et peut référencer
+`Microsoft.AspNetCore.Components` (uniquement pour le type délégué `RenderFragment`
+porté par `WindowRuntimeState.Content`, cf. 2.1 et 3.2). Elle ne doit contenir aucun
+composant `.razor`, aucun `RenderFragment` produit par le moteur lui-même, aucun
+MudBlazor et aucune interop JavaScript : le moteur reste headless, il consomme
+seulement le contenu que l’appelant lui fournit sans jamais le construire.
 
 ### 3.4 `HackerOs.Windowing.Blazor`
 
@@ -168,6 +205,16 @@ Le projet existant devient la couche de composition HackerOS :
 - lanceur d’applications, dialogues, centre de notifications et UX de session.
 
 Ainsi, les packages exportables ne connaissent pas le modèle complet de l’OS.
+
+Vérifié dans le code actuel : `WindowCloseCoordinator` dépend de
+`AppLifecycleOrchestrator` (`HackerOs.Platform.Core.Lifecycle`) et
+`WindowAppRenderer` dépend de `AppDescriptor`
+(`HackerOs.Platform.Core.Discovery`) ainsi que de `WindowAppBase`/
+`IWindowCloseGuard` (`HackerOs.AppSdk.Blazor`). Les deux confirment donc bien la
+frontière ci-dessus et restent dans `HackerOs.Platform.Blazor` sans modification
+de signature publique lors de l’extraction. Le système de dialogues (2.1) suit la
+même règle : `FileDialogWindowAdapter` reste dans `HackerOs.Platform.Blazor` et
+n’utilise que le mécanisme générique `Content`/`OnRequestClose` du moteur exporté.
 
 ## 4. API de consommation attendue
 
