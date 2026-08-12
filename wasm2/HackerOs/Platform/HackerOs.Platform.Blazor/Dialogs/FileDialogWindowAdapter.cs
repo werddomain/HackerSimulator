@@ -1,5 +1,5 @@
-using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.Windowing.Core;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 

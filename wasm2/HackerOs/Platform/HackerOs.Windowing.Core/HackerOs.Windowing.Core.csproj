@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only for the RenderFragment delegate type carried by WindowRuntimeState.Content.
+         No browser pipeline, no .razor components, no MudBlazor: this project stays headless. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Temporary: WindowRuntimeState still carries ProcessId/AppInstanceId directly.
+         Removed once EXT-WIN-002 introduces a generic owner identifier. -->
+    <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,6 @@
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Blazor.Windows;
+using HackerOs.Windowing.Core;
 
 namespace HackerOs.Platform.Blazor.Tests;
 

@@ -1,7 +1,7 @@
 using HackerOs.Simulation.Abstractions.Processes;
 using Microsoft.AspNetCore.Components;
 
-namespace HackerOs.Platform.Blazor.Windows;
+namespace HackerOs.Windowing.Core;
 
 /// <summary>Describes the visible layout state of a window.</summary>
 public enum WindowVisualState

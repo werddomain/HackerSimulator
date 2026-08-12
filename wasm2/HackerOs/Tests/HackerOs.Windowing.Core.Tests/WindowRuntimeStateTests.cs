@@ -1,7 +1,7 @@
-using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.Windowing.Core;
 
-namespace HackerOs.Platform.Blazor.Tests;
+namespace HackerOs.Windowing.Core.Tests;
 
 public sealed class WindowRuntimeStateTests
 {

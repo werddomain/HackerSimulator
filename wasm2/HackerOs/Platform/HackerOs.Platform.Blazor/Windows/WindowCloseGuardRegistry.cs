@@ -1,4 +1,5 @@
 using HackerOs.AppSdk.Blazor;
+using HackerOs.Windowing.Core;
 
 namespace HackerOs.Platform.Blazor.Windows;
 

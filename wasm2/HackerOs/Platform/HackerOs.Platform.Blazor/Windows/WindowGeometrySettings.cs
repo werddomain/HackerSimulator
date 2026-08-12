@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Settings;
+using HackerOs.Windowing.Core;
 
 namespace HackerOs.Platform.Blazor.Windows;
 

@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Notifications;
+using HackerOs.Windowing.Core;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;

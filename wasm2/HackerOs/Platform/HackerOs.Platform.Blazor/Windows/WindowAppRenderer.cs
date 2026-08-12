@@ -1,6 +1,7 @@
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Windowing.Core;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
