@@ -345,13 +345,20 @@ mais manquent dans un package.
 
 ## 10. Plan d’implémentation
 
-- [ ] `EXT-WIN-001` Créer `HackerOs.Windowing.Abstractions` et documenter son API
-  publique.
-- [ ] `EXT-WIN-002` Découpler les identités génériques des identités de processus
-  HackerOS.
-- [ ] `EXT-WIN-003` Déplacer le moteur headless dans `HackerOs.Windowing.Core`.
-- [ ] `EXT-WIN-004` Porter les tests du runtime et ajouter une suite de contrats
-  indépendante de HackerOS.
+- [~] `EXT-WIN-001` Créer `HackerOs.Windowing.Abstractions` et documenter son API
+  publique. *Reporté* : les contrats génériques vivent pour l'instant dans
+  `HackerOs.Windowing.Core` (voir 003/004) plutôt que dans un projet séparé,
+  choix pris pour d'abord déplacer le moteur sans rupture ; le split
+  Abstractions/Core proprement dit reste à faire avant la Phase B.
+- [x] `EXT-WIN-002` Découpler les identités génériques des identités de processus
+  HackerOS. `WindowRuntimeState` porte désormais `WindowOwnerId` (opaque,
+  dérivé de l'instance d'app) au lieu de `ProcessId`/`AppInstanceId`.
+- [x] `EXT-WIN-003` Déplacer le moteur headless dans `HackerOs.Windowing.Core`.
+  Le projet ne référence plus que `Microsoft.AspNetCore.Components`, aucune
+  dépendance HackerOS.
+- [x] `EXT-WIN-004` Porter les tests du runtime et ajouter une suite de contrats
+  indépendante de HackerOS. `HackerOs.Windowing.Core.Tests` (11 tests) ne
+  référence que `HackerOs.Windowing.Core`.
 - [ ] `EXT-WIN-005` Créer la Razor Class Library `HackerOs.Windowing.Blazor` avec
   assets collocatés.
 - [ ] `EXT-WIN-006` Éliminer les dépendances MudBlazor obligatoires du chrome
