@@ -285,8 +285,7 @@ public sealed class WindowRuntime
         new(
             state.Id,
             state.AppId,
-            state.ProcessId,
-            state.AppInstanceId,
+            state.OwnerInstanceId,
             state.Title,
             state.IconAssetPath,
             bounds ?? state.Bounds,

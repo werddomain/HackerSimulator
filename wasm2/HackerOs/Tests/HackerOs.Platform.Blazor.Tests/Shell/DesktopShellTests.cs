@@ -71,8 +71,7 @@ public sealed class DesktopShellTests
         new(
             WindowId.FromGuid(Guid.Parse($"10000000-0000-0000-0000-{seed:D12}")),
             $"org.hackeros.test{seed}",
-            ProcessId.FromInt64(seed),
-            AppInstanceId.FromGuid(Guid.Parse($"20000000-0000-0000-0000-{seed:D12}")),
+            WindowOwnerId.FromGuid(Guid.Parse($"20000000-0000-0000-0000-{seed:D12}")),
             $"Test App {seed}",
             null,
             new WindowBounds(20 * seed, 30 * seed, 640, 480),

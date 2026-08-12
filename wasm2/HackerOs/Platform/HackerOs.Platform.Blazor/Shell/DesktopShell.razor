@@ -36,7 +36,7 @@
                 {
                     @window.Content
                 }
-                else if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                else if (Orchestrator.TryGetRunningInstance(AppInstanceId.FromGuid(window.OwnerInstanceId.Value), out AppDescriptor? descriptor, out IAppExecutionContext? context))
                 {
                     <WindowAppRenderer Window="window"
                                        Descriptor="descriptor"
@@ -256,10 +256,14 @@
     {
         if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
         {
-            WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.ProcessId == e.Pid);
-            if (matchingWindow is not null)
+            if (TryGetInstanceId(e.Pid, out AppInstanceId instanceId))
             {
-                WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+                WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(instanceId.Value);
+                WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.OwnerInstanceId == ownerInstanceId);
+                if (matchingWindow is not null)
+                {
+                    WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+                }
             }
         }
         else if (e.NewState == ProcessState.Running)
@@ -279,6 +283,25 @@
         }
 
         InvokeAsync(StateHasChanged);
+    }
+
+    private bool TryGetInstanceId(ProcessId pid, out AppInstanceId instanceId)
+    {
+        if (ProcessManager.TryGetActive(pid, out ProcessRecord active))
+        {
+            instanceId = active.AppInstanceId;
+            return true;
+        }
+
+        ProcessRecord? historical = ProcessManager.GetHistory().LastOrDefault(record => record.Pid == pid);
+        if (historical is not null)
+        {
+            instanceId = historical.AppInstanceId;
+            return true;
+        }
+
+        instanceId = default;
+        return false;
     }
 
     private void HandleShellKeyDown(KeyboardEventArgs args)

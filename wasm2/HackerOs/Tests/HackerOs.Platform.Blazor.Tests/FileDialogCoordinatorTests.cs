@@ -97,8 +97,7 @@ public sealed class FileDialogCoordinatorTests
         windows.Apply(new CreateWindowCommand(new WindowRuntimeState(
             ownerId,
             context.Manifest.Id,
-            context.ProcessId,
-            AppInstanceId.FromGuid(context.InstanceId),
+            WindowOwnerId.FromGuid(context.InstanceId),
             "Owner",
             null,
             new WindowBounds(100, 80, 800, 600),
@@ -171,8 +170,7 @@ public sealed class FileDialogCoordinatorTests
         windows.Apply(new CreateWindowCommand(new WindowRuntimeState(
             ownerId,
             context.Manifest.Id,
-            context.ProcessId,
-            AppInstanceId.FromGuid(context.InstanceId),
+            WindowOwnerId.FromGuid(context.InstanceId),
             "Owner",
             null,
             bounds,

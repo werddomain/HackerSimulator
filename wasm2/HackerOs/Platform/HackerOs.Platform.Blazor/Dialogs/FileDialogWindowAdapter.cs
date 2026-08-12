@@ -1,4 +1,3 @@
-using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Windowing.Core;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -67,18 +66,16 @@ public sealed class FileDialogWindowAdapter : IDisposable
         }
 
         IReadOnlyList<WindowRuntimeState> windows = _windows.Windows;
-        Dictionary<(ProcessId ProcessId, Guid AppInstanceId), Guid> desiredByOwner = [];
-        foreach ((ProcessId processId, Guid appInstanceId) in windows
-            .Select(window => (window.ProcessId, window.AppInstanceId.Value))
-            .Distinct())
+        Dictionary<WindowOwnerId, Guid> desiredByOwner = [];
+        foreach (WindowOwnerId ownerInstanceId in windows.Select(window => window.OwnerInstanceId).Distinct())
         {
-            if (_fileCoordinator.ActiveRequestFor(processId, appInstanceId) is FileDialogPresentation filePresentation)
+            if (_fileCoordinator.ActiveRequestFor(ownerInstanceId.Value) is FileDialogPresentation filePresentation)
             {
-                desiredByOwner[(processId, appInstanceId)] = filePresentation.Id;
+                desiredByOwner[ownerInstanceId] = filePresentation.Id;
             }
-            else if (_basicCoordinator?.ActiveRequestFor(processId, appInstanceId) is DialogPresentation basicPresentation)
+            else if (_basicCoordinator?.ActiveRequestFor(ownerInstanceId.Value) is DialogPresentation basicPresentation)
             {
-                desiredByOwner[(processId, appInstanceId)] = basicPresentation.Id;
+                desiredByOwner[ownerInstanceId] = basicPresentation.Id;
             }
         }
 
@@ -110,30 +107,30 @@ public sealed class FileDialogWindowAdapter : IDisposable
         return changed;
     }
 
-    private bool CreateMissingWindows(Dictionary<(ProcessId ProcessId, Guid AppInstanceId), Guid> desiredByOwner)
+    private bool CreateMissingWindows(Dictionary<WindowOwnerId, Guid> desiredByOwner)
     {
         bool changed = false;
-        foreach (((ProcessId processId, Guid appInstanceId), Guid requestId) in desiredByOwner)
+        foreach ((WindowOwnerId ownerInstanceId, Guid requestId) in desiredByOwner)
         {
             if (_projected.ContainsKey(requestId))
             {
                 continue;
             }
 
-            WindowRuntimeState? owner = FindOwner(processId, appInstanceId);
+            WindowRuntimeState? owner = FindOwner(ownerInstanceId);
             if (owner is null)
             {
                 CancelRequest(requestId);
                 continue;
             }
 
-            if (_fileCoordinator.ActiveRequestFor(processId, appInstanceId) is FileDialogPresentation filePresentation
+            if (_fileCoordinator.ActiveRequestFor(ownerInstanceId.Value) is FileDialogPresentation filePresentation
                 && filePresentation.Id == requestId)
             {
                 CreateFileDialogWindow(filePresentation, owner);
                 changed = true;
             }
-            else if (_basicCoordinator?.ActiveRequestFor(processId, appInstanceId) is DialogPresentation basicPresentation
+            else if (_basicCoordinator?.ActiveRequestFor(ownerInstanceId.Value) is DialogPresentation basicPresentation
                 && basicPresentation.Id == requestId)
             {
                 CreateBasicDialogWindow(basicPresentation, owner);
@@ -144,8 +141,8 @@ public sealed class FileDialogWindowAdapter : IDisposable
         return changed;
     }
 
-    private WindowRuntimeState? FindOwner(ProcessId processId, Guid appInstanceIdGuid) => _windows.Windows
-        .Where(window => window.ProcessId == processId && window.AppInstanceId == AppInstanceId.FromGuid(appInstanceIdGuid))
+    private WindowRuntimeState? FindOwner(WindowOwnerId ownerInstanceId) => _windows.Windows
+        .Where(window => window.OwnerInstanceId == ownerInstanceId)
         .OrderByDescending(window => window.ZOrder)
         .FirstOrDefault();
 
@@ -159,7 +156,7 @@ public sealed class FileDialogWindowAdapter : IDisposable
             return Task.CompletedTask;
         };
 
-        CreateWindow(dialogId, presentation.Id, presentation.AppId, presentation.ProcessId, owner, FileTitle(presentation), (720, 560), content, onRequestClose);
+        CreateWindow(dialogId, presentation.Id, presentation.AppId, owner, FileTitle(presentation), (720, 560), content, onRequestClose);
     }
 
     private void CreateBasicDialogWindow(DialogPresentation presentation, WindowRuntimeState owner)
@@ -179,14 +176,13 @@ public sealed class FileDialogWindowAdapter : IDisposable
             _ => (480, 240)
         };
 
-        CreateWindow(dialogId, presentation.Id, presentation.AppId, presentation.ProcessId, owner, BasicTitle(presentation), dimensions, content, onRequestClose);
+        CreateWindow(dialogId, presentation.Id, presentation.AppId, owner, BasicTitle(presentation), dimensions, content, onRequestClose);
     }
 
     private void CreateWindow(
         WindowId dialogId,
         Guid requestId,
         string appId,
-        ProcessId processId,
         WindowRuntimeState owner,
         string title,
         (int width, int height) dimensions,
@@ -196,8 +192,7 @@ public sealed class FileDialogWindowAdapter : IDisposable
         WindowRuntimeState state = new(
             dialogId,
             appId,
-            processId,
-            owner.AppInstanceId,
+            owner.OwnerInstanceId,
             title,
             iconAssetPath: null,
             new WindowBounds(owner.Bounds.X + 40, owner.Bounds.Y + 40, dimensions.width, dimensions.height),

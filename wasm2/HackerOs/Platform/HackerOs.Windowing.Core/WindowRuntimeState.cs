@@ -1,4 +1,3 @@
-using HackerOs.Simulation.Abstractions.Processes;
 using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.Windowing.Core;
@@ -30,8 +29,7 @@ public sealed record WindowRuntimeState
     public WindowRuntimeState(
         WindowId id,
         string appId,
-        ProcessId processId,
-        AppInstanceId appInstanceId,
+        WindowOwnerId ownerInstanceId,
         string title,
         string? iconAssetPath,
         WindowBounds bounds,
@@ -70,8 +68,7 @@ public sealed record WindowRuntimeState
 
         Id = id;
         AppId = appId;
-        ProcessId = processId;
-        AppInstanceId = appInstanceId;
+        OwnerInstanceId = ownerInstanceId;
         Title = title;
         IconAssetPath = iconAssetPath;
         Bounds = bounds;
@@ -92,11 +89,8 @@ public sealed record WindowRuntimeState
     /// <summary>Gets the immutable application identity.</summary>
     public string AppId { get; }
 
-    /// <summary>Gets the simulated process identity.</summary>
-    public ProcessId ProcessId { get; }
-
-    /// <summary>Gets the running app instance identity.</summary>
-    public AppInstanceId AppInstanceId { get; }
+    /// <summary>Gets the opaque owning app instance identity.</summary>
+    public WindowOwnerId OwnerInstanceId { get; }
 
     /// <summary>Gets the displayed title.</summary>
     public string Title { get; }

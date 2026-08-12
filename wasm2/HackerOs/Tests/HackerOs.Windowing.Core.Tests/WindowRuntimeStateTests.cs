@@ -1,4 +1,3 @@
-using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Windowing.Core;
 
 namespace HackerOs.Windowing.Core.Tests;
@@ -14,11 +13,11 @@ public sealed class WindowRuntimeStateTests
         WindowBounds restoreBounds = new(40, 50, 640, 480);
         WindowConstraints constraints = new(true, 320, 240, 1600, 1200);
 
+        WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(Guid.Parse("20000000-0000-0000-0000-000000000001"));
         WindowRuntimeState state = new(
             id,
             "org.hackeros.terminal",
-            ProcessId.FromInt64(42),
-            AppInstanceId.FromGuid(Guid.Parse("20000000-0000-0000-0000-000000000001")),
+            ownerInstanceId,
             "Terminal",
             "icons/terminal.svg",
             bounds,
@@ -32,7 +31,7 @@ public sealed class WindowRuntimeStateTests
 
         Assert.Equal(id, state.Id);
         Assert.Equal("org.hackeros.terminal", state.AppId);
-        Assert.Equal(42, state.ProcessId.Value);
+        Assert.Equal(ownerInstanceId, state.OwnerInstanceId);
         Assert.Equal("Terminal", state.Title);
         Assert.Equal(bounds, state.Bounds);
         Assert.Equal(restoreBounds, state.RestoreBounds);
@@ -80,8 +79,7 @@ public sealed class WindowRuntimeStateTests
         new(
             id,
             "org.hackeros.settings",
-            ProcessId.FromInt64(1),
-            AppInstanceId.FromGuid(Guid.NewGuid()),
+            WindowOwnerId.FromGuid(Guid.NewGuid()),
             "Settings",
             null,
             new WindowBounds(10, 10, 640, 480),

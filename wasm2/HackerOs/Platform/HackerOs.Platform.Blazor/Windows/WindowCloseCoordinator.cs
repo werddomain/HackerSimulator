@@ -41,7 +41,7 @@ public sealed class WindowCloseCoordinator
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        await _lifecycle.StopAsync(window.ProcessId, ProcessExitReason.CloseRequested);
+        await _lifecycle.StopAsync(AppInstanceId.FromGuid(window.OwnerInstanceId.Value), ProcessExitReason.CloseRequested);
         events.AddRange(_runtime.Apply(new ForceWindowCloseCommand(windowId)));
         return events;
     }

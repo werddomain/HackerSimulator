@@ -25,8 +25,7 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.True(presented);
         WindowRuntimeState window = Assert.Single(runtime.Windows);
         Assert.Equal(manifest.Id, window.AppId);
-        Assert.Equal(process.Pid, window.ProcessId);
-        Assert.Equal(process.AppInstanceId, window.AppInstanceId);
+        Assert.Equal(WindowOwnerId.FromGuid(process.AppInstanceId.Value), window.OwnerInstanceId);
         Assert.True(window.IsFocused);
     }
 
@@ -65,7 +64,7 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.True(presented);
         WindowRuntimeState window = Assert.Single(runtime.Windows);
         Assert.Equal(manifest.Id, window.AppId);
-        Assert.Equal(process.Pid, window.ProcessId);
+        Assert.Equal(WindowOwnerId.FromGuid(process.AppInstanceId.Value), window.OwnerInstanceId);
     }
 
     [Fact]

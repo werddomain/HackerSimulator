@@ -95,13 +95,13 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
     }
 
     /// <summary>Gets the oldest still-pending request for one owning app instance, independent of other owners.</summary>
-    public FileDialogPresentation? ActiveRequestFor(ProcessId processId, Guid appInstanceId)
+    public FileDialogPresentation? ActiveRequestFor(Guid appInstanceId)
     {
         lock (_gate)
         {
             for (LinkedListNode<PendingDialog>? node = _pending.First; node is not null; node = node.Next)
             {
-                if (node.Value.Presentation.ProcessId == processId && node.Value.Presentation.AppInstanceId == appInstanceId)
+                if (node.Value.Presentation.AppInstanceId == appInstanceId)
                 {
                     return node.Value.Presentation;
                 }

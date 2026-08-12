@@ -49,7 +49,8 @@ public sealed class WindowLaunchCoordinator
             return false;
         }
 
-        WindowRuntimeState? existing = _windows.Windows.FirstOrDefault(window => window.ProcessId == process.Pid);
+        WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(process.AppInstanceId.Value);
+        WindowRuntimeState? existing = _windows.Windows.FirstOrDefault(window => window.OwnerInstanceId == ownerInstanceId);
         if (existing is not null)
         {
             if (existing.VisualState == WindowVisualState.Minimized)
@@ -65,16 +66,15 @@ public sealed class WindowLaunchCoordinator
         WindowRuntimeState state = new(
             WindowId.FromGuid(Guid.NewGuid()),
             manifest.Id,
-            process.Pid,
-            process.AppInstanceId,
+            ownerInstanceId,
             manifest.Name,
             manifest.Presentation.IconAssetPaths.FirstOrDefault(),
             new WindowBounds(48 + (cascadeIndex * 28), 42 + (cascadeIndex * 28), 800, 560),
             restoreBounds: null,
             zOrder: 0,
-            WindowVisualState.Normal,
-            new WindowConstraints(isResizable: true, minWidth: 360, minHeight: 240),
-            WindowModality.Modeless);
+            visualState: WindowVisualState.Normal,
+            constraints: new WindowConstraints(isResizable: true, minWidth: 360, minHeight: 240),
+            modality: WindowModality.Modeless);
         _windows.Apply(new CreateWindowCommand(state));
         return true;
     }

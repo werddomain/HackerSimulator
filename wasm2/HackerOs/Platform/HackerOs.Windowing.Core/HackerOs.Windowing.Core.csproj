@@ -12,10 +12,4 @@
     <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.10" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Temporary: WindowRuntimeState still carries ProcessId/AppInstanceId directly.
-         Removed once EXT-WIN-002 introduces a generic owner identifier. -->
-    <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
-  </ItemGroup>
-
 </Project>
