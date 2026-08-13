@@ -14,6 +14,7 @@
     <ProjectReference Include="..\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
     <ProjectReference Include="..\HackerOs.Windowing.Blazor\HackerOs.Windowing.Blazor.csproj" />
+    <ProjectReference Include="..\HackerOs.Taskbar.Blazor\HackerOs.Taskbar.Blazor.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
