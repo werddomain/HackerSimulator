@@ -39,6 +39,10 @@
     {
         <HackPaintBrowserScenario />
     }
+    else if (IsTaskbarScenario)
+    {
+        <TaskbarBrowserScenario />
+    }
     else
     {
         <h1>HackerOS IndexedDB contract harness</h1>
@@ -57,6 +61,7 @@
     private bool IsTerminalFullScreenScenario => new Uri(Navigation.Uri).Query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal);
     private bool IsCodeEditorScenario => new Uri(Navigation.Uri).Query.Contains("scenario=code-editor", StringComparison.Ordinal);
     private bool IsHackPaintScenario => new Uri(Navigation.Uri).Query.Contains("scenario=hack-paint", StringComparison.Ordinal);
+    private bool IsTaskbarScenario => new Uri(Navigation.Uri).Query.Contains("scenario=taskbar", StringComparison.Ordinal);
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -74,7 +79,8 @@
                 || query.Contains("scenario=dialog", StringComparison.Ordinal)
                 || query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal)
                 || query.Contains("scenario=code-editor", StringComparison.Ordinal)
-                || query.Contains("scenario=hack-paint", StringComparison.Ordinal))
+                || query.Contains("scenario=hack-paint", StringComparison.Ordinal)
+                || query.Contains("scenario=taskbar", StringComparison.Ordinal))
             {
                 return;
             }

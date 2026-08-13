@@ -193,6 +193,27 @@ Chaque fonctionnalité optionnelle doit disparaître proprement lorsque son cont
 n’est pas fourni. La taskbar ne doit pas créer un faux service global pour
 remplacer une intégration absente.
 
+**Implémenté** avec `RequestLogout()` seul sur `ITaskbarSessionCommands`
+(verrouillage/arrêt non exposés faute de consommateur réel — à ajouter quand un
+hôte en a besoin, pas avant) et `TaskbarOptions` limité aux libellés du lanceur
+(`LauncherMark`/`LauncherLabel`, seul texte HackerOS actuellement codé en dur) ;
+la visibilité de zone est déjà couverte par l’absence/présence de chaque contrat,
+donc pas dupliquée dans les options.
+
+**Piège de compilation Razor à retenir** pour toute future Razor Class Library
+exportée (Phase D comprise) : un projet `Microsoft.NET.Sdk.Razor` qui référence
+le paquet `Microsoft.AspNetCore.Components.Web` mais dont le `_Imports.razor`
+n’a **pas** `@using Microsoft.AspNetCore.Components.Web` compile sans aucune
+erreur ni avertissement, mais Razor ne reconnaît alors aucun `@onclick` (ni les
+autres événements DOM) comme liaison d’événement : il les rend comme attribut
+HTML littéral (`@onclick="..."` visible tel quel dans le DOM), et les clics ne
+font donc rien, silencieusement. `HackerOs.Windowing.Blazor` (3.4) avait ce
+`@using` ; `HackerOs.Taskbar.Blazor` ne l’avait pas à la création et est resté
+casse pendant tout le développement du composant jusqu’à ce que ce soit
+diagnostiqué au navigateur. Vérifier systématiquement ce `@using` dans le
+`_Imports.razor` de toute nouvelle RCL, et confirmer par un test au navigateur
+qu’un clic produit un effet observable, pas seulement que le build réussit.
+
 ### 3.6 `HackerOs.Platform.Blazor`
 
 Le projet existant devient la couche de composition HackerOS :
@@ -370,8 +391,17 @@ mais manquent dans un package.
   natifs + icônes SVG scoped-CSS. Vérifié au navigateur : minimiser,
   maximiser/restaurer, fermer et le geste de déplacement pointeur
   fonctionnent identiquement.
-- [ ] `EXT-WIN-007` Définir les contrats de source et de commandes de taskbar.
-- [ ] `EXT-WIN-008` Créer `HackerOs.Taskbar.Blazor` et ses tests de composants.
+- [x] `EXT-WIN-007` Définir les contrats de source et de commandes de taskbar.
+  `ITaskbarWindowSource`, `ITaskbarCommandDispatcher`, `ITaskbarLauncher`,
+  `ITaskbarStatusSource`, `ITaskbarNotificationSource`,
+  `ITaskbarSessionCommands`, `TaskbarOptions` dans `HackerOs.Taskbar.Blazor`.
+- [x] `EXT-WIN-008` Créer `HackerOs.Taskbar.Blazor` et ses tests de composants.
+  `Taskbar.razor` ne reçoit plus que ces contrats (tous nullables) au lieu
+  d'injecter `WindowRuntime`/`ISimulationClock` ; chaque zone optionnelle
+  disparaît proprement quand son contrat n'est pas fourni (vérifié au
+  navigateur pour les cinq). `HackerOs.Taskbar.Blazor.Tests` couvre la
+  logique d'interaction pure (`TaskbarWindowInteraction`, 4 tests). Piège
+  rencontré, voir note dans la section 3.5 ci-dessous.
 - [ ] `EXT-WIN-009` Implémenter les adaptateurs HackerOS dans
   `HackerOs.Platform.Blazor`.
 - [ ] `EXT-WIN-010` Migrer `DesktopShell` sans modifier son comportement public.

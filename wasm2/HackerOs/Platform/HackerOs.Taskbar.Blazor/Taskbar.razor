@@ -1,0 +1,163 @@
+@namespace HackerOs.Taskbar.Blazor
+@implements IDisposable
+
+<footer class="taskbar-container" role="contentinfo" aria-label="Desktop taskbar">
+    <div class="taskbar-start">
+        @if (Launcher is not null)
+        {
+            <button type="button"
+                    class="launcher-trigger @(Launcher.IsOpen ? "is-active" : "")"
+                    aria-label="App launcher"
+                    aria-expanded="@Launcher.IsOpen.ToString().ToLowerInvariant()"
+                    @onclick="HandleLauncherToggleClick">
+                <span class="launcher-mark" aria-hidden="true">@Options.LauncherMark</span>
+                <span class="launcher-label">@Options.LauncherLabel</span>
+            </button>
+        }
+    </div>
+
+    <nav class="taskbar-center" aria-label="Running applications">
+        @if (WindowSource is not null)
+        {
+            @foreach (TaskbarWindowItem window in WindowSource.Windows)
+            {
+                bool isFocused = window.IsFocused && !window.IsMinimized;
+                <button type="button"
+                        key="@window.Id.Value"
+                        class="taskbar-item @(isFocused ? "is-active" : "") @(window.IsMinimized ? "is-minimized" : "")"
+                        aria-label="@(window.Title) (@(isFocused ? "focused" : window.IsMinimized ? "minimized" : "background"))"
+                        @onclick="() => HandleWindowItemClick(window)">
+                    <span class="item-icon" aria-hidden="true">🗔</span>
+                    <span class="item-title">@window.Title</span>
+                </button>
+            }
+        }
+    </nav>
+
+    <div class="taskbar-end">
+        @if (NotificationSource is not null)
+        {
+            <button type="button"
+                    class="notification-trigger @(NotificationSource.IsOpen ? "is-active" : "")"
+                    aria-label="Notifications (@NotificationSource.UnreadCount unread)"
+                    aria-expanded="@NotificationSource.IsOpen.ToString().ToLowerInvariant()"
+                    @onclick="() => NotificationSource.Toggle()">
+                <span class="notification-icon" aria-hidden="true">🔔</span>
+                @if (NotificationSource.UnreadCount > 0)
+                {
+                    <span class="notification-badge" role="status">@NotificationSource.UnreadCount</span>
+                }
+            </button>
+        }
+
+        @if (StatusSource is not null)
+        {
+            <div class="taskbar-clock" aria-label="System clock" role="timer">
+                <span class="clock-icon" aria-hidden="true">⏱</span>
+                <span class="clock-text">@FormattedTime</span>
+            </div>
+        }
+
+        @if (SessionCommands is not null)
+        {
+            <button type="button"
+                    class="logout-trigger"
+                    aria-label="User session and logout"
+                    @onclick="() => SessionCommands.RequestLogout()">
+                <span class="logout-icon" aria-hidden="true">⏻</span>
+            </button>
+        }
+    </div>
+</footer>
+
+@code {
+    /// <summary>Gets or sets the running-windows source. Hides the center region when null.</summary>
+    [Parameter]
+    public ITaskbarWindowSource? WindowSource { get; set; }
+
+    /// <summary>Gets or sets the dispatcher for taskbar-initiated window commands.</summary>
+    [Parameter]
+    public ITaskbarCommandDispatcher? Commands { get; set; }
+
+    /// <summary>Gets or sets the host-provided launcher. Hides the launcher trigger when null.</summary>
+    [Parameter]
+    public ITaskbarLauncher? Launcher { get; set; }
+
+    /// <summary>Gets or sets the status source backing the clock region. Hides it when null.</summary>
+    [Parameter]
+    public ITaskbarStatusSource? StatusSource { get; set; }
+
+    /// <summary>Gets or sets the notification source. Hides the notification trigger when null.</summary>
+    [Parameter]
+    public ITaskbarNotificationSource? NotificationSource { get; set; }
+
+    /// <summary>Gets or sets the optional session commands. Hides the session control when null.</summary>
+    [Parameter]
+    public ITaskbarSessionCommands? SessionCommands { get; set; }
+
+    /// <summary>Gets or sets host-supplied labels for chrome that would otherwise hardcode branding.</summary>
+    [Parameter]
+    public TaskbarOptions Options { get; set; } = new();
+
+    private string FormattedTime => StatusSource?.UtcNow.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private void HandleLauncherToggleClick() => Launcher?.Toggle();
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        if (WindowSource is not null)
+        {
+            WindowSource.Changed += OnSourceChanged;
+        }
+
+        if (Launcher is not null)
+        {
+            Launcher.Changed += OnSourceChanged;
+        }
+
+        if (StatusSource is not null)
+        {
+            StatusSource.Changed += OnSourceChanged;
+        }
+
+        if (NotificationSource is not null)
+        {
+            NotificationSource.Changed += OnSourceChanged;
+        }
+    }
+
+    private void OnSourceChanged() => InvokeAsync(StateHasChanged);
+
+    private void HandleWindowItemClick(TaskbarWindowItem window)
+    {
+        if (Commands is not null)
+        {
+            TaskbarWindowInteraction.HandleClick(window, Commands);
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (WindowSource is not null)
+        {
+            WindowSource.Changed -= OnSourceChanged;
+        }
+
+        if (Launcher is not null)
+        {
+            Launcher.Changed -= OnSourceChanged;
+        }
+
+        if (StatusSource is not null)
+        {
+            StatusSource.Changed -= OnSourceChanged;
+        }
+
+        if (NotificationSource is not null)
+        {
+            NotificationSource.Changed -= OnSourceChanged;
+        }
+    }
+}
