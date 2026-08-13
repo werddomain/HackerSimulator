@@ -209,6 +209,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Windowing.Core", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Windowing.Core.Tests", "Tests\HackerOs.Windowing.Core.Tests\HackerOs.Windowing.Core.Tests.csproj", "{33203753-1BA8-43FE-969B-0EB3B9DB9601}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Windowing.Blazor", "Platform\HackerOs.Windowing.Blazor\HackerOs.Windowing.Blazor.csproj", "{5EE15063-5E89-4756-9780-B5377CA7E9EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1299,6 +1301,18 @@ Global
 		{33203753-1BA8-43FE-969B-0EB3B9DB9601}.Release|x64.Build.0 = Release|Any CPU
 		{33203753-1BA8-43FE-969B-0EB3B9DB9601}.Release|x86.ActiveCfg = Release|Any CPU
 		{33203753-1BA8-43FE-969B-0EB3B9DB9601}.Release|x86.Build.0 = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|x64.Build.0 = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1397,6 +1411,7 @@ Global
 		{1B3DA3E1-64DE-4824-A4D4-B9C8440A16C7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{B5BA182C-36EA-4823-9C64-F8A604771C96} = {E54149B9-7F22-367F-9CC5-FD829E3AA07B}
 		{33203753-1BA8-43FE-969B-0EB3B9DB9601} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{5EE15063-5E89-4756-9780-B5377CA7E9EC} = {E54149B9-7F22-367F-9CC5-FD829E3AA07B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {339AC3E9-0C3E-4CCF-BC46-C1938BC52847}

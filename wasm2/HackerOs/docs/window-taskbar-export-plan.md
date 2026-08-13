@@ -359,10 +359,17 @@ mais manquent dans un package.
 - [x] `EXT-WIN-004` Porter les tests du runtime et ajouter une suite de contrats
   indépendante de HackerOS. `HackerOs.Windowing.Core.Tests` (11 tests) ne
   référence que `HackerOs.Windowing.Core`.
-- [ ] `EXT-WIN-005` Créer la Razor Class Library `HackerOs.Windowing.Blazor` avec
-  assets collocatés.
-- [ ] `EXT-WIN-006` Éliminer les dépendances MudBlazor obligatoires du chrome
-  exportable.
+- [x] `EXT-WIN-005` Créer la Razor Class Library `HackerOs.Windowing.Blazor` avec
+  assets collocatés. `DesktopArea.razor`, `WindowHost.razor` et
+  `WindowChrome.razor` (+ `.razor.css`/`.razor.js`) déplacés depuis
+  `Platform.Blazor`, servis depuis `_content/HackerOs.Windowing.Blazor/...`.
+  `WindowSurface` reste à faire (voir 3.4) : reporté à la Phase D une fois
+  l'ergonomie de consommation réelle connue via la migration de `DesktopShell`.
+- [x] `EXT-WIN-006` Éliminer les dépendances MudBlazor obligatoires du chrome
+  exportable. `WindowChrome.razor` n'utilise plus `MudIconButton` ; boutons
+  natifs + icônes SVG scoped-CSS. Vérifié au navigateur : minimiser,
+  maximiser/restaurer, fermer et le geste de déplacement pointeur
+  fonctionnent identiquement.
 - [ ] `EXT-WIN-007` Définir les contrats de source et de commandes de taskbar.
 - [ ] `EXT-WIN-008` Créer `HackerOs.Taskbar.Blazor` et ses tests de composants.
 - [ ] `EXT-WIN-009` Implémenter les adaptateurs HackerOS dans

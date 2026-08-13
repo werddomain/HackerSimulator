@@ -1,5 +1,4 @@
-@namespace HackerOs.Platform.Blazor.Windows
-@using MudBlazor
+@namespace HackerOs.Windowing.Blazor
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
@@ -14,22 +13,32 @@
         <h2 id="@TitleId">@Window.Title</h2>
     </div>
     <div class="window-actions" aria-label="Window controls">
-        <MudIconButton Icon="@Icons.Material.Filled.Minimize"
-                       Size="Size.Small"
-                       aria-label="Minimize"
-                       title="Minimize"
-                       OnClick="MinimizeAsync" />
-        <MudIconButton Icon="@ToggleIcon"
-                       Size="Size.Small"
-                       aria-label="@ToggleLabel"
-                       title="@ToggleLabel"
-                       OnClick="ToggleMaximizeAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.Close"
-                       Size="Size.Small"
-                       Color="Color.Error"
-                       aria-label="Close"
-                       title="Close"
-                       OnClick="CloseAsync" />
+        <button type="button" class="chrome-button" aria-label="Minimize" title="Minimize" @onclick="MinimizeAsync">
+            <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                <line x1="2" y1="9" x2="10" y2="9" />
+            </svg>
+        </button>
+        <button type="button" class="chrome-button" aria-label="@ToggleLabel" title="@ToggleLabel" @onclick="ToggleMaximizeAsync">
+            @if (Window.VisualState == WindowVisualState.Maximized)
+            {
+                <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                    <rect x="1.5" y="3.5" width="7" height="7" />
+                    <rect x="3.5" y="1.5" width="7" height="7" class="chrome-icon-overlay" />
+                </svg>
+            }
+            else
+            {
+                <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                    <rect x="2" y="2" width="8" height="8" />
+                </svg>
+            }
+        </button>
+        <button type="button" class="chrome-button chrome-button-close" aria-label="Close" title="Close" @onclick="CloseAsync">
+            <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                <line x1="2" y1="2" x2="10" y2="10" />
+                <line x1="10" y1="2" x2="2" y2="10" />
+            </svg>
+        </button>
     </div>
 </header>
 @foreach (string edge in ResizeEdges)
@@ -72,10 +81,6 @@
     private IJSObjectReference? _module;
     private DotNetObjectReference<WindowChrome>? _selfReference;
 
-    private string ToggleIcon => Window.VisualState == WindowVisualState.Maximized
-        ? Icons.Material.Filled.FilterNone
-        : Icons.Material.Filled.CropSquare;
-
     private string ToggleLabel => Window.VisualState == WindowVisualState.Maximized ? "Restore" : "Maximize";
 
     private async Task MinimizeAsync()
@@ -106,7 +111,7 @@
 
         _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import",
-            "./_content/HackerOs.Platform.Blazor/Windows/WindowChrome.razor.js");
+            "./_content/HackerOs.Windowing.Blazor/WindowChrome.razor.js");
         _selfReference = DotNetObjectReference.Create(this);
         await _module.InvokeVoidAsync("attachWindowGestures", _interactionLayer, _selfReference);
     }
