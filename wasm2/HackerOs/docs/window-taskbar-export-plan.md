@@ -428,27 +428,101 @@ mais manquent dans un package.
   n'active ni notifications ni commandes de session (zones absentes
   proprement, vérifié au navigateur). Confirme que le moteur/chrome/taskbar
   exportés sont utilisables sans aucun type HackerOS.
-- [ ] `EXT-WIN-012` Ajouter les métadonnées de packaging et produire des packages
-  NuGet locaux.
-- [ ] `EXT-WIN-013` Tester un sample consommant uniquement les packages locaux.
-- [ ] `EXT-WIN-014` Ajouter baseline API, tests Release/trimming et documentation
-  de versionnement.
-- [ ] `EXT-WIN-015` Mettre à jour la solution, les documents d’architecture et la
-  liste d’intégration.
+- [x] `EXT-WIN-012` Ajouter les métadonnées de packaging et produire des packages
+  NuGet locaux. `Platform/Packaging.props` (importé par les 3 projets exportés)
+  fixe `Version=0.1.0-local`, `Authors`, `RepositoryUrl`/`RepositoryType`,
+  `PackageTags`, `PackageLicenseFile`/`PackageReadmeFile`,
+  `GenerateDocumentationFile=true`, symboles `.snupkg`, et SourceLink GitHub
+  (`EmbedUntrackedSources`). Chaque projet ajoute son `PackageId` et sa
+  `Description`. Un `README.md` a été ajouté dans chacun des 3 dossiers de
+  projet. `dotnet pack -c Release -o artifacts/local-nupkg` produit
+  `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor` et
+  `HackerOs.Taskbar.Blazor` (`.nupkg` + `.snupkg`) sans avertissement, y
+  compris sous `TreatWarningsAsErrors=true` avec doc XML générée — la
+  couverture XML publique exigée par cette tâche était donc déjà complète
+  avant packaging, aucun commentaire supplémentaire n'a été nécessaire.
+  `artifacts/` et `*.nupkg` sont déjà couverts par le `.gitignore` du dépôt.
+- [x] `EXT-WIN-013` Tester un sample consommant uniquement les packages locaux.
+  `Samples/HackerOs.Windowing.SampleHost/nuget.config` déclare une source
+  locale (`<clear/>` + `nuget.org` + `../../artifacts/local-nupkg`). Le csproj
+  du sample a été temporairement basculé de `ProjectReference` vers
+  `PackageReference Version="0.1.0-local"` pour les 3 packages, restauré
+  (`dotnet restore`) et compilé (`dotnet build -c Debug`, 0 avertissement/0
+  erreur) en consommant réellement les `.nupkg` plutôt que les projets.
+  Vérifié au navigateur (harness `hackeros-windowing-sample-host`, port 5254) :
+  aucune erreur console, rendu identique (launcher + horloge, sans
+  notifications/session comme prévu), et surtout les assets statiques
+  packagés de la RCL (`DesktopArea.razor.js`, `WindowHost.razor.js`,
+  `WindowChrome.razor.js`) se chargent en `200 OK` depuis
+  `_content/HackerOs.Windowing.Blazor/...` — preuve que le contenu
+  `staticwebassets/` du `.nupkg` fonctionne à l'exécution, pas seulement par
+  coïncidence de référence de projet. Le geste de déplacement de fenêtre par
+  pointeur (`pointerdown`/`pointermove`/`pointerup` synthétiques) a aussi été
+  rejoué avec succès contre les assets packagés, avec un delta exact
+  (`+60,+30`). Le csproj du sample a ensuite été restauré à
+  `ProjectReference` (ergonomie de développement normale dans le dépôt) ;
+  `nuget.config` reste en place car inoffensif et permet de rejouer cette
+  vérification à tout moment.
+- [x] `EXT-WIN-014` Ajouter baseline API, tests Release/trimming et documentation
+  de versionnement. `Microsoft.CodeAnalysis.PublicApiAnalyzers` (3.3.4) est
+  référencé par les 3 projets exportés via `Packaging.props`. Chaque projet a
+  ses `PublicAPI.Shipped.txt` (vide — rien n'a encore été publié) et
+  `PublicAPI.Unshipped.txt` (surface publique actuelle, générée avec
+  `dotnet format analyzers --diagnostics RS0016 --include-generated`, seul
+  moyen de faire remonter aussi les membres générés par le compilateur Razor
+  comme `OnAfterRenderAsync`/`DisposeAsync`/les accesseurs de `[Parameter]` —
+  sans ce drapeau l'outil ignore silencieusement le code généré). RS0041
+  (« type référence inconscient ») est désactivé via `NoWarn` dans
+  `Packaging.props` uniquement pour les surcharges `BuildRenderTree`
+  générées par Razor, qui n'ont pas de contexte `#nullable enable` et ne
+  peuvent pas être corrigées à la main sans casser à chaque montée de
+  version du SDK Razor. Toute évolution future de la surface publique de ces
+  3 projets fera échouer le build (RS0016/RS0017) tant que
+  `PublicAPI.Unshipped.txt` n'est pas mis à jour — comportement voulu.
+  Preuve Release/trimming : `dotnet publish
+  Samples/HackerOs.Windowing.SampleHost -c Release` termine sans le moindre
+  avertissement (aucun `warn`/`IL####` dans la sortie complète), l'IL Linker
+  tourne (« Optimisation des assemblages pour la taille ») et les 3
+  assemblys exportés apparaissent bien recadrés dans
+  `wwwroot/_framework/` aux côtés du sample lui-même.
+- [x] `EXT-WIN-015` Mettre à jour la solution, les documents d’architecture et la
+  liste d’intégration. `HackerOs.sln` contient déjà les 6 projets exportés/tests/
+  sample depuis les phases précédentes (aucun ajout requis ici). Mis à jour :
+  `docs/window-runtime.md` (retire l'affirmation obsolète « pas de RenderFragment »
+  et « couplé à ProcessId/AppInstanceId », documente `HackerOs.Windowing.Core`,
+  `WindowOwnerId`, et le `RenderFragment? Content` approuvé) ; `docs/desktop-shell.md`
+  (remplace la description de l'ancien `Shell/Taskbar.razor` par
+  `HackerOs.Taskbar.Blazor.Taskbar` + `Shell/TaskbarAdapters.cs`) ;
+  `docs/integration-task-list.md` sections 11 et 14 (note de relocalisation
+  pointant vers ce document, historique `P2-WIN-*`/`P2-SHELL-002` conservé tel
+  quel conformément à la règle « ne jamais supprimer une tâche »).
+  `dotnet build HackerOs.sln -c Debug` termine à 0 avertissement/0 erreur après
+  chacune des sections `EXT-WIN-012` à `014` (métadonnées de packaging,
+  `Microsoft.CodeAnalysis.PublicApiAnalyzers`, RS0041 en `NoWarn`).
 
 ## 11. Définition de complétion
 
 L’extraction est terminée lorsque :
 
-- une application de la solution utilise fenêtres et taskbar sans référencer
-  `HackerOs.Ecosystem` ;
-- le moteur headless ne dépend ni de Blazor ni des services HackerOS ;
-- la taskbar consomme uniquement ses contrats publics ;
-- HackerOS conserve son comportement via des adaptateurs explicites ;
-- les tests headless, composants et navigateur passent ;
-- les ressources statiques fonctionnent depuis une référence de projet et depuis
-  un package NuGet local ;
-- la publication Release ne produit aucun diagnostic inexpliqué ;
-- la documentation publique permet à un autre développeur d’intégrer les packages
-  sans lire leur code source.
+- [x] une application de la solution utilise fenêtres et taskbar sans référencer
+  `HackerOs.Ecosystem` (`Samples/HackerOs.Windowing.SampleHost`, `EXT-WIN-011`) ;
+- [x] le moteur headless ne dépend ni de Blazor ni des services HackerOS
+  (`HackerOs.Windowing.Core` : zéro référence de projet, seul
+  `Microsoft.AspNetCore.Components` pour le type délégué `RenderFragment`) ;
+- [x] la taskbar consomme uniquement ses contrats publics
+  (`HackerOs.Taskbar.Blazor`, `EXT-WIN-007`/`008`) ;
+- [x] HackerOS conserve son comportement via des adaptateurs explicites
+  (`Shell/TaskbarAdapters.cs`, vérifié au navigateur sans régression, `EXT-WIN-009`/`010`) ;
+- [x] les tests headless, composants et navigateur passent (`dotnet test HackerOs.sln`
+  et vérifications `HackerOs.BrowserHarness.Tests` à chaque phase) ;
+- [x] les ressources statiques fonctionnent depuis une référence de projet et depuis
+  un package NuGet local (`EXT-WIN-011` puis `EXT-WIN-013`) ;
+- [x] la publication Release ne produit aucun diagnostic inexpliqué
+  (`EXT-WIN-014` : `dotnet publish -c Release` du sample, 0 avertissement) ;
+- [x] la documentation publique permet à un autre développeur d’intégrer les packages
+  sans lire leur code source (`README.md` dans chacun des 3 projets exportés,
+  doc XML publique complète sous `GenerateDocumentationFile=true`).
+
+**État : extraction terminée le 2026-08-13.** `EXT-WIN-001` à `015` sont tous
+complets ; voir la section 10 pour le détail phase par phase.
 

@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="..\Packaging.props" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>HackerOs.Windowing.Blazor</PackageId>
+    <Description>Razor components (DesktopArea, WindowHost, WindowChrome) that render a HackerOs.Windowing.Core WindowRuntime. No MudBlazor dependency.</Description>
   </PropertyGroup>
 
   <ItemGroup>

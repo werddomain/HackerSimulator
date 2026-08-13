@@ -1,0 +1,42 @@
+<Project>
+  <!--
+    Shared NuGet packaging metadata for the windowing/taskbar export
+    (wasm2/HackerOs/docs/window-taskbar-export-plan.md, EXT-WIN-012). Imported only by
+    the projects meant to ship as packages; most of the solution never imports this file.
+
+    Version is a single shared "0.1.0-local" across all three packages for this first
+    packaging pass; they can version independently once real consumers pin different
+    versions. Per the export plan, these are local-only: produced with `dotnet pack` and
+    consumed from a local NuGet feed, never pushed to a public source, until a dedicated
+    publish decision is made.
+  -->
+  <PropertyGroup>
+    <!-- RS0041 fires on Razor-generated BuildRenderTree overrides because the Razor source
+         generator emits that method without a #nullable enable pragma; there is no source we
+         control to fix, so it is excluded rather than hand-authoring oblivious-nullable
+         PublicAPI entries that would break on every Razor SDK bump. -->
+    <NoWarn>$(NoWarn);RS0041</NoWarn>
+    <Version>0.1.0-local</Version>
+    <Authors>Benoit Robin</Authors>
+    <RepositoryUrl>https://github.com/werddomain/HackerSimulator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>hackeros;windowing;blazor;desktop-shell</PackageTags>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <!-- EXT-WIN-014: tracks the public surface of each exported package across releases;
+         additions/removals must be reflected in PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt
+         in the project's own directory, or the build fails (RS0016/RS0017). -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="All" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\LICENSE.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="README.md" Pack="true" PackagePath="" Condition="Exists('README.md')" Visible="false" />
+  </ItemGroup>
+</Project>
