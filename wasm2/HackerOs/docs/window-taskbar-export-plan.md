@@ -402,11 +402,32 @@ mais manquent dans un package.
   navigateur pour les cinq). `HackerOs.Taskbar.Blazor.Tests` couvre la
   logique d'interaction pure (`TaskbarWindowInteraction`, 4 tests). Piège
   rencontré, voir note dans la section 3.5 ci-dessous.
-- [ ] `EXT-WIN-009` Implémenter les adaptateurs HackerOS dans
-  `HackerOs.Platform.Blazor`.
-- [ ] `EXT-WIN-010` Migrer `DesktopShell` sans modifier son comportement public.
-- [ ] `EXT-WIN-011` Créer un sample host interne sans dépendance à
-  `HackerOs.Ecosystem`.
+- [x] `EXT-WIN-009` Implémenter les adaptateurs HackerOS dans
+  `HackerOs.Platform.Blazor`. Six classes dans `Shell/TaskbarAdapters.cs` :
+  `TaskbarWindowSourceAdapter`, `TaskbarCommandDispatcherAdapter` (route
+  `Close` par le même mécanisme de close-guard que `DesktopShell`),
+  `TaskbarLauncherAdapter`/`TaskbarNotificationSourceAdapter` (possèdent
+  eux-mêmes leur état ouvert/fermé pour que le panneau du shell et le
+  déclencheur de la taskbar restent synchronisés quel que soit lequel des
+  deux a changé l'état), `TaskbarStatusSourceAdapter` (tick chaque seconde
+  simulée), `TaskbarSessionCommandsAdapter`.
+- [x] `EXT-WIN-010` Migrer `DesktopShell` sans modifier son comportement public.
+  L'ancien `Platform.Blazor/Shell/Taskbar.razor` est supprimé (plus aucune
+  référence). Vérifié entièrement au navigateur contre l'hôte HackerOS
+  complet : lanceur, sélection d'appli, minimiser/restaurer par la taskbar,
+  notifications, touche Échap, fermeture de fenêtre, déconnexion, geste de
+  déplacement pointeur. Un vrai bug trouvé par cette vérification (pas par
+  la compilation) : `OpenLogout()` invoqué via un appel de méthode brut sur
+  l'adaptateur au lieu d'un `EventCallback` Blazor ne déclenchait plus le
+  nouveau rendu automatique du parent ; corrigé par un appel explicite.
+- [x] `EXT-WIN-011` Créer un sample host interne sans dépendance à
+  `HackerOs.Ecosystem`. `Samples/HackerOs.Windowing.SampleHost` ne référence
+  que `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor` et
+  `HackerOs.Taskbar.Blazor` ; sa propre source d'applications (deux
+  composants Blazor triviaux), ses propres adaptateurs de taskbar, et
+  n'active ni notifications ni commandes de session (zones absentes
+  proprement, vérifié au navigateur). Confirme que le moteur/chrome/taskbar
+  exportés sont utilisables sans aucun type HackerOS.
 - [ ] `EXT-WIN-012` Ajouter les métadonnées de packaging et produire des packages
   NuGet locaux.
 - [ ] `EXT-WIN-013` Tester un sample consommant uniquement les packages locaux.

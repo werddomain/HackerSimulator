@@ -12,6 +12,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Tests/HackerOs.BrowserHarness.Tests/HackerOs.BrowserHarness.Tests.csproj", "--urls", "http://127.0.0.1:5253"],
       "port": 5253
+    },
+    {
+      "name": "hackeros-windowing-sample-host",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Samples/HackerOs.Windowing.SampleHost/HackerOs.Windowing.SampleHost.csproj", "--urls", "http://127.0.0.1:5254"],
+      "port": 5254
     }
   ]
 }

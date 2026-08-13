@@ -215,6 +215,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Taskbar.Blazor", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Taskbar.Blazor.Tests", "Tests\HackerOs.Taskbar.Blazor.Tests\HackerOs.Taskbar.Blazor.Tests.csproj", "{1BA254E9-4C51-4A4C-BF99-E58BD4786E63}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{5D20AA90-6969-D8BD-9DCD-8634F4692FDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Windowing.SampleHost", "Samples\HackerOs.Windowing.SampleHost\HackerOs.Windowing.SampleHost.csproj", "{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1341,6 +1345,18 @@ Global
 		{1BA254E9-4C51-4A4C-BF99-E58BD4786E63}.Release|x64.Build.0 = Release|Any CPU
 		{1BA254E9-4C51-4A4C-BF99-E58BD4786E63}.Release|x86.ActiveCfg = Release|Any CPU
 		{1BA254E9-4C51-4A4C-BF99-E58BD4786E63}.Release|x86.Build.0 = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|x64.Build.0 = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Debug|x86.Build.0 = Debug|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|x64.ActiveCfg = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|x64.Build.0 = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|x86.ActiveCfg = Release|Any CPU
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1442,6 +1458,7 @@ Global
 		{5EE15063-5E89-4756-9780-B5377CA7E9EC} = {E54149B9-7F22-367F-9CC5-FD829E3AA07B}
 		{039E9ADD-006A-4828-B48E-BCB88BC94315} = {E54149B9-7F22-367F-9CC5-FD829E3AA07B}
 		{1BA254E9-4C51-4A4C-BF99-E58BD4786E63} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{4B2AA52C-F469-45B6-BF53-3B4347F6BA7F} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {339AC3E9-0C3E-4CCF-BC46-C1938BC52847}
