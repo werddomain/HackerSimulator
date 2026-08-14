@@ -514,7 +514,20 @@ L’extraction est terminée lorsque :
 - [x] HackerOS conserve son comportement via des adaptateurs explicites
   (`Shell/TaskbarAdapters.cs`, vérifié au navigateur sans régression, `EXT-WIN-009`/`010`) ;
 - [x] les tests headless, composants et navigateur passent (`dotnet test HackerOs.sln`
-  et vérifications `HackerOs.BrowserHarness.Tests` à chaque phase) ;
+  et vérifications `HackerOs.BrowserHarness.Tests` à chaque phase). Un test E2E
+  Playwright permanent manquait pour le scénario `taskbar` (vérifié seulement à
+  la main via le navigateur pendant la Phase C) : ajouté
+  `Taskbar_reacts_to_contracts_and_hides_optional_zones_cleanly` dans
+  `Tests/HackerOs.E2E.Tests/IndexedDbBrowserContractTests.cs`, qui exerce le
+  cycle background→focused→minimized→focused par clic, l'ajout dynamique de
+  fenêtre, notification et horloge poussées sans commande du taskbar, le
+  launcher, la déconnexion, et la disparition/réapparition propre de chacune
+  des 5 zones optionnelles quand son contrat est retiré ; `taskbar` a aussi été
+  ajouté à la liste de scénarios du test d'accessibilité axe-core. Les deux
+  suites `HackerOs.E2E.Tests` (15/15) et `HackerOs.UI.E2E.Tests` (4/4) passent
+  intégralement (nécessite un build Release préalable de
+  `Tests/HackerOs.BrowserHarness.Tests` et `test/test`, que ces suites lancent
+  elles-mêmes via `dotnet run --no-build -c Release`) ;
 - [x] les ressources statiques fonctionnent depuis une référence de projet et depuis
   un package NuGet local (`EXT-WIN-011` puis `EXT-WIN-013`) ;
 - [x] la publication Release ne produit aucun diagnostic inexpliqué
