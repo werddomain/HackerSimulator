@@ -7,12 +7,12 @@
 @using HackerOs.Platform.Core.Sessions
 @using HackerOs.Simulation.Abstractions.Recovery
 @using HackerOs.Simulation.Abstractions.Sessions
-@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@using HackerOs.Platform.Blazor.Hosting
 @inject ILocalUserRepository UserRepository
 @inject ILocalGroupRepository GroupRepository
 @inject ISessionService SessionService
 @inject EcosystemBootCoordinator BootCoordinator
-@inject IWebAssemblyHostEnvironment HostEnvironment
+@inject IEcosystemHostEnvironment HostEnvironment
 @inject WebCryptoPasswordHasher PasswordHasher
 
 <main class="ecosystem-host">
@@ -119,7 +119,7 @@
                 <h1 id="boundary-fatal-title">HackerOS encountered an error</h1>
                 <p>The failure was recorded without exposing sensitive details.</p>
                 <code>Correlation: @ErrorBoundary?.CorrelationId</code>
-                @if (HostEnvironment.IsDevelopment())
+                @if (HostEnvironment.IsDevelopment)
                 {
                     <pre class="fatal-details">@exception.ToString()</pre>
                 }

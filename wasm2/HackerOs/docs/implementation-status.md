@@ -454,6 +454,15 @@ server is absent.
 | P5-SRV-003 | Server data policy, health, and export | ✅ Done |
 | P5-SRV-004 | ASP.NET Core server composition (Program.cs + EF Core) | ✅ Done — documented configuration, schema bootstrap, health, authenticated ownership, and bounded backup/restore are integrated |
 
+### P5-UI — Server-Hosted Blazor UI (ADR 0027)
+
+| ID | Title | Status |
+|---|---|---|
+| P5-UI-001 | Render-mode-agnostic environment/lazy-load transport seam (`IEcosystemHostEnvironment`, `InProcessAssemblyTransport`) | ✅ Done |
+| P5-UI-002 | Interactive Server component hosting in `HackerOs.Server` (`Components/App.razor`, `Program.cs` composition) | ✅ Done — single-tenant/single-active-circuit only |
+| P5-UI-003 | Multi-tenant scoped-service conversion and EF-backed browser-storage replacement | ⬜ Not started — needs its own ADR |
+| P5-UI-004 | Direct injection of `IAccountService`/`ISyncService`/`IProxyService` into UI code instead of HTTP | ⬜ Not started — needs its own ADR and shared client abstraction |
+
 ### P5-SYNC — Record Synchronization
 
 | ID | Title | Status |
@@ -480,6 +489,7 @@ server is absent.
 ### New ADRs
 - **ADR 0024** — Server Identity and Device Registration (D-017)
 - **ADR 0025** — Record Synchronization Envelope, Conflict Model, and Cursor Strategy (D-018)
+- **ADR 0027** — Server-Hosted Blazor UI (Third Host, Single-Tenant Phase)
 
 ### Solution structure
 ```
@@ -489,6 +499,7 @@ Server/
     Data/                          — DbContext + entity models
     Services/                      — AuthServices, AccountService, SyncService, ProxyService, AuditService, ContentBlobService
     Endpoints/                     — VersionEndpoints, IdentityEndpoints, SyncEndpoints, ProxyEndpoints, AdminEndpoints
+    Components/                    — Server-hosted Blazor UI (ADR 0027): App.razor, Interactive Server render mode
 Tests/
   HackerOs.Server.Tests/           — focused unit tests for sync, proxy, versioning, and identity
 ```

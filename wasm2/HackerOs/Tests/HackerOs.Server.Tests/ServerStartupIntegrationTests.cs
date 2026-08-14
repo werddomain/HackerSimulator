@@ -11,9 +11,22 @@ using Xunit;
 namespace HackerOs.Server.Tests;
 
 /// <summary>
+/// Serializes tests that configure the server host via process-wide
+/// <c>HACKEROS_*</c> environment variables (read once at <see cref="Program"/>
+/// startup) — xUnit runs different test classes concurrently by default, and
+/// two such tests racing would each observe the other's connection string.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ServerEnvironmentCollection
+{
+    public const string Name = "HackerOs.Server environment-variable tests";
+}
+
+/// <summary>
 /// Exercises the optional server's real application composition, including the
 /// SQLite migration performed during startup and the unauthenticated health endpoint.
 /// </summary>
+[Collection(ServerEnvironmentCollection.Name)]
 public sealed class ServerStartupIntegrationTests : IAsyncLifetime
 {
     private readonly string _databasePath = Path.Combine(

@@ -1,0 +1,7 @@
+@* Exists only to give MapRazorComponents<App>() a matchable route for "/" — App.razor
+   always renders HackerOs.Ecosystem.App directly regardless of which page matched, so
+   this page's own content is never shown. Mirrors test/test/Components/Pages/Home.razor,
+   the same load-bearing pattern that host already depends on. *@
+@page "/"
+
+<PageTitle>HackerOS</PageTitle>

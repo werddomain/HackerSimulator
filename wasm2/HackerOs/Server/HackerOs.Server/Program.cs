@@ -1,3 +1,8 @@
+using HackerOs.Ecosystem;
+using HackerOs.Platform.Blazor.Hosting;
+using HackerOs.Platform.Blazor.LazyLoading;
+using HackerOs.Server;
+using HackerOs.Server.Components;
 using HackerOs.Server.Data;
 using HackerOs.Server.Endpoints;
 using HackerOs.Server.Services;
@@ -18,6 +23,18 @@ using Scalar.AspNetCore;
 // =============================================================================
 
 var builder = WebApplication.CreateBuilder(args);
+
+// The server-hosted Blazor UI (ADR 0027) reuses AddHackerOsEcosystem unmodified,
+// whose composition root registers browser-storage repositories as process-wide
+// singletons that construct-inject the circuit-scoped IJSRuntime — the same
+// single-tenant captive-dependency shape test/test already accepts for the same
+// composition root. Default scope validation would reject that at Build() time;
+// disabling it here mirrors test/test/Program.cs exactly.
+builder.Host.UseDefaultServiceProvider(options =>
+{
+    options.ValidateScopes = false;
+    options.ValidateOnBuild = false;
+});
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 // WebApplication.CreateBuilder already loads appsettings.json, the environment
@@ -99,6 +116,45 @@ builder.Services.AddCors(options =>
 // ── OpenAPI (Scalar UI) ───────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
+// ── Server-hosted Blazor UI (ADR 0027) ────────────────────────────────────────
+// Serves the same HackerOs.Ecosystem.App component tree as OS/HackerOs.Ecosystem
+// (static WASM) and test/test (WASM debug harness) via Interactive Server render
+// mode. Single-tenant/single-active-circuit only for this phase — see ADR 0027.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddSingleton<IEcosystemHostEnvironment, AspNetCoreEcosystemHostEnvironment>();
+builder.Services.AddSingleton<IBuildKnownAssemblyTransport, InProcessAssemblyTransport>();
+builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
+    BuildKnownLazyAssemblies.Names,
+    provider.GetRequiredService<IBuildKnownAssemblyTransport>()));
+builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
+    BuildKnownLazyApps.Catalog,
+    provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
+
+int serviceCountBeforeEcosystem = builder.Services.Count;
+builder.Services.AddHackerOsEcosystem(
+    BuildKnownLazyApps.Catalog,
+    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
+    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
+
+// AddHackerOsEcosystem registers HackerOsDiagnosticLoggerProvider as ILoggerProvider. That
+// provider construct-injects the browser-storage diagnostic repository, which construct-injects
+// IJSRuntime — safe in WASM hosts (IJSRuntime is available immediately, no circuit concept) but
+// not here: ASP.NET Core eagerly constructs every registered ILoggerProvider while building the
+// host's ILoggerFactory, before any Blazor Server circuit exists, and IJSRuntime has no live
+// circuit to attach to that early. This is the single-tenant captive-dependency limitation ADR
+// 0027 documents, surfacing at its worst — a startup hang rather than a leaked-instance quirk.
+// Removing only the descriptor AddHackerOsEcosystem just added (not any framework-registered
+// ILoggerProvider) keeps the diagnostic sink itself intact; only its ILoggerFactory bridge is
+// skipped for this host. IndexedDb*-backed singletons are unaffected — they stay lazy and
+// resolve correctly on first real circuit use, exactly as intended for single-tenant hosting.
+for (int i = builder.Services.Count - 1; i >= serviceCountBeforeEcosystem; i--)
+{
+    if (builder.Services[i].ServiceType == typeof(ILoggerProvider))
+    {
+        builder.Services.RemoveAt(i);
+    }
+}
+
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
@@ -111,6 +167,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
+app.MapStaticAssets();
 
 // ── Database migration on startup ─────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
@@ -138,6 +196,13 @@ app.MapIdentityEndpoints();   // POST /api/account, POST /api/auth/login, ...
 app.MapSyncEndpoints();       // POST /api/sync/pull, POST /api/sync/push, ...
 app.MapProxyEndpoints();      // POST /api/proxy/http, GET /api/proxy/policy
 app.MapAdminEndpoints();      // GET /health, GET /api/account/data-summary, ...
+
+// ── Server-hosted Blazor UI (ADR 0027) ────────────────────────────────────────
+app.MapRazorComponents<HackerOs.Server.Components.App>()
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(
+        typeof(HackerOs.Ecosystem.App).Assembly,
+        typeof(HackerOs.Platform.Blazor.Shell.DesktopShell).Assembly);
 
 await app.RunAsync();
 

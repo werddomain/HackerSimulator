@@ -135,6 +135,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0024](adr/0024-server-identity-and-device-registration.md) | Server identity and device registration |
 | [0025](adr/0025-record-synchronization-envelope-and-conflict-model.md) | Record synchronization envelope, conflict model, and cursor strategy |
 | [0026](adr/0026-icon-library-support.md) | Shared icon library support (Bootstrap, Font Awesome, Lucide, Simple Icons) |
+| [0027](adr/0027-server-hosted-blazor-ui.md) | Server-hosted Blazor UI (third host, single-tenant phase) |
 
 ## Migration history and project status
 

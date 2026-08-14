@@ -1,4 +1,5 @@
 using HackerOs.Ecosystem;
+using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
 using test;
 using test.Components;
@@ -17,6 +18,7 @@ builder.Host.UseDefaultServiceProvider(options =>
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
+builder.Services.AddSingleton<IEcosystemHostEnvironment, WebAssemblyEcosystemHostEnvironment>();
 builder.Services.AddSingleton<IBuildKnownAssemblyTransport, WebAssemblyLazyAssemblyTransport>();
 builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
     BuildKnownLazyAssemblies.Names,

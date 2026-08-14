@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using HackerOs.Ecosystem;
+using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -10,6 +11,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // WebAssembly client service registrations: required for client-side DI when running in WebAssembly mode.
 // builder.RootComponents.Add<App>("#app");
 // builder.RootComponents.Add<HeadOutlet>("head::after");
+builder.Services.AddSingleton<IEcosystemHostEnvironment, WebAssemblyEcosystemHostEnvironment>();
 builder.Services.AddSingleton<IBuildKnownAssemblyTransport, WebAssemblyLazyAssemblyTransport>();
 builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
     BuildKnownLazyAssemblies.Names,

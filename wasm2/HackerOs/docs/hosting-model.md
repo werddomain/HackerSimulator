@@ -42,29 +42,52 @@ This host is not a distribution target and is not a dependency of any other
 project — it is expected to remain a permanent developer-facing harness, not a
 temporary scaffold to delete once the migration is "done."
 
-### 3. `Server/HackerOs.Server` — the optional backend, today
+### 3. `Server/HackerOs.Server` — the optional backend, and a third UI host
 
-`Server/HackerOs.Server/HackerOs.Server.csproj` is an ASP.NET Core minimal-API
-process (EF Core/SQLite) that is entirely optional at runtime. It currently
-provides three capabilities, consumed over HTTP by the WASM client when present:
+`Server/HackerOs.Server/HackerOs.Server.csproj` is an ASP.NET Core process
+(EF Core/SQLite) that is entirely optional at runtime. It provides three
+backend capabilities, consumed over HTTP by the WASM client when present:
 
 - **Sync** — versioned record push/pull with conflict resolution (ADR 0025).
 - **Identity** — account/device registration and token management (ADR 0024).
 - **Proxy** — server-validated HTTP/TCP/UDP proxying for authorized apps
   reaching the real network.
 
-It does not host any Razor UI today. See [`server-security.md`](server-security.md)
-and [`server-backup-restore.md`](server-backup-restore.md).
+Per ADR 0027, it also hosts the same `HackerOs.Ecosystem.App` Razor component
+tree the other two hosts render, via Interactive Server render mode
+(`Components/App.razor`, mapped in `Program.cs` alongside the unchanged API
+endpoints). This mirrors how `test/test` wires the shared component tree in,
+but as a real deployment target rather than a debug harness. **This host is
+single-tenant / single-active-circuit for this phase**: `AddHackerOsEcosystem`
+is reused completely unmodified, and nearly every service it registers is a
+process-wide singleton — correct for exactly one connected browser circuit
+(the same assumption `test/test` already makes), not for concurrent
+multi-user access. See ADR 0027 for the full reasoning and the enumerated
+singleton registrations this constraint rests on.
 
-## Future direction: Server as a third UI host
+See [`server-security.md`](server-security.md) and
+[`server-backup-restore.md`](server-backup-restore.md) for the backend
+capabilities, and ADR 0027 for the UI-hosting addition.
 
-It is a stated long-term goal — **not yet implemented, not yet scheduled** —
-for `HackerOs.Server` to also become a third way to serve the UI: hosting the
-same Razor components the way `test/test` does today, but as a real deployment
-target rather than a debug harness, with backend-only contracts and services
-(the ones `HackerOs.Server` already implements: sync, identity, proxy) injected
-directly into the composition root instead of being reached over HTTP from the
-WASM client.
+## Future direction: multi-tenant server hosting and direct service injection
+
+Two extensions to the server-hosted UI added by ADR 0027 remain future work,
+not yet scheduled:
+
+- **Multi-tenant concurrent access.** Converting the composition root's
+  singleton registrations to circuit-scoped lifetimes, and replacing every
+  `IndexedDb*`-backed repository with an EF Core/SQLite-backed equivalent (browser
+  storage cannot be shared across users the way a database can). This needs
+  its own ADR once undertaken.
+- **Direct service injection instead of HTTP.** Consuming
+  `IAccountService`/`ISyncService`/`IProxyService` directly from UI code when
+  hosted in `HackerOs.Server`, instead of over HTTP as the WASM hosts must.
+  This needs a shared client abstraction (e.g. an `IAccountClient`-shaped
+  interface with an HTTP-backed implementation for the WASM hosts and a
+  direct-injection implementation for the server-hosted UI) so the same UI
+  component code compiles and runs across all three hosts without
+  `HackerOs.Server`'s EF/SQLite-specific types leaking into shared UI code.
+  This also needs its own ADR.
 
 Consequences this implies for any component/service work done in the
 meantime, so it doesn't need to be redone later:
@@ -76,13 +99,12 @@ meantime, so it doesn't need to be redone later:
 - The WASM-only composition (`AddHackerOsEcosystem`) must keep working
   unmodified whether or not a server-hosted mode exists — this is additive, not
   a replacement for the standalone PWA.
-- No task in `integration-task-list.md` currently tracks this; when work
-  actually starts on it, it should get its own ADR (server-hosted composition,
-  render-mode strategy, contract injection boundary) before implementation.
 
 ## Non-goals
 
 - This document does not change which host is "the" build target — that
   remains `OS/HackerOs.Ecosystem`.
-- This document does not authorize adding a `Components/Pages` UI to
-  `HackerOs.Server` yet. That is future work requiring its own design pass.
+- The server-hosted UI added by ADR 0027 does not support concurrent
+  multi-user circuits — see "Future direction" above. Treat it as a
+  single-operator deployment target, not a multi-tenant service, until that
+  gap is closed by a future ADR.
