@@ -79,7 +79,7 @@ public sealed class EcosystemBootCoordinatorTests
 
         await bootCoordinator.BootAsync();
 
-        Assert.Equal(11, _catalog.SelectedManifests.Count);
+        Assert.Equal(12, _catalog.SelectedManifests.Count);
         Assert.Contains(_catalog.SelectedManifests, manifest => manifest.Id == "org.hackeros.hack-paint");
     }
 

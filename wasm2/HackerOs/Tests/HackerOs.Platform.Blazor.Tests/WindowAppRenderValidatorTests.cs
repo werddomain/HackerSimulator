@@ -3,6 +3,7 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Windowing.Core;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -39,9 +40,9 @@ public sealed class WindowAppRenderValidatorTests
     }
 
     [Fact]
-    public void Validate_rejects_mismatched_instance_or_process_identity()
+    public void Validate_rejects_mismatched_instance_identity()
     {
-        RenderFixture fixture = new(windowProcessId: ProcessId.FromInt64(99));
+        RenderFixture fixture = new(windowInstanceId: Guid.Parse("30000000-0000-0000-0000-000000000099"));
 
         Assert.Throws<InvalidOperationException>(() =>
             WindowAppRenderValidator.Validate(fixture.Window, fixture.Descriptor, fixture.Context));
@@ -51,7 +52,7 @@ public sealed class WindowAppRenderValidatorTests
     {
         private readonly Guid _instanceId = Guid.Parse("30000000-0000-0000-0000-000000000001");
 
-        public RenderFixture(string? windowAppId = null, ProcessId? windowProcessId = null)
+        public RenderFixture(string? windowAppId = null, Guid? windowInstanceId = null)
         {
             Manifest = CreateManifest();
             ProcessId processId = ProcessId.FromInt64(7);
@@ -60,8 +61,7 @@ public sealed class WindowAppRenderValidatorTests
             Window = new WindowRuntimeState(
                 WindowId.FromGuid(Guid.Parse("10000000-0000-0000-0000-000000000001")),
                 windowAppId ?? Manifest.Id,
-                windowProcessId ?? processId,
-                AppInstanceId.FromGuid(_instanceId),
+                WindowOwnerId.FromGuid(windowInstanceId ?? _instanceId),
                 Manifest.Name,
                 null,
                 new WindowBounds(20, 20, 640, 480),

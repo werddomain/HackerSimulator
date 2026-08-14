@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Windowing.Core;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
@@ -24,8 +25,7 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.True(presented);
         WindowRuntimeState window = Assert.Single(runtime.Windows);
         Assert.Equal(manifest.Id, window.AppId);
-        Assert.Equal(process.Pid, window.ProcessId);
-        Assert.Equal(process.AppInstanceId, window.AppInstanceId);
+        Assert.Equal(WindowOwnerId.FromGuid(process.AppInstanceId.Value), window.OwnerInstanceId);
         Assert.True(window.IsFocused);
     }
 
@@ -64,7 +64,7 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.True(presented);
         WindowRuntimeState window = Assert.Single(runtime.Windows);
         Assert.Equal(manifest.Id, window.AppId);
-        Assert.Equal(process.Pid, window.ProcessId);
+        Assert.Equal(WindowOwnerId.FromGuid(process.AppInstanceId.Value), window.OwnerInstanceId);
     }
 
     [Fact]

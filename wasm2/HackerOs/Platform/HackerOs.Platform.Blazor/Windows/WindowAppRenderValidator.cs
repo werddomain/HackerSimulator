@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Windowing.Core;
 
 namespace HackerOs.Platform.Blazor.Windows;
 
@@ -44,9 +45,9 @@ public static class WindowAppRenderValidator
             throw new InvalidOperationException("Window, descriptor, and execution context app IDs must match.");
         }
 
-        if (window.AppInstanceId.Value != appContext.InstanceId || window.ProcessId != appContext.ProcessId)
+        if (window.OwnerInstanceId.Value != appContext.InstanceId)
         {
-            throw new InvalidOperationException("Window and execution context instance/process identities must match.");
+            throw new InvalidOperationException("Window and execution context instance identities must match.");
         }
     }
 }

@@ -1,5 +1,4 @@
-@namespace HackerOs.Platform.Blazor.Windows
-@using Microsoft.AspNetCore.Components.Web
+@namespace HackerOs.Windowing.Blazor
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
@@ -85,7 +84,7 @@
         {
             _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
                 "import",
-                "./_content/HackerOs.Platform.Blazor/Windows/WindowHost.razor.js");
+                "./_content/HackerOs.Windowing.Blazor/WindowHost.razor.js");
         }
 
         if (_module is not null)

@@ -1,4 +1,4 @@
-@namespace HackerOs.Platform.Blazor.Windows
+@namespace HackerOs.Windowing.Blazor
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
@@ -77,7 +77,7 @@
             {
                 _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
                     "import",
-                    "./_content/HackerOs.Platform.Blazor/Windows/DesktopArea.razor.js");
+                    "./_content/HackerOs.Windowing.Blazor/DesktopArea.razor.js");
                 await _module.InvokeVoidAsync("observeDesktopSize", _desktopElement, _dotNetHelper);
             }
             catch (Exception ex)

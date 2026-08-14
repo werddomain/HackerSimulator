@@ -878,7 +878,7 @@ public sealed class IndexedDbBrowserContractTests
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
 
-            foreach (string scenario in new[] { "idle", "window", "dialog", "terminal-full-screen", "code-editor", "hack-paint" })
+            foreach (string scenario in new[] { "idle", "window", "dialog", "terminal-full-screen", "code-editor", "hack-paint", "taskbar" })
             {
                 await NavigateWhenReadyAsync(page, $"{address}/?scenario={scenario}");
                 var result = await page.RunAxe();
@@ -890,6 +890,124 @@ public sealed class IndexedDbBrowserContractTests
                     blocking.Length == 0,
                     $"serious/critical axe violations for '{scenario}': {string.Join(", ", blocking.Select(item => item.Id))}");
             }
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
+    /// <summary>Verifies the exported <c>HackerOs.Taskbar.Blazor.Taskbar</c> renders from host contracts,
+    /// reacts to window/notification/clock/session changes routed only through those contracts, and hides
+    /// each optional zone cleanly when its contract is withheld (EXT-WIN-007/008).</summary>
+    [Fact]
+    public async Task Taskbar_reacts_to_contracts_and_hides_optional_zones_cleanly()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+            List<string> failures = [];
+            page.Console += (_, message) =>
+            {
+                if (message.Type == "error") failures.Add($"console: {message.Text}");
+            };
+            page.PageError += (_, error) => failures.Add($"page: {error}");
+
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=taskbar");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
+
+            ILocator scenarioLog = page.Locator("[data-scenario-log]");
+            ILocator window1 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 1 (focused)" });
+            ILocator window2 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 2 (background)" });
+            await window1.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await window2.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            ILocator launcher = page.GetByLabel("App launcher");
+            Assert.Equal("false", await launcher.GetAttributeAsync("aria-expanded"));
+            await page.GetByLabel("Notifications (0 unread)")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await Assertions.Expect(page.Locator(".clock-text")).ToHaveTextAsync("09:00:00");
+            ILocator logout = page.GetByLabel("User session and logout");
+            await logout.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            // A background window click activates it; the previously focused window becomes background.
+            await window2.ClickAsync();
+            window2 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 2 (focused)" });
+            window1 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 1 (background)" });
+            await window2.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await window1.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            // A focused window click minimizes it.
+            await window2.ClickAsync();
+            window2 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 2 (minimized)" });
+            await window2.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            Assert.Contains("is-minimized", await window2.GetAttributeAsync("class"), StringComparison.Ordinal);
+
+            // A minimized window click restores and re-focuses it.
+            await window2.ClickAsync();
+            window2 = page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 2 (focused)" });
+            await window2.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            // A scenario-level control adds a third window directly through the window source contract.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Add window" }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 3 (background)" })
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            // Notification and clock sources push changes without a taskbar-initiated command.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Add notification" }).ClickAsync();
+            await page.GetByLabel("Notifications (1 unread)")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            Assert.Equal("1", await page.Locator(".notification-badge").InnerTextAsync());
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Tick clock" }).ClickAsync();
+            await Assertions.Expect(page.Locator(".clock-text")).ToHaveTextAsync("09:00:01");
+
+            // The launcher trigger toggles open/closed state from the host-supplied contract.
+            await launcher.ClickAsync();
+            Assert.Equal("true", await launcher.GetAttributeAsync("aria-expanded"));
+
+            // Logout routes through the host-supplied session commands contract.
+            await logout.ClickAsync();
+            await Assertions.Expect(scenarioLog).ToHaveTextAsync("Logout requested");
+
+            // Each optional zone disappears cleanly when its contract is withheld, and returns when restored.
+            // The "Running applications" <nav> wrapper itself is unconditional (only the window buttons
+            // inside are gated), so an empty nav collapses to zero size (hidden) rather than detaching.
+            ILocator runningApplications = page.GetByRole(AriaRole.Navigation, new() { Name = "Running applications" });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle window source" }).ClickAsync();
+            await runningApplications.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle window source" }).ClickAsync();
+            await runningApplications.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle launcher" }).ClickAsync();
+            await launcher.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle launcher" }).ClickAsync();
+            await launcher.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle status source" }).ClickAsync();
+            await page.Locator(".taskbar-clock").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle status source" }).ClickAsync();
+            await page.Locator(".taskbar-clock").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle notification source" }).ClickAsync();
+            await page.Locator(".notification-trigger").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle notification source" }).ClickAsync();
+            await page.Locator(".notification-trigger").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle session commands" }).ClickAsync();
+            await logout.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle session commands" }).ClickAsync();
+            await logout.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            Assert.Empty(failures);
         }
         finally
         {

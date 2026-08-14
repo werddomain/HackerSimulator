@@ -9,6 +9,7 @@
 @using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.Simulation.Abstractions.Processes
 @using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Windowing.Core
 @implements IDisposable
 
 <section class="dialog-browser-scenario" data-status="ready">
@@ -55,8 +56,7 @@
         _runtime.Apply(new CreateWindowCommand(new WindowRuntimeState(
             WindowId.FromGuid(Guid.Parse("43000000-0000-0000-0000-000000000001")),
             _context.Manifest.Id,
-            OwnerProcessId,
-            AppInstanceId.FromGuid(OwnerInstanceId),
+            WindowOwnerId.FromGuid(OwnerInstanceId),
             "Dialog Owner",
             null,
             new WindowBounds(80, 70, 360, 280),

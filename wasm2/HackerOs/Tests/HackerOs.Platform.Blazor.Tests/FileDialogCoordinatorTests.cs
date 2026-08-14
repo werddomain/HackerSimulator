@@ -5,6 +5,7 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
+using HackerOs.Windowing.Core;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -96,8 +97,7 @@ public sealed class FileDialogCoordinatorTests
         windows.Apply(new CreateWindowCommand(new WindowRuntimeState(
             ownerId,
             context.Manifest.Id,
-            context.ProcessId,
-            AppInstanceId.FromGuid(context.InstanceId),
+            WindowOwnerId.FromGuid(context.InstanceId),
             "Owner",
             null,
             new WindowBounds(100, 80, 800, 600),
@@ -170,8 +170,7 @@ public sealed class FileDialogCoordinatorTests
         windows.Apply(new CreateWindowCommand(new WindowRuntimeState(
             ownerId,
             context.Manifest.Id,
-            context.ProcessId,
-            AppInstanceId.FromGuid(context.InstanceId),
+            WindowOwnerId.FromGuid(context.InstanceId),
             "Owner",
             null,
             bounds,

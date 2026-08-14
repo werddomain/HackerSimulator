@@ -993,7 +993,17 @@ payload measurements are documented.
 **Scope and location:** New Razor Class Library
 `Platform/HackerOs.Platform.Blazor/`; tests in
 `Tests/HackerOs.Platform.Blazor.Tests/`; components and assets collocated; docs in
-`docs/window-runtime.md`.  
+`docs/window-runtime.md`.
+**Relocated (`EXT-WIN-001`–`006`, see [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md)):**
+the headless state machine (`WindowRuntime`, `WindowRuntimeState`, geometry/message
+types) now lives in standalone `Platform/HackerOs.Windowing.Core/`, tested in
+`Tests/HackerOs.Windowing.Core.Tests/`; the Razor components (`DesktopArea`,
+`WindowHost`, `WindowChrome`) now live in standalone `Platform/HackerOs.Windowing.Blazor/`.
+`HackerOs.Platform.Blazor` references both and supplies the HackerOS-specific adapters
+(`WindowCloseCoordinator`, `WindowLaunchCoordinator`, `WindowAppRenderer`) that remain
+here because they depend on `AppLifecycleOrchestrator`/`AppCatalog`. The task history
+below predates the relocation and is retained as-is; current architecture is documented
+in `docs/window-runtime.md`.  
 **Prerequisites:** `P1-ADR-002`, `P2-UI-001`, lifecycle/process/intent contracts,
 `WindowAppBase`. Can be prototyped before the host but must integrate through
 public platform contracts.  
@@ -1231,7 +1241,16 @@ UI, no server requirement, no root DI exposure, and no runtime package loader.
 
 **Scope and location:** `Platform/HackerOs.Platform.Blazor/Shell/` for reusable
 shell components; host-only boot/recovery UI in `OS/HackerOs.Ecosystem/`;
-collocated assets; docs in `docs/desktop-shell.md`.  
+collocated assets; docs in `docs/desktop-shell.md`.
+**Relocated (`EXT-WIN-007`–`010`, see [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md)):**
+the taskbar itself moved to standalone `Platform/HackerOs.Taskbar.Blazor/`, driven by
+host-supplied contracts rather than concrete HackerOS services. The former
+`Shell/Taskbar.razor/.css` was deleted; `Shell/TaskbarAdapters.cs` now implements the
+contracts against `WindowRuntime`/`AppCatalog`/`ISimulationClock`/`INotificationQueue`/
+`ISessionService`/`AppIntentDispatcher`, and `DesktopShell.razor` renders
+`HackerOs.Taskbar.Blazor.Taskbar` with those adapters. `P2-SHELL-002` below predates the
+relocation and is retained as history; current architecture is documented in
+`docs/desktop-shell.md`.
 **Prerequisites:** Window runtime, app runtime, session/policy, host.  
 **Explicit exclusions:** No marketing landing page, no app-specific dashboards,
 no decorative card-heavy layout, no direct concrete app references, and no

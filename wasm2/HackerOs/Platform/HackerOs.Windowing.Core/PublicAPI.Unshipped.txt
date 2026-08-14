@@ -1,0 +1,167 @@
+#nullable enable
+HackerOs.Windowing.Core.CancelWindowCloseCommand
+HackerOs.Windowing.Core.CancelWindowCloseCommand.CancelWindowCloseCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.CancelWindowCloseCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.CancelWindowCloseCommand.WindowId.init -> void
+HackerOs.Windowing.Core.ChangeViewportCommand
+HackerOs.Windowing.Core.ChangeViewportCommand.ChangeViewportCommand(HackerOs.Windowing.Core.WindowBounds WorkArea) -> void
+HackerOs.Windowing.Core.ChangeViewportCommand.WorkArea.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.ChangeViewportCommand.WorkArea.init -> void
+HackerOs.Windowing.Core.CreateWindowCommand
+HackerOs.Windowing.Core.CreateWindowCommand.CreateWindowCommand(HackerOs.Windowing.Core.WindowRuntimeState! InitialState) -> void
+HackerOs.Windowing.Core.CreateWindowCommand.InitialState.get -> HackerOs.Windowing.Core.WindowRuntimeState!
+HackerOs.Windowing.Core.CreateWindowCommand.InitialState.init -> void
+HackerOs.Windowing.Core.FocusWindowCommand
+HackerOs.Windowing.Core.FocusWindowCommand.FocusWindowCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.FocusWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.FocusWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.ForceWindowCloseCommand
+HackerOs.Windowing.Core.ForceWindowCloseCommand.ForceWindowCloseCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.ForceWindowCloseCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.ForceWindowCloseCommand.WindowId.init -> void
+HackerOs.Windowing.Core.MaximizeWindowCommand
+HackerOs.Windowing.Core.MaximizeWindowCommand.MaximizeWindowCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.MaximizeWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.MaximizeWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.MinimizeWindowCommand
+HackerOs.Windowing.Core.MinimizeWindowCommand.MinimizeWindowCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.MinimizeWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.MinimizeWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.MoveWindowCommand
+HackerOs.Windowing.Core.MoveWindowCommand.MoveWindowCommand(HackerOs.Windowing.Core.WindowId WindowId, double X, double Y) -> void
+HackerOs.Windowing.Core.MoveWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.MoveWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.MoveWindowCommand.X.get -> double
+HackerOs.Windowing.Core.MoveWindowCommand.X.init -> void
+HackerOs.Windowing.Core.MoveWindowCommand.Y.get -> double
+HackerOs.Windowing.Core.MoveWindowCommand.Y.init -> void
+HackerOs.Windowing.Core.RequestWindowCloseCommand
+HackerOs.Windowing.Core.RequestWindowCloseCommand.RequestWindowCloseCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.RequestWindowCloseCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.RequestWindowCloseCommand.WindowId.init -> void
+HackerOs.Windowing.Core.ResizeWindowCommand
+HackerOs.Windowing.Core.ResizeWindowCommand.Bounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.ResizeWindowCommand.Bounds.init -> void
+HackerOs.Windowing.Core.ResizeWindowCommand.ResizeWindowCommand(HackerOs.Windowing.Core.WindowId WindowId, HackerOs.Windowing.Core.WindowBounds Bounds) -> void
+HackerOs.Windowing.Core.ResizeWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.ResizeWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.RestoreWindowCommand
+HackerOs.Windowing.Core.RestoreWindowCommand.RestoreWindowCommand(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.RestoreWindowCommand.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.RestoreWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowBounds.Height.get -> double
+HackerOs.Windowing.Core.WindowBounds.Width.get -> double
+HackerOs.Windowing.Core.WindowBounds.WindowBounds() -> void
+HackerOs.Windowing.Core.WindowBounds.WindowBounds(double x, double y, double width, double height) -> void
+HackerOs.Windowing.Core.WindowBounds.X.get -> double
+HackerOs.Windowing.Core.WindowBounds.Y.get -> double
+HackerOs.Windowing.Core.WindowCloseCancelledEvent
+HackerOs.Windowing.Core.WindowCloseCancelledEvent.WindowCloseCancelledEvent(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.WindowCloseCancelledEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowCloseCancelledEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowClosedEvent
+HackerOs.Windowing.Core.WindowClosedEvent.WasForced.get -> bool
+HackerOs.Windowing.Core.WindowClosedEvent.WasForced.init -> void
+HackerOs.Windowing.Core.WindowClosedEvent.WindowClosedEvent(HackerOs.Windowing.Core.WindowId WindowId, bool WasForced) -> void
+HackerOs.Windowing.Core.WindowClosedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowClosedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowCloseRequestedEvent
+HackerOs.Windowing.Core.WindowCloseRequestedEvent.WindowCloseRequestedEvent(HackerOs.Windowing.Core.WindowId WindowId) -> void
+HackerOs.Windowing.Core.WindowCloseRequestedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowCloseRequestedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowCommand
+HackerOs.Windowing.Core.WindowConstraints
+HackerOs.Windowing.Core.WindowConstraints.IsResizable.get -> bool
+HackerOs.Windowing.Core.WindowConstraints.MaxHeight.get -> double?
+HackerOs.Windowing.Core.WindowConstraints.MaxWidth.get -> double?
+HackerOs.Windowing.Core.WindowConstraints.MinHeight.get -> double
+HackerOs.Windowing.Core.WindowConstraints.MinWidth.get -> double
+HackerOs.Windowing.Core.WindowConstraints.WindowConstraints(bool isResizable, double minWidth, double minHeight, double? maxWidth = null, double? maxHeight = null) -> void
+HackerOs.Windowing.Core.WindowCreatedEvent
+HackerOs.Windowing.Core.WindowCreatedEvent.Window.get -> HackerOs.Windowing.Core.WindowRuntimeState!
+HackerOs.Windowing.Core.WindowCreatedEvent.Window.init -> void
+HackerOs.Windowing.Core.WindowCreatedEvent.WindowCreatedEvent(HackerOs.Windowing.Core.WindowRuntimeState! Window) -> void
+HackerOs.Windowing.Core.WindowEvent
+HackerOs.Windowing.Core.WindowFocusedEvent
+HackerOs.Windowing.Core.WindowFocusedEvent.PreviousWindowId.get -> HackerOs.Windowing.Core.WindowId?
+HackerOs.Windowing.Core.WindowFocusedEvent.PreviousWindowId.init -> void
+HackerOs.Windowing.Core.WindowFocusedEvent.WindowFocusedEvent(HackerOs.Windowing.Core.WindowId? PreviousWindowId, HackerOs.Windowing.Core.WindowId WindowId, int ZOrder) -> void
+HackerOs.Windowing.Core.WindowFocusedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowFocusedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowFocusedEvent.ZOrder.get -> int
+HackerOs.Windowing.Core.WindowFocusedEvent.ZOrder.init -> void
+HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowId.Value.get -> System.Guid
+HackerOs.Windowing.Core.WindowId.WindowId() -> void
+HackerOs.Windowing.Core.WindowModality
+HackerOs.Windowing.Core.WindowModality.Modeless = 0 -> HackerOs.Windowing.Core.WindowModality
+HackerOs.Windowing.Core.WindowModality.OwnerModal = 1 -> HackerOs.Windowing.Core.WindowModality
+HackerOs.Windowing.Core.WindowMovedEvent
+HackerOs.Windowing.Core.WindowMovedEvent.Bounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowMovedEvent.Bounds.init -> void
+HackerOs.Windowing.Core.WindowMovedEvent.PreviousBounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowMovedEvent.PreviousBounds.init -> void
+HackerOs.Windowing.Core.WindowMovedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowMovedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowMovedEvent.WindowMovedEvent(HackerOs.Windowing.Core.WindowId WindowId, HackerOs.Windowing.Core.WindowBounds PreviousBounds, HackerOs.Windowing.Core.WindowBounds Bounds) -> void
+HackerOs.Windowing.Core.WindowOwnerId
+HackerOs.Windowing.Core.WindowOwnerId.Value.get -> System.Guid
+HackerOs.Windowing.Core.WindowOwnerId.WindowOwnerId() -> void
+HackerOs.Windowing.Core.WindowResizedEvent
+HackerOs.Windowing.Core.WindowResizedEvent.Bounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowResizedEvent.Bounds.init -> void
+HackerOs.Windowing.Core.WindowResizedEvent.PreviousBounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowResizedEvent.PreviousBounds.init -> void
+HackerOs.Windowing.Core.WindowResizedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowResizedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowResizedEvent.WindowResizedEvent(HackerOs.Windowing.Core.WindowId WindowId, HackerOs.Windowing.Core.WindowBounds PreviousBounds, HackerOs.Windowing.Core.WindowBounds Bounds) -> void
+HackerOs.Windowing.Core.WindowRuntime
+HackerOs.Windowing.Core.WindowRuntime.Apply(HackerOs.Windowing.Core.WindowCommand! command) -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Core.WindowEvent!>!
+HackerOs.Windowing.Core.WindowRuntime.IsInteractionBlocked(HackerOs.Windowing.Core.WindowId id) -> bool
+HackerOs.Windowing.Core.WindowRuntime.StateChanged -> System.Action?
+HackerOs.Windowing.Core.WindowRuntime.WindowRuntime(HackerOs.Windowing.Core.WindowBounds workArea) -> void
+HackerOs.Windowing.Core.WindowRuntime.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Core.WindowRuntimeState!>!
+HackerOs.Windowing.Core.WindowRuntimeState
+HackerOs.Windowing.Core.WindowRuntimeState.AppId.get -> string!
+HackerOs.Windowing.Core.WindowRuntimeState.Bounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowRuntimeState.Constraints.get -> HackerOs.Windowing.Core.WindowConstraints!
+HackerOs.Windowing.Core.WindowRuntimeState.Content.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Windowing.Core.WindowRuntimeState.IconAssetPath.get -> string?
+HackerOs.Windowing.Core.WindowRuntimeState.Id.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowRuntimeState.IsFocused.get -> bool
+HackerOs.Windowing.Core.WindowRuntimeState.Modality.get -> HackerOs.Windowing.Core.WindowModality
+HackerOs.Windowing.Core.WindowRuntimeState.OnRequestClose.get -> System.Func<System.Threading.Tasks.Task!>?
+HackerOs.Windowing.Core.WindowRuntimeState.OwnerId.get -> HackerOs.Windowing.Core.WindowId?
+HackerOs.Windowing.Core.WindowRuntimeState.OwnerInstanceId.get -> HackerOs.Windowing.Core.WindowOwnerId
+HackerOs.Windowing.Core.WindowRuntimeState.RestoreBounds.get -> HackerOs.Windowing.Core.WindowBounds?
+HackerOs.Windowing.Core.WindowRuntimeState.Title.get -> string!
+HackerOs.Windowing.Core.WindowRuntimeState.VisualState.get -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowRuntimeState.WindowRuntimeState(HackerOs.Windowing.Core.WindowId id, string! appId, HackerOs.Windowing.Core.WindowOwnerId ownerInstanceId, string! title, string? iconAssetPath, HackerOs.Windowing.Core.WindowBounds bounds, HackerOs.Windowing.Core.WindowBounds? restoreBounds, int zOrder, HackerOs.Windowing.Core.WindowVisualState visualState, HackerOs.Windowing.Core.WindowConstraints! constraints, HackerOs.Windowing.Core.WindowModality modality = HackerOs.Windowing.Core.WindowModality.Modeless, HackerOs.Windowing.Core.WindowId? ownerId = null, bool isFocused = false, Microsoft.AspNetCore.Components.RenderFragment? content = null, System.Func<System.Threading.Tasks.Task!>? onRequestClose = null) -> void
+HackerOs.Windowing.Core.WindowRuntimeState.ZOrder.get -> int
+HackerOs.Windowing.Core.WindowViewportChangedEvent
+HackerOs.Windowing.Core.WindowViewportChangedEvent.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Core.WindowRuntimeState!>!
+HackerOs.Windowing.Core.WindowViewportChangedEvent.Windows.init -> void
+HackerOs.Windowing.Core.WindowViewportChangedEvent.WindowViewportChangedEvent(HackerOs.Windowing.Core.WindowBounds WorkArea, System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Core.WindowRuntimeState!>! Windows) -> void
+HackerOs.Windowing.Core.WindowViewportChangedEvent.WorkArea.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowViewportChangedEvent.WorkArea.init -> void
+HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualState.Maximized = 2 -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualState.Minimized = 1 -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualState.Normal = 0 -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.Bounds.get -> HackerOs.Windowing.Core.WindowBounds
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.Bounds.init -> void
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.PreviousState.get -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.PreviousState.init -> void
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.RestoreBounds.get -> HackerOs.Windowing.Core.WindowBounds?
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.RestoreBounds.init -> void
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.State.get -> HackerOs.Windowing.Core.WindowVisualState
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.State.init -> void
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.WindowId.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.WindowId.init -> void
+HackerOs.Windowing.Core.WindowVisualStateChangedEvent.WindowVisualStateChangedEvent(HackerOs.Windowing.Core.WindowId WindowId, HackerOs.Windowing.Core.WindowVisualState PreviousState, HackerOs.Windowing.Core.WindowVisualState State, HackerOs.Windowing.Core.WindowBounds Bounds, HackerOs.Windowing.Core.WindowBounds? RestoreBounds) -> void
+override HackerOs.Windowing.Core.WindowId.ToString() -> string!
+override HackerOs.Windowing.Core.WindowOwnerId.ToString() -> string!
+static HackerOs.Windowing.Core.WindowId.FromGuid(System.Guid value) -> HackerOs.Windowing.Core.WindowId
+static HackerOs.Windowing.Core.WindowOwnerId.FromGuid(System.Guid value) -> HackerOs.Windowing.Core.WindowOwnerId

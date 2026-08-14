@@ -23,6 +23,7 @@ using HackerOs.Platform.Core.Time;
 using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
+using HackerOs.Windowing.Core;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;

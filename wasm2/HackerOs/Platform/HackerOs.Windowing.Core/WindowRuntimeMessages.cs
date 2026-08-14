@@ -1,4 +1,4 @@
-namespace HackerOs.Platform.Blazor.Windows;
+namespace HackerOs.Windowing.Core;
 
 /// <summary>Base contract for an immutable request to mutate window runtime state.</summary>
 public abstract record WindowCommand;

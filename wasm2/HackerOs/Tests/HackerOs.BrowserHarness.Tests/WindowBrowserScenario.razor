@@ -1,5 +1,5 @@
 @using HackerOs.Platform.Blazor.Windows
-@using HackerOs.Simulation.Abstractions.Processes
+@using HackerOs.Windowing.Core
 
 <section class="window-browser-scenario" data-status="ready">
     <nav class="scenario-taskbar" aria-label="Window test controls">
@@ -49,8 +49,7 @@
         _runtime.Apply(new CreateWindowCommand(new WindowRuntimeState(
             ModalId,
             "org.hackeros.browser.modal",
-            ProcessId.FromInt64(3),
-            AppInstanceId.FromGuid(Guid.Parse("30000000-0000-0000-0000-000000000003")),
+            WindowOwnerId.FromGuid(Guid.Parse("30000000-0000-0000-0000-000000000003")),
             "Primary Modal",
             null,
             new WindowBounds(180, 140, 320, 220),
@@ -90,8 +89,7 @@
         _runtime.Apply(new CreateWindowCommand(new WindowRuntimeState(
             WindowId.FromGuid(Guid.Parse(id)),
             appId,
-            ProcessId.FromInt64(_runtime.Windows.Count + 1),
-            AppInstanceId.FromGuid(Guid.NewGuid()),
+            WindowOwnerId.FromGuid(Guid.NewGuid()),
             title,
             null,
             new WindowBounds(x, y, 360, 280),

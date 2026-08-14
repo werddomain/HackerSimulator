@@ -1,4 +1,4 @@
-namespace HackerOs.Platform.Blazor.Windows;
+namespace HackerOs.Windowing.Core;
 
 /// <summary>Identifies one window independently from its app instance.</summary>
 public readonly record struct WindowId

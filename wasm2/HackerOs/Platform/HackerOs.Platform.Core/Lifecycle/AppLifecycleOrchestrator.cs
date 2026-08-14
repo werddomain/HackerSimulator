@@ -98,6 +98,30 @@ public sealed class AppLifecycleOrchestrator
     }
 
     /// <summary>
+    /// Attempts to resolve the active descriptor and context for a running instance, for callers
+    /// (e.g. the window runtime) that only carry the instance ID rather than the process ID.
+    /// </summary>
+    public bool TryGetRunningInstance(AppInstanceId instanceId, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
+    {
+        lock (_sync)
+        {
+            foreach (RunningInstance instance in _running.Values)
+            {
+                if (instance.Context.InstanceId == instanceId.Value)
+                {
+                    descriptor = instance.Descriptor;
+                    context = instance.Context;
+                    return true;
+                }
+            }
+        }
+
+        descriptor = null;
+        context = null;
+        return false;
+    }
+
+    /// <summary>
     /// Launches one catalog app. For a singleton <see cref="AppKind.Window"/> app that already has
     /// an active process, focuses the existing instance instead of starting a new one
     /// (`P1-APP-006`). <see cref="AppKind.Terminal"/> apps run to completion synchronously, since
@@ -258,6 +282,36 @@ public sealed class AppLifecycleOrchestrator
         lock (_sync)
         {
             _running.TryGetValue(pid, out instance);
+        }
+
+        if (instance is null)
+        {
+            return false;
+        }
+
+        await StopInstanceAsync(pid, instance, reason);
+        return true;
+    }
+
+    /// <summary>
+    /// Stops one running app instance identified by its instance rather than process identity, for
+    /// callers (e.g. the window runtime) that only carry the instance ID. An instance ID is unique
+    /// to one process for the whole life of that process, so this is equivalent to
+    /// <see cref="StopAsync(ProcessId, ProcessExitReason)"/> once the owning process is resolved.
+    /// </summary>
+    /// <param name="instanceId">Instance identity of the process to stop.</param>
+    /// <param name="reason">Terminal reason recorded for the process.</param>
+    /// <returns><see langword="true"/> when an active instance was found and stopped.</returns>
+    public async Task<bool> StopAsync(AppInstanceId instanceId, ProcessExitReason reason = ProcessExitReason.CloseRequested)
+    {
+        ProcessId pid;
+        RunningInstance? instance;
+        lock (_sync)
+        {
+            KeyValuePair<ProcessId, RunningInstance> found = _running
+                .FirstOrDefault(entry => entry.Value.Context.InstanceId == instanceId.Value);
+            instance = found.Value;
+            pid = found.Key;
         }
 
         if (instance is null)

@@ -36,7 +36,7 @@
                 {
                     @window.Content
                 }
-                else if (Orchestrator.TryGetRunningInstance(window.ProcessId, out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                else if (Orchestrator.TryGetRunningInstance(AppInstanceId.FromGuid(window.OwnerInstanceId.Value), out AppDescriptor? descriptor, out IAppExecutionContext? context))
                 {
                     <WindowAppRenderer Window="window"
                                        Descriptor="descriptor"
@@ -51,7 +51,7 @@
         </DesktopArea>
     </div>
 
-    @if (_isLauncherOpen)
+    @if (_launcher.IsOpen)
     {
         <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" />
     }
@@ -68,12 +68,12 @@
         <LogoutDialog OnClose="CloseLogout" OnLoggedOut="HandleLoggedOutAsync" />
     }
 
-    <Taskbar IsLauncherOpen="_isLauncherOpen"
-             IsNotificationsOpen="_isNotificationsDrawerOpen"
-             UnreadNotificationCount="UnreadNotificationCount"
-             OnToggleLauncher="ToggleLauncher"
-             OnToggleNotifications="ToggleNotifications"
-             OnRequestLogout="OpenLogout" />
+    <HackerOs.Taskbar.Blazor.Taskbar WindowSource="_taskbarWindowSource"
+                                      Commands="_taskbarCommands"
+                                      Launcher="_launcher"
+                                      StatusSource="_taskbarStatus"
+                                      NotificationSource="_notifications"
+                                      SessionCommands="_taskbarSessionCommands" />
 
     @if (TestDemoEnabled)
     {
@@ -90,10 +90,14 @@
 </div>
 
 @code {
-    private bool _isLauncherOpen;
-    private bool _isNotificationsDrawerOpen;
     private bool _isLogoutOpen;
     private string? _launchError;
+    private TaskbarWindowSourceAdapter _taskbarWindowSource = null!;
+    private TaskbarCommandDispatcherAdapter _taskbarCommands = null!;
+    private TaskbarLauncherAdapter _launcher = null!;
+    private TaskbarNotificationSourceAdapter _notifications = null!;
+    private TaskbarStatusSourceAdapter _taskbarStatus = null!;
+    private TaskbarSessionCommandsAdapter _taskbarSessionCommands = null!;
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
@@ -109,32 +113,17 @@
     private bool _testDemoRunning;
     private string? _testDemoStatus;
 
-    private int UnreadNotificationCount => NotificationQueue.GetActive(
-        SessionService.CurrentPrincipal?.UserId ?? default,
-        SimulationClock.UtcNow).Count;
-
-    private void ToggleLauncher()
-    {
-        _isLauncherOpen = !_isLauncherOpen;
-        _isNotificationsDrawerOpen = false;
-    }
-
     private void CloseLauncher()
     {
-        _isLauncherOpen = false;
-    }
-
-    private void ToggleNotifications()
-    {
-        _isNotificationsDrawerOpen = !_isNotificationsDrawerOpen;
-        _isLauncherOpen = false;
+        _launcher.Close();
     }
 
     private void OpenLogout()
     {
         _isLogoutOpen = true;
-        _isLauncherOpen = false;
-        _isNotificationsDrawerOpen = false;
+        _launcher.Close();
+        _notifications.Close();
+        Rerender();
     }
 
     private void CloseLogout()
@@ -153,7 +142,7 @@
 
     private async Task HandleAppSelected(AppManifest manifest)
     {
-        _isLauncherOpen = false;
+        _launcher.Close();
         if (SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal)
         {
             return;
@@ -242,12 +231,21 @@
 
     protected override void OnInitialized()
     {
-        WindowRuntime.StateChanged += OnWindowRuntimeStateChanged;
-        FileDialogAdapter.Changed += OnWindowRuntimeStateChanged;
+        WindowRuntime.StateChanged += Rerender;
+        FileDialogAdapter.Changed += Rerender;
         _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+
+        _taskbarWindowSource = new TaskbarWindowSourceAdapter(WindowRuntime);
+        _taskbarCommands = new TaskbarCommandDispatcherAdapter(WindowRuntime, CloseCoordinator, CloseGuards);
+        _launcher = new TaskbarLauncherAdapter();
+        _launcher.Changed += Rerender;
+        _notifications = new TaskbarNotificationSourceAdapter(NotificationQueue, SessionService, SimulationClock);
+        _notifications.Changed += Rerender;
+        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
+        _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
     }
 
-    private void OnWindowRuntimeStateChanged()
+    private void Rerender()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -256,10 +254,14 @@
     {
         if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
         {
-            WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.ProcessId == e.Pid);
-            if (matchingWindow is not null)
+            if (TryGetInstanceId(e.Pid, out AppInstanceId instanceId))
             {
-                WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+                WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(instanceId.Value);
+                WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.OwnerInstanceId == ownerInstanceId);
+                if (matchingWindow is not null)
+                {
+                    WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+                }
             }
         }
         else if (e.NewState == ProcessState.Running)
@@ -281,25 +283,48 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private bool TryGetInstanceId(ProcessId pid, out AppInstanceId instanceId)
+    {
+        if (ProcessManager.TryGetActive(pid, out ProcessRecord active))
+        {
+            instanceId = active.AppInstanceId;
+            return true;
+        }
+
+        ProcessRecord? historical = ProcessManager.GetHistory().LastOrDefault(record => record.Pid == pid);
+        if (historical is not null)
+        {
+            instanceId = historical.AppInstanceId;
+            return true;
+        }
+
+        instanceId = default;
+        return false;
+    }
+
     private void HandleShellKeyDown(KeyboardEventArgs args)
     {
         if (args.Key == "Escape")
         {
-            if (_isLauncherOpen)
+            if (_launcher.IsOpen)
             {
-                _isLauncherOpen = false;
+                _launcher.Close();
             }
-            else if (_isNotificationsDrawerOpen)
+            else if (_notifications.IsOpen)
             {
-                _isNotificationsDrawerOpen = false;
+                _notifications.Close();
             }
         }
     }
 
     public void Dispose()
     {
-        WindowRuntime.StateChanged -= OnWindowRuntimeStateChanged;
-        FileDialogAdapter.Changed -= OnWindowRuntimeStateChanged;
+        WindowRuntime.StateChanged -= Rerender;
+        FileDialogAdapter.Changed -= Rerender;
         _processSubscription?.Dispose();
+        _launcher.Changed -= Rerender;
+        _notifications.Changed -= Rerender;
+        _taskbarWindowSource.Dispose();
+        _taskbarStatus.Dispose();
     }
 }

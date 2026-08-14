@@ -1,4 +1,4 @@
-namespace HackerOs.Platform.Blazor.Windows;
+namespace HackerOs.Windowing.Core;
 
 /// <summary>Owns authoritative window snapshots and applies deterministic transitions.</summary>
 public sealed class WindowRuntime
@@ -285,8 +285,7 @@ public sealed class WindowRuntime
         new(
             state.Id,
             state.AppId,
-            state.ProcessId,
-            state.AppInstanceId,
+            state.OwnerInstanceId,
             state.Title,
             state.IconAssetPath,
             bounds ?? state.Bounds,
