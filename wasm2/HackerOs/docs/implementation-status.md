@@ -463,6 +463,17 @@ server is absent.
 | P5-UI-003 | Multi-tenant scoped-service conversion and EF-backed browser-storage replacement | ⬜ Not started — needs its own ADR |
 | P5-UI-004 | Direct injection of `IAccountService`/`ISyncService`/`IProxyService` into UI code instead of HTTP | ⬜ Not started — needs its own ADR and shared client abstraction |
 
+### P5-CONN — Client-Side Server Connection and Proxy Bridge (ADR 0028)
+
+| ID | Title | Status |
+|---|---|---|
+| P5-CONN-001 | Per-device connection storage (`IServerConnectionRepository`, IndexedDB schema v3) | ✅ Done |
+| P5-CONN-002 | Browser-independent HTTP clients (`IAccountClient`, `IProxyClient`, `IServerConnectionService` in `Platform.Core/ServerConnection/`) | ✅ Done |
+| P5-CONN-003 | Settings UI panel to connect/disconnect | ✅ Done |
+| P5-CONN-004 | Real-network proxy fallback wired into `ping` | ✅ Done |
+| P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+1a |
+| P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
+
 ### P5-SYNC — Record Synchronization
 
 | ID | Title | Status |
@@ -490,6 +501,7 @@ server is absent.
 - **ADR 0024** — Server Identity and Device Registration (D-017)
 - **ADR 0025** — Record Synchronization Envelope, Conflict Model, and Cursor Strategy (D-018)
 - **ADR 0027** — Server-Hosted Blazor UI (Third Host, Single-Tenant Phase)
+- **ADR 0028** — Client-Side Optional-Server Connection and Proxy Bridge
 
 ### Solution structure
 ```

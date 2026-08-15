@@ -46,12 +46,22 @@ temporary scaffold to delete once the migration is "done."
 
 `Server/HackerOs.Server/HackerOs.Server.csproj` is an ASP.NET Core process
 (EF Core/SQLite) that is entirely optional at runtime. It provides three
-backend capabilities, consumed over HTTP by the WASM client when present:
+backend capabilities:
 
 - **Sync** — versioned record push/pull with conflict resolution (ADR 0025).
+  Server-side only so far; no client consumes it yet — see
+  `docs/server-implementation-pass.md`.
 - **Identity** — account/device registration and token management (ADR 0024).
+  Consumed client-side per ADR 0028 (`IAccountClient`, opt-in per-device
+  connection via Settings).
 - **Proxy** — server-validated HTTP/TCP/UDP proxying for authorized apps
-  reaching the real network.
+  reaching the real network. Consumed client-side per ADR 0028
+  (`IProxyClient`), currently wired into `ping`'s real-host fallback only —
+  see `docs/server-implementation-pass.md` for the rest.
+
+Browser-local storage (IndexedDB) remains the source of truth regardless of
+whether a device is connected to the optional server — connecting is always
+opt-in and never required for normal use.
 
 Per ADR 0027, it also hosts the same `HackerOs.Ecosystem.App` Razor component
 tree the other two hosts render, via Interactive Server render mode

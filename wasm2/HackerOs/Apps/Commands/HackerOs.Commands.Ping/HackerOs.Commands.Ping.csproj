@@ -11,6 +11,9 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <!-- ADR 0028: the optional server's shared contracts are designed for use by any
+         browser-independent client adapter/consumer, not just the ASP.NET Core server. -->
+    <ProjectReference Include="..\..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

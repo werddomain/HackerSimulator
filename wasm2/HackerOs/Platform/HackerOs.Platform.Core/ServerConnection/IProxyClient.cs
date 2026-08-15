@@ -1,0 +1,85 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using HackerOs.Server.Contracts.Proxy;
+
+namespace HackerOs.Platform.Core.ServerConnection;
+
+/// <summary>
+/// Thin HTTP wrapper over the optional server's proxy endpoints (ADR 0028). Takes only
+/// <see cref="HackerOs.Server.Contracts"/> DTOs and primitives, matching <see cref="IAccountClient"/>'s
+/// direct-injection-friendly, browser-independent shape.
+/// </summary>
+/// <remarks>
+/// <see cref="ProxyHttpRequest"/>/<see cref="ProxyHttpResponse"/> are metadata-only by design (see
+/// their doc comments in <c>ProxyContracts.cs</c>) — the server endpoint mapped today
+/// (<c>POST /api/proxy/http</c>) does not yet stream the actual request/response body, only status,
+/// headers, and a content hash. Callers needing the fetched body (a normal <c>curl</c> GET, for
+/// example) cannot get it from this client until that server-side gap is closed — tracked in
+/// <c>docs/server-implementation-pass.md</c>. Callers that only need reachability/status/headers
+/// (e.g. <c>curl -I</c>) are fully served today.
+/// </remarks>
+public interface IProxyClient
+{
+    Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+        Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default);
+
+    Task<ProxyPolicyResponse> GetPolicyAsync(
+        Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Default <see cref="IProxyClient"/> implementation backed by <see cref="HttpClient"/>.</summary>
+public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
+{
+    public async Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+        Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage message = new(HttpMethod.Post, new Uri(serverBaseUrl, "api/proxy/http"))
+        {
+            Content = JsonContent.Create(request, ProxyContractsJsonContext.Default.ProxyHttpRequest)
+        };
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            ProxyErrorResponse? error = await TryReadErrorAsync(response, cancellationToken).ConfigureAwait(false);
+            throw new ServerConnectionException(
+                error is null
+                    ? $"The proxy request failed ({(int)response.StatusCode} {response.ReasonPhrase})."
+                    : $"The proxy request failed: {error.ErrorCode} — {error.Message}");
+        }
+
+        return (await response.Content.ReadFromJsonAsync(
+            ProxyContractsJsonContext.Default.ProxyHttpResponse, cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<ProxyPolicyResponse> GetPolicyAsync(
+        Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage message = new(HttpMethod.Get, new Uri(serverBaseUrl, "api/proxy/policy"));
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new ServerConnectionException(
+                $"Reading the proxy policy failed ({(int)response.StatusCode} {response.ReasonPhrase}).");
+        }
+
+        return (await response.Content.ReadFromJsonAsync(
+            ProxyContractsJsonContext.Default.ProxyPolicyResponse, cancellationToken).ConfigureAwait(false))!;
+    }
+
+    private static async Task<ProxyErrorResponse?> TryReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await response.Content.ReadFromJsonAsync(
+                ProxyContractsJsonContext.Default.ProxyErrorResponse, cancellationToken).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+}

@@ -1,14 +1,18 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core.ServerConnection
 @using HackerOs.Infrastructure.Browser.Schema
 @using HackerOs.Platform.Core
+@using HackerOs.Simulation.Abstractions.ServerConnection
+@using System.Net.Http
 @using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
 @inject AppCatalog Catalog
 @inject IJSRuntime JS
+@inject IServerConnectionService ServerConnection
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -63,6 +67,64 @@
                             <div class="grant-tag">✓ @cap</div>
                         }
                     </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Server Connection" Icon="@Icons.Material.Filled.Cloud">
+                <div class="setting-group">
+                    <h4>Optional Server</h4>
+                    <p class="setting-desc">
+                        Connecting a device to an optional HackerOS server enables real network
+                        access for apps like Terminal's <code>curl</code>/<code>ping</code>. Local
+                        storage remains the source of truth either way — connecting is never
+                        required for normal use.
+                    </p>
+
+                    @if (_connectionState is not null)
+                    {
+                        <div class="server-connection-status connected">
+                            <div class="info-line"><span>Status:</span> <strong>Connected</strong></div>
+                            <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerBaseUrl</strong></div>
+                            <div class="info-line"><span>Account:</span> <strong>@_connectionState.AccountId</strong></div>
+                        </div>
+                        <button class="btn-danger" disabled="@_isConnecting" @onclick="DisconnectAsync">
+                            Disconnect
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="server-connection-status disconnected">
+                            <div class="info-line"><span>Status:</span> <strong>Not connected</strong></div>
+                        </div>
+                        <form class="server-connection-form" @onsubmit="() => ConnectAsync(createNewAccount: false)" @onsubmit:preventDefault>
+                            <label for="server-url">Server URL</label>
+                            <input id="server-url" type="url" placeholder="https://example.com" autocomplete="off"
+                                   disabled="@_isConnecting" @bind="_serverUrl" @bind:event="oninput" />
+
+                            <label for="server-username">Username</label>
+                            <input id="server-username" type="text" autocomplete="username" maxlength="128"
+                                   disabled="@_isConnecting" @bind="_username" @bind:event="oninput" />
+
+                            <label for="server-password">Password</label>
+                            <input id="server-password" type="password" autocomplete="current-password"
+                                   disabled="@_isConnecting" @bind="_password" @bind:event="oninput" />
+
+                            @if (!string.IsNullOrEmpty(_connectionErrorMessage))
+                            {
+                                <p class="dialog-error" role="alert">@_connectionErrorMessage</p>
+                            }
+
+                            <div class="server-connection-actions">
+                                <button type="submit" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)">
+                                    @(_isConnecting ? "Connecting..." : "Log In")
+                                </button>
+                                <button type="button" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)"
+                                        @onclick="() => ConnectAsync(createNewAccount: true)">
+                                    @(_isConnecting ? "Connecting..." : "Create Account")
+                                </button>
+                            </div>
+                        </form>
+                    }
                 </div>
             </MudTabPanel>
 
@@ -183,7 +245,19 @@
     private string _confirmText = string.Empty;
     private string? _resetErrorMessage;
 
+    private ServerConnectionState? _connectionState;
+    private string _serverUrl = string.Empty;
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+    private bool _isConnecting;
+    private string? _connectionErrorMessage;
+
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
+
+    private bool CanSubmitConnection =>
+        Uri.TryCreate(_serverUrl, UriKind.Absolute, out _) &&
+        !string.IsNullOrWhiteSpace(_username) &&
+        !string.IsNullOrWhiteSpace(_password);
 
     protected override async Task OnAppInitializedAsync()
     {
@@ -196,6 +270,8 @@
             .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
                 handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
             .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
+
+        _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
     }
 
     protected override async Task OnAppAfterRenderAsync(bool firstRender)
@@ -267,6 +343,50 @@
             }
             StateHasChanged();
         }
+    }
+
+    private async Task ConnectAsync(bool createNewAccount)
+    {
+        if (!CanSubmitConnection || _isConnecting)
+        {
+            return;
+        }
+
+        _isConnecting = true;
+        _connectionErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Uri serverBaseUrl = new(_serverUrl, UriKind.Absolute);
+            _connectionState = createNewAccount
+                ? await ServerConnection.ConnectWithNewAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken)
+                : await ServerConnection.ConnectWithExistingAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken);
+            _password = string.Empty;
+        }
+        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
+        {
+            _connectionErrorMessage = $"Could not connect: {ex.Message}";
+        }
+        finally
+        {
+            _isConnecting = false;
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        if (_isConnecting)
+        {
+            return;
+        }
+
+        await ServerConnection.DisconnectAsync(AppContext.CancellationToken);
+        _connectionState = null;
+        _serverUrl = string.Empty;
+        _username = string.Empty;
+        _password = string.Empty;
+        _connectionErrorMessage = null;
     }
 
     private void OpenResetDialog()

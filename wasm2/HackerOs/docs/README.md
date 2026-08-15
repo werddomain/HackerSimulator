@@ -99,6 +99,7 @@ For work on the backend process described in
 | --- | --- |
 | [`server-security.md`](server-security.md) | The server's implemented security boundary and open evidence gaps. |
 | [`server-backup-restore.md`](server-backup-restore.md) | SQLite snapshot backup/restore for the optional server. |
+| [`server-implementation-pass.md`](server-implementation-pass.md) | Standing roadmap of every remaining client-server integration pass (sync per domain, direct injection); read before starting new server-integration work. |
 
 ## Architecture Decision Records
 
@@ -136,6 +137,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0025](adr/0025-record-synchronization-envelope-and-conflict-model.md) | Record synchronization envelope, conflict model, and cursor strategy |
 | [0026](adr/0026-icon-library-support.md) | Shared icon library support (Bootstrap, Font Awesome, Lucide, Simple Icons) |
 | [0027](adr/0027-server-hosted-blazor-ui.md) | Server-hosted Blazor UI (third host, single-tenant phase) |
+| [0028](adr/0028-client-side-server-connection.md) | Client-side optional-server connection and proxy bridge |
 
 ## Migration history and project status
 

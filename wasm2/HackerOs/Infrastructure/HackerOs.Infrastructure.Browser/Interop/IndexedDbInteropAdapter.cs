@@ -215,6 +215,13 @@ internal sealed record IndexedDbMigrationPlan
             [new IndexedDbIndexChange(
                 HackerOsIndexedDbSchema.FileSystemEntryStoreName,
                 new IndexedDbIndexDefinition("contentHash", ["contentHash"]))],
+            []),
+        new(
+            3,
+            [HackerOsIndexedDbSchema.ObjectStores.Single(
+                store => store.Name == HackerOsIndexedDbSchema.ServerConnectionStoreName)],
+            [],
+            [],
             [])
     ]);
 }

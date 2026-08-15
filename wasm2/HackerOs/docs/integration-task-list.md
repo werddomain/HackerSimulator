@@ -1867,6 +1867,15 @@ real systems; gameplay remains a controlled simulation.
 
 ## 32. Server Contracts, Sync, and Network Proxy
 
+> **Update (ADR 0028):** the browser client adapters this section anticipated
+> now exist for identity/proxy — `IAccountClient`/`IProxyClient`/
+> `IServerConnectionService`, living in `Platform/HackerOs.Platform.Core/ServerConnection/`
+> (not Browser Infrastructure — they're plain `HttpClient`, no JS interop; see
+> ADR 0028's Implementation notes for why). Sync itself still has no client
+> adapter. See `docs/server-implementation-pass.md` for the current, tracked
+> state of every remaining piece — that doc, not this section, is authoritative
+> for what's left.
+
 **Scope and location:** New `Server/HackerOs.Server.Contracts/` and
 `Server/HackerOs.Server/`; browser client adapters in Browser Infrastructure;
 docs in `docs/server/`; server tests in `Tests/HackerOs.Server.Tests/`.  

@@ -6,9 +6,12 @@ using HackerOs.Commands.Nmap;
 using HackerOs.Commands.Ping;
 using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Network.Websites;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Xunit;
 
@@ -141,7 +144,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task PingCommand_ExecutesSuccessfully_ForUpHost()
     {
-        var cmd = new PingCommand(PingCommand.StaticManifest, _network);
+        var cmd = new PingCommand(PingCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -154,6 +157,21 @@ public sealed class Wave4NetworkTests
         Assert.Contains("PING hackersearch.net (192.168.1.90)", output);
         Assert.Contains("64 bytes from 192.168.1.90", output);
         Assert.Contains("0% packet loss", output);
+    }
+
+    [Fact]
+    public async Task PingCommand_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
+    {
+        var cmd = new PingCommand(PingCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(2, exitCode);
+        Assert.Contains("cannot resolve", stdoutWriter.ToString());
     }
 
     [Fact]
@@ -268,5 +286,37 @@ public sealed class Wave4NetworkTests
         public IAppDiagnosticsGateway Diagnostics => throw new NotImplementedException();
         public IAppClockGateway Clock => throw new NotImplementedException();
         public IAppProcessGateway Processes => throw new NotImplementedException();
+    }
+
+    /// <summary>Fake used only to prove the pure-simulation path is unaffected: this device is never connected.</summary>
+    private sealed class NeverConnectedServerConnectionService : IServerConnectionService
+    {
+        public ValueTask<ServerConnectionState?> GetStateAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ServerConnectionState?>(null);
+
+        public Task<ServerConnectionState> ConnectWithNewAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ServerConnectionState> ConnectWithExistingAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public Task<string?> EnsureAccessTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
+    }
+
+    /// <summary>Fake that always throws: proves the real-network path is never reached when disconnected.</summary>
+    private sealed class UnusedProxyClient : IProxyClient
+    {
+        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called when disconnected.");
+
+        public Task<ProxyPolicyResponse> GetPolicyAsync(
+            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called when disconnected.");
     }
 }

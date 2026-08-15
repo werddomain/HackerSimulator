@@ -22,7 +22,7 @@ public static class HackerOsIndexedDbSchema
     /// Incrementing this value is the only way to add/remove/change an object store or index;
     /// migration steps for each prior version are implemented by <c>P2-IDB-006</c>.
     /// </remarks>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     /// <summary>Object store persisting one record per <c>LocalUser</c> account.</summary>
     public const string UserStoreName = "users";
@@ -63,6 +63,14 @@ public static class HackerOsIndexedDbSchema
     /// multi-device network sync, which remains excluded per section 1.2 and Phase 5.
     /// </summary>
     public const string LocalBookkeepingStoreName = "syncMetadata";
+
+    /// <summary>
+    /// Object store persisting the single per-device optional-server connection record (ADR 0028):
+    /// account ID, device ID, server base URL, and opaque refresh token. Not the local-only
+    /// <see cref="LocalBookkeepingStoreName"/> store, and never exported through the ordinary
+    /// settings `.config` projection.
+    /// </summary>
+    public const string ServerConnectionStoreName = "serverConnection";
 
     /// <summary>Gets every object store declared for <see cref="CurrentVersion"/>, in creation order.</summary>
     public static IReadOnlyList<IndexedDbObjectStoreDefinition> ObjectStores { get; } =
@@ -192,7 +200,17 @@ public static class HackerOsIndexedDbSchema
             indexes: [],
             purpose:
                 "Small local bookkeeping values (current policy revision, installation ID, last " +
-                "backup time). Not multi-device sync; see this member's XML summary.")
+                "backup time). Not multi-device sync; see this member's XML summary."),
+
+        new(
+            ServerConnectionStoreName,
+            keyPath: ["key"],
+            autoIncrement: false,
+            indexes: [],
+            purpose:
+                "The single per-device optional-server connection record (account ID, device ID, " +
+                "server base URL, opaque refresh token), keyed by a fixed constant key. Added by " +
+                "ADR 0028; distinct from the local-only syncMetadata store.")
     ];
 
     /// <summary>
@@ -271,6 +289,12 @@ public static class HackerOsIndexedDbSchema
         new(
             "BackupRestore",
             ObjectStores.Select(store => store.Name).ToArray(),
-            "Read a consistent export snapshot or restore every validated store atomically.")
+            "Read a consistent export snapshot or restore every validated store atomically."),
+
+        new(
+            "ServerConnectionUpdate",
+            [ServerConnectionStoreName],
+            "Create/update/clear the single per-device server connection record atomically, " +
+                "independent of every other store (ADR 0028).")
     ];
 }

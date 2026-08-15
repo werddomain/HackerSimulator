@@ -5,8 +5,10 @@ using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Diagnostics;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Policy;
+using HackerOs.Infrastructure.Browser.ServerConnection;
 using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
+using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
@@ -30,6 +32,7 @@ using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
@@ -126,6 +129,23 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<WebCryptoPasswordHasher>(provider =>
             new WebCryptoPasswordHasher(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<ILoginProgressTracker, LoginProgressTracker>();
+
+        // Optional server connection (ADR 0028) — opt-in, per-device; a device that never
+        // connects sees no behavior change anywhere else in this composition.
+        services.AddSingleton<IServerConnectionRepository>(provider =>
+            new IndexedDbServerConnectionRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddSingleton<HttpClient>();
+        services.AddSingleton<IAccountClient, HttpAccountClient>();
+        services.AddSingleton<IProxyClient, HttpProxyClient>();
+        services.AddSingleton<IServerConnectionService>(provider =>
+        {
+            WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
+            return new ServerConnectionService(
+                provider.GetRequiredService<IServerConnectionRepository>(),
+                provider.GetRequiredService<IAccountClient>(),
+                asyncPasswordHasher: (password, salt, iterations, length, ct) =>
+                    hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
+        });
         services.AddSingleton<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();

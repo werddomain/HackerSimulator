@@ -104,6 +104,13 @@ public static class AppCapabilities
     /// </summary>
     public const string GameplayDomainAccess = "gameplay.domain.access";
 
+    /// <summary>
+    /// Reach real hosts outside the simulated network, via the optional server's proxy (ADR 0028),
+    /// when a device is connected. Distinct from <see cref="NetworkSimulatedRead"/> so real network
+    /// reach is independently auditable/grantable.
+    /// </summary>
+    public const string NetworkRealAccess = "network.real.access";
+
     /// <summary>Read structured diagnostic log entries recorded across the system.</summary>
     public const string DiagnosticsRead = "diagnostics.read";
 
@@ -139,6 +146,7 @@ public static class AppCapabilities
         ServicesManage,
         NetworkSimulatedRead,
         NetworkSimulatedWrite,
+        NetworkRealAccess,
         GameplayDomainAccess,
         DiagnosticsRead,
         DiagnosticsClear

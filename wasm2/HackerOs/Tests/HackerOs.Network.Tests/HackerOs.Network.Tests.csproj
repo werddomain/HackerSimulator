@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ping\HackerOs.Commands.Ping.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
