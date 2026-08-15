@@ -14,6 +14,7 @@
 @inject IJSRuntime JS
 @inject IServerConnectionService ServerConnection
 @inject ISettingsSyncService SettingsSync
+@inject IFileSystemSyncService FileSystemSync
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -90,6 +91,13 @@
                             @if (!string.IsNullOrEmpty(_syncStatusMessage))
                             {
                                 <div class="info-line"><span>Sync:</span> <strong>@_syncStatusMessage</strong></div>
+                            }
+                            @if (FileSystemSync.UnresolvedConflicts.Count > 0)
+                            {
+                                <div class="info-line sync-conflict-warning">
+                                    <span>Files:</span>
+                                    <strong>@FileSystemSync.UnresolvedConflicts.Count file(s) have unresolved sync conflicts</strong>
+                                </div>
                             }
                         </div>
                         <div class="server-connection-actions">
@@ -433,7 +441,15 @@
                 await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
             }
 
-            _syncStatusMessage = $"Last synced {DateTimeOffset.Now:t}";
+            // ADR 0030: push before pull, same order as Settings sync above — pushing first lets a
+            // concurrent-edit conflict get detected and flagged before the pull step runs, so the
+            // pull's conflict guard (skip any record this push just flagged) has something to check.
+            await FileSystemSync.PushAsync(AppContext.CancellationToken);
+            await FileSystemSync.PullAsync(AppContext.CancellationToken);
+
+            _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
+                ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"
+                : $"Last synced {DateTimeOffset.Now:t}";
         }
         catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
         {

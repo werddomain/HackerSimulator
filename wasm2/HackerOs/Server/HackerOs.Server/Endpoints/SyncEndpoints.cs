@@ -14,8 +14,9 @@ namespace HackerOs.Server.Endpoints;
 /// POST /api/sync/content/upload     → initiate chunked content upload
 /// GET  /api/sync/content/upload/{sessionId}/progress → query upload progress
 /// PUT  /api/sync/content/upload/{sessionId}/chunks/{index} → upload a chunk
-/// POST /api/sync/content/download   → initiate content download session
-/// GET  /api/sync/content/download/{sessionId}/chunks/{index} → download chunk
+/// POST /api/sync/content/download   → initiate content download (metadata only)
+/// GET  /api/sync/content/download/{contentHash}/chunks/{index} → download chunk
+///   (content-addressed and immutable — keyed by hash directly, not a session; ADR 0030)
 /// </summary>
 public static class SyncEndpoints
 {
@@ -34,7 +35,7 @@ public static class SyncEndpoints
         contentGroup.MapGet("/upload/{sessionId}/progress", QueryUploadProgressAsync).WithName("QueryUploadProgress");
         contentGroup.MapPut("/upload/{sessionId}/chunks/{chunkIndex:int}", UploadChunkAsync).WithName("UploadChunk");
         contentGroup.MapPost("/download", InitiateDownloadAsync).WithName("InitiateDownload");
-        contentGroup.MapGet("/download/{sessionId}/chunks/{chunkIndex:int}", DownloadChunkAsync).WithName("DownloadChunk");
+        contentGroup.MapGet("/download/{contentHash}/chunks/{chunkIndex:int}", DownloadChunkAsync).WithName("DownloadChunk");
 
         return app;
     }
@@ -148,12 +149,23 @@ public static class SyncEndpoints
     }
 
     private static async Task<IResult> DownloadChunkAsync(
-        string sessionId, int chunkIndex,
+        string contentHash, int chunkIndex,
         IContentBlobService blobs, ClaimsPrincipal user, CancellationToken ct)
     {
-        var accountId = GetAccountId(user);
-        var chunkData = await blobs.GetChunkAsync(accountId, sessionId, chunkIndex, ct);
-        return Results.Bytes(chunkData, "application/octet-stream");
+        try
+        {
+            var accountId = GetAccountId(user);
+            var chunkData = await blobs.GetChunkAsync(accountId, contentHash, chunkIndex, ct);
+            return Results.Bytes(chunkData, "application/octet-stream");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Results.NotFound(new { error = ex.Message });
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 
     private static Guid GetAccountId(ClaimsPrincipal user) =>

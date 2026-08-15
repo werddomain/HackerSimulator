@@ -58,8 +58,13 @@ public interface IContentBlobService
     Task<Contracts.Sync.InitiateContentDownloadResponse> InitiateDownloadAsync(
         Guid accountId, Contracts.Sync.InitiateContentDownloadRequest request, CancellationToken ct);
 
+    /// <summary>
+    /// Reads one chunk of previously-uploaded, content-addressed blob data. Content is immutable and
+    /// deduplicated by hash, so chunk boundaries are deterministic from <paramref name="contentHash"/>
+    /// and <paramref name="chunkIndex"/> alone — no download-session state is needed (ADR 0030).
+    /// </summary>
     Task<byte[]> GetChunkAsync(
-        Guid accountId, string downloadSessionId, int chunkIndex, CancellationToken ct);
+        Guid accountId, string contentHash, int chunkIndex, CancellationToken ct);
 }
 
 /// <inheritdoc />
@@ -201,13 +206,30 @@ public sealed class ContentBlobService : IContentBlobService
 
     /// <inheritdoc />
     public async Task<byte[]> GetChunkAsync(
-        Guid accountId, string downloadSessionId, int chunkIndex, CancellationToken ct)
+        Guid accountId, string contentHash, int chunkIndex, CancellationToken ct)
     {
-        // In a production implementation the session ID would map to a content hash.
-        // Here we return empty to satisfy the interface without maintaining a download session table.
-        // The full implementation would look up blob.StoragePath and stream the chunk.
-        await Task.CompletedTask;
-        return [];
+        var blob = await _db.ContentBlobs
+            .FirstOrDefaultAsync(b => b.ContentHash == contentHash, ct)
+            ?? throw new KeyNotFoundException($"Content hash '{contentHash}' not found.");
+
+        if (chunkIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(chunkIndex), chunkIndex, "Chunk index cannot be negative.");
+        }
+
+        long start = (long)chunkIndex * DefaultChunkSizeBytes;
+        if (start >= blob.TotalBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(chunkIndex), chunkIndex, "Chunk index is past the end of the content.");
+        }
+
+        int length = (int)Math.Min(DefaultChunkSizeBytes, blob.TotalBytes - start);
+        byte[] buffer = new byte[length];
+
+        await using FileStream stream = new(blob.StoragePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        stream.Seek(start, SeekOrigin.Begin);
+        await stream.ReadExactlyAsync(buffer, ct);
+        return buffer;
     }
 
     private static async Task AssembleAndVerifyAsync(

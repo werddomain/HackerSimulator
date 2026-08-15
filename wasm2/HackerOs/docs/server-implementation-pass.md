@@ -46,6 +46,31 @@ requirement for normal operation. See `docs/hosting-model.md`.
   an on-connect trigger in the Settings panel. Conflicts resolve automatically
   in the server's favor (not surfaced to the user) — an explicit, recorded
   simplification for this low-stakes first domain, not a general policy.
+- **FileSystem domain sync** (ADR 0030, `docs/adr/0030-filesystem-sync.md`) —
+  push/pull of every entry under the active user's `/home/{userId}` (recursive
+  walk, not the whole filesystem). Fixed a real server-side gap along the way:
+  `ContentBlobService.GetChunkAsync` was a stub returning zero bytes, so
+  content download was completely broken — now content-addressed and
+  session-free (`GET /api/sync/content/download/{contentHash}/chunks/{index}`),
+  covered by the first server-side content-blob tests
+  (`Tests/HackerOs.Server.Tests/ContentBlobServiceTests.cs`). New
+  `IContentTransferClient`/`HttpContentTransferClient` (chunked upload/download,
+  browser-independent, mirrors `ISyncClient`'s placement) and
+  `IFileSystemSyncService`/`FileSystemSyncService` (the domain adapter —
+  metadata via `SyncRecordEnvelope`, content via the separate chunked
+  protocol, tied together only by `ContentHash`). Unlike Settings, a push
+  conflict is **never** auto-resolved in either direction (ADR 0030 Decision
+  5) — and a pull-side guard added during implementation prevents the
+  matching gap: without it, a pull immediately following a conflicted push
+  would have silently reapplied the server's copy over the very edit that
+  just failed to push. Wired into the same "Sync now" button and a
+  "N files have unresolved sync conflicts" indicator in the Settings panel.
+  Known, deliberate simplifications carried forward rather than solved here:
+  no deletion propagation (a file removed on one device isn't removed on
+  another), and pull always re-downloads file content rather than checking
+  for a local dedup hit first (the plan's "check local `fsContent` by hash"
+  optimization needs an abstraction that doesn't exist yet — correctness was
+  prioritized over that optimization for this pass).
 
 ## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
 
@@ -59,23 +84,6 @@ named. Concretely:
 - `nmap`: port-scanning doesn't map onto a single HTTP proxy call at all;
   needs either a new non-HTTP proxy contract shape or stays simulation-only
   indefinitely — see the open question below.
-
-## Pass N+2: Sync — FileSystem domain
-
-The largest sync pass. Content-hash chunked transfer already has server-side
-contracts to build against (`Server/HackerOs.Server.Contracts/Sync/ContentTransferContracts.cs`
-— `InitiateContentUploadRequest/Response`, chunk upload/download, keyed by
-SHA-256). Entries/links metadata sync separately from content, per the existing
-transaction-boundary split documented in `docs/indexeddb-filesystem.md` (entries+
-links commit together; content is independent and deduplicated by hash — the
-sync adapter should preserve that same split rather than inventing a new one).
-Reuses Pass N+1's `syncCursors`/`syncRecordState` stores, `ISyncClient`, and
-the push/pull/cursor-paging pattern proven there — write a new domain-specific
-adapter (`IFileSystemSyncService`-shaped), not new scaffolding. Unlike
-Settings, a naive automatic-server-wins conflict resolution is a worse default
-here (file content loss is more consequential than a reverted preference) —
-decide this domain's conflict UX explicitly rather than reusing ADR 0029
-Decision 6 by default.
 
 ## Pass N+3: Sync — Grants domain
 

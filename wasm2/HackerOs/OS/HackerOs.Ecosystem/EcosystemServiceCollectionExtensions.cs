@@ -163,6 +163,19 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
 
+        // FileSystem domain sync (ADR 0030) — reuses the same connection and sync scaffolding as
+        // Settings sync above; scoped to the active session's own /home/{userId}, so a no-op when
+        // disconnected or no session is active.
+        services.AddSingleton<IContentTransferClient, HttpContentTransferClient>();
+        services.AddSingleton<IFileSystemSyncService>(provider => new FileSystemSyncService(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISyncClient>(),
+            provider.GetRequiredService<IContentTransferClient>(),
+            provider.GetRequiredService<ISyncCursorRepository>(),
+            provider.GetRequiredService<ISyncRecordStateRepository>()));
+
         services.AddSingleton<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();

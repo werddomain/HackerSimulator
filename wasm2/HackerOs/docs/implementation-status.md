@@ -474,7 +474,7 @@ server is absent.
 | P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+1a |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
 
-### P5-SYNC-CLIENT — Settings Domain Sync (ADR 0029)
+### P5-SYNC-CLIENT — Settings and FileSystem Domain Sync (ADR 0029, ADR 0030)
 
 | ID | Title | Status |
 |---|---|---|
@@ -482,8 +482,13 @@ server is absent.
 | P5-SYNC-CLIENT-002 | `SyncEligible` opt-in flag; `AppearanceSettingsDocuments` opted in | ✅ Done |
 | P5-SYNC-CLIENT-003 | `ISettingsSyncService` push/pull adapter with deterministic `RecordId` derivation | ✅ Done |
 | P5-SYNC-CLIENT-004 | On-connect + manual "Sync now" trigger in Settings UI | ✅ Done |
-| P5-SYNC-CLIENT-005 | FileSystem/Grants/AppCatalog/FileAssociations domain adapters | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+2 onward |
-| P5-SYNC-CLIENT-006 | Surfaced (non-automatic) conflict resolution UI | ⬜ Not started — ADR 0029 Decision 6 is an explicit simplification for this domain only |
+| P5-SYNC-CLIENT-005 | Grants/AppCatalog/FileAssociations domain adapters | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+3 onward |
+| P5-SYNC-CLIENT-006 | Surfaced (non-automatic) conflict resolution UI for Settings | ⬜ Not started — ADR 0029 Decision 6 is an explicit simplification for this domain only |
+| P5-SYNC-CLIENT-007 | `IContentTransferClient`/`HttpContentTransferClient` chunked content transfer (browser-independent) | ✅ Done (ADR 0030) |
+| P5-SYNC-CLIENT-008 | `IFileSystemSyncService` push/pull adapter, recursive walk of `/home/{userId}`, `FileSystemEntryId`-derived `RecordId` | ✅ Done (ADR 0030) |
+| P5-SYNC-CLIENT-009 | FileSystem conflict handling — never auto-apply either copy; unresolved-count indicator in Settings UI | ✅ Done for detection/surfacing — manual resolution UI is still future work |
+| P5-SYNC-CLIENT-010 | FileSystem deletion propagation (tombstones) | ⬜ Not started — a file removed on one device is not removed on another via sync |
+| P5-SYNC-CLIENT-011 | Pull-side local-content dedup check before downloading (skip re-download when `fsContent` already has the hash) | ⬜ Not started — pull always re-downloads; correctness-first simplification for this pass |
 
 ### P5-SYNC — Record Synchronization
 
@@ -493,7 +498,7 @@ server is absent.
 | P5-SYNC-002 | Push with durable idempotency and content-hash verification | ⬜ Reopened: idempotency is not restart-safe |
 | P5-SYNC-003 | Per-domain conflict rules (ADR 0025 / D-018) | ⬜ Reopened for ownership/conflict evidence |
 | P5-SYNC-004 | Grant domain security block (ServerWins only) | ⬜ Reopened for complete authorization evidence |
-| P5-SYNC-005 | Chunked resumable file content transfer with SHA-256 deduplication | ⬜ Reopened for restart/resume evidence |
+| P5-SYNC-005 | Chunked resumable file content transfer with SHA-256 deduplication | ⬜ Reopened for restart/resume evidence — upload and content-addressed download both now work end-to-end (`GetChunkAsync` was a stub returning zero bytes until ADR 0030 fixed it, `Tests/HackerOs.Server.Tests/ContentBlobServiceTests.cs`); restart-mid-transfer resumption specifically still lacks test evidence |
 | P5-SYNC-006 | Complete sync integration/security matrix | ⬜ Reopened |
 
 ### P5-PROXY — HTTP/TCP/UDP Proxy
@@ -514,6 +519,7 @@ server is absent.
 - **ADR 0027** — Server-Hosted Blazor UI (Third Host, Single-Tenant Phase)
 - **ADR 0028** — Client-Side Optional-Server Connection and Proxy Bridge
 - **ADR 0029** — Settings Domain Sync (First Client Sync Implementation)
+- **ADR 0030** — FileSystem Domain Sync
 
 ### Solution structure
 ```

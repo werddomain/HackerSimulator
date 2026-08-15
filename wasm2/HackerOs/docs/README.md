@@ -139,6 +139,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0027](adr/0027-server-hosted-blazor-ui.md) | Server-hosted Blazor UI (third host, single-tenant phase) |
 | [0028](adr/0028-client-side-server-connection.md) | Client-side optional-server connection and proxy bridge |
 | [0029](adr/0029-settings-sync.md) | Settings domain sync (first client sync implementation) |
+| [0030](adr/0030-filesystem-sync.md) | FileSystem domain sync |
 
 ## Migration history and project status
 
