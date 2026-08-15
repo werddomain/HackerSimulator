@@ -71,6 +71,26 @@ requirement for normal operation. See `docs/hosting-model.md`.
   for a local dedup hit first (the plan's "check local `fsContent` by hash"
   optimization needs an abstraction that doesn't exist yet — correctness was
   prioritized over that optimization for this pass).
+- **Grants domain sync — pull-only** (ADR 0031, `docs/adr/0031-grants-sync.md`) —
+  no client push exists for this domain, deliberately: nothing in the
+  codebase legitimately originates a client-side grant to push (the only
+  production grant-writer, `CleanProfileCapabilityGrantSeeder`, seeds exactly
+  what each app's manifest declares at every login), and the server doesn't
+  validate pushed Grants payload semantics — so the client simply never
+  pushes rather than trusting an unvalidated server not to accept a crafted
+  widening push. Added `IPersistentCapabilityGrantRepository.ImportAsync`
+  (upserts a grant under a caller-supplied ID, needed since `GrantAsync`
+  always mints a new one) so a pulled server-issued grant can apply under
+  the server's own `RecordId` and a later re-pull (e.g. a revocation)
+  updates the same row. **Not wired into live capability enforcement** —
+  pulled grants land only in the durable `IPersistentCapabilityGrantRepository`;
+  the in-memory `ICapabilityGrantRepository` every runtime capability check
+  actually reads is still rebuilt from manifest declarations at every login,
+  completely disconnected from the durable store. Wiring that up is a
+  separate, larger change (touches `LocalSessionService` login seeding) that
+  needs its own design once there's a real reason to widen local grants
+  beyond manifest declarations — tracked as an open question below, not
+  silently assumed solved.
 
 ## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
 
@@ -84,14 +104,6 @@ named. Concretely:
 - `nmap`: port-scanning doesn't map onto a single HTTP proxy call at all;
   needs either a new non-HTTP proxy contract shape or stays simulation-only
   indefinitely — see the open question below.
-
-## Pass N+3: Sync — Grants domain
-
-Capability grants are server-authoritative per ADR 0025 (`ClientWins`/`Merge`
-are not applicable to this domain; tombstones are blocked). Simplest conflict
-story of the five remaining domains, but highest security sensitivity — needs
-explicit test coverage proving a compromised/buggy client can never widen its
-own grants via a crafted push. Depends on Pass N+1's scaffolding.
 
 ## Pass N+4: Sync — AppCatalog + FileAssociations domains
 
@@ -133,6 +145,27 @@ independent of any one browser).
 
 ## Open questions carried forward
 
+- **Server-side gap found during ADR 0031 implementation**: `SyncService.PushAsync`
+  blocks tombstones and enforces `ServerWins`-only conflict resolution for the
+  `grants` domain, but has no semantic validation of a pushed Grants payload —
+  nothing stops a payload claiming a wider capability/constraint than the
+  account actually has. This client never pushes Grants (ADR 0031 Decision 1),
+  so it can't exploit this, but the gap is still real for any client that
+  calls `POST /api/sync/push` directly. Also: there is still no server-side
+  grant-issuing/admin endpoint at all — the only way a Grants record could
+  ever be created today is through the generic sync push path, and ADR 0025's
+  own text presumes a dedicated "authorized grant API" exists. Both need a
+  real design pass once an actual grant-issuing authority is built.
+- **Wiring gap found during ADR 0031 implementation**: `ICapabilityGrantRepository`
+  (in-memory, what every runtime capability check reads) and
+  `IPersistentCapabilityGrantRepository` (IndexedDB-backed, what sync pulls
+  into) are completely disconnected — the in-memory one is rebuilt from
+  manifest declarations at every login, and nothing reads the durable one
+  back into it. A pulled/revoked grant is durable and visible across devices
+  but does not affect what a running (or even freshly launched) app can
+  actually do until `LocalSessionService`'s login seeding is changed to also
+  hydrate from the durable store — a separate, larger change than the sync
+  adapter itself, deferred with its own design needed first.
 - **Server-side gap found during ADR 0028 implementation**: `POST /api/proxy/http`
   (`ProxyEndpoints.ExecuteHttpAsync`) only ever returns `ProxyHttpResponse`
   metadata (status, headers, a content hash) — it does not stream the actual

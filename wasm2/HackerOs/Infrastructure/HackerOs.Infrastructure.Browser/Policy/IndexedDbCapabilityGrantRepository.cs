@@ -132,6 +132,52 @@ public sealed class IndexedDbCapabilityGrantRepository :
     }
 
     /// <inheritdoc />
+    public async ValueTask<CapabilityGrantMutationResult> ImportAsync(
+        CapabilityGrantId id,
+        string appId,
+        string userId,
+        string capability,
+        CapabilityGrantSource source,
+        IEnumerable<CapabilityConstraint>? constraints,
+        bool isRevoked,
+        AppAuthority actingAuthority,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        (long revision, GrantRecord? _) = await ReadRevisionAndGrantAsync(id, cancellationToken).ConfigureAwait(false);
+        if (!AppAuthorityPolicy.Satisfies(actingAuthority, AppAuthority.Administrator))
+        {
+            return new(CapabilityGrantMutationStatus.AuthorityDenied, null, revision);
+        }
+
+        long nextRevision = checked(revision + 1);
+        CapabilityGrant grant = new(
+            id, appId, userId, capability, nextRevision, source, constraints?.ToArray() ?? []);
+        DateTimeOffset timestamp = _timeProvider.GetUtcNow().ToUniversalTime();
+        GrantRecord record = GrantRecord.FromDomain(grant) with
+        {
+            RevokedAtUtcMs = isRevoked ? timestamp.ToUnixTimeMilliseconds() : null,
+            RevokedRevision = isRevoked ? nextRevision : null
+        };
+
+        // "capability.sync-import" is a distinct audit action from "capability.grant"/"capability.revoke"
+        // so the audit trail can distinguish a server-issued sync application from a locally-authorized
+        // grant/revoke mutation (ADR 0031). Upserts by id — create-or-update-in-place, unlike GrantAsync's
+        // always-mint-a-new-ID behavior, so a later re-import of the same RecordId (e.g. a revocation)
+        // updates this row instead of creating a duplicate.
+        await CommitMutationAsync(
+            revision,
+            record,
+            AuditRecord.Create("capability.sync-import", grant, nextRevision, actingAuthority, timestamp, _guidFactory()),
+            cancellationToken).ConfigureAwait(false);
+
+        return new(
+            isRevoked ? CapabilityGrantMutationStatus.Revoked : CapabilityGrantMutationStatus.Granted,
+            grant,
+            nextRevision);
+    }
+
+    /// <inheritdoc />
     public async ValueTask<CapabilityPolicyEvaluation> EvaluateAsync(
         string appId,
         string userId,

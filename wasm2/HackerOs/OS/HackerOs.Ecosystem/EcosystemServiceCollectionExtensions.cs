@@ -176,6 +176,14 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
 
+        // Grants domain sync (ADR 0031) — pull-only, applies server-issued grants into the durable
+        // grant store. Not wired into live capability enforcement in this pass (see ADR 0031).
+        services.AddSingleton<IGrantsSyncService>(provider => new GrantsSyncService(
+            provider.GetRequiredService<IPersistentCapabilityGrantRepository>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISyncClient>(),
+            provider.GetRequiredService<ISyncCursorRepository>()));
+
         services.AddSingleton<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();

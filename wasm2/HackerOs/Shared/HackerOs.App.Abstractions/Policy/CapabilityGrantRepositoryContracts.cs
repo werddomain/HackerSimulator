@@ -87,6 +87,33 @@ public interface IPersistentCapabilityGrantRepository
         AppAuthority actingAuthority,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Creates or updates one capability grant under a caller-supplied ID, atomically and audited,
+    /// bypassing the always-mint-a-new-ID behavior of <see cref="GrantAsync"/>. Used exclusively by
+    /// the optional server's Grants domain sync pull adapter (ADR 0031) to apply a server-issued
+    /// grant record under the server's own <c>RecordId</c>, so a later re-import of the same record
+    /// (e.g. a revocation) updates the existing row instead of creating a duplicate.
+    /// </summary>
+    /// <param name="id">Caller-supplied grant identity — the server's sync <c>RecordId</c>.</param>
+    /// <param name="appId">Exact app ID receiving the grant.</param>
+    /// <param name="userId">Exact user ID receiving the grant.</param>
+    /// <param name="capability">Exact known capability identifier.</param>
+    /// <param name="source">Trusted grant source.</param>
+    /// <param name="constraints">Optional structured resource constraints.</param>
+    /// <param name="isRevoked">Whether the imported grant is currently revoked.</param>
+    /// <param name="actingAuthority">Authority of the principal requesting the mutation.</param>
+    /// <returns>The mutation result.</returns>
+    ValueTask<CapabilityGrantMutationResult> ImportAsync(
+        CapabilityGrantId id,
+        string appId,
+        string userId,
+        string capability,
+        CapabilityGrantSource source,
+        IEnumerable<CapabilityConstraint>? constraints,
+        bool isRevoked,
+        AppAuthority actingAuthority,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Evaluates durable deny-by-default policy for one requested resource.</summary>
     ValueTask<CapabilityPolicyEvaluation> EvaluateAsync(
         string appId,

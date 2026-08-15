@@ -15,6 +15,7 @@
 @inject IServerConnectionService ServerConnection
 @inject ISettingsSyncService SettingsSync
 @inject IFileSystemSyncService FileSystemSync
+@inject IGrantsSyncService GrantsSync
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -446,6 +447,9 @@
             // pull's conflict guard (skip any record this push just flagged) has something to check.
             await FileSystemSync.PushAsync(AppContext.CancellationToken);
             await FileSystemSync.PullAsync(AppContext.CancellationToken);
+
+            // ADR 0031: Grants is pull-only — no push call exists for this domain.
+            await GrantsSync.PullAsync(AppContext.CancellationToken);
 
             _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
                 ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"

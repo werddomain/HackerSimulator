@@ -176,6 +176,18 @@ public sealed class EcosystemBootCoordinatorTests
             CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
+        public ValueTask<CapabilityGrantMutationResult> ImportAsync(
+            CapabilityGrantId id,
+            string appId,
+            string userId,
+            string capability,
+            CapabilityGrantSource source,
+            IEnumerable<CapabilityConstraint>? constraints,
+            bool isRevoked,
+            AppAuthority actingAuthority,
+            CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
         public ValueTask<CapabilityPolicyEvaluation> EvaluateAsync(
             string appId,
             string userId,

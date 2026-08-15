@@ -69,6 +69,88 @@ public sealed class IndexedDbCapabilityGrantRepositoryTests
     }
 
     [Fact]
+    public async Task Import_creates_grant_under_the_given_id_with_a_distinct_audit_action()
+    {
+        FakeIndexedDbModule module = new();
+        await using IndexedDbCapabilityGrantRepository repository = new(
+            new FakeJsRuntime(module),
+            new FixedTimeProvider(),
+            new GuidSequence());
+        CapabilityGrantId serverIssuedId = CapabilityGrantId.FromGuid(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+
+        CapabilityGrantMutationResult imported = await repository.ImportAsync(
+            serverIssuedId,
+            "org.hackeros.browser",
+            "user-1",
+            AppCapabilities.FileSystemUserHomeRead,
+            CapabilityGrantSource.AdministratorApproval,
+            constraints: null,
+            isRevoked: false,
+            AppAuthority.Administrator);
+
+        Assert.Equal(CapabilityGrantMutationStatus.Granted, imported.Status);
+        Assert.Equal(serverIssuedId, imported.Grant!.Id);
+        Assert.Equal(["capability.sync-import"], module.AuditActions);
+        JsonElement persistedGrant = Assert.IsType<JsonElement>(module.Grant);
+        Assert.Equal(serverIssuedId.ToString(), persistedGrant.GetProperty("id").GetString());
+        Assert.False(persistedGrant.TryGetProperty("revokedAtUtcMs", out JsonElement revokedAt) && revokedAt.ValueKind != JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Import_revoked_sets_revocation_fields_and_reports_revoked_status()
+    {
+        FakeIndexedDbModule module = new();
+        await using IndexedDbCapabilityGrantRepository repository = new(
+            new FakeJsRuntime(module),
+            new FixedTimeProvider(),
+            new GuidSequence());
+        CapabilityGrantId serverIssuedId = CapabilityGrantId.FromGuid(Guid.Parse("22222222-2222-2222-2222-222222222222"));
+
+        CapabilityGrantMutationResult imported = await repository.ImportAsync(
+            serverIssuedId,
+            "org.hackeros.browser",
+            "user-1",
+            AppCapabilities.FileSystemUserHomeRead,
+            CapabilityGrantSource.AdministratorApproval,
+            constraints: null,
+            isRevoked: true,
+            AppAuthority.Administrator);
+
+        Assert.Equal(CapabilityGrantMutationStatus.Revoked, imported.Status);
+        JsonElement persistedGrant = Assert.IsType<JsonElement>(module.Grant);
+        Assert.Equal(1785672000000, persistedGrant.GetProperty("revokedAtUtcMs").GetInt64());
+        Assert.Equal(1, persistedGrant.GetProperty("revokedRevision").GetInt64());
+    }
+
+    [Fact]
+    public async Task Import_same_id_twice_updates_in_place_instead_of_duplicating()
+    {
+        FakeIndexedDbModule module = new();
+        await using IndexedDbCapabilityGrantRepository repository = new(
+            new FakeJsRuntime(module),
+            new FixedTimeProvider(),
+            new GuidSequence());
+        CapabilityGrantId serverIssuedId = CapabilityGrantId.FromGuid(Guid.Parse("33333333-3333-3333-3333-333333333333"));
+
+        await repository.ImportAsync(
+            serverIssuedId, "org.hackeros.browser", "user-1", AppCapabilities.FileSystemUserHomeRead,
+            CapabilityGrantSource.AdministratorApproval, constraints: null, isRevoked: false, AppAuthority.Administrator);
+
+        // A later re-import of the same server RecordId (e.g. the same grant, now revoked) must update
+        // the existing row under the same id, not mint a second grant record.
+        CapabilityGrantMutationResult second = await repository.ImportAsync(
+            serverIssuedId, "org.hackeros.browser", "user-1", AppCapabilities.FileSystemUserHomeRead,
+            CapabilityGrantSource.AdministratorApproval, constraints: null, isRevoked: true, AppAuthority.Administrator);
+
+        Assert.Equal(serverIssuedId, second.Grant!.Id);
+        Assert.Equal(2, second.PolicyRevision);
+        JsonElement persistedGrant = Assert.IsType<JsonElement>(module.Grant);
+        Assert.Equal(serverIssuedId.ToString(), persistedGrant.GetProperty("id").GetString());
+        Assert.Equal(1785672000000, persistedGrant.GetProperty("revokedAtUtcMs").GetInt64());
+        Assert.Equal(["capability.sync-import", "capability.sync-import"], module.AuditActions);
+    }
+
+    [Fact]
     public async Task Grant_reports_explicit_conflict_when_policy_revision_changes_before_commit()
     {
         FakeIndexedDbModule module = new() { ConflictOnNextAssertion = true };
