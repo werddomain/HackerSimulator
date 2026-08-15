@@ -13,6 +13,7 @@
 @inject AppCatalog Catalog
 @inject IJSRuntime JS
 @inject IServerConnectionService ServerConnection
+@inject ISettingsSyncService SettingsSync
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -86,10 +87,19 @@
                             <div class="info-line"><span>Status:</span> <strong>Connected</strong></div>
                             <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerBaseUrl</strong></div>
                             <div class="info-line"><span>Account:</span> <strong>@_connectionState.AccountId</strong></div>
+                            @if (!string.IsNullOrEmpty(_syncStatusMessage))
+                            {
+                                <div class="info-line"><span>Sync:</span> <strong>@_syncStatusMessage</strong></div>
+                            }
                         </div>
-                        <button class="btn-danger" disabled="@_isConnecting" @onclick="DisconnectAsync">
-                            Disconnect
-                        </button>
+                        <div class="server-connection-actions">
+                            <button class="btn-secondary" disabled="@(_isConnecting || _isSyncing)" @onclick="SyncNowAsync">
+                                @(_isSyncing ? "Syncing..." : "Sync now")
+                            </button>
+                            <button class="btn-danger" disabled="@_isConnecting" @onclick="DisconnectAsync">
+                                Disconnect
+                            </button>
+                        </div>
                     }
                     else
                     {
@@ -251,6 +261,8 @@
     private string _password = string.Empty;
     private bool _isConnecting;
     private string? _connectionErrorMessage;
+    private bool _isSyncing;
+    private string? _syncStatusMessage;
 
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
 
@@ -372,6 +384,12 @@
         {
             _isConnecting = false;
         }
+
+        if (_connectionState is not null)
+        {
+            // ADR 0029 Decision 7: sync once immediately after a successful connect.
+            await SyncNowAsync();
+        }
     }
 
     private async Task DisconnectAsync()
@@ -387,6 +405,44 @@
         _username = string.Empty;
         _password = string.Empty;
         _connectionErrorMessage = null;
+        _syncStatusMessage = null;
+    }
+
+    private async Task SyncNowAsync()
+    {
+        if (_isSyncing || _connectionState is null)
+        {
+            return;
+        }
+
+        _isSyncing = true;
+        _syncStatusMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await SettingsSync.PushAsync(AppContext.CancellationToken);
+            await SettingsSync.PullAsync(AppContext.CancellationToken);
+
+            AppearanceSettings current = await _appearance!.ReadAsync(AppContext.CancellationToken);
+            _activeAccent = current.Accent;
+            _animationsEnabled = current.AnimationsEnabled;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
+                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
+            }
+
+            _syncStatusMessage = $"Last synced {DateTimeOffset.Now:t}";
+        }
+        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
+        {
+            _syncStatusMessage = $"Sync failed: {ex.Message}";
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
     }
 
     private void OpenResetDialog()

@@ -8,6 +8,7 @@ using HackerOs.Infrastructure.Browser.Policy;
 using HackerOs.Infrastructure.Browser.ServerConnection;
 using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
+using HackerOs.Infrastructure.Browser.Sync;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
@@ -34,6 +35,7 @@ using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Simulation.Abstractions.Sync;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Icons;
@@ -146,6 +148,21 @@ public static class EcosystemServiceCollectionExtensions
                 asyncPasswordHasher: (password, salt, iterations, length, ct) =>
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
         });
+
+        // Settings domain sync (ADR 0029) — reuses the connection above; a no-op when disconnected.
+        services.AddSingleton<ISyncCursorRepository>(provider =>
+            new IndexedDbSyncCursorRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddSingleton<ISyncRecordStateRepository>(provider =>
+            new IndexedDbSyncRecordStateRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddSingleton<ISyncClient, HttpSyncClient>();
+        services.AddSingleton<ISettingsSyncService>(provider => new SettingsSyncService(
+            CreateSystemSettingsDefinitions(),
+            provider.GetRequiredService<ISettingsDocumentService>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISyncClient>(),
+            provider.GetRequiredService<ISyncCursorRepository>(),
+            provider.GetRequiredService<ISyncRecordStateRepository>()));
+
         services.AddSingleton<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();

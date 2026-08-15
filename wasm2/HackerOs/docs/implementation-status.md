@@ -474,6 +474,17 @@ server is absent.
 | P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+1a |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
 
+### P5-SYNC-CLIENT — Settings Domain Sync (ADR 0029)
+
+| ID | Title | Status |
+|---|---|---|
+| P5-SYNC-CLIENT-001 | Domain-agnostic sync scaffolding (`syncCursors`/`syncRecordState` stores, schema v4; `ISyncClient`) | ✅ Done |
+| P5-SYNC-CLIENT-002 | `SyncEligible` opt-in flag; `AppearanceSettingsDocuments` opted in | ✅ Done |
+| P5-SYNC-CLIENT-003 | `ISettingsSyncService` push/pull adapter with deterministic `RecordId` derivation | ✅ Done |
+| P5-SYNC-CLIENT-004 | On-connect + manual "Sync now" trigger in Settings UI | ✅ Done |
+| P5-SYNC-CLIENT-005 | FileSystem/Grants/AppCatalog/FileAssociations domain adapters | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+2 onward |
+| P5-SYNC-CLIENT-006 | Surfaced (non-automatic) conflict resolution UI | ⬜ Not started — ADR 0029 Decision 6 is an explicit simplification for this domain only |
+
 ### P5-SYNC — Record Synchronization
 
 | ID | Title | Status |
@@ -502,6 +513,7 @@ server is absent.
 - **ADR 0025** — Record Synchronization Envelope, Conflict Model, and Cursor Strategy (D-018)
 - **ADR 0027** — Server-Hosted Blazor UI (Third Host, Single-Tenant Phase)
 - **ADR 0028** — Client-Side Optional-Server Connection and Proxy Bridge
+- **ADR 0029** — Settings Domain Sync (First Client Sync Implementation)
 
 ### Solution structure
 ```

@@ -39,8 +39,13 @@ Default app paths are:
 ```
 
 Protected documents remain under `/etc/hackeros/`, including the existing
-file-association path. Only roaming scope is sync-eligible by default; device
-scope never roams.
+file-association path. Per ADR 0029, sync eligibility is an explicit
+`SyncEligible` flag on `SettingsDocumentDefinition`, not inferred from scope —
+`AppRoamingUser` remains the natural scope for a document a user expects to
+follow them, but any document may opt in regardless of scope, and none does
+so implicitly. See `docs/adr/0029-settings-sync.md` and
+`docs/server-implementation-pass.md` for what is actually wired up today
+(one document, `AppearanceSettingsDocuments`).
 
 Ordinary `.config` documents accept blank lines, `#` comment lines, root
 `key=value` pairs, and optional `[GroupName]` sections. The settings schema owns
@@ -105,5 +110,5 @@ app ID, user ID, and effective authority.
 - [x] Define app/user, app/device, and roaming path definitions.
 - [x] Define local app/user/device scope for per-device user window geometry.
 - [x] Add schema-driven app settings validators.
-- [ ] Add a persistent IndexedDB repository implementation.
+- [x] Add a persistent IndexedDB repository implementation (`IndexedDbSettingsDocumentService`).
 - [ ] Add a full virtual filesystem router that mounts the settings projection.

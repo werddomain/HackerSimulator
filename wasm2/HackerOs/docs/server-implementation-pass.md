@@ -36,8 +36,16 @@ requirement for normal operation. See `docs/hosting-model.md`.
   fallback wired into `ping` only (an unknown host now attempts an HTTP HEAD
   proxy round-trip through the connected server before reporting unreachable).
   **`curl`/`nmap`/`cat` were named as candidates but not wired in this pass** —
-  scoped down deliberately rather than spread thin; see Pass N+1a below. Sync
-  itself deferred to the passes below.
+  scoped down deliberately rather than spread thin; see Pass N+1a below.
+- **Settings domain sync** (ADR 0029, `docs/adr/0029-settings-sync.md`) — the
+  first real sync client for any domain. Explicit per-document `SyncEligible`
+  opt-in (only `AppearanceSettingsDocuments` opted in so far), deterministic
+  `RecordId` derivation, two new domain-agnostic IndexedDB stores
+  (`syncCursors`/`syncRecordState`, schema v4) reused by every future sync
+  pass, `ISyncClient`, `ISettingsSyncService`, and a "Sync now" button plus
+  an on-connect trigger in the Settings panel. Conflicts resolve automatically
+  in the server's favor (not surfaced to the user) — an explicit, recorded
+  simplification for this low-stakes first domain, not a general policy.
 
 ## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
 
@@ -52,17 +60,6 @@ named. Concretely:
   needs either a new non-HTTP proxy contract shape or stays simulation-only
   indefinitely — see the open question below.
 
-## Pass N+1: Sync — Settings domain
-
-Serialize `ISettingsDocumentService` documents to/from the existing
-`SyncRecordEnvelope` (`Server/HackerOs.Server.Contracts/Sync/SyncContracts.cs`),
-apply ADR 0025's revision/conflict rules on pull, and trigger a push on
-reconnect plus an explicit "sync now" action in Settings. Depends on the
-connection foundation from ADR 0028 (this pass reuses `IServerConnectionService`
-for the access token and `IAccountClient`'s refresh flow — no new auth work
-needed). Smallest of the five sync domains; a good first sync pass to prove the
-push/pull/conflict-apply pattern before tackling FileSystem.
-
 ## Pass N+2: Sync — FileSystem domain
 
 The largest sync pass. Content-hash chunked transfer already has server-side
@@ -72,7 +69,13 @@ SHA-256). Entries/links metadata sync separately from content, per the existing
 transaction-boundary split documented in `docs/indexeddb-filesystem.md` (entries+
 links commit together; content is independent and deduplicated by hash — the
 sync adapter should preserve that same split rather than inventing a new one).
-Depends on Pass N+1's push/pull/conflict-apply scaffolding existing and proven.
+Reuses Pass N+1's `syncCursors`/`syncRecordState` stores, `ISyncClient`, and
+the push/pull/cursor-paging pattern proven there — write a new domain-specific
+adapter (`IFileSystemSyncService`-shaped), not new scaffolding. Unlike
+Settings, a naive automatic-server-wins conflict resolution is a worse default
+here (file content loss is more consequential than a reverted preference) —
+decide this domain's conflict UX explicitly rather than reusing ADR 0029
+Decision 6 by default.
 
 ## Pass N+3: Sync — Grants domain
 
@@ -140,8 +143,6 @@ independent of any one browser).
   change, needs its own security review per the SSRF/redirect-limit work
   already tracked under `P5-PROXY-*`) or scope those two commands' "real" mode
   down to what HTTP proxying actually supports.
-- Does real network access need its own capability ID (e.g.
-  `network.real.access`), separate from the existing
-  `AppCapabilities.NetworkSimulatedRead`/`NetworkSimulatedWrite`, so it's
-  independently auditable/grantable? Decided during the ADR 0028 implementation
-  pass — see that ADR for the resolution once written.
+- ~~Does real network access need its own capability ID...~~ **Resolved**:
+  `AppCapabilities.NetworkRealAccess` (`network.real.access`) was added during
+  ADR 0028 implementation and is declared by `ping`'s manifest.

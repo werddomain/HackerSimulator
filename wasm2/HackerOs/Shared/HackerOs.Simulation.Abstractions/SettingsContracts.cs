@@ -15,6 +15,11 @@ namespace HackerOs.Simulation.Abstractions;
 /// <param name="MinimumReadAuthority">Minimum acting authority required to read.</param>
 /// <param name="MinimumWriteAuthority">Minimum acting authority required to write.</param>
 /// <param name="Validator">Whole-document syntax and schema validator.</param>
+/// <param name="SyncEligible">
+/// Whether this document is pushed/pulled to the optional server (ADR 0029). Defaults to
+/// <see langword="false"/> — sync is an explicit per-document opt-in, not inferred from
+/// <see cref="Key"/>'s scope.
+/// </param>
 public sealed record SettingsDocumentDefinition(
     VirtualPath Path,
     SettingsDocumentKey Key,
@@ -24,7 +29,8 @@ public sealed record SettingsDocumentDefinition(
     string WriteCapability,
     AppAuthority MinimumReadAuthority,
     AppAuthority MinimumWriteAuthority,
-    ISettingsDocumentValidator Validator);
+    ISettingsDocumentValidator Validator,
+    bool SyncEligible = false);
 
 /// <summary>
 /// Represents one immutable revision of a settings document.

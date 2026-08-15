@@ -22,7 +22,7 @@ public static class HackerOsIndexedDbSchema
     /// Incrementing this value is the only way to add/remove/change an object store or index;
     /// migration steps for each prior version are implemented by <c>P2-IDB-006</c>.
     /// </remarks>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     /// <summary>Object store persisting one record per <c>LocalUser</c> account.</summary>
     public const string UserStoreName = "users";
@@ -71,6 +71,20 @@ public static class HackerOsIndexedDbSchema
     /// settings `.config` projection.
     /// </summary>
     public const string ServerConnectionStoreName = "serverConnection";
+
+    /// <summary>
+    /// Object store persisting one opaque pull cursor per sync domain (ADR 0029). Domain-agnostic —
+    /// reused by every sync-domain pass (Settings, FileSystem, Grants, AppCatalog, FileAssociations),
+    /// not specific to Settings.
+    /// </summary>
+    public const string SyncCursorStoreName = "syncCursors";
+
+    /// <summary>
+    /// Object store persisting the last-synced sync-<c>Revision</c>/<c>ContentHash</c> per
+    /// <c>(domain, recordId)</c> pair (ADR 0029). Independent of any document's own local
+    /// optimistic-concurrency revision; domain-agnostic like <see cref="SyncCursorStoreName"/>.
+    /// </summary>
+    public const string SyncRecordStateStoreName = "syncRecordState";
 
     /// <summary>Gets every object store declared for <see cref="CurrentVersion"/>, in creation order.</summary>
     public static IReadOnlyList<IndexedDbObjectStoreDefinition> ObjectStores { get; } =
@@ -210,7 +224,26 @@ public static class HackerOsIndexedDbSchema
             purpose:
                 "The single per-device optional-server connection record (account ID, device ID, " +
                 "server base URL, opaque refresh token), keyed by a fixed constant key. Added by " +
-                "ADR 0028; distinct from the local-only syncMetadata store.")
+                "ADR 0028; distinct from the local-only syncMetadata store."),
+
+        new(
+            SyncCursorStoreName,
+            keyPath: ["domain"],
+            autoIncrement: false,
+            indexes: [],
+            purpose:
+                "One opaque pull cursor per sync domain (ADR 0029). Domain-agnostic scaffolding " +
+                "reused by every sync-domain pass, not specific to Settings."),
+
+        new(
+            SyncRecordStateStoreName,
+            keyPath: ["id"],
+            autoIncrement: false,
+            indexes: [new IndexedDbIndexDefinition("domain", ["domain"])],
+            purpose:
+                "Last-synced sync-Revision/ContentHash per (domain, recordId) pair, id = " +
+                "\"domain|recordId\" (ADR 0029). Separate from any document's own local " +
+                "optimistic-concurrency revision.")
     ];
 
     /// <summary>
@@ -295,6 +328,18 @@ public static class HackerOsIndexedDbSchema
             "ServerConnectionUpdate",
             [ServerConnectionStoreName],
             "Create/update/clear the single per-device server connection record atomically, " +
-                "independent of every other store (ADR 0028).")
+                "independent of every other store (ADR 0028)."),
+
+        new(
+            "SyncCursorUpdate",
+            [SyncCursorStoreName],
+            "Create/update one sync domain's pull cursor atomically, independent of every other " +
+                "store (ADR 0029)."),
+
+        new(
+            "SyncRecordStateUpdate",
+            [SyncRecordStateStoreName],
+            "Create/update one (domain, recordId) sync tracking record atomically, independent of " +
+                "every other store (ADR 0029).")
     ];
 }

@@ -12,7 +12,7 @@ public sealed class HackerOsIndexedDbSchemaTests
     public void DatabaseIdentity_MatchesAdr0015()
     {
         Assert.Equal("hackeros", HackerOsIndexedDbSchema.DatabaseName);
-        Assert.Equal(3, HackerOsIndexedDbSchema.CurrentVersion);
+        Assert.Equal(4, HackerOsIndexedDbSchema.CurrentVersion);
     }
 
     [Fact]
@@ -21,7 +21,8 @@ public sealed class HackerOsIndexedDbSchemaTests
         string[] expected =
         [
             "users", "groups", "sessions", "settings", "fsEntries", "fsLinks", "fsContent",
-            "catalog", "grants", "audit", "diagnostics", "syncMetadata", "serverConnection"
+            "catalog", "grants", "audit", "diagnostics", "syncMetadata", "serverConnection",
+            "syncCursors", "syncRecordState"
         ];
 
         string[] actual = [.. HackerOsIndexedDbSchema.ObjectStores.Select(store => store.Name)];

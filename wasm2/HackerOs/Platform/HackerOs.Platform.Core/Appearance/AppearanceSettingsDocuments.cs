@@ -35,5 +35,6 @@ public static class AppearanceSettingsDocuments
         AppCapabilities.SettingsSystemWrite,
         AppAuthority.User,
         AppAuthority.User,
-        new AppearanceSettingsValidator());
+        new AppearanceSettingsValidator(),
+        SyncEligible: true);
 }

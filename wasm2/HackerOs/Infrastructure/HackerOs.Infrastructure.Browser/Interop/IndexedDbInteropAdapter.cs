@@ -222,6 +222,14 @@ internal sealed record IndexedDbMigrationPlan
                 store => store.Name == HackerOsIndexedDbSchema.ServerConnectionStoreName)],
             [],
             [],
+            []),
+        new(
+            4,
+            [.. HackerOsIndexedDbSchema.ObjectStores.Where(store =>
+                store.Name is HackerOsIndexedDbSchema.SyncCursorStoreName
+                    or HackerOsIndexedDbSchema.SyncRecordStateStoreName)],
+            [],
+            [],
             [])
     ]);
 }
