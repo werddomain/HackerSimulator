@@ -100,6 +100,30 @@ public sealed class IndexedDbFileSystemProviderTests
     }
 
     [Fact]
+    public async Task ReadAsync_FileCreatedButNeverWritten_ReturnsEmptyContentNotFailure()
+    {
+        // A file created via CreateAsync alone (e.g. `touch`, never followed by WriteAsync) has no
+        // content-hash yet — that's a legitimate empty file, not a corrupt entry (see FromMetadata's
+        // defaults: ContentKind=Binary, ContentHash=null). ReadAsync must succeed with zero bytes,
+        // matching how InMemoryFileSystemRepository already treats an unwritten file's content.
+        ScriptedModule module = new(
+            One(Entry(RootId, FileSystemEntryKind.Directory)),
+            One(Link("empty.txt", ChildId)),
+            One(Entry(ChildId, FileSystemEntryKind.File, revision: 1, length: 0)));
+        await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
+
+        FileSystemResult<FileSystemContentReadHandle> result = await provider.ReadAsync(
+            new FileSystemReadRequest(VirtualPath.Parse("/empty.txt")),
+            Context());
+
+        Assert.True(result.Succeeded);
+        await using FileSystemContentReadHandle handle = result.Value!;
+        using StreamReader reader = new(handle.Content);
+        Assert.Equal(string.Empty, await reader.ReadToEndAsync());
+        Assert.Equal(FileSystemContentKind.Binary, handle.Descriptor.Kind);
+    }
+
+    [Fact]
     public async Task WriteAsync_PersistsChunksThenPublishesRevisionedMetadata()
     {
         const string expectedHash = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";

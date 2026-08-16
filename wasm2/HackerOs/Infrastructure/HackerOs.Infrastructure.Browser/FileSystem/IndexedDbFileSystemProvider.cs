@@ -69,16 +69,16 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
                     Error(FileSystemOperation.Read, FileSystemErrorCode.NotFile, request.Path));
             }
 
-            if (entry.ContentHash is null)
-            {
-                return FileSystemResult<FileSystemContentReadHandle>.Failure(
-                    Error(FileSystemOperation.Read, FileSystemErrorCode.ProviderFailure, request.Path));
-            }
-
-            Stream content = await _contentRepository.ReadAsync(
-                entry.ContentHash,
-                entry.Length,
-                cancellationToken).ConfigureAwait(false);
+            // A file that was created (e.g. `touch`) but never written has no content blob yet —
+            // that is a legitimate empty file, not a corrupt entry, matching FromMetadata's
+            // defaults (ContentKind=Binary, MediaType=application/octet-stream) and how
+            // InMemoryFileSystemRepository already treats an unwritten file's content as empty.
+            Stream content = entry.ContentHash is null
+                ? Stream.Null
+                : await _contentRepository.ReadAsync(
+                    entry.ContentHash,
+                    entry.Length,
+                    cancellationToken).ConfigureAwait(false);
             FileSystemContentDescriptor descriptor = (FileSystemContentKind)entry.ContentKind switch
             {
                 FileSystemContentKind.Binary => FileSystemContentDescriptor.Binary(entry.MediaType),

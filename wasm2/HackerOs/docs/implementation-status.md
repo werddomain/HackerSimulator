@@ -488,7 +488,7 @@ to every host.
 | P5-CMD-002 | `AppLifecycleOrchestrator` constructs terminal/service apps via `ActivatorUtilities.CreateInstance` so commands needing injected services (`ping`, `curl`, `nmap`) actually launch | ✅ Done |
 | P5-CMD-003 | Register `ISimulatedNetworkService` with `SmokeTestNetworkSeed` (`example.hackeros`, `empty.hackeros`) — first production registration/seed of any kind | ✅ Done — deliberately minimal, not the ADR 0023 "Game domain" content pack |
 | P5-CMD-004 | Fix incomplete capability declarations found during live verification: `mkdir`/`touch`/`rm`/`chmod` missing `filesystem.user-home.read`, `alias`'s JSON manifest missing both capabilities its C# manifest already declared | ✅ Done |
-| P5-CMD-005 | `cat` cannot read a file `touch` just created (`FileSystem.ReadAsync` returns not-found though `StatAsync`/`EnumerateAsync` succeed) | ⬜ Found, not fixed — see `docs/server-implementation-pass.md` open questions; likely a VFS provider bug for never-written file content |
+| P5-CMD-005 | `cat` cannot read a file `touch` just created (`IndexedDbFileSystemProvider.ReadAsync` treated a null `ContentHash` as failure instead of an empty file) | ✅ Done — fixed in `IndexedDbFileSystemProvider.ReadAsync`; see `docs/server-implementation-pass.md` |
 
 ### P5-SYNC-CLIENT — Settings, FileSystem, Grants, AppCatalog, and FileAssociations Domain Sync (ADR 0029-0031, ADR 0033)
 

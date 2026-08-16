@@ -165,6 +165,27 @@ as separate, deferred decisions.
   (`CurlCommand_HeadersOnly_UnknownHost_With/WithoutServerConnection_*`);
   live-verified in the browser for both the simulated-host and
   disconnected-unknown-host cases.
+- **Fixed `IndexedDbFileSystemProvider.ReadAsync` treating an unwritten file as
+  a provider failure** (found during ADR 0034 live verification) — `cat`
+  couldn't read a file `touch` just created: `touch` only calls `CreateAsync`
+  (never `WriteAsync`), so the persisted entry has `ContentHash == null`, and
+  `ReadAsync` (`Infrastructure/HackerOs.Infrastructure.Browser/FileSystem/IndexedDbFileSystemProvider.cs`)
+  treated that as `FileSystemErrorCode.ProviderFailure` instead of a
+  legitimate empty file — `StatAsync`/`EnumerateAsync` both succeeded on the
+  same path (they only read metadata, not content), so the file visibly
+  existed everywhere except `cat`. `InMemoryFileSystemRepository` (the
+  in-memory provider `dotnet test` exercises) already returns an empty
+  content stream for an unwritten file, which is why this was invisible to
+  the test suite and only surfaced through live browser verification — the
+  two providers had diverged on what "file exists but was never written"
+  means. Fixed by returning `Stream.Null` (with the entry's stored, default
+  Binary descriptor) instead of failing when `ContentHash` is null, matching
+  `FromMetadata`'s own defaults and the in-memory provider's behavior.
+  Regression test added in
+  `Tests/HackerOs.Infrastructure.Browser.Tests/IndexedDbFileSystemProviderTests.cs`
+  (`ReadAsync_FileCreatedButNeverWritten_ReturnsEmptyContentNotFailure`);
+  live-verified: `touch hello.txt` then `cat hello.txt` now succeeds with
+  empty output instead of "No such file or directory".
 
 ## Pass N+1a (remaining): `nmap` and full-body `curl`/`cat`
 
@@ -209,20 +230,6 @@ independent of any one browser).
 
 ## Open questions carried forward
 
-- **Found during ADR 0034 live verification, unfixed**: `cat` fails to read a
-  file `touch` just created — `FileSystem.ReadAsync` returns not-found on a
-  path whose `StatAsync`/`EnumerateAsync` both succeed (confirmed live:
-  `touch testdir/hello.txt` then `ls testdir` shows `hello.txt`, but
-  `cat testdir/hello.txt` reports "No such file or directory", and a
-  subsequent `rm` on the same path succeeds cleanly, ruling out the path
-  simply not existing). Most likely the VFS provider models an empty/
-  never-written file's content as absent rather than zero-length, so a file
-  created via `CreateAsync` alone (no `WriteAsync`) is stat/enumerate-visible
-  but not read-visible. This is a `FileSystemService`/provider-level bug,
-  orthogonal to catalog wiring or capability declarations, and was never
-  observable before this pass since `cat`/`touch` had never both been
-  launchable. Needs its own investigation before `cat`/full-body `curl`
-  (which reads through the same path) can be trusted.
 - **Scope divergence recorded during ADR 0033 implementation**: AppCatalog
   sync's conflict handling reuses Settings' server-wins pattern rather than
   ADR 0025's suggested `ClientWins` for this domain — nothing could produce an
