@@ -18,6 +18,7 @@ using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
@@ -31,6 +32,7 @@ using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
@@ -253,6 +255,24 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
             provider.GetRequiredService<ISettingsDocumentService>()));
+
+        // Simulated network (ADR 0034) — smoke-test seed only, not the full "Game domain" content
+        // pack ADR 0023 scoped separately. Enough for curl/ping/nmap's simulated path to work now
+        // that the commands themselves are wired into the catalog.
+        services.AddSingleton<ISimulatedWebsiteRegistry>(_ =>
+        {
+            InMemorySimulatedWebsiteRegistry registry = new();
+            foreach (ISimulatedWebsiteController controller in SmokeTestNetworkSeed.Websites)
+            {
+                registry.Register(controller);
+            }
+
+            return registry;
+        });
+        services.AddSingleton<ISimulatedNetworkService>(provider => new InMemorySimulatedNetworkService(
+            SmokeTestNetworkSeed.Hosts,
+            provider.GetRequiredService<ISimulatedWebsiteRegistry>()));
+
         services.AddSingleton<AppLifecycleOrchestrator>(provider => new AppLifecycleOrchestrator(
             provider.GetRequiredService<AppCatalog>(),
             descriptorProvider?.Invoke(provider) ?? new Dictionary<string, AppDescriptor>(StringComparer.Ordinal),
@@ -263,7 +283,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
             descriptorLoaderProvider?.Invoke(provider),
-            provider.GetRequiredService<IPersistentAppCatalogRepository>()));
+            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
+            provider));
         services.AddSingleton<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

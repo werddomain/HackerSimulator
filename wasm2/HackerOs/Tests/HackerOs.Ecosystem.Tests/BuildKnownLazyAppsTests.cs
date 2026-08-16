@@ -11,13 +11,25 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        Assert.Equal(12, catalog.Manifests.Count);
+        Assert.Equal(36, catalog.Manifests.Count);
         Assert.Contains("org.hackeros.browser", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.diagnostic", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.hack-paint", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.terminal", catalog.Manifests.Keys);
-        Assert.All(catalog.Manifests.Values, manifest =>
-            Assert.Equal(AppLaunchVisibility.Visible, manifest.Presentation.LaunchVisibility));
-        Assert.Equal(12, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Contains("org.hackeros.commands.curl", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.ping", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.nmap", catalog.Manifests.Keys);
+        Assert.DoesNotContain("org.hackeros.commands.cd", catalog.Manifests.Keys);
+        Assert.DoesNotContain("org.hackeros.commands.pwd", catalog.Manifests.Keys);
+        Assert.DoesNotContain("org.hackeros.commands.clear", catalog.Manifests.Keys);
+        Assert.DoesNotContain("org.hackeros.commands.help", catalog.Manifests.Keys);
+
+        // Window/service apps (the launcher-visible desktop suite) stay Visible; terminal
+        // commands are deliberately Hidden — they're invoked by name from the terminal, not
+        // double-clicked from a launcher, and shouldn't clutter it.
+        Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
+            manifest.Kind == AppKind.Terminal ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
+            manifest.Presentation.LaunchVisibility));
+        Assert.Equal(36, BuildKnownLazyAssemblies.Names.Count);
     }
 }

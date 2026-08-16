@@ -22,7 +22,7 @@ public sealed class ChmodCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Chmod.dll", "HackerOs.Commands.Chmod.ChmodCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeWrite],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("chmod", [], "chmod <mode> <file...>"),
         SingleInstancePerUser = false

@@ -198,6 +198,81 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task Launching_a_command_whose_constructor_needs_an_injected_service_resolves_it_from_di()
+    {
+        FakeServiceProvider services = new(new FakeInjectedService("injected-value"));
+
+        AppManifest manifest = InjectingManifest();
+        Fixture fixture = new(services, manifest);
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest(manifest.Id, principal, []));
+
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"injected-value{Environment.NewLine}", result.StandardOutput);
+    }
+
+    [Fact]
+    public async Task Launching_a_command_with_extra_constructor_dependencies_without_a_service_provider_fails_as_entry_point_fault()
+    {
+        // Characterizes the bug this pass fixes: without a service provider, construction throws
+        // (MissingMethodException) inside LaunchAsync's existing catch-all, which reports it as
+        // EntryPointFault rather than crashing — this is the "curl doesn't crash the app, it just
+        // silently produces a confusing reflection error" shape the bug actually had in production.
+        AppManifest manifest = InjectingManifest();
+        Fixture fixture = new(manifest);
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest(manifest.Id, principal, []));
+
+        Assert.Equal(AppLaunchStatus.EntryPointFault, result.Status);
+        Assert.Contains("constructor", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private interface IFakeInjectedService
+    {
+        string Value { get; }
+    }
+
+    private sealed class FakeInjectedService(string value) : IFakeInjectedService
+    {
+        public string Value { get; } = value;
+    }
+
+    private sealed class FakeServiceProvider(IFakeInjectedService injected) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(IFakeInjectedService) ? injected : null;
+    }
+
+    private sealed class InjectingTerminalApp(AppManifest manifest, IFakeInjectedService injected) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await context.StandardOutput.WriteLineAsync(injected.Value.AsMemory(), cancellationToken);
+            return 0;
+        }
+    }
+
+    private static AppManifest InjectingManifest() => new()
+    {
+        Id = "org.hackeros.injecting",
+        Name = "Injecting",
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "Requires an injected service beyond the manifest.",
+        Kind = AppKind.Terminal,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(InjectingTerminalApp).FullName!),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None,
+        Terminal = new TerminalCommandManifest("injecting", [], "injecting")
+    };
+
+    [Fact]
     public async Task Enabling_an_app_is_blocked_with_an_explanatory_error_when_a_dependency_is_disabled()
     {
         AppManifest dependency = EchoManifest();
@@ -311,11 +386,23 @@ public sealed class AppLifecycleOrchestratorTests
         private readonly DateTimeOffset _now = new(2026, 8, 1, 12, 0, 0, TimeSpan.Zero);
         private readonly LocalLoginName _aliceLoginName;
 
-        internal Fixture(params AppManifest[] manifests) : this(catalogRepository: null, manifests)
+        internal Fixture(params AppManifest[] manifests)
+            : this(catalogRepository: null, services: null, manifests)
         {
         }
 
         internal Fixture(IPersistentAppCatalogRepository? catalogRepository, params AppManifest[] manifests)
+            : this(catalogRepository, services: null, manifests)
+        {
+        }
+
+        internal Fixture(IServiceProvider services, params AppManifest[] manifests)
+            : this(catalogRepository: null, services, manifests)
+        {
+        }
+
+        internal Fixture(
+            IPersistentAppCatalogRepository? catalogRepository, IServiceProvider? services, params AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -378,7 +465,7 @@ public sealed class AppLifecycleOrchestratorTests
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus,
-                descriptorLoader: null, catalogRepository);
+                descriptorLoader: null, catalogRepository, services);
         }
 
         internal LocalSessionService Session { get; }

@@ -471,8 +471,23 @@ server is absent.
 | P5-CONN-002 | Browser-independent HTTP clients (`IAccountClient`, `IProxyClient`, `IServerConnectionService` in `Platform.Core/ServerConnection/`) | ✅ Done |
 | P5-CONN-003 | Settings UI panel to connect/disconnect | ✅ Done |
 | P5-CONN-004 | Real-network proxy fallback wired into `ping` | ✅ Done |
-| P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+1a |
+| P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — now unblocked by ADR 0034 (P5-CMD below); see `docs/server-implementation-pass.md` Pass N+1a |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
+
+### P5-CMD — Terminal Command Catalog Wiring (ADR 0034)
+
+Unplanned prerequisite discovered starting Pass N+1a: verifying `ping`'s
+real-network fallback against a real app launch (not just direct unit-test
+construction) surfaced that the entire `Apps/Commands/*` suite was invisible
+to every host.
+
+| ID | Description | Status |
+| --- | --- | --- |
+| P5-CMD-001 | Wire 24 of 28 `Apps/Commands/*` projects into `HackerOs.Ecosystem.csproj` (`ProjectReference`/`EmbeddedResource`/`BlazorWebAssemblyLazyLoad`), excluding `cd`/`pwd`/`clear`/`help` (terminal built-ins) | ✅ Done |
+| P5-CMD-002 | `AppLifecycleOrchestrator` constructs terminal/service apps via `ActivatorUtilities.CreateInstance` so commands needing injected services (`ping`, `curl`, `nmap`) actually launch | ✅ Done |
+| P5-CMD-003 | Register `ISimulatedNetworkService` with `SmokeTestNetworkSeed` (`example.hackeros`, `empty.hackeros`) — first production registration/seed of any kind | ✅ Done — deliberately minimal, not the ADR 0023 "Game domain" content pack |
+| P5-CMD-004 | Fix incomplete capability declarations found during live verification: `mkdir`/`touch`/`rm`/`chmod` missing `filesystem.user-home.read`, `alias`'s JSON manifest missing both capabilities its C# manifest already declared | ✅ Done |
+| P5-CMD-005 | `cat` cannot read a file `touch` just created (`FileSystem.ReadAsync` returns not-found though `StatAsync`/`EnumerateAsync` succeed) | ⬜ Found, not fixed — see `docs/server-implementation-pass.md` open questions; likely a VFS provider bug for never-written file content |
 
 ### P5-SYNC-CLIENT — Settings, FileSystem, Grants, AppCatalog, and FileAssociations Domain Sync (ADR 0029-0031, ADR 0033)
 
@@ -530,6 +545,7 @@ All five domains named in the original roadmap now have a client-side adapter.
 - **ADR 0031** — Grants Domain Sync (Pull-Only)
 - **ADR 0032** — App Enablement Management
 - **ADR 0033** — AppCatalog and FileAssociations Domain Sync
+- **ADR 0034** — Wire the Terminal Command Catalog
 
 ### Solution structure
 ```

@@ -121,11 +121,43 @@ either scoped-down follow-ups named along the way, or the two larger,
 independently-optional items (Pass N+5, Pass N+6) ADR 0027 always described
 as separate, deferred decisions.
 
+- **Wire the terminal command catalog** (ADR 0034,
+  `docs/adr/0034-wire-terminal-command-catalog.md`) — an unplanned prerequisite
+  discovered while starting Pass N+1a below: verifying `ping`'s "proven
+  end-to-end" real-network fallback against a real app launch (not just direct
+  unit-test construction) surfaced that none of the 28 `Apps/Commands/*`
+  projects were referenced by `HackerOs.Ecosystem.csproj` at all — the entire
+  terminal command suite (including plain `ls`/`cat`/`mkdir`, not just
+  curl/nmap/ping) was invisible to every host. Fixed three compounding gaps:
+  wired 24 of the 28 command projects into the shared catalog (excluding
+  `cd`/`pwd`/`clear`/`help`, which `TerminalWindow.razor` intercepts as
+  built-ins before catalog resolution); made `AppLifecycleOrchestrator`
+  construct terminal/service apps via `ActivatorUtilities.CreateInstance` so
+  commands needing injected services (`PingCommand`, `CurlCommand`,
+  `NmapCommand`) actually launch instead of silently failing construction;
+  registered `ISimulatedNetworkService` for the first time with a small,
+  explicitly-labeled `SmokeTestNetworkSeed` (`example.hackeros`,
+  `empty.hackeros`) — deliberately not an attempt at the "Game domain" content
+  pack ADR 0023 scoped separately. This is what actually makes Pass N+1a
+  testable; it was blocked without this fix. Live verification in a real
+  browser session (not just `dotnet test`) then surfaced a fourth, independent
+  gap: `mkdir`/`touch`/`rm`/`chmod` declared only the `write` filesystem
+  capability despite each calling `StatAsync` (a `read` operation) on their
+  target's parent, and `alias`'s `app.manifest.json` had a stale empty
+  `capabilities: []` that didn't match its already-correct C# manifest — both
+  silently denied by the deny-by-default `CapabilityGrantRepository` and never
+  observable before this pass, since none of these five commands had ever
+  actually launched. Fixed by declaring `filesystem.user-home.read` alongside
+  `write` for the first four, and by fixing `alias`'s JSON to match its C#
+  source. See ADR 0034 Decision 4.
+
 ## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
 
 Extend the pattern already proven end-to-end by `ping` (see `PingCommand.cs`'s
 `PingRealHostAsync`) to the other three commands ADR 0023/0028 originally
-named. Concretely:
+named. Now unblocked by ADR 0034 above (the commands are launchable and the
+simulated-network path is exercisable) — this pass can proceed as originally
+scoped. Concretely:
 - `curl -I` (headers-only): fully achievable today — `IProxyClient.ExecuteHttpRequestAsync`
   already returns real status/headers, no body needed.
 - Normal `curl` (full body) and `cat` (reading a URL as content): blocked on
@@ -167,6 +199,20 @@ independent of any one browser).
 
 ## Open questions carried forward
 
+- **Found during ADR 0034 live verification, unfixed**: `cat` fails to read a
+  file `touch` just created — `FileSystem.ReadAsync` returns not-found on a
+  path whose `StatAsync`/`EnumerateAsync` both succeed (confirmed live:
+  `touch testdir/hello.txt` then `ls testdir` shows `hello.txt`, but
+  `cat testdir/hello.txt` reports "No such file or directory", and a
+  subsequent `rm` on the same path succeeds cleanly, ruling out the path
+  simply not existing). Most likely the VFS provider models an empty/
+  never-written file's content as absent rather than zero-length, so a file
+  created via `CreateAsync` alone (no `WriteAsync`) is stat/enumerate-visible
+  but not read-visible. This is a `FileSystemService`/provider-level bug,
+  orthogonal to catalog wiring or capability declarations, and was never
+  observable before this pass since `cat`/`touch` had never both been
+  launchable. Needs its own investigation before `cat`/full-body `curl`
+  (which reads through the same path) can be trusted.
 - **Scope divergence recorded during ADR 0033 implementation**: AppCatalog
   sync's conflict handling reuses Settings' server-wins pattern rather than
   ADR 0025's suggested `ClientWins` for this domain — nothing could produce an
@@ -187,6 +233,12 @@ independent of any one browser).
   ever be created today is through the generic sync push path, and ADR 0025's
   own text presumes a dedicated "authorized grant API" exists. Both need a
   real design pass once an actual grant-issuing authority is built.
+- **Found during ADR 0034 implementation**: `SmokeTestNetworkSeed` is
+  intentionally minimal (two hosts, one page) — just enough to prove
+  `curl`/`ping`/`nmap` launch and resolve `ISimulatedNetworkService` at all.
+  It is not, and should not grow into, the "Game domain" simulated-internet
+  content pack ADR 0023 scopes separately; that remains a from-scratch content
+  effort with its own design pass, not an incremental extension of this seed.
 - **Wiring gap found during ADR 0031 implementation**: `ICapabilityGrantRepository`
   (in-memory, what every runtime capability check reads) and
   `IPersistentCapabilityGrantRepository` (IndexedDB-backed, what sync pulls

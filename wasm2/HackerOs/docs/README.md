@@ -143,6 +143,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0031](adr/0031-grants-sync.md) | Grants domain sync (pull-only) |
 | [0032](adr/0032-app-enablement-management.md) | App enablement management |
 | [0033](adr/0033-appcatalog-and-fileassociations-sync.md) | AppCatalog and FileAssociations domain sync |
+| [0034](adr/0034-wire-terminal-command-catalog.md) | Wire the terminal command catalog |
 
 ## Migration history and project status
 

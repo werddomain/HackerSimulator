@@ -9,6 +9,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HackerOs.Platform.Core.Lifecycle;
 
@@ -31,6 +32,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IEventBus? _eventBus;
     private readonly IAppDescriptorLoader? _descriptorLoader;
     private readonly IPersistentAppCatalogRepository? _catalogRepository;
+    private readonly IServiceProvider? _services;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -50,6 +52,14 @@ public sealed class AppLifecycleOrchestrator
     /// in-memory <see cref="AppEnablementRegistry"/>, so a disable/enable survives past this
     /// process. Omitted in contexts (mostly tests) that don't need durability.
     /// </param>
+    /// <param name="services">
+    /// Optional DI container used to construct terminal/service app instances (ADR 0034). When
+    /// supplied, <see cref="RunTerminalAsync"/>/<see cref="StartService"/> use
+    /// <see cref="ActivatorUtilities.CreateInstance(IServiceProvider, Type, object[])"/> so a
+    /// command's constructor can request additional injected services beyond the manifest (e.g.
+    /// <c>PingCommand</c>'s <c>IServerConnectionService</c>/<c>IProxyClient</c>). When omitted, only
+    /// manifest-only constructors work — the previous, narrower behavior tests still rely on.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -60,7 +70,8 @@ public sealed class AppLifecycleOrchestrator
         ISettingsDocumentService settings,
         IEventBus? eventBus = null,
         IAppDescriptorLoader? descriptorLoader = null,
-        IPersistentAppCatalogRepository? catalogRepository = null)
+        IPersistentAppCatalogRepository? catalogRepository = null,
+        IServiceProvider? services = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -72,8 +83,25 @@ public sealed class AppLifecycleOrchestrator
         _eventBus = eventBus;
         _descriptorLoader = descriptorLoader;
         _catalogRepository = catalogRepository;
+        _services = services;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
+
+    /// <summary>
+    /// Constructs a terminal/service app instance, resolving any constructor parameters beyond the
+    /// manifest from DI when a service provider was supplied (ADR 0034) — falls back to the
+    /// manifest-only shape when it wasn't, matching the pre-ADR-0034 behavior for tests that don't
+    /// need extra dependencies.
+    /// </summary>
+    [UnconditionalSuppressMessage(
+        "Trimming", "IL2072",
+        Justification = "descriptor.EntryPointType was verified by AppEntryPointDiscovery against an " +
+            "explicit host assembly allowlist, never scanned; see P1-GATE-004 for the tracked follow-up " +
+            "to add matching trim root descriptors once a host publish step exists.")]
+    private object CreateAppInstance(AppDescriptor descriptor) =>
+        _services is not null
+            ? ActivatorUtilities.CreateInstance(_services, descriptor.EntryPointType, descriptor.Manifest)
+            : Activator.CreateInstance(descriptor.EntryPointType, descriptor.Manifest)!;
 
     private void OnProcessStateChanged(ProcessStateChangedEvent e)
     {
@@ -436,11 +464,6 @@ public sealed class AppLifecycleOrchestrator
         return granted;
     }
 
-    [UnconditionalSuppressMessage(
-        "Trimming", "IL2072",
-        Justification = "descriptor.EntryPointType was verified by AppEntryPointDiscovery against an " +
-            "explicit host assembly allowlist, never scanned; see P1-GATE-004 for the tracked follow-up " +
-            "to add matching trim root descriptors once a host publish step exists.")]
     private async Task<AppLaunchResult> RunTerminalAsync(
         AppDescriptor descriptor,
         ProcessRecord process,
@@ -453,7 +476,7 @@ public sealed class AppLifecycleOrchestrator
     {
         _processManager.MarkRunning(process.Pid);
 
-        TerminalAppBase app = (TerminalAppBase)Activator.CreateInstance(descriptor.EntryPointType, descriptor.Manifest)!;
+        TerminalAppBase app = (TerminalAppBase)CreateAppInstance(descriptor);
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
@@ -483,14 +506,9 @@ public sealed class AppLifecycleOrchestrator
             AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString());
     }
 
-    [UnconditionalSuppressMessage(
-        "Trimming", "IL2072",
-        Justification = "descriptor.EntryPointType was verified by AppEntryPointDiscovery against an " +
-            "explicit host assembly allowlist, never scanned; see P1-GATE-004 for the tracked follow-up " +
-            "to add matching trim root descriptors once a host publish step exists.")]
     private AppLaunchResult StartService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
     {
-        ServiceAppBase service = (ServiceAppBase)Activator.CreateInstance(descriptor.EntryPointType, descriptor.Manifest)!;
+        ServiceAppBase service = (ServiceAppBase)CreateAppInstance(descriptor);
         _processManager.MarkRunning(process.Pid);
         Task runTask = RunServiceAsync(service, process.Pid, context);
 

@@ -22,7 +22,7 @@ public sealed class TouchCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Touch.dll", "HackerOs.Commands.Touch.TouchCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeWrite],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("touch", [], "touch <file...>"),
         SingleInstancePerUser = false

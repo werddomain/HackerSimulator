@@ -19,6 +19,7 @@
     "iconAssetPaths": []
   },
   "capabilities": [
+    "filesystem.user-home.read",
     "filesystem.user-home.write"
   ],
   "resources": {

@@ -22,7 +22,7 @@ public sealed class RmCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Rm.dll", "HackerOs.Commands.Rm.RmCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeWrite],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("rm", [], "rm [-r|-R] [-f] <file...>"),
         SingleInstancePerUser = false

@@ -18,7 +18,10 @@
     "launchVisibility": "hidden",
     "iconAssetPaths": []
   },
-  "capabilities": [],
+  "capabilities": [
+    "filesystem.user-home.read",
+    "filesystem.user-home.write"
+  ],
   "resources": {
     "baselineCpuWeight": 0.0,
     "burstCpuWeight": 0.01,
