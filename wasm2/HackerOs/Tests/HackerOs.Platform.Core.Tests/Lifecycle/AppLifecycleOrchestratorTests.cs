@@ -159,6 +159,45 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task DisableAsync_persists_through_the_catalog_repository_when_supplied()
+    {
+        FakeAppCatalogRepository catalogRepository = new();
+        Fixture fixture = new(catalogRepository, EchoManifest());
+        await fixture.LoginAsync();
+
+        await fixture.Orchestrator.DisableAsync("org.hackeros.echo");
+
+        Assert.Equal(("org.hackeros.echo", false), Assert.Single(catalogRepository.Calls));
+    }
+
+    [Fact]
+    public async Task EnableAsync_persists_through_the_catalog_repository_when_supplied()
+    {
+        FakeAppCatalogRepository catalogRepository = new();
+        Fixture fixture = new(catalogRepository, EchoManifest());
+        await fixture.LoginAsync();
+        await fixture.Orchestrator.DisableAsync("org.hackeros.echo");
+        catalogRepository.Calls.Clear();
+
+        await fixture.Orchestrator.EnableAsync("org.hackeros.echo");
+
+        Assert.Equal(("org.hackeros.echo", true), Assert.Single(catalogRepository.Calls));
+    }
+
+    [Fact]
+    public async Task DisableAsync_and_EnableAsync_work_unchanged_when_no_catalog_repository_is_supplied()
+    {
+        Fixture fixture = new(EchoManifest());
+        await fixture.LoginAsync();
+
+        AppDisableResult disableResult = await fixture.Orchestrator.DisableAsync("org.hackeros.echo");
+        AppEnableResult enableResult = await fixture.Orchestrator.EnableAsync("org.hackeros.echo");
+
+        Assert.True(disableResult.Success);
+        Assert.True(enableResult.Success);
+    }
+
+    [Fact]
     public async Task Enabling_an_app_is_blocked_with_an_explanatory_error_when_a_dependency_is_disabled()
     {
         AppManifest dependency = EchoManifest();
@@ -171,7 +210,7 @@ public sealed class AppLifecycleOrchestratorTests
         await fixture.Orchestrator.DisableAsync(dependency.Id);
         await fixture.Orchestrator.DisableAsync(dependent.Id);
 
-        AppEnableResult result = fixture.Orchestrator.Enable(dependent.Id);
+        AppEnableResult result = await fixture.Orchestrator.EnableAsync(dependent.Id);
 
         Assert.False(result.Success);
         Assert.Contains(result.Errors, e => e.Contains(dependency.Id, StringComparison.Ordinal));
@@ -272,7 +311,11 @@ public sealed class AppLifecycleOrchestratorTests
         private readonly DateTimeOffset _now = new(2026, 8, 1, 12, 0, 0, TimeSpan.Zero);
         private readonly LocalLoginName _aliceLoginName;
 
-        internal Fixture(params AppManifest[] manifests)
+        internal Fixture(params AppManifest[] manifests) : this(catalogRepository: null, manifests)
+        {
+        }
+
+        internal Fixture(IPersistentAppCatalogRepository? catalogRepository, params AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -334,7 +377,8 @@ public sealed class AppLifecycleOrchestratorTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus);
+                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus,
+                descriptorLoader: null, catalogRepository);
         }
 
         internal LocalSessionService Session { get; }
@@ -350,5 +394,23 @@ public sealed class AppLifecycleOrchestratorTests
         {
             public override DateTimeOffset GetUtcNow() => now;
         }
+    }
+
+    private sealed class FakeAppCatalogRepository : IPersistentAppCatalogRepository
+    {
+        public List<(string AppId, bool Enabled)> Calls { get; } = [];
+
+        public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReconcileAsync(
+            IEnumerable<AppManifest> selectedManifests, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public ValueTask<bool> SetEnabledAsync(string appId, bool enabled, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((appId, enabled));
+            return ValueTask.FromResult(true);
+        }
+
+        public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReadAllAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
     }
 }

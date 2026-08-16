@@ -41,5 +41,6 @@ public static class FileAssociationSettingsDocuments
         AppCapabilities.FileAssociationsWrite,
         AppAuthority.User,
         AppAuthority.Administrator,
-        new FileAssociationSettingsValidator());
+        new FileAssociationSettingsValidator(),
+        SyncEligible: true);
 }

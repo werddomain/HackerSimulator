@@ -141,6 +141,8 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0029](adr/0029-settings-sync.md) | Settings domain sync (first client sync implementation) |
 | [0030](adr/0030-filesystem-sync.md) | FileSystem domain sync |
 | [0031](adr/0031-grants-sync.md) | Grants domain sync (pull-only) |
+| [0032](adr/0032-app-enablement-management.md) | App enablement management |
+| [0033](adr/0033-appcatalog-and-fileassociations-sync.md) | AppCatalog and FileAssociations domain sync |
 
 ## Migration history and project status
 

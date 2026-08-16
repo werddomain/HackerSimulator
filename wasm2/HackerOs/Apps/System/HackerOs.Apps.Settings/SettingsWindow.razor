@@ -4,6 +4,7 @@
 @using HackerOs.Platform.Core.ServerConnection
 @using HackerOs.Infrastructure.Browser.Schema
 @using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Lifecycle
 @using HackerOs.Simulation.Abstractions.ServerConnection
 @using System.Net.Http
 @using Microsoft.JSInterop
@@ -16,6 +17,10 @@
 @inject ISettingsSyncService SettingsSync
 @inject IFileSystemSyncService FileSystemSync
 @inject IGrantsSyncService GrantsSync
+@inject IFileAssociationsSyncService FileAssociationsSync
+@inject IAppCatalogSyncService AppCatalogSync
+@inject IPersistentAppCatalogRepository AppCatalogRepository
+@inject AppLifecycleOrchestrator AppLifecycle
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -68,6 +73,39 @@
                         @foreach (string cap in Manifest.Capabilities)
                         {
                             <div class="grant-tag">✓ @cap</div>
+                        }
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Installed Apps" Icon="@Icons.Material.Filled.Apps">
+                <div class="setting-group">
+                    <h4>Installed Applications</h4>
+                    <p class="setting-desc">
+                        Enable or disable installed apps. Disabling an app stops any of its running
+                        instances and blocks future launches (and those of anything that depends on
+                        it) until it is re-enabled.
+                    </p>
+                    <div class="installed-apps-list">
+                        @if (_installedApps.Count == 0)
+                        {
+                            <div class="assoc-row"><span>No installed applications found.</span></div>
+                        }
+                        else
+                        {
+                            @foreach (PersistedAppCatalogEntry entry in _installedApps)
+                            {
+                                <div class="assoc-row">
+                                    <span>@entry.Manifest.Name</span>
+                                    <MudSwitch T="bool" Value="@entry.IsEnabled"
+                                               ValueChanged="@(value => ToggleAppEnabledAsync(entry.Manifest.Id, value))"
+                                               Color="Color.Primary" Disabled="@_isTogglingApp" />
+                                </div>
+                            }
+                        }
+                        @if (!string.IsNullOrEmpty(_appToggleErrorMessage))
+                        {
+                            <p class="dialog-error" role="alert">@_appToggleErrorMessage</p>
                         }
                     </div>
                 </div>
@@ -258,6 +296,9 @@
     private AppearancePersistenceService? _appearance;
     private IJSObjectReference? _module;
     private List<(string Extension, string AppName)> _fileHandlers = [];
+    private List<PersistedAppCatalogEntry> _installedApps = [];
+    private bool _isTogglingApp;
+    private string? _appToggleErrorMessage;
 
     private bool _isResetDialogOpen;
     private bool _isResetting;
@@ -291,6 +332,8 @@
             .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
                 handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
             .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
+
+        _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
 
         _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
     }
@@ -363,6 +406,47 @@
                 await _module.InvokeVoidAsync("applyAnimations", previous);
             }
             StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAppEnabledAsync(string appId, bool enabled)
+    {
+        if (_isTogglingApp)
+        {
+            return;
+        }
+
+        _isTogglingApp = true;
+        _appToggleErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // AppLifecycleOrchestrator both enforces the change live (stops running instances,
+            // computes the dependency closure) and persists it durably (ADR 0032) in one call.
+            if (enabled)
+            {
+                AppEnableResult result = await AppLifecycle.EnableAsync(appId);
+                if (!result.Success)
+                {
+                    _appToggleErrorMessage = string.Join("; ", result.Errors);
+                }
+            }
+            else
+            {
+                AppDisableResult result = await AppLifecycle.DisableAsync(appId);
+                if (!result.Success)
+                {
+                    _appToggleErrorMessage = string.Join("; ", result.Errors);
+                }
+            }
+
+            // A disable's dependency closure may have toggled more than the one row clicked.
+            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+        }
+        finally
+        {
+            _isTogglingApp = false;
         }
     }
 
@@ -450,6 +534,13 @@
 
             // ADR 0031: Grants is pull-only — no push call exists for this domain.
             await GrantsSync.PullAsync(AppContext.CancellationToken);
+
+            // ADR 0033: completes the original five-domain sync roadmap.
+            await FileAssociationsSync.PushAsync(AppContext.CancellationToken);
+            await FileAssociationsSync.PullAsync(AppContext.CancellationToken);
+            await AppCatalogSync.PushAsync(AppContext.CancellationToken);
+            await AppCatalogSync.PullAsync(AppContext.CancellationToken);
+            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
 
             _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
                 ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"

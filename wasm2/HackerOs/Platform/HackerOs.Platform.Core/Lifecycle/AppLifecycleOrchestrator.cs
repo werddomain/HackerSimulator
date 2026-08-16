@@ -30,6 +30,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly ISettingsDocumentService _settings;
     private readonly IEventBus? _eventBus;
     private readonly IAppDescriptorLoader? _descriptorLoader;
+    private readonly IPersistentAppCatalogRepository? _catalogRepository;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -42,6 +43,13 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="contextFactory">Trusted execution-context factory.</param>
     /// <param name="settings">Canonical settings service, used to invalidate stale file-association defaults on disable.</param>
     /// <param name="eventBus">Optional typed event bus for cross-subsystem lifecycle cleanup.</param>
+    /// <param name="descriptorLoader">Optional lazy descriptor loader for assemblies not eagerly discovered.</param>
+    /// <param name="catalogRepository">
+    /// Optional durable catalog store (ADR 0032). When supplied, <see cref="DisableAsync"/> and
+    /// <see cref="EnableAsync"/> persist enablement changes here in addition to updating the
+    /// in-memory <see cref="AppEnablementRegistry"/>, so a disable/enable survives past this
+    /// process. Omitted in contexts (mostly tests) that don't need durability.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -51,7 +59,8 @@ public sealed class AppLifecycleOrchestrator
         AppExecutionContextFactory contextFactory,
         ISettingsDocumentService settings,
         IEventBus? eventBus = null,
-        IAppDescriptorLoader? descriptorLoader = null)
+        IAppDescriptorLoader? descriptorLoader = null,
+        IPersistentAppCatalogRepository? catalogRepository = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -62,6 +71,7 @@ public sealed class AppLifecycleOrchestrator
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus;
         _descriptorLoader = descriptorLoader;
+        _catalogRepository = catalogRepository;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -358,6 +368,14 @@ public sealed class AppLifecycleOrchestrator
         }
 
         _enablement.MarkDisabled(closure);
+        if (_catalogRepository is not null)
+        {
+            foreach (string disabledAppId in closure)
+            {
+                await _catalogRepository.SetEnabledAsync(disabledAppId, false).ConfigureAwait(false);
+            }
+        }
+
         foreach (string disabledAppId in closure)
         {
             _eventBus?.Publish(new AppDisabledEvent(disabledAppId));
@@ -372,7 +390,7 @@ public sealed class AppLifecycleOrchestrator
     /// missing or still disabled (`P1-APP-011`).
     /// </summary>
     /// <param name="appId">App to enable.</param>
-    public AppEnableResult Enable(string appId)
+    public async Task<AppEnableResult> EnableAsync(string appId)
     {
         if (!_catalog.Manifests.ContainsKey(appId))
         {
@@ -393,6 +411,11 @@ public sealed class AppLifecycleOrchestrator
         }
 
         _enablement.MarkEnabled(appId);
+        if (_catalogRepository is not null)
+        {
+            await _catalogRepository.SetEnabledAsync(appId, true).ConfigureAwait(false);
+        }
+
         return new AppEnableResult(true, []);
     }
 

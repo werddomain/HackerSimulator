@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Ecosystem;
@@ -15,6 +16,7 @@ public sealed class EcosystemBootCoordinator
     private readonly IPersistentCapabilityGrantRepository _grants;
     private readonly IPersistentAppCatalogRepository _catalog;
     private readonly AppCatalog _selectedCatalog;
+    private readonly AppEnablementRegistry _enablement;
     private readonly ILocalGroupRepository _groups;
     private readonly ILocalUserRepository _users;
 
@@ -25,6 +27,7 @@ public sealed class EcosystemBootCoordinator
         IPersistentCapabilityGrantRepository grants,
         IPersistentAppCatalogRepository catalog,
         AppCatalog selectedCatalog,
+        AppEnablementRegistry enablement,
         ILocalGroupRepository groups,
         ILocalUserRepository users)
     {
@@ -34,6 +37,7 @@ public sealed class EcosystemBootCoordinator
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _selectedCatalog = selectedCatalog ?? throw new ArgumentNullException(nameof(selectedCatalog));
+        _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
         _groups = groups ?? throw new ArgumentNullException(nameof(groups));
         _users = users ?? throw new ArgumentNullException(nameof(users));
     }
@@ -77,6 +81,11 @@ public sealed class EcosystemBootCoordinator
 
         IReadOnlyList<PersistedAppCatalogEntry> catalog = await catalogTask.ConfigureAwait(false);
         IReadOnlyList<LocalUser> users = await usersTask.ConfigureAwait(false);
+
+        // Hydrate live enablement enforcement from durable state (ADR 0032) — without this, a
+        // disable from a prior run (or a future sync pull) would only be enforced once someone
+        // happened to toggle the app again, not from the first launch attempt after boot.
+        _enablement.MarkDisabled(catalog.Where(entry => !entry.IsEnabled).Select(entry => entry.Manifest.Id));
 
         return new EcosystemBootResult(users, policyRevision, catalog.Count);
     }

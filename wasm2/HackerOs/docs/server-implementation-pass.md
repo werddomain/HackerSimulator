@@ -91,6 +91,35 @@ requirement for normal operation. See `docs/hosting-model.md`.
   needs its own design once there's a real reason to widen local grants
   beyond manifest declarations — tracked as an open question below, not
   silently assumed solved.
+- **App enablement management** (ADR 0032, `docs/adr/0032-app-enablement-management.md`)
+  — not itself a sync pass, but a prerequisite the user identified while
+  reviewing the plan for Pass N+4: `IPersistentAppCatalogRepository.SetEnabledAsync`
+  and `AppLifecycleOrchestrator.DisableAsync`/`Enable` already existed but had
+  zero production callers and no UI, so AppCatalog sync would have synced a
+  feature nobody could use. Added a durable persistence path (`DisableAsync`/
+  the renamed async `EnableAsync` now call `SetEnabledAsync`), boot-time
+  hydration of the live `AppEnablementRegistry` from the durable store (closing
+  the same kind of wiring gap ADR 0031 left open for Grants, but closed here
+  because a real UI now depends on it), and a new "Installed Apps" Settings tab.
+- **AppCatalog + FileAssociations domain sync** (ADR 0033,
+  `docs/adr/0033-appcatalog-and-fileassociations-sync.md`) — completes the
+  original five-domain sync roadmap. FileAssociations is a narrow sibling of
+  `SettingsSyncService` scoped to the one `FileAssociationSettingsDocuments`
+  document and `SyncDomain.FileAssociations` (not a generalization of the
+  Settings adapter — the two domains are partitioned separately server-side).
+  AppCatalog syncs only the ADR 0032 enablement flag (never the manifest,
+  which is a build artifact) and, unlike Grants, gets push **and** pull since
+  ADR 0032 gave it a real local write path; pulled changes take effect
+  immediately via `AppEnablementRegistry`, not just at next boot. Conflict
+  handling reuses Settings' server-wins pattern rather than ADR 0025's
+  suggested `ClientWins`, recorded as a deliberate divergence since nothing
+  could produce an AppCatalog conflict before this pass existed.
+
+**The original five-domain sync roadmap (Settings, FileSystem, Grants,
+AppCatalog, FileAssociations) is now complete.** Remaining work below is
+either scoped-down follow-ups named along the way, or the two larger,
+independently-optional items (Pass N+5, Pass N+6) ADR 0027 always described
+as separate, deferred decisions.
 
 ## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
 
@@ -104,13 +133,6 @@ named. Concretely:
 - `nmap`: port-scanning doesn't map onto a single HTTP proxy call at all;
   needs either a new non-HTTP proxy contract shape or stays simulation-only
   indefinitely — see the open question below.
-
-## Pass N+4: Sync — AppCatalog + FileAssociations domains
-
-The remaining two `SyncDomain` values. Smallest scope of the five; do together
-in one pass once N+1 through N+3 have proven the pattern across three
-meaningfully different domains (simple document, chunked content, server-
-authoritative).
 
 ## Pass N+5: Direct service injection for the server-hosted host
 
@@ -145,6 +167,15 @@ independent of any one browser).
 
 ## Open questions carried forward
 
+- **Scope divergence recorded during ADR 0033 implementation**: AppCatalog
+  sync's conflict handling reuses Settings' server-wins pattern rather than
+  ADR 0025's suggested `ClientWins` for this domain — nothing could produce an
+  AppCatalog conflict before ADR 0032 gave it a real writer, so there was no
+  real usage to validate a bespoke policy against. Revisit once cross-device
+  enablement conflicts are actually observed. Also: a pulled AppCatalog
+  disable updates `AppEnablementRegistry` directly (so future launches are
+  blocked) but does not stop an already-running instance of that app on this
+  device mid-session, the same scope boot-time hydration already has.
 - **Server-side gap found during ADR 0031 implementation**: `SyncService.PushAsync`
   blocks tombstones and enforces `ServerWins`-only conflict resolution for the
   `grants` domain, but has no semantic validation of a pushed Grants payload —

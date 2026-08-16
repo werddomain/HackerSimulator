@@ -184,6 +184,23 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>()));
 
+        // FileAssociations + AppCatalog domain sync (ADR 0033) — completes the original five-domain
+        // sync roadmap. FileAssociations reuses the Settings-document plumbing under its own domain
+        // string; AppCatalog syncs only the ADR 0032 enablement flag, never the manifest.
+        services.AddSingleton<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
+            provider.GetRequiredService<ISettingsDocumentService>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISyncClient>(),
+            provider.GetRequiredService<ISyncCursorRepository>(),
+            provider.GetRequiredService<ISyncRecordStateRepository>()));
+        services.AddSingleton<IAppCatalogSyncService>(provider => new AppCatalogSyncService(
+            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
+            provider.GetRequiredService<AppEnablementRegistry>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISyncClient>(),
+            provider.GetRequiredService<ISyncCursorRepository>(),
+            provider.GetRequiredService<ISyncRecordStateRepository>()));
+
         services.AddSingleton<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -245,7 +262,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppExecutionContextFactory>(),
             provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
-            descriptorLoaderProvider?.Invoke(provider)));
+            descriptorLoaderProvider?.Invoke(provider),
+            provider.GetRequiredService<IPersistentAppCatalogRepository>()));
         services.AddSingleton<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

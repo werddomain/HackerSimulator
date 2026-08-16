@@ -474,7 +474,9 @@ server is absent.
 | P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+1a |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
 
-### P5-SYNC-CLIENT — Settings, FileSystem, and Grants Domain Sync (ADR 0029, ADR 0030, ADR 0031)
+### P5-SYNC-CLIENT — Settings, FileSystem, Grants, AppCatalog, and FileAssociations Domain Sync (ADR 0029-0031, ADR 0033)
+
+All five domains named in the original roadmap now have a client-side adapter.
 
 | ID | Title | Status |
 |---|---|---|
@@ -482,7 +484,7 @@ server is absent.
 | P5-SYNC-CLIENT-002 | `SyncEligible` opt-in flag; `AppearanceSettingsDocuments` opted in | ✅ Done |
 | P5-SYNC-CLIENT-003 | `ISettingsSyncService` push/pull adapter with deterministic `RecordId` derivation | ✅ Done |
 | P5-SYNC-CLIENT-004 | On-connect + manual "Sync now" trigger in Settings UI | ✅ Done |
-| P5-SYNC-CLIENT-005 | AppCatalog/FileAssociations domain adapters | ⬜ Not started — see `docs/server-implementation-pass.md` Pass N+4 |
+| P5-SYNC-CLIENT-005 | `IFileAssociationsSyncService`/`IAppCatalogSyncService` domain adapters | ✅ Done (ADR 0033) |
 | P5-SYNC-CLIENT-006 | Surfaced (non-automatic) conflict resolution UI for Settings | ⬜ Not started — ADR 0029 Decision 6 is an explicit simplification for this domain only |
 | P5-SYNC-CLIENT-007 | `IContentTransferClient`/`HttpContentTransferClient` chunked content transfer (browser-independent) | ✅ Done (ADR 0030) |
 | P5-SYNC-CLIENT-008 | `IFileSystemSyncService` push/pull adapter, recursive walk of `/home/{userId}`, `FileSystemEntryId`-derived `RecordId` | ✅ Done (ADR 0030) |
@@ -491,6 +493,9 @@ server is absent.
 | P5-SYNC-CLIENT-011 | Pull-side local-content dedup check before downloading (skip re-download when `fsContent` already has the hash) | ⬜ Not started — pull always re-downloads; correctness-first simplification for this pass |
 | P5-SYNC-CLIENT-012 | `IGrantsSyncService` pull-only adapter; `IPersistentCapabilityGrantRepository.ImportAsync` (upsert-by-server-ID) | ✅ Done (ADR 0031) |
 | P5-SYNC-CLIENT-013 | Wire pulled/revoked grants into live `ICapabilityGrantRepository` enforcement | ⬜ Not started — pulled grants are durable but inert; enforcement still reads only the manifest-seeded in-memory repository, see ADR 0031 Decision 4 |
+| P5-SYNC-CLIENT-014 | App enablement made real: durable persistence, boot-time live-enforcement hydration, "Installed Apps" Settings UI | ✅ Done (ADR 0032) |
+| P5-SYNC-CLIENT-015 | `AppCatalogSyncService` push+pull; pulled enablement changes take effect immediately via `AppEnablementRegistry`, not just at next boot | ✅ Done (ADR 0033) |
+| P5-SYNC-CLIENT-016 | AppCatalog `ClientWins` conflict policy (ADR 0025's stated preference for this domain) | ⬜ Not started — server-wins reused instead; see ADR 0033 and the open question in `docs/server-implementation-pass.md` |
 
 ### P5-SYNC — Record Synchronization
 
@@ -523,6 +528,8 @@ server is absent.
 - **ADR 0029** — Settings Domain Sync (First Client Sync Implementation)
 - **ADR 0030** — FileSystem Domain Sync
 - **ADR 0031** — Grants Domain Sync (Pull-Only)
+- **ADR 0032** — App Enablement Management
+- **ADR 0033** — AppCatalog and FileAssociations Domain Sync
 
 ### Solution structure
 ```
