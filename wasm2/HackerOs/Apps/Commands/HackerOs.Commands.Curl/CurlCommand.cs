@@ -1,18 +1,25 @@
 using System.Collections.Immutable;
+using System.Net.Http;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.Simulation.Abstractions.ServerConnection;
 
 namespace HackerOs.Commands.Curl;
 
 /// <summary>
-/// Simulated <c>curl</c> terminal command (P4-W4-006).
-/// Sends a simulated HTTP request through the in-memory network service
-/// and prints the structured page content as plain text.
+/// Simulated <c>curl</c> terminal command (P4-W4-006), with a real-network fallback for
+/// <c>-I</c> (ADR 0028/ADR 0034 Pass N+1a): a host unknown to the simulated network gets a real
+/// HTTP HEAD proxy round-trip (through the optional server, when connected) instead of only
+/// "Could not resolve host." Full-body <c>curl</c> (no <c>-I</c>) against an unrecognized host
+/// stays simulation-only — <see cref="IProxyClient"/> is metadata-only until the server-side
+/// proxy body-transfer gap closes (see docs/server-implementation-pass.md). The simulated
+/// network stays authoritative for any host it recognizes, real or not.
 /// Supports -I (headers only), -v (verbose), -X (method), -d (POST data),
 /// -L (follow redirects — always followed for navigation, this flag is a no-op).
-/// Makes zero real network or HTTP calls.
 /// </summary>
 public sealed class CurlCommand : TerminalAppBase
 {
@@ -29,23 +36,31 @@ public sealed class CurlCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Curl.dll", "HackerOs.Commands.Curl.CurlCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("network", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite],
+        Capabilities = [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite, AppCapabilities.NetworkRealAccess],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("curl", [], "curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>"),
         SingleInstancePerUser = false
     };
 
     private readonly ISimulatedNetworkService _network;
+    private readonly IServerConnectionService _connection;
+    private readonly IProxyClient _proxy;
     private readonly Dictionary<string, Dictionary<string, string>> _sessionCookies = [];
 
-    /// <summary>Initializes the command with its manifest and the simulated network service.</summary>
-    public CurlCommand(AppManifest manifest, ISimulatedNetworkService network) : base(manifest)
+    /// <summary>Initializes the command with its manifest, the simulated network, and the optional real-network bridge.</summary>
+    public CurlCommand(
+        AppManifest manifest,
+        ISimulatedNetworkService network,
+        IServerConnectionService connection,
+        IProxyClient proxy) : base(manifest)
     {
         _network = network;
+        _connection = connection;
+        _proxy = proxy;
     }
 
     /// <inheritdoc/>
-    public override ValueTask<int> ExecuteAsync(
+    public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
@@ -83,7 +98,7 @@ public sealed class CurlCommand : TerminalAppBase
         if (url is null)
         {
             context.StandardError.WriteLine("curl: no URL specified!\ncurl: try 'curl --help' for more information");
-            return ValueTask.FromResult(1);
+            return 1;
         }
 
         // Normalize URL
@@ -96,6 +111,11 @@ public sealed class CurlCommand : TerminalAppBase
             context.StandardOutput.WriteLine($"> {method} {new Uri(url).PathAndQuery} HTTP/1.1");
             context.StandardOutput.WriteLine($"> Host: {new Uri(url).Host}");
             context.StandardOutput.WriteLine($"> User-Agent: curl/7.88.1");
+        }
+
+        if (headersOnly && _network.GetHost(new Uri(url).Host) is null)
+        {
+            return await CurlRealHostHeadAsync(context, url, cancellationToken).ConfigureAwait(false);
         }
 
         SimulatedNavigationResult result;
@@ -123,7 +143,7 @@ public sealed class CurlCommand : TerminalAppBase
             {
                 context.StandardOutput.WriteLine($"HTTP/1.1 {resp.StatusCode}");
                 context.StandardOutput.WriteLine($"Content-Type: text/simulated");
-                return ValueTask.FromResult(resp.StatusCode < 400 ? 0 : 1);
+                return resp.StatusCode < 400 ? 0 : 1;
             }
 
             if (resp.Page is not null)
@@ -131,7 +151,7 @@ public sealed class CurlCommand : TerminalAppBase
             else if (resp.RedirectUrl is not null)
                 context.StandardOutput.WriteLine($"<Redirect: {resp.RedirectUrl}>");
 
-            return ValueTask.FromResult(resp.StatusCode < 400 ? 0 : 1);
+            return resp.StatusCode < 400 ? 0 : 1;
         }
 
         result = _network.Navigate(url, _sessionCookies);
@@ -146,7 +166,7 @@ public sealed class CurlCommand : TerminalAppBase
         if (result.NetworkError is not null)
         {
             context.StandardError.WriteLine($"curl: ({result.NetworkError}) Could not resolve host: {url}");
-            return ValueTask.FromResult(6);
+            return 6;
         }
 
         if (headersOnly)
@@ -154,13 +174,59 @@ public sealed class CurlCommand : TerminalAppBase
             context.StandardOutput.WriteLine($"HTTP/1.1 {result.StatusCode}");
             context.StandardOutput.WriteLine($"Content-Type: text/simulated");
             context.StandardOutput.WriteLine($"X-Final-Url: {result.FinalUrl}");
-            return ValueTask.FromResult(0);
+            return 0;
         }
 
         if (result.Page is not null)
             PrintPage(context, result.Page);
 
-        return ValueTask.FromResult(result.StatusCode < 400 ? 0 : 1);
+        return result.StatusCode < 400 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Real-network fallback (ADR 0028/ADR 0034 Pass N+1a) for <c>curl -I</c> against a host the
+    /// simulated network doesn't recognize: a single HTTP HEAD proxy round-trip through the
+    /// optional server, when connected. <see cref="IProxyClient"/> is metadata-only, so this path
+    /// only ever serves <c>-I</c> — a normal body-fetching <c>curl</c> against an unknown host
+    /// still reports "Could not resolve host" via the caller's existing <c>NetworkError</c> path.
+    /// </summary>
+    private async ValueTask<int> CurlRealHostHeadAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
+    {
+        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
+            return 6;
+        }
+
+        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (accessToken is null)
+        {
+            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
+            return 6;
+        }
+
+        try
+        {
+            ProxyHttpResponse response = await _proxy.ExecuteHttpRequestAsync(
+                new Uri(state.ServerBaseUrl),
+                accessToken,
+                new ProxyHttpRequest(Guid.NewGuid(), ProxyProtocol.Http, url, "HEAD", [], null, 0, 10, Manifest.Id),
+                cancellationToken).ConfigureAwait(false);
+
+            context.StandardOutput.WriteLine($"HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
+            foreach (ProxyHeader header in response.Headers)
+            {
+                context.StandardOutput.WriteLine($"{header.Name}: {header.Value}");
+            }
+
+            return 0;
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        {
+            context.StandardError.WriteLine($"curl: (7) Failed to connect to {url}: {exception.Message}");
+            return 7;
+        }
     }
 
     // ── Plain-text serialization of structured page content ──────────────

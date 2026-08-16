@@ -150,16 +150,26 @@ as separate, deferred decisions.
   actually launched. Fixed by declaring `filesystem.user-home.read` alongside
   `write` for the first four, and by fixing `alias`'s JSON to match its C#
   source. See ADR 0034 Decision 4.
+- **`curl -I` real-network fallback** (Pass N+1a, first of three originally-named
+  commands) — extends the pattern `ping` already proved end-to-end
+  (`PingCommand.cs`'s `PingRealHostAsync`) to `curl`: when `-I` is passed and
+  the simulated network doesn't recognize the target host, `CurlCommand` now
+  does a real HTTP HEAD proxy round-trip through the optional server (when
+  connected), printing the real status line and headers, exactly matching
+  `IProxyClient`'s own doc comment (*"Callers that only need
+  reachability/status/headers, e.g. `curl -I`, are fully served today"*).
+  Normal (non-`-I`) `curl` against an unrecognized host is untouched — still
+  reports "Could not resolve host" — since full-body fetching needs the
+  server-side proxy body-transfer gap closed first (see below). Regression
+  and new-path coverage added in `Tests/HackerOs.Network.Tests/Wave4NetworkTests.cs`
+  (`CurlCommand_HeadersOnly_UnknownHost_With/WithoutServerConnection_*`);
+  live-verified in the browser for both the simulated-host and
+  disconnected-unknown-host cases.
 
-## Pass N+1a: Wire `curl -I`/`nmap`/`cat` into the same proxy bridge
+## Pass N+1a (remaining): `nmap` and full-body `curl`/`cat`
 
-Extend the pattern already proven end-to-end by `ping` (see `PingCommand.cs`'s
-`PingRealHostAsync`) to the other three commands ADR 0023/0028 originally
-named. Now unblocked by ADR 0034 above (the commands are launchable and the
-simulated-network path is exercisable) — this pass can proceed as originally
-scoped. Concretely:
-- `curl -I` (headers-only): fully achievable today — `IProxyClient.ExecuteHttpRequestAsync`
-  already returns real status/headers, no body needed.
+The other two commands ADR 0023/0028 originally named alongside `curl -I`
+remain unimplemented:
 - Normal `curl` (full body) and `cat` (reading a URL as content): blocked on
   the same server-side gap noted below (`ProxyHttpResponse` is metadata-only).
 - `nmap`: port-scanning doesn't map onto a single HTTP proxy call at all;

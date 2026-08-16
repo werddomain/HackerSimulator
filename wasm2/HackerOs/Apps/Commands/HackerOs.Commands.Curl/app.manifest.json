@@ -20,7 +20,8 @@
   },
   "capabilities": [
     "network.simulated.read",
-    "network.simulated.write"
+    "network.simulated.write",
+    "network.real.access"
   ],
   "resources": {
     "baselineCpuWeight": 0.01,

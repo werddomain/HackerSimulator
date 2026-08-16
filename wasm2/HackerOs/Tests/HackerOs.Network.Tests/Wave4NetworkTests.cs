@@ -195,7 +195,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FetchesPage_And_PrintsSections()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network);
+        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -213,7 +213,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_WithHeadersOnly_PrintsHttpStatus()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network);
+        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -224,6 +224,44 @@ public sealed class Wave4NetworkTests
         Assert.Equal(0, exitCode);
         var output = stdoutWriter.ToString();
         Assert.Contains("HTTP/1.1 200", output);
+    }
+
+    // ── ADR 0034 Pass N+1a: curl -I real-network fallback ───────────────────
+
+    [Fact]
+    public async Task CurlCommand_HeadersOnly_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
+    {
+        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["-I", "https://unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(6, exitCode);
+        Assert.Contains("Could not resolve host", stderrWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CurlCommand_HeadersOnly_UnknownHost_WithServerConnection_UsesRealProxyHead()
+    {
+        var cmd = new CurlCommand(
+            CurlCommand.StaticManifest,
+            _network,
+            new ConnectedServerConnectionService(),
+            new SuccessProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["-I", "https://real-external-site.example"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        var output = stdoutWriter.ToString();
+        Assert.Contains("HTTP/1.1 204 No Content", output);
+        Assert.Contains("X-Test-Header: proxied", output);
     }
 
     // ── P4-W4-007: Proving Zero External Network Requests ──────────────────
@@ -318,5 +356,50 @@ public sealed class Wave4NetworkTests
         public Task<ProxyPolicyResponse> GetPolicyAsync(
             Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("The proxy client must not be called when disconnected.");
+    }
+
+    /// <summary>Fake used to prove the real-network path is reached when a device is connected.</summary>
+    private sealed class ConnectedServerConnectionService : IServerConnectionService
+    {
+        private static readonly ServerConnectionState State = new(
+            Guid.NewGuid(), Guid.NewGuid(), "https://server.hackeros.test", "fingerprint", "refresh-token",
+            DateTimeOffset.UtcNow.AddDays(1));
+
+        public ValueTask<ServerConnectionState?> GetStateAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ServerConnectionState?>(State);
+
+        public Task<ServerConnectionState> ConnectWithNewAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ServerConnectionState> ConnectWithExistingAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public Task<string?> EnsureAccessTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>("access-token");
+    }
+
+    /// <summary>Fake that returns a canned successful proxy response, proving <c>curl -I</c> prints it verbatim.</summary>
+    private sealed class SuccessProxyClient : IProxyClient
+    {
+        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProxyHttpResponse(
+                request.RequestId,
+                204,
+                "No Content",
+                [new ProxyHeader("X-Test-Header", "proxied")],
+                BodyHash: null,
+                BodyBytes: 0,
+                FinalUrl: request.TargetUrl,
+                RedirectHops: 0,
+                DurationMs: 12));
+
+        public Task<ProxyPolicyResponse> GetPolicyAsync(
+            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
     }
 }

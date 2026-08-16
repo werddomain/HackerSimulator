@@ -471,7 +471,8 @@ server is absent.
 | P5-CONN-002 | Browser-independent HTTP clients (`IAccountClient`, `IProxyClient`, `IServerConnectionService` in `Platform.Core/ServerConnection/`) | ✅ Done |
 | P5-CONN-003 | Settings UI panel to connect/disconnect | ✅ Done |
 | P5-CONN-004 | Real-network proxy fallback wired into `ping` | ✅ Done |
-| P5-CONN-005 | Real-network proxy fallback wired into `curl -I`/`nmap`/`cat` | ⬜ Not started — now unblocked by ADR 0034 (P5-CMD below); see `docs/server-implementation-pass.md` Pass N+1a |
+| P5-CONN-005a | Real-network proxy fallback wired into `curl -I` | ✅ Done — matches `ping`'s `IProxyClient` pattern; unblocked by ADR 0034 (P5-CMD below) |
+| P5-CONN-005b | Real-network proxy fallback wired into `nmap`/full-body `curl`/`cat` | ⬜ Not started — `nmap` needs a non-HTTP proxy shape; full-body fetch blocked on P5-CONN-006; see `docs/server-implementation-pass.md` Pass N+1a (remaining) |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
 
 ### P5-CMD — Terminal Command Catalog Wiring (ADR 0034)
