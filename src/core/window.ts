@@ -14,31 +14,68 @@ export interface WindowOptions {
   appId: string;
   icon?: string;
   processId?: number;
+  monitorId?: number;
 }
 
 /**
  * Window Manager class for managing application windows
  */
+import { MultiMonitorManager } from './multi-monitor';
+
 export class WindowManager {
   private windows: Map<string, WindowOptions> = new Map();
   private windowElements: Map<string, HTMLElement> = new Map();
   private activeWindowId: string | null = null;
   private zIndex: number = 100;
-  private windowsContainer: HTMLElement | null = null;
+  private windowsContainers: Map<number, HTMLElement> = new Map();
+  private windowMonitorMap: Map<string, number> = new Map();
   private taskbarItems: HTMLElement | null = null;
+  private multiMonitor: MultiMonitorManager;
+
+  constructor(multiMonitor: MultiMonitorManager) {
+    this.multiMonitor = multiMonitor;
+
+    this.multiMonitor.addEventListener('message', (e: any) => {
+      if (!this.multiMonitor.isSecondary) return;
+      const msg = e.detail;
+      if (!msg || !msg.data) return;
+      const data = msg.data;
+      switch (data.action) {
+        case 'createWindow':
+          this.createWindow(data.options);
+          break;
+        case 'moveWindow':
+          this.moveWindowToMonitor(data.windowId, data.monitorId);
+          break;
+        case 'closeWindow':
+          this.closeWindow(data.windowId);
+          break;
+      }
+    });
+  }
 
   /**
    * Initialize the window manager
    */
   public init(): void {
     console.log('Initializing Window Manager...');
-    
-    this.windowsContainer = document.getElementById('windows-container');
+
+    document.querySelectorAll('.windows-container').forEach(el => {
+      const match = (el as HTMLElement).id.match(/windows-container-(\d+)/);
+      const id = match ? parseInt(match[1], 10) : 1;
+      this.windowsContainers.set(id, el as HTMLElement);
+    });
+
     this.taskbarItems = document.getElementById('taskbar-items');
-    
-    if (!this.windowsContainer) {
-      console.error('Window container element not found');
-      return;
+
+    if (this.windowsContainers.size === 0) {
+      const fallback = document.getElementById('windows-container');
+      if (fallback) {
+        this.windowsContainers.set(1, fallback);
+      } else {
+        console.error('Window container elements not found');
+        return;
+      }
     }
     
     if (!this.taskbarItems) {
@@ -59,7 +96,11 @@ export class WindowManager {
    * Create a new window
    */
   public createWindow(options: WindowOptions): string {
-    if (!this.windowsContainer || !this.taskbarItems) return '';
+    if (!this.taskbarItems) return '';
+
+    const monitorId = options.monitorId ?? 1;
+    const container = this.windowsContainers.get(monitorId);
+    if (!container) return '';
     
     // Generate a unique ID for the window
     const id = `window-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -135,7 +176,16 @@ export class WindowManager {
     windowElement.appendChild(windowContent);
     
     // Add window to container
-    this.windowsContainer.appendChild(windowElement);
+    container.appendChild(windowElement);
+    this.windowMonitorMap.set(id, monitorId);
+
+    if (!this.multiMonitor.isSecondary) {
+      this.multiMonitor.sendMessage(monitorId, {
+        action: 'createWindow',
+        windowId: id,
+        options: windowOptions,
+      });
+    }
     
     // Store window element reference
     this.windowElements.set(id, windowElement);
@@ -506,6 +556,29 @@ export class WindowManager {
   }
 
   /**
+   * Move a window to a different monitor
+   */
+  public moveWindowToMonitor(id: string, monitorId: number): void {
+    const windowElement = this.windowElements.get(id);
+    const container = this.windowsContainers.get(monitorId);
+    if (!windowElement || !container) return;
+
+    container.appendChild(windowElement);
+    this.windowMonitorMap.set(id, monitorId);
+
+    const options = this.windows.get(id);
+    if (options) {
+      options.monitorId = monitorId;
+    }
+
+    this.multiMonitor.sendMessage(monitorId, {
+      action: 'moveWindow',
+      windowId: id,
+      monitorId,
+    });
+  }
+
+  /**
    * Toggle maximize/restore window
    */
   public toggleMaximizeWindow(id: string): void {
@@ -559,6 +632,8 @@ export class WindowManager {
     
     // Remove window element
     windowElement.remove();
+
+    const monitorId = this.windowMonitorMap.get(id) ?? 1;
     
     // Remove taskbar item
     const taskbarItem = document.querySelector(`.taskbar-item[data-window-id="${id}"]`);
@@ -581,6 +656,7 @@ export class WindowManager {
     // Remove window from maps
     this.windowElements.delete(id);
     this.windows.delete(id);
+    this.windowMonitorMap.delete(id);
     
     // Clear active window ID if this window was active
     if (this.activeWindowId === id) {
@@ -589,6 +665,14 @@ export class WindowManager {
     
     // Emit window close event
     this.emitWindowEvent('close', id);
+
+    if (!this.multiMonitor.isSecondary) {
+      this.multiMonitor.sendMessage(monitorId, {
+        action: 'closeWindow',
+        windowId: id,
+        monitorId,
+      });
+    }
   }
 
   /**
