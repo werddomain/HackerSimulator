@@ -341,6 +341,33 @@
     {
         try
         {
+            long? expectedRevision = _doc.LoadedRevision;
+
+            if (expectedRevision is null)
+            {
+                // Buffer has never been persisted, so there is no existing entry for
+                // WriteAsync to replace (it requires the target to already exist). Create
+                // it first; an AlreadyExists failure means the user chose Save As over an
+                // existing file, so fall through to an unconditional overwrite below.
+                FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(
+                    new FileSystemCreateRequest(
+                        path,
+                        FileSystemEntryKind.File,
+                        FileSystemPermissions.FromMode(0b110_100_100)),
+                    AppContext.CancellationToken);
+
+                if (creation.Succeeded && creation.Entry is not null)
+                {
+                    expectedRevision = creation.Entry.Metadata.Revision;
+                }
+                else if (creation.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
+                {
+                    await ShowErrorDialogAsync("Save Failed", DescribeSaveError(creation.Transaction.Error?.Code));
+                    StateHasChanged();
+                    return;
+                }
+            }
+
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(_doc.Content);
             MemoryStream stream = new(bytes);
             MemoryStreamContentSource source = new(
@@ -349,7 +376,7 @@
 
             // WriteAsync(request, content, ct) returns FileSystemMutationResult (P2-TEXT-003)
             FileSystemMutationResult result = await AppContext.FileSystem.WriteAsync(
-                new FileSystemWriteRequest(path, _doc.LoadedRevision),
+                new FileSystemWriteRequest(path, expectedRevision),
                 source,
                 AppContext.CancellationToken);
 
@@ -366,14 +393,7 @@
             }
             else
             {
-                string reason = result.Transaction.Error?.Code switch
-                {
-                    FileSystemErrorCode.PermissionDenied => "Permission denied.",
-                    FileSystemErrorCode.NotFound => "Destination directory not found.",
-                    FileSystemErrorCode.RevisionConflict => "Revision conflict.",
-                    _ => result.Transaction.Error?.Code.ToString() ?? "Write failed."
-                };
-                await ShowErrorDialogAsync("Save Failed", reason);
+                await ShowErrorDialogAsync("Save Failed", DescribeSaveError(result.Transaction.Error?.Code));
             }
         }
         catch (OperationCanceledException)
@@ -387,6 +407,14 @@
 
         StateHasChanged();
     }
+
+    private static string DescribeSaveError(FileSystemErrorCode? code) => code switch
+    {
+        FileSystemErrorCode.PermissionDenied => "Permission denied.",
+        FileSystemErrorCode.NotFound => "Destination directory not found.",
+        FileSystemErrorCode.RevisionConflict => "Revision conflict.",
+        _ => code?.ToString() ?? "Write failed."
+    };
 
     /// <summary>
     /// Minimal in-memory implementation of <see cref="IFileSystemContentSource"/> used
