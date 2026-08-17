@@ -18,13 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cd\HackerOs.Commands.Cd.csproj" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Echo\HackerOs.Commands.Echo.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ls\HackerOs.Commands.Ls.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Pwd\HackerOs.Commands.Pwd.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cd\HackerOs.Commands.Cd.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Echo\HackerOs.Commands.Echo.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 

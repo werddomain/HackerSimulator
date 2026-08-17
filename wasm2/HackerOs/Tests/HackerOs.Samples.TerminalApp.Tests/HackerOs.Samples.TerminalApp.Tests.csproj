@@ -19,6 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.TerminalApp\HackerOs.Samples.TerminalApp.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
-  </ItemGroup>
+    </ItemGroup>
 
 </Project>

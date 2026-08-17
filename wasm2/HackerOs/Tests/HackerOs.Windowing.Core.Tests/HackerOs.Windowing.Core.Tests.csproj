@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

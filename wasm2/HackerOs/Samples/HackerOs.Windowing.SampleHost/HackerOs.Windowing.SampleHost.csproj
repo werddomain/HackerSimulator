@@ -20,6 +20,7 @@
       by a host with no knowledge of HackerOS's process/app model.
     -->
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Blazor\HackerOs.Windowing.Blazor.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Taskbar.Blazor\HackerOs.Taskbar.Blazor.csproj" />
   </ItemGroup>

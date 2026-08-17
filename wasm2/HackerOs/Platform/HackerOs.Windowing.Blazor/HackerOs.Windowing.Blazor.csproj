@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
     <ProjectReference Include="..\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
   </ItemGroup>
 
