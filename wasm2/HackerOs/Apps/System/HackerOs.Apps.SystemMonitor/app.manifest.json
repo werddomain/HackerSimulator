@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.system-monitor",
+  "name": "System Monitor",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "System resource performance monitoring, process manager, memory usage, and background service diagnostics",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.SystemMonitor.dll",
+    "type": "HackerOs.Apps.SystemMonitor.SystemMonitorWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "system",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "process.list",
+    "process.manage",
+    "services.manage"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.1,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": true
+}

@@ -1,0 +1,283 @@
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: var(--hos-bg-base, #0d1117);
+    color: var(--hos-text-primary, #e6edf3);
+    font-family: var(--hos-font-sans, "Inter", sans-serif);
+    overflow: hidden;
+    outline: none;
+}
+
+/* ─── Menu Bar ──────────────────────────────────────────────────────────────── */
+
+.editor-menubar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 0.5rem;
+    height: 2rem;
+    background: var(--hos-bg-surface, #161b22);
+    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.menu-group {
+    position: relative;
+}
+
+.menu-label {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.82rem;
+    color: var(--hos-text-secondary, #8b949e);
+    cursor: default;
+    border-radius: 4px;
+}
+
+.menu-group:hover .menu-label {
+    color: var(--hos-text-primary, #e6edf3);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 200;
+    min-width: 140px;
+    background: var(--hos-bg-elevated, #21262d);
+    border: 1px solid var(--hos-border-color, #30363d);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    padding: 0.25rem 0;
+}
+
+.menu-group:hover .menu-dropdown {
+    display: block;
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.3rem 0.9rem;
+    text-align: left;
+    font-size: 0.82rem;
+    background: transparent;
+    border: none;
+    color: var(--hos-text-primary, #e6edf3);
+    cursor: pointer;
+}
+
+.menu-item:hover:not(:disabled) {
+    background: rgba(66, 211, 146, 0.12);
+    color: var(--hos-accent, #42d392);
+}
+
+.menu-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.editor-title-display {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--hos-text-muted, #6e7681);
+    font-family: var(--hos-font-mono, monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+    padding-right: 0.5rem;
+}
+
+.title-error {
+    color: var(--hos-error, #ff9a91);
+}
+
+/* ─── Find Bar ──────────────────────────────────────────────────────────────── */
+
+.find-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    background: var(--hos-bg-surface, #161b22);
+    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    flex-shrink: 0;
+}
+
+.find-input {
+    flex: 1;
+    max-width: 260px;
+    padding: 0.2rem 0.5rem;
+    background: var(--hos-bg-base, #0d1117);
+    border: 1px solid var(--hos-border-color, #30363d);
+    border-radius: 4px;
+    color: var(--hos-text-primary, #e6edf3);
+    font-size: 0.83rem;
+    outline: none;
+}
+
+.find-input:focus {
+    border-color: var(--hos-accent, #42d392);
+}
+
+.find-match-count {
+    font-size: 0.78rem;
+    color: var(--hos-text-muted, #6e7681);
+    min-width: 70px;
+}
+
+.find-nav-btn {
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid var(--hos-border-color, #30363d);
+    background: var(--hos-bg-elevated, #21262d);
+    color: var(--hos-text-primary, #e6edf3);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.find-nav-btn:hover {
+    background: rgba(66, 211, 146, 0.12);
+    border-color: var(--hos-accent, #42d392);
+}
+
+.find-close-btn {
+    width: 1.4rem;
+    height: 1.4rem;
+    border: none;
+    background: transparent;
+    color: var(--hos-text-muted, #6e7681);
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-left: 0.2rem;
+}
+
+.find-close-btn:hover {
+    color: var(--hos-error, #ff9a91);
+}
+
+/* ─── Overlay states ────────────────────────────────────────────────────────── */
+
+.overlay-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hos-text-muted, #6e7681);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.overlay-error {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--hos-error, #ff9a91);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.retry-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--hos-error, #ff9a91);
+    background: transparent;
+    color: var(--hos-error, #ff9a91);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
+.retry-btn:hover {
+    background: rgba(255, 154, 145, 0.12);
+}
+
+/* ─── Main Text Area ────────────────────────────────────────────────────────── */
+
+.editor-textarea {
+    flex: 1;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    resize: none;
+    background: var(--hos-bg-base, #0d1117);
+    color: var(--hos-text-primary, #e6edf3);
+    font-family: var(--hos-font-mono, "JetBrains Mono", "Fira Code", monospace);
+    font-size: 0.875rem;
+    line-height: 1.65;
+    border: none;
+    outline: none;
+    caret-color: var(--hos-accent, #42d392);
+    overflow-y: auto;
+    tab-size: 4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--hos-border-color, #30363d) transparent;
+}
+
+.editor-textarea::placeholder {
+    color: var(--hos-text-muted, #6e7681);
+}
+
+.editor-textarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ─── Status Bar ────────────────────────────────────────────────────────────── */
+
+.editor-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    height: 1.6rem;
+    background: var(--hos-bg-surface, #161b22);
+    border-top: 1px solid var(--hos-border-color, #21262d);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--hos-text-muted, #6e7681);
+    overflow: hidden;
+}
+
+.status-path {
+    font-family: var(--hos-font-mono, monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60%;
+}
+
+.status-sep {
+    color: var(--hos-border-color, #30363d);
+}
+
+.status-media {
+    color: var(--hos-accent, #42d392);
+}
+
+.status-conflict {
+    margin-left: auto;
+    color: var(--hos-warning, #e3b341);
+    font-weight: 600;
+    animation: blink-warn 1.5s ease-in-out infinite;
+}
+
+@keyframes blink-warn {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}

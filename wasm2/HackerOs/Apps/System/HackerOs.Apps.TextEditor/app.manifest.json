@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.text-editor",
+  "name": "Text Editor",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Authorized virtual-filesystem text editor for HackerOS",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.TextEditor.dll",
+    "type": "HackerOs.Apps.TextEditor.TextEditorWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "apps.launch",
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "dialogs.file-open",
+    "dialogs.file-save",
+    "settings.read",
+    "settings.write",
+    "notifications.post"
+  ],
+  "fileHandlers": [
+    {
+      "mediaType": "text/plain",
+      "extensions": [".txt", ".md", ".log", ".json", ".csv", ".ini", ".conf", ".cfg", ".yml", ".yaml", ".xml", ".env"],
+      "actions": ["open", "edit"],
+      "priority": 0
+    }
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.04,
+    "burstMemoryWeight": 0.15,
+    "baselineStorageIoWeight": 0.02,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": false
+}

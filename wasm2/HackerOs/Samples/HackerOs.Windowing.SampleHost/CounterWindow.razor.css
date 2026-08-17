@@ -1,0 +1,23 @@
+.counter-window {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 1rem;
+    color: #e7f7f1;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.9rem;
+}
+
+.counter-window button {
+    padding: 0.4rem 0.9rem;
+    color: #e7f7f1;
+    background: #173b2c;
+    border: 1px solid #42d392;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.counter-window button:hover {
+    background: #1e4d3a;
+}

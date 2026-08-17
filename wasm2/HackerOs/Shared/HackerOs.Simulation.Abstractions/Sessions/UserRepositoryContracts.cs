@@ -1,0 +1,75 @@
+using HackerOs.App.Abstractions;
+
+namespace HackerOs.Simulation.Abstractions.Sessions;
+
+/// <summary>Stores and mutates local user accounts, per ADR 0013.</summary>
+public interface ILocalUserRepository
+{
+    /// <summary>Creates and stores one new, enabled local user account.</summary>
+    /// <param name="loginName">Normalized, unique, case-insensitive login name.</param>
+    /// <param name="displayName">Mutable display name shown in the UI.</param>
+    /// <param name="authority">Login authority granted to sessions started by this user.</param>
+    /// <param name="primaryGroupId">The user's primary group.</param>
+    /// <param name="additionalGroupIds">Additional groups the user belongs to; defaults to none.</param>
+    /// <param name="credential">Optional local password credential.</param>
+    /// <returns>The newly created user record.</returns>
+    /// <exception cref="InvalidOperationException">The login name is already in use.</exception>
+    ValueTask<LocalUser> CreateUserAsync(
+        LocalLoginName loginName,
+        string displayName,
+        AppAuthority authority,
+        LocalGroupId primaryGroupId,
+        IReadOnlyCollection<LocalGroupId>? additionalGroupIds = null,
+        LocalPasswordCredential? credential = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Attempts to find a user by opaque ID.</summary>
+    ValueTask<LocalUser?> FindByIdAsync(LocalUserId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Attempts to find a user by normalized login name.</summary>
+    ValueTask<LocalUser?> FindByLoginNameAsync(
+        LocalLoginName loginName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Gets every stored user.</summary>
+    ValueTask<IReadOnlyList<LocalUser>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enables or disables one user. The last enabled Administrator can never be disabled.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="enabled"/> is <see langword="false"/> and the user is the last enabled Administrator.
+    /// </exception>
+    ValueTask<LocalUser> SetEnabledAsync(
+        LocalUserId id,
+        bool enabled,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes one user's login authority. The last enabled Administrator can never be demoted.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The user is the last enabled Administrator and <paramref name="authority"/> is not Administrator.
+    /// </exception>
+    ValueTask<LocalUser> SetAuthorityAsync(
+        LocalUserId id,
+        AppAuthority authority,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Stores local user groups, per ADR 0013.</summary>
+public interface ILocalGroupRepository
+{
+    /// <summary>Creates and stores one new local group.</summary>
+    ValueTask<LocalGroup> CreateGroupAsync(
+        LocalLoginName name,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Attempts to find a group by opaque ID.</summary>
+    ValueTask<LocalGroup?> FindByIdAsync(LocalGroupId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Attempts to find a group by its normalized unique name.</summary>
+    ValueTask<LocalGroup?> FindByNameAsync(
+        LocalLoginName name,
+        CancellationToken cancellationToken = default);
+}

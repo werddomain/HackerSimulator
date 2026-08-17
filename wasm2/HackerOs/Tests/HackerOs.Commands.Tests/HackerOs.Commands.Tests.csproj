@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cd\HackerOs.Commands.Cd.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Echo\HackerOs.Commands.Echo.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ls\HackerOs.Commands.Ls.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Pwd\HackerOs.Commands.Pwd.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

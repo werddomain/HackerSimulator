@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.settings",
+  "name": "Settings",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "System control panel for user preferences, appearance, file associations, capabilities, and device configuration",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.Settings.dll",
+    "type": "HackerOs.Apps.Settings.SettingsWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "system",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "settings.read",
+    "settings.write",
+    "settings.system.read",
+    "settings.system.write",
+    "file-associations.read",
+    "file-associations.write",
+    "process.list"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.1,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": true
+}

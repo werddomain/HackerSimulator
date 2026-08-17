@@ -1,0 +1,33 @@
+.dialog-browser-scenario {
+    min-height: 100vh;
+    background: #101417;
+    color: #e8eef2;
+}
+
+.dialog-browser-scenario > nav {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #182126;
+    border-bottom: 1px solid #36505d;
+}
+
+.dialog-browser-scenario button {
+    font: inherit;
+}
+
+.dialog-browser-scenario > output {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 10000;
+    padding: 0.5rem 0.75rem;
+    background: #e8eef2;
+    color: #101417;
+    border-radius: 4px;
+}
+
+.owner-content {
+    margin: 1rem;
+    padding: 0.75rem 1rem;
+}

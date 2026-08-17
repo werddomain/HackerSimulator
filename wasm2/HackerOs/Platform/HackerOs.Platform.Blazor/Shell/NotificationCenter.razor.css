@@ -1,0 +1,118 @@
+.notification-overlay {
+    position: fixed;
+    bottom: 3.5rem;
+    right: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(100vw - 1.5rem, 22rem);
+    z-index: 950;
+    pointer-events: none;
+}
+
+.notification-toast {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    border: 1px solid var(--hos-border, #34444c);
+    border-radius: 6px;
+    background: var(--hos-bg-surface, #151c20);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    color: var(--hos-text-primary, #f4f7f8);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.82rem;
+    animation: toast-slide-in 0.2s ease-out;
+}
+
+.notification-toast.is-info {
+    border-left: 3px solid var(--hos-accent, #42d392);
+}
+
+.notification-toast.is-warning {
+    border-left: 3px solid var(--hos-warning, #d5a84f);
+}
+
+.notification-toast.is-error {
+    border-left: 3px solid var(--hos-error, #ff9a91);
+}
+
+.toast-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.severity-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+    background: var(--hos-bg-base, #101417);
+    color: var(--hos-text-secondary, #a8bac4);
+}
+
+.source-app {
+    font-size: 0.75rem;
+    color: var(--hos-text-muted, #6a7e88);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.toast-dismiss {
+    border: none;
+    background: transparent;
+    color: var(--hos-text-muted, #6a7e88);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.25rem;
+}
+
+.toast-dismiss:hover {
+    color: var(--hos-text-primary, #f4f7f8);
+}
+
+.toast-message {
+    margin: 0;
+    line-height: 1.4;
+    color: var(--hos-text-primary, #f4f7f8);
+    overflow-wrap: anywhere;
+}
+
+.toast-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.action-btn {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--hos-border, #34444c);
+    border-radius: 4px;
+    background: var(--hos-bg-base, #101417);
+    color: var(--hos-accent, #42d392);
+    font-family: inherit;
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    background: var(--hos-accent-subtle, #173b2c);
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateY(0.75rem);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

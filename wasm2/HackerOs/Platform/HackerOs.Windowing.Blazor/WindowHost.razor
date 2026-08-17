@@ -1,0 +1,126 @@
+@namespace HackerOs.Windowing.Blazor
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<article class="@HostClass"
+         @ref="_hostElement"
+         role="dialog"
+         aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
+         aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
+         aria-labelledby="@TitleId"
+         inert="@(IsInteractionBlocked ? true : null)"
+         data-window-id="@Window.Id"
+         data-window-x="@Window.Bounds.X"
+         data-window-y="@Window.Bounds.Y"
+         data-window-width="@Window.Bounds.Width"
+         data-window-height="@Window.Bounds.Height"
+         data-window-z="@Window.ZOrder"
+         style="position: absolute; top: @(Window.Bounds.Y)px; left: @(Window.Bounds.X)px; width: @(Window.Bounds.Width)px; height: @(Window.Bounds.Height)px; z-index: @Window.ZOrder; --window-x: @(Window.Bounds.X)px; --window-y: @(Window.Bounds.Y)px; --window-width: @(Window.Bounds.Width)px; --window-height: @(Window.Bounds.Height)px; --window-z: @Window.ZOrder;"
+         hidden="@(Window.VisualState == WindowVisualState.Minimized ? true : null)"
+         @onpointerdown="FocusAsync">
+    <WindowChrome Window="Window"
+                  TitleId="TitleId"
+                  OnFocus="OnFocus"
+                  OnMinimize="OnMinimize"
+                  OnToggleMaximize="OnToggleMaximize"
+                  OnClose="OnClose"
+                  OnGesture="OnGesture" />
+    <div class="window-content">
+        @ChildContent
+    </div>
+</article>
+
+@code {
+    /// <summary>Gets or sets the authoritative snapshot rendered by this host.</summary>
+    [Parameter, EditorRequired]
+    public WindowRuntimeState Window { get; set; } = null!;
+
+    /// <summary>Gets or sets the app content rendered inside the chrome.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the focus request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnFocus { get; set; }
+
+    /// <summary>Gets or sets the minimize request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnMinimize { get; set; }
+
+    /// <summary>Gets or sets the maximize/restore request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnToggleMaximize { get; set; }
+
+    /// <summary>Gets or sets the close request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnClose { get; set; }
+
+    /// <summary>Gets or sets the pointer gesture command callback.</summary>
+    [Parameter]
+    public EventCallback<WindowCommand> OnGesture { get; set; }
+
+    /// <summary>Gets or sets whether an owner-modal child blocks this host.</summary>
+    [Parameter]
+    public bool IsInteractionBlocked { get; set; }
+
+    private string TitleId => $"window-title-{Window.Id.Value:N}";
+    private ElementReference _hostElement;
+    private IJSObjectReference? _module;
+
+    private string HostClass => string.Join(
+        ' ',
+        "window-host",
+        Window.IsFocused ? "is-focused" : "is-background",
+        Window.VisualState == WindowVisualState.Maximized ? "is-maximized" : "is-normal");
+
+    private Task FocusAsync(PointerEventArgs _) =>
+        IsInteractionBlocked ? Task.CompletedTask : OnFocus.InvokeAsync(Window.Id);
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/HackerOs.Windowing.Blazor/WindowHost.razor.js");
+        }
+
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync(
+                    "projectWindowGeometry",
+                    _hostElement,
+                    Window.Bounds.X,
+                    Window.Bounds.Y,
+                    Window.Bounds.Width,
+                    Window.Bounds.Height,
+                    Window.ZOrder);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WindowHost] Failed to project window geometry: {ex.Message}");
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

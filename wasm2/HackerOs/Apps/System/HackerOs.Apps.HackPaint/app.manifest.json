@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.hack-paint",
+  "name": "Hack Paint",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Virtual image editor with drawing canvas, filters, undo/redo, and file dialog export",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.HackPaint.dll",
+    "type": "HackerOs.Apps.HackPaint.HackPaintWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "graphics",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "dialogs.file-open",
+    "dialogs.file-save"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.05,
+    "burstCpuWeight": 0.25,
+    "baselineMemoryWeight": 0.08,
+    "burstMemoryWeight": 0.3,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.2,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": false
+}

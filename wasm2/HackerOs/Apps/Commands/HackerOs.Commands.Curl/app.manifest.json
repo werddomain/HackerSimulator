@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.curl",
+  "name": "curl",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Simulated URL data transfer — fetches content from simulated websites",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Curl.dll",
+    "type": "HackerOs.Commands.Curl.CurlCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "network",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "network.simulated.read",
+    "network.simulated.write",
+    "network.real.access"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.08,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "curl",
+    "aliases": [],
+    "usage": "curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>"
+  },
+  "singleInstancePerUser": false
+}

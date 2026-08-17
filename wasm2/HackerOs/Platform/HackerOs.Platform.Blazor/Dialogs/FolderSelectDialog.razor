@@ -1,0 +1,116 @@
+@namespace HackerOs.Platform.Blazor.Dialogs
+@using HackerOs.App.Abstractions
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+
+<section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
+         tabindex="-1" @onkeydown="HandleKeyDown">
+    <header>
+        <MudIcon Icon="@Icons.Material.Filled.DriveFolderUpload" />
+        <h2 id="@_titleId">@(Presentation.Request.Title ?? "Select folder")</h2>
+    </header>
+
+    <VirtualFolderBrowser @ref="_browser"
+                          FileSystem="@Presentation.FileSystem"
+                          InitialDirectory="@EffectiveInitialDirectory"
+                          AllowFileSelection="false"
+                          AllowDirectorySelection="true"
+                          DirectoryChanged="DirectoryChanged"
+                          SelectionChanged="SelectionChanged" />
+
+    @if (Presentation.Request.AllowCreateFolder)
+    {
+        <div class="create-control">
+            <input value="@_newFolderName" @oninput="ChangeFolderName" aria-label="New folder name" />
+            <button type="button" disabled="@_creating" @onclick="CreateFolderAsync">New folder</button>
+        </div>
+    }
+
+    @if (_error is not null)
+    {
+        <p class="error" role="alert">@_error</p>
+    }
+
+    <footer>
+        <span>@SelectedPath.Value</span>
+        <button type="button" @onclick="Cancel">Cancel</button>
+        <button type="button" class="primary" @onclick="Select">Select</button>
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets the active folder-selection presentation.</summary>
+    [Parameter, EditorRequired]
+    public SelectFolderDialogPresentation Presentation { get; set; } = null!;
+
+    /// <summary>Gets or sets the owning session coordinator.</summary>
+    [Parameter, EditorRequired]
+    public FileDialogCoordinator Coordinator { get; set; } = null!;
+
+    private readonly string _titleId = $"folder-select-title-{Guid.NewGuid():N}";
+    private VirtualFolderBrowser? _browser;
+    private VirtualPath _currentDirectory = VirtualPath.Parse("/");
+    private VirtualPath? _selectedChild;
+    private long _currentRevision;
+    private string _newFolderName = string.Empty;
+    private string? _error;
+    private bool _creating;
+    private VirtualPath SelectedPath => _selectedChild ?? _currentDirectory;
+
+    private VirtualPath EffectiveInitialDirectory =>
+        Presentation.Request.InitialDirectory ?? VirtualPath.Parse($"/home/{Presentation.UserId}");
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        _currentDirectory = EffectiveInitialDirectory;
+    }
+
+    private void DirectoryChanged(FileSystemDirectorySnapshot snapshot)
+    {
+        _currentDirectory = snapshot.Path;
+        _currentRevision = snapshot.Revision;
+        _selectedChild = null;
+    }
+
+    private void SelectionChanged(IReadOnlyList<VirtualPath> paths) => _selectedChild = paths.FirstOrDefault();
+    private void ChangeFolderName(ChangeEventArgs args) { _newFolderName = args.Value?.ToString() ?? string.Empty; _error = null; }
+
+    private async Task CreateFolderAsync()
+    {
+        FileSystemEntryName name;
+        try { name = FileSystemEntryName.Parse(_newFolderName); }
+        catch (FormatException exception) { _error = exception.Message; return; }
+
+        _creating = true;
+        FileSystemMutationResult result = await Presentation.FileSystem.CreateAsync(new FileSystemCreateRequest(
+            Combine(_currentDirectory, name.Value),
+            FileSystemEntryKind.Directory,
+            FileSystemPermissions.FromMode(0x01ED),
+            _currentRevision));
+        _creating = false;
+        if (result.Succeeded)
+        {
+            _newFolderName = string.Empty;
+            await _browser!.RefreshAsync();
+        }
+        else
+        {
+            _error = $"Unable to create the folder ({result.Transaction.Error?.Code}).";
+        }
+    }
+
+    private void Select() => Coordinator.SelectFolder(Presentation.Id, SelectedPath);
+    private void Cancel() => Coordinator.Cancel(Presentation.Id);
+    private void HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Cancel();
+        }
+    }
+
+    private static VirtualPath Combine(VirtualPath directory, string name) =>
+        VirtualPath.Parse(directory.Value == "/" ? $"/{name}" : $"{directory.Value}/{name}");
+}

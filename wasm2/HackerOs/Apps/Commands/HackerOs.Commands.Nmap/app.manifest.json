@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.nmap",
+  "name": "nmap",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Simulated network mapper — scans ports on simulated hosts",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Nmap.dll",
+    "type": "HackerOs.Commands.Nmap.NmapCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "network",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "network.simulated.read",
+    "network.real.access"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.02,
+    "burstCpuWeight": 0.15,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "nmap",
+    "aliases": [],
+    "usage": "nmap [-p <range>] [-sV] [-O] <target>"
+  },
+  "singleInstancePerUser": false
+}

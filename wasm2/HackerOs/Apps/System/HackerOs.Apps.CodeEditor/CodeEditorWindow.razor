@@ -1,0 +1,607 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using MudBlazor
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@implements IWindowCloseGuard
+@inject IJSRuntime JavaScript
+@inject MudBlazor.IDialogService MudDialogService
+
+<section class="code-editor" @onkeydown="HandleShortcutAsync" aria-label="Code Editor">
+    <header class="editor-toolbar">
+        <div class="file-actions" role="toolbar" aria-label="File actions">
+            <button id="code-new" class="toolbar-btn" @onclick="NewDocumentAsync">New</button>
+            <button id="code-open" class="toolbar-btn" @onclick="OpenFileAsync">Open</button>
+            <button id="code-save" class="toolbar-btn" @onclick="SaveActiveAsync" disabled="@(ActiveDocument is null)">Save</button>
+            <button id="code-save-as" class="toolbar-btn" @onclick="SaveActiveAsAsync" disabled="@(ActiveDocument is null)">Save As</button>
+        </div>
+
+        <label class="language-label" for="code-language">
+            Mode
+            <select id="code-language"
+                    class="language-select"
+                    value="@ActiveDocument?.SyntaxMode"
+                    @onchange="ChangeSyntaxModeAsync"
+                    disabled="@(ActiveDocument is null)">
+                @foreach (CodeEditorSyntaxMode mode in Enum.GetValues<CodeEditorSyntaxMode>())
+                {
+                    <option value="@mode">@SyntaxModeLabel(mode)</option>
+                }
+            </select>
+        </label>
+    </header>
+
+    <nav class="tab-strip" aria-label="Open editor documents">
+        @foreach (CodeEditorDocument document in _session.Documents)
+        {
+            <div class="tab-shell @(document.Id == _session.ActiveDocumentId ? "is-active" : null)">
+                <button class="tab-select"
+                        role="tab"
+                        aria-selected="@(document.Id == _session.ActiveDocumentId)"
+                        @onclick="() => ActivateDocumentAsync(document.Id)">
+                    <span class="tab-name">@document.Title</span>
+                    @if (document.IsDirty)
+                    {
+                        <span class="dirty-marker" aria-label="Unsaved changes">●</span>
+                    }
+                </button>
+                <button class="tab-close"
+                        aria-label="Close @document.Title"
+                        @onclick="() => CloseDocumentAsync(document.Id)">×</button>
+            </div>
+        }
+    </nav>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <div class="editor-message @(_statusIsError ? "is-error" : "is-information")"
+             role="@(_statusIsError ? "alert" : "status")">
+            @_statusMessage
+        </div>
+    }
+
+    <div class="editor-workspace">
+        <div class="editor-host" @ref="_editorHost" aria-label="Source code editor"></div>
+    </div>
+
+    <footer class="editor-statusbar" aria-label="Code editor status">
+        <span>@(ActiveDocument?.Path?.Value ?? "Unsaved buffer")</span>
+        <span>@(ActiveDocument is null ? "0 bytes" : $"{ActiveDocument.Utf8ByteCount} bytes")</span>
+        <span>@(ActiveDocument is null ? "Plain text" : SyntaxModeLabel(ActiveDocument.SyntaxMode))</span>
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets the static manifest used by build-time discovery.</summary>
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.code-editor",
+        Name = "Code Editor",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Multi-tab CodeMirror editor with syntax modes and VFS persistence",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.CodeEditor.dll", "HackerOs.Apps.CodeEditor.CodeEditorWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("developer", AppLaunchVisibility.Visible, []),
+        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "clipboard.read", "clipboard.write"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = false
+    };
+
+    private CodeEditorSession _session = new();
+    private ElementReference _editorHost;
+    private CodeEditorFileService? _fileService;
+    private CodeEditorRecoveryStore? _recoveryStore;
+    private readonly SemaphoreSlim _recoveryGate = new(1, 1);
+    private CancellationTokenSource? _recoveryDebounce;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _editor;
+    private DotNetObjectReference<CodeEditorWindow>? _dotNetReference;
+    private bool _editorSyncRequired;
+    private bool _focusAfterSync;
+    private string? _statusMessage;
+    private bool _statusIsError;
+    private bool _recoveryClearedOnClose;
+
+    /// <summary>Gets or sets an optional VFS path supplied by an open-file intent.</summary>
+    [Parameter]
+    public string? LaunchFilePath { get; set; }
+
+    private CodeEditorDocument? ActiveDocument => _session.ActiveDocument;
+
+    protected override void OnAppInitialized()
+    {
+        _fileService = new CodeEditorFileService(AppContext.FileSystem);
+        _recoveryStore = new CodeEditorRecoveryStore(AppContext.FileSystem, AppContext.UserId);
+        _session.NewDocument();
+        _editorSyncRequired = true;
+    }
+
+    protected override async Task OnAppInitializedAsync()
+    {
+        CodeEditorRecoveryResult recovery = await _recoveryStore!.LoadAsync(AppContext.CancellationToken);
+        if (recovery.HasSession)
+        {
+            _session = CodeEditorSession.Restore(recovery.Session!);
+            if (_session.Documents.Count == 0)
+            {
+                _session.NewDocument();
+            }
+
+            SetStatus("Recovered unsaved editor session.", isError: false);
+        }
+        else if (recovery.Status is not CodeEditorRecoveryStatus.Missing)
+        {
+            SetStatus(recovery.Error ?? "Editor recovery could not be loaded.", isError: true);
+        }
+
+        if (!string.IsNullOrWhiteSpace(LaunchFilePath))
+        {
+            await LoadPathAsync(VirtualPath.Parse(LaunchFilePath), _fileService!);
+        }
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _dotNetReference = DotNetObjectReference.Create(this);
+                _module = await JavaScript.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
+                CodeEditorDocument? document = ActiveDocument;
+                _editor = await _module.InvokeAsync<IJSObjectReference>(
+                    "createEditor",
+                    _editorHost,
+                    _dotNetReference,
+                    document?.Content ?? string.Empty,
+                    ModeKey(document?.SyntaxMode ?? CodeEditorSyntaxMode.PlainText));
+                _editorSyncRequired = false;
+                await _editor.InvokeVoidAsync("focus");
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException)
+            {
+                SetStatus("Code editor assets could not be initialized.", isError: true);
+            }
+        }
+
+        if (_editor is not null && _editorSyncRequired)
+        {
+            CodeEditorDocument? document = ActiveDocument;
+            await _editor.InvokeVoidAsync("setDocument", document?.Content ?? string.Empty);
+            await _editor.InvokeVoidAsync(
+                "setLanguage", ModeKey(document?.SyntaxMode ?? CodeEditorSyntaxMode.PlainText));
+            _editorSyncRequired = false;
+            if (_focusAfterSync)
+            {
+                _focusAfterSync = false;
+                await _editor.InvokeVoidAsync("focus");
+            }
+        }
+    }
+
+    /// <summary>Receives content changes from the isolated CodeMirror instance.</summary>
+    [JSInvokable]
+    public async Task OnEditorChanged(string content)
+    {
+        CodeEditorDocument? document = ActiveDocument;
+        if (document is null)
+        {
+            return;
+        }
+
+        CodeEditorEditResult result = document.TryEdit(content);
+        if (!result.Succeeded)
+        {
+            SetStatus(result.Error ?? "Edit rejected.", isError: true);
+            if (_editor is not null)
+            {
+                await _editor.InvokeVoidAsync("setDocument", document.Content);
+            }
+        }
+        else
+        {
+            ClearStatus();
+        }
+
+        ScheduleRecovery();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task NewDocumentAsync()
+    {
+        _session.NewDocument();
+        RequestEditorSync(focus: true);
+        ClearStatus();
+        ScheduleRecovery();
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenFileAsync()
+    {
+        OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
+        {
+            Title = "Open Source File",
+            Filters =
+            [
+                new FileDialogFilter(
+                    "Source and text files",
+                    [".cs", ".js", ".ts", ".html", ".css", ".json", ".md", ".txt"],
+                    ["text/plain", "text/x-csharp", "text/javascript", "text/typescript", "text/html", "text/css", "application/json", "text/markdown"]),
+                new FileDialogFilter("All files", [], [])
+            ],
+            RequestedAccess = SelectedFileAccess.ReadWrite
+        }, AppContext.CancellationToken);
+
+        if (result.Status != FileDialogStatus.Selected || result.Resources.Count == 0)
+        {
+            return;
+        }
+
+        SelectedFileResource selected = result.Resources[0];
+        CodeEditorFileService selectedService = new(
+            AppContext.FileSystem.WithSelectedHandle(selected.Handle));
+        await LoadPathAsync(selected.Path, selectedService);
+    }
+
+    private async Task LoadPathAsync(VirtualPath path, CodeEditorFileService service)
+    {
+        CodeEditorLoadResult result = await service.LoadAsync(path, AppContext.CancellationToken);
+        if (!result.Succeeded || result.Content is null || result.Revision is null)
+        {
+            SetStatus(result.Error ?? "Unable to open file.", isError: true);
+            return;
+        }
+
+        _session.OpenDocument(path, result.Content, result.Revision.Value);
+        RequestEditorSync(focus: true);
+        SetStatus($"Opened {path.Value}.", isError: false);
+        ScheduleRecovery();
+    }
+
+    private async Task SaveActiveAsync()
+    {
+        CodeEditorDocument? document = ActiveDocument;
+        if (document is null)
+        {
+            return;
+        }
+
+        if (document.Path is not VirtualPath path)
+        {
+            await SaveActiveAsAsync();
+            return;
+        }
+
+        await SaveDocumentAsync(document, path, _fileService!);
+    }
+
+    private async Task SaveActiveAsAsync()
+    {
+        CodeEditorDocument? document = ActiveDocument;
+        if (document is null)
+        {
+            return;
+        }
+
+        SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
+        {
+            Title = "Save Source File",
+            SuggestedFileName = document.Path is null ? SuggestedFileName(document) : document.Title,
+            ConfirmOverwrite = true
+        }, AppContext.CancellationToken);
+
+        if (result.Status != FileDialogStatus.Selected || result.Resource is null)
+        {
+            return;
+        }
+
+        CodeEditorFileService selectedService = new(
+            AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle));
+        await SaveDocumentAsync(document, result.Resource.Path, selectedService);
+    }
+
+    private async Task SaveDocumentAsync(
+        CodeEditorDocument document,
+        VirtualPath path,
+        CodeEditorFileService service)
+    {
+        CodeEditorSaveResult result = await service.SaveAsync(
+            document, path, AppContext.CancellationToken);
+        if (result.Succeeded)
+        {
+            SetStatus($"Saved {path.Value}.", isError: false);
+        }
+        else
+        {
+            SetStatus(result.Error ?? "Save failed.", isError: true);
+        }
+
+        ScheduleRecovery();
+    }
+
+    private Task ActivateDocumentAsync(Guid documentId)
+    {
+        if (_session.Activate(documentId))
+        {
+            RequestEditorSync(focus: true);
+            ClearStatus();
+            ScheduleRecovery();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task CloseDocumentAsync(Guid documentId)
+    {
+        CodeEditorCloseResult result = _session.Close(documentId);
+        if (result == CodeEditorCloseResult.ConfirmationRequired)
+        {
+            CodeEditorDocument document = _session.Documents.Single(item => item.Id == documentId);
+            bool? discard = await MudDialogService.ShowMessageBoxAsync(
+                "Unsaved Changes",
+                $"Discard unsaved changes in '{document.Title}'?",
+                yesText: "Discard",
+                cancelText: "Cancel");
+            if (discard != true)
+            {
+                return;
+            }
+
+            result = _session.Close(documentId, discardDirty: true);
+        }
+
+        if (result == CodeEditorCloseResult.Closed)
+        {
+            if (_session.Documents.Count == 0)
+            {
+                _session.NewDocument();
+            }
+
+            RequestEditorSync(focus: true);
+            ClearStatus();
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> ConfirmCloseAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        CodeEditorDocument[] dirtyDocuments = _session.Documents
+            .Where(document => document.IsDirty)
+            .ToArray();
+        if (dirtyDocuments.Length == 0)
+        {
+            return await ClearRecoveryForCloseAsync(cancellationToken);
+        }
+
+        string names = string.Join(", ", dirtyDocuments.Select(document => document.Title));
+        bool? discard = await MudDialogService.ShowMessageBoxAsync(
+            "Unsaved Editor Documents",
+            $"Close and discard unsaved changes in: {names}?",
+            yesText: "Discard and Close",
+            cancelText: "Keep Editing");
+        cancellationToken.ThrowIfCancellationRequested();
+        return discard == true && await ClearRecoveryForCloseAsync(cancellationToken);
+    }
+
+    private async Task ChangeSyntaxModeAsync(ChangeEventArgs args)
+    {
+        if (ActiveDocument is not CodeEditorDocument document
+            || !Enum.TryParse(args.Value?.ToString(), out CodeEditorSyntaxMode mode))
+        {
+            return;
+        }
+
+        document.SetSyntaxMode(mode);
+        if (_editor is not null)
+        {
+            await _editor.InvokeVoidAsync("setLanguage", ModeKey(mode));
+            await _editor.InvokeVoidAsync("focus");
+        }
+
+        ScheduleRecovery();
+    }
+
+    private async Task HandleShortcutAsync(KeyboardEventArgs args)
+    {
+        if (!args.CtrlKey)
+        {
+            return;
+        }
+
+        switch (args.Key)
+        {
+            case "s" or "S":
+                if (args.ShiftKey)
+                {
+                    await SaveActiveAsAsync();
+                }
+                else
+                {
+                    await SaveActiveAsync();
+                }
+                break;
+            case "o" or "O":
+                await OpenFileAsync();
+                break;
+            case "n" or "N":
+                await NewDocumentAsync();
+                break;
+            case "w" or "W" when ActiveDocument is not null:
+                await CloseDocumentAsync(ActiveDocument.Id);
+                break;
+        }
+    }
+
+    private void ScheduleRecovery()
+    {
+        _recoveryClearedOnClose = false;
+        _recoveryDebounce?.Cancel();
+        _recoveryDebounce?.Dispose();
+        _recoveryDebounce = new CancellationTokenSource();
+        _ = PersistRecoveryAfterDelayAsync(_recoveryDebounce.Token);
+    }
+
+    private async Task PersistRecoveryAfterDelayAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+            await PersistRecoveryAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task PersistRecoveryAsync(CancellationToken cancellationToken)
+    {
+        if (_recoveryStore is null)
+        {
+            return;
+        }
+
+        await _recoveryGate.WaitAsync(cancellationToken);
+        try
+        {
+            CodeEditorRecoveryResult result = await _recoveryStore.SaveAsync(
+                _session.CaptureRecovery(), cancellationToken);
+            if (result.Status is not CodeEditorRecoveryStatus.Success)
+            {
+                SetStatus(result.Error ?? "Editor recovery could not be saved.", isError: true);
+            }
+        }
+        finally
+        {
+            _recoveryGate.Release();
+        }
+    }
+
+    private async Task<bool> ClearRecoveryForCloseAsync(CancellationToken cancellationToken)
+    {
+        if (_recoveryStore is null)
+        {
+            return true;
+        }
+
+        CodeEditorRecoveryResult result = await _recoveryStore.ClearAsync(cancellationToken);
+        if (result.Status == CodeEditorRecoveryStatus.Success)
+        {
+            _recoveryClearedOnClose = true;
+            return true;
+        }
+
+        SetStatus(result.Error ?? "Editor recovery could not be cleared.", isError: true);
+        return false;
+    }
+
+    private void RequestEditorSync(bool focus)
+    {
+        _editorSyncRequired = true;
+        _focusAfterSync = focus;
+        StateHasChanged();
+    }
+
+    private void SetStatus(string message, bool isError)
+    {
+        _statusMessage = message;
+        _statusIsError = isError;
+        StateHasChanged();
+    }
+
+    private void ClearStatus()
+    {
+        _statusMessage = null;
+        _statusIsError = false;
+    }
+
+    private static string SuggestedFileName(CodeEditorDocument document) =>
+        document.SyntaxMode switch
+        {
+            CodeEditorSyntaxMode.CSharp => "script.cs",
+            CodeEditorSyntaxMode.JavaScript => "script.js",
+            CodeEditorSyntaxMode.TypeScript => "script.ts",
+            CodeEditorSyntaxMode.Html => "index.html",
+            CodeEditorSyntaxMode.Css => "styles.css",
+            CodeEditorSyntaxMode.Json => "data.json",
+            CodeEditorSyntaxMode.Markdown => "README.md",
+            _ => "untitled.txt"
+        };
+
+    private static string SyntaxModeLabel(CodeEditorSyntaxMode mode) => mode switch
+    {
+        CodeEditorSyntaxMode.PlainText => "Plain Text",
+        CodeEditorSyntaxMode.CSharp => "C#",
+        CodeEditorSyntaxMode.JavaScript => "JavaScript",
+        CodeEditorSyntaxMode.TypeScript => "TypeScript",
+        CodeEditorSyntaxMode.Html => "HTML",
+        CodeEditorSyntaxMode.Css => "CSS",
+        CodeEditorSyntaxMode.Json => "JSON",
+        CodeEditorSyntaxMode.Markdown => "Markdown",
+        _ => mode.ToString()
+    };
+
+    private static string ModeKey(CodeEditorSyntaxMode mode) => mode switch
+    {
+        CodeEditorSyntaxMode.CSharp => "cSharp",
+        CodeEditorSyntaxMode.JavaScript => "javaScript",
+        CodeEditorSyntaxMode.TypeScript => "typeScript",
+        CodeEditorSyntaxMode.Html => "html",
+        CodeEditorSyntaxMode.Css => "css",
+        CodeEditorSyntaxMode.Json => "json",
+        CodeEditorSyntaxMode.Markdown => "markdown",
+        _ => "plainText"
+    };
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _recoveryDebounce?.Cancel();
+        _recoveryDebounce?.Dispose();
+        if (!_recoveryClearedOnClose)
+        {
+            try
+            {
+                await PersistRecoveryAsync(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // Component disposal cannot surface a transient recovery failure.
+            }
+        }
+
+        if (_editor is not null)
+        {
+            try
+            {
+                await _editor.InvokeVoidAsync("destroy");
+                await _editor.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _dotNetReference?.Dispose();
+    }
+}

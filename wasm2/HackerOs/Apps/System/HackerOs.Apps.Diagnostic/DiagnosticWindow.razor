@@ -1,0 +1,320 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Infrastructure.Browser.Diagnostics
+@using HackerOs.Infrastructure.Browser.Schema
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using Microsoft.JSInterop
+@inherits WindowAppBase
+@inject IJSRuntime JS
+
+<div class="diag-container">
+    <header class="diag-header">
+        <div class="diag-title-area">
+            <span class="diag-title">IndexedDB Diagnostic Inspector</span>
+            <span class="diag-badge">DB: @(HackerOsIndexedDbSchema.DatabaseName) v@(HackerOsIndexedDbSchema.CurrentVersion)</span>
+            @if (_snapshot is not null)
+            {
+                <span class="diag-badge diag-badge-info">@_snapshot.ResolvedPaths.Count Virtual Paths Resolved</span>
+            }
+        </div>
+        <div class="diag-actions">
+            <button class="diag-btn" @onclick="RefreshAsync" disabled="@_isLoading">
+                <span>⟳ Refresh</span>
+            </button>
+            <button class="diag-btn diag-btn-accent" @onclick="CopyToClipboardAsync" disabled="@(_snapshot is null)">
+                <span>📋 Copy JSON to Clipboard</span>
+            </button>
+            <button class="diag-btn diag-btn-primary" @onclick="ExportJsonFileAsync" disabled="@(_snapshot is null)">
+                <span>💾 Save JSON File</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="diag-notice-banner">
+        💡 <span class="diag-notice-highlight">HackerOS Architecture Note:</span> File metadata is stored in <code>fsEntries</code> (inodes) while directory hierarchy links mapping <code>(parentId, name)</code> to <code>entryId</code> reside in <code>fsLinks</code>. Absolute <code>filePath</code> is dynamically resolved below by traversing directory link trees.
+    </div>
+
+    <div class="diag-body">
+        @if (_isLoading)
+        {
+            <div class="diag-content">
+                <p>Loading IndexedDB snapshot...</p>
+            </div>
+        }
+        else if (_snapshot is not null)
+        {
+            <aside class="diag-sidebar">
+                @foreach (var store in _snapshot.Stores)
+                {
+                    <button class="diag-store-item @(store.Name == _selectedStoreName ? "active" : "")"
+                            @onclick="() => SelectStore(store.Name)">
+                        <span>@store.Name</span>
+                        <span class="diag-store-count">@store.RecordCount</span>
+                    </button>
+                }
+            </aside>
+
+            <main class="diag-content">
+                @if (SelectedStore is { } activeStore)
+                {
+                    <div class="diag-store-header">
+                        <div class="diag-store-name">@activeStore.Name (@activeStore.RecordCount records)</div>
+                        <div class="diag-store-purpose">@activeStore.Purpose</div>
+                    </div>
+
+                    <div class="diag-filter-bar">
+                        <input type="text" class="diag-search-input" placeholder="Search records..."
+                               @bind="_searchFilter" @bind:event="oninput" aria-label="Search store records" />
+                        <button class="diag-btn" @onclick="ToggleRawJsonView">
+                            <span>@(_showRawJson ? "📊 Table View" : "📄 Raw JSON")</span>
+                        </button>
+                    </div>
+
+                    @if (_showRawJson)
+                    {
+                        <pre class="diag-json-viewer">@activeStore.FormattedJson</pre>
+                    }
+                    else if (activeStore.Name == HackerOsIndexedDbSchema.FileSystemEntryStoreName)
+                    {
+                        <div class="diag-table-wrapper">
+                            <table class="diag-table">
+                                <thead>
+                                    <tr>
+                                        <th>Resolved Virtual Path</th>
+                                        <th>Entry ID</th>
+                                        <th>Kind</th>
+                                        <th>Owner ID</th>
+                                        <th>Content Hash</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in FilteredFsEntries(activeStore))
+                                    {
+                                        <tr>
+                                            <td class="diag-path-highlight">@entry.Path</td>
+                                            <td><code>@entry.Id</code></td>
+                                            <td>@entry.Kind</td>
+                                            <td>@entry.OwnerId</td>
+                                            <td><code>@(entry.ContentHash ?? "-")</code></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else if (activeStore.Name == HackerOsIndexedDbSchema.FileSystemLinkStoreName)
+                    {
+                        <div class="diag-table-wrapper">
+                            <table class="diag-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parent Directory ID</th>
+                                        <th>Child Name</th>
+                                        <th>Child Entry ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var link in FilteredFsLinks(activeStore))
+                                    {
+                                        <tr>
+                                            <td><code>@link.ParentId</code></td>
+                                            <td class="diag-path-highlight">@link.Name</td>
+                                            <td><code>@link.EntryId</code></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="diag-table-wrapper">
+                            <pre class="diag-json-viewer">@FilteredJson(activeStore)</pre>
+                        </div>
+                    }
+                }
+            </main>
+        }
+    </div>
+
+    @if (_toastMessage is not null)
+    {
+        <div class="diag-toast" role="status">@_toastMessage</div>
+    }
+</div>
+
+@code {
+    private IndexedDbInspectorService _service = default!;
+    private IndexedDbSnapshot? _snapshot;
+    private string _selectedStoreName = HackerOsIndexedDbSchema.FileSystemEntryStoreName;
+    private string _searchFilter = string.Empty;
+    private bool _isLoading = true;
+    private bool _showRawJson = false;
+    private string? _toastMessage;
+
+    private IndexedDbStoreSnapshot? SelectedStore =>
+        _snapshot?.Stores.FirstOrDefault(s => s.Name == _selectedStoreName);
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        _service = new IndexedDbInspectorService(JS);
+    }
+
+    protected override async Task OnAppInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _snapshot = await _service.InspectDatabaseAsync(AppContext.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Failed to load IndexedDB: {ex.Message}");
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private void SelectStore(string storeName)
+    {
+        _selectedStoreName = storeName;
+        _searchFilter = string.Empty;
+    }
+
+    private void ToggleRawJsonView()
+    {
+        _showRawJson = !_showRawJson;
+    }
+
+    private async Task CopyToClipboardAsync()
+    {
+        if (_snapshot is null) return;
+        try
+        {
+            string exportContent = _snapshot.ToExportJson();
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", exportContent);
+            ShowToast("IndexedDB JSON Dump copied to Clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Copy failed: {ex.Message}");
+        }
+    }
+
+    private async Task ExportJsonFileAsync()
+    {
+        if (_snapshot is null) return;
+
+        string exportContent = _snapshot.ToExportJson();
+        SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
+        {
+            Title = "Export IndexedDB JSON Dump",
+            InitialDirectory = VirtualPath.Parse($"/home/{AppContext.UserId}"),
+            SuggestedFileName = $"indexeddb-dump-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json",
+            DefaultExtension = ".json",
+            Filters = [new FileDialogFilter("JSON Files", [".json"], ["application/json"])],
+            ConfirmOverwrite = true
+        });
+
+        if (result.Status == FileDialogStatus.Selected && result.Resource is not null)
+        {
+            Utf8TextSource source = new(exportContent);
+
+            var writeResult = await AppContext.FileSystem.WriteAsync(
+                new FileSystemWriteRequest(result.Resource.Path, 0),
+                source,
+                AppContext.CancellationToken);
+
+            if (writeResult.Succeeded)
+            {
+                ShowToast($"Exported JSON to {result.Resource.Path.Value}");
+            }
+            else
+            {
+                ShowToast($"Export failed: {writeResult.Transaction.Error?.Code}");
+            }
+        }
+    }
+
+    private sealed class Utf8TextSource(string content) : IFileSystemContentSource
+    {
+        private readonly byte[] _bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        public FileSystemContentDescriptor Descriptor => FileSystemContentDescriptor.Text("application/json", "utf-8");
+        public long? Length => _bytes.Length;
+
+        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Stream>(new MemoryStream(_bytes, writable: false));
+    }
+
+    private void ShowToast(string message)
+    {
+        _toastMessage = message;
+        StateHasChanged();
+        _ = Task.Delay(3500).ContinueWith(_ =>
+        {
+            _toastMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private IEnumerable<(string Id, string Path, string Kind, string OwnerId, string? ContentHash)> FilteredFsEntries(IndexedDbStoreSnapshot store)
+    {
+        if (store.RawElement.ValueKind != System.Text.Json.JsonValueKind.Array) yield break;
+
+        foreach (var element in store.RawElement.EnumerateArray())
+        {
+            string id = element.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
+            string kind = element.TryGetProperty("kind", out var k) ? k.ToString() : "";
+            string ownerId = element.TryGetProperty("ownerId", out var o) ? o.GetString() ?? "" : "";
+            string? contentHash = element.TryGetProperty("contentHash", out var ch) ? ch.GetString() : null;
+            string path = _snapshot?.ResolvedPaths.GetValueOrDefault(id) ?? "/";
+
+            if (string.IsNullOrWhiteSpace(_searchFilter) ||
+                path.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                id.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                ownerId.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return (id, path, kind, ownerId, contentHash);
+            }
+        }
+    }
+
+    private IEnumerable<(string ParentId, string Name, string EntryId)> FilteredFsLinks(IndexedDbStoreSnapshot store)
+    {
+        if (store.RawElement.ValueKind != System.Text.Json.JsonValueKind.Array) yield break;
+
+        foreach (var element in store.RawElement.EnumerateArray())
+        {
+            string parentId = element.TryGetProperty("parentId", out var p) ? p.GetString() ?? "" : "";
+            string name = element.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+            string entryId = element.TryGetProperty("entryId", out var e) ? e.GetString() ?? "" : "";
+
+            if (string.IsNullOrWhiteSpace(_searchFilter) ||
+                name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                parentId.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                entryId.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return (parentId, name, entryId);
+            }
+        }
+    }
+
+    private string FilteredJson(IndexedDbStoreSnapshot store)
+    {
+        if (string.IsNullOrWhiteSpace(_searchFilter))
+        {
+            return store.FormattedJson;
+        }
+
+        return store.FormattedJson;
+    }
+}

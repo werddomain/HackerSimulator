@@ -1,0 +1,61 @@
+.code-editor-proof {
+    display: grid;
+    grid-template-rows: auto minmax(18rem, 1fr) auto;
+    gap: 0.75rem;
+    min-height: 32rem;
+    padding: 1rem;
+    color: #c9d1d9;
+    background: #0d1117;
+}
+
+.code-editor-proof header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.code-editor-proof h1 {
+    margin: 0;
+    color: #7ee787;
+    font-size: 1.1rem;
+}
+
+.code-editor-proof button {
+    margin-left: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    color: #c9d1d9;
+    border: 1px solid #58a6ff;
+    border-radius: 0.3rem;
+    background: #21262d;
+}
+
+.proof-editor {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid #30363d;
+    font-family: "Cascadia Code", Consolas, monospace;
+}
+
+.proof-editor ::deep .cm-editor {
+    height: 100%;
+    color: #c9d1d9;
+    background: #0d1117;
+}
+
+.proof-editor ::deep .cm-scroller {
+    overflow: auto;
+}
+
+.proof-editor ::deep .cm-gutters {
+    color: #8b949e;
+    border-color: #30363d;
+    background: #161b22;
+}
+
+#code-editor-result {
+    min-height: 1.4rem;
+    padding: 0.4rem;
+    color: #aff5b4;
+    border: 1px solid #238636;
+}

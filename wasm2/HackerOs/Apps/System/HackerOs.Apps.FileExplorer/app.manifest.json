@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.file-explorer",
+  "name": "File Explorer",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Graphical virtual file manager and directory browser",
+  "kind": "window",
+  "entryPoint": {
+    "assembly": "HackerOs.Apps.FileExplorer.dll",
+    "type": "HackerOs.Apps.FileExplorer.FileExplorerWindow"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "visible",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "apps.launch",
+    "filesystem.user-home.read",
+    "filesystem.user-home.write",
+    "filesystem.system.read",
+    "filesystem.system.write",
+    "dialogs.file-open",
+    "dialogs.file-save",
+    "dialogs.folder-select"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.05,
+    "burstCpuWeight": 0.2,
+    "baselineMemoryWeight": 0.05,
+    "burstMemoryWeight": 0.2,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.3,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "singleInstancePerUser": false
+}

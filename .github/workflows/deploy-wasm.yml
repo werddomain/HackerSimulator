@@ -1,8 +1,9 @@
-name: Deploy Wasm App to GitHub Pages
+name: Verify and deploy HackerOS WASM
 
 on:
   push:
-    branches: [ "Wasm" ]
+    branches: [ "main", "Wasm" ]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,41 +12,112 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages-wasm"
+  group: "pages-hackeros-wasm-${{ github.ref }}"
   cancel-in-progress: true
 
+env:
+  HACKEROS_SOLUTION_DIR: wasm2/HackerOs
+  HACKEROS_ARTIFACT_DIR: wasm2/HackerOs/artifacts
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
-      - name: Install wasm workload
+      - name: Install WASM workload
         run: dotnet workload install wasm-tools
 
-      - name: Publish
-        run: dotnet publish ./wasm/HackerSimulator.Wasm.sln -c Release -o publish
+      - name: Pack local Windowing/Taskbar feed
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: >-
+          dotnet pack Platform/HackerOs.Windowing.Core/HackerOs.Windowing.Core.csproj
+          --configuration Release --output artifacts/local-nupkg &&
+          dotnet pack Platform/HackerOs.Windowing.Blazor/HackerOs.Windowing.Blazor.csproj
+          --configuration Release --output artifacts/local-nupkg &&
+          dotnet pack Platform/HackerOs.Taskbar.Blazor/HackerOs.Taskbar.Blazor.csproj
+          --configuration Release --output artifacts/local-nupkg
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Restore solution
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: dotnet restore HackerOs.sln
 
-      - name: Upload artifact
+      - name: Build Release with warnings as errors
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: dotnet build HackerOs.sln --configuration Release --no-restore
+
+      - name: Verify production Razor assets
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        shell: pwsh
+        run: |
+          $matches = rg --pcre2 -n '<style|<script|\sstyle\s*=|(?<!@)\bon[a-z][a-z0-9_-]*\s*=' . -g '*.razor' -g '!Tests/RazorAssetValidation.Invalid/**'
+          if ($LASTEXITCODE -eq 0) {
+            $matches
+            throw 'Forbidden inline Razor asset markup was found.'
+          }
+          if ($LASTEXITCODE -eq 1) { exit 0 }
+          throw 'Razor source scan failed.'
+
+      - name: Install Playwright Chromium
+        run: pwsh wasm2/HackerOs/Tests/HackerOs.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Check vulnerable dependencies
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: dotnet list HackerOs.sln package --vulnerable --include-transitive --no-restore
+
+      - name: Test complete Release solution
+        # Includes Tests/HackerOs.Pwa.E2E.Tests (P2-PWA-007 / P2-ACC-015 / P2-ACC-016):
+        # it publishes OS/HackerOs.Ecosystem twice into artifacts/pwa-test-publish (two
+        # distinct -p:Version= releases) and serves each from an in-process static host,
+        # so this step now includes ~2 extra Release publishes plus real-browser PWA
+        # install/offline/update runs — expect several extra minutes here.
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: >-
+          dotnet test HackerOs.sln
+          --configuration Release
+          --no-build
+          --no-restore
+          --logger "trx;LogFilePrefix=hackeros"
+          --results-directory artifacts/test-results
+
+      - name: Publish HackerOS PWA
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: >-
+          dotnet publish OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj
+          --configuration Release
+          --no-restore
+          --output artifacts/publish
+
+      - name: Upload verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hackeros-verification-${{ github.run_attempt }}
+          path: |
+            wasm2/HackerOs/artifacts/test-results
+            wasm2/HackerOs/artifacts/playwright
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./publish/wwwroot
+          path: wasm2/HackerOs/artifacts/publish/wwwroot
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: verify
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

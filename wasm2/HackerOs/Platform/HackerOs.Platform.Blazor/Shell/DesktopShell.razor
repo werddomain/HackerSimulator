@@ -1,0 +1,330 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Platform.Blazor.Dialogs
+@using HackerOs.Platform.Blazor.Windows
+@using HackerOs.Platform.Core.Discovery
+@using HackerOs.Platform.Core.FileSystem
+@using HackerOs.Platform.Core.Lifecycle
+@using HackerOs.Simulation.Abstractions.Notifications
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Simulation.Abstractions.Time
+@using HackerOs.Simulation.Abstractions.Events
+@using HackerOs.Simulation.Abstractions.Processes
+@implements IDisposable
+@inject WindowRuntime WindowRuntime
+@inject WindowLaunchCoordinator LaunchCoordinator
+@inject INotificationQueue NotificationQueue
+@inject AppLifecycleOrchestrator Orchestrator
+@inject IProcessManager ProcessManager
+@inject WindowCloseCoordinator CloseCoordinator
+@inject WindowCloseGuardRegistry CloseGuards
+@inject ISessionService SessionService
+@inject ISimulationClock SimulationClock
+@inject IEventBus EventBus
+@inject FileDialogWindowAdapter FileDialogAdapter
+@inject TestDemoFixtureSeeder TestDemoSeeder
+
+<div class="desktop-shell" @onkeydown="HandleShellKeyDown">
+    <div class="desktop-workspace">
+        <DesktopArea Windows="WindowRuntime.Windows"
+                     OnFocus="HandleFocus"
+                     OnMinimize="HandleMinimize"
+                     OnToggleMaximize="HandleToggleMaximize"
+                     OnClose="HandleClose"
+                     OnGesture="HandleGesture">
+            <WindowContent Context="window">
+                @if (window.Content is not null)
+                {
+                    @window.Content
+                }
+                else if (Orchestrator.TryGetRunningInstance(AppInstanceId.FromGuid(window.OwnerInstanceId.Value), out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                {
+                    <WindowAppRenderer Window="window"
+                                       Descriptor="descriptor"
+                                       AppContext="context"
+                                       CloseGuards="CloseGuards" />
+                }
+                else
+                {
+                    <div class="window-content-placeholder">@window.Title</div>
+                }
+            </WindowContent>
+        </DesktopArea>
+    </div>
+
+    @if (_launcher.IsOpen)
+    {
+        <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" />
+    }
+
+    <NotificationCenter OnNotificationDismissed="StateHasChanged" />
+
+    @if (!string.IsNullOrEmpty(_launchError))
+    {
+        <aside class="lazy-launch-error" role="alert">@_launchError</aside>
+    }
+
+    @if (_isLogoutOpen)
+    {
+        <LogoutDialog OnClose="CloseLogout" OnLoggedOut="HandleLoggedOutAsync" />
+    }
+
+    <HackerOs.Taskbar.Blazor.Taskbar WindowSource="_taskbarWindowSource"
+                                      Commands="_taskbarCommands"
+                                      Launcher="_launcher"
+                                      StatusSource="_taskbarStatus"
+                                      NotificationSource="_notifications"
+                                      SessionCommands="_taskbarSessionCommands" />
+
+    @if (TestDemoEnabled)
+    {
+        <div class="e2e-test-demo-panel">
+            <button type="button" id="btn-test-demo" @onclick="RunTestDemoAsync" disabled="@_testDemoRunning">
+                @(_testDemoRunning ? "Seeding…" : "Test Demo")
+            </button>
+            @if (_testDemoStatus is not null)
+            {
+                <output id="test-demo-status" role="status">@_testDemoStatus</output>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLogoutOpen;
+    private string? _launchError;
+    private TaskbarWindowSourceAdapter _taskbarWindowSource = null!;
+    private TaskbarCommandDispatcherAdapter _taskbarCommands = null!;
+    private TaskbarLauncherAdapter _launcher = null!;
+    private TaskbarNotificationSourceAdapter _notifications = null!;
+    private TaskbarStatusSourceAdapter _taskbarStatus = null!;
+    private TaskbarSessionCommandsAdapter _taskbarSessionCommands = null!;
+
+    [Parameter]
+    public EventCallback OnLoggedOut { get; set; }
+
+    /// <summary>
+    /// Shows the E2E-only "Test Demo" fixture-seeding control. Must only ever be set
+    /// true by a trusted, out-of-band signal from the test harness (see
+    /// docs/e2e-test-demo-mode.md) — never reachable from a normal app launch.
+    /// </summary>
+    [Parameter]
+    public bool TestDemoEnabled { get; set; }
+
+    private bool _testDemoRunning;
+    private string? _testDemoStatus;
+
+    private void CloseLauncher()
+    {
+        _launcher.Close();
+    }
+
+    private void OpenLogout()
+    {
+        _isLogoutOpen = true;
+        _launcher.Close();
+        _notifications.Close();
+        Rerender();
+    }
+
+    private void CloseLogout()
+    {
+        _isLogoutOpen = false;
+    }
+
+    private async Task HandleLoggedOutAsync()
+    {
+        _isLogoutOpen = false;
+        if (OnLoggedOut.HasDelegate)
+        {
+            await OnLoggedOut.InvokeAsync();
+        }
+    }
+
+    private async Task HandleAppSelected(AppManifest manifest)
+    {
+        _launcher.Close();
+        if (SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal)
+        {
+            return;
+        }
+
+        AppLaunchResult result = await Orchestrator.LaunchAsync(
+            new AppLaunchRequest(manifest.Id, principal, []));
+        if (result.IsSuccess)
+        {
+            LaunchCoordinator.Present(manifest, result);
+        }
+        _launchError = result.IsSuccess
+            ? null
+            : result.ErrorMessage ?? result.ErrorCode ?? "The optional app could not be loaded.";
+        StateHasChanged();
+    }
+
+    private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));
+    private void HandleMinimize(WindowId id) => WindowRuntime.Apply(new MinimizeWindowCommand(id));
+    private void HandleToggleMaximize(WindowId id)
+    {
+        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window is not null)
+        {
+            if (window.VisualState == WindowVisualState.Maximized)
+            {
+                WindowRuntime.Apply(new RestoreWindowCommand(id));
+            }
+            else
+            {
+                WindowRuntime.Apply(new MaximizeWindowCommand(id));
+            }
+        }
+    }
+
+    private async Task HandleClose(WindowId id)
+    {
+        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window?.OnRequestClose is { } onRequestClose)
+        {
+            await onRequestClose();
+            StateHasChanged();
+            return;
+        }
+
+        await CloseCoordinator.CloseAsync(
+            id,
+            cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken));
+        StateHasChanged();
+    }
+    private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
+
+    private async Task RunTestDemoAsync()
+    {
+        if (!TestDemoEnabled || _testDemoRunning)
+        {
+            return;
+        }
+
+        if (SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal)
+        {
+            _testDemoStatus = "Error: no signed-in user.";
+            return;
+        }
+
+        _testDemoRunning = true;
+        _testDemoStatus = null;
+        StateHasChanged();
+        try
+        {
+            string root = await TestDemoSeeder.SeedAsync(principal);
+            _testDemoStatus = $"Seeded:{root}";
+        }
+        catch (Exception exception)
+        {
+            _testDemoStatus = $"Error:{exception.Message}";
+        }
+        finally
+        {
+            _testDemoRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private IDisposable? _processSubscription;
+
+    protected override void OnInitialized()
+    {
+        WindowRuntime.StateChanged += Rerender;
+        FileDialogAdapter.Changed += Rerender;
+        _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+
+        _taskbarWindowSource = new TaskbarWindowSourceAdapter(WindowRuntime);
+        _taskbarCommands = new TaskbarCommandDispatcherAdapter(WindowRuntime, CloseCoordinator, CloseGuards);
+        _launcher = new TaskbarLauncherAdapter();
+        _launcher.Changed += Rerender;
+        _notifications = new TaskbarNotificationSourceAdapter(NotificationQueue, SessionService, SimulationClock);
+        _notifications.Changed += Rerender;
+        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
+        _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
+    }
+
+    private void Rerender()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnProcessStateChanged(ProcessStateChangedEvent e)
+    {
+        if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
+        {
+            if (TryGetInstanceId(e.Pid, out AppInstanceId instanceId))
+            {
+                WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(instanceId.Value);
+                WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.OwnerInstanceId == ownerInstanceId);
+                if (matchingWindow is not null)
+                {
+                    WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
+                }
+            }
+        }
+        else if (e.NewState == ProcessState.Running)
+        {
+            // A window-kind app can reach Running via any caller that goes through
+            // AppLifecycleOrchestrator.LaunchAsync -- not just this shell's own app launcher
+            // (e.g. another app opening a file through IAppIntentGateway.OpenFileAsync). The
+            // orchestrator only owns process state, not window presentation, so this shell
+            // presents any such process itself; Present() is a no-op if it was already
+            // presented directly (e.g. by HandleAppSelected).
+            if (Orchestrator.TryGetRunningInstance(e.Pid, out AppDescriptor? descriptor, out _)
+                && descriptor.Manifest.Kind == AppKind.Window
+                && ProcessManager.TryGetActive(e.Pid, out ProcessRecord process))
+            {
+                LaunchCoordinator.Present(descriptor.Manifest, process);
+            }
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool TryGetInstanceId(ProcessId pid, out AppInstanceId instanceId)
+    {
+        if (ProcessManager.TryGetActive(pid, out ProcessRecord active))
+        {
+            instanceId = active.AppInstanceId;
+            return true;
+        }
+
+        ProcessRecord? historical = ProcessManager.GetHistory().LastOrDefault(record => record.Pid == pid);
+        if (historical is not null)
+        {
+            instanceId = historical.AppInstanceId;
+            return true;
+        }
+
+        instanceId = default;
+        return false;
+    }
+
+    private void HandleShellKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            if (_launcher.IsOpen)
+            {
+                _launcher.Close();
+            }
+            else if (_notifications.IsOpen)
+            {
+                _notifications.Close();
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        WindowRuntime.StateChanged -= Rerender;
+        FileDialogAdapter.Changed -= Rerender;
+        _processSubscription?.Dispose();
+        _launcher.Changed -= Rerender;
+        _notifications.Changed -= Rerender;
+        _taskbarWindowSource.Dispose();
+        _taskbarStatus.Dispose();
+    }
+}

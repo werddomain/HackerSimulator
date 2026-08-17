@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Optional ASP.NET Core server. Clients continue to work when this process is absent. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <RootNamespace>HackerOs.Server</RootNamespace>
+    <AssemblyName>HackerOs.Server</AssemblyName>
+    <Description>Optional ASP.NET Core server providing sync, identity, and network proxy services for HackerOs. The browser PWA operates fully offline when this server is absent.</Description>
+    <!-- Publish as a self-contained single-file for easy operator deployment. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <!--
+      The optional ASP.NET Core/EF Core server is intentionally not trimmed.
+      EF Core explicitly requires unreferenced code, while the WASM client and
+      shared contracts continue to use the repository-wide trim analyzer.
+    -->
+    <IsTrimmable>false</IsTrimmable>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Inline the server ADR decision: D-017, D-018 implemented here. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
+    <!-- Server-hosted Blazor UI (ADR 0027): the same shared component tree as OS/HackerOs.Ecosystem and test/test. -->
+    <ProjectReference Include="..\..\OS\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Settings\HackerOs.Apps.Settings.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SQLite for portable single-file server deployment; can be swapped for PostgreSQL. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Pin a patched native SQLite build instead of the vulnerable transitive floor. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <!-- Scalar for OpenAPI documentation UI. -->
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
+    <!-- OpenAPI document generation (required for AddOpenApi/MapOpenApi). -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+  </ItemGroup>
+
+</Project>

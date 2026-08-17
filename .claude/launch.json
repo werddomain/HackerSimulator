@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hackeros-test-harness",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--configuration", "Release", "--project", "wasm2/HackerOs/test/test/test.csproj", "--urls", "http://127.0.0.1:5251"],
+      "port": 5251
+    },
+    {
+      "name": "hackeros-browser-harness",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Tests/HackerOs.BrowserHarness.Tests/HackerOs.BrowserHarness.Tests.csproj", "--urls", "http://127.0.0.1:5253"],
+      "port": 5253
+    },
+    {
+      "name": "hackeros-windowing-sample-host",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Samples/HackerOs.Windowing.SampleHost/HackerOs.Windowing.SampleHost.csproj", "--urls", "http://127.0.0.1:5254"],
+      "port": 5254
+    },
+    {
+      "name": "hackeros-server",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Server/HackerOs.Server/HackerOs.Server.csproj", "--urls", "http://127.0.0.1:5255"],
+      "port": 5255
+    }
+  ]
+}

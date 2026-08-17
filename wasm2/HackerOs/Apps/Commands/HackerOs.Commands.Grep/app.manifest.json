@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.grep",
+  "name": "grep",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Print lines matching a pattern in stdin or virtual files",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Grep.dll",
+    "type": "HackerOs.Commands.Grep.GrepCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "filesystem.user-home.read"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.1,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.05,
+    "burstStorageIoWeight": 0.3,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "grep",
+    "aliases": [],
+    "usage": "grep [-i] [-n] [-v] <pattern> [file...]"
+  },
+  "singleInstancePerUser": false
+}

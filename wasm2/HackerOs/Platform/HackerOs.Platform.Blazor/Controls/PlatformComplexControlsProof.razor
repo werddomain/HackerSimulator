@@ -1,0 +1,72 @@
+@using MudBlazor
+
+<section class="platform-controls-proof" aria-labelledby="platform-controls-title">
+    <header class="proof-header">
+        <div>
+            <p class="proof-kicker">PLATFORM UI PROOF</p>
+            <h2 id="platform-controls-title">Control surface</h2>
+        </div>
+        <MudMenu Label="Actions" Variant="Variant.Outlined" Color="Color.Primary">
+            <MudMenuItem role="menuitem" OnClick="SelectAudit">Audit storage</MudMenuItem>
+            <MudMenuItem role="menuitem" OnClick="SelectRecovery">Open recovery</MudMenuItem>
+        </MudMenu>
+    </header>
+
+    <MudTabs Rounded="false" ApplyEffectsToContainer="true">
+        <MudTabPanel Text="Status">
+            <dl class="status-grid">
+                <div>
+                    <dt>Runtime</dt>
+                    <dd>Browser WASM</dd>
+                </div>
+                <div>
+                    <dt>Storage</dt>
+                    <dd>Operational</dd>
+                </div>
+            </dl>
+        </MudTabPanel>
+        <MudTabPanel Text="Operator">
+            <MudForm @ref="_form" ValidationDelay="0">
+                <MudTextField @bind-Value="_operatorName"
+                              Label="Operator name"
+                              Immediate="true"
+                              Required="true"
+                              RequiredError="Operator name is required"
+                              Variant="Variant.Outlined" />
+                <MudButton ButtonType="ButtonType.Button"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="ValidateAsync">
+                    Validate
+                </MudButton>
+            </MudForm>
+            <p class="validation-result" role="status" aria-live="polite">@_validationMessage</p>
+        </MudTabPanel>
+    </MudTabs>
+
+    <p class="action-result" role="status" aria-live="polite">@_selectedAction</p>
+</section>
+
+@code {
+    private MudForm? _form;
+    private string? _operatorName;
+    private string _selectedAction = "No action selected.";
+    private string _validationMessage = "Awaiting validation.";
+
+    private void SelectAudit() => _selectedAction = "Audit storage selected.";
+
+    private void SelectRecovery() => _selectedAction = "Recovery selected.";
+
+    private async Task ValidateAsync()
+    {
+        if (_form is null)
+        {
+            return;
+        }
+
+        await _form.ValidateAsync();
+        _validationMessage = _form.IsValid
+            ? "Operator form is valid."
+            : "Operator form requires attention.";
+    }
+}

@@ -1,0 +1,65 @@
+@namespace HackerOs.Ecosystem
+@using HackerOs.Simulation.Abstractions.Sessions
+@implements IDisposable
+@inject ILoginProgressTracker ProgressTracker
+
+<section class="login-progress-surface" aria-busy="true" aria-label="Session startup progress">
+    <div class="progress-card">
+        <div class="boot-logo" aria-hidden="true">
+            <span class="logo-mark">H_</span>
+        </div>
+
+        <h1 class="system-title">HackerOS</h1>
+        <p class="status-subtitle">Session initialization in progress</p>
+
+        <div class="progress-bar-container" role="progressbar" aria-valuenow="@Snapshot.Percentage" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill @GetProgressClass(Snapshot.Percentage)"></div>
+            </div>
+            <div class="progress-meta">
+                <span class="step-label">@Snapshot.CurrentStepName...</span>
+                <span class="step-percentage">@Snapshot.Percentage%</span>
+            </div>
+        </div>
+
+        @if (Snapshot.StepHistory.Count > 0)
+        {
+            <ul class="step-history-log" aria-label="Completed startup steps">
+                @foreach (string step in Snapshot.StepHistory)
+                {
+                    <li class="history-item">
+                        <span class="check-mark" aria-hidden="true">✓</span>
+                        <span class="history-text">@step</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</section>
+
+@code {
+    private LoginProgressSnapshot Snapshot => ProgressTracker.CurrentSnapshot;
+
+    protected override void OnInitialized()
+    {
+        ProgressTracker.ProgressChanged += OnProgressChanged;
+    }
+
+    private void OnProgressChanged(LoginProgressSnapshot snapshot)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private static string GetProgressClass(int percentage) => percentage switch
+    {
+        <= 33 => "progress-33",
+        <= 66 => "progress-66",
+        <= 99 => "progress-99",
+        _ => "progress-100"
+    };
+
+    public void Dispose()
+    {
+        ProgressTracker.ProgressChanged -= OnProgressChanged;
+    }
+}

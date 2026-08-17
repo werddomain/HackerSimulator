@@ -1,0 +1,14 @@
+.terminal-harness {
+    width: min(48rem, 90vw);
+    height: 24rem;
+    padding: 1rem;
+    color: #f4f7f8;
+    background: #0d1114;
+    font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+#terminal-full-screen-result {
+    display: block;
+    margin-top: 0.75rem;
+    color: #42d392;
+}

@@ -1,0 +1,149 @@
+@namespace HackerOs.Platform.Blazor.Dialogs
+@using HackerOs.App.Abstractions
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+
+<section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
+         tabindex="-1" @onkeydown="HandleKeyDown">
+    <header>
+        <MudIcon Icon="@Icons.Material.Filled.Save" />
+        <h2 id="@_titleId">@(Presentation.Request.Title ?? "Save file")</h2>
+    </header>
+
+    <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
+                          InitialDirectory="@EffectiveInitialDirectory"
+                          AllowFileSelection="false"
+                          DirectoryChanged="DirectoryChanged" />
+
+    <label class="name-control">
+        <span>File name</span>
+        <input value="@_fileName" @oninput="ChangeName" aria-invalid="@(_error is not null)" />
+    </label>
+
+    @if (_error is not null)
+    {
+        <p class="error" role="alert">@_error</p>
+    }
+
+    @if (_confirmPath is VirtualPath conflictPath)
+    {
+        <div class="overwrite" role="alertdialog" aria-label="Confirm overwrite">
+            <span>@conflictPath.Value already exists. Replace it?</span>
+            <button type="button" @onclick="RejectOverwrite">No</button>
+            <button type="button" class="danger" @onclick="ConfirmOverwrite">Replace</button>
+        </div>
+    }
+
+    <footer>
+        <button type="button" @onclick="Cancel">Cancel</button>
+        <button type="button" class="primary" disabled="@_checking" @onclick="SaveAsync">Save</button>
+    </footer>
+</section>
+
+@code {
+    /// <summary>Gets or sets the active save-file presentation.</summary>
+    [Parameter, EditorRequired]
+    public SaveFileDialogPresentation Presentation { get; set; } = null!;
+
+    /// <summary>Gets or sets the owning session coordinator.</summary>
+    [Parameter, EditorRequired]
+    public FileDialogCoordinator Coordinator { get; set; } = null!;
+
+    private readonly string _titleId = $"save-file-title-{Guid.NewGuid():N}";
+    private VirtualPath _directory = VirtualPath.Parse("/");
+    private VirtualPath? _confirmPath;
+    private string _fileName = string.Empty;
+    private string? _error;
+    private bool _checking;
+
+    private VirtualPath EffectiveInitialDirectory =>
+        Presentation.Request.InitialDirectory ?? VirtualPath.Parse($"/home/{Presentation.UserId}");
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_fileName))
+        {
+            _fileName = Presentation.Request.SuggestedFileName ?? string.Empty;
+        }
+
+        _directory = EffectiveInitialDirectory;
+    }
+
+    private void DirectoryChanged(FileSystemDirectorySnapshot snapshot) => _directory = snapshot.Path;
+
+    private void ChangeName(ChangeEventArgs args)
+    {
+        _fileName = args.Value?.ToString() ?? string.Empty;
+        _error = null;
+        _confirmPath = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        string candidate = _fileName;
+        if (!string.IsNullOrEmpty(Presentation.Request.DefaultExtension)
+            && !candidate.EndsWith(Presentation.Request.DefaultExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            candidate += Presentation.Request.DefaultExtension;
+        }
+
+        FileSystemEntryName name;
+        try
+        {
+            name = FileSystemEntryName.Parse(candidate);
+        }
+        catch (FormatException exception)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        VirtualPath destination = Combine(_directory, name.Value);
+        _checking = true;
+        FileSystemResult<FileSystemEntrySnapshot> existing = await Presentation.FileSystem.StatAsync(
+            new FileSystemStatRequest(destination));
+        _checking = false;
+        if (existing.Succeeded)
+        {
+            if (Presentation.Request.ConfirmOverwrite)
+            {
+                _confirmPath = destination;
+                return;
+            }
+
+            Coordinator.SelectSave(Presentation.Id, destination);
+        }
+        else if (existing.Error?.Code == FileSystemErrorCode.NotFound)
+        {
+            Coordinator.SelectSave(Presentation.Id, destination);
+        }
+        else
+        {
+            _error = $"Unable to inspect the destination ({existing.Error?.Code}).";
+        }
+    }
+
+    private void ConfirmOverwrite()
+    {
+        if (_confirmPath is VirtualPath path)
+        {
+            Coordinator.SelectSave(Presentation.Id, path);
+        }
+    }
+
+    private void RejectOverwrite() => _confirmPath = null;
+    private void Cancel() => Coordinator.Cancel(Presentation.Id);
+    private void HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Cancel();
+        }
+    }
+
+    private static VirtualPath Combine(VirtualPath directory, string name) =>
+        VirtualPath.Parse(directory.Value == "/" ? $"/{name}" : $"{directory.Value}/{name}");
+}

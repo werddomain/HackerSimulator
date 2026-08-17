@@ -1,0 +1,7 @@
+#nullable enable
+HackerOs.Windowing.Core.WindowRuntime
+HackerOs.Windowing.Core.WindowRuntime.Apply(HackerOs.Windowing.Abstractions.WindowCommand! command) -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowEvent!>!
+HackerOs.Windowing.Core.WindowRuntime.IsInteractionBlocked(HackerOs.Windowing.Abstractions.WindowId id) -> bool
+HackerOs.Windowing.Core.WindowRuntime.StateChanged -> System.Action?
+HackerOs.Windowing.Core.WindowRuntime.WindowRuntime(HackerOs.Windowing.Abstractions.WindowBounds workArea) -> void
+HackerOs.Windowing.Core.WindowRuntime.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!

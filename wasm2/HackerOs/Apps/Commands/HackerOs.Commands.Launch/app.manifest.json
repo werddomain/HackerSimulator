@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.launch",
+  "name": "launch",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Launch an application by ID",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Launch.dll",
+    "type": "HackerOs.Commands.Launch.LaunchCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "apps.launch"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "launch",
+    "aliases": [],
+    "usage": "launch <app-id>"
+  },
+  "singleInstancePerUser": false
+}

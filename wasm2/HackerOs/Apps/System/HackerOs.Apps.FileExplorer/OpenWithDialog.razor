@@ -1,0 +1,54 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Platform.Core
+@using MudBlazor
+
+<MudDialog Class="gothic-dialog">
+    <DialogContent>
+        <div class="openwith-container">
+            <p class="openwith-subtitle">Select an installed app to open <strong>@FilePath</strong>:</p>
+            <MudList T="AppManifest" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_selectedApp" SelectedValueChanged="HandleSelectedAppChanged">
+                @foreach (AppManifest manifest in AvailableApps)
+                {
+                    <MudListItem Value="@manifest">
+                        <div class="app-item">
+                            <span class="app-name">@manifest.Name</span>
+                            <span class="app-id">(@manifest.Id)</span>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selectedApp is null)" OnClick="Confirm">Open</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string FilePath { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<AppManifest> AvailableApps { get; set; } = [];
+
+    private AppManifest? _selectedApp;
+
+    private void HandleSelectedAppChanged(AppManifest manifest)
+    {
+        _selectedApp = manifest;
+    }
+
+    private void Confirm()
+    {
+        if (_selectedApp is not null)
+        {
+            MudDialog.Close(DialogResult.Ok(_selectedApp));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

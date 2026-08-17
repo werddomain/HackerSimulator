@@ -1,0 +1,25 @@
+.desktop-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 20rem;
+    overflow: hidden;
+    color: var(--hackeros-window-text, #e7f7f1);
+    background: #07100f;
+    isolation: isolate;
+}
+
+.desktop-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgb(85 214 161 / 4%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(85 214 161 / 4%) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+.window-layer {
+    position: absolute;
+    inset: 0;
+}

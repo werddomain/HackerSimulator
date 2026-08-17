@@ -1,0 +1,603 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core.ServerConnection
+@using HackerOs.Infrastructure.Browser.Schema
+@using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Lifecycle
+@using HackerOs.Simulation.Abstractions.ServerConnection
+@using System.Net.Http
+@using Microsoft.JSInterop
+@using MudBlazor
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@inject AppCatalog Catalog
+@inject IJSRuntime JS
+@inject IServerConnectionService ServerConnection
+@inject ISettingsSyncService SettingsSync
+@inject IFileSystemSyncService FileSystemSync
+@inject IGrantsSyncService GrantsSync
+@inject IFileAssociationsSyncService FileAssociationsSync
+@inject IAppCatalogSyncService AppCatalogSync
+@inject IPersistentAppCatalogRepository AppCatalogRepository
+@inject AppLifecycleOrchestrator AppLifecycle
+
+<div class="settings-window-container">
+    <header class="settings-header">
+        <span class="settings-header-title">HackerOS System Settings</span>
+    </header>
+
+    <div class="settings-body">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs">
+            <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
+                <div class="setting-group">
+                    <h4>Color Theme</h4>
+                    <p class="setting-desc">Select modern gothic system accent color token.</p>
+                    <div class="accent-options">
+                        <button class="accent-btn accent-green" @onclick='() => ChangeAccent("green")'>Green</button>
+                        <button class="accent-btn accent-cyan" @onclick='() => ChangeAccent("cyan")'>Cyan</button>
+                        <button class="accent-btn accent-purple" @onclick='() => ChangeAccent("purple")'>Purple</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h4>Animations</h4>
+                    <MudSwitch T="bool" Value="@_animationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary" Label="Enable desktop transitions and micro-animations" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="File Associations" Icon="@Icons.Material.Filled.Extension">
+                <div class="setting-group">
+                    <h4>File Association Policy</h4>
+                    <p class="setting-desc">Default applications per extension, from installed apps' declared file handlers.</p>
+                    <div class="associations-list">
+                        @if (_fileHandlers.Count == 0)
+                        {
+                            <div class="assoc-row"><span>No file handlers are currently registered.</span></div>
+                        }
+                        else
+                        {
+                            @foreach ((string extension, string appName) in _fileHandlers)
+                            {
+                                <div class="assoc-row"><span>@extension</span> <strong>@appName</strong></div>
+                            }
+                        }
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Capability Grants" Icon="@Icons.Material.Filled.Security">
+                <div class="setting-group">
+                    <h4>Granted Application Capabilities</h4>
+                    <p class="setting-desc">Active security grants for current session.</p>
+                    <div class="grants-list">
+                        @foreach (string cap in Manifest.Capabilities)
+                        {
+                            <div class="grant-tag">✓ @cap</div>
+                        }
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Installed Apps" Icon="@Icons.Material.Filled.Apps">
+                <div class="setting-group">
+                    <h4>Installed Applications</h4>
+                    <p class="setting-desc">
+                        Enable or disable installed apps. Disabling an app stops any of its running
+                        instances and blocks future launches (and those of anything that depends on
+                        it) until it is re-enabled.
+                    </p>
+                    <div class="installed-apps-list">
+                        @if (_installedApps.Count == 0)
+                        {
+                            <div class="assoc-row"><span>No installed applications found.</span></div>
+                        }
+                        else
+                        {
+                            @foreach (PersistedAppCatalogEntry entry in _installedApps)
+                            {
+                                <div class="assoc-row">
+                                    <span>@entry.Manifest.Name</span>
+                                    <MudSwitch T="bool" Value="@entry.IsEnabled"
+                                               ValueChanged="@(value => ToggleAppEnabledAsync(entry.Manifest.Id, value))"
+                                               Color="Color.Primary" Disabled="@_isTogglingApp" />
+                                </div>
+                            }
+                        }
+                        @if (!string.IsNullOrEmpty(_appToggleErrorMessage))
+                        {
+                            <p class="dialog-error" role="alert">@_appToggleErrorMessage</p>
+                        }
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Server Connection" Icon="@Icons.Material.Filled.Cloud">
+                <div class="setting-group">
+                    <h4>Optional Server</h4>
+                    <p class="setting-desc">
+                        Connecting a device to an optional HackerOS server enables real network
+                        access for apps like Terminal's <code>curl</code>/<code>ping</code>. Local
+                        storage remains the source of truth either way — connecting is never
+                        required for normal use.
+                    </p>
+
+                    @if (_connectionState is not null)
+                    {
+                        <div class="server-connection-status connected">
+                            <div class="info-line"><span>Status:</span> <strong>Connected</strong></div>
+                            <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerBaseUrl</strong></div>
+                            <div class="info-line"><span>Account:</span> <strong>@_connectionState.AccountId</strong></div>
+                            @if (!string.IsNullOrEmpty(_syncStatusMessage))
+                            {
+                                <div class="info-line"><span>Sync:</span> <strong>@_syncStatusMessage</strong></div>
+                            }
+                            @if (FileSystemSync.UnresolvedConflicts.Count > 0)
+                            {
+                                <div class="info-line sync-conflict-warning">
+                                    <span>Files:</span>
+                                    <strong>@FileSystemSync.UnresolvedConflicts.Count file(s) have unresolved sync conflicts</strong>
+                                </div>
+                            }
+                        </div>
+                        <div class="server-connection-actions">
+                            <button class="btn-secondary" disabled="@(_isConnecting || _isSyncing)" @onclick="SyncNowAsync">
+                                @(_isSyncing ? "Syncing..." : "Sync now")
+                            </button>
+                            <button class="btn-danger" disabled="@_isConnecting" @onclick="DisconnectAsync">
+                                Disconnect
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="server-connection-status disconnected">
+                            <div class="info-line"><span>Status:</span> <strong>Not connected</strong></div>
+                        </div>
+                        <form class="server-connection-form" @onsubmit="() => ConnectAsync(createNewAccount: false)" @onsubmit:preventDefault>
+                            <label for="server-url">Server URL</label>
+                            <input id="server-url" type="url" placeholder="https://example.com" autocomplete="off"
+                                   disabled="@_isConnecting" @bind="_serverUrl" @bind:event="oninput" />
+
+                            <label for="server-username">Username</label>
+                            <input id="server-username" type="text" autocomplete="username" maxlength="128"
+                                   disabled="@_isConnecting" @bind="_username" @bind:event="oninput" />
+
+                            <label for="server-password">Password</label>
+                            <input id="server-password" type="password" autocomplete="current-password"
+                                   disabled="@_isConnecting" @bind="_password" @bind:event="oninput" />
+
+                            @if (!string.IsNullOrEmpty(_connectionErrorMessage))
+                            {
+                                <p class="dialog-error" role="alert">@_connectionErrorMessage</p>
+                            }
+
+                            <div class="server-connection-actions">
+                                <button type="submit" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)">
+                                    @(_isConnecting ? "Connecting..." : "Log In")
+                                </button>
+                                <button type="button" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)"
+                                        @onclick="() => ConnectAsync(createNewAccount: true)">
+                                    @(_isConnecting ? "Connecting..." : "Create Account")
+                                </button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="About System" Icon="@Icons.Material.Filled.Info">
+                <div class="system-info-box">
+                    <div class="info-line"><span>OS Version:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
+                    <div class="info-line"><span>Runtime:</span> <strong>.NET 10.0 WebAssembly</strong></div>
+                    <div class="info-line"><span>Architecture:</span> <strong>C# Kernel / Scoped CSS / MudBlazor</strong></div>
+                    <div class="info-line"><span>User ID:</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>
+                    <div class="info-line"><span>Authority:</span> <strong>@(AppContext?.UserAuthority.ToString() ?? "User")</strong></div>
+                </div>
+
+                <div class="setting-group danger-zone">
+                    <h4>Danger Zone</h4>
+                    <p class="setting-desc">
+                        Reset HackerOS to its factory state. This permanently clears the local IndexedDB
+                        database — all accounts, files, sessions, and settings — and restores your account
+                        to its default configuration. This action cannot be undone.
+                    </p>
+                    <button class="btn-danger" @onclick="OpenResetDialog">
+                        Reset to Factory Settings
+                    </button>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+
+    @if (_isResetDialogOpen)
+    {
+        <div class="modal-backdrop" @onclick="CancelReset">
+            <div class="reset-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="reset-title"
+                 @onclick:stopPropagation>
+                <header class="dialog-header">
+                    <div class="reset-mark" aria-hidden="true">⚠</div>
+                    <h2 id="reset-title">Reset to Factory Settings</h2>
+                </header>
+
+                <div class="dialog-body">
+                    <p>
+                        This will permanently delete the entire local <code>@HackerOsIndexedDbSchema.DatabaseName</code>
+                        IndexedDB database, including:
+                    </p>
+                    <ul class="reset-affected-list">
+                        <li>All local user accounts and sessions</li>
+                        <li>All files and folders</li>
+                        <li>All application and account settings (restored to defaults)</li>
+                        <li>All capability grants and audit history</li>
+                    </ul>
+                    <p>HackerOS will reload afterward as if freshly installed.</p>
+
+                    <label class="confirm-label" for="reset-confirm-input">
+                        Type <strong>RESET</strong> to confirm:
+                    </label>
+                    <input id="reset-confirm-input"
+                           class="confirm-input"
+                           type="text"
+                           autocomplete="off"
+                           disabled="@_isResetting"
+                           @bind="_confirmText"
+                           @bind:event="oninput" />
+
+                    @if (!string.IsNullOrEmpty(_resetErrorMessage))
+                    {
+                        <p class="dialog-error" role="alert">@_resetErrorMessage</p>
+                    }
+                </div>
+
+                <footer class="dialog-footer">
+                    <button type="button"
+                            class="btn-secondary"
+                            disabled="@_isResetting"
+                            @onclick="CancelReset">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn-danger"
+                            disabled="@(_isResetting || !IsConfirmed)"
+                            @onclick="ConfirmResetAsync">
+                        @(_isResetting ? "Resetting..." : "Reset to Factory Settings")
+                    </button>
+                </footer>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.settings",
+        Name = "Settings",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "System control panel for user preferences, appearance, file associations, capabilities, and device configuration",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.Settings.dll", "HackerOs.Apps.Settings.SettingsWindow"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
+        Capabilities = ["settings.read", "settings.write", "settings.system.read", "settings.system.write", "file-associations.read", "file-associations.write", "process.list"],
+        Resources = AppResourceProfileManifest.None,
+        SingleInstancePerUser = true
+    };
+
+    private const string ResetConfirmPhrase = "RESET";
+
+    private bool _animationsEnabled = true;
+    private string _activeAccent = "green";
+    private AppearancePersistenceService? _appearance;
+    private IJSObjectReference? _module;
+    private List<(string Extension, string AppName)> _fileHandlers = [];
+    private List<PersistedAppCatalogEntry> _installedApps = [];
+    private bool _isTogglingApp;
+    private string? _appToggleErrorMessage;
+
+    private bool _isResetDialogOpen;
+    private bool _isResetting;
+    private string _confirmText = string.Empty;
+    private string? _resetErrorMessage;
+
+    private ServerConnectionState? _connectionState;
+    private string _serverUrl = string.Empty;
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+    private bool _isConnecting;
+    private string? _connectionErrorMessage;
+    private bool _isSyncing;
+    private string? _syncStatusMessage;
+
+    private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
+
+    private bool CanSubmitConnection =>
+        Uri.TryCreate(_serverUrl, UriKind.Absolute, out _) &&
+        !string.IsNullOrWhiteSpace(_username) &&
+        !string.IsNullOrWhiteSpace(_password);
+
+    protected override async Task OnAppInitializedAsync()
+    {
+        _appearance = new AppearancePersistenceService(AppContext.Settings);
+        AppearanceSettings current = await _appearance.ReadAsync(AppContext.CancellationToken);
+        _activeAccent = current.Accent;
+        _animationsEnabled = current.AnimationsEnabled;
+
+        _fileHandlers = [.. Catalog.Manifests.Values
+            .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
+                handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
+            .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
+
+        _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+
+        _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.Settings/SettingsWindow.razor.js");
+                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
+                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
+            }
+            catch (Exception)
+            {
+                // Headless test DOM and unavailable-JS fallback: preferences still persist,
+                // just without a live visual application in this environment.
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+
+    private async Task ChangeAccent(string accent)
+    {
+        string previous = _activeAccent;
+        _activeAccent = accent;
+        StateHasChanged();
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("applyAccent", accent);
+        }
+
+        if (_appearance is null || !await _appearance.WriteAsync(accent, _animationsEnabled, AppContext.CancellationToken))
+        {
+            _activeAccent = previous;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAccent", previous);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAnimations(bool value)
+    {
+        bool previous = _animationsEnabled;
+        _animationsEnabled = value;
+        StateHasChanged();
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("applyAnimations", value);
+        }
+
+        if (_appearance is null || !await _appearance.WriteAsync(_activeAccent, value, AppContext.CancellationToken))
+        {
+            _animationsEnabled = previous;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAnimations", previous);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAppEnabledAsync(string appId, bool enabled)
+    {
+        if (_isTogglingApp)
+        {
+            return;
+        }
+
+        _isTogglingApp = true;
+        _appToggleErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // AppLifecycleOrchestrator both enforces the change live (stops running instances,
+            // computes the dependency closure) and persists it durably (ADR 0032) in one call.
+            if (enabled)
+            {
+                AppEnableResult result = await AppLifecycle.EnableAsync(appId);
+                if (!result.Success)
+                {
+                    _appToggleErrorMessage = string.Join("; ", result.Errors);
+                }
+            }
+            else
+            {
+                AppDisableResult result = await AppLifecycle.DisableAsync(appId);
+                if (!result.Success)
+                {
+                    _appToggleErrorMessage = string.Join("; ", result.Errors);
+                }
+            }
+
+            // A disable's dependency closure may have toggled more than the one row clicked.
+            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+        }
+        finally
+        {
+            _isTogglingApp = false;
+        }
+    }
+
+    private async Task ConnectAsync(bool createNewAccount)
+    {
+        if (!CanSubmitConnection || _isConnecting)
+        {
+            return;
+        }
+
+        _isConnecting = true;
+        _connectionErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Uri serverBaseUrl = new(_serverUrl, UriKind.Absolute);
+            _connectionState = createNewAccount
+                ? await ServerConnection.ConnectWithNewAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken)
+                : await ServerConnection.ConnectWithExistingAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken);
+            _password = string.Empty;
+        }
+        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
+        {
+            _connectionErrorMessage = $"Could not connect: {ex.Message}";
+        }
+        finally
+        {
+            _isConnecting = false;
+        }
+
+        if (_connectionState is not null)
+        {
+            // ADR 0029 Decision 7: sync once immediately after a successful connect.
+            await SyncNowAsync();
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        if (_isConnecting)
+        {
+            return;
+        }
+
+        await ServerConnection.DisconnectAsync(AppContext.CancellationToken);
+        _connectionState = null;
+        _serverUrl = string.Empty;
+        _username = string.Empty;
+        _password = string.Empty;
+        _connectionErrorMessage = null;
+        _syncStatusMessage = null;
+    }
+
+    private async Task SyncNowAsync()
+    {
+        if (_isSyncing || _connectionState is null)
+        {
+            return;
+        }
+
+        _isSyncing = true;
+        _syncStatusMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await SettingsSync.PushAsync(AppContext.CancellationToken);
+            await SettingsSync.PullAsync(AppContext.CancellationToken);
+
+            AppearanceSettings current = await _appearance!.ReadAsync(AppContext.CancellationToken);
+            _activeAccent = current.Accent;
+            _animationsEnabled = current.AnimationsEnabled;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
+                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
+            }
+
+            // ADR 0030: push before pull, same order as Settings sync above — pushing first lets a
+            // concurrent-edit conflict get detected and flagged before the pull step runs, so the
+            // pull's conflict guard (skip any record this push just flagged) has something to check.
+            await FileSystemSync.PushAsync(AppContext.CancellationToken);
+            await FileSystemSync.PullAsync(AppContext.CancellationToken);
+
+            // ADR 0031: Grants is pull-only — no push call exists for this domain.
+            await GrantsSync.PullAsync(AppContext.CancellationToken);
+
+            // ADR 0033: completes the original five-domain sync roadmap.
+            await FileAssociationsSync.PushAsync(AppContext.CancellationToken);
+            await FileAssociationsSync.PullAsync(AppContext.CancellationToken);
+            await AppCatalogSync.PushAsync(AppContext.CancellationToken);
+            await AppCatalogSync.PullAsync(AppContext.CancellationToken);
+            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+
+            _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
+                ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"
+                : $"Last synced {DateTimeOffset.Now:t}";
+        }
+        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
+        {
+            _syncStatusMessage = $"Sync failed: {ex.Message}";
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
+
+    private void OpenResetDialog()
+    {
+        _isResetDialogOpen = true;
+        _confirmText = string.Empty;
+        _resetErrorMessage = null;
+    }
+
+    private void CancelReset()
+    {
+        if (_isResetting)
+        {
+            return;
+        }
+
+        _isResetDialogOpen = false;
+        _confirmText = string.Empty;
+        _resetErrorMessage = null;
+    }
+
+    private async Task ConfirmResetAsync()
+    {
+        if (!IsConfirmed || _isResetting)
+        {
+            return;
+        }
+
+        _isResetting = true;
+        _resetErrorMessage = null;
+
+        try
+        {
+            await using IJSObjectReference module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/HackerOs.Infrastructure.Browser/indexedDb.js");
+            await module.InvokeVoidAsync("deleteDatabase", HackerOsIndexedDbSchema.DatabaseName);
+
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            _resetErrorMessage = $"Reset failed: {ex.Message}";
+            _isResetting = false;
+        }
+    }
+}

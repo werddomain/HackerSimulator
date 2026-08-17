@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "org.hackeros.commands.ps",
+  "name": "ps",
+  "version": "1.0.0",
+  "publisherId": "pub.hackeros",
+  "description": "Report a snapshot of current processes",
+  "kind": "terminal",
+  "entryPoint": {
+    "assembly": "HackerOs.Commands.Ps.dll",
+    "type": "HackerOs.Commands.Ps.PsCommand"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "1.0.0"
+  },
+  "presentation": {
+    "category": "utilities",
+    "launchVisibility": "hidden",
+    "iconAssetPaths": []
+  },
+  "capabilities": [
+    "process.list"
+  ],
+  "resources": {
+    "baselineCpuWeight": 0.01,
+    "burstCpuWeight": 0.05,
+    "baselineMemoryWeight": 0.01,
+    "burstMemoryWeight": 0.05,
+    "baselineStorageIoWeight": 0.0,
+    "burstStorageIoWeight": 0.0,
+    "baselineNetworkIoWeight": 0.0,
+    "burstNetworkIoWeight": 0.0
+  },
+  "terminal": {
+    "name": "ps",
+    "aliases": [],
+    "usage": "ps [-a] [-u]"
+  },
+  "singleInstancePerUser": false
+}

@@ -1,0 +1,150 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Infrastructure\HackerOs.Infrastructure.Browser\HackerOs.Infrastructure.Browser.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\HackerOs.Apps.Diagnostic.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.IconViewer\HackerOs.Apps.IconViewer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Settings\HackerOs.Apps.Settings.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Alias\HackerOs.Commands.Alias.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Chmod\HackerOs.Commands.Chmod.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cp\HackerOs.Commands.Cp.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Curl\HackerOs.Commands.Curl.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Diff\HackerOs.Commands.Diff.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Echo\HackerOs.Commands.Echo.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Find\HackerOs.Commands.Find.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Grep\HackerOs.Commands.Grep.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Head\HackerOs.Commands.Head.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Kill\HackerOs.Commands.Kill.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Launch\HackerOs.Commands.Launch.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ls\HackerOs.Commands.Ls.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mkdir\HackerOs.Commands.Mkdir.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mv\HackerOs.Commands.Mv.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nano\HackerOs.Commands.Nano.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nmap\HackerOs.Commands.Nmap.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ping\HackerOs.Commands.Ping.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ps\HackerOs.Commands.Ps.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Rm\HackerOs.Commands.Rm.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Sort\HackerOs.Commands.Sort.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Tail\HackerOs.Commands.Tail.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Touch\HackerOs.Commands.Touch.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Wc\HackerOs.Commands.Wc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Browser.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Calculator.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.CodeEditor.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Diagnostic.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.ErrorLogViewer.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.FileExplorer.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.HackPaint.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.IconViewer.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Settings.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.SystemMonitor.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Terminal.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.TextEditor.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Alias.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Cat.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Chmod.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Cp.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Curl.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Diff.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Echo.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Find.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Grep.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Head.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Kill.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Launch.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Ls.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Mkdir.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Mv.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Nano.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Nmap.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Ping.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Ps.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Rm.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Sort.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Tail.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Touch.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Commands.Wc.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Browser\app.manifest.json" Link="Manifests\org.hackeros.browser.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Calculator\app.manifest.json" Link="Manifests\org.hackeros.calculator.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\app.manifest.json" Link="Manifests\org.hackeros.code-editor.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\app.manifest.json" Link="Manifests\org.hackeros.diagnostic.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\app.manifest.json" Link="Manifests\org.hackeros.error-log-viewer.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\app.manifest.json" Link="Manifests\org.hackeros.file-explorer.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.HackPaint\app.manifest.json" Link="Manifests\org.hackeros.hack-paint.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.IconViewer\app.manifest.json" Link="Manifests\org.hackeros.icon-viewer.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Settings\app.manifest.json" Link="Manifests\org.hackeros.settings.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\app.manifest.json" Link="Manifests\org.hackeros.system-monitor.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Terminal\app.manifest.json" Link="Manifests\org.hackeros.terminal.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.TextEditor\app.manifest.json" Link="Manifests\org.hackeros.text-editor.json" />
+    <!--
+      cd/pwd/clear/help are deliberately not wired here: TerminalWindow.razor intercepts those exact
+      command names before catalog resolution ever runs (hardcoded built-ins), so their catalog
+      command projects (HackerOs.Commands.Cd/Pwd/Clear/Help) would be permanently unreachable dead
+      entries if embedded, and would misleadingly show up in both the "Built-in" and "Catalog" lists
+      in `help`'s own output. See docs/adr/0034-wire-terminal-command-catalog.md.
+    -->
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Alias\app.manifest.json" Link="Manifests\org.hackeros.commands.alias.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Cat\app.manifest.json" Link="Manifests\org.hackeros.cmd.cat.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Chmod\app.manifest.json" Link="Manifests\org.hackeros.commands.chmod.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Cp\app.manifest.json" Link="Manifests\org.hackeros.commands.cp.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Curl\app.manifest.json" Link="Manifests\org.hackeros.commands.curl.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Diff\app.manifest.json" Link="Manifests\org.hackeros.commands.diff.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Echo\app.manifest.json" Link="Manifests\org.hackeros.cmd.echo.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Find\app.manifest.json" Link="Manifests\org.hackeros.commands.find.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Grep\app.manifest.json" Link="Manifests\org.hackeros.commands.grep.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Head\app.manifest.json" Link="Manifests\org.hackeros.commands.head.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Kill\app.manifest.json" Link="Manifests\org.hackeros.commands.kill.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Launch\app.manifest.json" Link="Manifests\org.hackeros.commands.launch.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Ls\app.manifest.json" Link="Manifests\org.hackeros.cmd.ls.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Mkdir\app.manifest.json" Link="Manifests\org.hackeros.commands.mkdir.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Mv\app.manifest.json" Link="Manifests\org.hackeros.commands.mv.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Nano\app.manifest.json" Link="Manifests\org.hackeros.commands.nano.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Nmap\app.manifest.json" Link="Manifests\org.hackeros.commands.nmap.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Ping\app.manifest.json" Link="Manifests\org.hackeros.commands.ping.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Ps\app.manifest.json" Link="Manifests\org.hackeros.commands.ps.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Rm\app.manifest.json" Link="Manifests\org.hackeros.commands.rm.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Sort\app.manifest.json" Link="Manifests\org.hackeros.commands.sort.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Tail\app.manifest.json" Link="Manifests\org.hackeros.commands.tail.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Touch\app.manifest.json" Link="Manifests\org.hackeros.commands.touch.json" />
+    <EmbeddedResource Include="..\..\Apps\Commands\HackerOs.Commands.Wc\app.manifest.json" Link="Manifests\org.hackeros.commands.wc.json" />
+  </ItemGroup>
+
+</Project>

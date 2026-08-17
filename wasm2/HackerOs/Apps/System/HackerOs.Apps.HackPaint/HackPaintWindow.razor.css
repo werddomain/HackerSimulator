@@ -1,0 +1,130 @@
+/* ==========================================================================
+   HackPaintWindow.razor.css — scoped styles for Hack Paint app.
+   Dark canvas surround with HackerOS custom property tokens.
+   ========================================================================== */
+
+.paint-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--hackeros-bg, #0d0d0d);
+    color: var(--hackeros-fg, #33ff33);
+    font-family: var(--hackeros-font-mono, "Courier New", monospace);
+    user-select: none;
+}
+
+.paint-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--hackeros-toolbar-bg, #111);
+    border-bottom: 1px solid var(--hackeros-border, #2a2a2a);
+    flex-shrink: 0;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-right: 1px solid var(--hackeros-border, #222);
+    padding-right: 8px;
+}
+
+.tool-group:last-child {
+    border-right: none;
+}
+
+.paint-btn {
+    background: transparent;
+    border: 1px solid var(--hackeros-border, #2a2a2a);
+    color: var(--hackeros-fg, #33ff33);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.paint-btn:hover:not(:disabled) {
+    background: var(--hackeros-hover-bg, #1e1e1e);
+    border-color: var(--hackeros-accent, #33ff33);
+}
+
+.paint-btn.active {
+    background: var(--hackeros-accent, #33ff33);
+    color: var(--hackeros-bg, #0d0d0d);
+    font-weight: 700;
+}
+
+.paint-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.tool-label {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.zoom-label, .size-label {
+    font-size: 11px;
+    min-width: 36px;
+}
+
+.color-picker {
+    width: 28px;
+    height: 24px;
+    border: 1px solid var(--hackeros-border, #2a2a2a);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 3px;
+}
+
+.size-range {
+    width: 70px;
+    accent-color: var(--hackeros-accent, #33ff33);
+}
+
+.paint-viewport {
+    flex: 1;
+    overflow: auto;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+}
+
+.paint-viewport.grid-overlay {
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.canvas-frame {
+    transform-origin: center center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    border: 1px solid #444;
+}
+
+.paint-canvas {
+    display: block;
+    cursor: crosshair;
+}
+
+.paint-statusbar {
+    display: flex;
+    gap: 16px;
+    padding: 3px 10px;
+    font-size: 11px;
+    background: var(--hackeros-toolbar-bg, #111);
+    border-top: 1px solid var(--hackeros-border, #2a2a2a);
+    opacity: 0.7;
+    flex-shrink: 0;
+}

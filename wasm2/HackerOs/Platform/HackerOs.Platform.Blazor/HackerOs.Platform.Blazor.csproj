@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" Version="9.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <ProjectReference Include="..\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
+    <ProjectReference Include="..\HackerOs.Windowing.Blazor\HackerOs.Windowing.Blazor.csproj" />
+    <ProjectReference Include="..\HackerOs.Taskbar.Blazor\HackerOs.Taskbar.Blazor.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

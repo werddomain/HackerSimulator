@@ -1,0 +1,1040 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core
+@using HackerOs.Simulation.Abstractions.Gateways
+@using HackerOs.Simulation.Abstractions.Events
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.AppSdk.Blazor.Interop
+@using HackerOs.AppSdk.Icons
+@using System.IO.Compression
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using MudBlazor
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@inject AppCatalog Catalog
+@inject ISessionService SessionService
+@inject MudBlazor.IDialogService MudDialogService
+@inject IJSRuntime JSRuntime
+
+<div class="file-explorer-container">
+    <!-- Navigation & Address Toolbar -->
+    <div class="explorer-toolbar">
+        <div class="nav-buttons">
+            <button class="nav-btn" disabled="@(!_state.CanNavigateBack)" @onclick="_state.NavigateBack" title="Back">
+                <HackerIcon Library="IconLibrary.Lucide" Name="arrow-left" Size="16" />
+            </button>
+            <button class="nav-btn" disabled="@(!_state.CanNavigateForward)" @onclick="_state.NavigateForward" title="Forward">
+                <HackerIcon Library="IconLibrary.Lucide" Name="arrow-right" Size="16" />
+            </button>
+            <button class="nav-btn" disabled="@(!_state.CanNavigateUp)" @onclick="_state.NavigateUp" title="Up">
+                <HackerIcon Library="IconLibrary.Lucide" Name="arrow-up" Size="16" />
+            </button>
+            <button class="nav-btn" @onclick="LoadCurrentDirectoryAsync" title="Refresh">
+                <HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="16" />
+            </button>
+            <button class="nav-btn" @onclick='() => _state.NavigateTo(GetHomePath())' title="Home">
+                <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" />
+            </button>
+        </div>
+
+        <div class="address-bar">
+            <input type="text" class="address-input" @bind="_addressInput" @bind:event="oninput" @onkeydown="HandleAddressKeyDownAsync" aria-label="Current path address" />
+        </div>
+
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search..." @bind="_state.SearchQuery" @bind:event="oninput" aria-label="Search directory" />
+        </div>
+
+        <div class="view-toggle">
+            <button class="view-btn @(_state.ViewMode == FileExplorerViewMode.Details ? "active" : "")" @onclick="() => SetViewMode(FileExplorerViewMode.Details)" title="Details View">
+                <HackerIcon Library="IconLibrary.Lucide" Name="list" Size="16" />
+            </button>
+            <button class="view-btn @(_state.ViewMode == FileExplorerViewMode.Grid ? "active" : "")" @onclick="() => SetViewMode(FileExplorerViewMode.Grid)" title="Grid View">
+                <HackerIcon Library="IconLibrary.Lucide" Name="layout-grid" Size="16" />
+            </button>
+        </div>
+    </div>
+
+    <!-- Actions Toolbar -->
+    <div class="actions-toolbar">
+        <button class="action-btn" @onclick="CreateFolderAsync" title="New Folder">
+            <HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" /> <span>New Folder</span>
+        </button>
+        <button class="action-btn" @onclick="CreateFileAsync" title="New File">
+            <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" /> <span>New File</span>
+        </button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="RenameSelectedAsync" title="Rename">
+            <HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> <span>Rename</span>
+        </button>
+        <button class="action-btn danger" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DeleteSelectedAsync" title="Delete">
+            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Delete</span>
+        </button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="ShowPropertiesAsync" title="Properties">
+            <HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> <span>Properties</span>
+        </button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count != 1)" @onclick="OpenWithAsync" title="Open With...">
+            <HackerIcon Library="IconLibrary.Lucide" Name="external-link" Size="16" /> <span>Open With...</span>
+        </button>
+
+        <span class="toolbar-divider"></span>
+
+        <InputFile id="fileInput" OnChange="UploadFilesAsync" multiple hidden />
+        <label for="fileInput" class="action-btn" title="Upload">
+            <HackerIcon Library="IconLibrary.Lucide" Name="upload" Size="16" /> <span>Upload</span>
+        </label>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="DownloadSelectedAsync" title="Download">
+            <HackerIcon Library="IconLibrary.Lucide" Name="download" Size="16" /> <span>Download</span>
+        </button>
+        <button class="action-btn" disabled="@(_state.SelectedItemNames.Count == 0)" @onclick="CompressSelectedAsync" title="Compress to Zip">
+            <HackerIcon Library="IconLibrary.Lucide" Name="archive" Size="16" /> <span>Compress</span>
+        </button>
+        <button class="action-btn" disabled="@(!CanExtractSelection)" @onclick="ExtractSelectedAsync" title="Extract Zip">
+            <HackerIcon Library="IconLibrary.Lucide" Name="package-open" Size="16" /> <span>Extract</span>
+        </button>
+    </div>
+
+    <!-- Directory Content View -->
+    <div class="explorer-content" @oncontextmenu="OnBackgroundContextMenuAsync" @oncontextmenu:preventDefault="true">
+        @if (_isLoading)
+        {
+            <div class="loading-state">Loading directory items...</div>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="error-state">@_errorMessage</div>
+        }
+        else if (FilteredEntries.Count == 0)
+        {
+            <div class="empty-state">This directory is empty.</div>
+        }
+        else if (_state.ViewMode == FileExplorerViewMode.Details)
+        {
+            <table class="details-table">
+                <thead>
+                    <tr>
+                        <th class="col-checkbox"></th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Name)">Name @GetSortIndicator(FileExplorerSortColumn.Name)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Kind)">Kind @GetSortIndicator(FileExplorerSortColumn.Kind)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.Size)">Size @GetSortIndicator(FileExplorerSortColumn.Size)</th>
+                        <th class="col-sortable" @onclick="() => _state.SetSortColumn(FileExplorerSortColumn.ModifiedDate)">Modified @GetSortIndicator(FileExplorerSortColumn.ModifiedDate)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (FileSystemDirectoryItem item in FilteredEntries)
+                    {
+                        bool isSelected = _state.SelectedItemNames.Contains(item.Name.Value);
+                        <tr class="entry-row @(isSelected ? "selected" : "")"
+                            @onclick="() => HandleRowClick(item.Name.Value)"
+                            @ondblclick="() => HandleEntryDblClickAsync(item)"
+                            @oncontextmenu="e => OnEntryContextMenuAsync(e, item.Name.Value)"
+                            @oncontextmenu:preventDefault="true"
+                            @oncontextmenu:stopPropagation="true">
+                            <td class="col-checkbox">
+                                <input type="checkbox" checked="@isSelected" @onclick:stopPropagation="true" @onchange="() => _state.ToggleSelection(item.Name.Value)" />
+                            </td>
+                            <td class="entry-name">
+                                <span class="entry-icon">
+                                    <HackerIcon Library="IconLibrary.Lucide" Name="@(item.Metadata.Kind == FileSystemEntryKind.Directory ? "folder" : "file-text")" Size="16" />
+                                </span>
+                                @item.Name.Value
+                            </td>
+                            <td class="entry-kind">@item.Metadata.Kind</td>
+                            <td class="entry-size">@(item.Metadata is FileMetadata fm ? $"{fm.Length} B" : "--")</td>
+                            <td class="entry-date">@item.Metadata.Timestamps.ContentModifiedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="grid-view">
+                @foreach (FileSystemDirectoryItem item in FilteredEntries)
+                {
+                    bool isSelected = _state.SelectedItemNames.Contains(item.Name.Value);
+                    <div class="grid-card @(isSelected ? "selected" : "")"
+                         @onclick="() => HandleRowClick(item.Name.Value)"
+                         @ondblclick="() => HandleEntryDblClickAsync(item)"
+                         @oncontextmenu="e => OnEntryContextMenuAsync(e, item.Name.Value)"
+                         @oncontextmenu:preventDefault="true"
+                         @oncontextmenu:stopPropagation="true">
+                        <div class="card-icon">
+                            <HackerIcon Library="IconLibrary.Lucide" Name="@(item.Metadata.Kind == FileSystemEntryKind.Directory ? "folder" : "file-text")" Size="32" />
+                        </div>
+                        <div class="card-name" title="@item.Name.Value">@item.Name.Value</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Status Bar -->
+    <div class="explorer-statusbar">
+        <span>@FilteredEntries.Count item(s)</span>
+        @if (_state.SelectedItemNames.Count > 0)
+        {
+            <span> | @_state.SelectedItemNames.Count selected</span>
+        }
+    </div>
+
+    <!-- Right-click Context Menu -->
+    <MudMenu @ref="_contextMenu" PositionAtCursor="true">
+        <ActivatorContent></ActivatorContent>
+        <ChildContent>
+            @if (_state.SelectedItemNames.Count == 0)
+            {
+                <MudMenuItem OnClick="CreateFolderAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" /> New Folder</span>
+                </MudMenuItem>
+                <MudMenuItem OnClick="CreateFileAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" /> New File</span>
+                </MudMenuItem>
+                <MudMenuItem OnClick="LoadCurrentDirectoryAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="16" /> Refresh</span>
+                </MudMenuItem>
+            }
+            else
+            {
+                @if (_state.SelectedItemNames.Count == 1)
+                {
+                    <MudMenuItem OnClick="OpenSelectedAsync">
+                        <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="folder-open" Size="16" /> Open</span>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="RenameSelectedAsync">
+                        <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> Rename</span>
+                    </MudMenuItem>
+                }
+                <MudMenuItem OnClick="DeleteSelectedAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> Delete</span>
+                </MudMenuItem>
+                <MudMenuItem OnClick="DownloadSelectedAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="download" Size="16" /> Download</span>
+                </MudMenuItem>
+                <MudMenuItem OnClick="CompressSelectedAsync">
+                    <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="archive" Size="16" /> Compress to Zip</span>
+                </MudMenuItem>
+                @if (CanExtractSelection)
+                {
+                    <MudMenuItem OnClick="ExtractSelectedAsync">
+                        <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="package-open" Size="16" /> Extract Here</span>
+                    </MudMenuItem>
+                }
+                @if (_state.SelectedItemNames.Count == 1)
+                {
+                    <MudMenuItem OnClick="OpenWithAsync">
+                        <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="external-link" Size="16" /> Open With...</span>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="ShowPropertiesAsync">
+                        <span class="context-menu-item"><HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> Properties</span>
+                    </MudMenuItem>
+                }
+            }
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    private FileExplorerState _state = default!;
+    private readonly List<FileSystemDirectoryItem> _entries = [];
+    private string _addressInput = string.Empty;
+    private string _lastLoadedPath = string.Empty;
+    private bool _isLoading = false;
+    private string? _errorMessage;
+    private IDisposable? _eventSub;
+    private BrowserFileDownloader? _downloader;
+    private MudMenu? _contextMenu;
+
+    private string GetHomePath() => SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        string homePath = GetHomePath();
+        _state = new FileExplorerState(homePath);
+        _addressInput = homePath;
+        _state.StateChanged += OnStateChanged;
+        _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(_ => InvokeAsync(LoadCurrentDirectoryAsync));
+    }
+
+    protected override async Task OnAppInitializedAsync()
+    {
+        _downloader = new BrowserFileDownloader(JSRuntime);
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private void OnStateChanged()
+    {
+        _addressInput = _state.CurrentPath;
+        StateHasChanged();
+        
+        if (_lastLoadedPath != _state.CurrentPath)
+        {
+            _ = LoadCurrentDirectoryAsync();
+        }
+    }
+
+    private async Task LoadCurrentDirectoryAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _lastLoadedPath = _state.CurrentPath;
+        StateHasChanged();
+
+        try
+        {
+            FileSystemResult<FileSystemDirectorySnapshot> result = await AppContext.FileSystem.EnumerateAsync(
+                new FileSystemEnumerateRequest(VirtualPath.Parse(_state.CurrentPath)), AppContext.CancellationToken);
+
+            _entries.Clear();
+            if (result.Succeeded && result.Value is not null)
+            {
+                _entries.AddRange(result.Value.Entries);
+            }
+            else
+            {
+                _errorMessage = result.Error?.Code == FileSystemErrorCode.PermissionDenied
+                    ? "Permission denied."
+                    : "Directory not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<FileSystemDirectoryItem> FilteredEntries
+    {
+        get
+        {
+            IEnumerable<FileSystemDirectoryItem> list = _entries;
+            if (!string.IsNullOrWhiteSpace(_state.SearchQuery))
+            {
+                list = list.Where(e => e.Name.Value.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return _state.SortColumn switch
+            {
+                FileExplorerSortColumn.Kind => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata.Kind).ThenBy(e => e.Name.Value).ToList()
+                    : list.OrderByDescending(e => e.Metadata.Kind).ThenBy(e => e.Name.Value).ToList(),
+                FileExplorerSortColumn.Size => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata is FileMetadata fm ? fm.Length : 0).ToList()
+                    : list.OrderByDescending(e => e.Metadata is FileMetadata fm ? fm.Length : 0).ToList(),
+                FileExplorerSortColumn.ModifiedDate => _state.SortAscending
+                    ? list.OrderBy(e => e.Metadata.Timestamps.ContentModifiedAtUtc).ToList()
+                    : list.OrderByDescending(e => e.Metadata.Timestamps.ContentModifiedAtUtc).ToList(),
+                _ => _state.SortAscending
+                    ? list.OrderBy(e => e.Name.Value, StringComparer.OrdinalIgnoreCase).ToList()
+                    : list.OrderByDescending(e => e.Name.Value, StringComparer.OrdinalIgnoreCase).ToList()
+            };
+        }
+    }
+
+    private async Task HandleAddressKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            _state.NavigateTo(_addressInput);
+            await LoadCurrentDirectoryAsync();
+        }
+    }
+
+    private void SetViewMode(FileExplorerViewMode mode)
+    {
+        _state.ViewMode = mode;
+        StateHasChanged();
+    }
+
+    private void HandleRowClick(string name)
+    {
+        _state.SelectSingle(name);
+    }
+
+    private async Task OnEntryContextMenuAsync(MouseEventArgs args, string name)
+    {
+        if (!_state.SelectedItemNames.Contains(name))
+        {
+            _state.SelectSingle(name);
+        }
+
+        if (_contextMenu is not null)
+        {
+            await _contextMenu.OpenMenuAsync(args);
+        }
+    }
+
+    private async Task OnBackgroundContextMenuAsync(MouseEventArgs args)
+    {
+        _state.ClearSelection();
+
+        if (_contextMenu is not null)
+        {
+            await _contextMenu.OpenMenuAsync(args);
+        }
+    }
+
+    private async Task OpenSelectedAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+        if (item is null) return;
+
+        await HandleEntryDblClickAsync(item);
+    }
+
+    private async Task HandleEntryDblClickAsync(FileSystemDirectoryItem item)
+    {
+        if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+        {
+            string newPath = _state.CurrentPath.TrimEnd('/') + "/" + item.Name.Value;
+            _state.NavigateTo(newPath);
+            await LoadCurrentDirectoryAsync();
+        }
+        else
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + item.Name.Value;
+            await LaunchFileIntentAsync(fullPath);
+        }
+    }
+
+    private async Task LaunchFileIntentAsync(string fullPath)
+    {
+        AppIntentOpenFileResult result;
+        try
+        {
+            result = await AppContext.Intents.OpenFileAsync(VirtualPath.Parse(fullPath));
+        }
+        catch (AppGatewayAccessDeniedException)
+        {
+            _errorMessage = "You don't have permission to open files.";
+            StateHasChanged();
+            return;
+        }
+
+        switch (result.Outcome)
+        {
+            case AppIntentOpenFileOutcome.Opened:
+                break;
+            case AppIntentOpenFileOutcome.ChooserRequired:
+                await ShowOpenWithChooserAsync(fullPath, result.CandidateAppIds ?? []);
+                break;
+            case AppIntentOpenFileOutcome.NoHandler:
+                _errorMessage = "No application is registered to open this file.";
+                StateHasChanged();
+                break;
+            default:
+                _errorMessage = $"Could not open file: {result.ErrorCode}";
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private async Task ShowOpenWithChooserAsync(string fullPath, IReadOnlyList<string> candidateAppIds)
+    {
+        IReadOnlyList<AppManifest> candidates = candidateAppIds
+            .Select(id => Catalog.Manifests.GetValueOrDefault(id))
+            .Where(manifest => manifest is not null)
+            .Select(manifest => manifest!)
+            .ToList();
+
+        DialogParameters parameters = new()
+        {
+            { nameof(OpenWithDialog.FilePath), fullPath },
+            { nameof(OpenWithDialog.AvailableApps), candidates }
+        };
+
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        DialogResult? dialogResult = await dialog.Result;
+
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is AppManifest selectedApp)
+        {
+            await LaunchWithAsync(selectedApp.Id, fullPath);
+        }
+    }
+
+    private async Task LaunchWithAsync(string appId, string fullPath)
+    {
+        try
+        {
+            await AppContext.Intents.LaunchAsync(appId, [fullPath]);
+        }
+        catch (AppGatewayAccessDeniedException)
+        {
+            _errorMessage = "You don't have permission to launch applications.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task<long> GetDirectoryRevisionAsync(VirtualPath dirPath)
+    {
+        FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(dirPath), AppContext.CancellationToken);
+        return stat.Succeeded && stat.Value is not null ? stat.Value.Metadata.Revision : 1;
+    }
+
+    private async Task<long> GetEntryRevisionAsync(VirtualPath entryPath)
+    {
+        FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(entryPath), AppContext.CancellationToken);
+        return stat.Succeeded && stat.Value is not null ? stat.Value.Metadata.Revision : 1;
+    }
+
+    private async Task CreateFolderAsync()
+    {
+        TextInputDialogResult result = await base.TextInput(
+            title: "New Folder",
+            content: "Enter the name of the new folder:",
+            defaultValue: "New Folder",
+            placeholder: "Folder name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string folderName = result.Value.Trim();
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + folderName;
+            FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+                VirtualPath.Parse(fullPath), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)), AppContext.CancellationToken);
+            if (creation.Succeeded)
+            {
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
+                    ? $"'{folderName}' already exists."
+                    : "Could not create the folder.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task CreateFileAsync()
+    {
+        TextInputDialogResult result = await base.TextInput(
+            title: "New File",
+            content: "Enter the name of the new file:",
+            defaultValue: "NewFile.txt",
+            placeholder: "File name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string fileName = result.Value.Trim();
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + fileName;
+            FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(new FileSystemCreateRequest(
+                VirtualPath.Parse(fullPath), FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)), AppContext.CancellationToken);
+            if (creation.Succeeded)
+            {
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
+                    ? $"'{fileName}' already exists."
+                    : "Could not create the file.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RenameSelectedAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+        if (item is null) return;
+
+        string currentFullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        VirtualPath sourcePath = VirtualPath.Parse(currentFullPath);
+
+        TextInputDialogResult result = await base.TextInput(
+            title: item.Metadata.Kind == FileSystemEntryKind.Directory ? "Rename Folder" : "Rename File",
+            content: $"Enter new name for '{name}':",
+            defaultValue: name,
+            placeholder: "New name...");
+
+        if (result.Status == TextInputStatus.Submitted && !string.IsNullOrWhiteSpace(result.Value))
+        {
+            string newName = result.Value.Trim();
+            if (newName.Equals(name, StringComparison.Ordinal)) return;
+
+            string destinationFullPath = _state.CurrentPath.TrimEnd('/') + "/" + newName;
+            VirtualPath destinationPath = VirtualPath.Parse(destinationFullPath);
+            VirtualPath parentPath = VirtualPath.Parse(_state.CurrentPath);
+
+            long entryRevision = await GetEntryRevisionAsync(sourcePath);
+            long parentRevision = await GetDirectoryRevisionAsync(parentPath);
+
+            FileSystemMutationResult moveResult = await AppContext.FileSystem.MoveAsync(
+                new FileSystemMoveRequest(sourcePath, destinationPath, entryRevision, parentRevision, parentRevision),
+                AppContext.CancellationToken);
+
+            if (moveResult.Succeeded)
+            {
+                _state.ClearSelection();
+                await LoadCurrentDirectoryAsync();
+            }
+            else
+            {
+                _errorMessage = moveResult.Transaction.Error is not null
+                    ? $"Failed to rename: {moveResult.Transaction.Error.Code}"
+                    : "Failed to rename entry.";
+            }
+        }
+    }
+
+    private async Task UploadFilesAsync(InputFileChangeEventArgs e)
+    {
+        foreach (IBrowserFile file in e.GetMultipleFiles())
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + file.Name;
+            VirtualPath path = VirtualPath.Parse(fullPath);
+
+            FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(path), AppContext.CancellationToken);
+            if (!stat.Succeeded && stat.Error?.Code == FileSystemErrorCode.NotFound)
+            {
+                FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
+                    new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
+                    AppContext.CancellationToken);
+
+                if (!createResult.Succeeded) continue;
+            }
+            else if (!stat.Succeeded)
+            {
+                continue;
+            }
+
+            // Unconditional write: an upload always replaces whatever is at this path
+            // with the freshly selected file — there is no "revision the browser read
+            // before editing" to protect here the way there is for a text editor.
+            BrowserFileContentSource source = new BrowserFileContentSource(file);
+            await AppContext.FileSystem.WriteAsync(
+                new FileSystemWriteRequest(path),
+                source,
+                AppContext.CancellationToken);
+        }
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task DownloadSelectedAsync()
+    {
+        if (_downloader is null) return;
+
+        if (_state.SelectedItemNames.Count == 1)
+        {
+            string name = _state.SelectedItemNames.First();
+            FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+            if (item is null) return;
+            
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+            VirtualPath path = VirtualPath.Parse(fullPath);
+
+            if (item.Metadata.Kind == FileSystemEntryKind.File)
+            {
+                FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
+                    new FileSystemReadRequest(path), AppContext.CancellationToken);
+                if (result.Succeeded && result.Value is not null)
+                {
+                    await using FileSystemContentReadHandle handle = result.Value;
+                    await _downloader.DownloadFileFromStreamAsync(name, handle.Content);
+                }
+            }
+            else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+            {
+                using var ms = new MemoryStream();
+                using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                {
+                    await AddDirectoryToZipAsync(archive, path, name);
+                }
+                ms.Position = 0;
+                await _downloader.DownloadFileFromStreamAsync(name + ".zip", ms);
+            }
+        }
+        else if (_state.SelectedItemNames.Count > 1)
+        {
+            using var ms = new MemoryStream();
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            {
+                foreach (string name in _state.SelectedItemNames)
+                {
+                    FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+                    if (item is null) continue;
+
+                    string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+                    VirtualPath path = VirtualPath.Parse(fullPath);
+
+                    if (item.Metadata.Kind == FileSystemEntryKind.File)
+                    {
+                        await AddFileToZipAsync(archive, path, name);
+                    }
+                    else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                    {
+                        await AddDirectoryToZipAsync(archive, path, name);
+                    }
+                }
+            }
+            ms.Position = 0;
+            await _downloader.DownloadFileFromStreamAsync("Archive.zip", ms);
+        }
+    }
+
+    private async Task AddFileToZipAsync(ZipArchive archive, VirtualPath filePath, string entryName)
+    {
+        FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
+            new FileSystemReadRequest(filePath), AppContext.CancellationToken);
+        
+        if (result.Succeeded && result.Value is not null)
+        {
+            await using FileSystemContentReadHandle handle = result.Value;
+            ZipArchiveEntry zipEntry = archive.CreateEntry(entryName);
+            using Stream entryStream = zipEntry.Open();
+            await handle.Content.CopyToAsync(entryStream);
+        }
+    }
+
+    private async Task AddDirectoryToZipAsync(ZipArchive archive, VirtualPath dirPath, string currentZipPath)
+    {
+        FileSystemResult<FileSystemDirectorySnapshot> result = await AppContext.FileSystem.EnumerateAsync(
+            new FileSystemEnumerateRequest(dirPath), AppContext.CancellationToken);
+            
+        if (result.Succeeded && result.Value is not null)
+        {
+            foreach (FileSystemDirectoryItem item in result.Value.Entries)
+            {
+                VirtualPath childPath = VirtualPath.Parse(dirPath.Value.TrimEnd('/') + "/" + item.Name.Value);
+                string zipEntryPath = currentZipPath + "/" + item.Name.Value;
+                
+                if (item.Metadata.Kind == FileSystemEntryKind.File)
+                {
+                    await AddFileToZipAsync(archive, childPath, zipEntryPath);
+                }
+                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                {
+                    await AddDirectoryToZipAsync(archive, childPath, zipEntryPath);
+                }
+            }
+        }
+    }
+
+    private bool CanExtractSelection =>
+        _state.SelectedItemNames.Count == 1 &&
+        _entries.FirstOrDefault(e => e.Name.Value == _state.SelectedItemNames.First()) is { } item &&
+        item.Metadata.Kind == FileSystemEntryKind.File &&
+        item.Name.Value.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+
+    private async Task CompressSelectedAsync()
+    {
+        if (_state.SelectedItemNames.Count == 0) return;
+
+        string defaultName = _state.SelectedItemNames.Count == 1
+            ? _state.SelectedItemNames.First() + ".zip"
+            : "Archive.zip";
+
+        TextInputDialogResult result = await base.TextInput(
+            title: "Compress to Zip",
+            content: "Enter the name of the zip archive:",
+            defaultValue: defaultName,
+            placeholder: "Archive name...");
+
+        if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
+
+        string archiveName = result.Value.Trim();
+        if (!archiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            archiveName += ".zip";
+        }
+
+        string destFullPath = _state.CurrentPath.TrimEnd('/') + "/" + archiveName;
+        VirtualPath destPath = VirtualPath.Parse(destFullPath);
+
+        FileSystemResult<FileSystemEntrySnapshot> destStat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(destPath), AppContext.CancellationToken);
+        if (destStat.Succeeded)
+        {
+            _errorMessage = $"'{archiveName}' already exists.";
+            StateHasChanged();
+            return;
+        }
+
+        using MemoryStream ms = new();
+        using (ZipArchive archive = new(ms, ZipArchiveMode.Create, true))
+        {
+            foreach (string name in _state.SelectedItemNames)
+            {
+                FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+                if (item is null) continue;
+
+                string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+                VirtualPath path = VirtualPath.Parse(fullPath);
+
+                if (item.Metadata.Kind == FileSystemEntryKind.File)
+                {
+                    await AddFileToZipAsync(archive, path, name);
+                }
+                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                {
+                    await AddDirectoryToZipAsync(archive, path, name);
+                }
+            }
+        }
+        ms.Position = 0;
+
+        FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
+            new FileSystemCreateRequest(destPath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
+            AppContext.CancellationToken);
+
+        if (!createResult.Succeeded)
+        {
+            _errorMessage = "Could not create the archive.";
+            StateHasChanged();
+            return;
+        }
+
+        MemoryStreamContentSource source = new(FileSystemContentDescriptor.Binary("application/zip"), ms);
+        FileSystemMutationResult writeResult = await AppContext.FileSystem.WriteAsync(
+            new FileSystemWriteRequest(destPath), source, AppContext.CancellationToken);
+
+        if (writeResult.Succeeded)
+        {
+            _state.ClearSelection();
+            await LoadCurrentDirectoryAsync();
+        }
+        else
+        {
+            _errorMessage = "Failed to write the archive.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExtractSelectedAsync()
+    {
+        if (!CanExtractSelection) return;
+
+        string name = _state.SelectedItemNames.First();
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        VirtualPath zipPath = VirtualPath.Parse(fullPath);
+
+        FileSystemResult<FileSystemContentReadHandle> readResult = await AppContext.FileSystem.ReadAsync(
+            new FileSystemReadRequest(zipPath), AppContext.CancellationToken);
+
+        if (!readResult.Succeeded || readResult.Value is null)
+        {
+            _errorMessage = "Could not read the archive.";
+            StateHasChanged();
+            return;
+        }
+
+        using MemoryStream ms = new();
+        await using (FileSystemContentReadHandle handle = readResult.Value)
+        {
+            await handle.Content.CopyToAsync(ms);
+        }
+        ms.Position = 0;
+
+        string folderName = name[..^".zip".Length];
+        string destDirPath = _state.CurrentPath.TrimEnd('/') + "/" + folderName;
+        VirtualPath destDir = VirtualPath.Parse(destDirPath);
+
+        FileSystemResult<FileSystemEntrySnapshot> destStat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(destDir), AppContext.CancellationToken);
+        if (destStat.Succeeded)
+        {
+            _errorMessage = $"'{folderName}' already exists.";
+            StateHasChanged();
+            return;
+        }
+
+        FileSystemMutationResult dirCreate = await AppContext.FileSystem.CreateAsync(
+            new FileSystemCreateRequest(destDir, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)),
+            AppContext.CancellationToken);
+
+        if (!dirCreate.Succeeded)
+        {
+            _errorMessage = "Could not create destination folder.";
+            StateHasChanged();
+            return;
+        }
+
+        HashSet<string> ensuredDirs = new(StringComparer.Ordinal) { destDirPath };
+
+        try
+        {
+            using ZipArchive archive = new(ms, ZipArchiveMode.Read);
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                string entryName = entry.FullName.Replace('\\', '/').TrimStart('/');
+                if (string.IsNullOrEmpty(entryName)) continue;
+
+                string entryFullPath = destDirPath + "/" + entryName.TrimEnd('/');
+
+                if (entryName.EndsWith('/'))
+                {
+                    await EnsureDirectoryAsync(entryFullPath, ensuredDirs);
+                    continue;
+                }
+
+                int lastSlash = entryFullPath.LastIndexOf('/');
+                string parentPath = lastSlash > 0 ? entryFullPath[..lastSlash] : destDirPath;
+                await EnsureDirectoryAsync(parentPath, ensuredDirs);
+
+                VirtualPath entryPath = VirtualPath.Parse(entryFullPath);
+                FileSystemMutationResult fileCreate = await AppContext.FileSystem.CreateAsync(
+                    new FileSystemCreateRequest(entryPath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
+                    AppContext.CancellationToken);
+
+                if (!fileCreate.Succeeded) continue;
+
+                using MemoryStream entryBuffer = new();
+                await using (Stream entryStream = entry.Open())
+                {
+                    await entryStream.CopyToAsync(entryBuffer);
+                }
+                entryBuffer.Position = 0;
+
+                MemoryStreamContentSource entrySource = new(FileSystemContentDescriptor.Binary(), entryBuffer);
+                await AppContext.FileSystem.WriteAsync(
+                    new FileSystemWriteRequest(entryPath), entrySource, AppContext.CancellationToken);
+            }
+        }
+        catch (InvalidDataException)
+        {
+            _errorMessage = "The archive is not a valid zip file.";
+            StateHasChanged();
+            return;
+        }
+
+        _state.ClearSelection();
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task EnsureDirectoryAsync(string dirPath, HashSet<string> ensuredDirs)
+    {
+        if (string.IsNullOrEmpty(dirPath) || ensuredDirs.Contains(dirPath)) return;
+
+        int lastSlash = dirPath.LastIndexOf('/');
+        string parent = lastSlash > 0 ? dirPath[..lastSlash] : string.Empty;
+        if (!string.IsNullOrEmpty(parent))
+        {
+            await EnsureDirectoryAsync(parent, ensuredDirs);
+        }
+
+        VirtualPath path = VirtualPath.Parse(dirPath);
+        FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(
+            new FileSystemStatRequest(path), AppContext.CancellationToken);
+        if (!stat.Succeeded)
+        {
+            await AppContext.FileSystem.CreateAsync(
+                new FileSystemCreateRequest(path, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)),
+                AppContext.CancellationToken);
+        }
+
+        ensuredDirs.Add(dirPath);
+    }
+
+    private sealed class MemoryStreamContentSource : IFileSystemContentSource
+    {
+        private readonly MemoryStream _stream;
+
+        public MemoryStreamContentSource(FileSystemContentDescriptor descriptor, MemoryStream stream)
+        {
+            Descriptor = descriptor;
+            _stream = stream;
+            Length = stream.Length;
+        }
+
+        public FileSystemContentDescriptor Descriptor { get; }
+        public long? Length { get; }
+
+        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default)
+        {
+            _stream.Position = 0;
+            return ValueTask.FromResult<Stream>(_stream);
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        VirtualPath parentPath = VirtualPath.Parse(_state.CurrentPath);
+        long parentRevision = await GetDirectoryRevisionAsync(parentPath);
+
+        foreach (string name in _state.SelectedItemNames.ToList())
+        {
+            string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+            VirtualPath entryPath = VirtualPath.Parse(fullPath);
+            long entryRevision = await GetEntryRevisionAsync(entryPath);
+
+            await AppContext.FileSystem.DeleteAsync(new FileSystemDeleteRequest(
+                entryPath, entryRevision, parentRevision, recursive: true), AppContext.CancellationToken);
+        }
+        _state.ClearSelection();
+        await LoadCurrentDirectoryAsync();
+    }
+
+    private async Task ShowPropertiesAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        FileSystemDirectoryItem? item = _entries.FirstOrDefault(e => e.Name.Value == name);
+        if (item is null) return;
+
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        DialogParameters parameters = new()
+        {
+            { nameof(FilePropertiesDialog.EntryName), name },
+            { nameof(FilePropertiesDialog.Path), fullPath },
+            { nameof(FilePropertiesDialog.Metadata), item.Metadata }
+        };
+
+        await MudDialogService.ShowAsync<FilePropertiesDialog>("Properties", parameters);
+    }
+
+    private async Task OpenWithAsync()
+    {
+        string? name = _state.SelectedItemNames.FirstOrDefault();
+        if (name is null) return;
+
+        string fullPath = _state.CurrentPath.TrimEnd('/') + "/" + name;
+        IReadOnlyList<AppManifest> windowApps = Catalog.Manifests.Values.Where(m => m.Kind == AppKind.Window).ToList();
+
+        DialogParameters parameters = new()
+        {
+            { nameof(OpenWithDialog.FilePath), fullPath },
+            { nameof(OpenWithDialog.AvailableApps), windowApps }
+        };
+
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        DialogResult? result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is AppManifest selectedApp)
+        {
+            await LaunchWithAsync(selectedApp.Id, fullPath);
+        }
+    }
+
+    private string GetSortIndicator(FileExplorerSortColumn column)
+    {
+        if (_state.SortColumn != column) return string.Empty;
+        return _state.SortAscending ? " ▲" : " ▼";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _state.StateChanged -= OnStateChanged;
+        _eventSub?.Dispose();
+        if (_downloader != null)
+        {
+            await _downloader.DisposeAsync();
+        }
+    }
+}

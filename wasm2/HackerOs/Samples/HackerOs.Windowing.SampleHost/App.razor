@@ -1,0 +1,95 @@
+@inject WindowRuntime WindowRuntime
+@implements IDisposable
+
+<div class="sample-shell">
+    <div class="sample-workspace">
+        <WindowSurface Runtime="WindowRuntime">
+            <WindowContent Context="window">
+                @window.Content
+            </WindowContent>
+        </WindowSurface>
+    </div>
+
+    @if (_launcher.IsOpen)
+    {
+        <div class="sample-launcher" role="dialog" aria-label="Sample launcher">
+            <h2>Sample applications</h2>
+            <ul class="sample-launcher-list">
+                @foreach (SampleAppDescriptor app in SampleAppCatalog.Apps)
+                {
+                    <li>
+                        <button type="button" @onclick="() => OpenApp(app)">@app.Title</button>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <Taskbar WindowSource="_windowSource"
+             Commands="_commands"
+             Launcher="_launcher"
+             StatusSource="_status"
+             Options="_options" />
+</div>
+
+@code {
+    private readonly TaskbarOptions _options = new() { LauncherMark = "◆", LauncherLabel = "Apps" };
+    private SampleWindowSource _windowSource = null!;
+    private SampleCommands _commands = null!;
+    private SampleLauncher _launcher = null!;
+    private SampleStatusSource _status = null!;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _windowSource = new SampleWindowSource(WindowRuntime);
+        _commands = new SampleCommands(WindowRuntime);
+        _launcher = new SampleLauncher();
+        _launcher.Changed += Rerender;
+        _status = new SampleStatusSource();
+    }
+
+    private void Rerender() => InvokeAsync(StateHasChanged);
+
+    private void OpenApp(SampleAppDescriptor app)
+    {
+        _launcher.Close();
+        WindowRuntimeState? existing = WindowRuntime.Windows.FirstOrDefault(w => w.AppId == app.Id);
+        if (existing is not null)
+        {
+            if (existing.VisualState == WindowVisualState.Minimized)
+            {
+                WindowRuntime.Apply(new RestoreWindowCommand(existing.Id));
+            }
+
+            WindowRuntime.Apply(new FocusWindowCommand(existing.Id));
+            return;
+        }
+
+        int cascade = WindowRuntime.Windows.Count % 6;
+        WindowRuntimeState state = new(
+            WindowId.FromGuid(Guid.NewGuid()),
+            app.Id,
+            WindowOwnerId.FromGuid(Guid.NewGuid()),
+            app.Title,
+            iconAssetPath: null,
+            new WindowBounds(60 + (cascade * 24), 50 + (cascade * 24), 420, 280),
+            restoreBounds: null,
+            zOrder: 0,
+            WindowVisualState.Normal,
+            new WindowConstraints(isResizable: true, minWidth: 260, minHeight: 180),
+            WindowModality.Modeless,
+            ownerId: null,
+            isFocused: false,
+            content: app.Content);
+        WindowRuntime.Apply(new CreateWindowCommand(state));
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _launcher.Changed -= Rerender;
+        _windowSource.Dispose();
+        _status.Dispose();
+    }
+}

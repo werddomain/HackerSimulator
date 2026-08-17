@@ -1,0 +1,456 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Infrastructure.Browser.Backup
+@using HackerOs.Infrastructure.Browser.FileSystem
+@using HackerOs.Infrastructure.Browser.Sessions
+@using HackerOs.Infrastructure.Browser.Settings
+@using HackerOs.Infrastructure.Browser.Storage
+@using HackerOs.Platform.Blazor.Windows
+@using HackerOs.Simulation.Abstractions
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Simulation.Abstractions.Settings
+@using HackerOs.Windowing.Core
+@using HackerOs.Windowing.Abstractions
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+
+<main>
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    @if (IsDialogScenario)
+    {
+        <FileDialogBrowserScenario />
+    }
+    else if (IsWindowScenario)
+    {
+        <WindowBrowserScenario />
+    }
+    else if (IsTerminalFullScreenScenario)
+    {
+        <TerminalFullScreenBrowserScenario />
+    }
+    else if (IsCodeEditorScenario)
+    {
+        <CodeEditorBrowserScenario />
+    }
+    else if (IsHackPaintScenario)
+    {
+        <HackPaintBrowserScenario />
+    }
+    else if (IsTaskbarScenario)
+    {
+        <TaskbarBrowserScenario />
+    }
+    else
+    {
+        <h1>HackerOS IndexedDB contract harness</h1>
+        <output id="contract-result" data-status="@_status">@_message</output>
+        <PlatformComplexControlsProof />
+    }
+</main>
+
+@code {
+    private const string DatabaseName = "hackeros";
+    private string _status = "running";
+    private string _message = "Running browser storage contracts.";
+    private bool _started;
+    private bool IsWindowScenario => new Uri(Navigation.Uri).Query.Contains("scenario=window", StringComparison.Ordinal);
+    private bool IsDialogScenario => new Uri(Navigation.Uri).Query.Contains("scenario=dialog", StringComparison.Ordinal);
+    private bool IsTerminalFullScreenScenario => new Uri(Navigation.Uri).Query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal);
+    private bool IsCodeEditorScenario => new Uri(Navigation.Uri).Query.Contains("scenario=code-editor", StringComparison.Ordinal);
+    private bool IsHackPaintScenario => new Uri(Navigation.Uri).Query.Contains("scenario=hack-paint", StringComparison.Ordinal);
+    private bool IsTaskbarScenario => new Uri(Navigation.Uri).Query.Contains("scenario=taskbar", StringComparison.Ordinal);
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _started)
+        {
+            return;
+        }
+
+        _started = true;
+        try
+        {
+            string query = new Uri(Navigation.Uri).Query;
+            if (query.Contains("scenario=window", StringComparison.Ordinal)
+                || query.Contains("scenario=dialog", StringComparison.Ordinal)
+                || query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal)
+                || query.Contains("scenario=code-editor", StringComparison.Ordinal)
+                || query.Contains("scenario=hack-paint", StringComparison.Ordinal)
+                || query.Contains("scenario=taskbar", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (query.Contains("scenario=quota", StringComparison.Ordinal))
+            {
+                await VerifyQuotaFailureAsync();
+                _status = "passed";
+                _message = "Native quota exhaustion mapped to BrowserStorageQuotaException.";
+                StateHasChanged();
+                return;
+            }
+
+            if (query.Contains("scenario=idle", StringComparison.Ordinal))
+            {
+                _status = "passed";
+                _message = "Browser harness is ready.";
+                StateHasChanged();
+                return;
+            }
+
+            if (query.Contains("scenario=reload", StringComparison.Ordinal))
+            {
+                await VerifyReloadPersistenceAsync();
+                _status = "passed";
+                _message = "Settings and filesystem data survived a page reload.";
+                StateHasChanged();
+                return;
+            }
+
+            await ResetDatabaseAsync();
+            await VerifyGroupRepositoryAsync();
+            await VerifySettingsServiceAsync();
+            await VerifyWindowGeometryPersistenceAsync();
+            await VerifyFileSystemProviderAsync();
+            await VerifyBackupRestoreAsync();
+            await VerifyOrphanCleanupAsync();
+            _status = "passed";
+            _message = "Repository, filesystem, backup, and cleanup IndexedDB contracts passed.";
+        }
+        catch (Exception exception)
+        {
+            _status = "failed";
+            _message = $"{exception.GetType().Name}: {exception.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task VerifyQuotaFailureAsync()
+    {
+        await ResetDatabaseAsync();
+        await using IndexedDbLocalGroupRepository repository = new(JsRuntime);
+        try
+        {
+            await repository.CreateGroupAsync(LocalLoginName.Parse("quota-proof"));
+        }
+        catch (BrowserStorageQuotaException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Quota-limited IndexedDB write unexpectedly committed.");
+    }
+
+    private async Task ResetDatabaseAsync()
+    {
+        await using IJSObjectReference module = await JsRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/HackerOs.Infrastructure.Browser/indexedDb.js");
+        await module.InvokeVoidAsync("deleteDatabase", DatabaseName);
+    }
+
+    private async Task VerifyGroupRepositoryAsync()
+    {
+        await using IndexedDbLocalGroupRepository repository = new(JsRuntime);
+        LocalGroup created = await repository.CreateGroupAsync(LocalLoginName.Parse("browser-users"));
+        LocalGroup? loaded = await repository.FindByIdAsync(created.Id);
+        Require(loaded == created, "Group create/find did not round-trip.");
+        Require(
+            await repository.FindByIdAsync(LocalGroupId.FromGuid(Guid.NewGuid())) is null,
+            "Missing group lookup did not return null.");
+    }
+
+    private async Task VerifySettingsServiceAsync()
+    {
+        SettingsDocumentKey key = SettingsDocumentKey.ForAppUser("org.hackeros.browser-harness", "user");
+        VirtualPath path = SettingsDocumentPathFactory.GetProjectionPath(key);
+        SettingsDocumentDefinition definition = new(
+            path,
+            key,
+            "initial",
+            "text/plain",
+            "settings.read",
+            "settings.write",
+            AppAuthority.User,
+            AppAuthority.User,
+            new AcceptAllValidator());
+        AppOperationContext context = new()
+        {
+            AppId = "org.hackeros.browser-harness",
+            UserId = "user",
+            UserAuthority = AppAuthority.User,
+            GrantedCapabilities = new HashSet<string>(
+                ["settings.read", "settings.write"],
+                StringComparer.Ordinal)
+        };
+
+        await using IndexedDbSettingsDocumentService service = new(JsRuntime, [definition]);
+        SettingsReadResult initial = await service.ReadAsync(path, context);
+        Require(initial.Status == SettingsReadStatus.Success, "Initial settings read failed.");
+        Require(initial.Document?.Content == "initial", "Initial settings content differs.");
+
+        SettingsWriteResult written = await service.WriteAsync(
+            new SettingsWriteRequest(path, "updated", initial.Document!.Revision),
+            context);
+        Require(written.Status == SettingsWriteStatus.Success, "Settings write failed.");
+
+        SettingsWriteResult conflict = await service.WriteAsync(
+            new SettingsWriteRequest(path, "stale", initial.Document.Revision),
+            context);
+        Require(conflict.Status == SettingsWriteStatus.Conflict, "Stale settings write did not conflict.");
+
+        SettingsReadResult loaded = await service.ReadAsync(path, context);
+        Require(loaded.Document?.Content == "updated", "Committed settings content was not retained.");
+    }
+
+    private async Task VerifyWindowGeometryPersistenceAsync()
+    {
+        SettingsDocumentDefinition definition = WindowGeometrySettings.CreateDefinition(
+            "org.hackeros.browser-harness", "user", "browser-installation");
+        AppOperationContext context = new()
+        {
+            AppId = "org.hackeros.browser-harness",
+            UserId = "user",
+            UserAuthority = AppAuthority.User,
+            GrantedCapabilities = new HashSet<string>(
+                [AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite],
+                StringComparer.Ordinal)
+        };
+
+        await using IndexedDbSettingsDocumentService service = new(JsRuntime, [definition]);
+        WindowGeometryPersistence persistence = new(service);
+        Require(await persistence.RestoreAsync(definition, context) is null, "Fresh window geometry was not empty.");
+
+        WindowBounds expected = new(31, 47, 760, 520);
+        SettingsWriteStatus status = await persistence.SaveAsync(
+            definition, expected, isEligible: true, context);
+        Require(status == SettingsWriteStatus.Success, "Window geometry write failed.");
+        Require(await persistence.RestoreAsync(definition, context) == expected, "Window geometry did not round-trip.");
+    }
+
+    private async Task VerifyFileSystemProviderAsync()
+    {
+        await using (IndexedDbFileSystemBootstrapper bootstrapper = new(JsRuntime))
+        {
+            await bootstrapper.EnsureRootAsync();
+            await bootstrapper.EnsureRootAsync();
+        }
+
+        FileSystemAuthorizationContext context = CreateFileSystemContext();
+        VirtualPath rootPath = VirtualPath.Parse("/");
+        VirtualPath sourcePath = VirtualPath.Parse("/browser.txt");
+        VirtualPath destinationPath = VirtualPath.Parse("/renamed.txt");
+        await using IndexedDbFileSystemProvider provider = new(JsRuntime);
+
+        FileSystemResult<FileSystemEntrySnapshot> root = await provider.StatAsync(
+            new FileSystemStatRequest(rootPath),
+            context);
+        Require(root.Succeeded, "Filesystem root was not initialized.");
+
+        FileSystemMutationResult created = await provider.CreateAsync(
+            new FileSystemCreateRequest(
+                sourcePath,
+                FileSystemEntryKind.File,
+                FileSystemPermissions.FromMode(0x01A4),
+                root.Value!.Metadata.Revision),
+            context);
+        Require(created.Succeeded, "Filesystem file creation failed.");
+
+        FileSystemResult<FileSystemDirectorySnapshot> afterCreate = await provider.EnumerateAsync(
+            new FileSystemEnumerateRequest(rootPath),
+            context);
+        Require(
+            afterCreate.Succeeded && afterCreate.Value!.Entries.Any(item => item.Name.Value == "browser.txt"),
+            "Created file was not enumerated.");
+
+        FileSystemMutationResult moved = await provider.MoveAsync(
+            new FileSystemMoveRequest(
+                sourcePath,
+                destinationPath,
+                created.Entry!.Metadata.Revision,
+                afterCreate.Value!.Revision,
+                afterCreate.Value.Revision),
+            context);
+        Require(moved.Succeeded, "Filesystem rename failed.");
+
+        FileSystemResult<FileSystemEntrySnapshot> sourceAfterMove = await provider.StatAsync(
+            new FileSystemStatRequest(sourcePath),
+            context);
+        FileSystemResult<FileSystemEntrySnapshot> destination = await provider.StatAsync(
+            new FileSystemStatRequest(destinationPath),
+            context);
+        Require(!sourceAfterMove.Succeeded, "Rename retained the source path.");
+        Require(destination.Succeeded, "Rename did not create the destination path.");
+
+        FileSystemResult<FileSystemDirectorySnapshot> beforeDelete = await provider.EnumerateAsync(
+            new FileSystemEnumerateRequest(rootPath),
+            context);
+        FileSystemMutationResult deleted = await provider.DeleteAsync(
+            new FileSystemDeleteRequest(
+                destinationPath,
+                destination.Value!.Metadata.Revision,
+                beforeDelete.Value!.Revision),
+            context);
+        Require(deleted.Succeeded, "Filesystem delete failed.");
+
+        FileSystemResult<FileSystemEntrySnapshot> destinationAfterDelete = await provider.StatAsync(
+            new FileSystemStatRequest(destinationPath),
+            context);
+        Require(!destinationAfterDelete.Succeeded, "Deleted path remained visible.");
+
+        FileSystemResult<FileSystemDirectorySnapshot> afterDelete = await provider.EnumerateAsync(
+            new FileSystemEnumerateRequest(rootPath),
+            context);
+        FileSystemMutationResult reloadProof = await provider.CreateAsync(
+            new FileSystemCreateRequest(
+                VirtualPath.Parse("/reload-proof.txt"),
+                FileSystemEntryKind.File,
+                FileSystemPermissions.FromMode(0x01A4),
+                afterDelete.Value!.Revision),
+            context);
+        Require(reloadProof.Succeeded, "Reload proof file creation failed.");
+    }
+
+    private async Task VerifyReloadPersistenceAsync()
+    {
+        SettingsDocumentKey key = SettingsDocumentKey.ForAppUser("org.hackeros.browser-harness", "user");
+        VirtualPath settingsPath = SettingsDocumentPathFactory.GetProjectionPath(key);
+        SettingsDocumentDefinition definition = new(
+            settingsPath,
+            key,
+            "initial",
+            "text/plain",
+            "settings.read",
+            "settings.write",
+            AppAuthority.User,
+            AppAuthority.User,
+            new AcceptAllValidator());
+        AppOperationContext operation = new()
+        {
+            AppId = "org.hackeros.browser-harness",
+            UserId = "user",
+            UserAuthority = AppAuthority.User,
+            GrantedCapabilities = new HashSet<string>(
+                ["settings.read", "settings.write"],
+                StringComparer.Ordinal)
+        };
+
+        await using (IndexedDbSettingsDocumentService settings = new(JsRuntime, [definition]))
+        {
+            SettingsReadResult persisted = await settings.ReadAsync(settingsPath, operation);
+            Require(
+                persisted.Status == SettingsReadStatus.Success
+                    && persisted.Document?.Content == "updated"
+                    && persisted.Document.Revision == 2,
+                "Settings did not survive reload at the committed revision.");
+        }
+
+        await using IndexedDbFileSystemProvider provider = new(JsRuntime);
+        FileSystemResult<FileSystemEntrySnapshot> file = await provider.StatAsync(
+            new FileSystemStatRequest(VirtualPath.Parse("/reload-proof.txt")),
+            CreateFileSystemContext());
+        Require(file.Succeeded, "Filesystem marker did not survive reload.");
+    }
+
+    private async Task VerifyBackupRestoreAsync()
+    {
+        string backup;
+        await using (IndexedDbBackupService backupService = new(JsRuntime))
+        {
+            backup = await backupService.ExportAsync();
+        }
+
+        LocalGroup transient;
+        await using (IndexedDbLocalGroupRepository groups = new(JsRuntime))
+        {
+            transient = await groups.CreateGroupAsync(LocalLoginName.Parse("transient-after-backup"));
+        }
+
+        await using (IndexedDbBackupService backupService = new(JsRuntime))
+        {
+            IndexedDbRestoreResult replaced = await backupService.RestoreAsync(
+                backup,
+                IndexedDbRestoreMode.Replace);
+            Require(replaced.RecordCount > 0, "Replacement restore reported no records.");
+            IndexedDbRestoreResult merged = await backupService.RestoreAsync(
+                backup,
+                IndexedDbRestoreMode.Merge);
+            Require(merged.RecordCount == replaced.RecordCount, "Idempotent merge count differs.");
+        }
+
+        await using IndexedDbLocalGroupRepository verification = new(JsRuntime);
+        Require(
+            await verification.FindByIdAsync(transient.Id) is null,
+            "Replacement restore retained a post-backup record.");
+    }
+
+    private async Task VerifyOrphanCleanupAsync()
+    {
+        const string orphanHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        await using (IJSObjectReference module = await JsRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/HackerOs.Infrastructure.Browser/indexedDb.js"))
+        {
+            await module.InvokeAsync<object[]>(
+                "executeTransaction",
+                DatabaseName,
+                2,
+                new[] { "fsContent" },
+                "readwrite",
+                new[]
+                {
+                    new
+                    {
+                        kind = "add",
+                        objectStoreName = "fsContent",
+                        value = new
+                        {
+                            contentHash = orphanHash,
+                            chunkIndex = 0,
+                            dataBase64 = string.Empty,
+                            createdUtcMs = 0
+                        }
+                    }
+                });
+        }
+
+        await using IndexedDbFileSystemMaintenance maintenance = new(JsRuntime);
+        IndexedDbFileContentCleanupResult result = await maintenance.CleanupAsync();
+        Require(result.CandidateHashes == 1, "Orphan cleanup did not select the stale hash.");
+        Require(result.DeletedChunks == 1, "Orphan cleanup did not delete the stale chunk.");
+        Require(result.RetainedReferencedHashes == 0, "Orphan cleanup treated stale data as referenced.");
+    }
+
+    private static FileSystemAuthorizationContext CreateFileSystemContext()
+    {
+        AppOperationContext operation = new()
+        {
+            AppId = "org.hackeros.browser-harness",
+            UserId = "user",
+            UserAuthority = AppAuthority.Administrator,
+            GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+            IsSystemOperation = true
+        };
+        return new FileSystemAuthorizationContext(operation, ["users"], DateTimeOffset.UtcNow);
+    }
+
+    private static void Require(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new InvalidOperationException(message);
+        }
+    }
+
+    private sealed class AcceptAllValidator : ISettingsDocumentValidator
+    {
+        /// <inheritdoc />
+        public IReadOnlyList<string> Validate(string content) => [];
+    }
+}

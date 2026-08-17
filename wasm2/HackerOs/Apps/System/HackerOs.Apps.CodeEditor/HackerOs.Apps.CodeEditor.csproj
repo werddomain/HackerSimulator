@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+    <PackageReference Include="MudBlazor" Version="9.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
+    <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
+    <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+  </ItemGroup>
+
+  <Target Name="ValidateCodeEditorAssets" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('package-lock.json')"
+           Text="Code Editor requires the pinned package-lock.json for reproducible CodeMirror assets." />
+    <Error Condition="!Exists('wwwroot/codemirror.bundle.js')"
+           Text="CodeMirror bundle is missing. Run npm ci and npm run build in the Code Editor project." />
+    <Error Condition="!Exists('wwwroot/codemirror.bundle.LICENSE.txt')"
+           Text="CodeMirror third-party license notice is missing." />
+  </Target>
+
+</Project>

@@ -1,0 +1,34 @@
+.window-browser-scenario {
+    display: block;
+    width: 960px;
+    height: 640px;
+    overflow: hidden;
+}
+
+.scenario-content {
+    margin: 0;
+    padding: 1rem;
+    color: #d4f8e8;
+    font-family: "Cascadia Mono", monospace;
+}
+
+.scenario-taskbar {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 1000;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.scenario-taskbar button {
+    padding: 0.45rem 0.7rem;
+    color: #d4f8e8;
+    background: #132522;
+    border: 1px solid #55d6a1;
+}
+
+.scenario-taskbar button:focus-visible {
+    outline: 2px solid #f3c969;
+    outline-offset: 2px;
+}

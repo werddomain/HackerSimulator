@@ -1,0 +1,59 @@
+.sample-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #07100f;
+}
+
+.sample-workspace {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.sample-launcher {
+    position: absolute;
+    bottom: 3rem;
+    left: 0.5rem;
+    z-index: 950;
+    width: 16rem;
+    padding: 1rem;
+    color: #e7f7f1;
+    background: #101417;
+    border: 1px solid #34444c;
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgb(0 0 0 / 40%);
+}
+
+.sample-launcher h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a8bac4;
+}
+
+.sample-launcher-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.sample-launcher-list button {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    color: #e7f7f1;
+    background: #172025;
+    border: 1px solid #34444c;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sample-launcher-list button:hover {
+    background: #1e2b31;
+    border-color: #42d392;
+}

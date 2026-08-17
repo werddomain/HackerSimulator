@@ -1,0 +1,56 @@
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using MudBlazor
+
+<MudDialog Class="gothic-dialog">
+    <DialogContent>
+        <div class="properties-container">
+            <div class="prop-row">
+                <span class="prop-label">Name:</span>
+                <span class="prop-value">@EntryName</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Path:</span>
+                <span class="prop-value">@Path</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Kind:</span>
+                <span class="prop-value">@Metadata?.Kind</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Size:</span>
+                <span class="prop-value">@(Metadata is FileMetadata fm ? $"{fm.Length} bytes" : "--")</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Owner:</span>
+                <span class="prop-value">@Metadata?.OwnerId</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Permissions:</span>
+                <span class="prop-value">@Metadata?.Permissions.ToString()</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Modified:</span>
+                <span class="prop-value">@Metadata?.Timestamps.ContentModifiedAtUtc.ToString("f")</span>
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string EntryName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Path { get; set; } = string.Empty;
+
+    [Parameter]
+    public FileSystemEntryMetadata? Metadata { get; set; }
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+}

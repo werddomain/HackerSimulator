@@ -1,0 +1,462 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Intents
+@using HackerOs.Simulation.Abstractions.Diagnostics
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Processes
+@using HackerOs.Simulation.Abstractions.Sessions
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inherits WindowAppBase
+@implements IAsyncDisposable
+@inject AppCatalog Catalog
+@inject AppIntentDispatcher IntentDispatcher
+@inject ISessionService SessionService
+@inject IJSRuntime JavaScript
+
+<div class="terminal-container" @ref="_terminalContainerRef" @onkeydown="HandleKeyDownAsync">
+    @if (_isFullScreen)
+    {
+        <TerminalScreen @ref="_screenComponent"
+                        Frame="_fullScreenFrame"
+                        OnKey="HandleFullScreenKeyAsync" />
+    }
+    else
+    {
+        <div class="terminal-output" @ref="_outputBufferRef" role="log" aria-live="polite">
+        <div class="welcome-banner">
+            <pre class="ascii-art">
+  _  _         _         ___  ___ 
+ | || |__ _ __| |_____ _| _ \/ __|
+ | __ / _` / _| / / -_) '_|   /\__ \
+ |_||_\__,_\__|__\_\___|_| |_|_|___/
+            </pre>
+            <p>HackerOS Terminal v1.0.0 — Type 'help' for available commands.</p>
+        </div>
+
+        @foreach (TerminalOutputLine line in _lines)
+        {
+            <div key="@line.Id" class="output-line @line.TypeClass">
+                @if (!string.IsNullOrEmpty(line.Prompt))
+                {
+                    <span class="line-prompt">@line.Prompt </span>
+                }
+                <span class="line-text">@line.Text</span>
+            </div>
+        }
+
+        <div class="input-line">
+            <span class="input-prompt">@_session.GetPrompt() </span>
+            <input @ref="_inputRef"
+                   type="text"
+                   class="terminal-input"
+                   aria-label="Terminal command input"
+                   @bind="_inputBuffer"
+                   @bind:event="oninput" />
+        </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ElementReference _outputBufferRef;
+    private ElementReference _inputRef;
+    private ElementReference _terminalContainerRef;
+    private TerminalScreen? _screenComponent;
+    private readonly TerminalSession _session = new("user", "/home/user");
+    private readonly List<TerminalOutputLine> _lines = [];
+    private string _inputBuffer = string.Empty;
+    private CancellationTokenSource? _activeCts;
+    private TerminalCommandResolver? _resolver;
+    private TerminalFullScreenSession? _fullScreenSession;
+    private TerminalScreenFrame? _fullScreenFrame;
+    private bool _isFullScreen;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _resizeObserver;
+    private DotNetObjectReference<TerminalWindow>? _dotNetReference;
+
+    protected override void OnAppInitialized()
+    {
+        base.OnAppInitialized();
+        _resolver = new TerminalCommandResolver(Catalog);
+        if (SessionService.CurrentPrincipal is { } principal)
+        {
+            _session.InitializeUser(principal.LoginName.Value, principal.HomePath);
+        }
+    }
+
+    protected override async Task OnAppAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await _inputRef.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Headless test DOM fallback
+            }
+
+            try
+            {
+                _dotNetReference = DotNetObjectReference.Create(this);
+                _module = await JavaScript.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/HackerOs.Apps.Terminal/TerminalWindow.razor.js");
+                _resizeObserver = await _module.InvokeAsync<IJSObjectReference>(
+                    "observeTerminal", _terminalContainerRef, _dotNetReference);
+            }
+            catch (Exception)
+            {
+                // Headless test DOM and unavailable-JS fallback retain the safe 80x24 viewport.
+            }
+        }
+
+        if (_isFullScreen)
+        {
+            try
+            {
+                if (_screenComponent is not null)
+                    await _screenComponent.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Headless test DOM fallback.
+            }
+        }
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (_isFullScreen)
+            return;
+
+        if (args.Key == "Enter")
+        {
+            await ExecuteInputAsync();
+        }
+        else if (args.Key == "ArrowUp")
+        {
+            string? previous = _session.NavigateHistory(-1, _inputBuffer);
+            if (previous is not null)
+            {
+                _inputBuffer = previous;
+            }
+        }
+        else if (args.Key == "ArrowDown")
+        {
+            string? next = _session.NavigateHistory(1, _inputBuffer);
+            if (next is not null)
+            {
+                _inputBuffer = next;
+            }
+        }
+        else if (args.Key == "c" && args.CtrlKey)
+        {
+            CancelActiveCommand();
+        }
+        else if (args.Key == "l" && args.CtrlKey)
+        {
+            ClearBuffer();
+        }
+        else if (args.Key == "Tab")
+        {
+            AutoCompleteInput();
+        }
+    }
+
+    private Task HandleFullScreenKeyAsync(TerminalKeyEvent keyEvent)
+    {
+        _fullScreenSession?.TryPostKey(keyEvent);
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteInputAsync()
+    {
+        string rawLine = _inputBuffer.Trim();
+        _inputBuffer = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(rawLine))
+        {
+            _lines.Add(new TerminalOutputLine(_session.GetPrompt(), string.Empty, OutputType.PromptOnly));
+            return;
+        }
+
+        _lines.Add(new TerminalOutputLine(_session.GetPrompt(), rawLine, OutputType.Input));
+        _session.AddHistory(rawLine);
+
+        ShellParseResult parseResult = ShellParser.Parse(rawLine);
+        if (!parseResult.IsSuccess)
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, parseResult.ErrorMessage!, OutputType.Error));
+            _session.LastExitCode = 2;
+            return;
+        }
+
+        string cmd = parseResult.CommandName;
+        IReadOnlyList<string> args = parseResult.Arguments;
+
+        if (cmd is "rmalias" or "unalias")
+        {
+            args = ["-r", .. args];
+            cmd = "alias";
+        }
+        else if (cmd != "alias" && SessionService.CurrentPrincipal is AuthenticatedPrincipal aliasPrincipal)
+        {
+            string? expansion = await TryResolveAliasAsync(aliasPrincipal.HomePath, cmd);
+            if (expansion is not null)
+            {
+                ShellParseResult expanded = ShellParser.Parse($"{expansion} {string.Join(" ", args)}".Trim());
+                if (expanded.IsSuccess)
+                {
+                    cmd = expanded.CommandName;
+                    args = expanded.Arguments;
+                }
+            }
+        }
+
+        if (cmd == "clear")
+        {
+            ClearBuffer();
+            return;
+        }
+
+        if (cmd == "pwd")
+        {
+            _lines.Add(new TerminalOutputLine(string.Empty, _session.Cwd, OutputType.Stdout));
+            _session.LastExitCode = 0;
+            return;
+        }
+
+        if (cmd == "cd")
+        {
+            string targetPath = args.Count > 0 ? args[0] : "~";
+            string resolvedPath = _session.ResolvePath(targetPath);
+            var stat = await AppContext.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(resolvedPath)), AppContext.CancellationToken);
+
+            if (!stat.Succeeded || stat.Value is null)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"cd: {targetPath}: No such file or directory", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            else if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"cd: {targetPath}: Not a directory", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            else
+            {
+                _session.SetCwd(targetPath);
+                _session.LastExitCode = 0;
+            }
+            return;
+        }
+
+        if (cmd == "help")
+        {
+            if (args.Count > 0)
+            {
+                AppManifest? target = _resolver?.GetTerminalCommands()
+                    .FirstOrDefault(m => string.Equals(m.Terminal!.Name, args[0], StringComparison.OrdinalIgnoreCase));
+                if (target is null)
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"help: no manual entry for '{args[0]}'", OutputType.Error));
+                    _session.LastExitCode = 1;
+                }
+                else
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"{target.Terminal!.Name} - {target.Description}", OutputType.System));
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"usage: {target.Terminal.Usage}", OutputType.System));
+                    _session.LastExitCode = 0;
+                }
+                return;
+            }
+
+            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help", OutputType.System));
+            _lines.Add(new TerminalOutputLine(string.Empty, "Catalog commands: " + string.Join(", ", GetCatalogCommands()), OutputType.System));
+            _lines.Add(new TerminalOutputLine(string.Empty, "Type 'help <command>' for usage.", OutputType.System));
+            _session.LastExitCode = 0;
+            return;
+        }
+
+        // Resolve external command from AppCatalog
+        TerminalCommandResolution? resolution = _resolver?.Resolve(cmd, args);
+        if (resolution is null)
+        {
+            AppContext.Logging.Log(DiagnosticSeverity.Warning, $"Command '{cmd}' not found in system path.");
+            _lines.Add(new TerminalOutputLine(string.Empty, $"command not found: {cmd}", OutputType.Error));
+            _session.LastExitCode = 127;
+            return;
+        }
+
+        if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
+        {
+            _activeCts = new CancellationTokenSource();
+            _fullScreenSession = new TerminalFullScreenSession(ApplyFullScreenStateAsync);
+            try
+            {
+                AppIntentDispatchResult result = await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                    RequestId: Guid.NewGuid(),
+                    CallerAppId: "org.hackeros.terminal",
+                    UserId: principal.UserId.ToString(),
+                    Intent: new ExecuteCommandIntent(
+                        $"{cmd} {string.Join(" ", args)}".Trim(), VirtualPath.Parse(_session.Cwd))),
+                    principal,
+                    _fullScreenSession,
+                    _activeCts.Token);
+
+                if (result.Status == AppIntentDispatchStatus.Dispatched)
+                {
+                    if (!string.IsNullOrEmpty(result.StandardOutput))
+                    {
+                        _lines.Add(new TerminalOutputLine(string.Empty, result.StandardOutput, OutputType.Stdout));
+                    }
+                    if (!string.IsNullOrEmpty(result.StandardError))
+                    {
+                        _lines.Add(new TerminalOutputLine(string.Empty, result.StandardError, OutputType.Stderr));
+                    }
+                    _session.LastExitCode = result.ExitCode ?? 0;
+                }
+                else
+                {
+                    _lines.Add(new TerminalOutputLine(string.Empty, $"Error [{result.Status}]: {result.ErrorCode}", OutputType.Error));
+                    _session.LastExitCode = 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"Fault: {ex.Message}", OutputType.Error));
+                _session.LastExitCode = 1;
+            }
+            finally
+            {
+                await _fullScreenSession.DisposeAsync();
+                _fullScreenSession = null;
+                _activeCts = null;
+            }
+        }
+    }
+
+    private void CancelActiveCommand()
+    {
+        if (_activeCts is not null && !_activeCts.IsCancellationRequested)
+        {
+            _activeCts.Cancel();
+            _lines.Add(new TerminalOutputLine(string.Empty, "^C", OutputType.System));
+            _session.LastExitCode = 130;
+        }
+    }
+
+    private void ClearBuffer()
+    {
+        _lines.Clear();
+    }
+
+    private void AutoCompleteInput()
+    {
+        if (string.IsNullOrWhiteSpace(_inputBuffer))
+        {
+            return;
+        }
+
+        List<string> candidates = ["clear", "cd", "pwd", "help"];
+        candidates.AddRange(GetCatalogCommands());
+
+        string matches = candidates.FirstOrDefault(c => c.StartsWith(_inputBuffer, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+        if (!string.IsNullOrEmpty(matches))
+        {
+            _inputBuffer = matches;
+        }
+    }
+
+    private async Task<string?> TryResolveAliasAsync(string home, string name)
+    {
+        VirtualPath aliasFilePath = VirtualPath.Parse($"{home.TrimEnd('/')}/.hackeros/aliases");
+        var stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(aliasFilePath), AppContext.CancellationToken);
+        if (!stat.Succeeded || stat.Value is null)
+        {
+            return null;
+        }
+
+        var read = await AppContext.FileSystem.ReadAsync(new FileSystemReadRequest(aliasFilePath), AppContext.CancellationToken);
+        if (!read.Succeeded || read.Value is null)
+        {
+            return null;
+        }
+
+        using StreamReader reader = new(read.Value.Content);
+        string content = await reader.ReadToEndAsync(AppContext.CancellationToken);
+        foreach (string rawLine in content.Split('\n'))
+        {
+            string line = rawLine.TrimEnd('\r').Trim();
+            int eqIdx = line.IndexOf('=');
+            if (eqIdx <= 0)
+            {
+                continue;
+            }
+            if (string.Equals(line[..eqIdx], name, StringComparison.Ordinal))
+            {
+                return line[(eqIdx + 1)..];
+            }
+        }
+
+        return null;
+    }
+
+    private IEnumerable<string> GetCatalogCommands()
+    {
+        return Catalog.Manifests.Values
+            .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
+            .Select(m => m.Terminal!.Name);
+    }
+
+    /// <summary>Receives character-cell dimensions from the collocated resize observer.</summary>
+    [JSInvokable]
+    public void UpdateTerminalViewport(int columns, int rows)
+    {
+        if (columns < 1 || rows < 3)
+            return;
+        _fullScreenSession?.UpdateViewport(columns, rows);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _activeCts?.Cancel();
+        if (_fullScreenSession is not null)
+            await _fullScreenSession.DisposeAsync();
+        if (_resizeObserver is not null)
+            await _resizeObserver.DisposeAsync();
+        if (_module is not null)
+            await _module.DisposeAsync();
+        _dotNetReference?.Dispose();
+        _activeCts?.Dispose();
+    }
+
+    private Task ApplyFullScreenStateAsync(TerminalScreenFrame? frame, bool active) =>
+        InvokeAsync(() =>
+        {
+            _fullScreenFrame = frame;
+            _isFullScreen = active;
+            StateHasChanged();
+        });
+
+
+    private enum OutputType { Input, PromptOnly, Stdout, Stderr, System, Error }
+
+    private sealed record TerminalOutputLine(string Prompt, string Text, OutputType Type)
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+        public string TypeClass => Type switch
+        {
+            OutputType.Input => "line-input",
+            OutputType.Stderr => "line-stderr",
+            OutputType.Error => "line-error",
+            OutputType.System => "line-system",
+            _ => "line-stdout"
+        };
+    }
+}

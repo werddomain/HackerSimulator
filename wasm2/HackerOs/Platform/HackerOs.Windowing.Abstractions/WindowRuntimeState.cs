@@ -1,0 +1,138 @@
+using Microsoft.AspNetCore.Components;
+
+namespace HackerOs.Windowing.Abstractions;
+
+/// <summary>Describes the visible layout state of a window.</summary>
+public enum WindowVisualState
+{
+    /// <summary>The window uses its current freeform geometry.</summary>
+    Normal,
+    /// <summary>The window is represented by the taskbar and hidden from the desktop.</summary>
+    Minimized,
+    /// <summary>The window fills the current desktop work area.</summary>
+    Maximized,
+}
+
+/// <summary>Describes whether a window blocks interaction with an owner.</summary>
+public enum WindowModality
+{
+    /// <summary>The window does not block another window.</summary>
+    Modeless,
+    /// <summary>The window blocks its owner until it closes.</summary>
+    OwnerModal,
+}
+
+/// <summary>Contains all renderer-independent authoritative state for one window.</summary>
+public sealed record WindowRuntimeState
+{
+    /// <summary>Creates a validated window state snapshot.</summary>
+    public WindowRuntimeState(
+        WindowId id,
+        string appId,
+        WindowOwnerId ownerInstanceId,
+        string title,
+        string? iconAssetPath,
+        WindowBounds bounds,
+        WindowBounds? restoreBounds,
+        int zOrder,
+        WindowVisualState visualState,
+        WindowConstraints constraints,
+        WindowModality modality = WindowModality.Modeless,
+        WindowId? ownerId = null,
+        bool isFocused = false,
+        RenderFragment? content = null,
+        Func<Task>? onRequestClose = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+
+        if (id == default)
+        {
+            throw new ArgumentException("Window ID must be initialized.", nameof(id));
+        }
+
+        if (zOrder < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(zOrder), "Z-order cannot be negative.");
+        }
+
+        if (modality == WindowModality.OwnerModal && ownerId is null)
+        {
+            throw new ArgumentException("An owner-modal window requires an owner.", nameof(ownerId));
+        }
+
+        if (ownerId == id)
+        {
+            throw new ArgumentException("A window cannot own itself.", nameof(ownerId));
+        }
+
+        Id = id;
+        AppId = appId;
+        OwnerInstanceId = ownerInstanceId;
+        Title = title;
+        IconAssetPath = iconAssetPath;
+        Bounds = bounds;
+        RestoreBounds = restoreBounds;
+        ZOrder = zOrder;
+        VisualState = visualState;
+        Constraints = constraints ?? throw new ArgumentNullException(nameof(constraints));
+        Modality = modality;
+        OwnerId = ownerId;
+        IsFocused = isFocused;
+        Content = content;
+        OnRequestClose = onRequestClose;
+    }
+
+    /// <summary>Gets the window identity.</summary>
+    public WindowId Id { get; }
+
+    /// <summary>Gets the immutable application identity.</summary>
+    public string AppId { get; }
+
+    /// <summary>Gets the opaque owning app instance identity.</summary>
+    public WindowOwnerId OwnerInstanceId { get; }
+
+    /// <summary>Gets the displayed title.</summary>
+    public string Title { get; }
+
+    /// <summary>Gets the optional package-local icon asset path.</summary>
+    public string? IconAssetPath { get; }
+
+    /// <summary>Gets the current normal-state geometry.</summary>
+    public WindowBounds Bounds { get; }
+
+    /// <summary>Gets geometry captured before maximizing.</summary>
+    public WindowBounds? RestoreBounds { get; }
+
+    /// <summary>Gets the deterministic stacking order.</summary>
+    public int ZOrder { get; }
+
+    /// <summary>Gets the visible layout state.</summary>
+    public WindowVisualState VisualState { get; }
+
+    /// <summary>Gets resize and dimension constraints.</summary>
+    public WindowConstraints Constraints { get; }
+
+    /// <summary>Gets the blocking relationship type.</summary>
+    public WindowModality Modality { get; }
+
+    /// <summary>Gets the optional owning window.</summary>
+    public WindowId? OwnerId { get; }
+
+    /// <summary>Gets whether this window currently owns keyboard focus.</summary>
+    public bool IsFocused { get; }
+
+    /// <summary>
+    /// Gets the content rendered inside the window chrome in place of the running app instance.
+    /// Set by whoever creates a non-app window (e.g. a dialog projection) so the desktop shell
+    /// never needs to know that window's type.
+    /// </summary>
+    public RenderFragment? Content { get; }
+
+    /// <summary>
+    /// Gets the delegate invoked instead of the normal close-guard flow when the user requests
+    /// this window be closed. Lets a dialog window route "close" to its own cancel/dismiss logic
+    /// without the desktop shell special-casing it.
+    /// </summary>
+    public Func<Task>? OnRequestClose { get; }
+}

@@ -1,0 +1,250 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Infrastructure.Browser.Interop
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using HackerOs.Infrastructure.Browser.Recovery
+@using HackerOs.Platform.Blazor.Shell
+@using HackerOs.Platform.Core.Sessions
+@using HackerOs.Simulation.Abstractions.Recovery
+@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.Platform.Blazor.Hosting
+@inject ILocalUserRepository UserRepository
+@inject ILocalGroupRepository GroupRepository
+@inject ISessionService SessionService
+@inject EcosystemBootCoordinator BootCoordinator
+@inject IEcosystemHostEnvironment HostEnvironment
+@inject WebCryptoPasswordHasher PasswordHasher
+
+<main class="ecosystem-host">
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    @if (State.UpdateAvailable)
+    {
+        <aside class="update-notice" role="status">
+            <span>A HackerOS update is ready.</span>
+            <button type="button" disabled>Restart to update</button>
+        </aside>
+    }
+
+    <HostErrorBoundary @ref="ErrorBoundary">
+        <ChildContent>
+        @switch (State.View)
+        {
+        case EcosystemHostView.Initializing:
+            <section class="boot-surface" aria-busy="true">
+                <div class="boot-mark" aria-hidden="true">H_</div>
+                <h1>HackerOS</h1>
+                <p role="status">Validating local ecosystem</p>
+            </section>
+            break;
+        case EcosystemHostView.FirstRun:
+            <section class="auth-surface" aria-labelledby="setup-title">
+                <div class="boot-mark" aria-hidden="true">H_</div>
+                <h1 id="setup-title">Create administrator</h1>
+                <p>Initialize this local HackerOS profile.</p>
+                <form @onsubmit="CreateAdministratorAsync" @onsubmit:preventDefault>
+                    <label for="setup-login">Login name</label>
+                    <input id="setup-login" autocomplete="username" maxlength="32" required @bind="SetupLogin" />
+                    <label for="setup-display">Display name</label>
+                    <input id="setup-display" autocomplete="name" maxlength="80" required @bind="SetupDisplayName" />
+                    <label for="setup-password">Password</label>
+                    <input id="setup-password" type="password" autocomplete="new-password" minlength="8" required @bind="SetupPassword" />
+                    <label for="setup-confirm">Confirm password</label>
+                    <input id="setup-confirm" type="password" autocomplete="new-password" minlength="8" required @bind="SetupPasswordConfirmation" />
+                    @if (!string.IsNullOrEmpty(FormError))
+                    {
+                        <p class="form-error" role="alert">@FormError</p>
+                    }
+                    <button type="submit" disabled="@IsSubmitting">Create local profile</button>
+                </form>
+            </section>
+            break;
+        case EcosystemHostView.Login:
+            <section class="auth-surface" aria-labelledby="login-title">
+                <div class="boot-mark" aria-hidden="true">H_</div>
+                <h1 id="login-title">Sign in</h1>
+                <form @onsubmit="LoginAsync" @onsubmit:preventDefault>
+                    <label for="login-user">Local user</label>
+                    <select id="login-user" autocomplete="username" required @bind="SelectedLogin">
+                        @foreach (LocalUser user in State.Users)
+                        {
+                            <option value="@user.LoginName.Value">@user.DisplayName (@user.LoginName.Value)</option>
+                        }
+                    </select>
+                    <label for="login-password">Password</label>
+                    <input id="login-password" type="password" autocomplete="current-password" @bind="LoginPassword" />
+                    @if (!string.IsNullOrEmpty(FormError))
+                    {
+                        <p class="form-error" role="alert">@FormError</p>
+                    }
+                    <button type="submit" disabled="@IsSubmitting">Start session</button>
+                </form>
+            </section>
+            break;
+        case EcosystemHostView.LoginProgress:
+            <LoginProgressScreen />
+            break;
+        case EcosystemHostView.Desktop:
+            <DesktopShell OnLoggedOut="HandleLoggedOut" TestDemoEnabled="@TestDemoEnabled" />
+            break;
+        case EcosystemHostView.Recovery:
+            <section class="recovery-surface" aria-labelledby="recovery-title">
+                <div class="boot-mark" aria-hidden="true">H_</div>
+                <p class="status-label">Recovery environment</p>
+                <h1 id="recovery-title">Local storage is unavailable</h1>
+                <p>Startup remains paused to protect persisted data.</p>
+                <code>@State.Recovery?.ErrorCode</code>
+                <code>Correlation: @State.Recovery?.CorrelationId</code>
+                @if (State.Recovery?.Actions.HasFlag(StorageRecoveryActions.Retry) == true)
+                {
+                    <button type="button" @onclick="InitializeAsync">Retry</button>
+                }
+            </section>
+            break;
+            case EcosystemHostView.Fatal:
+                <section class="fatal-surface" aria-labelledby="fatal-title">
+                    <div class="boot-mark" aria-hidden="true">H_</div>
+                    <h1 id="fatal-title">HackerOS could not start</h1>
+                    <p>The failure was recorded without exposing sensitive details.</p>
+                    <code>Correlation: @State.FatalCorrelationId</code>
+                </section>
+                break;
+        }
+        </ChildContent>
+        <ErrorContent Context="exception">
+            <section class="fatal-surface" aria-labelledby="boundary-fatal-title">
+                <div class="boot-mark" aria-hidden="true">H_</div>
+                <h1 id="boundary-fatal-title">HackerOS encountered an error</h1>
+                <p>The failure was recorded without exposing sensitive details.</p>
+                <code>Correlation: @ErrorBoundary?.CorrelationId</code>
+                @if (HostEnvironment.IsDevelopment)
+                {
+                    <pre class="fatal-details">@exception.ToString()</pre>
+                }
+            </section>
+        </ErrorContent>
+    </HostErrorBoundary>
+</main>
+
+@code {
+    /// <summary>
+    /// Enables the E2E-only "Test Demo" fixture-seeding control on the desktop shell.
+    /// Set by the hosting page from a trusted, out-of-band signal (e.g. a CLI flag on
+    /// the test harness process) — never something an end user's normal launch can set.
+    /// See docs/e2e-test-demo-mode.md.
+    /// </summary>
+    [Parameter]
+    public bool TestDemoEnabled { get; set; }
+
+    private HostErrorBoundary? ErrorBoundary { get; set; }
+    private EcosystemHostState State { get; } = new();
+    private string SetupLogin { get; set; } = string.Empty;
+    private string SetupDisplayName { get; set; } = string.Empty;
+    private string SetupPassword { get; set; } = string.Empty;
+    private string SetupPasswordConfirmation { get; set; } = string.Empty;
+    private string SelectedLogin { get; set; } = string.Empty;
+    private string LoginPassword { get; set; } = string.Empty;
+    private string? FormError { get; set; }
+    private bool IsSubmitting { get; set; }
+
+    protected override Task OnInitializedAsync() => InitializeAsync();
+
+    private async Task InitializeAsync()
+    {
+        State.BeginInitialization();
+        FormError = null;
+        try
+        {
+            EcosystemBootResult result = await BootCoordinator.BootAsync();
+            State.CompleteIdentityLoad(result.Users);
+            SelectedLogin = State.Users.FirstOrDefault()?.LoginName.Value ?? string.Empty;
+        }
+        catch (Exception exception)
+        {
+            State.ShowRecovery(BrowserStorageRecoveryClassifier.Classify(
+                exception, StorageRecoveryContext.Boot, Guid.NewGuid()));
+        }
+    }
+
+    private async Task CreateAdministratorAsync()
+    {
+        FormError = null;
+        if (SetupPassword.Length < 8 || !StringComparer.Ordinal.Equals(SetupPassword, SetupPasswordConfirmation))
+        {
+            FormError = "Passwords must match and contain at least eight characters.";
+            return;
+        }
+
+        IsSubmitting = true;
+        try
+        {
+            LocalLoginName loginName = LocalLoginName.Parse(SetupLogin);
+            LocalLoginName groupName = LocalLoginName.Parse("administrators");
+            LocalGroup group = await GroupRepository.FindByNameAsync(groupName)
+                ?? await GroupRepository.CreateGroupAsync(groupName);
+            LocalPasswordCredential credential = await LocalPasswordHasher.CreateAsync(
+                SetupPassword,
+                asyncHasher: (pwd, salt, iter, len, ct) => PasswordHasher.DeriveKeyAsync(pwd, salt, iter, len, ct));
+            await UserRepository.CreateUserAsync(
+                loginName,
+                SetupDisplayName,
+                AppAuthority.Administrator,
+                group.Id,
+                credential: credential);
+            State.BeginLoginProgress();
+            StateHasChanged();
+            await Task.Delay(50);
+            await SessionService.LoginAsync(loginName, SetupPassword);
+            ClearPasswords();
+            State.CompleteLogin();
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidOperationException)
+        {
+            State.CompleteIdentityLoad(State.Users);
+            FormError = exception.Message;
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        FormError = null;
+        IsSubmitting = true;
+        try
+        {
+            State.BeginLoginProgress();
+            StateHasChanged();
+            await Task.Delay(50);
+            await SessionService.LoginAsync(LocalLoginName.Parse(SelectedLogin), LoginPassword);
+            ClearPasswords();
+            State.CompleteLogin();
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidOperationException)
+        {
+            State.CompleteIdentityLoad(State.Users);
+            FormError = "The local credentials were not accepted.";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private void ClearPasswords()
+    {
+        SetupPassword = string.Empty;
+        SetupPasswordConfirmation = string.Empty;
+        LoginPassword = string.Empty;
+    }
+
+    private void HandleLoggedOut()
+    {
+        State.BeginInitialization();
+        _ = InitializeAsync();
+    }
+}
