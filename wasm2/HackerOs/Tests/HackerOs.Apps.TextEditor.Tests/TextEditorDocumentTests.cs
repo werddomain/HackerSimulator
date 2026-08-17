@@ -26,7 +26,7 @@ public sealed class TextEditorDocumentTests
         Assert.False(doc.IsDirty);
         Assert.Null(doc.Path);
         Assert.Null(doc.ErrorMessage);
-        Assert.Equal(0, doc.LoadedRevision);
+        Assert.Null(doc.LoadedRevision);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class TextEditorDocumentTests
         Assert.Equal(string.Empty, doc.Content);
         Assert.False(doc.IsDirty);
         Assert.Null(doc.Path);
-        Assert.Equal(0, doc.LoadedRevision);
+        Assert.Null(doc.LoadedRevision);
     }
 
     // ──────────────────────────────────── Loading ─────────────────────────────────

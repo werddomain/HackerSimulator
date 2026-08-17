@@ -72,9 +72,11 @@ itself — filesystem, settings, security, window runtime, storage.
 | [`login-progress-screen.md`](login-progress-screen.md) | Session-startup progress feedback UI. |
 | [`terminal-full-screen.md`](terminal-full-screen.md) | The full-screen/alternate-screen contract used by Nano and similar commands. |
 | [`code-editor.md`](code-editor.md) | Multi-tab source editing over the virtual filesystem. |
+| [`user-code-compilation-execution-plan.md`](user-code-compilation-execution-plan.md) | Proposal (French, not implemented): hybrid client/server C# compilation and execution for user-authored ecosystem apps. |
 | [`system-monitor.md`](system-monitor.md) | Process/CPU/memory monitoring architecture. |
 | [`mobile-interface-platform-plan.md`](mobile-interface-platform-plan.md) | Mobile interface platform plan (French). |
 | [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md) | Window/taskbar system extraction plan (French). |
+| [`ecosystem-maturity-gap-analysis.md`](ecosystem-maturity-gap-analysis.md) | Analysis (French, exploratory): what's missing to call HackerOS a real WebAssembly ecosystem, beyond the tracked phase plan. |
 
 ## Built-in apps and commands (reference)
 

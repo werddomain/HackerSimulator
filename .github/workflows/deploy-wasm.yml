@@ -34,6 +34,16 @@ jobs:
       - name: Install WASM workload
         run: dotnet workload install wasm-tools
 
+      - name: Pack local Windowing/Taskbar feed
+        working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
+        run: >-
+          dotnet pack Platform/HackerOs.Windowing.Core/HackerOs.Windowing.Core.csproj
+          --configuration Release --output artifacts/local-nupkg &&
+          dotnet pack Platform/HackerOs.Windowing.Blazor/HackerOs.Windowing.Blazor.csproj
+          --configuration Release --output artifacts/local-nupkg &&
+          dotnet pack Platform/HackerOs.Taskbar.Blazor/HackerOs.Taskbar.Blazor.csproj
+          --configuration Release --output artifacts/local-nupkg
+
       - name: Restore solution
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         run: dotnet restore HackerOs.sln
@@ -62,6 +72,11 @@ jobs:
         run: dotnet list HackerOs.sln package --vulnerable --include-transitive --no-restore
 
       - name: Test complete Release solution
+        # Includes Tests/HackerOs.Pwa.E2E.Tests (P2-PWA-007 / P2-ACC-015 / P2-ACC-016):
+        # it publishes OS/HackerOs.Ecosystem twice into artifacts/pwa-test-publish (two
+        # distinct -p:Version= releases) and serves each from an in-process static host,
+        # so this step now includes ~2 extra Release publishes plus real-browser PWA
+        # install/offline/update runs — expect several extra minutes here.
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         run: >-
           dotnet test HackerOs.sln

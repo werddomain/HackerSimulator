@@ -29,8 +29,8 @@ public enum TextEditorLoadState
 /// </remarks>
 public sealed class TextEditorDocument
 {
-    // The last-known filesystem revision, or 0 if this is a new (unsaved) buffer.
-    private long _loadedRevision;
+    // The last-known filesystem revision, or null if this is a new (unsaved) buffer.
+    private long? _loadedRevision;
 
     public TextEditorDocument()
     {
@@ -62,8 +62,12 @@ public sealed class TextEditorDocument
     /// <summary>Gets the most recent error message, or <c>null</c> when there is none.</summary>
     public string? ErrorMessage { get; private set; }
 
-    /// <summary>Gets the revision observed at the last successful read.</summary>
-    public long LoadedRevision => _loadedRevision;
+    /// <summary>
+    /// Gets the revision observed at the last successful read or save, or <see langword="null"/>
+    /// for a buffer that has never been saved (an unconditional write is then correct — there is
+    /// no prior revision to require).
+    /// </summary>
+    public long? LoadedRevision => _loadedRevision;
 
     // ──────────────────────────────────── Mutations ───────────────────────────────
 
@@ -77,7 +81,7 @@ public sealed class TextEditorDocument
         LoadState = TextEditorLoadState.New;
         IsDirty = false;
         ErrorMessage = null;
-        _loadedRevision = 0;
+        _loadedRevision = null;
     }
 
     /// <summary>Records that a file load has started.</summary>

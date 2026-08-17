@@ -139,6 +139,14 @@ loads eagerly — adopting icons there does not change the payload math above (t
 is already eager), but it is a shell-behavior change with its own visual-regression
 surface, deserving its own review rather than being bundled into this addition.
 
+**Update 2026-08-13:** the taskbar moved to the standalone `HackerOs.Taskbar.Blazor`
+package (`docs/window-taskbar-export-plan.md`, `EXT-WIN-007`/`008`); its hardcoded
+emoji now live in `Platform/HackerOs.Taskbar.Blazor/Taskbar.razor`, not
+`HackerOs.Platform.Blazor`. Adopting `IIconCatalog`/`HackerIcon` there would add an
+`AppSdk.Icons` dependency to a package designed to be consumable outside HackerOS —
+worth weighing against the emoji-icon tradeoff explicitly if this follow-up is picked
+up. `Shell/AppLauncher.razor` is unaffected and remains in `HackerOs.Platform.Blazor`.
+
 ## Consequences
 
 - Any app, and the OS shell, can now draw a themeable, inline-SVG icon from five
