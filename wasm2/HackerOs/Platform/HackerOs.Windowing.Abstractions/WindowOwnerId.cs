@@ -1,4 +1,4 @@
-namespace HackerOs.Windowing.Core;
+namespace HackerOs.Windowing.Abstractions;
 
 /// <summary>
 /// Identifies the owning app instance of a window as an opaque token, independent of any host's

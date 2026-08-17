@@ -1,5 +1,6 @@
 using HackerOs.Taskbar.Blazor;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Taskbar.Blazor.Tests;
 

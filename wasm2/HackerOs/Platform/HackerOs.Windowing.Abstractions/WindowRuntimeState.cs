@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace HackerOs.Windowing.Core;
+namespace HackerOs.Windowing.Abstractions;
 
 /// <summary>Describes the visible layout state of a window.</summary>
 public enum WindowVisualState

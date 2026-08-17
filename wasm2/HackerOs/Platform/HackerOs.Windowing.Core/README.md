@@ -1,12 +1,14 @@
 # HackerOs.Windowing.Core
 
-A headless, renderer-independent window manager engine: window identity,
-geometry, focus, z-order, modality, and lifecycle transitions, applied as
-deterministic commands and observed as deterministic events.
+A headless, renderer-independent window manager engine: applies
+`HackerOs.Windowing.Abstractions` commands to authoritative window state
+(focus, z-order, geometry, modality, lifecycle) and emits deterministic
+events.
 
-This package has no dependency on Blazor rendering, a browser, or any
-particular host application model — only the `RenderFragment` delegate type
-(for window content) is referenced, via `Microsoft.AspNetCore.Components`.
+This package depends only on `HackerOs.Windowing.Abstractions` for its
+contract types (`WindowId`, `WindowBounds`, `WindowRuntimeState`, commands,
+events). It has no dependency on Blazor rendering, a browser, or any
+particular host application model.
 
 ## Usage
 

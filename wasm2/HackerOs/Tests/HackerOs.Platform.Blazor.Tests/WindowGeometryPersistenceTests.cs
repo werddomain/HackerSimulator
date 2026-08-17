@@ -3,6 +3,7 @@ using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Tests;
 

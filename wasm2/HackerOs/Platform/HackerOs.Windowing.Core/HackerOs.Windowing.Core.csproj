@@ -7,13 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>HackerOs.Windowing.Core</PackageId>
-    <Description>Headless, renderer-independent window manager engine: identity, geometry, focus, z-order, modality, and lifecycle transitions as deterministic commands and events.</Description>
+    <Description>Headless, renderer-independent window manager engine: applies HackerOs.Windowing.Abstractions commands to authoritative window state (focus, z-order, geometry, modality, lifecycle) and emits deterministic events.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Only for the RenderFragment delegate type carried by WindowRuntimeState.Content.
+    <!-- Contracts (WindowId, WindowBounds, WindowRuntimeState, commands/events) live in
+         HackerOs.Windowing.Abstractions; this project owns only the engine that applies them.
          No browser pipeline, no .razor components, no MudBlazor: this project stays headless. -->
-    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.10" />
+    <ProjectReference Include="..\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,6 +4,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Windows;
 

@@ -4,6 +4,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.Taskbar.Blazor;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Shell;
 

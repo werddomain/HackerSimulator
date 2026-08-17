@@ -3,6 +3,7 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Windows;
 

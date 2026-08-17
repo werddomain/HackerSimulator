@@ -1,0 +1,188 @@
+# État d'avancement et plan d'action — 2026-08-17
+
+## Objet
+
+Photo de l'avancement de la migration HackerOS v3 à cette date, et proposition
+de plan d'action priorisé. Ce document ne remplace pas
+[`integration-task-list.md`](integration-task-list.md) (source de vérité pour
+le détail tâche par tâche) ni [`server-implementation-pass.md`](server-implementation-pass.md)
+(source de vérité pour le serveur/proxy) — il sert de vue de synthèse et de
+séquencement pour décider quoi attaquer ensuite.
+
+## 1. Résumé exécutif
+
+| Priorité | Chantier | Pourquoi maintenant |
+|---|---|---|
+| 1 | Fermer le gate de sortie Phase 2 | Bloque formellement la progression vers le reste du plan depuis longtemps ; il ne reste que 5 items concrets |
+| 2 | Continuer Phase 5 (serveur/proxy) | En cours dans une autre session ; suite logique déjà identifiée dans `server-implementation-pass.md` |
+| ~~3~~ | ~~Clore réellement l'extraction fenêtres/taskbar~~ | **Fait le 2026-08-17** — voir section 2 |
+| 4 | Plateforme Mobile | Suite logique de l'extraction, maintenant close (le doc mobile n'a aucune tâche cochée) |
+| 5 | Finir Wave 3 / Wave 5 (hors réseau simulé/gameplay) | Reste du travail de migration fonctionnelle, priorisé avant le contenu réseau/gameplay |
+| Repoussé | Expansion réseau simulé & contenu gameplay | Le cœur technique (Wave 4, Wave 6) est déjà fait ; seule l'expansion de contenu reste, et elle est volontairement mise de côté |
+
+## 2. Extraction fenêtres/taskbar (`window-taskbar-export-plan.md`) — CLOSE 2026-08-17
+
+**Déjà confirmé fait** (PR #79 mergée — branche `feature/windowing-taskbar-extraction`,
+historique `EXT-WIN-001` à `EXT-WIN-015`) :
+
+- `HackerOs.Windowing.Core` (moteur headless, zéro dépendance HackerOS) — existe.
+- `HackerOs.Windowing.Blazor` (RCL fenêtres/chrome) — existe.
+- `HackerOs.Taskbar.Blazor` (RCL taskbar par contrats) — existe.
+- `Samples/HackerOs.Windowing.SampleHost` — existe, ne référence pas `HackerOs.Ecosystem`.
+- Adaptateurs HackerOS (`Shell/TaskbarAdapters.cs`) et migration de `DesktopShell` — faits, vérifiés navigateur.
+- Packaging NuGet local + baseline API publique + preuve Release/trimming — faits.
+- Couverture de tests (headless, composants, E2E Playwright `taskbar`) — faite.
+
+**Les deux points restés ouverts malgré la mention "extraction terminée le
+2026-08-13" ont été fermés aujourd'hui :**
+
+- [x] **`EXT-WIN-001`** — Nouveau projet `Platform/HackerOs.Windowing.Abstractions/`
+  créé : `WindowId`, `WindowOwnerId`, `WindowBounds`, `WindowConstraints`,
+  `WindowVisualState`, `WindowModality`, `WindowRuntimeState`, et toutes les
+  commandes/événements y sont déplacés (même noms, nouveau namespace).
+  `HackerOs.Windowing.Core` ne garde que la classe `WindowRuntime` et
+  référence Abstractions. Ajouté à `HackerOs.sln` via `dotnet sln add`. Les
+  30 fichiers consommateurs mis à jour. `dotnet build` (Debug et Release) et
+  `dotnet test` passent tous à 0 échec ; `dotnet pack`/`dotnet publish`
+  produisent les 4 packages/assemblys exportés sans avertissement.
+- [x] **`WindowSurface`** — Composant implémenté dans `HackerOs.Windowing.Blazor`
+  (`WindowSurface.razor`) : reçoit `Runtime` + `WindowContent`, s'abonne à
+  `Runtime.StateChanged`, et traduit les callbacks de `DesktopArea` en
+  `Runtime.Apply(...)`. Le sample host est migré vers
+  `<WindowSurface Runtime="WindowRuntime">`, éliminant le boilerplate qu'il
+  réimplémentait à la main. Vérifié au navigateur : ouverture, focus,
+  interaction, maximize/restore, minimize/restore par la taskbar, close —
+  sans erreur console. `DesktopShell` (l'hôte HackerOS complet) reste
+  délibérément sur son chemin actuel via `TaskbarAdapters` : il gère aussi
+  les dialogues et la fermeture avec garde/confirmation, deux préoccupations
+  hors du périmètre minimal de `WindowSurface` — migrer y introduirait une
+  rupture sans bénéfice réel.
+
+**Point relevé pendant la vérification, hors scope de ce lot** : la suite
+`HackerOs.E2E.Tests` a un test préexistant flaky/racy sans rapport avec le
+windowing — `IndexedDbBrowserContractTests.Group_and_settings_contracts_pass_in_real_browser`
+échoue de façon reproductible avec `IndexedDB database 'hackeros' version 2 is
+not open`, une race entre `VerifyBackupRestoreAsync` (restore destructif) et
+`VerifyOrphanCleanupAsync` (appel JS brut juste après) dans
+`Tests/HackerOs.BrowserHarness.Tests/App.razor`. Reproduit de façon identique
+avant et après ce lot de travail ; n'affecte aucun test lié aux
+fenêtres/taskbar. Laissé pour un futur passage sur le sujet IndexedDB backup/
+recovery plutôt que traité ici.
+
+## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`)
+
+Toujours au stade "proposition fonctionnelle et technique" — les 18 tâches
+(`MOB-001` à `MOB-018`) sont toutes non cochées, aucun travail commencé.
+
+Le document d'extraction fenêtres/taskbar référence déjà ce plan comme risque
+à éviter ("Rupture mobile : ne pas figer dans le moteur des hypothèses
+propres aux fenêtres flottantes Desktop"), donc la séquence
+extraction → mobile est cohérente avec ce qui est déjà écrit, même si ce
+n'est pas formulé comme un prérequis strict dans le document mobile
+lui-même.
+
+**Recommandation** : la section 2 ci-dessus est maintenant close — Mobile est
+prêt à démarrer comme prochain chantier de fonctionnalité (après Phase 2 gate
+et en parallèle ou après la suite serveur selon la bande passante disponible).
+
+## 4. Gate de sortie Phase 2 (priorité 1)
+
+Voir [`integration-task-list.md#22-phase-2-acceptance-and-exit-gate`](integration-task-list.md)
+et [`phase-2-acceptance.md`](phase-2-acceptance.md). Items encore ouverts :
+
+- [ ] `P2-ACC-015` — PWA publiée fonctionne après install en ligne, serveur
+  arrêté, navigateur hors-ligne.
+- [ ] `P2-ACC-016` — Une mise à jour PWA préserve les données compatibles et
+  ne mélange jamais les assets de deux versions.
+- [ ] `P2-ACC-017` — Matrice CI navigateur réelle verte et hébergée (un run
+  en état "PARTIAL" existe déjà au 2026-08-03).
+- [ ] `P2-GATE-002` — Publication Release sans erreur de trimming/asset/
+  console/réseau inexpliquée.
+- [ ] `P2-GATE-003` — Captures desktop/mobile + vérifications a11y sans
+  chevauchement, texte tronqué, contrôle inaccessible, canvas tiers vide.
+- [ ] `P2-GATE-004` — `phase-2-acceptance.md` doit lier des preuves
+  automatisées pour les 17 critères.
+- [ ] `P2-GATE-005` — Approbation utilisateur explicite pour continuer.
+
+`P2-GATE-001` (build + 622 tests, 0 échec) est déjà acquis.
+
+**Pourquoi en priorité 1** : c'est un gate formel bloquant depuis le
+2026-08-03 (voir la remédiation d'audit dans
+[`integration-audit-remediation.md`](integration-audit-remediation.md)) alors
+que le travail de fond a déjà largement dépassé Phase 2 en pratique — le
+fermer coûte relativement peu (5-6 items, surtout de la preuve/publication,
+pas de nouvelle fonctionnalité) et débloque une progression officielle
+propre du plan.
+
+## 5. Phase 5 — Serveur/Proxy (en cours ailleurs, priorité 2)
+
+Détail complet et à jour dans
+[`server-implementation-pass.md`](server-implementation-pass.md). Prochains
+items par ordre de proximité, tels qu'identifiés dans ce document :
+
+1. `cat` sans capacité de lecture d'URL — jamais construite, nécessite sa
+   propre décision de scope.
+2. `curl -d` (POST réel) — hors scope actuel.
+3. Pont Grants durable → application en mémoire (`LocalSessionService`) —
+   changement plus large, nécessite son propre design.
+4. Idempotence du push de sync au redémarrage, preuve de résolution de
+   conflits par domaine, tombstones de suppression FileSystem.
+5. Suite de sécurité proxy incomplète (SSRF/redirect/rebinding, quotas,
+   politique de bande passante).
+6. Pass N+5 (injection directe de services pour l'hôte server-hosted) et
+   Pass N+6 (multi-tenant concurrent) — différés par ADR 0027, pas des oublis.
+
+Ce chantier continue dans l'autre session ; pas d'action ici sauf coordination
+de priorité globale.
+
+## 6. Wave 3 / Wave 5 — compléter avant le contenu réseau/gameplay
+
+Voir [`integration-task-list.md#28-wave-3-editing-clipboard-and-dragdrop`](integration-task-list.md)
+et [`#30-wave-5-remaining-utility-apps-and-commands`](integration-task-list.md).
+
+- [ ] `P4-W3-002` / `P4-W3-007` — Code Editor : preuve de rechargement rendu
+  réel et validation offline/VFS complète manquantes.
+- [ ] `P4-W5-APP-002` — Hack Paint : fichiers VFS image, dialogues
+  import/export, couverture tactile/pixel E2E complète manquantes.
+
+## 7. Repoussé délibérément : réseau simulé & gameplay (Phase 4, Waves 4 et 6)
+
+Le cœur technique de la Wave 4 (réseau simulé, Browser app, `curl`/`ping`/
+`nmap`, sites simulés) et de la Wave 6 (domaines gameplay) est déjà marqué
+complet dans `implementation-status.md`. Ce qui resterait à faire dans cette
+direction est de l'**expansion de contenu**, pas de la plomberie manquante —
+notamment le pack de contenu "Game domain" qu'ADR 0023 scope séparément du
+`SmokeTestNetworkSeed` minimal actuel (voir la section "Open questions" de
+`server-implementation-pass.md`). Conformément à la décision prise ici, ce
+travail est repoussé après les priorités 1 à 5 ci-dessus.
+
+Dans la même veine d'idées non engagées : la compilation/exécution hybride de
+code C# utilisateur (concevoir une app pour l'écosystème et l'exécuter dans le
+navigateur et/ou côté serveur, sans dupliquer le compilateur) a été explorée
+en session le 2026-08-17 et documentée dans
+[`user-code-compilation-execution-plan.md`](user-code-compilation-execution-plan.md)
+(référencée aussi comme suggestion `S-007` dans `integration-task-list.md`).
+Aucune décision `D-xxx` n'a été prise ; ce n'est pas priorisé dans la séquence
+ci-dessus.
+
+## 8. Séquence proposée
+
+```text
+1. Fermer le gate Phase 2 (section 4)                    — court terme
+2. Continuer Phase 5 serveur/proxy (section 5)            — en parallèle, autre session
+✓  Extraction fenêtres/taskbar (section 2)                — FAIT le 2026-08-17
+3. Démarrer la plateforme Mobile (section 3)              — prêt à démarrer
+4. Finir Wave 3 / Wave 5 hors réseau (section 6)           — en parallèle de 1-3
+—  Expansion réseau simulé / contenu gameplay (section 7) — repoussé
+```
+
+## 9. Documents de référence
+
+- [`implementation-status.md`](implementation-status.md) — état implémenté condensé
+- [`integration-task-list.md`](integration-task-list.md) — liste de tâches exhaustive, source de vérité
+- [`server-implementation-pass.md`](server-implementation-pass.md) — roadmap serveur/proxy à jour
+- [`phase-2-acceptance.md`](phase-2-acceptance.md) — matrice de preuves Phase 2
+- [`integration-audit-remediation.md`](integration-audit-remediation.md) — audit du 2026-08-03
+- [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md) — plan d'extraction fenêtres/taskbar
+- [`mobile-interface-platform-plan.md`](mobile-interface-platform-plan.md) — proposition plateforme Mobile
+- [`user-code-compilation-execution-plan.md`](user-code-compilation-execution-plan.md) — proposition (non engagée) de compilation/exécution hybride WASM/serveur de code C# utilisateur

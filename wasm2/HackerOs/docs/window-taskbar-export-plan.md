@@ -157,7 +157,8 @@ Razor Class Library contenant :
 - les modules `.razor.js` strictement nécessaires aux Pointer Events, à la
   projection de géométrie et à la gestion du focus ;
 - un composant racine paramétrable, par exemple `WindowSurface`, qui reçoit un
-  runtime et un fragment de rendu de contenu ;
+  runtime et un fragment de rendu de contenu ; **implémenté**, voir la note
+  sous `EXT-WIN-005` en section 10 ;
 - des abstractions d’icônes et de chrome permettant au consommateur de choisir son
   rendu sans imposer MudBlazor.
 
@@ -366,11 +367,31 @@ mais manquent dans un package.
 
 ## 10. Plan d’implémentation
 
-- [~] `EXT-WIN-001` Créer `HackerOs.Windowing.Abstractions` et documenter son API
-  publique. *Reporté* : les contrats génériques vivent pour l'instant dans
-  `HackerOs.Windowing.Core` (voir 003/004) plutôt que dans un projet séparé,
-  choix pris pour d'abord déplacer le moteur sans rupture ; le split
-  Abstractions/Core proprement dit reste à faire avant la Phase B.
+- [x] `EXT-WIN-001` Créer `HackerOs.Windowing.Abstractions` et documenter son API
+  publique. **Complété 2026-08-17** (suivi tardif, après la Phase D) : le
+  report initial ("les contrats génériques vivent dans `HackerOs.Windowing.Core`
+  ... le split proprement dit reste à faire avant la Phase B") n'avait jamais
+  été refermé alors que les Phases B à D s'étaient déjà terminées sans lui.
+  `WindowId`, `WindowOwnerId`, `WindowBounds`, `WindowConstraints`,
+  `WindowVisualState`, `WindowModality`, `WindowRuntimeState`, et toutes les
+  commandes/événements (`WindowCommand`/`WindowEvent` et leurs types dérivés)
+  sont déplacés dans le nouveau projet `Platform/HackerOs.Windowing.Abstractions/`
+  (mêmes noms de types, namespace `HackerOs.Windowing.Abstractions` au lieu de
+  `HackerOs.Windowing.Core` — changement non rétrocompatible mais sans risque
+  réel puisque `PublicAPI.Shipped.txt` était vide pour les deux projets, donc
+  rien n'avait encore été publié sous SemVer). `HackerOs.Windowing.Core` ne
+  contient plus que `WindowRuntime` (le moteur) et référence Abstractions par
+  `ProjectReference`. Les 30 fichiers consommateurs (`HackerOs.Windowing.Blazor`,
+  `HackerOs.Taskbar.Blazor`, `HackerOs.Platform.Blazor`, le sample host, et
+  tous les projets de tests concernés) ont reçu le `using`/`@using` supplémentaire
+  nécessaire. `dotnet build HackerOs.sln` en Debug et en Release passe à 0
+  avertissement/0 erreur (y compris les baselines `PublicApiAnalyzers`
+  régénérées via `dotnet format analyzers --diagnostics RS0016`), et
+  `dotnet test` sur `HackerOs.Windowing.Core.Tests`, `HackerOs.Taskbar.Blazor.Tests`,
+  `HackerOs.Platform.Blazor.Tests` et `HackerOs.Ecosystem.Tests` passe
+  intégralement. Vérifié au navigateur : le sample host et les scénarios
+  `window`/`taskbar` du harness fonctionnent identiquement, sans erreur
+  console.
 - [x] `EXT-WIN-002` Découpler les identités génériques des identités de processus
   HackerOS. `WindowRuntimeState` porte désormais `WindowOwnerId` (opaque,
   dérivé de l'instance d'app) au lieu de `ProcessId`/`AppInstanceId`.
@@ -384,8 +405,23 @@ mais manquent dans un package.
   assets collocatés. `DesktopArea.razor`, `WindowHost.razor` et
   `WindowChrome.razor` (+ `.razor.css`/`.razor.js`) déplacés depuis
   `Platform.Blazor`, servis depuis `_content/HackerOs.Windowing.Blazor/...`.
-  `WindowSurface` reste à faire (voir 3.4) : reporté à la Phase D une fois
-  l'ergonomie de consommation réelle connue via la migration de `DesktopShell`.
+  `WindowSurface` (voir 3.4) est **implémenté 2026-08-17** : composant
+  paramétrable qui reçoit `Runtime` (un `WindowRuntime`) et `WindowContent`,
+  s'abonne lui-même à `Runtime.StateChanged`, et traduit les callbacks
+  `OnFocus`/`OnMinimize`/`OnToggleMaximize`/`OnClose`/`OnGesture` de
+  `DesktopArea` en appels `Runtime.Apply(...)` — exactement le boilerplate que
+  `HackerOs.Windowing.SampleHost/App.razor` réimplémentait à la main jusque-là.
+  Le sample host est migré vers `<WindowSurface Runtime="WindowRuntime">` pour
+  prouver une consommation réelle, pas seulement la compilation ; vérifié au
+  navigateur : ouverture par le launcher, focus, interaction (incrément),
+  maximize/restore, minimize/restore depuis la taskbar, et close fonctionnent
+  tous sans erreur console. `DesktopShell` (l'hôte HackerOS complet) n'est
+  délibérément pas migré vers `WindowSurface` — il gère aussi les dialogues
+  (`Content`/`OnRequestClose`) et la fermeture avec garde/confirmation via
+  `WindowCloseCoordinator`, deux préoccupations hors du périmètre minimal que
+  `WindowSurface` couvre volontairement ; le forcer y introduirait une rupture
+  sans bénéfice réel, contrairement à l'esprit "migration sans rupture" de la
+  section 5.
 - [x] `EXT-WIN-006` Éliminer les dépendances MudBlazor obligatoires du chrome
   exportable. `WindowChrome.razor` n'utilise plus `MudIconButton` ; boutons
   natifs + icônes SVG scoped-CSS. Vérifié au navigateur : minimiser,
@@ -429,15 +465,19 @@ mais manquent dans un package.
   proprement, vérifié au navigateur). Confirme que le moteur/chrome/taskbar
   exportés sont utilisables sans aucun type HackerOS.
 - [x] `EXT-WIN-012` Ajouter les métadonnées de packaging et produire des packages
-  NuGet locaux. `Platform/Packaging.props` (importé par les 3 projets exportés)
+  NuGet locaux. `Platform/Packaging.props` (importé par les projets exportés,
+  4 depuis `EXT-WIN-001` : `HackerOs.Windowing.Abstractions`,
+  `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor`,
+  `HackerOs.Taskbar.Blazor`)
   fixe `Version=0.1.0-local`, `Authors`, `RepositoryUrl`/`RepositoryType`,
   `PackageTags`, `PackageLicenseFile`/`PackageReadmeFile`,
   `GenerateDocumentationFile=true`, symboles `.snupkg`, et SourceLink GitHub
   (`EmbedUntrackedSources`). Chaque projet ajoute son `PackageId` et sa
-  `Description`. Un `README.md` a été ajouté dans chacun des 3 dossiers de
+  `Description`. Un `README.md` a été ajouté dans chacun des 4 dossiers de
   projet. `dotnet pack -c Release -o artifacts/local-nupkg` produit
-  `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor` et
-  `HackerOs.Taskbar.Blazor` (`.nupkg` + `.snupkg`) sans avertissement, y
+  `HackerOs.Windowing.Abstractions`, `HackerOs.Windowing.Core`,
+  `HackerOs.Windowing.Blazor` et `HackerOs.Taskbar.Blazor`
+  (`.nupkg` + `.snupkg`) sans avertissement, y
   compris sous `TreatWarningsAsErrors=true` avec doc XML générée — la
   couverture XML publique exigée par cette tâche était donc déjà complète
   avant packaging, aucun commentaire supplémentaire n'a été nécessaire.
@@ -465,7 +505,7 @@ mais manquent dans un package.
   vérification à tout moment.
 - [x] `EXT-WIN-014` Ajouter baseline API, tests Release/trimming et documentation
   de versionnement. `Microsoft.CodeAnalysis.PublicApiAnalyzers` (3.3.4) est
-  référencé par les 3 projets exportés via `Packaging.props`. Chaque projet a
+  référencé par les 4 projets exportés via `Packaging.props`. Chaque projet a
   ses `PublicAPI.Shipped.txt` (vide — rien n'a encore été publié) et
   `PublicAPI.Unshipped.txt` (surface publique actuelle, générée avec
   `dotnet format analyzers --diagnostics RS0016 --include-generated`, seul
@@ -477,14 +517,17 @@ mais manquent dans un package.
   générées par Razor, qui n'ont pas de contexte `#nullable enable` et ne
   peuvent pas être corrigées à la main sans casser à chaque montée de
   version du SDK Razor. Toute évolution future de la surface publique de ces
-  3 projets fera échouer le build (RS0016/RS0017) tant que
+  4 projets fera échouer le build (RS0016/RS0017) tant que
   `PublicAPI.Unshipped.txt` n'est pas mis à jour — comportement voulu.
   Preuve Release/trimming : `dotnet publish
   Samples/HackerOs.Windowing.SampleHost -c Release` termine sans le moindre
   avertissement (aucun `warn`/`IL####` dans la sortie complète), l'IL Linker
-  tourne (« Optimisation des assemblages pour la taille ») et les 3
-  assemblys exportés apparaissent bien recadrés dans
-  `wwwroot/_framework/` aux côtés du sample lui-même.
+  tourne (« Optimisation des assemblages pour la taille ») et les 4
+  assemblys exportés (`HackerOs.Windowing.Abstractions` compris) apparaissent
+  bien recadrés dans `wwwroot/_framework/` aux côtés du sample lui-même.
+  **Revérifié 2026-08-17** après l'ajout d'`HackerOs.Windowing.Abstractions` :
+  `dotnet pack -c Release -o artifacts/local-nupkg` produit les 4
+  `.nupkg`/`.snupkg` sans avertissement.
 - [x] `EXT-WIN-015` Mettre à jour la solution, les documents d’architecture et la
   liste d’intégration. `HackerOs.sln` contient déjà les 6 projets exportés/tests/
   sample depuis les phases précédentes (aucun ajout requis ici). Mis à jour :
@@ -499,6 +542,12 @@ mais manquent dans un package.
   `dotnet build HackerOs.sln -c Debug` termine à 0 avertissement/0 erreur après
   chacune des sections `EXT-WIN-012` à `014` (métadonnées de packaging,
   `Microsoft.CodeAnalysis.PublicApiAnalyzers`, RS0041 en `NoWarn`).
+  **Mis à jour 2026-08-17** (`EXT-WIN-001`) : `HackerOs.sln` contient
+  désormais un 7e projet exporté, `HackerOs.Windowing.Abstractions`, ajouté
+  via `dotnet sln add ... -s Platform` (donc avec les entrées
+  `ProjectConfigurationPlatforms` et `NestedProjects` correctement générées,
+  pas éditées à la main) ; `dotnet build HackerOs.sln -c Debug` et
+  `-c Release` terminent tous deux à 0 avertissement/0 erreur.
 
 ## 11. Définition de complétion
 
@@ -533,9 +582,14 @@ L’extraction est terminée lorsque :
 - [x] la publication Release ne produit aucun diagnostic inexpliqué
   (`EXT-WIN-014` : `dotnet publish -c Release` du sample, 0 avertissement) ;
 - [x] la documentation publique permet à un autre développeur d’intégrer les packages
-  sans lire leur code source (`README.md` dans chacun des 3 projets exportés,
+  sans lire leur code source (`README.md` dans chacun des 4 projets exportés,
   doc XML publique complète sous `GenerateDocumentationFile=true`).
 
-**État : extraction terminée le 2026-08-13.** `EXT-WIN-001` à `015` sont tous
-complets ; voir la section 10 pour le détail phase par phase.
+**État : extraction terminée le 2026-08-13, close pour de bon le 2026-08-17.**
+`EXT-WIN-001` à `015` sont tous complets ; voir la section 10 pour le détail
+phase par phase. Le 2026-08-13, `EXT-WIN-001` restait explicitement reporté
+(`[~]`) et le composant `WindowSurface` de la section 3.4 n'existait pas —
+la ligne d'état de cette date affirmait à tort que tout était complet. Ces
+deux points sont fermés le 2026-08-17 : voir `EXT-WIN-001` (section 10) et
+la note `WindowSurface` sous `EXT-WIN-005` pour les preuves.
 

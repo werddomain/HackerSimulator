@@ -1,3 +1,5 @@
+using HackerOs.Windowing.Abstractions;
+
 namespace HackerOs.Windowing.Core;
 
 /// <summary>Owns authoritative window snapshots and applies deterministic transitions.</summary>

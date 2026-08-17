@@ -19,6 +19,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;

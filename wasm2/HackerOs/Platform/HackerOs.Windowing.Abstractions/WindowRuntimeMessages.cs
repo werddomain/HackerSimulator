@@ -1,4 +1,4 @@
-namespace HackerOs.Windowing.Core;
+namespace HackerOs.Windowing.Abstractions;
 
 /// <summary>Base contract for an immutable request to mutate window runtime state.</summary>
 public abstract record WindowCommand;

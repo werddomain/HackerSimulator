@@ -1,4 +1,4 @@
-namespace HackerOs.Windowing.Core;
+namespace HackerOs.Windowing.Abstractions;
 
 /// <summary>Identifies one window independently from its app instance.</summary>
 public readonly record struct WindowId

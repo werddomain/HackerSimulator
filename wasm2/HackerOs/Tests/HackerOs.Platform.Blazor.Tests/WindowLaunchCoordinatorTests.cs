@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 

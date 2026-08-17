@@ -4,6 +4,7 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;

@@ -6,6 +6,7 @@ using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;

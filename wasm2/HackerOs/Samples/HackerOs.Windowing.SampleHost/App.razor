@@ -3,16 +3,11 @@
 
 <div class="sample-shell">
     <div class="sample-workspace">
-        <DesktopArea Windows="WindowRuntime.Windows"
-                     OnFocus="HandleFocus"
-                     OnMinimize="HandleMinimize"
-                     OnToggleMaximize="HandleToggleMaximize"
-                     OnClose="HandleClose"
-                     OnGesture="HandleGesture">
+        <WindowSurface Runtime="WindowRuntime">
             <WindowContent Context="window">
                 @window.Content
             </WindowContent>
-        </DesktopArea>
+        </WindowSurface>
     </div>
 
     @if (_launcher.IsOpen)
@@ -47,7 +42,6 @@
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        WindowRuntime.StateChanged += Rerender;
         _windowSource = new SampleWindowSource(WindowRuntime);
         _commands = new SampleCommands(WindowRuntime);
         _launcher = new SampleLauncher();
@@ -91,27 +85,9 @@
         WindowRuntime.Apply(new CreateWindowCommand(state));
     }
 
-    private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));
-    private void HandleMinimize(WindowId id) => WindowRuntime.Apply(new MinimizeWindowCommand(id));
-
-    private void HandleToggleMaximize(WindowId id)
-    {
-        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
-        if (window is not null)
-        {
-            WindowRuntime.Apply(window.VisualState == WindowVisualState.Maximized
-                ? new RestoreWindowCommand(id)
-                : new MaximizeWindowCommand(id));
-        }
-    }
-
-    private void HandleClose(WindowId id) => WindowRuntime.Apply(new ForceWindowCloseCommand(id));
-    private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
-
     /// <inheritdoc />
     public void Dispose()
     {
-        WindowRuntime.StateChanged -= Rerender;
         _launcher.Changed -= Rerender;
         _windowSource.Dispose();
         _status.Dispose();

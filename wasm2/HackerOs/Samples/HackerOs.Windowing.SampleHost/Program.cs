@@ -1,4 +1,5 @@
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 using HackerOs.Windowing.SampleHost;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;

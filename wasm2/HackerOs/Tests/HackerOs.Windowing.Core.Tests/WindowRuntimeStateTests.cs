@@ -1,4 +1,5 @@
 using HackerOs.Windowing.Core;
+using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Windowing.Core.Tests;
 

@@ -1,9 +1,9 @@
 #nullable enable
 HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher
-HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Activate(HackerOs.Windowing.Core.WindowId id) -> void
-HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Close(HackerOs.Windowing.Core.WindowId id) -> void
-HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Minimize(HackerOs.Windowing.Core.WindowId id) -> void
-HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Restore(HackerOs.Windowing.Core.WindowId id) -> void
+HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Activate(HackerOs.Windowing.Abstractions.WindowId id) -> void
+HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Close(HackerOs.Windowing.Abstractions.WindowId id) -> void
+HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Minimize(HackerOs.Windowing.Abstractions.WindowId id) -> void
+HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Restore(HackerOs.Windowing.Abstractions.WindowId id) -> void
 HackerOs.Taskbar.Blazor.ITaskbarLauncher
 HackerOs.Taskbar.Blazor.ITaskbarLauncher.Changed -> System.Action?
 HackerOs.Taskbar.Blazor.ITaskbarLauncher.IsOpen.get -> bool
@@ -46,13 +46,13 @@ HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherMark.init -> void
 HackerOs.Taskbar.Blazor.TaskbarWindowItem
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IconAssetPath.get -> string?
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IconAssetPath.init -> void
-HackerOs.Taskbar.Blazor.TaskbarWindowItem.Id.get -> HackerOs.Windowing.Core.WindowId
+HackerOs.Taskbar.Blazor.TaskbarWindowItem.Id.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.Id.init -> void
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IsFocused.get -> bool
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IsFocused.init -> void
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IsMinimized.get -> bool
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.IsMinimized.init -> void
-HackerOs.Taskbar.Blazor.TaskbarWindowItem.TaskbarWindowItem(HackerOs.Windowing.Core.WindowId Id, string! Title, string? IconAssetPath, bool IsFocused, bool IsMinimized) -> void
+HackerOs.Taskbar.Blazor.TaskbarWindowItem.TaskbarWindowItem(HackerOs.Windowing.Abstractions.WindowId Id, string! Title, string? IconAssetPath, bool IsFocused, bool IsMinimized) -> void
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.Title.get -> string!
 HackerOs.Taskbar.Blazor.TaskbarWindowItem.Title.init -> void
 HackerOs.Taskbar.Blazor._Imports
