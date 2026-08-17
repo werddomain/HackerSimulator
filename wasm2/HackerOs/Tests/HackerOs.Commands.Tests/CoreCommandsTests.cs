@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
@@ -7,9 +8,13 @@ using HackerOs.Commands.Cd;
 using HackerOs.Commands.Echo;
 using HackerOs.Commands.Ls;
 using HackerOs.Commands.Pwd;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Xunit;
 
@@ -95,7 +100,11 @@ public sealed class CoreCommandsTests
     [Fact]
     public async Task CatCommand_outputs_file_content_or_error_for_missing_file()
     {
-        CatCommand command = new(CreateManifest("cat", "org.hackeros.cmd.cat"));
+        CatCommand command = new(
+            CreateManifest("cat", "org.hackeros.cmd.cat"),
+            new NullSimulatedNetworkService(),
+            new NeverConnectedServerConnectionService(),
+            new UnusedProxyClient());
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
@@ -328,5 +337,62 @@ public sealed class CoreCommandsTests
         public ValueTask<FileSystemMutationResult> DeleteAsync(FileSystemDeleteRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public ValueTask<FileSystemMutationResult> SetPermissionsAsync(FileSystemSetPermissionsRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAppFileSystemGateway WithSelectedHandle(FileSystemSelectedResourceHandle handle) => this;
+    }
+
+    /// <summary>Fake that never recognizes a host, proving VFS-only cat arguments never touch the network.</summary>
+    private sealed class NullSimulatedNetworkService : ISimulatedNetworkService
+    {
+        public SimulatedNavigationResult Navigate(string url, Dictionary<string, Dictionary<string, string>> sessionCookies) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public SimulatedHttpResponse Post(string url, ImmutableDictionary<string, string> formBody, Dictionary<string, Dictionary<string, string>> sessionCookies) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public double? Ping(string hostnameOrIp) => throw new NotSupportedException("Not exercised by these tests.");
+
+        public IReadOnlyList<SimulatedPort> ScanPorts(string hostnameOrIp, int firstPort, int lastPort) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public SimulatedHost? GetHost(string hostnameOrIp) => null;
+
+        public IReadOnlyList<SimulatedHost> AllHosts => throw new NotSupportedException("Not exercised by these tests.");
+
+        public ISimulatedDns Dns => throw new NotSupportedException("Not exercised by these tests.");
+    }
+
+    /// <summary>Fake used only to prove the pure-VFS path is unaffected: this device is never connected.</summary>
+    private sealed class NeverConnectedServerConnectionService : IServerConnectionService
+    {
+        public ValueTask<ServerConnectionState?> GetStateAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ServerConnectionState?>(null);
+
+        public Task<ServerConnectionState> ConnectWithNewAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ServerConnectionState> ConnectWithExistingAccountAsync(
+            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public Task<string?> EnsureAccessTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
+    }
+
+    /// <summary>Fake that always throws: proves the real-network path is never reached in these tests.</summary>
+    private sealed class UnusedProxyClient : IProxyClient
+    {
+        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called by these tests.");
+
+        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called by these tests.");
+
+        public Task<ProxyPolicyResponse> GetPolicyAsync(
+            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called by these tests.");
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Cat;
 using HackerOs.Commands.Curl;
 using HackerOs.Commands.Nmap;
 using HackerOs.Commands.Ping;
@@ -376,6 +377,91 @@ public sealed class Wave4NetworkTests
 
         Assert.Equal(22, exitCode);
         Assert.DoesNotContain("Not Found", stdoutWriter.ToString());
+    }
+
+    // ── cat URL-reading (ADR 0028 follow-up) ─────────────────────────────────
+
+    private static readonly AppManifest CatManifest = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.cmd.cat",
+        Name = "cat",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Concatenate files and print on the standard output",
+        Kind = AppKind.Terminal,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Cat.dll", "HackerOs.Commands.Cat.CatCommand"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
+        Resources = AppResourceProfileManifest.None,
+        Terminal = new TerminalCommandManifest("cat", [], "cat [file ...]")
+    };
+
+    [Fact]
+    public async Task CatCommand_KnownSimulatedHostUrl_RendersPageLikeCurl()
+    {
+        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://hackersearch.net"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Title: HackerSearch", stdoutWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CatCommand_UnknownHostUrl_WithoutServerConnection_ReportsCannotResolve()
+    {
+        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("Could not resolve host", stderrWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CatCommand_UnknownHostUrl_WithServerConnection_FetchesRealBody()
+    {
+        var cmd = new CatCommand(
+            CatManifest,
+            _network,
+            new ConnectedServerConnectionService(),
+            new SuccessBodyProxyClient(200, "hello from the real internet"));
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://real-external-site.example"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("hello from the real internet", stdoutWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CatCommand_PlainPathArgument_NeverTreatedAsUrl()
+    {
+        // Guards the IsUrl() detection: a bare filename must be routed to the VFS path, not the
+        // network path. StubAppExecutionContext.FileSystem throws NotImplementedException, which
+        // this test uses as a routing probe -- reaching it (rather than NotSupportedException from
+        // UnusedProxyClient/NeverConnectedServerConnectionService) proves the argument was never
+        // treated as a URL.
+        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["not-a-url.txt"], stdoutWriter, stderrWriter);
+
+        await Assert.ThrowsAsync<NotImplementedException>(
+            () => cmd.ExecuteAsync(context, CancellationToken.None).AsTask());
     }
 
     // ── P4-W4-007: Proving Zero External Network Requests ──────────────────

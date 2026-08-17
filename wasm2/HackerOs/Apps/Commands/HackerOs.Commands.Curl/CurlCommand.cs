@@ -154,7 +154,7 @@ public sealed class CurlCommand : TerminalAppBase
             }
 
             if (resp.Page is not null)
-                PrintPage(context, resp.Page);
+                SimulatedPageTextFormatter.WriteTo(context.StandardOutput, resp.Page);
             else if (resp.RedirectUrl is not null)
                 context.StandardOutput.WriteLine($"<Redirect: {resp.RedirectUrl}>");
 
@@ -185,7 +185,7 @@ public sealed class CurlCommand : TerminalAppBase
         }
 
         if (result.Page is not null)
-            PrintPage(context, result.Page);
+            SimulatedPageTextFormatter.WriteTo(context.StandardOutput, result.Page);
 
         return result.StatusCode < 400 ? 0 : 1;
     }
@@ -290,93 +290,6 @@ public sealed class CurlCommand : TerminalAppBase
         {
             context.StandardError.WriteLine($"curl: (7) Failed to connect to {url}: {exception.Message}");
             return 7;
-        }
-    }
-
-    // ── Plain-text serialization of structured page content ──────────────
-
-    private static void PrintPage(TerminalExecutionContext context, SimulatedPage page)
-    {
-        context.StandardOutput.WriteLine($"<!-- Title: {page.Title} -->");
-        context.StandardOutput.WriteLine();
-
-        foreach (var section in page.Sections)
-        {
-            switch (section)
-            {
-                case HeroSection h:
-                    context.StandardOutput.WriteLine($"=== {h.Headline} ===");
-                    if (h.Subtitle is not null) context.StandardOutput.WriteLine(h.Subtitle);
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case ParagraphSection p:
-                    context.StandardOutput.WriteLine(p.Text);
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case ListSection l:
-                    if (l.Title is not null) context.StandardOutput.WriteLine(l.Title + ":");
-                    foreach (var item in l.Items) context.StandardOutput.WriteLine("  * " + item);
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case AlertSection a:
-                    context.StandardOutput.WriteLine($"[{a.Level.ToString().ToUpperInvariant()}] {a.Message}");
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case NavigationSection n:
-                    context.StandardOutput.WriteLine(string.Join("  |  ", n.Links.Select(lk => lk.Label)));
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case LoginFormSection lf:
-                    context.StandardOutput.WriteLine($"[FORM: {lf.Title}]");
-                    context.StandardOutput.WriteLine($"  {lf.UsernameLabel}: _______");
-                    context.StandardOutput.WriteLine($"  {lf.PasswordLabel}: _______");
-                    context.StandardOutput.WriteLine($"  [{lf.SubmitLabel}] -> POST {lf.PostPath}");
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case FormSection fs:
-                    context.StandardOutput.WriteLine($"[FORM: {fs.Title}]");
-                    foreach (var field in fs.Fields)
-                        context.StandardOutput.WriteLine($"  {field.Label}: _______");
-                    context.StandardOutput.WriteLine($"  [{fs.SubmitLabel}] -> POST {fs.PostPath}");
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case ProductGridSection g:
-                    foreach (var p in g.Products)
-                    {
-                        context.StandardOutput.WriteLine($"  [{p.Title}] - {p.Price}");
-                        context.StandardOutput.WriteLine($"    {p.Description}");
-                    }
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case TableSection t:
-                    if (t.Title is not null) context.StandardOutput.WriteLine(t.Title);
-                    context.StandardOutput.WriteLine(string.Join(" | ", t.Headers));
-                    foreach (var row in t.Rows)
-                        context.StandardOutput.WriteLine(string.Join(" | ", row));
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case ForumSection f:
-                    context.StandardOutput.WriteLine($"--- {f.SectionTitle} ---");
-                    foreach (var th in f.Threads)
-                        context.StandardOutput.WriteLine($"  {(th.IsHot ? "[HOT] " : "")}{th.Title}  [{th.Author}, {th.TimestampDisplay}, {th.Views} views]");
-                    context.StandardOutput.WriteLine();
-                    break;
-
-                case EmailListSection e:
-                    foreach (var em in e.Emails)
-                        context.StandardOutput.WriteLine($"  {(em.IsRead ? "" : "[UNREAD] ")}{em.Subject} — {em.Sender}");
-                    context.StandardOutput.WriteLine();
-                    break;
-            }
         }
     }
 }

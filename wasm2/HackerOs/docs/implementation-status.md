@@ -474,7 +474,7 @@ server is absent.
 | P5-CONN-005a | Real-network proxy fallback wired into `curl -I` | ✅ Done — matches `ping`'s `IProxyClient` pattern; unblocked by ADR 0034 (P5-CMD below) |
 | P5-CONN-005b | Real-network single-port TCP probe fallback wired into `nmap` (ADR 0035) | ✅ Done — new `POST /api/proxy/tcp-probe`; single host:port only, never a range; see P5-PROXY-008 below |
 | P5-CONN-005c | Real-network proxy fallback wired into full-body `curl` | ✅ Done — see P5-CONN-006 |
-| P5-CONN-005d | Real-network proxy fallback wired into `cat` (URL reading) | ⬜ Not started — `cat` has no URL-reading capability at all yet, simulated or real; found during this pass, needs its own scoping |
+| P5-CONN-005d | `cat` URL-reading (simulated + real-network fallback) | ✅ Done — a scheme-prefixed argument (`http(s)://`) is read as a URL; bare filenames are unaffected. Shared `SimulatedPageTextFormatter` extracted from `CurlCommand` for both commands to render pages identically |
 | P5-CONN-006 | Server-side proxy body-transfer (`ProxyHttpRequest.IncludeBody` / `ProxyHttpResponse.BodyBase64`) | ✅ Done — direct base64-in-response, not chunked; same `MaxResponseBytes` cap as every other proxy response; no new endpoint |
 
 ### P5-CMD — Terminal Command Catalog Wiring (ADR 0034)

@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Curl\HackerOs.Commands.Curl.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nmap\HackerOs.Commands.Nmap.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ping\HackerOs.Commands.Ping.csproj" />

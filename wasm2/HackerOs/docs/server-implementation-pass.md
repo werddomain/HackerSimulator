@@ -233,25 +233,42 @@ as separate, deferred decisions.
   fetches real content, a 4xx/5xx status doesn't print a body); live-verified
   in the browser (known simulated host unaffected, unknown host without a
   connection still reports "Could not resolve host").
-- **`cat` has no URL-reading capability at all, found but not built** — ADR
-  0023 named `cat` alongside `ping`/`curl` as a "network command" requiring
-  dual-mode (simulated + real) support, but the actual `CatCommand.cs` is
-  purely a VFS file reader — no URL detection, no `ISimulatedNetworkService`
-  dependency, not even a simulated fetch path. This is a different kind of
-  gap than the ones ADR 0034/0035 fixed (a genuinely missing feature, not an
-  existing path blocked on something else) and was deliberately left
-  unbuilt in this pass rather than silently added, since it needs its own
-  scoping decision (how does `cat` distinguish a URL argument from a file
-  path? does it reuse `curl`'s exact fetch logic, or something narrower?).
-  Left for a future pass to pick up explicitly.
+- **`cat` gained URL-reading (simulated + real), previously a missing
+  feature entirely** — ADR 0023 named `cat` alongside `ping`/`curl` as a
+  "network command" requiring dual-mode support, but `CatCommand.cs` was
+  purely a VFS file reader with zero URL detection, found during the
+  previous pass and deliberately left unbuilt pending its own scoping.
+  Scoping decision made here: an argument is read as a URL only when it
+  starts with `http://` or `https://` (a bare filename like
+  `cat example.hackeros`, with no scheme, stays a VFS lookup — no ambiguity,
+  no behavior change for any existing use of `cat`). A recognized URL uses
+  `_network.Navigate` and renders through the same
+  `SimulatedPageTextFormatter` `curl` uses; an unrecognized host falls back
+  to the same real-network `IncludeBody` GET `CurlCommand` uses, with
+  identical messaging. That formatter (`page → plain text`, ~150 lines of
+  section-type rendering) was extracted from `CurlCommand.cs` into
+  `Shared/HackerOs.Simulation.Abstractions/Network/SimulatedPageTextFormatter.cs`
+  once `cat` became a second consumer, rather than duplicated — the first
+  duplication (curl only) was fine as one-off logic; a second identical
+  consumer crossed into genuine shared domain logic worth not drifting apart.
+  `CatCommand.cs` needed new `HackerOs.Simulation.Abstractions`/
+  `HackerOs.Platform.Core` project references it didn't have before (it was
+  the one command project with zero network capability). Tests added in
+  `CoreCommandsTests.cs` (VFS-only fixture, updated constructor, a
+  `NullSimulatedNetworkService` fake proving VFS args never touch the
+  network) and `Wave4NetworkTests.cs` (known-host renders like curl,
+  unknown-host disconnected/connected, a routing-guard test proving a bare
+  filename never reaches the network fakes); live-verified all four cases
+  in the browser, including confirming `cat example.hackeros` (no scheme)
+  correctly stays a VFS lookup rather than being misread as a URL.
 
 ## Pass N+1a: status
 
-All three originally-named commands (`curl -I`, `nmap`, `curl` full-body)
-are now wired into the real-network proxy bridge. What's explicitly still
+All commands ADR 0023/0028 named as candidates for the real-network fallback
+pattern are now wired: `curl -I`, `nmap` (single-port probe), `curl`
+full-body, and `cat` (VFS + URL, simulated + real). What's explicitly still
 out of scope, by design, not by omission: `nmap` range/multi-port scanning
-(ADR 0035 Consequences), `cat`'s URL-reading feature (never built, see
-above), and real-network POST via `curl -d`.
+(ADR 0035 Consequences) and real-network POST via `curl -d`.
 
 ## Pass N+5: Direct service injection for the server-hosted host
 

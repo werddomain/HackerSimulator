@@ -19,7 +19,9 @@
     "iconAssetPaths": []
   },
   "capabilities": [
-    "filesystem.user-home.read"
+    "filesystem.user-home.read",
+    "network.simulated.read",
+    "network.real.access"
   ],
   "resources": {
     "baselineCpuWeight": 0.02,
