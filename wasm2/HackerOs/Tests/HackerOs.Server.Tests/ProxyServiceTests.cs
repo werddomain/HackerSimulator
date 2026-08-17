@@ -21,6 +21,7 @@ public sealed class ProxyServiceTests : IDisposable
     private readonly FakeHttpMessageHandler _fakeHandler;
     private readonly IHttpClientFactory _factory;
     private readonly ProxyConnectionPinAccessor _connectionPin;
+    private readonly FakeProxyTcpConnector _tcpConnector;
 
     private static readonly Guid AccountId = Guid.NewGuid();
     private static readonly Guid DeviceId = Guid.NewGuid();
@@ -44,12 +45,14 @@ public sealed class ProxyServiceTests : IDisposable
         _connectionPin = new ProxyConnectionPinAccessor();
         _fakeHandler = new FakeHttpMessageHandler(_connectionPin);
         _factory = new FakeHttpClientFactory(_fakeHandler);
+        _tcpConnector = new FakeProxyTcpConnector();
         _proxy = new ProxyService(
             _factory,
             _audit,
             _db,
             new FakeProxyAddressResolver(IPAddress.Parse("93.184.216.34")),
-            _connectionPin);
+            _connectionPin,
+            _tcpConnector);
     }
 
     public void Dispose() => _db.Dispose();
@@ -162,6 +165,94 @@ public sealed class ProxyServiceTests : IDisposable
         Assert.Null(_connectionPin.Address);
     }
 
+    // ── TCP probe (ADR 0035) ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task TcpProbe_ArbitraryPort_IsAllowed_UnlikeHttpProxy()
+    {
+        // Port 8080 is blocked for the HTTP proxy (see BlockedPort_Throws_WithBlockedPortCode)
+        // but must be allowed here — an arbitrary target port is the entire point of the probe.
+        _tcpConnector.NextState = ProxyTcpProbeState.Open;
+
+        var response = await _proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
+            BuildTcpProbeRequest("example.com", 8080), CancellationToken.None);
+
+        Assert.Equal(ProxyTcpProbeState.Open, response.State);
+        Assert.Equal("93.184.216.34", _tcpConnector.LastAddress);
+        Assert.Equal(8080, _tcpConnector.LastPort);
+    }
+
+    [Theory]
+    [InlineData(ProxyTcpProbeState.Open)]
+    [InlineData(ProxyTcpProbeState.Closed)]
+    [InlineData(ProxyTcpProbeState.Filtered)]
+    public async Task TcpProbe_ReturnsConnectorOutcomeVerbatim(ProxyTcpProbeState outcome)
+    {
+        _tcpConnector.NextState = outcome;
+
+        var response = await _proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
+            BuildTcpProbeRequest("example.com", 443), CancellationToken.None);
+
+        Assert.Equal(outcome, response.State);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(65536)]
+    [InlineData(-1)]
+    public async Task TcpProbe_InvalidPort_ThrowsMalformedRequest(int port)
+    {
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
+                BuildTcpProbeRequest("example.com", port), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.MalformedRequest, ex.ErrorCode);
+        Assert.Equal(0, _tcpConnector.CallCount);
+    }
+
+    [Theory]
+    [InlineData("example.hackeros.local")]
+    [InlineData("bank.sim")]
+    [InlineData("target.hackeros")]
+    public async Task TcpProbe_SimulatedDomain_ThrowsSimulatedDomainBlockedCode(string host)
+    {
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
+                BuildTcpProbeRequest(host, 443), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.SimulatedDomainBlocked, ex.ErrorCode);
+        Assert.Equal(0, _tcpConnector.CallCount);
+    }
+
+    [Fact]
+    public async Task TcpProbe_DeviceOwnedByAnotherAccount_IsRejectedBeforeConnect()
+    {
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteTcpProbeAsync(Guid.NewGuid(), DeviceId,
+                BuildTcpProbeRequest("example.com", 443), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.CapabilityDenied, ex.ErrorCode);
+        Assert.Equal(0, _tcpConnector.CallCount);
+    }
+
+    [Fact]
+    public async Task TcpProbe_BlockedAddress_ThrowsBlockedAddressCode()
+    {
+        // The fake resolver in this fixture always resolves to a public address; use a resolver
+        // seeded with a private-range address to prove SSRF protection still applies to probes.
+        var proxy = new ProxyService(
+            _factory, _audit, _db,
+            new FakeProxyAddressResolver(IPAddress.Parse("10.0.0.5")),
+            _connectionPin, _tcpConnector);
+
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
+                BuildTcpProbeRequest("internal.example.com", 22), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.BlockedAddress, ex.ErrorCode);
+        Assert.Equal(0, _tcpConnector.CallCount);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private static ProxyHttpRequest BuildRequest(string url) =>
@@ -175,6 +266,32 @@ public sealed class ProxyServiceTests : IDisposable
             BodyBytes: 0,
             TimeoutSeconds: 10,
             AppId: "org.hackeros.test");
+
+    private static ProxyTcpProbeRequest BuildTcpProbeRequest(string host, int port) =>
+        new(
+            RequestId: Guid.NewGuid(),
+            Host: host,
+            Port: port,
+            TimeoutSeconds: 5,
+            AppId: "org.hackeros.test");
+}
+
+/// <summary>Fake TCP connector that returns a scripted outcome without touching real sockets.</summary>
+public sealed class FakeProxyTcpConnector : IProxyTcpConnector
+{
+    public ProxyTcpProbeState NextState { get; set; } = ProxyTcpProbeState.Open;
+    public int CallCount { get; private set; }
+    public string? LastAddress { get; private set; }
+    public int LastPort { get; private set; }
+
+    public Task<ProxyTcpProbeState> ProbeAsync(
+        IPAddress address, int port, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        LastAddress = address.ToString();
+        LastPort = port;
+        return Task.FromResult(NextState);
+    }
 }
 
 /// <summary>

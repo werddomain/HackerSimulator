@@ -22,6 +22,15 @@ public interface IProxyService
     Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Guid accountId, Guid deviceId, ProxyHttpRequest request, CancellationToken ct);
 
+    /// <summary>
+    /// Executes a single-port TCP reachability probe (ADR 0035) — one connect attempt against one
+    /// host:port, no data exchanged. Reuses the same SSRF address-range and simulated-domain
+    /// protections as the HTTP proxy, but does not restrict the target port to 80/443, since an
+    /// arbitrary-port probe is the entire point.
+    /// </summary>
+    Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+        Guid accountId, Guid deviceId, ProxyTcpProbeRequest request, CancellationToken ct);
+
     Task<ProxyPolicyResponse> GetPolicyAsync(Guid deviceId, CancellationToken ct);
 }
 
@@ -60,11 +69,16 @@ public sealed class ProxyService : IProxyService
     private const long MaxResponseBytes = 10 * 1024 * 1024; // 10 MiB
     private const int MaxConcurrentPerDevice = 8;
 
+    // TCP probe timeout is clamped much shorter than the HTTP proxy's — a scan-shaped operation
+    // should fail fast rather than hold a connection slot for up to 30 seconds per port.
+    private const int MaxTcpProbeTimeoutSeconds = 5;
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAuditService _audit;
     private readonly HackerOsServerDbContext _db;
     private readonly IProxyAddressResolver _addressResolver;
     private readonly IProxyConnectionPinAccessor _connectionPin;
+    private readonly IProxyTcpConnector _tcpConnector;
 
     // Simple in-memory concurrency tracker per device.
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, int>
@@ -76,13 +90,15 @@ public sealed class ProxyService : IProxyService
         IAuditService audit,
         HackerOsServerDbContext db,
         IProxyAddressResolver addressResolver,
-        IProxyConnectionPinAccessor connectionPin)
+        IProxyConnectionPinAccessor connectionPin,
+        IProxyTcpConnector tcpConnector)
     {
         _httpClientFactory = httpClientFactory;
         _audit = audit;
         _db = db;
         _addressResolver = addressResolver;
         _connectionPin = connectionPin;
+        _tcpConnector = tcpConnector;
     }
 
     /// <inheritdoc />
@@ -117,6 +133,55 @@ public sealed class ProxyService : IProxyService
         finally
         {
             sw.Stop();
+            _activeCounts.AddOrUpdate(deviceId, 0, (_, v) => Math.Max(0, v - 1));
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+        Guid accountId, Guid deviceId, ProxyTcpProbeRequest request, CancellationToken ct)
+    {
+        await ValidateDeviceOwnershipAsync(accountId, deviceId, ct);
+
+        if (string.IsNullOrWhiteSpace(request.Host))
+            throw new ProxyRequestException(ProxyErrorCode.MalformedRequest, "A target host is required.");
+        if (request.Port is < 1 or > 65535)
+            throw new ProxyRequestException(ProxyErrorCode.MalformedRequest, "Port must be between 1 and 65535.");
+        if (string.IsNullOrWhiteSpace(request.AppId) || request.AppId.Length > 256)
+            throw new ProxyRequestException(ProxyErrorCode.CapabilityDenied,
+                "A valid registered application identifier is required.");
+
+        ValidateSimulatedDomain(request.Host);
+
+        var current = _activeCounts.AddOrUpdate(deviceId, 1, (_, v) => v + 1);
+        if (current > MaxConcurrentPerDevice)
+        {
+            _activeCounts.AddOrUpdate(deviceId, 0, (_, v) => Math.Max(0, v - 1));
+            throw new ProxyRequestException(ProxyErrorCode.QuotaExceeded,
+                $"Concurrent request limit of {MaxConcurrentPerDevice} exceeded.");
+        }
+
+        try
+        {
+            // No port allow-list here — probing an arbitrary port is the entire point (unlike the
+            // HTTP proxy, which only ever needs 80/443). Address-range and simulated-domain
+            // protection still fully apply.
+            var pinnedAddress = await ResolveAndValidateAddressAsync(
+                request.Host, request.Port, ct, enforceHttpPortAllowList: false);
+
+            var timeout = TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, MaxTcpProbeTimeoutSeconds));
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            ProxyTcpProbeState state = await _tcpConnector.ProbeAsync(pinnedAddress, request.Port, timeout, ct);
+            sw.Stop();
+
+            await _audit.RecordAsync(accountId, deviceId, "PROXY_TCP_PROBE",
+                $"{{\"host\":\"{request.Host}\",\"port\":{request.Port},\"state\":\"{state}\",\"ms\":{sw.ElapsedMilliseconds}}}",
+                ct);
+
+            return new ProxyTcpProbeResponse(request.RequestId, state, sw.ElapsedMilliseconds);
+        }
+        finally
+        {
             _activeCounts.AddOrUpdate(deviceId, 0, (_, v) => Math.Max(0, v - 1));
         }
     }
@@ -252,12 +317,21 @@ public sealed class ProxyService : IProxyService
     }
 
     private async Task<IPAddress> ResolveAndValidateAddressAsync(
-        string host, int port, CancellationToken ct)
+        string host, int port, CancellationToken ct, bool enforceHttpPortAllowList = true)
     {
-        // Validate port.
-        if (port > 0 && !AllowedPorts.Contains(port))
-            throw new ProxyRequestException(ProxyErrorCode.BlockedPort,
-                $"Port {port} is not in the proxy allow-list.");
+        // Validate port. The HTTP-only allow-list (80/443) doesn't apply to the TCP probe path,
+        // where an arbitrary target port is the entire point — but the port must still be a valid
+        // TCP port number.
+        if (enforceHttpPortAllowList)
+        {
+            if (port > 0 && !AllowedPorts.Contains(port))
+                throw new ProxyRequestException(ProxyErrorCode.BlockedPort,
+                    $"Port {port} is not in the proxy allow-list.");
+        }
+        else if (port is < 1 or > 65535)
+        {
+            throw new ProxyRequestException(ProxyErrorCode.BlockedPort, $"Port {port} is not a valid TCP port.");
+        }
 
         // Resolve and validate address.
         IPAddress[] addresses;

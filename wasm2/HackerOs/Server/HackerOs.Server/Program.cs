@@ -60,6 +60,7 @@ builder.Services.AddScoped<IContentBlobService, ContentBlobService>();
 builder.Services.AddSingleton<IServerDatabaseBackupService, ServerDatabaseBackupService>();
 builder.Services.AddSingleton<IProxyAddressResolver, SystemProxyAddressResolver>();
 builder.Services.AddSingleton<IProxyConnectionPinAccessor, ProxyConnectionPinAccessor>();
+builder.Services.AddSingleton<IProxyTcpConnector, SocketProxyTcpConnector>();
 
 // ── HTTP client for proxy outbound requests ───────────────────────────────────
 // The proxy service uses a named client with strict socket timeouts.

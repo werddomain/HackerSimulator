@@ -1,15 +1,21 @@
+using System.Net.Http;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.Simulation.Abstractions.ServerConnection;
 
 namespace HackerOs.Commands.Nmap;
 
 /// <summary>
-/// Simulated <c>nmap</c> port-scanner terminal command (P4-W4-006).
-/// Reads port information from the in-memory <see cref="SimulatedHost"/> record
-/// and formats output that mimics real nmap scan output.
-/// Makes zero real network calls; no actual scanning of real systems occurs.
+/// Simulated <c>nmap</c> port-scanner terminal command (P4-W4-006), with a narrow real-network
+/// fallback (ADR 0035): when the target is unknown to the simulated network AND the user asked
+/// about exactly one port with <c>-p &lt;port&gt;</c>, this issues a single real TCP-connect probe
+/// through the optional server instead of only reporting "Host seems down." This is deliberately
+/// not a real port-range scanner — no range or multi-port <c>-p</c> ever triggers a real probe,
+/// and the simulated network stays authoritative for any host it recognizes.
 /// </summary>
 public sealed class NmapCommand : TerminalAppBase
 {
@@ -30,22 +36,30 @@ public sealed class NmapCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Nmap.dll", "HackerOs.Commands.Nmap.NmapCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("network", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.NetworkSimulatedRead],
+        Capabilities = [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkRealAccess],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("nmap", [], "nmap [-p <range>] [-sV] [-O] <target>"),
         SingleInstancePerUser = false
     };
 
     private readonly ISimulatedNetworkService _network;
+    private readonly IServerConnectionService _connection;
+    private readonly IProxyClient _proxy;
 
-    /// <summary>Initializes the command with its manifest and the simulated network service.</summary>
-    public NmapCommand(AppManifest manifest, ISimulatedNetworkService network) : base(manifest)
+    /// <summary>Initializes the command with its manifest, the simulated network, and the optional real-network bridge.</summary>
+    public NmapCommand(
+        AppManifest manifest,
+        ISimulatedNetworkService network,
+        IServerConnectionService connection,
+        IProxyClient proxy) : base(manifest)
     {
         _network = network;
+        _connection = connection;
+        _proxy = proxy;
     }
 
     /// <inheritdoc/>
-    public override ValueTask<int> ExecuteAsync(
+    public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
@@ -56,6 +70,7 @@ public sealed class NmapCommand : TerminalAppBase
         string? targetArg = null;
         int firstPort = DefaultFirstPort;
         int lastPort  = DefaultLastPort;
+        bool explicitSinglePort = false;
         bool showVersion = false;
         bool showOs      = false;
 
@@ -65,7 +80,9 @@ public sealed class NmapCommand : TerminalAppBase
             var a = args[i];
             if (a is "-p" or "--port" && i + 1 < args.Count)
             {
-                (firstPort, lastPort) = ParsePortRange(args[++i]);
+                string portArg = args[++i];
+                (firstPort, lastPort) = ParsePortRange(portArg);
+                explicitSinglePort = firstPort == lastPort && !portArg.Contains('-');
             }
             else if (a is "-sV")
             {
@@ -84,7 +101,7 @@ public sealed class NmapCommand : TerminalAppBase
         if (targetArg is null)
         {
             context.StandardError.WriteLine("nmap: usage: nmap [-p <port-range>] [-sV] [-O] <target>");
-            return ValueTask.FromResult(1);
+            return 1;
         }
 
         var host = _network.GetHost(targetArg);
@@ -94,10 +111,15 @@ public sealed class NmapCommand : TerminalAppBase
 
         if (host is null)
         {
+            if (explicitSinglePort)
+            {
+                return await NmapRealHostPortAsync(context, targetArg, firstPort, cancellationToken).ConfigureAwait(false);
+            }
+
             context.StandardOutput.WriteLine($"Nmap scan report for {targetArg}");
             context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
             context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return ValueTask.FromResult(1);
+            return 1;
         }
 
         context.StandardOutput.WriteLine($"Nmap scan report for {targetArg} ({ip})");
@@ -106,7 +128,7 @@ public sealed class NmapCommand : TerminalAppBase
         if (!host.IsUp)
         {
             context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return ValueTask.FromResult(1);
+            return 1;
         }
 
         context.StandardOutput.WriteLine($"Not shown: {lastPort - firstPort + 1} closed tcp ports (conn-refused)");
@@ -144,7 +166,60 @@ public sealed class NmapCommand : TerminalAppBase
         context.StandardOutput.WriteLine();
         context.StandardOutput.WriteLine($"Nmap done: 1 IP address (1 host up) scanned in {host.LatencyMs * 0.1:F2} seconds");
 
-        return ValueTask.FromResult(0);
+        return 0;
+    }
+
+    /// <summary>
+    /// Real-network fallback (ADR 0035) for a target unknown to the simulated network, when the
+    /// user asked about exactly one port: a single TCP-connect probe through the optional server,
+    /// when connected. Never scans a range — that stays simulation-only.
+    /// </summary>
+    private async ValueTask<int> NmapRealHostPortAsync(
+        TerminalExecutionContext context, string target, int port, CancellationToken cancellationToken)
+    {
+        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
+            context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
+            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
+            return 1;
+        }
+
+        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (accessToken is null)
+        {
+            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
+            context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
+            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
+            return 1;
+        }
+
+        try
+        {
+            ProxyTcpProbeResponse response = await _proxy.ExecuteTcpProbeAsync(
+                new Uri(state.ServerBaseUrl),
+                accessToken,
+                new ProxyTcpProbeRequest(Guid.NewGuid(), target, port, 5, Manifest.Id),
+                cancellationToken).ConfigureAwait(false);
+
+            context.StandardOutput.WriteLine($"Nmap scan report for {target} (via optional server proxy)");
+            context.StandardOutput.WriteLine("Host is up.");
+            context.StandardOutput.WriteLine("PORT      STATE     SERVICE");
+            string stateLabel = response.State.ToString().ToLowerInvariant();
+            context.StandardOutput.WriteLine($"{$"{port}/tcp".PadRight(9)} {stateLabel.PadRight(9)} unknown");
+            context.StandardOutput.WriteLine();
+            context.StandardOutput.WriteLine(
+                $"Nmap done: 1 IP address (1 host up) scanned in {response.DurationMs / 1000.0:F2} seconds");
+            return 0;
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        {
+            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
+            context.StandardOutput.WriteLine($"Note: real-network probe failed ({exception.Message}).");
+            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
+            return 1;
+        }
     }
 
     // ── Port range parsing ────────────────────────────────────────────────

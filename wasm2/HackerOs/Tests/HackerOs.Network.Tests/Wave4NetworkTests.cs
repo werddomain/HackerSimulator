@@ -177,7 +177,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task NmapCommand_ScansPorts_And_FormatsOutput()
     {
-        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network);
+        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -190,6 +190,65 @@ public sealed class Wave4NetworkTests
         Assert.Contains("Nmap scan report for localhost (127.0.0.1)", output);
         Assert.Contains("22/tcp    open      ssh", output);
         Assert.Contains("80/tcp    open      http", output);
+    }
+
+    // ── ADR 0035: nmap single-port real-network fallback ────────────────────
+
+    [Fact]
+    public async Task NmapCommand_RangeAgainstUnknownHost_NeverAttemptsRealProbe_EvenWhenConnected()
+    {
+        // A port range (the default, or an explicit "-p 1-100") must never trigger a real probe --
+        // only an explicit single port does. UnusedProxyClient throws if called, proving this.
+        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["-p", "1-100", "unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("Host seems down", stdoutWriter.ToString());
+    }
+
+    [Fact]
+    public async Task NmapCommand_SinglePortAgainstUnknownHost_WithoutServerConnection_ReportsHostDown()
+    {
+        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["-p", "443", "unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("Host seems down", stdoutWriter.ToString());
+    }
+
+    [Theory]
+    [InlineData(ProxyTcpProbeState.Open, "open")]
+    [InlineData(ProxyTcpProbeState.Closed, "closed")]
+    [InlineData(ProxyTcpProbeState.Filtered, "filtered")]
+    public async Task NmapCommand_SinglePortAgainstUnknownHost_WithServerConnection_UsesRealTcpProbe(
+        ProxyTcpProbeState probeState, string expectedLabel)
+    {
+        var cmd = new NmapCommand(
+            NmapCommand.StaticManifest,
+            _network,
+            new ConnectedServerConnectionService(),
+            new SuccessTcpProbeProxyClient(probeState));
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["-p", "8080", "real-external-site.example"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        var output = stdoutWriter.ToString();
+        Assert.Contains("8080/tcp", output);
+        Assert.Contains(expectedLabel, output);
     }
 
     [Fact]
@@ -353,6 +412,10 @@ public sealed class Wave4NetworkTests
             Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("The proxy client must not be called when disconnected.");
 
+        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The proxy client must not be called when disconnected.");
+
         public Task<ProxyPolicyResponse> GetPolicyAsync(
             Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("The proxy client must not be called when disconnected.");
@@ -397,6 +460,26 @@ public sealed class Wave4NetworkTests
                 FinalUrl: request.TargetUrl,
                 RedirectHops: 0,
                 DurationMs: 12));
+
+        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ProxyPolicyResponse> GetPolicyAsync(
+            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+    }
+
+    /// <summary>Fake that returns a canned TCP probe outcome, proving <c>nmap</c>'s real fallback prints it.</summary>
+    private sealed class SuccessTcpProbeProxyClient(ProxyTcpProbeState state) : IProxyClient
+    {
+        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProxyTcpProbeResponse(request.RequestId, state, DurationMs: 8));
 
         public Task<ProxyPolicyResponse> GetPolicyAsync(
             Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>

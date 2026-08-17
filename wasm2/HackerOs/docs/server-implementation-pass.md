@@ -186,16 +186,39 @@ as separate, deferred decisions.
   (`ReadAsync_FileCreatedButNeverWritten_ReturnsEmptyContentNotFailure`);
   live-verified: `touch hello.txt` then `cat hello.txt` now succeeds with
   empty output instead of "No such file or directory".
+- **`nmap` single-port real-network fallback** (ADR 0035,
+  `docs/adr/0035-nmap-tcp-probe-fallback.md`) — the second of three originally
+  named commands. Given a choice between a bounded multi-port scan endpoint
+  (a materially bigger new server capability and abuse surface) and a
+  ping-style single-port probe, the user chose the latter. New
+  `ProxyTcpProbeRequest`/`ProxyTcpProbeResponse` contracts and
+  `POST /api/proxy/tcp-probe` carry exactly one host and one port — no range
+  or list shape exists anywhere in the contract. `ProxyService.ExecuteTcpProbeAsync`
+  reuses every existing SSRF protection (device ownership, simulated-domain
+  block, blocked-address ranges) but does **not** reuse the HTTP proxy's
+  80/443 port allow-list, since an arbitrary target port is the point;
+  `IProxyTcpConnector`/`SocketProxyTcpConnector` abstracts the raw socket
+  connect the same way `IProxyAddressResolver` abstracts DNS, keeping the
+  path fully unit-testable. `NmapCommand`'s fallback only fires when the
+  simulated network doesn't recognize the host **and** the user passed
+  `-p <single-port>` — a default range or any explicit range always stays on
+  the pre-existing simulated "Host seems down" path, enforced client-side by
+  construction (the real-probe code path is unreachable for a range). Full
+  test coverage added server-side (`ProxyServiceTests.cs`) and client-side
+  (`Wave4NetworkTests.cs`); live-verified: a known simulated host is
+  unaffected, `nmap -p 443 <unknown-host>` attempts the real fallback and
+  gracefully reports "Host seems down" when disconnected (matching
+  ping/curl's disconnected behavior), and `nmap -p 1-100 <unknown-host>`
+  never attempts a real probe regardless of connection state.
 
-## Pass N+1a (remaining): `nmap` and full-body `curl`/`cat`
+## Pass N+1a (remaining): full-body `curl`/`cat`
 
-The other two commands ADR 0023/0028 originally named alongside `curl -I`
-remain unimplemented:
-- Normal `curl` (full body) and `cat` (reading a URL as content): blocked on
-  the same server-side gap noted below (`ProxyHttpResponse` is metadata-only).
-- `nmap`: port-scanning doesn't map onto a single HTTP proxy call at all;
-  needs either a new non-HTTP proxy contract shape or stays simulation-only
-  indefinitely — see the open question below.
+The last of the three commands ADR 0023/0028 originally named alongside
+`curl -I`/`nmap` remains unimplemented: normal `curl` (full body) and `cat`
+(reading a URL as content) are blocked on the server-side gap below
+(`ProxyHttpResponse` is metadata-only). Real range/multi-port `nmap` scanning
+also remains explicitly out of scope — see ADR 0035 Consequences — and would
+need its own ADR and security design if ever wanted.
 
 ## Pass N+5: Direct service injection for the server-hosted host
 
@@ -278,12 +301,16 @@ independent of any one browser).
   needs its own small ADR/design pass (chunked, per the existing
   `ContentTransferContracts.cs` precedent from sync, or a simpler direct
   streaming response).
-- Does `ping`/`nmap`'s "real" mode need a TCP/UDP proxy call shape beyond
-  `IProxyService.ExecuteHttpRequestAsync`'s HTTP-only contract? If the existing
-  proxy contract can't support it, either extend `IProxyService` (server-side
-  change, needs its own security review per the SSRF/redirect-limit work
-  already tracked under `P5-PROXY-*`) or scope those two commands' "real" mode
-  down to what HTTP proxying actually supports.
+- ~~Does `ping`/`nmap`'s "real" mode need a TCP/UDP proxy call shape beyond
+  `IProxyService.ExecuteHttpRequestAsync`'s HTTP-only contract?~~ **Resolved
+  for `nmap`**: ADR 0035 added `IProxyService.ExecuteTcpProbeAsync`, a
+  single-host/single-port TCP-connect contract with no range or multi-port
+  shape — deliberately narrower than a general TCP/UDP proxy, after the user
+  declined a bounded-scan alternative on abuse-surface grounds. `ping` never
+  needed this — its real fallback already reuses the HTTP proxy (a HEAD
+  request approximates reachability well enough). A true range/multi-port
+  `nmap` scan capability, if ever wanted, still needs its own ADR and
+  security design; ADR 0035 explicitly does not open a path to it.
 - ~~Does real network access need its own capability ID...~~ **Resolved**:
   `AppCapabilities.NetworkRealAccess` (`network.real.access`) was added during
   ADR 0028 implementation and is declared by `ping`'s manifest.

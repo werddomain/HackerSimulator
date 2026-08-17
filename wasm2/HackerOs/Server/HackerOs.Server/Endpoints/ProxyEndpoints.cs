@@ -8,8 +8,9 @@ namespace HackerOs.Server.Endpoints;
 /// Proxy endpoints — P5-PROXY-001 through P5-PROXY-007.
 /// All endpoints require authentication.
 ///
-/// POST /api/proxy/http    → execute an HTTP proxy request
-/// GET  /api/proxy/policy  → read current device proxy policy
+/// POST /api/proxy/http      → execute an HTTP proxy request
+/// POST /api/proxy/tcp-probe → execute a single-port TCP reachability probe (ADR 0035)
+/// GET  /api/proxy/policy    → read current device proxy policy
 /// </summary>
 public static class ProxyEndpoints
 {
@@ -20,6 +21,8 @@ public static class ProxyEndpoints
 
         proxyGroup.MapPost("/http", ExecuteHttpAsync).WithName("ProxyHttp")
             .WithSummary("Executes a server-validated HTTP proxy request.");
+        proxyGroup.MapPost("/tcp-probe", ExecuteTcpProbeAsync).WithName("ProxyTcpProbe")
+            .WithSummary("Executes a server-validated single-port TCP reachability probe.");
         proxyGroup.MapGet("/policy", GetPolicyAsync).WithName("GetProxyPolicy")
             .WithSummary("Returns current proxy quotas and policy for the authenticated device.");
 
@@ -52,6 +55,45 @@ public static class ProxyEndpoints
                 ProxyErrorCode.QuotaExceeded => StatusCodes.Status429TooManyRequests,
                 ProxyErrorCode.Timeout => StatusCodes.Status504GatewayTimeout,
                 ProxyErrorCode.PayloadTooLarge => StatusCodes.Status502BadGateway,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Json(error, ProxyContractsJsonContext.Default.ProxyErrorResponse, statusCode: statusCode);
+        }
+        catch (OperationCanceledException)
+        {
+            var error = new ProxyErrorResponse(
+                request.RequestId, ProxyErrorCode.Timeout,
+                "The request was cancelled.", Guid.NewGuid());
+            return Results.Json(error, ProxyContractsJsonContext.Default.ProxyErrorResponse,
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+    }
+
+    private static async Task<IResult> ExecuteTcpProbeAsync(
+        ProxyTcpProbeRequest request, IProxyService proxy, ClaimsPrincipal user, CancellationToken ct)
+    {
+        var accountId = GetAccountId(user);
+        var deviceId = GetDeviceId(user);
+
+        try
+        {
+            var response = await proxy.ExecuteTcpProbeAsync(accountId, deviceId, request, ct);
+            return Results.Json(response, ProxyContractsJsonContext.Default.ProxyTcpProbeResponse);
+        }
+        catch (ProxyRequestException ex)
+        {
+            var error = new ProxyErrorResponse(
+                request.RequestId,
+                ex.ErrorCode,
+                ex.Message,
+                Guid.NewGuid());
+
+            var statusCode = ex.ErrorCode switch
+            {
+                ProxyErrorCode.CapabilityDenied => StatusCodes.Status403Forbidden,
+                ProxyErrorCode.QuotaExceeded => StatusCodes.Status429TooManyRequests,
+                ProxyErrorCode.Timeout => StatusCodes.Status504GatewayTimeout,
                 _ => StatusCodes.Status400BadRequest
             };
 

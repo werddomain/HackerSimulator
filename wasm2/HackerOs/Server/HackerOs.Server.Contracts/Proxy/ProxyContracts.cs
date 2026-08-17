@@ -102,6 +102,49 @@ public sealed record ProxyHttpResponse(
     long DurationMs);
 
 /// <summary>
+/// Server-observed outcome of a single-port TCP connect probe.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ProxyTcpProbeState>))]
+public enum ProxyTcpProbeState
+{
+    /// <summary>The TCP handshake completed — the port accepted a connection.</summary>
+    Open,
+
+    /// <summary>The target actively refused the connection (RST).</summary>
+    Closed,
+
+    /// <summary>No response before the timeout — likely firewalled or unreachable.</summary>
+    Filtered
+}
+
+/// <summary>
+/// A single-port TCP reachability probe (ADR 0035) — deliberately narrower than the HTTP proxy:
+/// exactly one host, one port, one connect attempt, no data exchanged. This is not a port-range
+/// scanner; <c>nmap</c>'s real-network fallback only ever issues one of these per invocation, for
+/// the single port the user explicitly requested with <c>-p</c>.
+/// </summary>
+/// <param name="RequestId">Client-generated idempotency UUID for this request.</param>
+/// <param name="Host">Target hostname or IP literal.</param>
+/// <param name="Port">Target TCP port (1–65535). Not restricted to the HTTP proxy's port allow-list.</param>
+/// <param name="TimeoutSeconds">Client-requested timeout (1–5; server clamps).</param>
+/// <param name="AppId">Declaring app ID; recorded for audit.</param>
+public sealed record ProxyTcpProbeRequest(
+    Guid RequestId,
+    string Host,
+    int Port,
+    int TimeoutSeconds,
+    string AppId);
+
+/// <summary>Result of a single-port TCP connect probe.</summary>
+/// <param name="RequestId">Matching request UUID.</param>
+/// <param name="State">Observed reachability state.</param>
+/// <param name="DurationMs">Server-measured probe duration in milliseconds.</param>
+public sealed record ProxyTcpProbeResponse(
+    Guid RequestId,
+    ProxyTcpProbeState State,
+    long DurationMs);
+
+/// <summary>
 /// Reason codes returned when the server blocks or rejects a proxy request.
 /// These are surfaced in ProxyErrorResponse for structured client handling.
 /// </summary>
@@ -179,6 +222,8 @@ public sealed record ProxyPolicyResponse(
 /// </summary>
 [JsonSerializable(typeof(ProxyHttpRequest))]
 [JsonSerializable(typeof(ProxyHttpResponse))]
+[JsonSerializable(typeof(ProxyTcpProbeRequest))]
+[JsonSerializable(typeof(ProxyTcpProbeResponse))]
 [JsonSerializable(typeof(ProxyErrorResponse))]
 [JsonSerializable(typeof(ProxyPolicyResponse))]
 [JsonSerializable(typeof(ProxyHeader))]

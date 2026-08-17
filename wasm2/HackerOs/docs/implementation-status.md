@@ -472,7 +472,8 @@ server is absent.
 | P5-CONN-003 | Settings UI panel to connect/disconnect | ✅ Done |
 | P5-CONN-004 | Real-network proxy fallback wired into `ping` | ✅ Done |
 | P5-CONN-005a | Real-network proxy fallback wired into `curl -I` | ✅ Done — matches `ping`'s `IProxyClient` pattern; unblocked by ADR 0034 (P5-CMD below) |
-| P5-CONN-005b | Real-network proxy fallback wired into `nmap`/full-body `curl`/`cat` | ⬜ Not started — `nmap` needs a non-HTTP proxy shape; full-body fetch blocked on P5-CONN-006; see `docs/server-implementation-pass.md` Pass N+1a (remaining) |
+| P5-CONN-005b | Real-network single-port TCP probe fallback wired into `nmap` (ADR 0035) | ✅ Done — new `POST /api/proxy/tcp-probe`; single host:port only, never a range; see P5-PROXY-008 below |
+| P5-CONN-005c | Real-network proxy fallback wired into full-body `curl`/`cat` | ⬜ Not started — blocked on P5-CONN-006 |
 | P5-CONN-006 | Server-side proxy body-transfer endpoint (currently metadata-only) | ⬜ Not started — blocks full `curl`/`cat` content fetching |
 
 ### P5-CMD — Terminal Command Catalog Wiring (ADR 0034)
@@ -535,6 +536,7 @@ All five domains named in the original roadmap now have a client-side adapter.
 | P5-PROXY-005 | Quotas, audit and explicit operator weakening | ⬜ Partial: concurrency and audit exist; durable quotas/configuration warnings absent |
 | P5-PROXY-006 | Simulated-domain isolation | ⬜ Reopened for end-to-end evidence |
 | P5-PROXY-007 | Complete proxy security suite | ⬜ Partial: focused server suite passes 40 tests; required integration cases remain |
+| P5-PROXY-008 | Single-port TCP reachability probe (`POST /api/proxy/tcp-probe`, ADR 0035) | ✅ Done — reuses device-ownership/simulated-domain/blocked-address checks; no port allow-list (arbitrary port is the point); no range/multi-port shape in the contract; `IProxyTcpConnector` abstraction keeps it unit-testable |
 
 ### New ADRs
 - **ADR 0024** — Server Identity and Device Registration (D-017)
@@ -547,6 +549,7 @@ All five domains named in the original roadmap now have a client-side adapter.
 - **ADR 0032** — App Enablement Management
 - **ADR 0033** — AppCatalog and FileAssociations Domain Sync
 - **ADR 0034** — Wire the Terminal Command Catalog
+- **ADR 0035** — Single-Port TCP Reachability Probe for nmap's Real-Network Fallback
 
 ### Solution structure
 ```

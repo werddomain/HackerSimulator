@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Sockets;
+using HackerOs.Server.Contracts.Proxy;
 
 namespace HackerOs.Server.Services;
 
@@ -53,5 +55,48 @@ public sealed class ProxyConnectionPinAccessor : IProxyConnectionPinAccessor
         private Action? _restore = restore;
 
         public void Dispose() => Interlocked.Exchange(ref _restore, null)?.Invoke();
+    }
+}
+
+/// <summary>
+/// Attempts a single TCP connect against an already-validated address, through an injectable,
+/// testable boundary (ADR 0035). Never sends or receives application data — the connect attempt
+/// itself is the entire probe.
+/// </summary>
+public interface IProxyTcpConnector
+{
+    /// <summary>Attempts one TCP connect within <paramref name="timeout"/> and reports the outcome.</summary>
+    Task<ProxyTcpProbeState> ProbeAsync(IPAddress address, int port, TimeSpan timeout, CancellationToken cancellationToken);
+}
+
+/// <summary>Uses a real OS socket connect for production TCP probes.</summary>
+public sealed class SocketProxyTcpConnector : IProxyTcpConnector
+{
+    /// <inheritdoc />
+    public async Task<ProxyTcpProbeState> ProbeAsync(
+        IPAddress address, int port, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using Socket socket = new(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(timeout);
+
+        try
+        {
+            await socket.ConnectAsync(address, port, timeoutCts.Token).ConfigureAwait(false);
+            return ProxyTcpProbeState.Open;
+        }
+        catch (SocketException exception) when (exception.SocketErrorCode == SocketError.ConnectionRefused)
+        {
+            return ProxyTcpProbeState.Closed;
+        }
+        catch (SocketException)
+        {
+            return ProxyTcpProbeState.Filtered;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timed out, not caller-cancelled — the target didn't respond in time.
+            return ProxyTcpProbeState.Filtered;
+        }
     }
 }

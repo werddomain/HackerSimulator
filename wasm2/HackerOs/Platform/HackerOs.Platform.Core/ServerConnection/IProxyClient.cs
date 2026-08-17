@@ -23,6 +23,13 @@ public interface IProxyClient
     Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Executes a single-port TCP reachability probe (ADR 0035) — one connect attempt against one
+    /// host:port, no data exchanged. Used by <c>nmap</c>'s real-network fallback.
+    /// </summary>
+    Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+        Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default);
+
     Task<ProxyPolicyResponse> GetPolicyAsync(
         Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default);
 }
@@ -51,6 +58,29 @@ public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
 
         return (await response.Content.ReadFromJsonAsync(
             ProxyContractsJsonContext.Default.ProxyHttpResponse, cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+        Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage message = new(HttpMethod.Post, new Uri(serverBaseUrl, "api/proxy/tcp-probe"))
+        {
+            Content = JsonContent.Create(request, ProxyContractsJsonContext.Default.ProxyTcpProbeRequest)
+        };
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            ProxyErrorResponse? error = await TryReadErrorAsync(response, cancellationToken).ConfigureAwait(false);
+            throw new ServerConnectionException(
+                error is null
+                    ? $"The TCP probe request failed ({(int)response.StatusCode} {response.ReasonPhrase})."
+                    : $"The TCP probe request failed: {error.ErrorCode} — {error.Message}");
+        }
+
+        return (await response.Content.ReadFromJsonAsync(
+            ProxyContractsJsonContext.Default.ProxyTcpProbeResponse, cancellationToken).ConfigureAwait(false))!;
     }
 
     public async Task<ProxyPolicyResponse> GetPolicyAsync(
