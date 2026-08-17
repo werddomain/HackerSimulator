@@ -180,6 +180,29 @@ public sealed class TextEditorDocumentTests
     }
 
     [Fact]
+    public void CompleteSave_FromNeverPersistedDocument_SetsPathAndRevision()
+    {
+        // Arrange – a brand-new "Untitled" buffer that was never opened from an
+        // existing path, so LoadedRevision starts out null (P2-TEXT-003 regression:
+        // Save As on such a buffer must create the file, not attempt to replace it).
+        TextEditorDocument doc = new();
+        doc.Edit("first content");
+        Assert.Null(doc.LoadedRevision);
+
+        // Act – simulate a successful Save As via CreateAsync + WriteAsync
+        VirtualPath savedAs = VirtualPath.Parse("/home/user/new-file.txt");
+        const long createdRevision = 1L;
+        doc.CompleteSave(savedAs, createdRevision);
+
+        // Assert
+        Assert.Equal(savedAs, doc.Path);
+        Assert.Equal("new-file.txt", doc.Title);
+        Assert.Equal(TextEditorLoadState.Loaded, doc.LoadState);
+        Assert.False(doc.IsDirty);
+        Assert.Equal(createdRevision, doc.LoadedRevision);
+    }
+
+    [Fact]
     public void GetWindowTitle_AfterSave_HasNoDirtyMarker()
     {
         TextEditorDocument doc = new();

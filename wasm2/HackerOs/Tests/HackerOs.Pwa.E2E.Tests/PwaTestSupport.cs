@@ -143,15 +143,16 @@ internal static class PwaTestSupport
     /// resolves to <c>FileSystem.WriteAsync</c> against a now-*existing* target. Used to prove
     /// file persistence survives reload/offline/update.
     ///
-    /// Two Text Editor gaps, confirmed by direct reproduction, made the obvious ways to do
-    /// this fail — routed around here rather than papered over silently (each flagged
-    /// separately for a real fix):
-    /// - "Save As" straight onto a path that has never existed fails with "Destination
-    ///   directory not found": WriteAsync is documented as "atomic REPLACEMENT of regular-file
-    ///   content" and requires a pre-existing target, unlike File Explorer's CreateAsync.
-    /// - Opening the freshly created *empty* file in Text Editor reports "Binary files are not
-    ///   supported by Text Editor" — a zero-length file fails its text/binary detection. Save
-    ///   As (which never reads the target's current bytes) avoids that path entirely.
+    /// Originally routed around two confirmed Text Editor gaps. The first — "Save As" straight
+    /// onto a path that has never existed failing with "Destination directory not found",
+    /// because <c>WriteToDiskAsync</c> only ever called <c>FileSystem.WriteAsync</c> (an atomic
+    /// REPLACEMENT requiring a pre-existing target) even for a document with no prior
+    /// revision/path — is now fixed: <c>WriteToDiskAsync</c> calls <c>FileSystem.CreateAsync</c>
+    /// first when the document has never been persisted. The File-Explorer-then-Save-As dance
+    /// here remains necessary for the second, still-open gap: opening the freshly created
+    /// *empty* file in Text Editor reports "Binary files are not supported by Text Editor" — a
+    /// zero-length file fails its text/binary detection. Save As (which never reads the
+    /// target's current bytes) avoids that path entirely.
     /// </summary>
     public static async Task CreateAndSaveFileAsync(IPage page, string directory, string fileName, string content)
     {
