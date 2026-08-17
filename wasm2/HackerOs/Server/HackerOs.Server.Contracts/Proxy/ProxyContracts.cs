@@ -55,7 +55,6 @@ public sealed record ProxyHeader(string Name, string Value);
 
 /// <summary>
 /// Proxy HTTP request contract.
-/// Body is transmitted as a separate binary payload; this contract carries metadata only.
 /// </summary>
 /// <param name="RequestId">Client-generated idempotency UUID for this request.</param>
 /// <param name="Protocol">Proxy protocol to use.</param>
@@ -66,6 +65,12 @@ public sealed record ProxyHeader(string Name, string Value);
 /// <param name="BodyBytes">Total body byte count. 0 for bodiless methods.</param>
 /// <param name="TimeoutSeconds">Client-requested timeout (1–30; server clamps).</param>
 /// <param name="AppId">Declaring app ID; server validates against stored capability grant.</param>
+/// <param name="IncludeBody">
+/// When true, the server base64-encodes the fetched response body directly into
+/// <see cref="ProxyHttpResponse.BodyBase64"/> (subject to the same <c>MaxResponseBytes</c> cap as
+/// every other proxy response). False for callers that only need status/headers (e.g. <c>curl -I</c>,
+/// <c>ping</c>'s HEAD probe) — the default, so existing callers are unaffected.
+/// </param>
 public sealed record ProxyHttpRequest(
     Guid RequestId,
     ProxyProtocol Protocol,
@@ -75,11 +80,12 @@ public sealed record ProxyHttpRequest(
     string? BodyHash,
     long BodyBytes,
     int TimeoutSeconds,
-    string AppId);
+    string AppId,
+    bool IncludeBody = false);
 
 /// <summary>
-/// Normalized proxy HTTP response metadata.
-/// Body is streamed separately; this contract carries metadata only.
+/// Normalized proxy HTTP response. Metadata is always present; <see cref="BodyBase64"/> is
+/// populated only when the request set <see cref="ProxyHttpRequest.IncludeBody"/>.
 /// </summary>
 /// <param name="RequestId">Matching request UUID.</param>
 /// <param name="StatusCode">HTTP status code.</param>
@@ -90,6 +96,11 @@ public sealed record ProxyHttpRequest(
 /// <param name="FinalUrl">URL after redirect resolution (may differ from TargetUrl).</param>
 /// <param name="RedirectHops">Number of server-side redirects followed.</param>
 /// <param name="DurationMs">Server-measured round-trip time in milliseconds.</param>
+/// <param name="BodyBase64">
+/// Base64-encoded response body, present only when the request asked for it via
+/// <see cref="ProxyHttpRequest.IncludeBody"/> and the response actually had a body. Null otherwise —
+/// including for metadata-only requests, where this field is never populated regardless of body size.
+/// </param>
 public sealed record ProxyHttpResponse(
     Guid RequestId,
     int StatusCode,
@@ -99,7 +110,8 @@ public sealed record ProxyHttpResponse(
     long BodyBytes,
     string FinalUrl,
     int RedirectHops,
-    long DurationMs);
+    long DurationMs,
+    string? BodyBase64 = null);
 
 /// <summary>
 /// Server-observed outcome of a single-port TCP connect probe.

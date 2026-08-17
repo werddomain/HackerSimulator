@@ -323,6 +323,61 @@ public sealed class Wave4NetworkTests
         Assert.Contains("X-Test-Header: proxied", output);
     }
 
+    // ── Body transfer (ADR 0028 follow-up): full-body curl real fallback ────
+
+    [Fact]
+    public async Task CurlCommand_FullBody_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
+    {
+        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://unknown-host-12345.com"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(6, exitCode);
+        Assert.Contains("Could not resolve host", stderrWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CurlCommand_FullBody_UnknownHost_WithServerConnection_FetchesRealBody()
+    {
+        var cmd = new CurlCommand(
+            CurlCommand.StaticManifest,
+            _network,
+            new ConnectedServerConnectionService(),
+            new SuccessBodyProxyClient(200, "hello from the real internet"));
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://real-external-site.example"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("hello from the real internet", stdoutWriter.ToString());
+    }
+
+    [Fact]
+    public async Task CurlCommand_FullBody_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
+    {
+        var cmd = new CurlCommand(
+            CurlCommand.StaticManifest,
+            _network,
+            new ConnectedServerConnectionService(),
+            new SuccessBodyProxyClient(404, "Not Found"));
+
+        using var stdoutWriter = new StringWriter();
+        using var stderrWriter = new StringWriter();
+        var context = CreateContext(["https://real-external-site.example"], stdoutWriter, stderrWriter);
+
+        int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(22, exitCode);
+        Assert.DoesNotContain("Not Found", stdoutWriter.ToString());
+    }
+
     // ── P4-W4-007: Proving Zero External Network Requests ──────────────────
 
     [Fact]
@@ -460,6 +515,34 @@ public sealed class Wave4NetworkTests
                 FinalUrl: request.TargetUrl,
                 RedirectHops: 0,
                 DurationMs: 12));
+
+        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
+            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+
+        public Task<ProxyPolicyResponse> GetPolicyAsync(
+            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Not exercised by these tests.");
+    }
+
+    /// <summary>Fake that returns a canned status/body, proving full-body <c>curl</c>'s real fallback prints it.</summary>
+    private sealed class SuccessBodyProxyClient(int statusCode, string? body) : IProxyClient
+    {
+        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
+            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProxyHttpResponse(
+                request.RequestId,
+                statusCode,
+                "OK",
+                [],
+                BodyHash: null,
+                BodyBytes: body?.Length ?? 0,
+                FinalUrl: request.TargetUrl,
+                RedirectHops: 0,
+                DurationMs: 15,
+                BodyBase64: request.IncludeBody && body is not null
+                    ? Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(body))
+                    : null));
 
         public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
             Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>

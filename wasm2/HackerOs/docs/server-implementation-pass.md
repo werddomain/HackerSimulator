@@ -210,15 +210,48 @@ as separate, deferred decisions.
   gracefully reports "Host seems down" when disconnected (matching
   ping/curl's disconnected behavior), and `nmap -p 1-100 <unknown-host>`
   never attempts a real probe regardless of connection state.
+- **Proxy body-transfer + full-body `curl` real-network fallback** (ADR 0028
+  follow-up, no new ADR — this extends an already-reviewed endpoint rather
+  than adding a new capability) — closes the server-side gap tracked below:
+  `ProxyHttpRequest` gained an `IncludeBody` flag (default `false`, so `-I`
+  and `ping`'s HEAD probes are unaffected) and `ProxyHttpResponse` gained a
+  matching `BodyBase64` field. The response body was already being fetched
+  and size-capped server-side to compute the hash every response carries —
+  it was just being discarded before this change; `IncludeBody` now controls
+  whether it's also base64-encoded into the response, subject to the same
+  `MaxResponseBytes` cap as every other proxy response. No new endpoint, no
+  new SSRF surface, no new capability — this was a direct "simpler streaming
+  response" implementation of the option `docs/server-implementation-pass.md`
+  itself named as the alternative to a chunked sync-style transfer, which
+  would have been unjustified complexity for a bounded, one-shot fetch.
+  `CurlCommand`'s real-network fallback now also fires for a plain GET (not
+  just `-I`) against a host unknown to the simulated network, printing the
+  fetched body. A real-network POST (`-d`) against an unrecognized host
+  stays explicitly out of scope. Tests added server-side (`ProxyServiceTests.cs`:
+  `IncludeBody` on/off, empty-body edge case, size cap still enforced) and
+  client-side (`Wave4NetworkTests.cs`: disconnected declines, connected
+  fetches real content, a 4xx/5xx status doesn't print a body); live-verified
+  in the browser (known simulated host unaffected, unknown host without a
+  connection still reports "Could not resolve host").
+- **`cat` has no URL-reading capability at all, found but not built** — ADR
+  0023 named `cat` alongside `ping`/`curl` as a "network command" requiring
+  dual-mode (simulated + real) support, but the actual `CatCommand.cs` is
+  purely a VFS file reader — no URL detection, no `ISimulatedNetworkService`
+  dependency, not even a simulated fetch path. This is a different kind of
+  gap than the ones ADR 0034/0035 fixed (a genuinely missing feature, not an
+  existing path blocked on something else) and was deliberately left
+  unbuilt in this pass rather than silently added, since it needs its own
+  scoping decision (how does `cat` distinguish a URL argument from a file
+  path? does it reuse `curl`'s exact fetch logic, or something narrower?).
+  Left for a future pass to pick up explicitly.
 
-## Pass N+1a (remaining): full-body `curl`/`cat`
+## Pass N+1a: status
 
-The last of the three commands ADR 0023/0028 originally named alongside
-`curl -I`/`nmap` remains unimplemented: normal `curl` (full body) and `cat`
-(reading a URL as content) are blocked on the server-side gap below
-(`ProxyHttpResponse` is metadata-only). Real range/multi-port `nmap` scanning
-also remains explicitly out of scope — see ADR 0035 Consequences — and would
-need its own ADR and security design if ever wanted.
+All three originally-named commands (`curl -I`, `nmap`, `curl` full-body)
+are now wired into the real-network proxy bridge. What's explicitly still
+out of scope, by design, not by omission: `nmap` range/multi-port scanning
+(ADR 0035 Consequences), `cat`'s URL-reading feature (never built, see
+above), and real-network POST via `curl -d`.
 
 ## Pass N+5: Direct service injection for the server-hosted host
 
@@ -289,18 +322,14 @@ independent of any one browser).
   actually do until `LocalSessionService`'s login seeding is changed to also
   hydrate from the durable store — a separate, larger change than the sync
   adapter itself, deferred with its own design needed first.
-- **Server-side gap found during ADR 0028 implementation**: `POST /api/proxy/http`
-  (`ProxyEndpoints.ExecuteHttpAsync`) only ever returns `ProxyHttpResponse`
-  metadata (status, headers, a content hash) — it does not stream the actual
-  request or response body. `ProxyHttpRequest`/`ProxyHttpResponse`'s own doc
-  comments in `ProxyContracts.cs` already say "Body is transmitted as a
-  separate binary payload; this contract carries metadata only," but no
-  endpoint for that separate binary payload exists yet. This blocks any
-  command needing fetched content (`curl` without `-I`, `cat`) from working
-  over the real proxy until a body-transfer endpoint is added server-side —
-  needs its own small ADR/design pass (chunked, per the existing
-  `ContentTransferContracts.cs` precedent from sync, or a simpler direct
-  streaming response).
+- ~~Server-side gap found during ADR 0028 implementation: `POST /api/proxy/http`
+  only ever returns metadata, not the fetched body~~ **Resolved**: `ProxyHttpRequest.IncludeBody`
+  / `ProxyHttpResponse.BodyBase64` close this — the simpler direct streaming
+  response option this entry itself named, not the heavier chunked
+  `ContentTransferContracts.cs`-style approach (unjustified for a bounded,
+  one-shot fetch). Wired into full-body `curl`'s real-network fallback; see
+  "Pass N+1a" above. `cat` still has no URL-reading capability at all to
+  wire this into — a separate, larger gap, also noted above.
 - ~~Does `ping`/`nmap`'s "real" mode need a TCP/UDP proxy call shape beyond
   `IProxyService.ExecuteHttpRequestAsync`'s HTTP-only contract?~~ **Resolved
   for `nmap`**: ADR 0035 added `IProxyService.ExecuteTcpProbeAsync`, a

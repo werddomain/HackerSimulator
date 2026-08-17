@@ -10,13 +10,11 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// direct-injection-friendly, browser-independent shape.
 /// </summary>
 /// <remarks>
-/// <see cref="ProxyHttpRequest"/>/<see cref="ProxyHttpResponse"/> are metadata-only by design (see
-/// their doc comments in <c>ProxyContracts.cs</c>) — the server endpoint mapped today
-/// (<c>POST /api/proxy/http</c>) does not yet stream the actual request/response body, only status,
-/// headers, and a content hash. Callers needing the fetched body (a normal <c>curl</c> GET, for
-/// example) cannot get it from this client until that server-side gap is closed — tracked in
-/// <c>docs/server-implementation-pass.md</c>. Callers that only need reachability/status/headers
-/// (e.g. <c>curl -I</c>) are fully served today.
+/// <see cref="ProxyHttpResponse"/>'s <c>BodyBase64</c> is populated only when the request sets
+/// <see cref="ProxyHttpRequest.IncludeBody"/> — false by default, so callers that only need
+/// reachability/status/headers (e.g. <c>curl -I</c>, <c>ping</c>) get the original metadata-only
+/// shape unchanged. Callers needing the fetched body (a normal <c>curl</c> GET) set it explicitly;
+/// the response is capped at the same <c>MaxResponseBytes</c> limit as every other proxy response.
 /// </remarks>
 public interface IProxyClient
 {

@@ -268,8 +268,14 @@ public sealed class ProxyService : IProxyService
 
             sw.Stop();
             await _audit.RecordAsync(accountId, deviceId, "PROXY_REQUEST",
-                $"{{\"url\":\"{request.TargetUrl}\",\"method\":\"{request.HttpMethod}\",\"status\":{(int)lastResponse.StatusCode},\"ms\":{sw.ElapsedMilliseconds}}}",
+                $"{{\"url\":\"{request.TargetUrl}\",\"method\":\"{request.HttpMethod}\",\"status\":{(int)lastResponse.StatusCode},\"ms\":{sw.ElapsedMilliseconds},\"includeBody\":{(request.IncludeBody ? "true" : "false")}}}",
                 ct);
+
+            // Body bytes were already fetched (and size-capped) above regardless of IncludeBody, to
+            // compute the hash every response carries; only base64-encode and return them when asked.
+            string? bodyBase64 = request.IncludeBody && bodyBytes.Length > 0
+                ? Convert.ToBase64String(bodyBytes)
+                : null;
 
             return new ProxyHttpResponse(
                 request.RequestId,
@@ -280,7 +286,8 @@ public sealed class ProxyService : IProxyService
                 bodyBytes.Length,
                 currentUri.ToString(),
                 redirectHops,
-                sw.ElapsedMilliseconds);
+                sw.ElapsedMilliseconds,
+                bodyBase64);
         }
         finally
         {

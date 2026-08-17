@@ -3,6 +3,7 @@ using HackerOs.Server.Data;
 using HackerOs.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using System.Text;
 using Xunit;
 
 namespace HackerOs.Server.Tests;
@@ -165,6 +166,57 @@ public sealed class ProxyServiceTests : IDisposable
         Assert.Null(_connectionPin.Address);
     }
 
+    // ── Body transfer (ADR 0028 follow-up) ──────────────────────────────────
+
+    [Fact]
+    public async Task IncludeBody_False_NeverPopulatesBodyBase64_EvenWhenResponseHasContent()
+    {
+        _fakeHandler.ResponseBody = Encoding.UTF8.GetBytes("hello world");
+
+        var response = await _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+            BuildRequest("https://example.com/", includeBody: false), CancellationToken.None);
+
+        Assert.Null(response.BodyBase64);
+        Assert.NotNull(response.BodyHash);
+        Assert.Equal(11, response.BodyBytes);
+    }
+
+    [Fact]
+    public async Task IncludeBody_True_PopulatesBodyBase64_WithFetchedContent()
+    {
+        _fakeHandler.ResponseBody = Encoding.UTF8.GetBytes("hello world");
+
+        var response = await _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+            BuildRequest("https://example.com/", includeBody: true), CancellationToken.None);
+
+        Assert.NotNull(response.BodyBase64);
+        Assert.Equal("hello world", Encoding.UTF8.GetString(Convert.FromBase64String(response.BodyBase64)));
+    }
+
+    [Fact]
+    public async Task IncludeBody_True_EmptyResponse_BodyBase64StaysNull()
+    {
+        _fakeHandler.ResponseBody = [];
+
+        var response = await _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+            BuildRequest("https://example.com/", includeBody: true), CancellationToken.None);
+
+        Assert.Null(response.BodyBase64);
+    }
+
+    [Fact]
+    public async Task IncludeBody_True_StillEnforcesMaxResponseBytes()
+    {
+        // 11 MiB exceeds the proxy's 10 MiB cap regardless of whether the body is requested.
+        _fakeHandler.ResponseBody = new byte[11 * 1024 * 1024];
+
+        var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
+            _proxy.ExecuteHttpRequestAsync(AccountId, DeviceId,
+                BuildRequest("https://example.com/", includeBody: true), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.PayloadTooLarge, ex.ErrorCode);
+    }
+
     // ── TCP probe (ADR 0035) ────────────────────────────────────────────────
 
     [Fact]
@@ -255,7 +307,7 @@ public sealed class ProxyServiceTests : IDisposable
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
-    private static ProxyHttpRequest BuildRequest(string url) =>
+    private static ProxyHttpRequest BuildRequest(string url, bool includeBody = false) =>
         new(
             RequestId: Guid.NewGuid(),
             Protocol: ProxyProtocol.Http,
@@ -265,7 +317,8 @@ public sealed class ProxyServiceTests : IDisposable
             BodyHash: null,
             BodyBytes: 0,
             TimeoutSeconds: 10,
-            AppId: "org.hackeros.test");
+            AppId: "org.hackeros.test",
+            IncludeBody: includeBody);
 
     private static ProxyTcpProbeRequest BuildTcpProbeRequest(string host, int port) =>
         new(
@@ -302,6 +355,7 @@ public sealed class FakeHttpMessageHandler(IProxyConnectionPinAccessor connectio
 {
     public int SendCount { get; private set; }
     public IPAddress? ObservedPin { get; private set; }
+    public byte[] ResponseBody { get; set; } = [];
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
@@ -310,7 +364,7 @@ public sealed class FakeHttpMessageHandler(IProxyConnectionPinAccessor connectio
         ObservedPin = connectionPin.Address;
         return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
-            Content = new ByteArrayContent([])
+            Content = new ByteArrayContent(ResponseBody)
         });
     }
 }
