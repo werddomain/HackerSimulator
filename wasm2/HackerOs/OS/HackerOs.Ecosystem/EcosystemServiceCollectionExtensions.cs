@@ -28,6 +28,7 @@ using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Windowing.Core;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using HackerOs.Windowing.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
@@ -140,8 +141,12 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IServerConnectionRepository>(provider =>
             new IndexedDbServerConnectionRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<HttpClient>();
-        services.AddSingleton<IAccountClient, HttpAccountClient>();
-        services.AddSingleton<IProxyClient, HttpProxyClient>();
+        // TryAdd, not Add: the server-hosted host (ADR 0036) registers its own direct-injection
+        // implementations before calling this method, so it never gets the HTTP-backed defaults
+        // below. Both WASM hosts register nothing here first, so they get the same Http*Client
+        // defaults as before this change — zero behavior change for them.
+        services.TryAddSingleton<IAccountClient, HttpAccountClient>();
+        services.TryAddSingleton<IProxyClient, HttpProxyClient>();
         services.AddSingleton<IServerConnectionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -157,7 +162,7 @@ public static class EcosystemServiceCollectionExtensions
             new IndexedDbSyncCursorRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<ISyncRecordStateRepository>(provider =>
             new IndexedDbSyncRecordStateRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
-        services.AddSingleton<ISyncClient, HttpSyncClient>();
+        services.TryAddSingleton<ISyncClient, HttpSyncClient>();
         services.AddSingleton<ISettingsSyncService>(provider => new SettingsSyncService(
             CreateSystemSettingsDefinitions(),
             provider.GetRequiredService<ISettingsDocumentService>(),

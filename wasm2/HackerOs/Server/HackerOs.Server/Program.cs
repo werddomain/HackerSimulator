@@ -1,10 +1,12 @@
 using HackerOs.Ecosystem;
 using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
+using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Server;
 using HackerOs.Server.Components;
 using HackerOs.Server.Data;
 using HackerOs.Server.Endpoints;
+using HackerOs.Server.ServerConnection;
 using HackerOs.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -130,6 +132,14 @@ builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
 builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
     BuildKnownLazyApps.Catalog,
     provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
+
+// Direct-injection IAccountClient/IProxyClient/ISyncClient (ADR 0036) — registered before
+// AddHackerOsEcosystem below so its TryAddSingleton calls find these already present and skip
+// the Http*Client defaults. Calls IAccountService/ISyncService/IProxyService in-process instead
+// of looping back through this same process's own HTTP API.
+builder.Services.AddSingleton<IAccountClient, DirectAccountClient>();
+builder.Services.AddSingleton<IProxyClient, DirectProxyClient>();
+builder.Services.AddSingleton<ISyncClient, DirectSyncClient>();
 
 int serviceCountBeforeEcosystem = builder.Services.Count;
 builder.Services.AddHackerOsEcosystem(

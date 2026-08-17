@@ -18,6 +18,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Samples/HackerOs.Windowing.SampleHost/HackerOs.Windowing.SampleHost.csproj", "--urls", "http://127.0.0.1:5254"],
       "port": 5254
+    },
+    {
+      "name": "hackeros-server",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Server/HackerOs.Server/HackerOs.Server.csproj", "--urls", "http://127.0.0.1:5255"],
+      "port": 5255
     }
   ]
 }
