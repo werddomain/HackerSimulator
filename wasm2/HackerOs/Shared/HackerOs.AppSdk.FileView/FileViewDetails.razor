@@ -31,7 +31,7 @@
             <tr role="row"
                 @key="item.FullPath.Value"
                 data-item-path="@item.FullPath.Value"
-                class="@(item.IsSelected ? "selected" : null)"
+                class="entry-row @(item.IsSelected ? "selected" : null)"
                 tabindex="@(IsTabStop(item) ? 0 : -1)"
                 draggable="@(Owner.AllowDragDrop ? "true" : "false")"
                 @onclick="@(args => OnRowClick(item, args))"
