@@ -32,6 +32,11 @@ internal static class E2ESupport
             RedirectStandardError = true,
             CreateNoWindow = true
         };
+        // Without this, the child process defaults to the Production environment, which
+        // makes Program.cs take the UseHsts()/UseExceptionHandler() branch instead of
+        // UseWebAssemblyDebugging() — the harness never becomes reachable and the test
+        // hangs until NavigateWhenReadyAsync's retry budget is exhausted.
+        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         startInfo.ArgumentList.Add("run");
         startInfo.ArgumentList.Add("--configuration");
         startInfo.ArgumentList.Add("Release");

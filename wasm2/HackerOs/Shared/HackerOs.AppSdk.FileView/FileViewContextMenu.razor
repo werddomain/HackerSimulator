@@ -7,7 +7,15 @@
     IFileViewContextMenuProvider customization, per FileViewControl.md#context-menu-customization (FV-008).
 *@
 <MudMenu @ref="_menu" PositionAtCursor="true">
-    <ActivatorContent></ActivatorContent>
+    <ActivatorContent>
+        @* MudMenu's UserAttributes splat lands on the outer .mud-menu wrapper (a role-less div,
+           where aria-label would trip aria-prohibited-attr), not on the inner activator div
+           that actually carries role="button" — so the accessible name has to come from text
+           content inside ActivatorContent instead. This activator is a positioning anchor only
+           (PositionAtCursor, opened programmatically via OpenAsync from right-click handlers
+           elsewhere in FileView), never meant to be seen, hence the visually-hidden clip. *@
+        <span class="visually-hidden">File context menu</span>
+    </ActivatorContent>
     <ChildContent>
         @if (_currentItems is not null)
         {
