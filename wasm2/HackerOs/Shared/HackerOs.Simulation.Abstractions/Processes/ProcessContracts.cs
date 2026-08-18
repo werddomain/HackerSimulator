@@ -96,7 +96,13 @@ public enum ProcessExitReason
     DependencyStop,
 
     /// <summary>The process faulted.</summary>
-    Fault
+    Fault,
+
+    /// <summary>
+    /// The active UI platform changed (docs/mobile-interface-platform-plan.md §6.3, <c>MOB-008</c>) and
+    /// this UI instance does not carry over to the new shell.
+    /// </summary>
+    PlatformChanged
 }
 
 /// <summary>Reports the self-assessed health of a long-running <see cref="AppKind.Service"/> process.</summary>

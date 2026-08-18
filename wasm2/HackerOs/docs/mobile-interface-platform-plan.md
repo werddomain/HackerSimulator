@@ -2,8 +2,9 @@
 
 **Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
 résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shell
-Mobile — sous-tranche de Phase 2) faite le 2026-08-18 — voir §16 ; le reste
-(§14, `MOB-008` complet, `MOB-011` à `MOB-018`) reste à l’état de proposition  
+Mobile) et Phase 2b (`MOB-008`, changement de shell contrôlé — Phase 2 est donc
+close) faites le 2026-08-18 — voir §16 ; le reste (§14, `MOB-011` à `MOB-018`)
+reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
@@ -609,9 +610,21 @@ activé automatiquement.
   (`PlatformEnvironmentPolicy.Decide`, pur et testable sans navigateur) +
   `Platform/HackerOs.Platform.Blazor/Shell/BrowserPlatformEnvironmentProbe.cs`
   (interop JS minimal, `wwwroot/platformEnvironmentProbe.js`).
-- [ ] `MOB-008` Implémenter le changement contrôlé de shell et la raison d’arrêt
-  `PlatformChanged`. **Non commencé** — `MobileShell` (Phase 2a, `MOB-009`) existe
-  mais n’est pas encore atteignable depuis `UiPlatformPreferenceService`, voir §16.6.
+- [x] `MOB-008` Implémenter le changement contrôlé de shell et la raison d’arrêt
+  `PlatformChanged`. **Phase 2b, 2026-08-18 — tranche pragmatique, pas les 9
+  étapes littérales de §6.3** :
+  `Platform/HackerOs.Platform.Blazor/Shell/PlatformShellSwitchCoordinator.cs`
+  confirme chaque fenêtre ouverte via `WindowCloseGuardRegistry`, arrête son
+  instance avec `ProcessExitReason.PlatformChanged` (nouveau, dans
+  `Shared/HackerOs.Simulation.Abstractions`) puis ferme sa fenêtre, avant de
+  persister via `UiPlatformPreferenceService`. `ClockPanel.razor` route
+  désormais Auto/Desktop/Mobile par ce coordinateur plutôt que d’appeler
+  `UiPlatformPreferenceService` directement, pour confirmer *avant* de
+  persister (ordre exact de §6.3). `App.razor` s’abonne à
+  `UiPlatformPreferenceService.Changed` et rend `MobileShell` ou `DesktopShell`
+  selon `Current.ActivePlatform` — le changement de shell est donc réellement
+  en direct, sans reload, prouvé par un test E2E navigateur réel
+  (`PlatformShellSwitchTests.cs`). Détail des simplifications assumées en §16.7.
 - [x] `MOB-009` Créer le shell Mobile à surface unique plein écran. **Phase 2a,
   2026-08-18** — moteur : `Platform/HackerOs.Windowing.Core/SingleSurfacePresentationPolicy.cs`
   (logique pure : sélectionne la fenêtre principale, minimise les autres,
@@ -735,11 +748,12 @@ Phase 1 — Manifeste et résolution de point d’entrée [FAIT le 2026-08-18]
   MOB-002, MOB-003, MOB-004, MOB-005, MOB-014 (partiel : une app de référence)
   Dépend de : AppPlatformId (Phase 0, fait)
 
-Phase 2 — Shell Mobile et changement contrôlé [Phase 2a FAITE le 2026-08-18]
+Phase 2 — Shell Mobile et changement contrôlé [FAITE le 2026-08-18]
   Phase 2a (sous-tranche) : MOB-009, MOB-010 — voir §16.6. Spike de faisabilité
   (§16.2) confirmé additif, pas de restructuration du moteur.
-  Reste : MOB-008 (séquence complète en 9 étapes, Phase 0 n’a fait que la
-  persistance), MOB-011, MOB-012, MOB-013
+  Phase 2b (sous-tranche) : MOB-008, en version pragmatique — voir §16.7.
+  Reste hors Phase 2 : MOB-011, MOB-012, MOB-013 (pile de navigation, Recent,
+  IAppBackHandler — Back/Recent du MOB-010 restent des no-op en attendant)
   Dépend de : Phase 1 (les apps doivent déclarer un point d’entrée Mobile)
 
 Phase 3 — Clavier virtuel Terminal Mobile
@@ -797,10 +811,12 @@ fichier. Résumé des décisions de conception :
 
 ### 16.6 Ce que « Phase 2a » a livré
 
-Sous-tranche de Phase 2 couvrant `MOB-009` et `MOB-010` — pas encore `MOB-008`
-(changement de shell contrôlé), `MOB-011` (pile de navigation/Recent) ni
-`MOB-012` (`IAppBackHandler`). Voir `MOB-009`/`010` ci-dessus pour le détail
-fichier par fichier.
+Sous-tranche de Phase 2 couvrant `MOB-009` et `MOB-010`, livrée en isolation
+avant `MOB-008` (§16.7) — au moment de cette tranche, `MobileShell` n'était
+volontairement atteignable depuis aucune route réelle (voir dernier point
+ci-dessous, devenu obsolète depuis Phase 2b). `MOB-011` (pile de
+navigation/Recent) et `MOB-012` (`IAppBackHandler`) restent non faits. Voir
+`MOB-009`/`010` ci-dessus pour le détail fichier par fichier.
 
 - **Spike de faisabilité (§16.2) fait avant tout code** : le moteur fenêtres
   supporte déjà, sans restructuration, les deux mécanismes dont
@@ -838,21 +854,74 @@ fichier par fichier.
   disparaîtrait proprement quand absente.
 - **`MobileShell.razor` (`Platform/HackerOs.Platform.Blazor/Shell/`) compose
   `SingleSurfaceArea` + `MobileSystemNavigationBar`** exactement comme
-  `DesktopShell.razor` compose `DesktopArea` + `Taskbar` — mais n'est
-  **atteignable depuis aucune route ni service de démarrage réel**. Construit
-  et testé unitairement en isolation (build + tests directs sur
-  `WindowRuntime`), pas via un test navigateur, puisqu'il n'y a rien de réel à
-  charger dans un navigateur avant `MOB-008`. `MobileNavigationCommandsAdapter`
+  `DesktopShell.razor` compose `DesktopArea` + `Taskbar`. Au moment de la
+  livraison de Phase 2a, il n'était atteignable depuis aucune route ni service
+  de démarrage réel et n'était testé qu'unitairement (build + tests directs
+  sur `WindowRuntime`) — Phase 2b (§16.7) l'a rendu réellement atteignable et
+  ajoute la preuve E2E navigateur. `MobileNavigationCommandsAdapter`
   n'implémente réellement que `RequestHome` (masque la surface active via
-  Minimize, §7.4) ; `RequestBack`/`RequestRecent` sont des no-op documentés —
+  Minimize, §7.4) ; `RequestBack`/`RequestRecent` restent des no-op documentés —
   §7.3 accepte explicitement « ne rien faire » comme issue terminale valide en
   l'absence de pile de navigation/gestionnaire Back applicatif (`MOB-011`/`012`).
-- **Pourquoi `MOB-008` reste hors scope** : la séquence contrôlée en 9 étapes
-  de §6.3 (avertir les apps sales, arrêter les instances avec la raison
-  `PlatformChanged`, reconstruire le shell cible, réafficher Home...) a
-  maintenant un vrai `MobileShell` à reconstruire *vers*, ce qui la rend
-  faisable — mais reste un morceau de travail à part entière (gestion d'état
-  sale, arrêt/redémarrage de processus, ordre de re-résolution du launcher)
-  qui mérite sa propre tranche plutôt que d'être ajoutée en fin de cette
-  session.
+- **`MOB-008` a suivi immédiatement dans la même session, en Phase 2b** — voir
+  §16.7 pour le détail : `MobileShell` avait besoin d'exister avant que le
+  changement de shell contrôlé ait un sens, donc les deux tranches
+  s'enchaînaient naturellement plutôt que d'être séparées par un délai.
+
+### 16.7 Ce que « Phase 2b » (`MOB-008`) a livré
+
+Rend `MobileShell` réellement atteignable : sélectionner Mobile dans le
+panneau horloge bascule maintenant le shell rendu **en direct, sans reload**,
+et bascule en sens inverse depuis un contrôle placeholder posé sur
+`MobileShell` (voir dernier point ci-dessous). Prouvé par un test navigateur
+réel de bout en bout (`Tests/HackerOs.UI.E2E.Tests/PlatformShellSwitchTests.cs`),
+en plus des tests unitaires du coordinateur
+(`Tests/HackerOs.Platform.Blazor.Tests/Shell/PlatformShellSwitchCoordinatorTests.cs`,
+construits contre un vrai `AppLifecycleOrchestrator`/`WindowRuntime`, pas des
+doublures).
+
+- **`PlatformShellSwitchCoordinator`** (`Platform/HackerOs.Platform.Blazor/Shell/`)
+  implémente une version pragmatique de la séquence en 9 étapes de §6.3, pas
+  littérale point par point : pour chaque fenêtre ouverte, confirme via
+  `WindowCloseGuardRegistry.ConfirmCloseAsync` (étape 2) ; si tout accepte,
+  arrête l'instance propriétaire avec `ProcessExitReason.PlatformChanged`
+  (nouveau, étape 4) puis force la fermeture de la fenêtre (couvre l'étape 3 —
+  aucune opération de surface ne survit à l'arrêt de son instance) ; enfin
+  persiste le nouveau choix via `UiPlatformPreferenceService` (étape 6). Le
+  changement effectif de rendu (étape 7) et l'affichage résultant (étape 9)
+  sont la responsabilité d'`App.razor`, pas du coordinateur — voir plus bas.
+- **Ordre confirmation-avant-persistance respecté** : Phase 0 avait câblé
+  `ClockPanel.razor` pour appeler `UiPlatformPreferenceService.SetExplicitAsync`/
+  `ClearToAutoAsync` directement, ce qui aurait persisté le choix avant toute
+  confirmation. `ClockPanel.razor` appelle maintenant
+  `PlatformShellSwitchCoordinator.RequestExplicitAsync`/`RequestAutoAsync` à la
+  place ; si une fenêtre refuse la fermeture, rien n'est persisté et rien ne
+  change à l'écran (pas de message d'erreur ajouté — le guard de la fenêtre a
+  déjà dû afficher sa propre confirmation, même motif que
+  `WindowCloseCoordinator.CloseAsync`).
+- **`App.razor` devient le point de bascule réel** : il s'abonne désormais à
+  `UiPlatformPreferenceService.Changed` (déplacé depuis l'initialisation
+  paresseuse de `DesktopShell.OnInitialized`, maintenant appelée au boot de
+  l'application) et rend `<MobileShell />` ou `<DesktopShell />` dans le cas
+  `EcosystemHostView.Desktop` selon `Current.ActivePlatform`.
+- **Étape 5 (services compatibles) volontairement simplifiée** : aucun service
+  (`AppKind.Service`) n'est arrêté ni redémarré par ce coordinateur — tous les
+  services en cours restent actifs tels quels. Aucun service du dépôt ne
+  déclare aujourd'hui d'exigence de redémarrage liée à la plateforme ; ajouter
+  cette distinction reste un exercice mécanique pour une session future si un
+  tel service apparaît.
+- **Étape 8 (re-résolution launcher/associations/intents) toujours différée** —
+  la raison documentée en §16.5 reste valide : aucun manifeste embarqué ne
+  déclare de point d'entrée Mobile-only (seul l'exemple `HackerOs.Samples.PlatformApp`
+  déclare `platform.entryPoints`, partagé desktop+mobile), donc toute app qui
+  se lance aujourd'hui se lance identiquement quelle que soit la plateforme
+  active — lancer une app Desktop sur Mobile affiche simplement son UI Desktop
+  plein écran sans chrome, ce qui est un état honnête et attendu tant
+  qu'aucune app ne déclare de variante Mobile réelle.
+- **Contrôle placeholder « Switch to Desktop » sur `MobileShell`** : Mobile n'a
+  aucune surface de réglages (pas d'équivalent du panneau horloge Desktop),
+  donc sans ce bouton temporaire, basculer vers Mobile serait une impasse UI.
+  Documenté dans le code comme un remplaçant provisoire — un vrai point
+  d'entrée de réglages Mobile n'est pas un item `MOB-00x` du plan actuel et
+  reste à définir.
 

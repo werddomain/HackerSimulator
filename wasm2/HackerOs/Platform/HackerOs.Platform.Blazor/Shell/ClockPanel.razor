@@ -9,6 +9,7 @@
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject UiPlatformPreferenceService PlatformPreference
+@inject PlatformShellSwitchCoordinator PlatformSwitch
 
 <div class="clock-panel" role="dialog" aria-label="Notifications and calendar" @onkeydown="HandleKeyDownAsync">
     <section class="clock-panel-section" aria-label="Notifications">
@@ -179,9 +180,9 @@
         await Task.CompletedTask;
     }
 
-    private Task SetAutoAsync() => PlatformPreference.ClearToAutoAsync();
+    private Task SetAutoAsync() => PlatformSwitch.RequestAutoAsync();
 
-    private Task SetExplicitAsync(AppPlatformId platformId) => PlatformPreference.SetExplicitAsync(platformId);
+    private Task SetExplicitAsync(AppPlatformId platformId) => PlatformSwitch.RequestExplicitAsync(platformId);
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {

@@ -6,6 +6,7 @@
 @inject WindowRuntime WindowRuntime
 @inject AppLifecycleOrchestrator Orchestrator
 @inject WindowCloseGuardRegistry CloseGuards
+@inject PlatformShellSwitchCoordinator PlatformSwitch
 
 <div class="mobile-shell">
     <div class="mobile-shell-workspace">
@@ -30,6 +31,13 @@
                 }
             </WindowContent>
         </SingleSurfaceArea>
+        <button type="button"
+                class="mobile-shell-desktop-toggle"
+                aria-label="Switch to Desktop"
+                title="Switch to Desktop"
+                @onclick="SwitchToDesktopAsync">
+            Desktop
+        </button>
     </div>
 
     <MobileSystemNavigationBar Commands="_navigationCommands" />
@@ -37,15 +45,20 @@
 
 @code {
     /// <summary>
-    /// Mobile counterpart to <see cref="DesktopShell"/> (<c>MOB-009</c>/<c>MOB-010</c> scaffold): a
-    /// single full-screen surface plus the Android-inspired system navigation bar, built and
-    /// unit-testable in isolation. Not yet reachable from the running app — swapping this in for
-    /// <see cref="DesktopShell"/> when <c>UiPlatformPreferenceService</c>'s preference is Mobile is
-    /// the controlled shell-change sequence of plan §6.3 (<c>MOB-008</c>), which needs to warn
-    /// dirty apps, stop/restart instances with a typed reason, and reconstruct the shell tree —
-    /// none of which this component does on its own.
+    /// Mobile counterpart to <see cref="DesktopShell"/> (<c>MOB-008</c>/<c>MOB-009</c>/<c>MOB-010</c>):
+    /// a single full-screen surface plus the Android-inspired system navigation bar. Reachable from
+    /// the running app via <c>App.razor</c> once <c>UiPlatformPreferenceService.Current.ActivePlatform</c>
+    /// is Mobile.
     /// </summary>
     private MobileNavigationCommandsAdapter _navigationCommands = null!;
+
+    /// <summary>
+    /// Placeholder return-to-Desktop control. Mobile has no settings surface yet (no equivalent of
+    /// the Desktop clock panel's platform toggle), so without this a user who switches to Mobile
+    /// would have no way back through the UI. A proper Mobile settings entry point is future work,
+    /// not part of MOB-008/009/010.
+    /// </summary>
+    private Task SwitchToDesktopAsync() => PlatformSwitch.RequestExplicitAsync(WellKnownAppPlatforms.Desktop);
 
     /// <inheritdoc />
     protected override void OnInitialized()

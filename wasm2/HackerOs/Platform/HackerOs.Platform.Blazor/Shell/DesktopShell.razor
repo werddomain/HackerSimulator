@@ -21,7 +21,6 @@
 @inject IEventBus EventBus
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
-@inject UiPlatformPreferenceService PlatformPreference
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -277,14 +276,6 @@
         _clockPanel.Changed += Rerender;
         _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
         _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
-
-        _ = InitializePlatformPreferenceAsync();
-    }
-
-    private async Task InitializePlatformPreferenceAsync()
-    {
-        await PlatformPreference.InitializeAsync();
-        await InvokeAsync(StateHasChanged);
     }
 
     private void Rerender()

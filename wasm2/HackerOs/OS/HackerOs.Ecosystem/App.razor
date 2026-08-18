@@ -5,15 +5,18 @@
 @using HackerOs.Infrastructure.Browser.Recovery
 @using HackerOs.Platform.Blazor.Shell
 @using HackerOs.Platform.Core.Sessions
+@using HackerOs.Platform.Core.Shell
 @using HackerOs.Simulation.Abstractions.Recovery
 @using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.Platform.Blazor.Hosting
+@implements IDisposable
 @inject ILocalUserRepository UserRepository
 @inject ILocalGroupRepository GroupRepository
 @inject ISessionService SessionService
 @inject EcosystemBootCoordinator BootCoordinator
 @inject IEcosystemHostEnvironment HostEnvironment
 @inject WebCryptoPasswordHasher PasswordHasher
+@inject UiPlatformPreferenceService PlatformPreference
 
 <main class="ecosystem-host">
     <MudThemeProvider Theme="_theme" IsDarkMode="true" />
@@ -87,7 +90,14 @@
             <LoginProgressScreen />
             break;
         case EcosystemHostView.Desktop:
-            <DesktopShell OnLoggedOut="HandleLoggedOut" TestDemoEnabled="@TestDemoEnabled" />
+            @if (PlatformPreference.Current.ActivePlatform == WellKnownAppPlatforms.Mobile)
+            {
+                <MobileShell />
+            }
+            else
+            {
+                <DesktopShell OnLoggedOut="HandleLoggedOut" TestDemoEnabled="@TestDemoEnabled" />
+            }
             break;
         case EcosystemHostView.Recovery:
             <section class="recovery-surface" aria-labelledby="recovery-title">
@@ -182,7 +192,17 @@
     private string? FormError { get; set; }
     private bool IsSubmitting { get; set; }
 
-    protected override Task OnInitializedAsync() => InitializeAsync();
+    protected override Task OnInitializedAsync()
+    {
+        PlatformPreference.Changed += OnPlatformPreferenceChanged;
+        _ = PlatformPreference.InitializeAsync();
+        return InitializeAsync();
+    }
+
+    private void OnPlatformPreferenceChanged() => InvokeAsync(StateHasChanged);
+
+    /// <inheritdoc />
+    public void Dispose() => PlatformPreference.Changed -= OnPlatformPreferenceChanged;
 
     private async Task InitializeAsync()
     {

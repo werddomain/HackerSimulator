@@ -6,6 +6,21 @@
 }
 
 .mobile-shell-workspace {
+    position: relative;
     flex: 1;
     min-height: 0;
+}
+
+.mobile-shell-desktop-toggle {
+    position: absolute;
+    top: calc(0.5rem + env(safe-area-inset-top));
+    right: calc(0.5rem + env(safe-area-inset-right));
+    z-index: 1000;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #315249;
+    border-radius: 999px;
+    background: #0c1516;
+    color: #e7f7f1;
+    font-size: 0.75rem;
+    cursor: pointer;
 }

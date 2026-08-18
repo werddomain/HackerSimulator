@@ -7,14 +7,15 @@ namespace HackerOs.UI.E2E.Tests;
 public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
 {
     /// <summary>
-    /// End-to-end proof of the Phase 0 mobile-platform toggle location
-    /// (docs/mobile-interface-platform-plan.md Phase 0): clicking the taskbar clock opens a
-    /// panel whose Auto/Desktop/Mobile choice persists across a reload, while the Desktop shell's
-    /// own rendering stays unchanged — this phase is persistence-only, no real Mobile shell exists
-    /// yet.
+    /// End-to-end proof of the mobile-platform toggle location
+    /// (docs/mobile-interface-platform-plan.md §16.1) and, since <c>MOB-008</c>, that the choice
+    /// actually drives which shell renders: clicking the taskbar clock opens a panel whose
+    /// Auto/Desktop/Mobile choice persists across a reload, and after reload the Mobile shell (its
+    /// Back/Home/Recent system navigation bar, not the Desktop taskbar/App launcher) is what's
+    /// reached.
     /// </summary>
     [Fact]
-    public async Task Clock_panel_opens_and_the_mobile_choice_persists_across_reload_without_changing_the_desktop_shell()
+    public async Task Clock_panel_opens_and_the_mobile_choice_persists_across_reload_into_the_mobile_shell()
     {
         string solutionDirectory = E2ESupport.FindSolutionDirectory();
         int port = E2ESupport.ReservePort();
@@ -43,9 +44,13 @@ public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
 
             ILocator mobileOption = panel.GetByRole(AriaRole.Radio, new() { Name = "Mobile" });
             await mobileOption.ClickAsync();
-            await Assertions.Expect(mobileOption).ToHaveAttributeAsync("aria-checked", "true");
             output.WriteLine("[test] selected explicit Mobile platform preference.");
 
+            // Selecting Mobile now drives an immediate, live shell swap (MOB-008) — the panel and
+            // the whole Desktop shell it belongs to are torn down as part of that swap, so nothing
+            // further is asserted about the panel itself here; PlatformShellSwitchTests covers the
+            // live (no-reload) swap directly. This test's own focus is that the choice survives a
+            // reload into the same Mobile shell.
             await page.ReloadAsync();
 
             // The local profile persists across reload, but the session does not — reload lands
@@ -55,16 +60,14 @@ public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
             await passwordField.FillAsync(E2ESupport.Password);
             await page.GetByRole(AriaRole.Button, new() { Name = "Start session" }).ClickAsync();
 
-            ILocator appLauncherAfterReload = page.GetByRole(AriaRole.Button, new() { Name = "App launcher" });
-            await appLauncherAfterReload.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
-            output.WriteLine("[test] desktop shell reached the same App launcher after reload — no Mobile shell swap.");
-
-            await page.GetByRole(AriaRole.Button, new() { Name = "System clock, notifications, and calendar" }).ClickAsync();
-            ILocator mobileOptionAfterReload = page
-                .GetByRole(AriaRole.Dialog, new() { Name = "Notifications and calendar" })
-                .GetByRole(AriaRole.Radio, new() { Name = "Mobile" });
-            await Assertions.Expect(mobileOptionAfterReload).ToHaveAttributeAsync("aria-checked", "true", new() { Timeout = 15000 });
-            output.WriteLine("[test] explicit Mobile preference survived the reload.");
+            // The persisted Mobile preference now drives the actual shell (MOB-008): the Desktop
+            // taskbar/App launcher is gone, replaced by the Mobile system navigation bar.
+            ILocator backButton = page.GetByRole(AriaRole.Button, new() { Name = "Back" });
+            await backButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Home" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Recent" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "App launcher" })).ToHaveCountAsync(0);
+            output.WriteLine("[test] Mobile shell reached after reload — system navigation bar visible, Desktop taskbar gone.");
 
             Assert.Empty(consoleErrors);
         }

@@ -370,6 +370,9 @@ public static class EcosystemServiceCollectionExtensions
         // Depends on IPlatformEnvironmentProbe, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
+        // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see
+        // above) — see this file's IJSRuntime scoping note.
+        services.AddScoped<PlatformShellSwitchCoordinator>();
 
         return services;
     }
