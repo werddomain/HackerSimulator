@@ -28,6 +28,14 @@
     "dialogs.file-save",
     "dialogs.folder-select"
   ],
+  "fileHandlers": [
+    {
+      "mediaType": "inode/directory",
+      "extensions": [],
+      "actions": ["open"],
+      "priority": 0
+    }
+  ],
   "resources": {
     "baselineCpuWeight": 0.05,
     "burstCpuWeight": 0.2,

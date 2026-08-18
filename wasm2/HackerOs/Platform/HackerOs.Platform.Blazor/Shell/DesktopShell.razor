@@ -26,6 +26,7 @@
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
         <DesktopArea Windows="WindowRuntime.Windows"
+                     BackgroundContent="BackgroundContent"
                      OnFocus="HandleFocus"
                      OnMinimize="HandleMinimize"
                      OnToggleMaximize="HandleToggleMaximize"
@@ -101,6 +102,14 @@
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets optional content forwarded unchanged to <see cref="DesktopArea.BackgroundContent"/>
+    /// (`INT-012`) — this shell doesn't need to know what the content is, only that a future composition
+    /// root may want to supply some.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? BackgroundContent { get; set; }
 
     /// <summary>
     /// Shows the E2E-only "Test Demo" fixture-seeding control. Must only ever be set

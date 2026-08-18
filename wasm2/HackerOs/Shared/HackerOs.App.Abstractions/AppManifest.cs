@@ -41,8 +41,20 @@ public sealed record AppManifest
     /// <summary>Gets localized label/help resource files keyed by culture.</summary>
     public IReadOnlyList<LocalizationManifest> Localizations { get; init; } = [];
 
-    /// <summary>Gets the capabilities requested by the app.</summary>
+    /// <summary>
+    /// Gets the capabilities requested by the app — either a fixed OS-catalog identifier
+    /// (<see cref="AppCapabilities"/>) or an app-declared topic permission (<see cref="TopicPermissions"/>)
+    /// exported by another installed app's <see cref="DeclaredTopicPermissions"/>.
+    /// </summary>
     public IReadOnlyList<string> Capabilities { get; init; } = [];
+
+    /// <summary>
+    /// Gets the custom topic permissions this app declares and exports, gating its own shared messaging
+    /// channels. Purely optional per <c>docs/adr/0040-declared-topic-permissions.md</c> — most apps
+    /// declare none and rely on the default owner-only/open channel access instead. Every identifier must
+    /// be rooted under this app's own topic namespace.
+    /// </summary>
+    public IReadOnlyList<TopicPermissionDeclarationManifest> DeclaredTopicPermissions { get; init; } = [];
 
     /// <summary>Gets the estimated simulation resource weights the app requests.</summary>
     public required AppResourceProfileManifest Resources { get; init; }
@@ -125,6 +137,19 @@ public sealed record FileHandlerManifest(
     IReadOnlyList<string> Extensions,
     IReadOnlyList<string> Actions,
     int Priority = 0);
+
+/// <summary>
+/// Declares one custom permission an app exports, gating a shared messaging channel it owns. The
+/// <see cref="Id"/> must be a well-formed topic-permission identifier
+/// (<see cref="HackerOs.App.Abstractions.TopicPermissions.IsWellFormed"/>) rooted under the declaring
+/// app's own topic namespace — produced by a
+/// <c>HackerOs.Simulation.Abstractions.Events.TopicName</c>'s <c>ToPublishPermission()</c>/
+/// <c>ToSubscribePermission()</c> extension, never hand-typed. See
+/// <c>docs/adr/0040-declared-topic-permissions.md</c>.
+/// </summary>
+/// <param name="Id">Well-formed topic-permission capability identifier.</param>
+/// <param name="Description">Human-readable description, shown when a requesting app's grant is approved.</param>
+public sealed record TopicPermissionDeclarationManifest(string Id, string Description);
 
 /// <summary>
 /// Describes a command provided by a terminal application.

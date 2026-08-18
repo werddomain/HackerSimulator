@@ -24,8 +24,16 @@ public static class FileAssociationSettingsDocuments
     /// <summary>Gets the registered virtual path of the protected file-association document.</summary>
     public static VirtualPath Path { get; } = VirtualPath.Parse("/etc/hackeros/file-associations.json");
 
-    /// <summary>Gets the clean-profile empty document content.</summary>
-    public const string EmptyDocumentContent = "{\"schemaVersion\":1,\"associations\":[]}";
+    /// <summary>
+    /// Gets the clean-profile default document content — despite the name (kept for parity with
+    /// <c>AppearanceSettingsDocuments.EmptyDocumentContent</c>, which is likewise not literally empty),
+    /// this seeds <c>org.hackeros.file-explorer</c> as the protected default handler for
+    /// <c>inode/directory</c> (`INT-009`), so directory-open intents resolve to a
+    /// <see cref="FileHandlerResolutionStatus.ConfiguredDefault"/> out of the box instead of
+    /// falling through to <see cref="FileHandlerResolutionStatus.SoleCandidate"/>/chooser logic.
+    /// </summary>
+    public const string EmptyDocumentContent =
+        "{\"schemaVersion\":1,\"associations\":[{\"mediaType\":\"inode/directory\",\"appId\":\"org.hackeros.file-explorer\",\"actions\":[\"open\"]}]}";
 
     /// <summary>Creates the clean-profile document definition for a settings service registration.</summary>
     /// <returns>

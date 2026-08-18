@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -31,7 +32,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppDiagnosticsGateway diagnostics,
         IAppClockGateway clock,
         IAppProcessGateway processes,
-        IAppIntentGateway intents)
+        IAppIntentGateway intents,
+        IAppFileSystemWatchGateway watch)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -52,6 +54,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Processes = processes ?? throw new ArgumentNullException(nameof(processes));
         Intents = intents ?? throw new ArgumentNullException(nameof(intents));
+        Watch = watch ?? throw new ArgumentNullException(nameof(watch));
     }
 
     /// <inheritdoc />
@@ -107,4 +110,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppIntentGateway Intents { get; }
+
+    /// <inheritdoc />
+    public IAppFileSystemWatchGateway Watch { get; }
 }

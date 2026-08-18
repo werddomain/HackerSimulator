@@ -1,7 +1,9 @@
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
@@ -288,6 +290,7 @@ public sealed class FileSystemContractSuiteTests
             router,
             new FileSystemPathResolver(router),
             new FileSystemAuthorizer(),
+            new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
             fixture.NextTransactionId);
         FileSystemAuthorizationContext admin = fixture.AdminContext;
 
@@ -346,6 +349,7 @@ public sealed class FileSystemContractSuiteTests
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
                 NextTransactionId);
             Seeder = new FileSystemSeeder(Service, TimeProvider);
             AliceContext = Context("alice", AppAuthority.User);

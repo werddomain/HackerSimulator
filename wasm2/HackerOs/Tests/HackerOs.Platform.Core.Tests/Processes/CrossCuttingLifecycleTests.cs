@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Time;
@@ -118,6 +119,7 @@ public sealed class CrossCuttingLifecycleTests
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => _now)),
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             FileSystemSeeder seeder = new(fileSystem, timeProvider);
 

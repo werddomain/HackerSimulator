@@ -28,6 +28,29 @@ process creation (`exec`) from request routing (a shell, `xdg-open`, or
   `/etc/hackeros/file-associations.json` settings document (never a duplicate
   registry) plus enabled Window manifests' declared `FileHandlers`.
 
+### The `inode/directory` convention
+
+Directory-open intents (e.g. "open this folder in a new window") reuse the exact same `OpenFileIntent` →
+`FileAssociationResolver` → `FileHandlerManifest` pipeline as regular file opens, rather than a parallel
+mechanism — the Unix precedent for `inode/directory` as the media type of a directory. There is nothing
+directory-specific in `FileAssociationResolver`/`FileAssociationIndex`: `MatchesTarget` already falls
+through to its media-type branch whenever a path has no extension (which every directory path naturally
+doesn't), so a `FileHandlerManifest(MediaType: "inode/directory", Extensions: [], Actions: ["open"])`
+resolves through the identical explicit-target/configured-default/sole-candidate/chooser-required
+precedence as any other handler — see `FileAssociationResolverTests.cs`'s `INT-007` tests.
+
+- **Caller side:** `FileView.ActivateItemAsync` (Shared/HackerOs.AppSdk.FileView) sends
+  `IAppIntentGateway.OpenFileAsync(path, mediaType: "inode/directory")` when
+  `FolderActivation == NewWindow` — the one call site in the codebase that opts a directory into this path
+  today.
+- **Handler side:** `org.hackeros.file-explorer`'s manifest declares
+  `fileHandlers: [{ "mediaType": "inode/directory", "extensions": [], "actions": ["open"] }]`, and
+  `FileAssociationSettingsDocuments.EmptyDocumentContent` seeds it as the protected configured default for
+  `inode/directory`, so a fresh install resolves `ConfiguredDefault` → `org.hackeros.file-explorer` out of
+  the box instead of falling through to sole-candidate/chooser logic — see
+  `AppIntentDispatcherTests.Open_file_intent_for_a_directory_resolves_org_hackeros_file_explorer_as_the_seeded_default_and_launches_it`
+  for the full dispatcher-level proof.
+
 ## Architecture
 
 ```mermaid
@@ -85,11 +108,13 @@ graph TD
   entry-point fault, dependency-cascade disable.
 - `Tests/HackerOs.Platform.Core.Tests/Intents/FileAssociationResolverTests.cs` —
   explicit target (valid/invalid/disabled), configured default, sole candidate,
-  chooser-required, no-handler.
+  chooser-required, no-handler; plus the `inode/directory` convention
+  (`INT-007`) across the same four outcomes.
 - `Tests/HackerOs.Platform.Core.Tests/Intents/AppIntentDispatcherTests.cs` —
   capability-gated launch, execute-command by name/alias/unknown, open-file
   sole-candidate and chooser-required, reveal-file/show-settings no-capability
-  paths.
+  paths, plus a directory-open intent resolving `org.hackeros.file-explorer` as
+  the seeded configured default and launching it end-to-end.
 
 ## Task list
 
