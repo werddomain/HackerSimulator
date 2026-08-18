@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <Import Project="..\Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>HackerOs.MobileShell.Blazor</PackageId>
+    <Description>Mobile shell chrome Razor components driven entirely by host-supplied contracts, starting with the Android-inspired Back/Home/Recent system navigation bar. Mobile has no taskbar, so this is a sibling package to HackerOs.Taskbar.Blazor rather than a modification of it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+  </ItemGroup>
+
+</Project>

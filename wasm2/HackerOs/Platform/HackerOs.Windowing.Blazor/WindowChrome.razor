@@ -4,7 +4,7 @@
 @inject IJSRuntime JSRuntime
 
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
-<header class="window-chrome" data-window-gesture="move">
+<header class="window-chrome" data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
     <div class="window-identity">
         @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
         {
@@ -41,9 +41,12 @@
         </button>
     </div>
 </header>
-@foreach (string edge in ResizeEdges)
+@if (Window.Constraints.IsResizable)
 {
-    <span class="resize-handle resize-@edge" data-window-gesture="resize" data-resize-edge="@edge" aria-hidden="true"></span>
+    @foreach (string edge in ResizeEdges)
+    {
+        <span class="resize-handle resize-@edge" data-window-gesture="resize" data-resize-edge="@edge" aria-hidden="true"></span>
+    }
 }
 </div>
 
@@ -140,10 +143,26 @@
         await OnFocus.InvokeAsync(gestureWindowId);
         if (string.Equals(mode, "move", StringComparison.Ordinal))
         {
+            if (!Window.Constraints.IsMovable)
+            {
+                // Defense in depth: the header omits data-window-gesture="move" for a pinned
+                // window, but a drag already in flight when constraints change should no-op
+                // rather than reach WindowRuntime.Move, which throws for this case.
+                return;
+            }
+
             await OnGesture.InvokeAsync(new MoveWindowCommand(
                 gestureWindowId,
                 origin.X + deltaX,
                 origin.Y + deltaY));
+            return;
+        }
+
+        if (!Window.Constraints.IsResizable)
+        {
+            // Defense in depth: the resize handles are hidden for a non-resizable window, but a
+            // drag gesture already in flight when constraints change should still no-op rather
+            // than reach WindowRuntime.Resize, which throws for this case.
             return;
         }
 

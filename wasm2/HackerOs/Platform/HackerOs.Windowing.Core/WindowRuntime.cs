@@ -105,6 +105,11 @@ public sealed class WindowRuntime
     private IReadOnlyList<WindowEvent> Move(MoveWindowCommand command)
     {
         WindowRuntimeState current = RequireNormal(command.WindowId);
+        if (!current.Constraints.IsMovable)
+        {
+            throw new InvalidOperationException("This window is not movable.");
+        }
+
         WindowBounds bounds = Constrain(
             new WindowBounds(command.X, command.Y, current.Bounds.Width, current.Bounds.Height),
             current.Constraints);

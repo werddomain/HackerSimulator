@@ -1,0 +1,9 @@
+.single-surface-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    color: var(--hackeros-window-text, #e7f7f1);
+    background: #07100f;
+    isolation: isolate;
+}

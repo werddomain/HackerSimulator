@@ -1,8 +1,9 @@
 # Plan de plateforme et d’interface Mobile
 
 **Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
-résolution de point d’entrée) faite le 2026-08-18 — voir §16 ; le reste (§14,
-`MOB-008` à `MOB-018`) reste à l’état de proposition  
+résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shell
+Mobile — sous-tranche de Phase 2) faite le 2026-08-18 — voir §16 ; le reste
+(§14, `MOB-008` complet, `MOB-011` à `MOB-018`) reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
@@ -609,9 +610,26 @@ activé automatiquement.
   `Platform/HackerOs.Platform.Blazor/Shell/BrowserPlatformEnvironmentProbe.cs`
   (interop JS minimal, `wwwroot/platformEnvironmentProbe.js`).
 - [ ] `MOB-008` Implémenter le changement contrôlé de shell et la raison d’arrêt
-  `PlatformChanged`.
-- [ ] `MOB-009` Créer le shell Mobile à surface unique plein écran.
-- [ ] `MOB-010` Créer `MobileSystemNavigationBar.razor/.css` avec Back/Home/Recent.
+  `PlatformChanged`. **Non commencé** — `MobileShell` (Phase 2a, `MOB-009`) existe
+  mais n’est pas encore atteignable depuis `UiPlatformPreferenceService`, voir §16.6.
+- [x] `MOB-009` Créer le shell Mobile à surface unique plein écran. **Phase 2a,
+  2026-08-18** — moteur : `Platform/HackerOs.Windowing.Core/SingleSurfacePresentationPolicy.cs`
+  (logique pure : sélectionne la fenêtre principale, minimise les autres,
+  réutilise Maximize pour remplir la zone de travail) +
+  `WindowConstraints.IsMovable` (nouveau, appliqué par `WindowRuntime.Move`,
+  défense en profondeur). Blazor : `Platform/HackerOs.Windowing.Blazor/SingleSurfaceArea.razor`
+  (réutilise `WindowHost` avec son nouveau paramètre `ShowChrome=false`) +
+  `Platform/HackerOs.Platform.Blazor/Shell/MobileShell.razor` (compose la
+  surface unique et la barre système). En corrigeant un bug latent découvert
+  pendant le spike de faisabilité (`WindowChrome` ignorait déjà `IsResizable`
+  pour les dialogues de fichiers non redimensionnables), voir §16.6.
+- [x] `MOB-010` Créer `MobileSystemNavigationBar.razor/.css` avec Back/Home/Recent.
+  **Phase 2a, 2026-08-18** — nouveau package `Platform/HackerOs.MobileShell.Blazor/`
+  (frère de `HackerOs.Taskbar.Blazor`, comme prévu en §16.2), contrat
+  `IMobileNavigationCommands`. `Back`/`Recent` sont des no-op documentés tant
+  que `MOB-011`/`MOB-012` n’existent pas ; `Home` masque la surface active via
+  Minimize sans terminer le processus (§7.4), implémenté dans
+  `MobileNavigationCommandsAdapter`.
 - [ ] `MOB-011` Implémenter la pile de navigation et la surface Recent.
 - [ ] `MOB-012` Ajouter `IAppBackHandler`, ses événements et la validation de
   manifeste.
@@ -717,10 +735,11 @@ Phase 1 — Manifeste et résolution de point d’entrée [FAIT le 2026-08-18]
   MOB-002, MOB-003, MOB-004, MOB-005, MOB-014 (partiel : une app de référence)
   Dépend de : AppPlatformId (Phase 0, fait)
 
-Phase 2 — Shell Mobile et changement contrôlé
-  MOB-008 (séquence complète en 9 étapes, Phase 0 n’a fait que la persistance)
-  MOB-009 ⚠ (voir §16.2 — spike de faisabilité requis avant chiffrage détaillé)
-  MOB-010, MOB-011, MOB-012, MOB-013
+Phase 2 — Shell Mobile et changement contrôlé [Phase 2a FAITE le 2026-08-18]
+  Phase 2a (sous-tranche) : MOB-009, MOB-010 — voir §16.6. Spike de faisabilité
+  (§16.2) confirmé additif, pas de restructuration du moteur.
+  Reste : MOB-008 (séquence complète en 9 étapes, Phase 0 n’a fait que la
+  persistance), MOB-011, MOB-012, MOB-013
   Dépend de : Phase 1 (les apps doivent déclarer un point d’entrée Mobile)
 
 Phase 3 — Clavier virtuel Terminal Mobile
@@ -775,4 +794,65 @@ fichier. Résumé des décisions de conception :
   code de shell — Phase 1 ne fait qu'enregistrer les descripteurs Desktop et
   Mobile ; leur premier vrai consommateur sera le shell Mobile de `MOB-009`/
   `MOB-010` (Phase 2).
+
+### 16.6 Ce que « Phase 2a » a livré
+
+Sous-tranche de Phase 2 couvrant `MOB-009` et `MOB-010` — pas encore `MOB-008`
+(changement de shell contrôlé), `MOB-011` (pile de navigation/Recent) ni
+`MOB-012` (`IAppBackHandler`). Voir `MOB-009`/`010` ci-dessus pour le détail
+fichier par fichier.
+
+- **Spike de faisabilité (§16.2) fait avant tout code** : le moteur fenêtres
+  supporte déjà, sans restructuration, les deux mécanismes dont
+  `SingleFullScreenSurface` a besoin — `Maximized` remplit exactement la zone
+  de travail suivie par `WindowRuntime`, et `Minimized` cache déjà une fenêtre
+  de bout en bout (moteur + rendu). `MOB-009` réutilise les deux plutôt que de
+  recalculer une géométrie ou un mécanisme de visibilité séparés.
+- **Bug latent corrigé en amont** : le spike a découvert que `WindowChrome`
+  affichait ses poignées de redimensionnement sans vérifier
+  `Constraints.IsResizable`, et que `DesktopShell.HandleGesture` n'avait aucun
+  `try/catch` autour de `WindowRuntime.Apply` — un vrai bug (pas seulement
+  latent : les dialogues de fichiers créent déjà des fenêtres
+  `isResizable:false` via `FileDialogWindowAdapter.cs`) qui aurait levé une
+  `InvalidOperationException` non gérée au premier redimensionnement tenté
+  d'un dialogue de fichier. Corrigé avant le reste de `MOB-009` pour ne pas
+  bâtir sur un mécanisme de contraintes déjà cassé.
+- **`WindowConstraints.IsMovable`** (nouveau, défaut `true`) ajouté en défense
+  en profondeur aux côtés de `IsResizable` — le moteur n'avait aucun concept
+  d'« impossible à déplacer » avant Phase 2a ; `WindowRuntime.Move` lève
+  maintenant la même exception que `Resize` pour une fenêtre épinglée.
+- **`SingleSurfaceArea` (Blazor) reste dans `HackerOs.Windowing.Core`/`.Blazor`**,
+  pas dans un package Mobile-only, parce que le comportement « une seule
+  surface visible à la fois » est un mode de présentation générique du moteur
+  de fenêtrage (au même titre que le mode flottant), même si Mobile en est le
+  premier consommateur — cohérent avec la note §16.2 qui plaçait déjà
+  `SingleFullScreenSurface` dans `HackerOs.Windowing.Core`/`WindowRuntime`.
+  `WindowHost` gagne un paramètre `ShowChrome` (`true` par défaut, donc aucun
+  changement de comportement pour `DesktopArea`) plutôt qu'un nouveau
+  composant dupliqué.
+- **`HackerOs.MobileShell.Blazor` est un nouveau package frère de
+  `HackerOs.Taskbar.Blazor`**, pas une modification de celui-ci, exactement
+  comme anticipé en §16.2 — Mobile n'a pas de taskbar. Contrairement aux
+  contrats du taskbar (tous optionnels), `MobileSystemNavigationBar.Commands`
+  est requis : la barre système n'a pas d'équivalent Desktop où elle
+  disparaîtrait proprement quand absente.
+- **`MobileShell.razor` (`Platform/HackerOs.Platform.Blazor/Shell/`) compose
+  `SingleSurfaceArea` + `MobileSystemNavigationBar`** exactement comme
+  `DesktopShell.razor` compose `DesktopArea` + `Taskbar` — mais n'est
+  **atteignable depuis aucune route ni service de démarrage réel**. Construit
+  et testé unitairement en isolation (build + tests directs sur
+  `WindowRuntime`), pas via un test navigateur, puisqu'il n'y a rien de réel à
+  charger dans un navigateur avant `MOB-008`. `MobileNavigationCommandsAdapter`
+  n'implémente réellement que `RequestHome` (masque la surface active via
+  Minimize, §7.4) ; `RequestBack`/`RequestRecent` sont des no-op documentés —
+  §7.3 accepte explicitement « ne rien faire » comme issue terminale valide en
+  l'absence de pile de navigation/gestionnaire Back applicatif (`MOB-011`/`012`).
+- **Pourquoi `MOB-008` reste hors scope** : la séquence contrôlée en 9 étapes
+  de §6.3 (avertir les apps sales, arrêter les instances avec la raison
+  `PlatformChanged`, reconstruire le shell cible, réafficher Home...) a
+  maintenant un vrai `MobileShell` à reconstruire *vers*, ce qui la rend
+  faisable — mais reste un morceau de travail à part entière (gestion d'état
+  sale, arrêt/redémarrage de processus, ordre de re-résolution du launcher)
+  qui mérite sa propre tranche plutôt que d'être ajoutée en fin de cette
+  session.
 

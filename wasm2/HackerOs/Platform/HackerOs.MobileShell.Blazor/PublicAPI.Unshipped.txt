@@ -1,0 +1,22 @@
+#nullable enable
+HackerOs.MobileShell.Blazor.IMobileNavigationCommands
+HackerOs.MobileShell.Blazor.IMobileNavigationCommands.RequestBack() -> void
+HackerOs.MobileShell.Blazor.IMobileNavigationCommands.RequestHome() -> void
+HackerOs.MobileShell.Blazor.IMobileNavigationCommands.RequestRecent() -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.Commands.get -> HackerOs.MobileShell.Blazor.IMobileNavigationCommands!
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.Commands.set -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.MobileSystemNavigationBar() -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.Options.get -> HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions!
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.Options.set -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.BackLabel.get -> string!
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.BackLabel.init -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.HomeLabel.get -> string!
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.HomeLabel.init -> void
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.RecentLabel.get -> string!
+HackerOs.MobileShell.Blazor.MobileSystemNavigationBarOptions.RecentLabel.init -> void
+HackerOs.MobileShell.Blazor._Imports
+HackerOs.MobileShell.Blazor._Imports.Execute() -> void
+HackerOs.MobileShell.Blazor._Imports._Imports() -> void
+~override HackerOs.MobileShell.Blazor.MobileSystemNavigationBar.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

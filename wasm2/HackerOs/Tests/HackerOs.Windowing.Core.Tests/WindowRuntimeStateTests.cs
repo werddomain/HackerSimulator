@@ -53,6 +53,22 @@ public sealed class WindowRuntimeStateTests
     }
 
     [Fact]
+    public void Constraints_isMovable_defaults_to_true_for_source_compatibility()
+    {
+        WindowConstraints constraints = new(true, 320, 240);
+
+        Assert.True(constraints.IsMovable);
+    }
+
+    [Fact]
+    public void Constraints_isMovable_can_be_pinned_false()
+    {
+        WindowConstraints constraints = new(true, 320, 240, isMovable: false);
+
+        Assert.False(constraints.IsMovable);
+    }
+
+    [Fact]
     public void Owner_modal_window_requires_a_distinct_owner()
     {
         WindowId id = WindowId.FromGuid(Guid.NewGuid());

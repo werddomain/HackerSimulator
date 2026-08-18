@@ -213,7 +213,21 @@
             cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken));
         StateHasChanged();
     }
-    private void HandleGesture(WindowCommand command) => WindowRuntime.Apply(command);
+    private void HandleGesture(WindowCommand command)
+    {
+        try
+        {
+            WindowRuntime.Apply(command);
+        }
+        catch (InvalidOperationException)
+        {
+            // Defense in depth against a stray gesture command that no longer matches window
+            // state (e.g. a resize in flight for a window that just became non-resizable, or a
+            // move/resize racing a minimize/close). WindowChrome already guards the common cases;
+            // this keeps the shell responsive instead of raising an unhandled exception through
+            // the render loop for a display-only pointer gesture.
+        }
+    }
 
     private async Task RunTestDemoAsync()
     {

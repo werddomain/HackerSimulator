@@ -69,12 +69,12 @@ avant et après ce lot de travail ; n'affecte aucun test lié aux
 fenêtres/taskbar. Laissé pour un futur passage sur le sujet IndexedDB backup/
 recovery plutôt que traité ici.
 
-## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`) — Phases 0 et 1 faites, 2026-08-18
+## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`) — Phases 0, 1 et 2a faites, 2026-08-18
 
 `MOB-001`, `MOB-006` (tranche persistance), `MOB-007` (Phase 0), puis
-`MOB-002`, `MOB-003`, `MOB-004`, `MOB-005`, `MOB-014` (partiel, Phase 1) sont
-faits — voir `mobile-interface-platform-plan.md` §14/§16 pour le détail
-fichier par fichier.
+`MOB-002`, `MOB-003`, `MOB-004`, `MOB-005`, `MOB-014` (partiel, Phase 1), puis
+`MOB-009`, `MOB-010` (Phase 2a, sous-tranche de Phase 2) sont faits — voir
+`mobile-interface-platform-plan.md` §14/§16 pour le détail fichier par fichier.
 
 Phase 0 : le taskbar expose un point d'ancrage générique
 (`ITaskbarClockPanelSource` + `RenderFragment ClockPanelContent`) ouvert en
@@ -95,6 +95,18 @@ préférence de plateforme *active* est volontairement reporté à `MOB-008`
 qu'un utilisateur bascule le toggle Mobile de Phase 0, sans shell Mobile pour
 les reprendre. `MOB-008` à `MOB-018` restent à faire, reséquencés en phases
 dans `mobile-interface-platform-plan.md` §16.4/§16.5.
+
+Phase 2a (sous-tranche de Phase 2, après le spike de faisabilité §16.2) : le
+moteur de fenêtrage gagne un mode de présentation « surface unique plein
+écran » réutilisant les mécanismes Maximize/Minimize existants
+(`SingleSurfacePresentationPolicy`, `WindowHost.ShowChrome`,
+`SingleSurfaceArea`), et un nouveau package `HackerOs.MobileShell.Blazor`
+(frère de `HackerOs.Taskbar.Blazor`) fournit `MobileSystemNavigationBar`
+(Back/Home/Recent). `MobileShell.razor` compose les deux mais n'est câblé
+nulle part — la bascule de shell contrôlée reste `MOB-008`. En bonus, un vrai
+bug latent a été corrigé au passage : `WindowChrome` ignorait déjà
+`Constraints.IsResizable` (les dialogues de fichiers non redimensionnables en
+étaient déjà affectés). `MOB-008`, `MOB-011` à `MOB-018` restent à faire.
 
 Le document d'extraction fenêtres/taskbar référence déjà ce plan comme risque
 à éviter ("Rupture mobile : ne pas figer dans le moteur des hypothèses

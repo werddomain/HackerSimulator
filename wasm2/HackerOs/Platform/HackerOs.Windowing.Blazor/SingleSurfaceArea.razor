@@ -1,0 +1,91 @@
+@namespace HackerOs.Windowing.Blazor
+@using HackerOs.Windowing.Core
+
+<main class="single-surface-area" aria-label="Application surface">
+    @if (Primary is not null)
+    {
+        <WindowHost @key="Primary.Id"
+                    Window="Primary"
+                    ShowChrome="false"
+                    IsInteractionBlocked="false"
+                    OnFocus="OnFocus"
+                    OnMinimize="OnMinimize"
+                    OnToggleMaximize="OnToggleMaximize"
+                    OnClose="OnClose"
+                    OnGesture="OnGesture">
+            @if (WindowContent is not null)
+            {
+                @WindowContent(Primary)
+            }
+        </WindowHost>
+    }
+</main>
+
+@code {
+    /// <summary>
+    /// Gets or sets stable window snapshots ordered back-to-front — the same shape
+    /// <see cref="DesktopArea.Windows"/> takes, so a host can switch presentation modes without
+    /// reshaping its window-source data.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<WindowRuntimeState> Windows { get; set; } = [];
+
+    /// <summary>Gets or sets content rendered for the single visible window snapshot.</summary>
+    [Parameter]
+    public RenderFragment<WindowRuntimeState>? WindowContent { get; set; }
+
+    /// <summary>Gets or sets the focus request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnFocus { get; set; }
+
+    /// <summary>Gets or sets the minimize request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnMinimize { get; set; }
+
+    /// <summary>Gets or sets the maximize/restore request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnToggleMaximize { get; set; }
+
+    /// <summary>Gets or sets the close request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnClose { get; set; }
+
+    /// <summary>Gets or sets the raw command dispatch callback used for policy-driven commands.</summary>
+    [Parameter]
+    public EventCallback<WindowCommand> OnGesture { get; set; }
+
+    private WindowRuntimeState? Primary
+    {
+        get
+        {
+            WindowId? primaryId = SingleSurfacePresentationPolicy.SelectPrimary(Windows);
+            return primaryId is WindowId id ? Windows.FirstOrDefault(window => window.Id == id) : null;
+        }
+    }
+
+    /// <summary>
+    /// Applies the single-full-screen-surface policy (plan §7.1, <c>MOB-009</c>): every window
+    /// except the current primary is minimized, and the primary is maximized to fill the work area
+    /// via the existing Maximize mechanism rather than computing full-screen geometry separately.
+    /// Idempotent — once applied, a subsequent parameter set with the same <see cref="Windows"/>
+    /// shape issues no further commands.
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!OnGesture.HasDelegate)
+        {
+            return;
+        }
+
+        WindowId? primaryId = SingleSurfacePresentationPolicy.SelectPrimary(Windows);
+        foreach (WindowId id in SingleSurfacePresentationPolicy.WindowsToMinimize(Windows, primaryId))
+        {
+            await OnGesture.InvokeAsync(new MinimizeWindowCommand(id));
+        }
+
+        if (SingleSurfacePresentationPolicy.ShouldMaximizePrimary(Windows, primaryId) && primaryId is WindowId primary)
+        {
+            await OnGesture.InvokeAsync(new MaximizeWindowCommand(primary));
+        }
+    }
+}

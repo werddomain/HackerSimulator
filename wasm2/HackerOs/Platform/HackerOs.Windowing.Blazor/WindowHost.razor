@@ -8,7 +8,8 @@
          role="dialog"
          aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
          aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
-         aria-labelledby="@TitleId"
+         aria-labelledby="@(ShowChrome ? TitleId : null)"
+         aria-label="@(ShowChrome ? null : Window.Title)"
          inert="@(IsInteractionBlocked ? true : null)"
          data-window-id="@Window.Id"
          data-window-x="@Window.Bounds.X"
@@ -19,13 +20,16 @@
          style="position: absolute; top: @(Window.Bounds.Y)px; left: @(Window.Bounds.X)px; width: @(Window.Bounds.Width)px; height: @(Window.Bounds.Height)px; z-index: @Window.ZOrder; --window-x: @(Window.Bounds.X)px; --window-y: @(Window.Bounds.Y)px; --window-width: @(Window.Bounds.Width)px; --window-height: @(Window.Bounds.Height)px; --window-z: @Window.ZOrder;"
          hidden="@(Window.VisualState == WindowVisualState.Minimized ? true : null)"
          @onpointerdown="FocusAsync">
-    <WindowChrome Window="Window"
-                  TitleId="@TitleId"
-                  OnFocus="OnFocus"
-                  OnMinimize="OnMinimize"
-                  OnToggleMaximize="OnToggleMaximize"
-                  OnClose="OnClose"
-                  OnGesture="OnGesture" />
+    @if (ShowChrome)
+    {
+        <WindowChrome Window="Window"
+                      TitleId="@TitleId"
+                      OnFocus="OnFocus"
+                      OnMinimize="OnMinimize"
+                      OnToggleMaximize="OnToggleMaximize"
+                      OnClose="OnClose"
+                      OnGesture="OnGesture" />
+    }
     <div class="window-content">
         @ChildContent
     </div>
@@ -39,6 +43,16 @@
     /// <summary>Gets or sets the app content rendered inside the chrome.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the floating-window chrome (title bar, drag/resize handles, chrome
+    /// buttons) is rendered around the content. Defaults to <see langword="true"/> for source
+    /// compatibility with every existing caller; a chromeless host (plan
+    /// docs/mobile-interface-platform-plan.md §7.1, <c>MOB-009</c>) sets this <see langword="false"/>
+    /// so a pinned single surface has no floating-window affordances to interact with.
+    /// </summary>
+    [Parameter]
+    public bool ShowChrome { get; set; } = true;
 
     /// <summary>Gets or sets the focus request callback.</summary>
     [Parameter]

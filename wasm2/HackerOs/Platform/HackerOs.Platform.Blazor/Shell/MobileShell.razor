@@ -1,0 +1,80 @@
+@using HackerOs.MobileShell.Blazor
+@using HackerOs.Platform.Blazor.Windows
+@using HackerOs.Platform.Core.Discovery
+@using HackerOs.Platform.Core.Lifecycle
+@implements IDisposable
+@inject WindowRuntime WindowRuntime
+@inject AppLifecycleOrchestrator Orchestrator
+@inject WindowCloseGuardRegistry CloseGuards
+
+<div class="mobile-shell">
+    <div class="mobile-shell-workspace">
+        <SingleSurfaceArea Windows="WindowRuntime.Windows"
+                           OnFocus="HandleFocus"
+                           OnGesture="HandleGesture">
+            <WindowContent Context="window">
+                @if (window.Content is not null)
+                {
+                    @window.Content
+                }
+                else if (Orchestrator.TryGetRunningInstance(AppInstanceId.FromGuid(window.OwnerInstanceId.Value), out AppDescriptor? descriptor, out IAppExecutionContext? context))
+                {
+                    <WindowAppRenderer Window="window"
+                                       Descriptor="descriptor"
+                                       AppContext="context"
+                                       CloseGuards="CloseGuards" />
+                }
+                else
+                {
+                    <div class="window-content-placeholder">@window.Title</div>
+                }
+            </WindowContent>
+        </SingleSurfaceArea>
+    </div>
+
+    <MobileSystemNavigationBar Commands="_navigationCommands" />
+</div>
+
+@code {
+    /// <summary>
+    /// Mobile counterpart to <see cref="DesktopShell"/> (<c>MOB-009</c>/<c>MOB-010</c> scaffold): a
+    /// single full-screen surface plus the Android-inspired system navigation bar, built and
+    /// unit-testable in isolation. Not yet reachable from the running app — swapping this in for
+    /// <see cref="DesktopShell"/> when <c>UiPlatformPreferenceService</c>'s preference is Mobile is
+    /// the controlled shell-change sequence of plan §6.3 (<c>MOB-008</c>), which needs to warn
+    /// dirty apps, stop/restart instances with a typed reason, and reconstruct the shell tree —
+    /// none of which this component does on its own.
+    /// </summary>
+    private MobileNavigationCommandsAdapter _navigationCommands = null!;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        WindowRuntime.StateChanged += Rerender;
+        _navigationCommands = new MobileNavigationCommandsAdapter(WindowRuntime);
+    }
+
+    private void Rerender() => InvokeAsync(StateHasChanged);
+
+    private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));
+
+    private void HandleGesture(WindowCommand command)
+    {
+        try
+        {
+            WindowRuntime.Apply(command);
+        }
+        catch (InvalidOperationException)
+        {
+            // Same defense-in-depth as DesktopShell.HandleGesture: a policy-issued command
+            // (SingleSurfaceArea's own Minimize/Maximize) racing a just-closed window should not
+            // raise an unhandled exception through the render loop.
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        WindowRuntime.StateChanged -= Rerender;
+    }
+}

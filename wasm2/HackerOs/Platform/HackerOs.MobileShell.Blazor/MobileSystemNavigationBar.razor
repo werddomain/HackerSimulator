@@ -1,0 +1,38 @@
+@namespace HackerOs.MobileShell.Blazor
+
+<nav class="mobile-nav-bar" aria-label="System navigation">
+    <button type="button" class="mobile-nav-button" aria-label="@Options.BackLabel" title="@Options.BackLabel" @onclick="HandleBack">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <polygon points="16,4 6,12 16,20" />
+        </svg>
+    </button>
+    <button type="button" class="mobile-nav-button" aria-label="@Options.HomeLabel" title="@Options.HomeLabel" @onclick="HandleHome">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="8" />
+        </svg>
+    </button>
+    <button type="button" class="mobile-nav-button" aria-label="@Options.RecentLabel" title="@Options.RecentLabel" @onclick="HandleRecent">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="5" y="5" width="14" height="14" />
+        </svg>
+    </button>
+</nav>
+
+@code {
+    /// <summary>
+    /// Gets or sets the dispatcher for the three system-navigation actions. Unlike
+    /// <c>HackerOs.Taskbar.Blazor</c>'s optional contract parameters, this is required: the
+    /// Mobile shell has no floating chrome equivalent for Back/Home/Recent, so a bar with nothing
+    /// to dispatch to is a host configuration error, not a legitimately reduced state.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IMobileNavigationCommands Commands { get; set; } = null!;
+
+    /// <summary>Gets or sets host-supplied accessible labels for the three buttons.</summary>
+    [Parameter]
+    public MobileSystemNavigationBarOptions Options { get; set; } = new();
+
+    private void HandleBack() => Commands.RequestBack();
+    private void HandleHome() => Commands.RequestHome();
+    private void HandleRecent() => Commands.RequestRecent();
+}

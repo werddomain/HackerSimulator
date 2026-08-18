@@ -19,6 +19,22 @@ HackerOs.Windowing.Blazor.DesktopArea.WindowContent.get -> Microsoft.AspNetCore.
 HackerOs.Windowing.Blazor.DesktopArea.WindowContent.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
 HackerOs.Windowing.Blazor.DesktopArea.Windows.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnClose.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnFocus.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnFocus.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnGesture.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowCommand!>
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnGesture.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnMinimize.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnMinimize.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnToggleMaximize.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.SingleSurfaceArea.OnToggleMaximize.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.SingleSurfaceArea() -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowContent.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
+HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowContent.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
+HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.set -> void
 HackerOs.Windowing.Blazor.WindowChrome
 HackerOs.Windowing.Blazor.WindowChrome.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Windowing.Blazor.WindowChrome.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
@@ -53,6 +69,8 @@ HackerOs.Windowing.Blazor.WindowHost.OnMinimize.get -> Microsoft.AspNetCore.Comp
 HackerOs.Windowing.Blazor.WindowHost.OnMinimize.set -> void
 HackerOs.Windowing.Blazor.WindowHost.OnToggleMaximize.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
 HackerOs.Windowing.Blazor.WindowHost.OnToggleMaximize.set -> void
+HackerOs.Windowing.Blazor.WindowHost.ShowChrome.get -> bool
+HackerOs.Windowing.Blazor.WindowHost.ShowChrome.set -> void
 HackerOs.Windowing.Blazor.WindowHost.Window.get -> HackerOs.Windowing.Abstractions.WindowRuntimeState!
 HackerOs.Windowing.Blazor.WindowHost.Window.set -> void
 HackerOs.Windowing.Blazor.WindowHost.WindowHost() -> void
@@ -67,10 +85,12 @@ HackerOs.Windowing.Blazor._Imports
 HackerOs.Windowing.Blazor._Imports.Execute() -> void
 HackerOs.Windowing.Blazor._Imports._Imports() -> void
 override HackerOs.Windowing.Blazor.DesktopArea.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override HackerOs.Windowing.Blazor.SingleSurfaceArea.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Windowing.Blazor.WindowChrome.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Windowing.Blazor.WindowHost.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Windowing.Blazor.WindowSurface.OnParametersSet() -> void
 ~override HackerOs.Windowing.Blazor.DesktopArea.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Windowing.Blazor.SingleSurfaceArea.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Windowing.Blazor.WindowChrome.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Windowing.Blazor.WindowHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Windowing.Blazor.WindowSurface.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

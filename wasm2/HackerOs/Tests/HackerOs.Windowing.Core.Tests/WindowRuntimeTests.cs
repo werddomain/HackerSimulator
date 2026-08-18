@@ -59,6 +59,27 @@ public sealed class WindowRuntimeTests
     }
 
     [Fact]
+    public void Resize_throws_for_a_non_resizable_window()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowRuntimeState initial = CreateState(1, constraints: new WindowConstraints(false, 320, 240, 1200, 900));
+        runtime.Apply(new CreateWindowCommand(initial));
+
+        Assert.Throws<InvalidOperationException>(
+            () => runtime.Apply(new ResizeWindowCommand(initial.Id, new WindowBounds(20, 20, 200, 200))));
+    }
+
+    [Fact]
+    public void Move_throws_for_a_pinned_window()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowRuntimeState initial = CreateState(1, constraints: new WindowConstraints(true, 320, 240, isMovable: false));
+        runtime.Apply(new CreateWindowCommand(initial));
+
+        Assert.Throws<InvalidOperationException>(() => runtime.Apply(new MoveWindowCommand(initial.Id, 50, 50)));
+    }
+
+    [Fact]
     public void Move_resize_and_mobile_viewport_keep_window_inside_work_area()
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
@@ -125,7 +146,8 @@ public sealed class WindowRuntimeTests
     private static WindowRuntimeState CreateState(
         int seed,
         WindowModality modality = WindowModality.Modeless,
-        WindowId? ownerId = null) =>
+        WindowId? ownerId = null,
+        WindowConstraints? constraints = null) =>
         new(
             WindowId.FromGuid(Guid.Parse($"10000000-0000-0000-0000-{seed:D12}")),
             $"org.hackeros.test{seed}",
@@ -136,7 +158,7 @@ public sealed class WindowRuntimeTests
             null,
             0,
             WindowVisualState.Normal,
-            new WindowConstraints(true, 320, 240, 1200, 900),
+            constraints ?? new WindowConstraints(true, 320, 240, 1200, 900),
             modality,
             ownerId);
 }

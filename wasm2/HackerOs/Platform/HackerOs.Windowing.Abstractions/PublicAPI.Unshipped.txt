@@ -72,12 +72,13 @@ HackerOs.Windowing.Abstractions.WindowCloseRequestedEvent.WindowId.get -> Hacker
 HackerOs.Windowing.Abstractions.WindowCloseRequestedEvent.WindowId.init -> void
 HackerOs.Windowing.Abstractions.WindowCommand
 HackerOs.Windowing.Abstractions.WindowConstraints
+HackerOs.Windowing.Abstractions.WindowConstraints.IsMovable.get -> bool
 HackerOs.Windowing.Abstractions.WindowConstraints.IsResizable.get -> bool
 HackerOs.Windowing.Abstractions.WindowConstraints.MaxHeight.get -> double?
 HackerOs.Windowing.Abstractions.WindowConstraints.MaxWidth.get -> double?
 HackerOs.Windowing.Abstractions.WindowConstraints.MinHeight.get -> double
 HackerOs.Windowing.Abstractions.WindowConstraints.MinWidth.get -> double
-HackerOs.Windowing.Abstractions.WindowConstraints.WindowConstraints(bool isResizable, double minWidth, double minHeight, double? maxWidth = null, double? maxHeight = null) -> void
+HackerOs.Windowing.Abstractions.WindowConstraints.WindowConstraints(bool isResizable, double minWidth, double minHeight, double? maxWidth = null, double? maxHeight = null, bool isMovable = true) -> void
 HackerOs.Windowing.Abstractions.WindowCreatedEvent
 HackerOs.Windowing.Abstractions.WindowCreatedEvent.Window.get -> HackerOs.Windowing.Abstractions.WindowRuntimeState!
 HackerOs.Windowing.Abstractions.WindowCreatedEvent.Window.init -> void

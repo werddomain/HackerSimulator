@@ -1,4 +1,8 @@
 #nullable enable
+HackerOs.Windowing.Core.SingleSurfacePresentationPolicy
+static HackerOs.Windowing.Core.SingleSurfacePresentationPolicy.SelectPrimary(System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>! windows) -> HackerOs.Windowing.Abstractions.WindowId?
+static HackerOs.Windowing.Core.SingleSurfacePresentationPolicy.ShouldMaximizePrimary(System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>! windows, HackerOs.Windowing.Abstractions.WindowId? primaryId) -> bool
+static HackerOs.Windowing.Core.SingleSurfacePresentationPolicy.WindowsToMinimize(System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>! windows, HackerOs.Windowing.Abstractions.WindowId? primaryId) -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowId>!
 HackerOs.Windowing.Core.WindowRuntime
 HackerOs.Windowing.Core.WindowRuntime.Apply(HackerOs.Windowing.Abstractions.WindowCommand! command) -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowEvent!>!
 HackerOs.Windowing.Core.WindowRuntime.IsInteractionBlocked(HackerOs.Windowing.Abstractions.WindowId id) -> bool

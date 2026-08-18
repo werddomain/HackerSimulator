@@ -56,7 +56,13 @@ public readonly record struct WindowBounds
 public sealed record WindowConstraints
 {
     /// <summary>Creates validated window constraints.</summary>
-    public WindowConstraints(bool isResizable, double minWidth, double minHeight, double? maxWidth = null, double? maxHeight = null)
+    public WindowConstraints(
+        bool isResizable,
+        double minWidth,
+        double minHeight,
+        double? maxWidth = null,
+        double? maxHeight = null,
+        bool isMovable = true)
     {
         if (!double.IsFinite(minWidth) || minWidth <= 0 || !double.IsFinite(minHeight) || minHeight <= 0)
         {
@@ -78,10 +84,18 @@ public sealed record WindowConstraints
         MinHeight = minHeight;
         MaxWidth = maxWidth;
         MaxHeight = maxHeight;
+        IsMovable = isMovable;
     }
 
     /// <summary>Gets whether user resize commands are allowed.</summary>
     public bool IsResizable { get; }
+
+    /// <summary>
+    /// Gets whether user move commands are allowed. Defaults to <see langword="true"/> for source
+    /// compatibility with every existing caller; a pinned surface (e.g. Mobile's single full-screen
+    /// window, docs/mobile-interface-platform-plan.md §7.1) sets this <see langword="false"/>.
+    /// </summary>
+    public bool IsMovable { get; }
 
     /// <summary>Gets the minimum width.</summary>
     public double MinWidth { get; }
