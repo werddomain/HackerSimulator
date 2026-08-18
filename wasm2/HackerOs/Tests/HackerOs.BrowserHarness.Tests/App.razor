@@ -1,6 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.Infrastructure.Browser.Backup
 @using HackerOs.Infrastructure.Browser.FileSystem
+@using HackerOs.Infrastructure.Browser.Schema
 @using HackerOs.Infrastructure.Browser.Sessions
 @using HackerOs.Infrastructure.Browser.Settings
 @using HackerOs.Infrastructure.Browser.Storage
@@ -400,7 +401,7 @@
             await module.InvokeAsync<object[]>(
                 "executeTransaction",
                 DatabaseName,
-                2,
+                HackerOsIndexedDbSchema.CurrentVersion,
                 new[] { "fsContent" },
                 "readwrite",
                 new[]

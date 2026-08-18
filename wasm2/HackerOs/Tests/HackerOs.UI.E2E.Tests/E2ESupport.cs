@@ -32,6 +32,13 @@ internal static class E2ESupport
             RedirectStandardError = true,
             CreateNoWindow = true
         };
+        // Without this, "dotnet run" defaults ASPNETCORE_ENVIRONMENT to Production when the shell
+        // that invoked `dotnet test` hasn't set it (e.g. plain CI shells). In Production,
+        // StaticAssetDevelopmentRuntimeHandler still runs but expects every static web asset to
+        // exist as a physical file under this project's own wwwroot, which fails for assets
+        // composed from referenced projects/packages (MudBlazor, HackerOs.Ecosystem) and 500s
+        // every request.
+        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         startInfo.ArgumentList.Add("run");
         startInfo.ArgumentList.Add("--configuration");
         startInfo.ArgumentList.Add("Release");
