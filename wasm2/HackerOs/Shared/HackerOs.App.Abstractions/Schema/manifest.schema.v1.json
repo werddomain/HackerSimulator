@@ -66,6 +66,21 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
+    "declaredTopicPermissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^(topic-publish|topic-subscribe):app/[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*){2,}/[a-z0-9-]+(/[a-z0-9-]+)*$"
+          },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "resources": { "$ref": "#/$defs/resourceProfile" },
     "settings": {
       "type": "object",

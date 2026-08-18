@@ -36,8 +36,17 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         services.AddSingleton<IJSRuntime, NonInvokedJsRuntime>();
         services.AddHackerOsEcosystem();
 
-        await using ServiceProvider provider = services.BuildServiceProvider(
+        await using ServiceProvider rootProvider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        // Most of this graph is Scoped, not Singleton: every service that construct-injects
+        // IJSRuntime (directly or transitively) must be, matching Blazor Server's per-circuit
+        // IJSRuntime lifetime — a Singleton first resolved outside a live circuit would
+        // permanently capture an unattached IJSRuntime and break JS interop for every later
+        // circuit. Resolve from a scope, exactly as a real circuit/WASM app would, rather than
+        // the root provider.
+        await using AsyncServiceScope scope = rootProvider.CreateAsyncScope();
+        IServiceProvider provider = scope.ServiceProvider;
 
         Assert.IsType<IndexedDbFileSystemProvider>(provider.GetRequiredService<IFileSystemProvider>());
         Assert.Same(
@@ -57,6 +66,7 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<IDiagnosticSink>());
         Assert.NotNull(provider.GetRequiredService<IAuditLog>());
         Assert.NotNull(provider.GetRequiredService<IEventBus>());
+        Assert.NotNull(provider.GetRequiredService<ITopicMessageBus>());
 
         SessionId sessionId = SessionId.FromGuid(Guid.NewGuid());
         IFileDialogService dialogs = provider.GetRequiredService<FileDialogServiceFactory>().Create(sessionId);

@@ -229,8 +229,10 @@ public sealed class Phase2AcceptanceTests
                 () => new Guid(_transactionId++, 0, 0, new byte[8]),
                 timeProvider);
             FileSystemMountRouter router = new(repository);
+            Grants = new CapabilityGrantRepository(() => _now);
+            InMemoryTopicMessageBus topicBus = new(Grants);
             FileSystemService = new FileSystemService(
-                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(),
+                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             Seeder = new FileSystemSeeder(FileSystemService, timeProvider);
 
@@ -251,12 +253,11 @@ public sealed class Phase2AcceptanceTests
 
             ManualSimulationClock clock = new(_now, TimeSpan.FromSeconds(1));
             ProcessManager = new InMemoryProcessManager(clock, Session, eventBus);
-            Grants = new CapabilityGrantRepository(() => _now);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
             SettingsService = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
             AppExecutionContextFactory contextFactory = new(
-                Grants, FileSystemService, SettingsService, eventBus, notifications, diagnostics, clock, ProcessManager);
+                Grants, FileSystemService, SettingsService, eventBus, topicBus, notifications, diagnostics, clock, ProcessManager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join("; ", catalogResult.Errors.Select(e => e.Message)));

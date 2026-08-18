@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />

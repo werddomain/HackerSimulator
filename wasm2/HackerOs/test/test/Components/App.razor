@@ -17,7 +17,16 @@
 
     <!-- HackerOS Global CSS Design System & Scoped CSS Bundles -->
     <link rel="stylesheet" href="_content/HackerOs.Platform.Blazor/HackerOs.Platform.Blazor.bundle.scp.css" />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <!--
+      HackerOs.Ecosystem owns the actual design-system tokens (--hos-*) at wwwroot/css/app.css.
+      Its static web assets compose directly at this host's root (Microsoft.NET.Sdk.BlazorWebAssembly
+      project references aren't prefixed with the usual RCL "_content/{Project}/" path) — confirmed
+      via its own HackerOs.Ecosystem.staticwebassets.endpoints.json, whose "css/app.css" route serves
+      unprefixed here. @Assets["app.css"] resolves to THIS project's own wwwroot/app.css instead,
+      which is just the unmodified `dotnet new blazor` scaffold stub (a 3-rule html/body reset) and
+      left every HackerOS surface completely unstyled.
+    -->
+    <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="@Assets["test.styles.css"]" />
 
     <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />

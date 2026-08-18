@@ -65,6 +65,7 @@ itself — filesystem, settings, security, window runtime, storage.
 | [`indexeddb-browser-contract-tests.md`](indexeddb-browser-contract-tests.md) | Real-Chromium proof for the IndexedDB contracts above. |
 | [`window-runtime.md`](window-runtime.md) | The C# owner of window identity, geometry, and lifecycle. |
 | [`desktop-shell.md`](desktop-shell.md) | Desktop workspace, taskbar, launcher, and notifications. |
+| [`Global-FileView-And-MessagingSystem.md`](Global-FileView-And-MessagingSystem.md) | Design entry point for the reusable `FileView` control and the topic-based messaging/filesystem-watch extension to `IEventBus`; see the linked `FileViewControl.md`, `MessagingSystem.md`, and `integrationPlan.md`. |
 | [`ecosystem-host.md`](ecosystem-host.md) | The standalone `HackerOs.Ecosystem` PWA composition root. |
 | [`lazy-loading.md`](lazy-loading.md) | Build-known lazy assembly loading architecture. |
 | [`startup-performance.md`](startup-performance.md) | The WASM startup path and its performance budget. |
@@ -147,6 +148,11 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0033](adr/0033-appcatalog-and-fileassociations-sync.md) | AppCatalog and FileAssociations domain sync |
 | [0034](adr/0034-wire-terminal-command-catalog.md) | Wire the terminal command catalog |
 | [0035](adr/0035-nmap-tcp-probe-fallback.md) | Single-port TCP reachability probe for nmap's real-network fallback |
+| [0036](adr/0036-direct-service-injection-for-server-host.md) | Direct service injection for the server-hosted UI |
+| [0037](adr/0037-reusable-file-view-control.md) | `FileView` as the canonical file-listing control |
+| [0038](adr/0038-emitter-authorized-topic-messaging.md) | Emitter-authorized topic messaging |
+| [0039](adr/0039-directory-open-file-association.md) | `inode/directory` media-type convention for directory file association |
+| [0040](adr/0040-declared-topic-permissions.md) | Declared topic permissions and optional per-channel access (tri-state `SharedChannelPolicy`) |
 
 ## Migration history and project status
 

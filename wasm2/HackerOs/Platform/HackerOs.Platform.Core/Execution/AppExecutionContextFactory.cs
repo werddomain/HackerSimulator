@@ -26,6 +26,7 @@ public sealed class AppExecutionContextFactory
     private readonly IFileSystemService _fileSystem;
     private readonly ISettingsDocumentService _settings;
     private readonly IEventBus _eventBus;
+    private readonly ITopicMessageBus _topicBus;
     private readonly INotificationQueue _notifications;
     private readonly IDiagnosticSink _diagnostics;
     private readonly ISimulationClock _clock;
@@ -45,6 +46,7 @@ public sealed class AppExecutionContextFactory
         IFileSystemService fileSystem,
         ISettingsDocumentService settings,
         IEventBus eventBus,
+        ITopicMessageBus topicBus,
         INotificationQueue notifications,
         IDiagnosticSink diagnostics,
         ISimulationClock clock,
@@ -55,6 +57,7 @@ public sealed class AppExecutionContextFactory
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _topicBus = topicBus ?? throw new ArgumentNullException(nameof(topicBus));
         _notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -118,13 +121,14 @@ public sealed class AppExecutionContextFactory
             capabilities,
             new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds),
             new AppSettingsGateway(_settings, operationContext),
-            new AppEventGateway(_eventBus),
+            new AppEventGateway(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString()),
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id),
             new AppDiagnosticsGateway(_diagnostics, capabilities),
             new AppClockGateway(_clock),
             new AppProcessGateway(_processManager, capabilities, process.Pid),
-            intents);
+            intents,
+            new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()));
     }
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
@@ -137,7 +141,7 @@ public sealed class AppExecutionContextFactory
                 "This execution context factory was not configured with an app-intent dispatcher.");
 
         public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
-            VirtualPath path, CancellationToken cancellationToken = default) =>
+            VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(
                 "This execution context factory was not configured with an app-intent dispatcher.");
     }

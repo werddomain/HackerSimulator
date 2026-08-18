@@ -1,5 +1,7 @@
 #nullable enable
 HackerOs.Windowing.Blazor.DesktopArea
+HackerOs.Windowing.Blazor.DesktopArea.BackgroundContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Windowing.Blazor.DesktopArea.BackgroundContent.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.DesktopArea() -> void
 HackerOs.Windowing.Blazor.DesktopArea.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Windowing.Blazor.DesktopArea.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>

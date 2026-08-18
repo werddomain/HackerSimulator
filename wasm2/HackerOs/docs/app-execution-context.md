@@ -13,7 +13,7 @@ Every running app instance (Window, Terminal, or Service) is given exactly one
 there is no root `IServiceProvider`, no raw `IJSRuntime`, no direct access to
 `IFileSystemService`, `IProcessManager`, `ICapabilityGrantRepository`, or any
 other Platform.Core singleton. Every capability an app might have is expressed
-as one of seven narrow gateway interfaces, each of which enforces trusted OS
+as one of several narrow gateway interfaces, each of which enforces trusted OS
 policy for that exact app/user/process before doing anything.
 
 This mirrors how a real OS hands a process a small set of file descriptors and
@@ -34,15 +34,21 @@ graph TD
     Context --> Logging[IAppLoggingGateway]
     Context --> Clock[IAppClockGateway]
     Context --> Processes[IAppProcessGateway]
+    Context --> Watch[IAppFileSystemWatchGateway]
 
     Capabilities -->|delegates to| GrantRepo[(ICapabilityGrantRepository)]
     FileSystem -->|builds FileSystemAuthorizationContext per call| FS[(IFileSystemService)]
     Settings --> SettingsSvc[(ISettingsDocumentService)]
-    Events --> Bus[(IEventBus)]
+    Events -->|kernel lane: Subscribe read-only, Publish denied for apps| Bus[(IEventBus)]
+    Events -->|app lane: namespace/shared-channel authorized| TopicBus[(ITopicMessageBus)]
+    TopicBus -->|shared-channel policy| GrantRepo
     Notifications -->|requires notifications.post| Queue[(INotificationQueue)]
     Logging --> Diagnostics[(IDiagnosticSink)]
     Clock --> SimClock[(ISimulationClock)]
     Processes -->|requires process.manage/list unless own pid| ProcMgr[(IProcessManager)]
+    Watch -->|StatAsync reuses the caller's own read authorization| FS
+    Watch -->|SubscribeChannel| TopicBus
+    FS -->|Publish, owner-only| TopicBus
 
     Registry[FileSystemSelectedResourceHandleRegistry] -->|subscribes| Bus
     Registry -.->|SessionLoggedOutEvent / SessionShutDownEvent / ProcessStateChangedEvent| Registry
@@ -56,11 +62,12 @@ graph TD
 | `ICapabilityChecker` / `AppCapabilityChecker` | `Shared/HackerOs.Simulation.Abstractions/Gateways/AppGatewayContracts.cs` / `Platform/HackerOs.Platform.Core/Execution/` | Evaluates/requires one capability for the bound app/user/authority, without exposing the grant repository. |
 | `IAppFileSystemGateway` / `AppFileSystemGateway` | same | Full FS CRUD surface; builds a fresh `FileSystemAuthorizationContext` per call; `WithSelectedHandle(...)` returns a scoped copy. |
 | `IAppSettingsGateway` / `AppSettingsGateway` | same | Thin `ISettingsDocumentService` wrapper bound to the app's `AppOperationContext`. |
-| `IAppEventGateway` / `AppEventGateway` | same | Thin `IEventBus` pass-through (`Subscribe<TEvent>`/`Publish<TEvent>`). |
+| `IAppEventGateway` / `AppEventGateway` | same | Two lanes, per [ADR 0038](adr/0038-emitter-authorized-topic-messaging.md): kernel lane (`Subscribe<TEvent>` read-only pass-through to `IEventBus`; `Publish<TEvent>` denies every app-initiated publish) and app lane (`Subscribe`/`SubscribeChannel`/`Publish`/`RegisterSharedChannel` over named `TopicName`s via `ITopicMessageBus`, authorized by namespace ownership or shared-channel policy). |
 | `IAppNotificationGateway` / `AppNotificationGateway` | same | Requires `notifications.post` before enqueuing. |
 | `IAppLoggingGateway` / `AppLoggingGateway` | same | Wraps `IDiagnosticSink`, stamping every entry with the app ID and a fresh correlation ID. |
 | `IAppClockGateway` / `AppClockGateway` | same | Read-only `ISimulationClock` wrapper (`UtcNow`, `CurrentTick`, `Schedule`, `DelayAsync`). |
 | `IAppProcessGateway` / `AppProcessGateway` | same | Own process always observable/stoppable/killable; managing or listing *other* processes requires `process.manage`/`process.list`. |
+| `IAppFileSystemWatchGateway` / `AppFileSystemWatchGateway` | `Shared/HackerOs.Simulation.Abstractions/FileSystem/FileSystemWatchContracts.cs` / `Platform/HackerOs.Platform.Core/Execution/` | `WatchAsync` reuses the caller's own filesystem-read authorization (a plain `StatAsync` call) before subscribing to `FileSystemTopics.ForDirectory` on the shared, kernel-owned `shared/filesystem/changed` channel; only `FileSystemWatchScope.ImmediateChildren` is implemented (`ThisEntry`/`Recursive` throw `NotSupportedException`). Default interface member on `IAppExecutionContext` (`Watch`), same unsupported-fallback pattern as `Intents`. |
 | `IFileSystemSelectedResourceHandleRegistry` / `FileSystemSelectedResourceHandleRegistry` | `Shared/.../Gateways/FileSystemSelectedResourceHandleRegistryContracts.cs` / `Platform/.../Execution/` | Issues/tracks/revokes short-lived selected-resource handles (e.g. from a file-open dialog), auto-revoking on session logout, shutdown, or owning-process termination. |
 | `AppExecutionContextFactory` | `Platform/HackerOs.Platform.Core/Execution/` | The **sole** trusted constructor for `IAppExecutionContext`. |
 | `AppExecutionContext` | same | `internal sealed class`; unreachable from app code — only the factory can construct one. |

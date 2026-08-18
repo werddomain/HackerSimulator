@@ -2,7 +2,9 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.Diagnostics;
+using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Notifications;
@@ -50,10 +52,13 @@ public sealed class SampleTickerServiceTests
         // Arrange
         SampleTickerService service = new(ServiceManifest, TimeSpan.FromMilliseconds(10));
         InMemoryEventBus eventBus = new();
+        InMemoryTopicMessageBus topicBus = new(new CapabilityGrantRepository());
         List<SampleTickerEvent> publishedEvents = [];
-        using IDisposable sub = eventBus.Subscribe<SampleTickerEvent>(publishedEvents.Add);
+        PublisherIdentity testSubscriber = new("test.harness", "test-user", "0");
+        using IDisposable sub = topicBus.Subscribe<SampleTickerEvent>(
+            SampleTickerTopics.Ticked, testSubscriber, message => publishedEvents.Add(message.Payload));
 
-        TestExecutionContext context = new(ServiceManifest, eventBus);
+        TestExecutionContext context = new(ServiceManifest, eventBus, topicBus);
         using CancellationTokenSource cts = new();
 
         // Act – run service loop in task and cancel after short delay
@@ -75,7 +80,8 @@ public sealed class SampleTickerServiceTests
         // Arrange
         SampleTickerService service = new(ServiceManifest, TimeSpan.FromMilliseconds(10));
         InMemoryEventBus eventBus = new();
-        TestExecutionContext context = new(ServiceManifest, eventBus);
+        InMemoryTopicMessageBus topicBus = new(new CapabilityGrantRepository());
+        TestExecutionContext context = new(ServiceManifest, eventBus, topicBus);
         using CancellationTokenSource cts = new();
 
         Task runTask = service.RunAsync(context, cts.Token);
@@ -98,7 +104,8 @@ public sealed class SampleTickerServiceTests
         // Arrange
         SampleTickerService service = new(ServiceManifest, TimeSpan.FromMilliseconds(5));
         InMemoryEventBus eventBus = new();
-        TestExecutionContext context = new(ServiceManifest, eventBus);
+        InMemoryTopicMessageBus topicBus = new(new CapabilityGrantRepository());
+        TestExecutionContext context = new(ServiceManifest, eventBus, topicBus);
 
         // Session 1
         using (CancellationTokenSource cts1 = new())
@@ -131,10 +138,10 @@ public sealed class SampleTickerServiceTests
 
     private sealed class TestExecutionContext : IAppExecutionContext
     {
-        public TestExecutionContext(AppManifest manifest, InMemoryEventBus eventBus)
+        public TestExecutionContext(AppManifest manifest, InMemoryEventBus eventBus, InMemoryTopicMessageBus topicBus)
         {
             Manifest = manifest;
-            Events = new AppEventGateway(eventBus);
+            Events = new AppEventGateway(eventBus, topicBus, manifest.Id, "user-1", "100");
             Clock = new TestClockGateway();
             Logging = new TestLoggingGateway();
         }

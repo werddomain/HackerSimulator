@@ -1,27 +1,49 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Platform.Core.Events;
+using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
 namespace HackerOs.Platform.Core.FileSystem;
 
 /// <summary>Coordinates traversal, authorization, mounts, and provider operations.</summary>
+/// <remarks>
+/// Publishes a <see cref="FileSystemChangeEvent"/> to <see cref="FileSystemTopics.ForDirectory"/> of the
+/// affected entry's parent after every successful mutation, per
+/// <c>docs/adr/0038-emitter-authorized-topic-messaging.md</c> and
+/// <c>docs/Global-FileView-And-MessagingSystem/MessagingSystem.md</c> (<c>MSG-011</c>/<c>MSG-012</c>).
+/// The <c>shared/filesystem/changed</c> channel is registered once, in this singleton's constructor,
+/// owner-only for publish under <see cref="KernelPublisherIdentity"/> so no app can ever forge a change
+/// notification.
+/// </remarks>
 public sealed class FileSystemService : IFileSystemService
 {
     private readonly IFileSystemMountRouter _router;
     private readonly IFileSystemPathResolver _pathResolver;
     private readonly IFileSystemAuthorizer _authorizer;
+    private readonly ITopicMessageBus _topicBus;
     private readonly Func<Guid> _transactionIdFactory;
+    private readonly Func<DateTimeOffset> _clock;
 
     /// <summary>Initializes the mounted filesystem service.</summary>
     public FileSystemService(
         IFileSystemMountRouter router,
         IFileSystemPathResolver pathResolver,
         IFileSystemAuthorizer authorizer,
-        Func<Guid>? transactionIdFactory = null)
+        ITopicMessageBus topicBus,
+        Func<Guid>? transactionIdFactory = null,
+        Func<DateTimeOffset>? clock = null)
     {
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
         _authorizer = authorizer ?? throw new ArgumentNullException(nameof(authorizer));
+        _topicBus = topicBus ?? throw new ArgumentNullException(nameof(topicBus));
         _transactionIdFactory = transactionIdFactory ?? Guid.NewGuid;
+        _clock = clock ?? (static () => DateTimeOffset.UtcNow);
+
+        _topicBus.RegisterSharedChannel(
+            TopicNames.Shared("filesystem").Segment("changed").Build(),
+            new SharedChannelPolicy(SharedChannelAccessMode.OwnerOnly, SharedChannelAccessMode.Open),
+            KernelPublisherIdentity.Value);
     }
 
     /// <inheritdoc />
@@ -138,7 +160,7 @@ public sealed class FileSystemService : IFileSystemService
         }
 
         FileSystemMountResolution route = _router.Resolve(path);
-        return await route.Mount.Provider.CreateAsync(
+        FileSystemMutationResult result = await route.Mount.Provider.CreateAsync(
             new FileSystemCreateRequest(
                 path,
                 request.Kind,
@@ -147,6 +169,12 @@ public sealed class FileSystemService : IFileSystemService
                 request.SymbolicLinkTarget),
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
+        {
+            PublishChange(path, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.Created);
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -181,11 +209,17 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(denial);
         }
 
-        return await _router.Resolve(path).Mount.Provider.WriteAsync(
+        FileSystemMutationResult result = await _router.Resolve(path).Mount.Provider.WriteAsync(
             new FileSystemWriteRequest(path, request.ExpectedRevision),
             content,
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
+        {
+            PublishChange(path, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.ContentModified);
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -249,7 +283,7 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(sourceDenial ?? destinationDenial!);
         }
 
-        return await sourceRoute.Mount.Provider.MoveAsync(
+        FileSystemMutationResult result = await sourceRoute.Mount.Provider.MoveAsync(
             new FileSystemMoveRequest(
                 source,
                 destination,
@@ -258,6 +292,17 @@ public sealed class FileSystemService : IFileSystemService
                 request.ExpectedDestinationParentRevision),
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
+        {
+            PublishChange(
+                source, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.MovedFrom, destination);
+            if (destinationParent != sourceParent)
+            {
+                PublishChange(destination, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.MovedTo);
+            }
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -319,7 +364,7 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(sourceDenial ?? destinationDenial!);
         }
 
-        return await sourceRoute.Mount.Provider.CopyAsync(
+        FileSystemMutationResult result = await sourceRoute.Mount.Provider.CopyAsync(
             new FileSystemCopyRequest(
                 source,
                 destination,
@@ -327,6 +372,12 @@ public sealed class FileSystemService : IFileSystemService
                 request.ExpectedDestinationParentRevision),
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
+        {
+            PublishChange(destination, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.Created);
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -370,7 +421,10 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(denial);
         }
 
-        return await route.Mount.Provider.DeleteAsync(
+        FileSystemResult<FileSystemEntrySnapshot> preDeleteStat = await route.Mount.Provider.StatAsync(
+            new FileSystemStatRequest(path, FileSystemLinkBehavior.NoFollow), context, cancellationToken);
+
+        FileSystemMutationResult result = await route.Mount.Provider.DeleteAsync(
             new FileSystemDeleteRequest(
                 path,
                 request.ExpectedEntryRevision,
@@ -378,6 +432,16 @@ public sealed class FileSystemService : IFileSystemService
                 request.Recursive),
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && preDeleteStat.Succeeded)
+        {
+            VirtualPath parent = GetParent(path);
+            FileSystemResult<FileSystemEntrySnapshot> parentStat = await route.Mount.Provider.StatAsync(
+                new FileSystemStatRequest(parent, FileSystemLinkBehavior.NoFollow), context, cancellationToken);
+            long revision = parentStat.Succeeded ? parentStat.Value!.Metadata.Revision : preDeleteStat.Value!.Metadata.Revision;
+            PublishChange(path, preDeleteStat.Value!.Metadata.Kind, revision, FileSystemChangeKind.Deleted);
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -448,7 +512,7 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(denial);
         }
 
-        return await _router.Resolve(path).Mount.Provider.SetPermissionsAsync(
+        FileSystemMutationResult result = await _router.Resolve(path).Mount.Provider.SetPermissionsAsync(
             new FileSystemSetPermissionsRequest(
                 path,
                 request.Permissions,
@@ -456,6 +520,12 @@ public sealed class FileSystemService : IFileSystemService
                 FileSystemLinkBehavior.NoFollow),
             context,
             cancellationToken);
+        if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
+        {
+            PublishChange(path, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.MetadataModified);
+        }
+
+        return result;
     }
 
     private ValueTask<FileSystemResult<FileSystemPathResolution>> ResolveAsync(
@@ -566,4 +636,19 @@ public sealed class FileSystemService : IFileSystemService
 
     private static VirtualPath Combine(VirtualPath parent, FileSystemEntryName name) =>
         VirtualPath.Parse(parent.Value == "/" ? $"/{name.Value}" : $"{parent.Value}/{name.Value}");
+
+    /// <summary>Publishes one change notification for <paramref name="affectedPath"/> to its parent directory's topic.</summary>
+    private void PublishChange(
+        VirtualPath affectedPath,
+        FileSystemEntryKind entryKind,
+        long revision,
+        FileSystemChangeKind kind,
+        VirtualPath? movedToPath = null)
+    {
+        TopicName topic = FileSystemTopics.ForDirectory(GetParent(affectedPath));
+        _topicBus.Publish(
+            topic,
+            new FileSystemChangeEvent(affectedPath, kind, entryKind, revision, _clock(), movedToPath),
+            KernelPublisherIdentity.Value);
+    }
 }

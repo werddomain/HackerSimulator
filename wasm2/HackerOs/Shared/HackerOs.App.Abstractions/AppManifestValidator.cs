@@ -48,6 +48,7 @@ public static partial class AppManifestValidator
 
         ValidateCapabilities(manifest.Capabilities, errors);
         ValidateCapabilityKindCompatibility(manifest.Kind, manifest.Capabilities, errors);
+        ValidateDeclaredTopicPermissions(manifest.Id, manifest.DeclaredTopicPermissions, errors);
         ValidateDependencies(manifest.Dependencies, errors);
         ValidateAssets(manifest.Assets, errors);
         ValidatePresentation(manifest.Presentation, manifest.Assets, errors);
@@ -318,13 +319,51 @@ public static partial class AppManifestValidator
 
         foreach (string capability in capabilities)
         {
-            if (!AppCapabilities.IsKnown(capability))
+            if (!AppCapabilities.IsKnown(capability) && !TopicPermissions.IsWellFormed(capability))
             {
                 AddError(
                     errors,
                     "manifest.capability.unknown",
                     "capabilities",
-                    $"Capability '{capability}' is not recognized by this App SDK version.");
+                    $"Capability '{capability}' is not recognized by this App SDK version and is not a " +
+                    "well-formed topic permission.");
+            }
+        }
+    }
+
+    private static void ValidateDeclaredTopicPermissions(
+        string appId,
+        IReadOnlyList<TopicPermissionDeclarationManifest> declarations,
+        List<ManifestValidationError> errors)
+    {
+        // A manifest deserialized from JSON that predates this field (every manifest.json shipped before
+        // this change) leaves it null rather than running the record's [] field initializer, the same as
+        // every other optional array-typed manifest property would if a caller omitted it.
+        declarations ??= [];
+
+        ValidateUniqueValues(declarations.Select(static declaration => declaration.Id), "declaredTopicPermissions", errors);
+
+        foreach (TopicPermissionDeclarationManifest declaration in declarations)
+        {
+            RequireText(declaration.Description, "declaredTopicPermissions.description", errors);
+
+            if (!TopicPermissions.IsWellFormed(declaration.Id))
+            {
+                AddError(
+                    errors,
+                    "manifest.topicPermission.malformed",
+                    "declaredTopicPermissions",
+                    $"'{declaration.Id}' is not a well-formed topic permission identifier.");
+                continue;
+            }
+
+            if (!TopicPermissions.IsOwnedByApp(declaration.Id, appId))
+            {
+                AddError(
+                    errors,
+                    "manifest.topicPermission.notOwned",
+                    "declaredTopicPermissions",
+                    $"'{declaration.Id}' must be rooted under this app's own topic namespace ('app/{appId}/...').");
             }
         }
     }
