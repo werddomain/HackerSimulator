@@ -11,8 +11,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+<ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
     <ProjectReference Include="..\..\Server\HackerOs.Server\HackerOs.Server.csproj" />
-    <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

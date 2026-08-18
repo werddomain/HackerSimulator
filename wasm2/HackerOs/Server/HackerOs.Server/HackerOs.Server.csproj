@@ -27,8 +27,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
-    <!-- Server-hosted Blazor UI (ADR 0027): the same shared component tree as OS/HackerOs.Ecosystem and test/test. -->
     <ProjectReference Include="..\..\OS\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
+    <!-- Server-hosted Blazor UI (ADR 0027): the same shared component tree as OS/HackerOs.Ecosystem and test/test. -->
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />

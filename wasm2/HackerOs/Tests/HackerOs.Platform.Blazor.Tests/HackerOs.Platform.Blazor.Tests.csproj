@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
+    <ProjectReference Include="..\..\OS\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj" />
   </ItemGroup>
 
 </Project>

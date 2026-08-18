@@ -18,5 +18,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\HackerOs.Game.Abstractions\HackerOs.Game.Abstractions.csproj" />
     <ProjectReference Include="..\..\Game\HackerOs.Game.Core\HackerOs.Game.Core.csproj" />
-  </ItemGroup>
+    </ItemGroup>
 </Project>
