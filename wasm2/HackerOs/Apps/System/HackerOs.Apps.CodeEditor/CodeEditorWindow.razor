@@ -35,13 +35,12 @@
         </label>
     </header>
 
-    <nav class="tab-strip" aria-label="Open editor documents">
+    <nav class="tab-strip" role="toolbar" aria-label="Open editor documents">
         @foreach (CodeEditorDocument document in _session.Documents)
         {
             <div class="tab-shell @(document.Id == _session.ActiveDocumentId ? "is-active" : null)">
                 <button class="tab-select"
-                        role="tab"
-                        aria-selected="@(document.Id == _session.ActiveDocumentId)"
+                        aria-pressed="@(document.Id == _session.ActiveDocumentId)"
                         @onclick="() => ActivateDocumentAsync(document.Id)">
                     <span class="tab-name">@document.Title</span>
                     @if (document.IsDirty)
@@ -65,7 +64,7 @@
     }
 
     <div class="editor-workspace">
-        <div class="editor-host" @ref="_editorHost" aria-label="Source code editor"></div>
+        <div class="editor-host" @ref="_editorHost" role="group" aria-label="Source code editor"></div>
     </div>
 
     <footer class="editor-statusbar" aria-label="Code editor status">

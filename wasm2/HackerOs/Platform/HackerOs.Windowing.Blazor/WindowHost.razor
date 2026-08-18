@@ -20,7 +20,7 @@
          hidden="@(Window.VisualState == WindowVisualState.Minimized ? true : null)"
          @onpointerdown="FocusAsync">
     <WindowChrome Window="Window"
-                  TitleId="TitleId"
+                  TitleId="@TitleId"
                   OnFocus="OnFocus"
                   OnMinimize="OnMinimize"
                   OnToggleMaximize="OnToggleMaximize"

@@ -133,7 +133,7 @@
                             @oncontextmenu:preventDefault="true"
                             @oncontextmenu:stopPropagation="true">
                             <td class="col-checkbox">
-                                <input type="checkbox" checked="@isSelected" @onclick:stopPropagation="true" @onchange="() => _state.ToggleSelection(item.Name.Value)" />
+                                <input type="checkbox" checked="@isSelected" aria-label="@($"Select {item.Name.Value}")" @onclick:stopPropagation="true" @onchange="() => _state.ToggleSelection(item.Name.Value)" />
                             </td>
                             <td class="entry-name">
                                 <span class="entry-icon">
@@ -181,8 +181,7 @@
     </div>
 
     <!-- Right-click Context Menu -->
-    <MudMenu @ref="_contextMenu" PositionAtCursor="true">
-        <ActivatorContent></ActivatorContent>
+    <MudMenu @ref="_contextMenu" PositionAtCursor="true" AriaLabel="File actions">
         <ChildContent>
             @if (_state.SelectedItemNames.Count == 0)
             {

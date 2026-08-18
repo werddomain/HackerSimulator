@@ -13,7 +13,7 @@ séquencement pour décider quoi attaquer ensuite.
 
 | Priorité | Chantier | Pourquoi maintenant |
 |---|---|---|
-| 1 | Fermer le gate de sortie Phase 2 | Bloque formellement la progression vers le reste du plan depuis longtemps ; il ne reste que 5 items concrets |
+| ~~1~~ | ~~Fermer le gate de sortie Phase 2~~ | **Presque fait le 2026-08-17** — voir section 4 ; ne reste que la facturation GitHub, hors code (la checklist humaine de `P2-GATE-003` a été explicitement marquée skip) |
 | 2 | Continuer Phase 5 (serveur/proxy) | En cours dans une autre session ; suite logique déjà identifiée dans `server-implementation-pass.md` |
 | ~~3~~ | ~~Clore réellement l'extraction fenêtres/taskbar~~ | **Fait le 2026-08-17** — voir section 2 |
 | 4 | Plateforme Mobile | Suite logique de l'extraction, maintenant close (le doc mobile n'a aucune tâche cochée) |
@@ -85,34 +85,63 @@ lui-même.
 prêt à démarrer comme prochain chantier de fonctionnalité (après Phase 2 gate
 et en parallèle ou après la suite serveur selon la bande passante disponible).
 
-## 4. Gate de sortie Phase 2 (priorité 1)
+## 4. Gate de sortie Phase 2 (priorité 1) — PRESQUE FERMÉ 2026-08-17
 
 Voir [`integration-task-list.md#22-phase-2-acceptance-and-exit-gate`](integration-task-list.md)
-et [`phase-2-acceptance.md`](phase-2-acceptance.md). Items encore ouverts :
+et [`phase-2-acceptance.md`](phase-2-acceptance.md) pour le détail complet des
+preuves. État à l'issue de la session du 2026-08-17 :
 
-- [ ] `P2-ACC-015` — PWA publiée fonctionne après install en ligne, serveur
-  arrêté, navigateur hors-ligne.
-- [ ] `P2-ACC-016` — Une mise à jour PWA préserve les données compatibles et
-  ne mélange jamais les assets de deux versions.
-- [ ] `P2-ACC-017` — Matrice CI navigateur réelle verte et hébergée (un run
-  en état "PARTIAL" existe déjà au 2026-08-03).
-- [ ] `P2-GATE-002` — Publication Release sans erreur de trimming/asset/
-  console/réseau inexpliquée.
-- [ ] `P2-GATE-003` — Captures desktop/mobile + vérifications a11y sans
-  chevauchement, texte tronqué, contrôle inaccessible, canvas tiers vide.
-- [ ] `P2-GATE-004` — `phase-2-acceptance.md` doit lier des preuves
-  automatisées pour les 17 critères.
-- [ ] `P2-GATE-005` — Approbation utilisateur explicite pour continuer.
+- [x] `P2-ACC-015` — PWA publiée fonctionne après install en ligne, serveur
+  arrêté, navigateur hors-ligne. **Preuve réelle** :
+  `Tests/HackerOs.Pwa.E2E.Tests` (nouveau projet), contre un vrai
+  `dotnet publish` servant le vrai `service-worker.published.js`.
+- [x] `P2-ACC-016` — Une mise à jour PWA préserve les données compatibles et
+  ne mélange jamais les assets de deux versions. **Preuve réelle**, même
+  projet.
+- [ ] `P2-ACC-017` — Matrice CI navigateur réelle verte et hébergée.
+  `HackerOs.Pwa.E2E.Tests` tourne déjà automatiquement dans le step CI
+  existant (aucun câblage supplémentaire nécessaire) et les runs locaux sont
+  verts. **Reste bloqué** : le compte GitHub est verrouillé pour facturation
+  (`gh run view` : "the job was not started because your account is locked
+  due to a billing issue") — action utilisateur, pas de code.
+- [x] `P2-GATE-002` — Publication Release sans erreur de trimming/asset/
+  console/réseau inexpliquée. **Deux vrais bugs trouvés et corrigés** en
+  construisant cette preuve : la PWA standalone ne montait plus jamais rien
+  (`RootComponents.Add<App>` était commenté dans `Program.cs`) et un lien CSS
+  404ait systématiquement.
+- [x] `P2-GATE-003` — **SKIPPED (partie manuelle), décision utilisateur
+  explicite du 2026-08-17** — voir plan détaillé ci-dessous. Captures
+  desktop/mobile + vérifications a11y. Preuve **automatisée** réelle et verte
+  (nouveau test `AccessibilityAndVisualCoverageTests`, 8 catégories de
+  violations réelles trouvées et corrigées sur 6 surfaces — dont une
+  régression `aria-labelledby` sur chaque fenêtre, et la découverte que
+  `test/test` et `HackerOs.Server` ne chargeaient jamais le vrai thème sombre
+  de l'app). La **checklist humaine** clavier/lecteur d'écran
+  ([`Human-test-needed-p2-GATE-003.md`](Human-test-needed-p2-GATE-003.md)) est
+  **explicitement passée en skip pour ne plus bloquer la fermeture du gate** —
+  ce n'est pas un abandon silencieux, c'est une décision prise en chat par
+  l'utilisateur. **Plan pour plus tard** : exécuter la checklist quand la
+  bande passante le permet, idéalement avant le gel de la surface SDK en
+  Phase 3, et consigner le résultat selon la convention de case datée déjà en
+  place dans `docs/accessibility.md` §2.4.
+- [x] `P2-GATE-004` — `phase-2-acceptance.md` réécrit : chaque ligne pointe
+  vers un test réel ou un écart explicitement documenté (facturation CI,
+  checklist humaine skip). Plus aucune preuve par fichier d'implémentation.
+- [ ] `P2-GATE-005` — Approbation utilisateur explicite. **Volontairement pas
+  demandée** avant que la facturation CI soit réglée (la checklist humaine
+  n'est plus un blocage, voir `P2-GATE-003` ci-dessus), conformément à
+  `integration-audit-remediation.md` ("cannot be inferred from source code or
+  a self-declared status line").
 
-`P2-GATE-001` (build + 622 tests, 0 échec) est déjà acquis.
+`P2-GATE-001` (build + tests) reconfirmé propre le 2026-08-17 après ce lot.
+Un échec pré-existant sans rapport (`Group_and_settings_contracts_pass_in_real_browser`,
+IndexedDB) a été retrouvé et documenté séparément (section 2 ci-dessus et
+tâche de suivi dédiée) — reproductible avant et après ce lot de travail.
 
-**Pourquoi en priorité 1** : c'est un gate formel bloquant depuis le
-2026-08-03 (voir la remédiation d'audit dans
-[`integration-audit-remediation.md`](integration-audit-remediation.md)) alors
-que le travail de fond a déjà largement dépassé Phase 2 en pratique — le
-fermer coûte relativement peu (5-6 items, surtout de la preuve/publication,
-pas de nouvelle fonctionnalité) et débloque une progression officielle
-propre du plan.
+**Il ne reste plus qu'une seule chose, hors de portée du code** : régler la
+facturation GitHub (`P2-ACC-017`). La checklist humaine de `P2-GATE-003` a
+été explicitement marquée skip (voir ci-dessus) plutôt que de rester un
+blocage. Une fois la facturation réglée, `P2-GATE-005` peut être demandé.
 
 ## 5. Phase 5 — Serveur/Proxy (en cours ailleurs, priorité 2)
 

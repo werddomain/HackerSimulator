@@ -64,6 +64,7 @@ export function createCodeEditor(host, dotNet, content, mode) {
       keymap.of([indentWithTab, ...defaultKeymap, ...searchKeymap, ...historyKeymap]),
       languageCompartment.of(languageFor(mode)),
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({ "aria-label": "Code editor content" }),
       EditorView.updateListener.of(update => {
         if (update.docChanged && !suppressChange && !disposed) {
           void dotNet.invokeMethodAsync("OnEditorChanged", update.state.doc.toString());

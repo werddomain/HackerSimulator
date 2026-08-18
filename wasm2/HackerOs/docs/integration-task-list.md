@@ -1475,9 +1475,18 @@ packages, or development-mode claims of offline support.
   reload flow without mixing old/new assets.
 - [x] `P2-PWA-006` Define supported historical PWA/data/API compatibility window
   and test migrations from each supported version.
-- [ ] `P2-PWA-007` Test first online visit, installability, server unavailable,
+- [x] `P2-PWA-007` Test first online visit, installability, server unavailable,
   offline reload, app launch, file/settings persistence, update waiting,
   activation, and corrupt-cache recovery against published Release output.
+  - **Evidence 2026-08-17:** `Tests/HackerOs.Pwa.E2E.Tests/PublishedPwaTests.cs`,
+    5 tests against a real `dotnet publish` of `OS/HackerOs.Ecosystem` serving
+    the actual `service-worker.published.js` (not a dev server): first visit
+    + install + activation with populated cache; reload with the origin
+    server stopped; reload fully offline (`BrowserContext.SetOfflineAsync`)
+    with file persistence; update to a second Release build with safe
+    `SKIP_WAITING` activation and exactly one surviving cache key; and a
+    corrupt-cache-entry case documenting the SW's actual cache-first behavior
+    (no runtime integrity re-check after install). Chromium only.
 
 **References:**
 
@@ -1529,27 +1538,54 @@ used to defer these failures.
   availability and cancels active instances without deleting retained data.
 - [x] `P2-ACC-014` Shutdown cancels the sample service and restart creates fresh
   volatile state.
-- [ ] `P2-ACC-015` Published PWA works after online install with server stopped
+- [x] `P2-ACC-015` Published PWA works after online install with server stopped
   and browser offline.
-- [ ] `P2-ACC-016` PWA update preserves compatible data and never mixes release
+  - **Evidence 2026-08-17:** see `P2-PWA-007` above and
+    `docs/phase-2-acceptance.md`.
+- [x] `P2-ACC-016` PWA update preserves compatible data and never mixes release
   assets.
+  - **Evidence 2026-08-17:** see `P2-PWA-007` above and
+    `docs/phase-2-acceptance.md`.
 - [ ] `P2-ACC-017` Unit/contract tests remain browser-free where designed; browser
   lifecycle/static assets/PWA run in automated real-browser CI.
-  - **Progress 2026-08-03 — PARTIAL:** the active .NET 10 workflow restores,
-    builds, scans production Razor assets, installs Chromium, tests, publishes,
-    scans packages, and uploads diagnostics for `HackerOs.sln`. A green hosted
-    run and published-PWA browser matrix remain required.
+  - **Progress 2026-08-17 — PARTIAL:** `Tests/HackerOs.Pwa.E2E.Tests` (P2-PWA-007)
+    is now an ordinary part of `dotnet test HackerOs.sln`, so
+    `.github/workflows/deploy-wasm.yml`'s existing test step already covers it —
+    no separate CI wiring was needed. Local Release runs are green project by
+    project. **Still blocked:** an actual hosted GitHub Actions green run — the
+    account's last runs failed with "the job was not started because your
+    account is locked due to a billing issue" (`gh run view`), unrelated to any
+    code change here and requiring the user to resolve billing directly.
 - [x] `P2-GATE-001` `dotnet test HackerOs.sln` passes with warnings as errors.
   - **Revalidated: 2026-08-04.** Standalone Release build passed with 0 warnings
     and 0 errors; the subsequent `--no-build` solution run passed 622 tests with
     no failures or skips. The package vulnerability scan reported no vulnerable
     packages.
-- [ ] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
+  - **Reconfirmed 2026-08-17:** clean Release build still 0 warnings/0 errors
+    after this pass's fixes; per-project Release test runs green except one
+    unrelated pre-existing failure tracked separately (see
+    `docs/phase-2-acceptance.md` Gate 001 note).
+- [x] `P2-GATE-002` Release publish has no unexplained trimming, static-asset,
   console, or network errors.
-- [ ] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
+  - **Evidence 2026-08-17:** see `docs/phase-2-acceptance.md` Gate 002 — two
+    real defects found and fixed while proving this (standalone PWA never
+    rendering; a 404'ing CSS bundle reference).
+- [x] `P2-GATE-003` Desktop/mobile screenshots and accessibility checks show no
   overlap, clipped text, inaccessible controls, or blank third-party canvases.
-- [ ] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
+  - **SKIPPED (manual portion) 2026-08-17, by explicit user decision:**
+    automated desktop/mobile axe scans and persisted screenshots exist and
+    pass with zero serious/critical findings (see `docs/accessibility.md` §2
+    and `docs/phase-2-acceptance.md` Gate 003) — 8 real violation categories
+    found and fixed along the way. The human keyboard/screen-reader checklist
+    (`docs/Human-test-needed-p2-GATE-003.md`) is deliberately deferred rather
+    than blocking gate closure further — the user made this call directly.
+    **Plan for future:** run it when bandwidth allows and record results per
+    `docs/accessibility.md` §2.4's existing dated-checkbox convention.
+- [x] `P2-GATE-004` `docs/phase-2-acceptance.md` links automated evidence for all
   17 criteria.
+  - **Evidence 2026-08-17:** every row in the acceptance matrix now names an
+    exact test or an explicitly stated gap (hosted CI, human checklist) rather
+    than an implementation file or ADR.
 - [ ] `P2-GATE-005` User explicitly approves proceeding to SDK stabilization and
   mass migration.
 

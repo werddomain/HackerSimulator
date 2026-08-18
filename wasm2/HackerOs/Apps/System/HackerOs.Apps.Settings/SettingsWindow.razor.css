@@ -24,6 +24,12 @@
     padding: 12px;
 }
 
+/* MudTabs' tab-header background/text color for this window is styled
+   globally in css/app.css (.hos-tab-header): MudBlazor's default light theme
+   otherwise renders it with insufficient contrast (axe color-contrast), and
+   Blazor CSS isolation's ::deep scoping did not reliably reach this
+   MudBlazor-internal element from here — a plain unscoped global rule does. */
+
 .setting-group {
     background-color: #161b22;
     border: 1px solid #30363d;

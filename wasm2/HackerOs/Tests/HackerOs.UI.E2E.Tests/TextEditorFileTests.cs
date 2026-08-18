@@ -54,7 +54,11 @@ public sealed class TextEditorFileTests(ITestOutputHelper output)
             await page.GetByText("File", new() { Exact = true }).HoverAsync();
             await page.Locator("#btn-open").ClickAsync();
 
-            ILocator openDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Open Text File" });
+            // Not page.GetByRole(Dialog, Name:"Open Text File"): the owning window (an
+            // <article role="dialog">) can share the same accessible name as the file
+            // dialog it contains, now that windows correctly expose one (WindowHost.razor's
+            // aria-labelledby fix) — scope by the dialog's own element instead.
+            ILocator openDialog = page.Locator("section.file-dialog", new() { HasText = "Open Text File" });
             await openDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
             output.WriteLine("[test] Open File dialog is visible.");
 
@@ -159,7 +163,7 @@ public sealed class TextEditorFileTests(ITestOutputHelper output)
             await page.GetByText("File", new() { Exact = true }).HoverAsync();
             await page.Locator("#btn-save-as").ClickAsync();
 
-            ILocator saveDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Save Text File" });
+            ILocator saveDialog = page.Locator("section.file-dialog", new() { HasText = "Save Text File" });
             await saveDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
             output.WriteLine("[test] Save File dialog is visible.");
 

@@ -180,7 +180,11 @@ internal static class PwaTestSupport
         await menu.GetByText("File", new() { Exact = true }).HoverAsync();
         await page.Locator("#btn-save-as").ClickAsync();
 
-        ILocator dialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Save Text File" });
+        // Not page.GetByRole(Dialog, Name:"Save Text File"): the owning window (an
+        // <article role="dialog">) can share the same accessible name as the file dialog
+        // it contains, now that windows correctly expose one (WindowHost.razor's
+        // aria-labelledby fix) — scope by the dialog's own element instead.
+        ILocator dialog = page.Locator("section.file-dialog", new() { HasText = "Save Text File" });
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
         await dialog.Locator(".name-control input").FillAsync(fileName);
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Save", Exact = true }).ClickAsync();

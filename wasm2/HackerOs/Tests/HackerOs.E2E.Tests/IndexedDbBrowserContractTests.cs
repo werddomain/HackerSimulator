@@ -36,7 +36,11 @@ public sealed class IndexedDbBrowserContractTests
             page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Save existing file" }).ClickAsync();
-            ILocator saveDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Save report" });
+            // Not page.GetByRole(Dialog, Name:"Save report"): the owning window (an
+            // <article role="dialog">) can share the same accessible name as the file
+            // dialog it contains, now that windows correctly expose one (WindowHost.razor's
+            // aria-labelledby fix) — scope by the dialog's own element instead.
+            ILocator saveDialog = page.Locator("section.file-dialog", new() { HasText = "Save report" });
             await saveDialog.WaitForAsync();
             await saveDialog.GetByRole(AriaRole.Button, new() { Name = "Save", Exact = true }).ClickAsync();
             ILocator overwrite = saveDialog.GetByRole(AriaRole.Alertdialog, new() { Name = "Confirm overwrite" });
@@ -46,7 +50,7 @@ public sealed class IndexedDbBrowserContractTests
             await page.GetByText("Saved:/home/user/readme.txt", new() { Exact = true }).WaitForAsync();
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Select or create folder" }).ClickAsync();
-            ILocator folderDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Choose workspace" });
+            ILocator folderDialog = page.Locator("section.file-dialog", new() { HasText = "Choose workspace" });
             await folderDialog.WaitForAsync();
             await folderDialog.GetByRole(AriaRole.Textbox, new() { Name = "New folder name" }).FillAsync("Projects");
             await folderDialog.GetByRole(AriaRole.Button, new() { Name = "New folder" }).ClickAsync();
@@ -58,7 +62,7 @@ public sealed class IndexedDbBrowserContractTests
             await page.GetByText("Folder:/home/user/Projects", new() { Exact = true }).WaitForAsync();
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Open denied folder" }).ClickAsync();
-            ILocator deniedDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Denied folder" });
+            ILocator deniedDialog = page.Locator("section.file-dialog", new() { HasText = "Denied folder" });
             await deniedDialog.GetByRole(AriaRole.Alert).WaitForAsync();
             Assert.Contains("PermissionDenied", await deniedDialog.GetByRole(AriaRole.Alert).InnerTextAsync(), StringComparison.Ordinal);
             await deniedDialog.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
@@ -98,7 +102,7 @@ public sealed class IndexedDbBrowserContractTests
             ILocator trigger = page.GetByRole(AriaRole.Button, new() { Name = "Open filtered files" });
 
             await trigger.ClickAsync();
-            ILocator dialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Choose text files" });
+            ILocator dialog = page.Locator("section.file-dialog", new() { HasText = "Choose text files" });
             await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             ILocator modalWindow = dialog.Locator("xpath=ancestor::article");
             Assert.Equal("true", await modalWindow.GetAttributeAsync("aria-modal"));
@@ -112,7 +116,7 @@ public sealed class IndexedDbBrowserContractTests
             Assert.Contains("is-focused", await owner.GetAttributeAsync("class"), StringComparison.Ordinal);
 
             await trigger.ClickAsync();
-            dialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Choose text files" });
+            dialog = page.Locator("section.file-dialog", new() { HasText = "Choose text files" });
             await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             ILocator options = dialog.GetByRole(AriaRole.Option);
             Assert.Equal(3, await options.CountAsync());
