@@ -180,7 +180,12 @@ internal static class PwaTestSupport
         await menu.GetByText("File", new() { Exact = true }).HoverAsync();
         await page.Locator("#btn-save-as").ClickAsync();
 
-        ILocator dialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Save Text File" });
+        // Not GetByRole(Dialog, Name: "Save Text File"): the window chrome hosting this dialog is
+        // itself role="dialog" and (correctly, since the WindowHost TitleId binding fix) now exposes
+        // the same "Save Text File" accessible name, so that locator resolves ambiguously to both the
+        // window and the actual file-picker section nested inside it. section.file-dialog is that
+        // inner element specifically (SaveFileDialog.razor).
+        ILocator dialog = page.Locator("section.file-dialog");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
         await dialog.Locator(".name-control input").FillAsync(fileName);
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Save", Exact = true }).ClickAsync();
