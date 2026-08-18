@@ -174,6 +174,28 @@ public sealed class AppIntentDispatcherTests
     }
 
     [Fact]
+    public async Task Open_file_intent_for_a_directory_resolves_org_hackeros_file_explorer_as_the_seeded_default_and_launches_it()
+    {
+        // Phase 5 (INT-006/INT-009): FileAssociationSettingsDocuments.EmptyDocumentContent seeds
+        // org.hackeros.file-explorer as the protected default handler for inode/directory, so with the
+        // real seeded association document (this fixture always uses CreateDefinition(), never a
+        // synthetic one) an unpreferenced directory-open intent resolves as ConfiguredDefault — matching
+        // the same end-to-end path FV-009's FileView.ActivateItemAsync(NewWindow) exercises when it calls
+        // IAppIntentGateway.OpenFileAsync(path, mediaType: "inode/directory").
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        AppIntentRequest request = new(
+            Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(),
+            new OpenFileIntent(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory"));
+
+        AppIntentDispatchResult result = await fixture.Dispatcher.DispatchAsync(request, principal);
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.NotNull(result.Process);
+    }
+
+    [Fact]
     public async Task Reveal_file_and_show_settings_intents_dispatch_without_requiring_any_capability()
     {
         Fixture fixture = new(NotepadManifest());
@@ -220,6 +242,21 @@ public sealed class AppIntentDispatcherTests
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"])]
+    };
+
+    private static AppManifest DirectoryHandlerManifest(string appId) => new()
+    {
+        Id = appId,
+        Name = appId,
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "A directory-capable Window app for Phase 5 tests.",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", $"{appId}.EntryPoint"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None,
+        FileHandlers = [new FileHandlerManifest("inode/directory", [], ["open"])]
     };
 
     private static AppManifest FullScreenManifest() => new()
@@ -345,8 +382,10 @@ public sealed class AppIntentDispatcherTests
                 () => new Guid(_transactionId++, 0, 0, new byte[8]),
                 timeProvider);
             FileSystemMountRouter router = new(repository);
+            Grants = new CapabilityGrantRepository(() => _now);
+            InMemoryTopicMessageBus topicBus = new(Grants);
             FileSystemService fileSystem = new(
-                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(),
+                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             FileSystemSeeder seeder = new(fileSystem, timeProvider);
 
@@ -367,12 +406,11 @@ public sealed class AppIntentDispatcherTests
 
             ManualSimulationClock clock = new(_now, TimeSpan.FromSeconds(1));
             Manager = new InMemoryProcessManager(clock, Session, eventBus);
-            Grants = new CapabilityGrantRepository(() => _now);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
             Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, eventBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, Settings, eventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));

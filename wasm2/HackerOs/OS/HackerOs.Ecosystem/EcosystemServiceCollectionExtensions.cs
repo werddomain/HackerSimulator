@@ -42,6 +42,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Sync;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -79,12 +80,19 @@ public static class EcosystemServiceCollectionExtensions
             new BoundedDiagnosticSink(1024),
             provider.GetRequiredService<IEventBus>()));
         services.AddSingleton<IAuditLog>(_ => new BoundedAuditLog(512));
-        services.AddSingleton<IndexedDbDiagnosticRepository>(provider => new IndexedDbDiagnosticRepository(
+        services.AddScoped<IndexedDbDiagnosticRepository>(provider => new IndexedDbDiagnosticRepository(
             provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
             provider.GetRequiredService<IDiagnosticRedactor>(),
             1024));
-        services.AddSingleton<IPersistentDiagnosticRepository>(provider =>
+        services.AddScoped<IPersistentDiagnosticRepository>(provider =>
             provider.GetRequiredService<IndexedDbDiagnosticRepository>());
+        // ILoggerProvider must stay Singleton — ASP.NET Core builds the host's ILoggerFactory
+        // once, before any circuit exists, so it can never depend on a Scoped service. This is
+        // fine for WASM hosts (IJSRuntime is available immediately there, no circuit concept),
+        // but the server host construct-injecting a Scoped IPersistentDiagnosticRepository here
+        // would violate scope validation at the moment ASP.NET Core eagerly builds every
+        // registered ILoggerProvider — see the comment where Server/HackerOs.Server/Program.cs
+        // strips this exact descriptor back out for that host, right after calling this method.
         services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
             provider.GetRequiredService<IDiagnosticSink>(),
             provider.GetRequiredService<IPersistentDiagnosticRepository>(),
@@ -100,45 +108,65 @@ public static class EcosystemServiceCollectionExtensions
             builder.AddFilter<HackerOsDiagnosticLoggerProvider>("System", LogLevel.None);
         });
 
-        services.AddSingleton<HostExceptionReporter>();
+        // Depends on IPersistentDiagnosticRepository, which is Scoped (see above) — see this
+        // file's IJSRuntime scoping note.
+        services.AddScoped<HostExceptionReporter>();
         services.AddSingleton<INotificationQueue>(_ => new InMemoryNotificationQueue(100));
 
-        services.AddSingleton<IndexedDbLocalUserRepository>();
-        services.AddSingleton<ILocalUserRepository>(provider =>
+        // IJSRuntime is scoped per Blazor Server circuit (WASM hosts have exactly one implicit
+        // scope for the app's lifetime, so this is a no-op behavior change there). Everything in
+        // this file that construct-injects IJSRuntime — directly or transitively — must be Scoped,
+        // not Singleton: a singleton is constructed once, on first resolution, and Blazor Web Apps
+        // construct+inject root/child components (running their [Inject] properties) during the
+        // static-SSR pass of the initial HTTP response even when that component's own @rendermode
+        // has prerender:false — prerender:false only skips calling its lifecycle methods during
+        // that pass, not construction. A singleton first resolved there permanently captures that
+        // pass's unattached IJSRuntime (no live circuit yet), and every later real circuit reuses
+        // that same dead instance, so its JS interop calls fail forever with "cannot be issued at
+        // this time... statically rendered" — regardless of which lifecycle method later calls it.
+        // Scoped services get a fresh instance per circuit's own DI scope, which is exactly what's
+        // needed here. See docs/Global-FileView-And-MessagingSystem/integrationPlan.md Phase 4 live
+        // browser check notes.
+        services.AddScoped<IndexedDbLocalUserRepository>();
+        services.AddScoped<ILocalUserRepository>(provider =>
             provider.GetRequiredService<IndexedDbLocalUserRepository>());
-        services.AddSingleton<IndexedDbLocalGroupRepository>();
-        services.AddSingleton<ILocalGroupRepository>(provider =>
+        services.AddScoped<IndexedDbLocalGroupRepository>();
+        services.AddScoped<ILocalGroupRepository>(provider =>
             provider.GetRequiredService<IndexedDbLocalGroupRepository>());
 
-        services.AddSingleton<IndexedDbSettingsDocumentService>(provider =>
+        services.AddScoped<IndexedDbSettingsDocumentService>(provider =>
             new IndexedDbSettingsDocumentService(
                 provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
                 CreateSystemSettingsDefinitions()));
-        services.AddSingleton<ISettingsDocumentService>(provider =>
+        services.AddScoped<ISettingsDocumentService>(provider =>
             provider.GetRequiredService<IndexedDbSettingsDocumentService>());
-        services.AddSingleton<IndexedDbCapabilityGrantRepository>();
-        services.AddSingleton<IPersistentCapabilityGrantRepository>(provider =>
+        services.AddScoped<IndexedDbCapabilityGrantRepository>();
+        services.AddScoped<IPersistentCapabilityGrantRepository>(provider =>
             provider.GetRequiredService<IndexedDbCapabilityGrantRepository>());
         services.AddSingleton<ICapabilityGrantRepository>(_ => new CapabilityGrantRepository());
+        services.AddSingleton<ITopicMessageBus>(provider =>
+            new InMemoryTopicMessageBus(provider.GetRequiredService<ICapabilityGrantRepository>()));
 
-        services.AddSingleton<IndexedDbFileSystemProvider>();
-        services.AddSingleton<IndexedDbFileSystemBootstrapper>();
-        services.AddSingleton<IFileSystemProvider>(provider =>
+        services.AddScoped<IndexedDbFileSystemProvider>();
+        services.AddScoped<IndexedDbFileSystemBootstrapper>();
+        services.AddScoped<IFileSystemProvider>(provider =>
             provider.GetRequiredService<IndexedDbFileSystemProvider>());
-        services.AddSingleton<IFileSystemMountRouter>(provider =>
+        services.AddScoped<IFileSystemMountRouter>(provider =>
             new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>()));
-        services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
+        // Depends on IFileSystemMountRouter, which is Scoped (see above) — see this file's
+        // IJSRuntime scoping note.
+        services.AddScoped<IFileSystemPathResolver, FileSystemPathResolver>();
         services.AddSingleton<IFileSystemAuthorizer, FileSystemAuthorizer>();
-        services.AddSingleton<IFileSystemService, FileSystemService>();
+        services.AddScoped<IFileSystemService, FileSystemService>();
         services.AddTransient<FileSystemSeeder>();
 
-        services.AddSingleton<WebCryptoPasswordHasher>(provider =>
+        services.AddScoped<WebCryptoPasswordHasher>(provider =>
             new WebCryptoPasswordHasher(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<ILoginProgressTracker, LoginProgressTracker>();
 
         // Optional server connection (ADR 0028) — opt-in, per-device; a device that never
         // connects sees no behavior change anywhere else in this composition.
-        services.AddSingleton<IServerConnectionRepository>(provider =>
+        services.AddScoped<IServerConnectionRepository>(provider =>
             new IndexedDbServerConnectionRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<HttpClient>();
         // TryAdd, not Add: the server-hosted host (ADR 0036) registers its own direct-injection
@@ -147,7 +175,7 @@ public static class EcosystemServiceCollectionExtensions
         // defaults as before this change — zero behavior change for them.
         services.TryAddSingleton<IAccountClient, HttpAccountClient>();
         services.TryAddSingleton<IProxyClient, HttpProxyClient>();
-        services.AddSingleton<IServerConnectionService>(provider =>
+        services.AddScoped<IServerConnectionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
             return new ServerConnectionService(
@@ -158,12 +186,12 @@ public static class EcosystemServiceCollectionExtensions
         });
 
         // Settings domain sync (ADR 0029) — reuses the connection above; a no-op when disconnected.
-        services.AddSingleton<ISyncCursorRepository>(provider =>
+        services.AddScoped<ISyncCursorRepository>(provider =>
             new IndexedDbSyncCursorRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
-        services.AddSingleton<ISyncRecordStateRepository>(provider =>
+        services.AddScoped<ISyncRecordStateRepository>(provider =>
             new IndexedDbSyncRecordStateRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.TryAddSingleton<ISyncClient, HttpSyncClient>();
-        services.AddSingleton<ISettingsSyncService>(provider => new SettingsSyncService(
+        services.AddScoped<ISettingsSyncService>(provider => new SettingsSyncService(
             CreateSystemSettingsDefinitions(),
             provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IServerConnectionService>(),
@@ -175,7 +203,7 @@ public static class EcosystemServiceCollectionExtensions
         // Settings sync above; scoped to the active session's own /home/{userId}, so a no-op when
         // disconnected or no session is active.
         services.AddSingleton<IContentTransferClient, HttpContentTransferClient>();
-        services.AddSingleton<IFileSystemSyncService>(provider => new FileSystemSyncService(
+        services.AddScoped<IFileSystemSyncService>(provider => new FileSystemSyncService(
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<ISessionService>(),
             provider.GetRequiredService<IServerConnectionService>(),
@@ -186,7 +214,7 @@ public static class EcosystemServiceCollectionExtensions
 
         // Grants domain sync (ADR 0031) — pull-only, applies server-issued grants into the durable
         // grant store. Not wired into live capability enforcement in this pass (see ADR 0031).
-        services.AddSingleton<IGrantsSyncService>(provider => new GrantsSyncService(
+        services.AddScoped<IGrantsSyncService>(provider => new GrantsSyncService(
             provider.GetRequiredService<IPersistentCapabilityGrantRepository>(),
             provider.GetRequiredService<IServerConnectionService>(),
             provider.GetRequiredService<ISyncClient>(),
@@ -195,13 +223,13 @@ public static class EcosystemServiceCollectionExtensions
         // FileAssociations + AppCatalog domain sync (ADR 0033) — completes the original five-domain
         // sync roadmap. FileAssociations reuses the Settings-document plumbing under its own domain
         // string; AppCatalog syncs only the ADR 0032 enablement flag, never the manifest.
-        services.AddSingleton<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
+        services.AddScoped<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
             provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IServerConnectionService>(),
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
-        services.AddSingleton<IAppCatalogSyncService>(provider => new AppCatalogSyncService(
+        services.AddScoped<IAppCatalogSyncService>(provider => new AppCatalogSyncService(
             provider.GetRequiredService<IPersistentAppCatalogRepository>(),
             provider.GetRequiredService<AppEnablementRegistry>(),
             provider.GetRequiredService<IServerConnectionService>(),
@@ -209,7 +237,7 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
 
-        services.AddSingleton<ISessionService>(provider =>
+        services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
             return new LocalSessionService(
@@ -225,7 +253,7 @@ public static class EcosystemServiceCollectionExtensions
                 grantRepository: provider.GetService<ICapabilityGrantRepository>(),
                 catalog: provider.GetService<AppCatalog>());
         });
-        services.AddSingleton<IProcessManager>(provider =>
+        services.AddScoped<IProcessManager>(provider =>
             new InMemoryProcessManager(
                 provider.GetRequiredService<ISimulationClock>(),
                 provider.GetRequiredService<ISessionService>(),
@@ -235,21 +263,22 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISimulationRandom>(),
             VirtualHardwareProfile.Default));
 
-        services.AddSingleton<IndexedDbAppCatalogRepository>();
-        services.AddSingleton<IPersistentAppCatalogRepository>(provider =>
+        services.AddScoped<IndexedDbAppCatalogRepository>();
+        services.AddScoped<IPersistentAppCatalogRepository>(provider =>
             provider.GetRequiredService<IndexedDbAppCatalogRepository>());
-        services.AddSingleton<EcosystemBootCoordinator>();
+        services.AddScoped<EcosystemBootCoordinator>();
 
         services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
         services.AddSingleton<AppEnablementRegistry>(provider =>
             new AppEnablementRegistry(provider.GetRequiredService<AppCatalog>()));
         services.AddSingleton<IAppEnablementRegistry>(provider =>
             provider.GetRequiredService<AppEnablementRegistry>());
-        services.AddSingleton<AppExecutionContextFactory>(provider => new AppExecutionContextFactory(
+        services.AddScoped<AppExecutionContextFactory>(provider => new AppExecutionContextFactory(
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
+            provider.GetRequiredService<ITopicMessageBus>(),
             provider.GetRequiredService<INotificationQueue>(),
             provider.GetRequiredService<IDiagnosticSink>(),
             provider.GetRequiredService<ISimulationClock>(),
@@ -257,7 +286,7 @@ public static class EcosystemServiceCollectionExtensions
             // Resolved lazily: AppIntentDispatcher depends (transitively, via AppLifecycleOrchestrator)
             // on this very factory, so eagerly injecting it here would be circular.
             intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>()));
-        services.AddSingleton<FileAssociationResolver>(provider => new FileAssociationResolver(
+        services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
             provider.GetRequiredService<ISettingsDocumentService>()));
@@ -279,7 +308,7 @@ public static class EcosystemServiceCollectionExtensions
             SmokeTestNetworkSeed.Hosts,
             provider.GetRequiredService<ISimulatedWebsiteRegistry>()));
 
-        services.AddSingleton<AppLifecycleOrchestrator>(provider => new AppLifecycleOrchestrator(
+        services.AddScoped<AppLifecycleOrchestrator>(provider => new AppLifecycleOrchestrator(
             provider.GetRequiredService<AppCatalog>(),
             descriptorProvider?.Invoke(provider) ?? new Dictionary<string, AppDescriptor>(StringComparer.Ordinal),
             provider.GetRequiredService<AppEnablementRegistry>(),
@@ -291,7 +320,7 @@ public static class EcosystemServiceCollectionExtensions
             descriptorLoaderProvider?.Invoke(provider),
             provider.GetRequiredService<IPersistentAppCatalogRepository>(),
             provider));
-        services.AddSingleton<AppIntentDispatcher>(provider => new AppIntentDispatcher(
+        services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
@@ -320,14 +349,19 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
         services.AddSingleton<WindowLaunchCoordinator>();
         services.AddSingleton<WindowCloseGuardRegistry>();
-        services.AddSingleton<WindowCloseCoordinator>();
+        // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
+        // IJSRuntime scoping note.
+        services.AddScoped<WindowCloseCoordinator>();
         services.AddScoped<FileDialogWindowAdapter>(provider => new FileDialogWindowAdapter(
             provider.GetRequiredService<FileDialogCoordinator>(),
             provider.GetRequiredService<WindowRuntime>(),
             provider.GetRequiredService<DialogCoordinator>()));
-        services.AddSingleton<TestDemoFixtureSeeder>();
+        // Depends on IFileSystemService, which is Scoped (see above) — see this file's IJSRuntime
+        // scoping note.
+        services.AddScoped<TestDemoFixtureSeeder>();
 
         services.AddSingleton<IIconCatalog, IconCatalog>();
+        services.AddSingleton<IShellIconProvider, DefaultShellIconProvider>();
 
         return services;
     }

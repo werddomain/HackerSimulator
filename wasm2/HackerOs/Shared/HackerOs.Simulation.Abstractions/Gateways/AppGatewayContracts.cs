@@ -118,13 +118,53 @@ public interface IAppSettingsGateway
 /// Provides one app instance's typed event bus access. Subscriptions are attributed to the
 /// app instance so platform code can trace and, if necessary, force-dispose leaked subscriptions.
 /// </summary>
+/// <remarks>
+/// Per <c>docs/adr/0038-emitter-authorized-topic-messaging.md</c>, this gateway has two lanes.
+/// <see cref="Subscribe{TEvent}"/>/<see cref="Publish{TEvent}"/> are the kernel lane: any app may still
+/// subscribe to a trusted platform lifecycle event type (read access was never the security problem),
+/// but <see cref="Publish{TEvent}"/> no longer forwards to the underlying bus for app-facing callers —
+/// no CLR event type is currently allow-listed for app-initiated publish, since the one app that
+/// previously used it (<c>SampleTickerService</c>) migrated to the topic lane below. The topic-bus
+/// members (<see cref="Subscribe{TPayload}(TopicName, Action{TopicMessage{TPayload}})"/>,
+/// <see cref="SubscribeChannel{TPayload}"/>, <see cref="Publish{TPayload}(TopicName, TPayload)"/>,
+/// <see cref="RegisterSharedChannel"/>) are the app lane apps are expected to use instead: publishing is
+/// authorized by namespace ownership or shared-channel policy rather than being unrestricted.
+/// </remarks>
 public interface IAppEventGateway
 {
     /// <summary>Subscribes to every event of type <typeparamref name="TEvent"/>.</summary>
     IDisposable Subscribe<TEvent>(Action<TEvent> handler) where TEvent : notnull;
 
-    /// <summary>Publishes one event to every current subscriber.</summary>
+    /// <summary>
+    /// Publishes one event to every current subscriber of <typeparamref name="TEvent"/>, when
+    /// <typeparamref name="TEvent"/> is on the app-publishable allow-list. No event type is currently
+    /// allow-listed; use <see cref="Publish{TPayload}(TopicName, TPayload)"/> instead. A non-allow-listed
+    /// publish is silently denied (returns an empty result, matching the existing fault-isolation
+    /// convention) rather than throwing.
+    /// </summary>
     IReadOnlyList<EventDispatchFault> Publish<TEvent>(TEvent @event) where TEvent : notnull;
+
+    /// <summary>Subscribes to every message published on <paramref name="topic"/>.</summary>
+    IDisposable Subscribe<TPayload>(TopicName topic, Action<TopicMessage<TPayload>> handler) where TPayload : notnull;
+
+    /// <summary>
+    /// Returns a disposable, <see cref="System.Threading.Channels.Channel{T}"/>-backed subscription for
+    /// <paramref name="topic"/>. Disposing stops delivery and completes the channel.
+    /// </summary>
+    ITopicChannelSubscription<TPayload> SubscribeChannel<TPayload>(TopicName topic, int? boundedCapacity = null)
+        where TPayload : notnull;
+
+    /// <summary>
+    /// Publishes one message to <paramref name="topic"/>, stamping this instance's own app/user/process
+    /// identity as the publisher — never a caller-supplied identity. Denied when <paramref name="topic"/>
+    /// is outside this app's own namespace and is not a shared channel this app may publish to.
+    /// </summary>
+    TopicPublishResult Publish<TPayload>(TopicName topic, TPayload payload) where TPayload : notnull;
+
+    /// <summary>
+    /// Idempotently registers <paramref name="root"/> as a shared channel owned by this app instance.
+    /// </summary>
+    void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy);
 }
 
 /// <summary>
@@ -280,7 +320,13 @@ public interface IAppIntentGateway
     /// with every candidate so the caller can show a picker and open with an explicit choice via
     /// <see cref="LaunchAsync"/>.
     /// </summary>
+    /// <param name="path">Canonical virtual filesystem path to open.</param>
+    /// <param name="mediaType">
+    /// Caller-supplied media type when already known (e.g. <c>"inode/directory"</c> for a directory-open
+    /// request per ADR 0039); never auto-detected from content.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
     ValueTask<AppIntentOpenFileResult> OpenFileAsync(
-        VirtualPath path, CancellationToken cancellationToken = default);
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
 }

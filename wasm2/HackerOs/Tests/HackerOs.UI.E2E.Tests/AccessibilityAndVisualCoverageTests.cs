@@ -105,6 +105,16 @@ public sealed class AccessibilityAndVisualCoverageTests(ITestOutputHelper output
         if (blocking.Length > 0)
         {
             findings.Add($"{surfaceName}: serious/critical axe violations: {string.Join(", ", blocking.Select(item => item.Id))}");
+            foreach (var violation in blocking)
+            {
+                foreach (var node in violation.Nodes ?? [])
+                {
+                    string summary = string.Join("; ", (node.All ?? []).Concat(node.Any ?? []).Concat(node.None ?? [])
+                        .Select(check => check.Message));
+                    output.WriteLine(
+                        $"[test]   {surfaceName} :: {violation.Id} :: {node.Target?.Selector} :: {node.Html} :: {summary}");
+                }
+            }
         }
 
         string screenshotPath = Path.Combine(screenshotDirectory, $"{surfaceName}.png");

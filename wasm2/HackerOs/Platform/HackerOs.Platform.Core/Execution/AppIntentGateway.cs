@@ -47,12 +47,12 @@ internal sealed class AppIntentGateway(
     }
 
     public async ValueTask<AppIntentOpenFileResult> OpenFileAsync(
-        VirtualPath path, CancellationToken cancellationToken = default)
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default)
     {
         AppIntentDispatcher dispatcher = dispatcherProvider();
         AppIntentDispatchResult result = await dispatcher.DispatchAsync(
             new AppIntentRequest(
-                Guid.NewGuid(), callerAppId, userId, new OpenFileIntent(path, FileIntentAction.Open)),
+                Guid.NewGuid(), callerAppId, userId, new OpenFileIntent(path, FileIntentAction.Open, mediaType)),
             principal,
             fullScreen: null,
             cancellationToken);

@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
 namespace HackerOs.Platform.Core.Tests.FileSystem;
@@ -92,6 +94,7 @@ public sealed class FileSystemSeederTests
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => _now)),
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             Seeder = new FileSystemSeeder(service, timeProvider);
             SystemContext = CreateSystemContext(_now);

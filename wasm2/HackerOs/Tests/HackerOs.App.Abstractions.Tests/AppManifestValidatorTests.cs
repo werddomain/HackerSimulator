@@ -111,6 +111,71 @@ public sealed class AppManifestValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Fact]
+    public void Validate_accepts_a_well_formed_topic_permission_as_a_requested_capability()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Capabilities = ["topic-publish:app/org.hackeros.file-explorer/change-directory"]
+        };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_accepts_a_topic_permission_the_manifest_declares_and_owns()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            DeclaredTopicPermissions =
+            [
+                new TopicPermissionDeclarationManifest(
+                    "topic-publish:app/org.hackeros.text-editor/change-directory",
+                    "Allows another app to change this window's current directory.")
+            ]
+        };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_rejects_a_declared_topic_permission_not_owned_by_this_app()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            DeclaredTopicPermissions =
+            [
+                new TopicPermissionDeclarationManifest(
+                    "topic-publish:app/org.hackeros.some-other-app/change-directory",
+                    "Attempts to declare a permission for a different app's namespace.")
+            ]
+        };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == "manifest.topicPermission.notOwned");
+    }
+
+    [Fact]
+    public void Validate_rejects_a_malformed_declared_topic_permission()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            DeclaredTopicPermissions =
+            [
+                new TopicPermissionDeclarationManifest("not-a-topic-permission", "Malformed identifier.")
+            ]
+        };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == "manifest.topicPermission.malformed");
+    }
+
     private static AppManifest CreateValidManifest() => new()
     {
         Id = "org.hackeros.text-editor",

@@ -26,15 +26,21 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// The server-hosted Blazor UI (ADR 0027) reuses AddHackerOsEcosystem unmodified,
-// whose composition root registers browser-storage repositories as process-wide
-// singletons that construct-inject the circuit-scoped IJSRuntime — the same
-// single-tenant captive-dependency shape test/test already accepts for the same
-// composition root. Default scope validation would reject that at Build() time;
-// disabling it here mirrors test/test/Program.cs exactly.
+// The server-hosted Blazor UI (ADR 0027) reuses AddHackerOsEcosystem, whose composition
+// root registers every IJSRuntime-touching service as Scoped (per-circuit) rather than
+// Singleton — Singleton was the original shape and caused a real bug: the first circuit
+// to resolve one permanently captured whichever IJSRuntime existed at that moment
+// (including an unattached one from the host page's own static-SSR pass), so JS interop
+// failed for every later circuit too. ValidateScopes is explicitly kept on so a future
+// singleton-consuming-a-scoped-service regression fails loudly instead of quietly
+// reintroducing that bug. ValidateOnBuild stays off only because IndexedDbDiagnosticRepository
+// remains a deliberately-accepted, dormant exception (constructor-injects IJSRuntime as a
+// Singleton, but this host removes its only consumer — see the ILoggerProvider strip-out
+// below — so it's registered but never resolved; eager build-time validation would still
+// flag it even though nothing ever touches it at runtime).
 builder.Host.UseDefaultServiceProvider(options =>
 {
-    options.ValidateScopes = false;
+    options.ValidateScopes = true;
     options.ValidateOnBuild = false;
 });
 
@@ -123,7 +129,17 @@ builder.Services.AddOpenApi();
 // Serves the same HackerOs.Ecosystem.App component tree as OS/HackerOs.Ecosystem
 // (static WASM) and test/test (WASM debug harness) via Interactive Server render
 // mode. Single-tenant/single-active-circuit only for this phase — see ADR 0027.
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
+// SignalR's default 32KB message cap is sized for typical form-post/DOM-diff traffic. This
+// app's initial interactive render (desktop shell + taskbar + app launcher, backed by the full
+// app catalog/manifest set) produces a render batch larger than that on first connect, so the
+// circuit was closing immediately with "The maximum message size of 32768B was exceeded" before
+// the desktop ever appeared. WASM hosts never hit this (no SignalR transport involved).
+builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024;
+});
 builder.Services.AddSingleton<IEcosystemHostEnvironment, AspNetCoreEcosystemHostEnvironment>();
 builder.Services.AddSingleton<IBuildKnownAssemblyTransport, InProcessAssemblyTransport>();
 builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(

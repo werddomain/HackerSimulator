@@ -12,21 +12,37 @@ namespace HackerOs.Server;
 /// </summary>
 public sealed partial class InProcessAssemblyTransport(ILogger<InProcessAssemblyTransport> logger) : IBuildKnownAssemblyTransport
 {
-    [RequiresUnreferencedCode("Resolves already-loaded assemblies; no additional metadata is fetched.")]
+    [RequiresUnreferencedCode("Resolves already-loaded assemblies, or loads them by simple name; no additional metadata is fetched.")]
     public Task<IReadOnlyList<Assembly>> LoadAsync(IReadOnlyList<string> assemblyNames, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
         List<Assembly> resolved = new(assemblyNames.Count);
         foreach (string assemblyName in assemblyNames)
         {
+            Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
             Assembly? match = Array.Find(loaded, assembly =>
                 string.Equals(assembly.GetName().Name + ".dll", assemblyName, StringComparison.Ordinal));
             if (match is null)
             {
-                LogAssemblyNotLoaded(assemblyName);
-                continue;
+                // Every declared app project is a direct compile-time reference of this host
+                // (see this class's own doc comment), so its DLL sits next to HackerOs.Server.dll
+                // in the output directory — but a compile-time reference alone does not put an
+                // assembly into AppDomain.CurrentDomain.GetAssemblies(): the CLR only loads an
+                // assembly once something actually touches one of its types, and this app's
+                // catalog wiring resolves app assemblies by name/reflection rather than a direct
+                // C# reference, so nothing forces that load before the first launch attempt.
+                // Assembly.Load resolves it from the same probing path the compile-time reference
+                // already guaranteed exists.
+                try
+                {
+                    match = Assembly.Load(Path.GetFileNameWithoutExtension(assemblyName));
+                }
+                catch (Exception exception) when (exception is FileNotFoundException or FileLoadException or BadImageFormatException)
+                {
+                    LogAssemblyNotLoaded(assemblyName);
+                    continue;
+                }
             }
 
             resolved.Add(match);

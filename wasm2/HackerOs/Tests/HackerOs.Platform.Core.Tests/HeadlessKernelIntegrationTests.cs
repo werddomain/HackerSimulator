@@ -240,8 +240,10 @@ public sealed class HeadlessKernelIntegrationTests
                 () => new Guid(_transactionId++, 0, 0, new byte[8]),
                 timeProvider);
             FileSystemMountRouter router = new(repository);
+            Grants = new CapabilityGrantRepository(() => _now);
+            InMemoryTopicMessageBus topicBus = new(Grants);
             FileSystemService fileSystem = new(
-                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(),
+                router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             Seeder = new FileSystemSeeder(fileSystem, timeProvider);
 
@@ -262,12 +264,11 @@ public sealed class HeadlessKernelIntegrationTests
 
             ManualSimulationClock clock = new(_now, TimeSpan.FromSeconds(1));
             Manager = new InMemoryProcessManager(clock, Session, eventBus);
-            Grants = new CapabilityGrantRepository(() => _now);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
             Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, eventBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, Settings, eventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));

@@ -287,10 +287,13 @@ public sealed class AppExecutionContextTests
                 () => new Guid(_transactionId++, 0, 0, new byte[8]),
                 timeProvider);
             FileSystemMountRouter router = new(repository);
+            Grants = new CapabilityGrantRepository(() => _now);
+            TopicBus = new InMemoryTopicMessageBus(Grants);
             FileSystem = new FileSystemService(
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                TopicBus,
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             Seeder = new FileSystemSeeder(FileSystem, timeProvider);
 
@@ -311,13 +314,12 @@ public sealed class AppExecutionContextTests
 
             Clock = new ManualSimulationClock(_now, TimeSpan.FromSeconds(1));
             Manager = new InMemoryProcessManager(Clock, Session, EventBus);
-            Grants = new CapabilityGrantRepository(() => _now);
             Notifications = new InMemoryNotificationQueue(maxEntriesPerUser: 20);
             Diagnostics = new BoundedDiagnosticSink(maxEntries: 100);
             Settings = new InMemorySettingsDocumentService([]);
             Registry = new FileSystemSelectedResourceHandleRegistry(Clock, Grants, EventBus);
             Factory = new AppExecutionContextFactory(
-                Grants, FileSystem, Settings, EventBus, Notifications, Diagnostics, Clock, Manager);
+                Grants, FileSystem, Settings, EventBus, TopicBus, Notifications, Diagnostics, Clock, Manager);
 
             Manifest = new AppManifest
             {
@@ -340,6 +342,7 @@ public sealed class AppExecutionContextTests
         internal FileSystemService FileSystem { get; }
         internal FileSystemSeeder Seeder { get; }
         internal InMemoryEventBus EventBus { get; }
+        internal InMemoryTopicMessageBus TopicBus { get; }
         internal BoundedAuditLog AuditLog { get; }
         internal LocalSessionService Session { get; }
         internal ManualSimulationClock Clock { get; }

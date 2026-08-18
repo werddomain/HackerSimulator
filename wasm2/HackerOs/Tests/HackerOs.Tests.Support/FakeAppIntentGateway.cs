@@ -17,6 +17,9 @@ public sealed class FakeAppIntentGateway : IAppIntentGateway
     /// <summary>Every open-file request received, in call order.</summary>
     public List<VirtualPath> OpenFileRequests { get; } = [];
 
+    /// <summary>Every open-file request's media type, in call order (parallel to <see cref="OpenFileRequests"/>).</summary>
+    public List<string?> OpenFileMediaTypes { get; } = [];
+
     public FakeAppIntentGateway WithResult(string appId, AppIntentLaunchResult result)
     {
         _results[appId] = result;
@@ -52,9 +55,10 @@ public sealed class FakeAppIntentGateway : IAppIntentGateway
     }
 
     public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
-        VirtualPath path, CancellationToken cancellationToken = default)
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default)
     {
         OpenFileRequests.Add(path);
+        OpenFileMediaTypes.Add(mediaType);
 
         AppIntentOpenFileResult result = _openResults.TryGetValue(path.Value, out AppIntentOpenFileResult? scripted)
             ? scripted

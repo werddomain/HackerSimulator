@@ -35,7 +35,12 @@
         </label>
     </header>
 
-    <nav class="tab-strip" role="toolbar" aria-label="Open editor documents">
+    @* Not a full ARIA tablist pattern (no tabpanel counterparts, no arrow-key roving tabindex —
+       see docs/Human-test-needed-p2-GATE-003.md's keyboard-navigation gap), and each tab carries
+       its own close button, which the tablist/tab pattern doesn't allow as a sibling owned
+       element (axe aria-required-children). aria-pressed communicates the active document
+       without claiming a pattern this widget doesn't fully implement. *@
+    <nav class="tab-strip" aria-label="Open editor documents">
         @foreach (CodeEditorDocument document in _session.Documents)
         {
             <div class="tab-shell @(document.Id == _session.ActiveDocumentId ? "is-active" : null)">
@@ -64,7 +69,7 @@
     }
 
     <div class="editor-workspace">
-        <div class="editor-host" @ref="_editorHost" role="group" aria-label="Source code editor"></div>
+        <div class="editor-host" @ref="_editorHost"></div>
     </div>
 
     <footer class="editor-statusbar" aria-label="Code editor status">

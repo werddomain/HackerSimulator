@@ -19,6 +19,12 @@
     pointer-events: none;
 }
 
+.background-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
 .window-layer {
     position: absolute;
     inset: 0;

@@ -1,0 +1,9 @@
+.shell-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shell-icon-raster {
+    object-fit: contain;
+}

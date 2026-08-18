@@ -1,8 +1,16 @@
+using HackerOs.AppSdk.FileView;
 using HackerOs.Apps.FileExplorer;
 using Xunit;
 
 namespace HackerOs.Apps.FileExplorer.Tests;
 
+/// <summary>
+/// Tests for <see cref="FileExplorerState"/>'s remaining responsibility after the Phase 4 migration onto
+/// <c>FileView</c> (<c>INT-001</c>): navigation history only. Sorting and selection are no longer this
+/// class's concern — <c>FileView.SelectedItems</c> and its own Details-mode sort own those now, so the
+/// tests that used to cover <c>SortColumn</c>/<c>SortAscending</c>/<c>SelectedItemNames</c> here were
+/// deleted rather than adapted, per <c>ADR 0037</c>'s "delete rather than keep a parallel path".
+/// </summary>
 public sealed class FileExplorerStateTests
 {
     [Fact]
@@ -36,27 +44,39 @@ public sealed class FileExplorerStateTests
     }
 
     [Fact]
-    public void FileExplorerState_toggles_sorting_and_selection()
+    public void NavigateTo_the_current_path_is_a_no_op()
     {
         FileExplorerState state = new("/home/user");
-        Assert.Equal(FileExplorerSortColumn.Name, state.SortColumn);
-        Assert.True(state.SortAscending);
+        int changeCount = 0;
+        state.StateChanged += () => changeCount++;
 
-        state.SetSortColumn(FileExplorerSortColumn.Name);
-        Assert.False(state.SortAscending);
+        state.NavigateTo("/home/user");
 
-        state.SetSortColumn(FileExplorerSortColumn.Size);
-        Assert.Equal(FileExplorerSortColumn.Size, state.SortColumn);
-        Assert.True(state.SortAscending);
+        Assert.Equal(0, changeCount);
+        Assert.False(state.CanNavigateBack);
+    }
 
-        state.SelectSingle("file1.txt");
-        Assert.Single(state.SelectedItemNames);
-        Assert.Contains("file1.txt", state.SelectedItemNames);
+    [Fact]
+    public void NavigateTo_clears_the_forward_stack()
+    {
+        FileExplorerState state = new("/home/user");
+        state.NavigateTo("/home/user/docs");
+        state.NavigateBack();
+        Assert.True(state.CanNavigateForward);
 
-        state.ToggleSelection("file2.txt");
-        Assert.Equal(2, state.SelectedItemNames.Count);
+        state.NavigateTo("/var/log");
 
-        state.ClearSelection();
-        Assert.Empty(state.SelectedItemNames);
+        Assert.False(state.CanNavigateForward);
+    }
+
+    [Fact]
+    public void ViewMode_defaults_to_Details_and_is_freely_settable()
+    {
+        FileExplorerState state = new("/home/user");
+        Assert.Equal(FileViewMode.Details, state.ViewMode);
+
+        state.ViewMode = FileViewMode.Tree;
+
+        Assert.Equal(FileViewMode.Tree, state.ViewMode);
     }
 }

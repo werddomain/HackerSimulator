@@ -1,0 +1,24 @@
+@namespace HackerOs.AppSdk.FileView
+@implements IAsyncDisposable
+
+@*
+    Root control shell: mode switch + shared chrome (context menu). All behavior lives in
+    FileView.razor.cs (FV-001 and later) — this file is markup only, per this repo's collocated-asset
+    convention for non-trivial components.
+*@
+<div class="file-view" data-mode="@Mode" @ref="_rootElement" @oncontextmenu="OnBackgroundContextMenuAsync" @oncontextmenu:preventDefault="true">
+    @if (Mode == FileViewMode.Details)
+    {
+        <FileViewDetails Owner="this" />
+    }
+    else if (Mode == FileViewMode.Icons)
+    {
+        <FileViewIcons Owner="this" />
+    }
+    else
+    {
+        <FileViewTree Owner="this" />
+    }
+
+    <FileViewContextMenu @ref="_contextMenu" Owner="this" />
+</div>

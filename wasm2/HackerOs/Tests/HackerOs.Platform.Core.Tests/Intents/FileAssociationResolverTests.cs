@@ -94,6 +94,83 @@ public sealed class FileAssociationResolverTests
         Assert.Equal(FileHandlerResolutionStatus.NoHandler, resolution.Status);
     }
 
+    // `INT-007`: a directory-only `FileHandlerManifest` (media type set, no extensions — a directory path
+    // has none for `GetExtension` to find anyway) needs no resolver code change, since `MatchesTarget`
+    // already falls through to the media-type branch whenever `extension` is null. These four tests prove
+    // that holds across every outcome `MatchesTarget`/`TryGetDefault` can produce, using the real
+    // `inode/directory` convention `FV-009`'s `FileView.ActivateItemAsync` already sends.
+
+    [Fact]
+    public async Task An_explicit_valid_preferred_app_is_used_for_a_directory_target()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        OpenFileIntent intent = new(
+            VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open,
+            PreferredAppId: "org.hackeros.file-explorer", MediaType: "inode/directory");
+
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+
+        Assert.Equal(FileHandlerResolutionStatus.ExplicitTarget, resolution.Status);
+        Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
+    }
+
+    [Fact]
+    public async Task A_configured_media_type_default_is_preferred_over_directory_candidates()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"), DirectoryHandlerManifest("org.hackeros.archiver"));
+        await fixture.ConfigureMediaTypeDefaultAsync("inode/directory", "org.hackeros.file-explorer");
+        OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
+
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+
+        Assert.Equal(FileHandlerResolutionStatus.ConfiguredDefault, resolution.Status);
+        Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
+    }
+
+    [Fact]
+    public async Task A_sole_directory_candidate_is_used_without_a_configured_default()
+    {
+        // FileAssociationSettingsDocuments.EmptyDocumentContent seeds org.hackeros.file-explorer as the
+        // inode/directory default (INT-009) — cleared here so this test genuinely exercises the
+        // no-configured-default candidate path, not the configured-default path INT-009 itself covers.
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        await fixture.ClearAssociationsAsync();
+        OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
+
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+
+        Assert.Equal(FileHandlerResolutionStatus.SoleCandidate, resolution.Status);
+        Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
+    }
+
+    [Fact]
+    public async Task Multiple_directory_candidates_without_a_configured_default_require_a_chooser()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"), DirectoryHandlerManifest("org.hackeros.archiver"));
+        await fixture.ClearAssociationsAsync();
+        OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
+
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+
+        Assert.Equal(FileHandlerResolutionStatus.ChooserRequired, resolution.Status);
+        Assert.Equal(["org.hackeros.archiver", "org.hackeros.file-explorer"], resolution.CandidateAppIds);
+    }
+
+    private static AppManifest DirectoryHandlerManifest(string appId) => new()
+    {
+        Id = appId,
+        Name = appId,
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "A directory-capable app for INT-007 tests.",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", $"{appId}.EntryPoint"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None,
+        FileHandlers = [new FileHandlerManifest("inode/directory", [], ["open"])]
+    };
+
     private static AppManifest NotepadManifest() => new()
     {
         Id = "org.hackeros.notepad",
@@ -169,6 +246,26 @@ public sealed class FileAssociationResolverTests
                 """;
             SettingsWriteResult write = await Settings.WriteAsync(
                 new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, content, read.Document!.Revision), WriteContext);
+            Assert.Equal(SettingsWriteStatus.Success, write.Status);
+        }
+
+        internal async Task ConfigureMediaTypeDefaultAsync(string mediaType, string appId)
+        {
+            SettingsReadResult read = await Settings.ReadAsync(FileAssociationSettingsDocuments.Path, WriteContext);
+            string content = $$"""
+                {"schemaVersion":1,"associations":[{"mediaType":"{{mediaType}}","appId":"{{appId}}","actions":["open"]}]}
+                """;
+            SettingsWriteResult write = await Settings.WriteAsync(
+                new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, content, read.Document!.Revision), WriteContext);
+            Assert.Equal(SettingsWriteStatus.Success, write.Status);
+        }
+
+        internal async Task ClearAssociationsAsync()
+        {
+            SettingsReadResult read = await Settings.ReadAsync(FileAssociationSettingsDocuments.Path, WriteContext);
+            SettingsWriteResult write = await Settings.WriteAsync(
+                new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, "{\"schemaVersion\":1,\"associations\":[]}", read.Document!.Revision),
+                WriteContext);
             Assert.Equal(SettingsWriteStatus.Success, write.Status);
         }
     }

@@ -1,7 +1,9 @@
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
@@ -154,6 +156,7 @@ public sealed class SettingsFileSystemProviderTests
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
                 () => new Guid(fixture._transactionId++, 0, 0, new byte[8]));
             return fixture;
         }

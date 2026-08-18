@@ -16,7 +16,7 @@
 @inject WebCryptoPasswordHasher PasswordHasher
 
 <main class="ecosystem-host">
-    <MudThemeProvider />
+    <MudThemeProvider Theme="_theme" IsDarkMode="true" />
     <MudPopoverProvider />
     <MudDialogProvider />
     <MudSnackbarProvider />
@@ -137,6 +137,39 @@
     /// </summary>
     [Parameter]
     public bool TestDemoEnabled { get; set; }
+
+    // MudBlazor's default theme is light, which leaves components like MudTabs painting a
+    // white surface behind text colored by HackerOS's inherited dark --hos-text-* tokens
+    // (e.g. desktop-settings' axe color-contrast: #c9d1d9 on #ffffff = 1.54:1). Mapping
+    // PaletteDark onto the same --hos-* tokens as wwwroot/css/app.css keeps every
+    // MudBlazor-rendered surface consistent with the rest of the OS chrome.
+    private static readonly MudTheme _theme = new()
+    {
+        PaletteDark = new PaletteDark
+        {
+            Black = "#101417",
+            Background = "#101417",
+            BackgroundGray = "#151c20",
+            Surface = "#172025",
+            DrawerBackground = "#151c20",
+            DrawerText = "#a8bac4",
+            AppbarBackground = "#151c20",
+            AppbarText = "#f4f7f8",
+            TextPrimary = "#f4f7f8",
+            TextSecondary = "#a8bac4",
+            TextDisabled = "#6a7e88",
+            ActionDefault = "#a8bac4",
+            Primary = "#42d392",
+            Success = "#42d392",
+            Error = "#ff9a91",
+            Warning = "#d5a84f",
+            LinesDefault = "#34444c",
+            LinesInputs = "#34444c",
+            TableLines = "#34444c",
+            Divider = "#34444c",
+            DividerLight = "#212c32",
+        }
+    };
 
     private HostErrorBoundary? ErrorBoundary { get; set; }
     private EcosystemHostState State { get; } = new();

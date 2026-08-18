@@ -28,7 +28,7 @@
             <span class="size-label">@_state.BrushSize px</span>
         </div>
     </div>
-    <div class="paint-viewport @(_state.ShowGrid ? "grid-overlay" : "")" tabindex="0" aria-label="Canvas viewport, scrollable">
+    <div class="paint-viewport @(_state.ShowGrid ? "grid-overlay" : "")" tabindex="0" aria-label="Canvas viewport">
         <div class="canvas-frame">
             <canvas @ref="_canvas" class="paint-canvas" width="@_state.Width" height="@_state.Height" aria-label="Hack Paint drawing canvas"
                     @onpointerdown="StartDrawAsync" @onpointermove="DrawAsync" @onpointerup="StopDrawAsync" @onpointercancel="StopDrawAsync"></canvas>

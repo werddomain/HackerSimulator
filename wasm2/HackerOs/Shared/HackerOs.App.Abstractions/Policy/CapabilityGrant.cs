@@ -159,7 +159,7 @@ public sealed record CapabilityGrant
 
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        if (!AppCapabilities.IsKnown(capability))
+        if (!AppCapabilities.IsKnown(capability) && !TopicPermissions.IsWellFormed(capability))
         {
             throw new ArgumentException($"Unknown exact capability '{capability}'.", nameof(capability));
         }
