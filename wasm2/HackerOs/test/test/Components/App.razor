@@ -17,7 +17,12 @@
 
     <!-- HackerOS Global CSS Design System & Scoped CSS Bundles -->
     <link rel="stylesheet" href="_content/HackerOs.Platform.Blazor/HackerOs.Platform.Blazor.bundle.scp.css" />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <!-- Single source of truth for --hos-* design tokens: HackerOs.Ecosystem/wwwroot/css/app.css, exposed by
+         the ProjectReference to HackerOs.Ecosystem.csproj as static web asset route "css/app.css" (NOT
+         "_content/HackerOs.Ecosystem/css/app.css" — Ecosystem is the referenced app's own wwwroot root here,
+         not a Razor Class Library, so its assets keep unprefixed routes). Do NOT give this host its own
+         wwwroot/app.css copy — see docs/webassembly-debugging.md. -->
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
     <link rel="stylesheet" href="@Assets["test.styles.css"]" />
 
     <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />

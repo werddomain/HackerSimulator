@@ -21,9 +21,17 @@ This document describes how WebAssembly debugging, Razor Class Library static we
 3. **Static Web Assets, MudBlazor & Scoped Bundles (`test/Components/App.razor`):**
    - **MudBlazor UI Library:** Registers `services.AddMudServices()` in DI and links MudBlazor CSS (`_content/MudBlazor/MudBlazor.min.css`) and JS (`_content/MudBlazor/MudBlazor.min.js`).
    - **Platform UI Scoped CSS Bundle:** Links `_content/HackerOs.Platform.Blazor/HackerOs.Platform.Blazor.bundle.scp.css` for desktop shell, window chrome, and taskbar styles.
-   - **HackerOS Global CSS:** Links `_content/HackerOs.Ecosystem/css/app.css` for HSL theme tokens and reset styles.
+   - **HackerOS Global CSS:** Links `@Assets["css/app.css"]`, the static web asset route exposed by the
+     `HackerOs.Ecosystem.csproj` ProjectReference for its own `wwwroot/css/app.css`. This is the single source
+     of truth for the `--hos-*` design tokens; `test/test` and `Server/HackerOs.Server` must never keep their
+     own `wwwroot/app.css` copy. Note the key is `css/app.css`, not `app.css` — `HackerOs.Ecosystem` is itself
+     a `Microsoft.NET.Sdk.BlazorWebAssembly` app (not a Razor Class Library), so when referenced by another
+     app project its static web assets keep their original unprefixed `wwwroot`-relative route instead of
+     gaining a `_content/HackerOs.Ecosystem/` prefix. Using the bare key `app.css` previously and silently
+     matched this host's own now-deleted scaffold `wwwroot/app.css` instead of erroring, which is how the
+     hosts drifted from the real theme in the first place.
    - **Ecosystem Scoped CSS:** Links `_content/HackerOs.Ecosystem/HackerOs.Ecosystem.styles.css`.
-   - **Host Styles:** Links `@Assets["app.css"]` and `@Assets["test.styles.css"]`.
+   - **Host Styles:** Links `@Assets["test.styles.css"]` (this host's own scoped CSS bundle, not shared).
    - **Dynamic Component Tags:** Supports dynamic style and script tag injection per Razor component via `<HeadOutlet />` and `<HeadContent>`.
 
 4. **Remediation for `STATUS_ACCESS_VIOLATION` in Local Development:**
