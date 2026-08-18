@@ -9,8 +9,8 @@ public sealed class PlatformShellSwitchTests(ITestOutputHelper output)
     /// <summary>
     /// End-to-end proof of the controlled platform switch (docs/mobile-interface-platform-plan.md
     /// §6.3, <c>MOB-008</c>): selecting Mobile in the clock panel swaps the rendered shell live
-    /// (no reload) from the Desktop taskbar to the Mobile system navigation bar, and the Mobile
-    /// shell's placeholder "Switch to Desktop" control swaps it back.
+    /// (no reload) from the Desktop taskbar to the Mobile system navigation bar, and Mobile's
+    /// swipe-down notification shade (reusing the same clock panel) swaps it back.
     /// </summary>
     [Fact]
     public async Task Selecting_mobile_swaps_the_live_shell_and_switching_back_restores_desktop()
@@ -50,7 +50,12 @@ public sealed class PlatformShellSwitchTests(ITestOutputHelper output)
             await Assertions.Expect(appLauncher).ToHaveCountAsync(0);
             output.WriteLine("[test] Mobile shell swapped in live — system navigation bar visible, Desktop taskbar gone.");
 
-            await page.GetByRole(AriaRole.Button, new() { Name = "Switch to Desktop" }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "Notifications, calendar, and platform mode" }).ClickAsync();
+            ILocator mobileShadePanel = page.GetByRole(AriaRole.Dialog, new() { Name = "Notifications and calendar" });
+            await Assertions.Expect(mobileShadePanel).ToBeVisibleAsync();
+            output.WriteLine("[test] Mobile notification shade opened — reuses the same clock panel.");
+
+            await mobileShadePanel.GetByRole(AriaRole.Radio, new() { Name = "Desktop" }).ClickAsync();
 
             await Assertions.Expect(appLauncher).ToBeVisibleAsync(new() { Timeout = 10000 });
             await Assertions.Expect(backButton).ToHaveCountAsync(0);

@@ -107,13 +107,18 @@ réutilisant les mécanismes Maximize/Minimize existants
 fichiers non redimensionnables en étaient déjà affectés).
 
 Phase 2b (sous-tranche, `MOB-008`) : `PlatformShellSwitchCoordinator` confirme
-chaque fenêtre ouverte, arrête son instance (`ProcessExitReason.PlatformChanged`,
-nouveau), puis persiste le choix — dans cet ordre, contrairement au câblage
+puis arrête (`ProcessExitReason.PlatformChanged`, nouveau) seulement les
+fenêtres dont le point d'entrée change réellement entre les deux plateformes
+(une fenêtre à point d'entrée partagé, ex. `HackerOs.Samples.PlatformApp`,
+survit telle quelle grâce au `WindowRuntime` singleton partagé entre les deux
+shells) — puis persiste le choix, dans cet ordre, contrairement au câblage
 Phase 0 de `ClockPanel.razor` qui persistait sans confirmer. `App.razor` rend
 maintenant `MobileShell` ou `DesktopShell` selon la préférence active, en
 direct et sans reload — prouvé par un vrai test navigateur
-(`PlatformShellSwitchTests.cs`). `MobileShell` porte un bouton placeholder
-« Switch to Desktop » (Mobile n'a encore aucune surface de réglages). Le
+(`PlatformShellSwitchTests.cs`). Un volet de notifications accessible par
+glissement depuis le haut de l'écran Mobile (`MobileShell.razor.js`,
+`attachSwipeDownGesture`) réutilise `ClockPanel` (donc le sélecteur
+Auto/Desktop/Mobile) — remplace un premier bouton placeholder. Le
 filtrage launcher/intents/associations par plateforme (§6.3 étape 8) reste
 différé : aucun manifeste embarqué ne déclare de point d'entrée Mobile-only,
 donc rien n'est aujourd'hui incorrect à laisser non filtré. `MOB-011` à

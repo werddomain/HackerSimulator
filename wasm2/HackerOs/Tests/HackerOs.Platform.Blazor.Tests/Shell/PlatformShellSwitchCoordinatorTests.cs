@@ -95,6 +95,49 @@ public sealed class PlatformShellSwitchCoordinatorTests
     }
 
     [Fact]
+    public async Task RequestExplicitAsync_leaves_a_shared_entry_point_window_running()
+    {
+        Fixture fixture = new();
+        AppLaunchResult launch = await fixture.LaunchSharedAppAsync();
+        WindowId windowId = fixture.CreateWindowFor(launch, "org.hackeros.test-shared");
+        // A rejecting guard proves the window was never even asked to confirm close.
+        RejectingGuard guard = new();
+        using IDisposable registration = fixture.CloseGuards.Register(windowId, guard);
+        await fixture.PlatformPreference.InitializeAsync();
+        PlatformShellSwitchCoordinator coordinator = fixture.CreateCoordinator();
+
+        bool switched = await coordinator.RequestExplicitAsync(WellKnownAppPlatforms.Mobile);
+
+        Assert.True(switched);
+        Assert.Single(fixture.WindowRuntime.Windows);
+        Assert.Equal(windowId, fixture.WindowRuntime.Windows[0].Id);
+        Assert.True(fixture.Manager.TryGetActive(launch.Process!.Pid, out _));
+        Assert.Equal(WellKnownAppPlatforms.Mobile, fixture.PlatformPreference.Current.ActivePlatform);
+    }
+
+    [Fact]
+    public async Task RequestExplicitAsync_stops_only_the_window_whose_app_is_not_shared()
+    {
+        Fixture fixture = new();
+        AppLaunchResult desktopOnlyLaunch = await fixture.LaunchWindowAppAsync();
+        WindowId desktopOnlyWindowId = fixture.CreateWindowFor(desktopOnlyLaunch, "org.hackeros.test-window");
+        AppLaunchResult sharedLaunch = await fixture.LaunchSharedAppAsync();
+        WindowId sharedWindowId = fixture.CreateWindowFor(sharedLaunch, "org.hackeros.test-shared");
+        AlwaysConfirmGuard confirmGuard = new();
+        using IDisposable desktopOnlyRegistration = fixture.CloseGuards.Register(desktopOnlyWindowId, confirmGuard);
+        await fixture.PlatformPreference.InitializeAsync();
+        PlatformShellSwitchCoordinator coordinator = fixture.CreateCoordinator();
+
+        bool switched = await coordinator.RequestExplicitAsync(WellKnownAppPlatforms.Mobile);
+
+        Assert.True(switched);
+        WindowRuntimeState remaining = Assert.Single(fixture.WindowRuntime.Windows);
+        Assert.Equal(sharedWindowId, remaining.Id);
+        Assert.False(fixture.Manager.TryGetActive(desktopOnlyLaunch.Process!.Pid, out _));
+        Assert.True(fixture.Manager.TryGetActive(sharedLaunch.Process!.Pid, out _));
+    }
+
+    [Fact]
     public async Task RequestAutoAsync_confirms_and_stops_windows_before_reverting()
     {
         Fixture fixture = new();
@@ -171,12 +214,15 @@ public sealed class PlatformShellSwitchCoordinatorTests
                 Grants, fileSystem, Settings, EventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppManifest manifest = CreateWindowManifest();
-            AppCatalogBuildResult catalogResult = AppCatalog.Build([manifest]);
+            AppManifest sharedManifest = CreateSharedEntryPointManifest();
+            AppCatalogBuildResult catalogResult = AppCatalog.Build([manifest, sharedManifest]);
             AppCatalog catalog = catalogResult.Catalog!;
+            Catalog = catalog;
             Dictionary<string, AppDescriptor> descriptors = new(StringComparer.Ordinal)
             {
                 // Placeholder entry point type, never instantiated by the orchestrator for a window app.
-                [manifest.Id] = new AppDescriptor(manifest, typeof(object), typeof(object).Assembly)
+                [manifest.Id] = new AppDescriptor(manifest, typeof(object), typeof(object).Assembly),
+                [sharedManifest.Id] = new AppDescriptor(sharedManifest, typeof(object), typeof(object).Assembly)
             };
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
@@ -196,9 +242,10 @@ public sealed class PlatformShellSwitchCoordinatorTests
         internal WindowRuntime WindowRuntime { get; }
         internal WindowCloseGuardRegistry CloseGuards { get; }
         internal UiPlatformPreferenceService PlatformPreference { get; }
+        internal AppCatalog Catalog { get; private set; } = null!;
 
         internal PlatformShellSwitchCoordinator CreateCoordinator() =>
-            new(WindowRuntime, Orchestrator, CloseGuards, PlatformPreference);
+            new(WindowRuntime, Orchestrator, CloseGuards, PlatformPreference, Catalog);
 
         internal async Task<AppLaunchResult> LaunchWindowAppAsync()
         {
@@ -206,12 +253,19 @@ public sealed class PlatformShellSwitchCoordinatorTests
             return await Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.test-window", principal, []));
         }
 
-        internal WindowId CreateWindowFor(AppLaunchResult launch)
+        internal async Task<AppLaunchResult> LaunchSharedAppAsync()
+        {
+            AuthenticatedPrincipal principal = Session.CurrentPrincipal as AuthenticatedPrincipal
+                ?? await Session.LoginAsync(_aliceLoginName, "hunter2");
+            return await Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.test-shared", principal, []));
+        }
+
+        internal WindowId CreateWindowFor(AppLaunchResult launch, string appId = "org.hackeros.test-window")
         {
             WindowId windowId = WindowId.FromGuid(Guid.NewGuid());
             WindowRuntimeState state = new(
                 windowId,
-                "org.hackeros.test-window",
+                appId,
                 WindowOwnerId.FromGuid(launch.Process!.AppInstanceId.Value),
                 "Test Window",
                 null,
@@ -233,6 +287,25 @@ public sealed class PlatformShellSwitchCoordinatorTests
             Description = "Platform switch coordinator test app.",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("Test.dll", "Test.Window"),
+            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+            Resources = AppResourceProfileManifest.None
+        };
+
+        private static AppManifest CreateSharedEntryPointManifest() => new()
+        {
+            Id = "org.hackeros.test-shared",
+            Name = "Test Shared Window",
+            Version = "1.0.0",
+            PublisherId = "pub.hackeros",
+            Description = "Platform switch coordinator test app declaring one shared entry point.",
+            Kind = AppKind.Window,
+            Platform = new AppManifestPlatform(
+                [WellKnownAppPlatforms.Desktop.Value, WellKnownAppPlatforms.Mobile.Value],
+                [new AppPlatformEntryPointManifest(
+                    [WellKnownAppPlatforms.Desktop.Value, WellKnownAppPlatforms.Mobile.Value],
+                    "Test.dll",
+                    "Test.SharedWindow")]),
             SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None

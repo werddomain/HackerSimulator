@@ -872,17 +872,20 @@ navigation/Recent) et `MOB-012` (`IAppBackHandler`) restent non faits. Voir
 
 Rend `MobileShell` réellement atteignable : sélectionner Mobile dans le
 panneau horloge bascule maintenant le shell rendu **en direct, sans reload**,
-et bascule en sens inverse depuis un contrôle placeholder posé sur
-`MobileShell` (voir dernier point ci-dessous). Prouvé par un test navigateur
-réel de bout en bout (`Tests/HackerOs.UI.E2E.Tests/PlatformShellSwitchTests.cs`),
-en plus des tests unitaires du coordinateur
+et un volet de notifications accessible par glissement depuis le haut de
+l'écran Mobile (§16.8) réutilise ce même panneau pour revenir à Desktop.
+Prouvé par des tests navigateur réels de bout en bout
+(`Tests/HackerOs.UI.E2E.Tests/PlatformShellSwitchTests.cs`,
+`ClockPanelMobileToggleTests.cs`, `MobileNotificationShadeSwipeTests.cs`), en
+plus des tests unitaires du coordinateur
 (`Tests/HackerOs.Platform.Blazor.Tests/Shell/PlatformShellSwitchCoordinatorTests.cs`,
 construits contre un vrai `AppLifecycleOrchestrator`/`WindowRuntime`, pas des
 doublures).
 
 - **`PlatformShellSwitchCoordinator`** (`Platform/HackerOs.Platform.Blazor/Shell/`)
   implémente une version pragmatique de la séquence en 9 étapes de §6.3, pas
-  littérale point par point : pour chaque fenêtre ouverte, confirme via
+  littérale point par point : pour chaque fenêtre qui a effectivement besoin
+  de redémarrer (voir point suivant), confirme via
   `WindowCloseGuardRegistry.ConfirmCloseAsync` (étape 2) ; si tout accepte,
   arrête l'instance propriétaire avec `ProcessExitReason.PlatformChanged`
   (nouveau, étape 4) puis force la fermeture de la fenêtre (couvre l'étape 3 —
@@ -890,6 +893,24 @@ doublures).
   persiste le nouveau choix via `UiPlatformPreferenceService` (étape 6). Le
   changement effectif de rendu (étape 7) et l'affichage résultant (étape 9)
   sont la responsabilité d'`App.razor`, pas du coordinateur — voir plus bas.
+- **Seules les fenêtres qui en ont réellement besoin sont redémarrées** —
+  raffinement apporté après coup (le premier jet arrêtait systématiquement
+  toutes les fenêtres ouvertes, plus prudent que nécessaire). §6.3 le dit
+  explicitement : « ne pas remplacer à chaud le type de composant d'une
+  instance existante... le changement de point d'entrée passe par un
+  arrêt/re-lancement contrôlé » — c'est le *changement de type* qui exige
+  l'arrêt, pas le changement de plateforme en soi. `WindowRuntime` est un
+  singleton DI partagé entre `DesktopShell` et `MobileShell` ; une fenêtre
+  dont l'app déclare un point d'entrée partagé pour les deux plateformes
+  (comme `HackerOs.Samples.PlatformApp`) survit donc telle quelle au
+  changement de shell — le nouveau shell la re-présente simplement (avec ou
+  sans chrome) sans toucher à l'instance en cours. `SelectWindowsNeedingRestart`
+  compare, pour chaque fenêtre, le point d'entrée résolu
+  (`AppManifestPlatformSupport.Resolve`) sur la plateforme active contre celui
+  de la plateforme cible ; seule une différence (ou une app non supportée sur
+  la cible) déclenche confirmation + arrêt. `RequestAutoAsync` reste
+  conservateur (arrête tout) puisque la plateforme résultante d'Auto n'est
+  pas connue à l'avance sans relancer la détection.
 - **Ordre confirmation-avant-persistance respecté** : Phase 0 avait câblé
   `ClockPanel.razor` pour appeler `UiPlatformPreferenceService.SetExplicitAsync`/
   `ClearToAutoAsync` directement, ce qui aurait persisté le choix avant toute
@@ -918,10 +939,40 @@ doublures).
   active — lancer une app Desktop sur Mobile affiche simplement son UI Desktop
   plein écran sans chrome, ce qui est un état honnête et attendu tant
   qu'aucune app ne déclare de variante Mobile réelle.
-- **Contrôle placeholder « Switch to Desktop » sur `MobileShell`** : Mobile n'a
-  aucune surface de réglages (pas d'équivalent du panneau horloge Desktop),
-  donc sans ce bouton temporaire, basculer vers Mobile serait une impasse UI.
-  Documenté dans le code comme un remplaçant provisoire — un vrai point
-  d'entrée de réglages Mobile n'est pas un item `MOB-00x` du plan actuel et
-  reste à définir.
+
+### 16.8 Volet de notifications Mobile par glissement (post-`MOB-008`)
+
+Ajouté après coup pour remplacer un premier jet de `MOB-008` (un bouton
+placeholder « Switch to Desktop » posé dans un coin de `MobileShell`) par
+quelque chose de plus proche d'un vrai shell Mobile : un volet accessible en
+glissant depuis le haut de l'écran, à l'image d'un panneau de notifications
+Android, qui réutilise **le même composant `ClockPanel`** que le panneau
+horloge Desktop (notifications, calendrier, et le sélecteur Auto/Desktop/Mobile
+— donc le retour vers Desktop se fait depuis ce même volet, sans contrôle
+séparé).
+
+- **`MobileShell.razor.js`** (nouveau, colocalisé) expose
+  `attachSwipeDownGesture`/`detachSwipeDownGesture`, sur le même modèle pointer
+  capture que `WindowChrome.razor.js` — un bouton poignée en haut de l'écran
+  (`.mobile-shade-handle`, aussi cliquable/focusable pour l'accessibilité, pas
+  seulement glissable) déclenche `[JSInvokable] OnSwipeDownDetected` après un
+  glissement vers le bas d'au moins 32px.
+- **Bug réel trouvé en testant, pas seulement latent** : sans
+  `event.preventDefault()` dans le gestionnaire `pointerdown`, un glissement
+  souris réellement fiable (piloté par le système, pas un événement
+  synthétique) peut être détourné vers la sélection de texte/le glisser-déposer
+  natif du navigateur avant de délivrer la séquence `pointermove` attendue —
+  corrigé pour correspondre exactement au motif déjà utilisé et fonctionnel de
+  `WindowChrome.razor.js`.
+- **Limite de test découverte en pratique** : ni `page.Mouse` (simulation
+  d'entrée au niveau système) ni `Locator.DispatchEventAsync` de Playwright ne
+  délivrent de façon fiable un vrai `PointerEvent` (avec `pointerId`/`clientY`/
+  `button` correctement renseignés) à un gestionnaire personnalisé basé sur
+  `setPointerCapture`, dans Chromium headless — confirmé par expérimentation
+  directe. `MobileNotificationShadeSwipeTests.cs` construit et distribue de
+  vrais `new PointerEvent(...)` via `page.EvaluateAsync` plutôt que de
+  s'appuyer sur l'un ou l'autre.
+- **`MobileShell` n'injecte plus `PlatformShellSwitchCoordinator` directement**
+  — le volet réutilisant `ClockPanel` tel quel, c'est ce composant qui gère
+  déjà tout le flux de changement de plateforme (Phase 2b ci-dessus).
 
