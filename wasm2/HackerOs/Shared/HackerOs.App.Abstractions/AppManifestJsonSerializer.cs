@@ -31,6 +31,7 @@ public static class AppManifestJsonSerializer
             "description",
             "kind",
             "entryPoint",
+            "platform",
             "sdkCompatibility",
             "osCompatibility",
             "presentation",
@@ -77,9 +78,21 @@ public static class AppManifestJsonSerializer
                     ? null
                     : [.. manifest.Settings.MigrationIds.OrderBy(value => value, StringComparer.Ordinal)]);
 
+        AppManifestPlatform? platform = manifest.Platform is null
+            ? null
+            : new AppManifestPlatform(
+                [.. manifest.Platform.Supported.OrderBy(value => value, StringComparer.Ordinal)],
+                [.. manifest.Platform.EntryPoints
+                    .Select(entryPoint => entryPoint with
+                    {
+                        Platforms = [.. entryPoint.Platforms.OrderBy(value => value, StringComparer.Ordinal)]
+                    })
+                    .OrderBy(entryPoint => string.Join("|", entryPoint.Platforms), StringComparer.Ordinal)]);
+
         return manifest with
         {
             Presentation = presentation,
+            Platform = platform,
             Localizations = [.. manifest.Localizations.OrderBy(item => item.Culture, StringComparer.Ordinal)],
             Capabilities = [.. manifest.Capabilities.OrderBy(value => value, StringComparer.Ordinal)],
             Dependencies = [.. manifest.Dependencies.OrderBy(item => item.AppId, StringComparer.Ordinal)
@@ -121,6 +134,12 @@ public static class AppManifestJsonSerializer
             {
                 case "entryPoint":
                     ValidateObject(property.Value, $"{path}.entryPoint", ["assembly", "type"]);
+                    break;
+                case "platform":
+                    ValidateObject(property.Value, $"{path}.platform", ["supported", "entryPoints"]);
+                    break;
+                case "entryPoints":
+                    ValidateArray(property.Value, $"{path}.entryPoints", ["platforms", "assembly", "type"]);
                     break;
                 case "sdkCompatibility":
                 case "osCompatibility":
@@ -189,6 +208,8 @@ public static class AppManifestJsonSerializer
     GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(AppManifest))]
 [JsonSerializable(typeof(AppEntryPointManifest))]
+[JsonSerializable(typeof(AppManifestPlatform))]
+[JsonSerializable(typeof(AppPlatformEntryPointManifest))]
 [JsonSerializable(typeof(AppSdkCompatibilityManifest))]
 [JsonSerializable(typeof(PresentationManifest))]
 [JsonSerializable(typeof(LocalizationManifest))]

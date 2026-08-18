@@ -26,8 +26,22 @@ public sealed record AppManifest
     /// <summary>Gets the application's hosting model.</summary>
     public required AppKind Kind { get; init; }
 
-    /// <summary>Gets the managed assembly and type used to activate the app.</summary>
-    public required AppEntryPointManifest EntryPoint { get; init; }
+    /// <summary>
+    /// Gets the managed assembly and type used to activate the app on every platform it supports.
+    /// Mutually exclusive with <see cref="Platform"/> — exactly one of the two must be set. This is
+    /// the legacy single-entry-point form; per docs/mobile-interface-platform-plan.md §4.3, a
+    /// manifest using this field is implicitly Desktop-only (see
+    /// <see cref="AppManifestPlatformSupport.Resolve"/>).
+    /// </summary>
+    public AppEntryPointManifest? EntryPoint { get; init; }
+
+    /// <summary>
+    /// Gets the multi-platform entry-point declaration (<c>MOB-003</c>), or <see langword="null"/>
+    /// for a manifest using the legacy single <see cref="EntryPoint"/> field. Mutually exclusive
+    /// with <see cref="EntryPoint"/> — exactly one of the two must be set.
+    /// See docs/mobile-interface-platform-plan.md §4.1.
+    /// </summary>
+    public AppManifestPlatform? Platform { get; init; }
 
     /// <summary>Gets the supported App SDK version range.</summary>
     public required AppSdkCompatibilityManifest SdkCompatibility { get; init; }

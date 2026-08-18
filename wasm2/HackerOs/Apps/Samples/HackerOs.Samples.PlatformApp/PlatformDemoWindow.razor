@@ -1,0 +1,47 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
+@inherits WindowAppBase
+
+<div class="platform-demo-container">
+    <header class="platform-demo-header">
+        <span class="platform-demo-title">Platform Demo (MOB-014)</span>
+    </header>
+    <div class="platform-demo-body">
+        <p>
+            This sample demonstrates one shared entry point declared for both the
+            <code>desktop</code> and <code>mobile</code> platforms via <code>app.manifest.json</code>'s
+            <code>platform.entryPoints</code> field, per
+            docs/mobile-interface-platform-plan.md §4.1.
+        </p>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// One shared entry point covering both platforms — plan §4.1's first example: a single
+    /// component reused across <c>desktop</c> and <c>mobile</c> rather than one variant per
+    /// platform.
+    /// </summary>
+    public static AppManifest StaticManifest { get; } = new()
+    {
+        SchemaVersion = 1,
+        Id = "org.hackeros.samples.platform-app",
+        Name = "Platform Demo",
+        Version = "1.0.0",
+        PublisherId = "pub.hackeros",
+        Description = "Demonstrates a manifest with a shared entry point covering multiple platforms.",
+        Kind = AppKind.Window,
+        Platform = new AppManifestPlatform(
+            Supported: [WellKnownAppPlatforms.Desktop.Value, WellKnownAppPlatforms.Mobile.Value],
+            EntryPoints:
+            [
+                new AppPlatformEntryPointManifest(
+                    Platforms: [WellKnownAppPlatforms.Desktop.Value, WellKnownAppPlatforms.Mobile.Value],
+                    Assembly: "HackerOs.Samples.PlatformApp.dll",
+                    Type: "HackerOs.Samples.PlatformApp.PlatformDemoWindow")
+            ]),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None
+    };
+}

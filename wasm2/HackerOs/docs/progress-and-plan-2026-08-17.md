@@ -69,17 +69,32 @@ avant et après ce lot de travail ; n'affecte aucun test lié aux
 fenêtres/taskbar. Laissé pour un futur passage sur le sujet IndexedDB backup/
 recovery plutôt que traité ici.
 
-## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`) — Phase 0 démarrée le 2026-08-18
+## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`) — Phases 0 et 1 faites, 2026-08-18
 
-`MOB-001`, `MOB-006` (tranche persistance) et `MOB-007` sont faits — voir
-`mobile-interface-platform-plan.md` §14/§16 pour le détail fichier par fichier.
-Nouveauté par rapport au doc d'origine : le taskbar expose maintenant un point
-d'ancrage générique (`ITaskbarClockPanelSource` + `RenderFragment
-ClockPanelContent`) ouvert en cliquant l'horloge, et c'est là que vit le
-sélecteur Auto/Desktop/Mobile — ce sera l'emplacement de toggle pour la suite
-du plan. Le toggle persiste la préférence mais ne change pas encore le rendu du
-shell (`MOB-008`/`009`, phases futures). `MOB-002` à `MOB-018` restent à faire,
-reséquencés en 4 phases dans `mobile-interface-platform-plan.md` §16.4.
+`MOB-001`, `MOB-006` (tranche persistance), `MOB-007` (Phase 0), puis
+`MOB-002`, `MOB-003`, `MOB-004`, `MOB-005`, `MOB-014` (partiel, Phase 1) sont
+faits — voir `mobile-interface-platform-plan.md` §14/§16 pour le détail
+fichier par fichier.
+
+Phase 0 : le taskbar expose un point d'ancrage générique
+(`ITaskbarClockPanelSource` + `RenderFragment ClockPanelContent`) ouvert en
+cliquant l'horloge, où vit le sélecteur Auto/Desktop/Mobile. Le toggle persiste
+la préférence mais ne change pas encore le rendu du shell (`MOB-008`/`009`,
+Phase 2).
+
+Phase 1 : le manifeste supporte désormais plusieurs points d'entrée par
+plateforme (`AppManifest.Platform`, mutuellement exclusif avec l'ancien
+`EntryPoint`) sans qu'aucun des `app.manifest.json` existants n'ait dû être
+modifié (un manifeste `entryPoint`-only est traité comme Desktop-only par
+normalisation, pas par migration physique). `IAppPlatformEntryPointResolver`
+résout l'entrée effective par plateforme et est câblé dans
+`AppEntryPointDiscovery` (défaut `desktop`, donc comportement inchangé pour le
+shell Desktop actuel). Le filtrage des intents/associations/launcher sur la
+préférence de plateforme *active* est volontairement reporté à `MOB-008`
+(Phase 2) — l'appliquer maintenant masquerait toutes les apps existantes dès
+qu'un utilisateur bascule le toggle Mobile de Phase 0, sans shell Mobile pour
+les reprendre. `MOB-008` à `MOB-018` restent à faire, reséquencés en phases
+dans `mobile-interface-platform-plan.md` §16.4/§16.5.
 
 Le document d'extraction fenêtres/taskbar référence déjà ce plan comme risque
 à éviter ("Rupture mobile : ne pas figer dans le moteur des hypothèses

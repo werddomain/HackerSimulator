@@ -1,7 +1,8 @@
 # Plan de plateforme et d’interface Mobile
 
-**Statut :** Phase 0 (fondation) faite le 2026-08-18 — voir §16 ; le reste (§14,
-`MOB-002` à `MOB-018`) reste à l’état de proposition  
+**Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
+résolution de point d’entrée) faite le 2026-08-18 — voir §16 ; le reste (§14,
+`MOB-008` à `MOB-018`) reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
@@ -547,14 +548,50 @@ activé automatiquement.
   **Phase 0, 2026-08-18** — `Shared/HackerOs.App.Abstractions/AppPlatformId.cs`
   (type validé + `WellKnownAppPlatforms.Desktop`/`.Mobile`). Pas encore de
   descripteurs de capacités (`MOB-002`, toujours ouvert).
-- [ ] `MOB-002` Définir les descripteurs de capacités de plateforme et les contrats
-  du shell.
-- [ ] `MOB-003` Faire évoluer le manifeste vers plusieurs points d’entrée couvrant
-  une ou plusieurs plateformes.
-- [ ] `MOB-004` Mettre à jour JSON Schema, sérialisation source-generated,
-  validation, fixtures, CLI et templates.
-- [ ] `MOB-005` Implémenter `IAppPlatformEntryPointResolver` et l’intégrer à la
-  découverte, au catalogue, aux intents et aux associations.
+- [x] `MOB-002` Définir les descripteurs de capacités de plateforme et les contrats
+  du shell. **Phase 1, 2026-08-18** —
+  `Shared/HackerOs.App.Abstractions/AppPlatformCapabilities.cs`
+  (`AppPlatformCapabilities`, `IAppPlatformCapabilityRegistry`/
+  `AppPlatformCapabilityRegistry`, descripteurs `WellKnownAppPlatformCapabilities.Desktop`/
+  `.Mobile`). Pas encore consommé par une UI de shell (ça reste Phase 2, `MOB-009`/`010`).
+- [x] `MOB-003` Faire évoluer le manifeste vers plusieurs points d’entrée couvrant
+  une ou plusieurs plateformes. **Phase 1, 2026-08-18** —
+  `Shared/HackerOs.App.Abstractions/AppManifestPlatform.cs`
+  (`AppManifestPlatform`, `AppPlatformEntryPointManifest`,
+  `AppManifestPlatformSupport.Resolve` normalizer). `AppManifest.EntryPoint` est
+  devenu optionnel ; `AppManifest.Platform` est le nouveau champ, mutuellement
+  exclusif avec `EntryPoint` (validé par `AppManifestValidator`). Un manifeste
+  historique n’utilisant que `entryPoint` est traité comme couvrant `desktop`
+  seul, sans qu’aucun des 40+ `app.manifest.json` existants n’ait eu besoin
+  d’être modifié — voir §16.5.
+- [x] `MOB-004` Mettre à jour JSON Schema, sérialisation source-generated,
+  validation, fixtures, CLI et templates. **Phase 1, 2026-08-18** — schéma :
+  `Shared/HackerOs.App.Abstractions/Schema/manifest.schema.v1.json` (`platform`
+  optionnel + règle `oneOf` entryPoint/platform) ; sérialisation :
+  `AppManifestJsonSerializerContext` + tri canonique dans
+  `AppManifestJsonSerializer.CreateCanonicalManifest` ; validation : voir
+  `MOB-003` ; fixtures : `window-multi-platform.valid.json` et
+  `invalid-platform-ambiguous.json` sous `Schema/Fixtures/` ; CLI :
+  `Tools/HackerOs.Tools.ManifestValidator` fonctionne sans modification (le
+  générateur source inclut `AppManifestPlatform` automatiquement, type atteint
+  depuis `AppManifest`), vérifié en validant un manifeste `platform` réel.
+  Pas de projet de template `dotnet new` trouvé dans le dépôt pour ce lot —
+  aucun à mettre à jour.
+- [x] `MOB-005` Implémenter `IAppPlatformEntryPointResolver` et l’intégrer à la
+  découverte, au catalogue, aux intents et aux associations. **Phase 1,
+  2026-08-18 — tranche découverte seule** :
+  `Platform/HackerOs.Platform.Core/Discovery/AppPlatformEntryPointResolver.cs`
+  + `AppEntryPointDiscovery.Discover` prend désormais un `activePlatform`
+  optionnel (défaut `desktop`, comportement inchangé pour tout appelant
+  existant). Un manifeste ne supportant pas la plateforme demandée est exclu du
+  résultat sans erreur, par §5. L’intégration aux intents/associations
+  (`FileAssociationResolver`, `AppIntentDispatcher`) est volontairement
+  **reportée à la Phase 2** (`MOB-008`) : filtrer ces surfaces sur la
+  préférence de plateforme *actuelle* de l’utilisateur avant que le shell sache
+  reconstruire proprement (arrêt des instances sales, etc.) masquerait toutes
+  les apps existantes dès qu’un utilisateur bascule le toggle Mobile de la
+  Phase 0, sans qu’aucun shell Mobile n’existe encore pour les reprendre — voir
+  §16.5.
 - [x] `MOB-006` Ajouter la préférence `Auto | Explicit` device-scoped et sa
   migration. **Phase 0, 2026-08-18 — tranche persistance seule** :
   `Platform/HackerOs.Platform.Core/Shell/UiPlatformPreferenceSettingsDocuments.cs`
@@ -580,8 +617,18 @@ activé automatiquement.
   manifeste.
 - [ ] `MOB-013` Ajouter le bouton Back Desktop uniquement aux applications qui le
   déclarent.
-- [ ] `MOB-014` Ajouter les variantes Desktop/Mobile de référence sous un AppId
-  commun et une application à point d’entrée partagé.
+- [x] `MOB-014` Ajouter les variantes Desktop/Mobile de référence sous un AppId
+  commun et une application à point d’entrée partagé. **Phase 1, 2026-08-18 —
+  tranche partielle : un seul point d’entrée partagé** (le premier exemple de
+  §4.1, pas encore les deux variantes distinctes du second exemple) —
+  `Apps/Samples/HackerOs.Samples.PlatformApp/` (`PlatformDemoWindow.razor` +
+  `app.manifest.json` déclarant `platform.entryPoints` pour `desktop`+`mobile`
+  via le même type) et `Tests/HackerOs.Samples.PlatformApp.Tests/` (validation,
+  résolution par plateforme, et cohérence du fichier JSON archivé — tout passe
+  par le vrai `AppManifestValidator`/`AppCatalog`/`AppEntryPointDiscovery`).
+  Comme les samples existants, ce projet n’est pas câblé dans le catalogue de
+  build de `HackerOs.Ecosystem` — c’est un projet de démonstration/test isolé,
+  pas une app réellement lancable dans le shell.
 - [ ] `MOB-015` Implémenter le clavier virtuel HackerOS du Terminal Mobile.
 - [ ] `MOB-016` Adapter le viewport terminal, les safe areas et l’orientation.
 - [ ] `MOB-017` Ajouter tests unitaires, composants, Playwright, accessibilité et
@@ -666,7 +713,7 @@ la suite de ce plan.
 ### 16.4 Séquencement proposé pour `MOB-002` à `MOB-018`
 
 ```text
-Phase 1 — Manifeste et résolution de point d’entrée
+Phase 1 — Manifeste et résolution de point d’entrée [FAIT le 2026-08-18]
   MOB-002, MOB-003, MOB-004, MOB-005, MOB-014 (partiel : une app de référence)
   Dépend de : AppPlatformId (Phase 0, fait)
 
@@ -690,4 +737,42 @@ Ce séquencement est une proposition de dépendances, pas un engagement daté �
 disponible, comme le fait déjà
 [`progress-and-plan-2026-08-17.md`](progress-and-plan-2026-08-17.md) §8 pour
 les autres chantiers.
+
+### 16.5 Ce que « Phase 1 » a livré
+
+Voir `MOB-002`/`003`/`004`/`005`/`014` ci-dessus pour le détail fichier par
+fichier. Résumé des décisions de conception :
+
+- **Rétrocompatibilité sans migration de fichiers** : plutôt que de migrer les
+  40+ `app.manifest.json` existants vers le nouveau format (§4.3 l'envisage
+  comme une migration physique), `AppManifest.EntryPoint` est resté un champ
+  optionnel à part entière et `AppManifestPlatformSupport.Resolve` normalise
+  virtuellement tout manifeste `entryPoint`-only comme couvrant `desktop`
+  seul. Un seul point d'entrée normalisé (`AppManifestPlatformResolution`) sert
+  ensuite à la fois la validation et la résolution — pas de double source de
+  vérité au sens de §4.3, juste deux syntaxes JSON d'entrée pour un seul modèle
+  interne.
+- **`platform` et `entryPoint` sont mutuellement exclusifs**, imposé à la fois
+  par le JSON Schema (règle `oneOf`) et par `AppManifestValidator`
+  (`manifest.platform.required`/`manifest.platform.ambiguous`).
+- **La découverte reste stable par défaut** : `AppEntryPointDiscovery.Discover`
+  résout maintenant chaque manifeste via `IAppPlatformEntryPointResolver` pour
+  une plateforme active (nouveau paramètre optionnel, défaut `desktop`), donc
+  aucun appelant existant (chargement paresseux WebAssembly compris, voir
+  `BuildKnownLazyAppDescriptorRegistry`/`WebAssemblyLazyAssemblyTransport`) n'a
+  changé de comportement observable.
+- **Périmètre volontairement non couvert par cette phase** : filtrer
+  `FileAssociationResolver`/`AppIntentDispatcher`/le launcher sur la
+  préférence de plateforme *actuelle* (§5 : « une application incompatible
+  n'apparaît pas dans le launcher actif »). Le faire maintenant masquerait
+  toutes les apps existantes (aucune ne déclare encore `mobile`) dès qu'un
+  utilisateur bascule le toggle Mobile posé en Phase 0, alors qu'aucun shell
+  Mobile n'existe pour les reprendre. Cette intégration revient avec le
+  changement de shell contrôlé de `MOB-008` (Phase 2), qui sait suspendre/
+  arrêter proprement les instances incompatibles avant de les retirer des
+  surfaces visibles.
+- **`AppPlatformCapabilities` (`MOB-002`) n'est pas encore consommé** par du
+  code de shell — Phase 1 ne fait qu'enregistrer les descripteurs Desktop et
+  Mobile ; leur premier vrai consommateur sera le shell Mobile de `MOB-009`/
+  `MOB-010` (Phase 2).
 

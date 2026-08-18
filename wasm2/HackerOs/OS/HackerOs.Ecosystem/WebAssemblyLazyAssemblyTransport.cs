@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using HackerOs.App.Abstractions;
 using HackerOs.Platform.Blazor.LazyLoading;
+using HackerOs.Platform.Core.Discovery;
 using Microsoft.AspNetCore.Components.WebAssembly.Services;
 
 namespace HackerOs.Ecosystem;
@@ -25,10 +27,15 @@ public sealed class WebAssemblyLazyAssemblyTransport(LazyAssemblyLoader loader) 
 /// <summary>Single source of truth for optional assemblies emitted by this host build.</summary>
 public static class BuildKnownLazyAssemblies
 {
-    /// <summary>Gets the exact app assemblies declared by the immutable host catalog.</summary>
+    /// <summary>
+    /// Gets the exact app assemblies declared by the immutable host catalog, resolved for the
+    /// Desktop platform (see <see cref="BuildKnownLazyAppDescriptorRegistry"/>'s matching default).
+    /// </summary>
     public static IReadOnlyList<string> Names { get; } =
         [.. BuildKnownLazyApps.Catalog.Manifests.Values
-            .Select(manifest => manifest.EntryPoint.Assembly)
+            .Select(manifest => AppPlatformEntryPointResolver.Instance.Resolve(manifest, WellKnownAppPlatforms.Desktop))
+            .Where(resolution => resolution.IsResolved)
+            .Select(resolution => resolution.EntryPoint!.Assembly)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(name => name, StringComparer.Ordinal)];
 }

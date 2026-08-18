@@ -16,7 +16,7 @@ public sealed class BuildKnownLazyAppDescriptorRegistryTests
         AppManifest manifest = CreateManifest();
         AppCatalog catalog = Assert.IsType<AppCatalog>(AppCatalog.Build([manifest]).Catalog);
         var transport = new RecordingTransport(typeof(TestWindow).Assembly);
-        var assemblies = new BuildKnownAssemblyLoaderRegistry([manifest.EntryPoint.Assembly], transport);
+        var assemblies = new BuildKnownAssemblyLoaderRegistry([manifest.EntryPoint!.Assembly], transport);
         var registry = new BuildKnownLazyAppDescriptorRegistry(catalog, assemblies);
 
         AppDescriptorLoadResult[] results = await Task.WhenAll(Enumerable.Range(0, 6)
@@ -34,7 +34,7 @@ public sealed class BuildKnownLazyAppDescriptorRegistryTests
         AppManifest manifest = CreateManifest();
         AppCatalog catalog = Assert.IsType<AppCatalog>(AppCatalog.Build([manifest]).Catalog);
         var transport = new RecordingTransport(typeof(TestWindow).Assembly);
-        var assemblies = new BuildKnownAssemblyLoaderRegistry([manifest.EntryPoint.Assembly], transport);
+        var assemblies = new BuildKnownAssemblyLoaderRegistry([manifest.EntryPoint!.Assembly], transport);
         var registry = new BuildKnownLazyAppDescriptorRegistry(catalog, assemblies);
 
         AppDescriptorLoadResult result = await registry.EnsureAvailableAsync("org.hackeros.unknown", CancellationToken.None);
@@ -50,7 +50,7 @@ public sealed class BuildKnownLazyAppDescriptorRegistryTests
         AppManifest deferred = CreateManifest() with { Id = "org.hackeros.deferred-test" };
         AppCatalog catalog = Assert.IsType<AppCatalog>(AppCatalog.Build([requested, deferred]).Catalog);
         var transport = new RecordingTransport(typeof(TestWindow).Assembly);
-        var assemblies = new BuildKnownAssemblyLoaderRegistry([requested.EntryPoint.Assembly], transport);
+        var assemblies = new BuildKnownAssemblyLoaderRegistry([requested.EntryPoint!.Assembly], transport);
         var registry = new BuildKnownLazyAppDescriptorRegistry(catalog, assemblies);
 
         AppDescriptorLoadResult result = await registry.EnsureAvailableAsync(

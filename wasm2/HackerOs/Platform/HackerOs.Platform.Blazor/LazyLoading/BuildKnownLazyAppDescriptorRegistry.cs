@@ -61,8 +61,19 @@ public sealed class BuildKnownLazyAppDescriptorRegistry : IAppDescriptorLoader
     private async Task<AppDescriptorLoadResult> LoadAndDiscoverAsync(string appId)
     {
         AppManifest manifest = _catalog.Manifests[appId];
+
+        // Lazy loading always targets Desktop today: no shell yet resolves discovery for another
+        // platform (that is Phase 2/MOB-008), see AppEntryPointDiscovery.Discover's activePlatform
+        // default.
+        AppPlatformEntryPointResolution resolution = AppPlatformEntryPointResolver.Instance.Resolve(
+            manifest, HackerOs.App.Abstractions.WellKnownAppPlatforms.Desktop);
+        if (!resolution.IsResolved || resolution.EntryPoint is not AppEntryPointManifest entryPoint)
+        {
+            return AppDescriptorLoadResult.Unavailable("The optional app manifest does not support the active platform.");
+        }
+
         BuildKnownAssemblyLoadOutcome assembly = await _assemblies
-            .LoadAsync(manifest.EntryPoint.Assembly, CancellationToken.None)
+            .LoadAsync(entryPoint.Assembly, CancellationToken.None)
             .ConfigureAwait(false);
         if (assembly.Status != BuildKnownAssemblyLoadStatus.Loaded || assembly.Assembly is null)
         {
@@ -82,7 +93,7 @@ public sealed class BuildKnownLazyAppDescriptorRegistry : IAppDescriptorLoader
             appCatalog,
             new Dictionary<string, System.Reflection.Assembly>(StringComparer.Ordinal)
             {
-                [manifest.EntryPoint.Assembly] = assembly.Assembly
+                [entryPoint.Assembly] = assembly.Assembly
             });
         if (!discovery.IsSuccess || discovery.Descriptors is null
             || !discovery.Descriptors.TryGetValue(appId, out AppDescriptor? descriptor))

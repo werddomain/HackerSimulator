@@ -33,6 +33,14 @@ public static class AppEntryPointDiscovery
     /// The explicit, host-provided set of assemblies apps may be loaded from, keyed by simple
     /// assembly name. Discovery never scans <see cref="AppDomain"/> or loads assemblies itself.
     /// </param>
+    /// <param name="activePlatform">
+    /// The platform to resolve each manifest's entry point for, per plan §5 (<c>MOB-005</c>).
+    /// Defaults to <see cref="WellKnownAppPlatforms.Desktop"/> so every existing caller keeps its
+    /// current behavior unchanged — no shell today ever resolves discovery for another platform
+    /// (that is Phase 2/<c>MOB-008</c>). A manifest that does not support <paramref name="activePlatform"/>
+    /// is silently excluded from the result, not reported as an error, per plan §5 ("une application
+    /// incompatible n'apparaît pas dans le launcher actif").
+    /// </param>
     /// <returns>Every resolved descriptor, or every deterministic resolution error.</returns>
     /// <remarks>
     /// Resolves manifest-declared type names by name (<see cref="Assembly.GetType(string, bool)"/>),
@@ -48,32 +56,49 @@ public static class AppEntryPointDiscovery
         "eventual host publish step must add matching trim root descriptors (see P1-GATE-004).")]
     public static AppDiscoveryResult Discover(
         AppCatalog catalog,
-        IReadOnlyDictionary<string, Assembly> hostAssemblies)
+        IReadOnlyDictionary<string, Assembly> hostAssemblies,
+        AppPlatformId? activePlatform = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(hostAssemblies);
 
+        AppPlatformId platform = activePlatform ?? WellKnownAppPlatforms.Desktop;
         List<AppDiscoveryError> errors = [];
         Dictionary<string, AppDescriptor> descriptors = new(StringComparer.Ordinal);
 
         foreach (AppManifest manifest in catalog.Manifests.Values.OrderBy(m => m.Id, StringComparer.Ordinal))
         {
-            if (!hostAssemblies.TryGetValue(manifest.EntryPoint.Assembly, out Assembly? assembly))
+            AppPlatformEntryPointResolution resolution = AppPlatformEntryPointResolver.Instance.Resolve(manifest, platform);
+            if (resolution.Status == AppPlatformEntryPointResolutionStatus.PlatformUnsupported)
+            {
+                continue;
+            }
+
+            if (!resolution.IsResolved || resolution.EntryPoint is not AppEntryPointManifest entryPoint)
+            {
+                errors.Add(new AppDiscoveryError(
+                    "discovery.platform.declaration-invalid",
+                    manifest.Id,
+                    "The manifest's entry-point/platform declaration is ambiguous or missing."));
+                continue;
+            }
+
+            if (!hostAssemblies.TryGetValue(entryPoint.Assembly, out Assembly? assembly))
             {
                 errors.Add(new AppDiscoveryError(
                     "discovery.assembly.not-allowed",
                     manifest.Id,
-                    $"Assembly '{manifest.EntryPoint.Assembly}' is not in the host's explicit assembly list."));
+                    $"Assembly '{entryPoint.Assembly}' is not in the host's explicit assembly list."));
                 continue;
             }
 
-            Type? entryType = assembly.GetType(manifest.EntryPoint.Type, throwOnError: false);
+            Type? entryType = assembly.GetType(entryPoint.Type, throwOnError: false);
             if (entryType is null)
             {
                 errors.Add(new AppDiscoveryError(
                     "discovery.type.not-found",
                     manifest.Id,
-                    $"Type '{manifest.EntryPoint.Type}' was not found in assembly '{manifest.EntryPoint.Assembly}'."));
+                    $"Type '{entryPoint.Type}' was not found in assembly '{entryPoint.Assembly}'."));
                 continue;
             }
 

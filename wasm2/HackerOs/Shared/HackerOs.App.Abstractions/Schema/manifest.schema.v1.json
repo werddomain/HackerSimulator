@@ -13,7 +13,6 @@
     "publisherId",
     "description",
     "kind",
-    "entryPoint",
     "sdkCompatibility",
     "presentation",
     "resources"
@@ -33,6 +32,36 @@
       "properties": {
         "assembly": { "type": "string", "minLength": 1 },
         "type": { "type": "string", "minLength": 1 }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported", "entryPoints"],
+      "properties": {
+        "supported": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/platformId" }
+        },
+        "entryPoints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["platforms", "assembly", "type"],
+            "properties": {
+              "platforms": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/platformId" }
+              },
+              "assembly": { "type": "string", "minLength": 1 },
+              "type": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
       }
     },
     "sdkCompatibility": { "$ref": "#/$defs/versionRange" },
@@ -207,9 +236,22 @@
         "properties": { "kind": { "not": { "const": "window" } } }
       },
       "then": { "not": { "required": ["fileHandlers"] } }
+    },
+    {
+      "description": "Exactly one of entryPoint (legacy, single-platform) or platform (MOB-003, multi-platform) must be present. See docs/mobile-interface-platform-plan.md §4.3.",
+      "oneOf": [
+        { "required": ["entryPoint"], "not": { "required": ["platform"] } },
+        { "required": ["platform"], "not": { "required": ["entryPoint"] } }
+      ]
     }
   ],
   "$defs": {
+    "platformId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
     "semanticVersion": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"

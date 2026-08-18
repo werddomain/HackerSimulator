@@ -101,6 +101,44 @@ public sealed class AppEntryPointDiscoveryTests
         Assert.Contains(result.Errors, e => e.Code == "discovery.type.wrong-base" && e.AppId == manifest.Id);
     }
 
+    [Fact]
+    public void Discover_excludes_a_manifest_that_does_not_support_the_active_platform()
+    {
+        // Legacy single-entryPoint manifests are Desktop-only per plan §4.3 (MOB-003/MOB-005), so a
+        // Mobile-active discovery run must not surface them, without treating that as an error.
+        AppManifest manifest = CreateManifest("org.hackeros.notes", AppKind.Window, typeof(TestWindowApp).FullName!);
+        AppCatalog catalog = BuildCatalog(manifest);
+
+        AppDiscoveryResult result = AppEntryPointDiscovery.Discover(catalog, HostAssemblies(), WellKnownAppPlatforms.Mobile);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.Descriptors!.ContainsKey(manifest.Id));
+    }
+
+    [Fact]
+    public void Discover_resolves_the_platform_specific_entry_point_when_a_manifest_declares_several()
+    {
+        AppManifest manifest = CreateManifest("org.hackeros.notes", AppKind.Window, typeof(TestWindowApp).FullName!) with
+        {
+            EntryPoint = null,
+            Platform = new AppManifestPlatform(
+                ["desktop", "mobile"],
+                [
+                    new AppPlatformEntryPointManifest(["desktop"], "HackerOs.Platform.Core.Tests", typeof(TestWindowApp).FullName!),
+                    new AppPlatformEntryPointManifest(["mobile"], "HackerOs.Platform.Core.Tests", typeof(OtherTestWindowApp).FullName!)
+                ])
+        };
+        AppCatalog catalog = BuildCatalog(manifest);
+
+        AppDiscoveryResult desktopResult = AppEntryPointDiscovery.Discover(catalog, HostAssemblies(), WellKnownAppPlatforms.Desktop);
+        AppDiscoveryResult mobileResult = AppEntryPointDiscovery.Discover(catalog, HostAssemblies(), WellKnownAppPlatforms.Mobile);
+
+        Assert.True(desktopResult.IsSuccess);
+        Assert.Equal(typeof(TestWindowApp), desktopResult.Descriptors![manifest.Id].EntryPointType);
+        Assert.True(mobileResult.IsSuccess);
+        Assert.Equal(typeof(OtherTestWindowApp), mobileResult.Descriptors![manifest.Id].EntryPointType);
+    }
+
     private static Dictionary<string, System.Reflection.Assembly> HostAssemblies() => new(StringComparer.Ordinal)
     {
         ["HackerOs.Platform.Core.Tests"] = typeof(AppEntryPointDiscoveryTests).Assembly
@@ -142,4 +180,6 @@ public sealed class AppEntryPointDiscoveryTests
     }
 
     private sealed class TestWindowApp : HackerOs.AppSdk.Blazor.WindowAppBase;
+
+    private sealed class OtherTestWindowApp : HackerOs.AppSdk.Blazor.WindowAppBase;
 }

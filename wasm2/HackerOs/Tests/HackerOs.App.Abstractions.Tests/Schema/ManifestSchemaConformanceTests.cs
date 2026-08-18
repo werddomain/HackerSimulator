@@ -18,7 +18,8 @@ public sealed class ManifestSchemaConformanceTests
     {
         "window.valid.json",
         "terminal.valid.json",
-        "service.valid.json"
+        "service.valid.json",
+        "window-multi-platform.valid.json"
     };
 
     public static TheoryData<string> InvalidFixtureNames => new()
@@ -31,7 +32,8 @@ public sealed class ManifestSchemaConformanceTests
         "invalid-filehandlers-on-service.json",
         "invalid-asset-hash.json",
         "invalid-resource-weight-out-of-range.json",
-        "invalid-settings-enum-missing-allowed-values.json"
+        "invalid-settings-enum-missing-allowed-values.json",
+        "invalid-platform-ambiguous.json"
     };
 
     [Theory]

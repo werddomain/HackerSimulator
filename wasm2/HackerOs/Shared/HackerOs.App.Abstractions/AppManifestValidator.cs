@@ -30,8 +30,7 @@ public static partial class AppManifestValidator
         ValidateSemanticVersion(manifest.Version, "version", errors);
         ValidatePublisherId(manifest.PublisherId, errors);
         RequireText(manifest.Description, "description", errors);
-        RequireText(manifest.EntryPoint.Assembly, "entryPoint.assembly", errors);
-        RequireText(manifest.EntryPoint.Type, "entryPoint.type", errors);
+        ValidatePlatformAndEntryPoint(manifest, errors);
         ValidateVersionRange(
             manifest.SdkCompatibility.MinimumVersion,
             manifest.SdkCompatibility.MaximumVersion,
@@ -73,6 +72,124 @@ public static partial class AppManifestValidator
         ValidateKindSpecificFields(manifest, errors);
 
         return new ManifestValidationResult(errors);
+    }
+
+    /// <summary>
+    /// Validates the mutually exclusive <see cref="AppManifest.EntryPoint"/> (legacy) /
+    /// <see cref="AppManifest.Platform"/> (<c>MOB-003</c>) declaration, per plan §4.2.
+    /// </summary>
+    private static void ValidatePlatformAndEntryPoint(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        bool hasEntryPoint = manifest.EntryPoint is not null;
+        bool hasPlatform = manifest.Platform is not null;
+
+        if (!hasEntryPoint && !hasPlatform)
+        {
+            AddError(errors, "manifest.platform.required", "entryPoint", "Either 'entryPoint' or 'platform' must be declared.");
+            return;
+        }
+
+        if (hasEntryPoint && hasPlatform)
+        {
+            AddError(errors, "manifest.platform.ambiguous", "platform", "Declare either 'entryPoint' or 'platform', not both.");
+            return;
+        }
+
+        if (hasEntryPoint)
+        {
+            RequireText(manifest.EntryPoint!.Assembly, "entryPoint.assembly", errors);
+            RequireText(manifest.EntryPoint!.Type, "entryPoint.type", errors);
+            return;
+        }
+
+        ValidatePlatform(manifest.Platform!, errors);
+    }
+
+    private static void ValidatePlatform(AppManifestPlatform platform, List<ManifestValidationError> errors)
+    {
+        if (platform.Supported is null || platform.Supported.Count == 0)
+        {
+            AddError(errors, "manifest.platform.supported.empty", "platform.supported", "At least one supported platform is required.");
+            return;
+        }
+
+        ValidateUniqueValues(platform.Supported, "platform.supported", errors);
+
+        HashSet<AppPlatformId> supportedPlatforms = [];
+        foreach (string rawPlatformId in platform.Supported)
+        {
+            if (!AppPlatformId.TryParse(rawPlatformId, out AppPlatformId platformId))
+            {
+                AddError(errors, "manifest.platform.id.invalid", "platform.supported", $"'{rawPlatformId}' is not a valid platform identifier.");
+                continue;
+            }
+
+            supportedPlatforms.Add(platformId);
+        }
+
+        if (platform.EntryPoints is null || platform.EntryPoints.Count == 0)
+        {
+            AddError(errors, "manifest.platform.entryPoints.empty", "platform.entryPoints", "At least one entry point is required.");
+            return;
+        }
+
+        Dictionary<AppPlatformId, int> coverage = [];
+        foreach (AppPlatformEntryPointManifest entryPoint in platform.EntryPoints)
+        {
+            RequireText(entryPoint.Assembly, "platform.entryPoints.assembly", errors);
+            RequireText(entryPoint.Type, "platform.entryPoints.type", errors);
+
+            if (entryPoint.Platforms is null || entryPoint.Platforms.Count == 0)
+            {
+                AddError(errors, "manifest.platform.entryPoint.platforms.empty", "platform.entryPoints.platforms", "An entry point must cover at least one platform.");
+                continue;
+            }
+
+            foreach (string rawPlatformId in entryPoint.Platforms)
+            {
+                if (!AppPlatformId.TryParse(rawPlatformId, out AppPlatformId platformId))
+                {
+                    AddError(errors, "manifest.platform.id.invalid", "platform.entryPoints.platforms", $"'{rawPlatformId}' is not a valid platform identifier.");
+                    continue;
+                }
+
+                if (!supportedPlatforms.Contains(platformId))
+                {
+                    AddError(
+                        errors,
+                        "manifest.platform.entryPoint.platform.unsupported",
+                        "platform.entryPoints.platforms",
+                        $"Entry point references platform '{platformId}', which is not in 'platform.supported'.");
+                    continue;
+                }
+
+                coverage[platformId] = coverage.GetValueOrDefault(platformId) + 1;
+            }
+        }
+
+        foreach ((AppPlatformId platformId, int entryPointCount) in coverage)
+        {
+            if (entryPointCount > 1)
+            {
+                AddError(
+                    errors,
+                    "manifest.platform.entryPoint.platform.duplicate",
+                    "platform.entryPoints",
+                    $"Platform '{platformId}' is covered by more than one entry point.");
+            }
+        }
+
+        foreach (AppPlatformId platformId in supportedPlatforms)
+        {
+            if (!coverage.ContainsKey(platformId))
+            {
+                AddError(
+                    errors,
+                    "manifest.platform.coverage.missing",
+                    "platform.entryPoints",
+                    $"Supported platform '{platformId}' is not covered by any entry point.");
+            }
+        }
     }
 
     private static void ValidateKindSpecificFields(AppManifest manifest, List<ManifestValidationError> errors)
