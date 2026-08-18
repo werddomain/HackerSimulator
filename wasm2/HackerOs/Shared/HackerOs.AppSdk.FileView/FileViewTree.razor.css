@@ -1,0 +1,59 @@
+.file-view-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    width: 100%;
+}
+
+::deep .file-view-tree-group {
+    list-style: none;
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+::deep .file-view-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.35rem;
+    cursor: default;
+    border-radius: 4px;
+}
+
+::deep .file-view-tree-row:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+}
+
+::deep .file-view-tree-row.selected {
+    background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+::deep .file-view-tree-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+}
+
+::deep .file-view-tree-toggle:disabled {
+    visibility: hidden;
+}
+
+::deep .file-view-rename-input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    padding: 0 0.25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}

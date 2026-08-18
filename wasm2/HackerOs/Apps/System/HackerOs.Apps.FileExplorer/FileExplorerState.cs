@@ -1,27 +1,18 @@
+using HackerOs.AppSdk.FileView;
+
 namespace HackerOs.Apps.FileExplorer;
 
-public enum FileExplorerSortColumn
-{
-    Name,
-    Kind,
-    Size,
-    ModifiedDate
-}
-
-public enum FileExplorerViewMode
-{
-    Details,
-    Grid
-}
-
 /// <summary>
-/// Encapsulates state, navigation history, sorting, filtering, and item selection for File Explorer (`P2-FILE-002`, `P2-FILE-003`).
+/// Navigation history (back/forward/up) and the active view mode for File Explorer (`P2-FILE-002`).
+/// Sorting, selection, and directory listing are no longer this class's concern — <see cref="FileView"/>
+/// owns all three since the Phase 4 migration (`INT-001`); duplicating them here would be exactly what
+/// `ADR 0037` commits to not doing. Only navigation history remains, since <see cref="FileView"/> itself
+/// has no concept of "back"/"forward" — only the current directory and one-way <c>NavigateAsync</c>.
 /// </summary>
 public sealed class FileExplorerState
 {
     private readonly Stack<string> _backStack = new();
     private readonly Stack<string> _forwardStack = new();
-    private readonly HashSet<string> _selectedItemNames = new(StringComparer.Ordinal);
 
     public FileExplorerState(string initialPath = "/home/user")
     {
@@ -34,12 +25,8 @@ public sealed class FileExplorerState
     public bool CanNavigateForward => _forwardStack.Count > 0;
     public bool CanNavigateUp => CurrentPath != "/";
 
-    public FileExplorerSortColumn SortColumn { get; set; } = FileExplorerSortColumn.Name;
-    public bool SortAscending { get; set; } = true;
-    public FileExplorerViewMode ViewMode { get; set; } = FileExplorerViewMode.Details;
+    public FileViewMode ViewMode { get; set; } = FileViewMode.Details;
     public string SearchQuery { get; set; } = string.Empty;
-
-    public IReadOnlySet<string> SelectedItemNames => _selectedItemNames;
 
     public event Action? StateChanged;
 
@@ -54,7 +41,6 @@ public sealed class FileExplorerState
         _backStack.Push(CurrentPath);
         _forwardStack.Clear();
         CurrentPath = normalized;
-        _selectedItemNames.Clear();
         NotifyStateChanged();
     }
 
@@ -67,7 +53,6 @@ public sealed class FileExplorerState
 
         _forwardStack.Push(CurrentPath);
         CurrentPath = _backStack.Pop();
-        _selectedItemNames.Clear();
         NotifyStateChanged();
     }
 
@@ -80,7 +65,6 @@ public sealed class FileExplorerState
 
         _backStack.Push(CurrentPath);
         CurrentPath = _forwardStack.Pop();
-        _selectedItemNames.Clear();
         NotifyStateChanged();
     }
 
@@ -94,45 +78,6 @@ public sealed class FileExplorerState
         int lastSlash = CurrentPath.LastIndexOf('/');
         string parentPath = lastSlash > 0 ? CurrentPath[..lastSlash] : "/";
         NavigateTo(parentPath);
-    }
-
-    public void SetSortColumn(FileExplorerSortColumn column)
-    {
-        if (SortColumn == column)
-        {
-            SortAscending = !SortAscending;
-        }
-        else
-        {
-            SortColumn = column;
-            SortAscending = true;
-        }
-        NotifyStateChanged();
-    }
-
-    public void ToggleSelection(string itemName)
-    {
-        if (!_selectedItemNames.Remove(itemName))
-        {
-            _selectedItemNames.Add(itemName);
-        }
-        NotifyStateChanged();
-    }
-
-    public void SelectSingle(string itemName)
-    {
-        _selectedItemNames.Clear();
-        _selectedItemNames.Add(itemName);
-        NotifyStateChanged();
-    }
-
-    public void ClearSelection()
-    {
-        if (_selectedItemNames.Count > 0)
-        {
-            _selectedItemNames.Clear();
-            NotifyStateChanged();
-        }
     }
 
     public void NotifyStateChanged()

@@ -326,6 +326,7 @@ public sealed class LocalSessionServiceTests
                 router,
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
+                new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => _now)),
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             FileSystemSeeder seeder = new(FileSystem, timeProvider);
             SystemContext = CreateSystemContext(_now);

@@ -18,10 +18,13 @@ namespace HackerOs.Samples.ServiceApp;
 /// </remarks>
 public class SampleTickerService : ServiceAppBase
 {
+    /// <summary>This app's manifest ID, also the owning namespace for <see cref="SampleTickerTopics"/>.</summary>
+    public const string AppId = "org.hackeros.samples.service-app";
+
     private static readonly AppManifest StaticManifest = new()
     {
         SchemaVersion = 1,
-        Id = "org.hackeros.samples.service-app",
+        Id = AppId,
         Name = "Sample Ticker Service",
         Version = "1.0.0",
         PublisherId = "pub.hackeros",
@@ -82,8 +85,10 @@ public class SampleTickerService : ServiceAppBase
                 string status = $"OK - Tick #{_tickCount}";
                 DateTimeOffset now = context.Clock.UtcNow;
 
-                // Publish status/health event to the event bus (P2-SVC-002)
-                context.Events.Publish(new SampleTickerEvent(_tickCount, now, status));
+                // Publish status/health event on this app's own topic (P2-SVC-002; migrated to the
+                // topic lane per docs/adr/0038-emitter-authorized-topic-messaging.md — the old
+                // type-based Publish<TEvent> no longer delivers app-initiated events).
+                context.Events.Publish(SampleTickerTopics.Ticked, new SampleTickerEvent(_tickCount, now, status));
 
                 context.Logging.Log(
                     DiagnosticSeverity.Information,

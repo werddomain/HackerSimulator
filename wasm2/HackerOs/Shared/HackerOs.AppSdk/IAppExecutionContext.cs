@@ -1,4 +1,6 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Simulation.Abstractions.Events;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -78,6 +80,13 @@ public interface IAppExecutionContext
     /// overrides it with a real implementation.
     /// </summary>
     IAppIntentGateway Intents => new UnsupportedAppIntentGateway();
+
+    /// <summary>
+    /// Gets this instance's authorized directory-change watch gateway. Defaults to an unsupported
+    /// gateway so existing <see cref="IAppExecutionContext"/> implementations that predate this member
+    /// keep compiling; the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    IAppFileSystemWatchGateway Watch => new UnsupportedAppFileSystemWatchGateway();
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Intents"/> for contexts that don't wire one up.</summary>
@@ -88,6 +97,14 @@ file sealed class UnsupportedAppIntentGateway : IAppIntentGateway
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide an Intents gateway.");
 
     public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
-        VirtualPath path, CancellationToken cancellationToken = default) =>
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide an Intents gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Watch"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppFileSystemWatchGateway : IAppFileSystemWatchGateway
+{
+    public ValueTask<ITopicChannelSubscription<FileSystemChangeEvent>> WatchAsync(
+        VirtualPath path, FileSystemWatchScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Watch gateway.");
 }

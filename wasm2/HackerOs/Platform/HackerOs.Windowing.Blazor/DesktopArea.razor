@@ -5,6 +5,12 @@
 
 <main @ref="_desktopElement" class="desktop-area" aria-label="Desktop workspace">
     <div class="desktop-grid" aria-hidden="true"></div>
+    @if (BackgroundContent is not null)
+    {
+        <section class="background-layer" aria-hidden="true">
+            @BackgroundContent
+        </section>
+    }
     <section class="window-layer" aria-label="Open windows">
         @foreach (WindowRuntimeState window in Windows)
         {
@@ -37,6 +43,14 @@
     /// <summary>Gets or sets content rendered for each window snapshot.</summary>
     [Parameter]
     public RenderFragment<WindowRuntimeState>? WindowContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets optional content rendered in a dedicated layer above the desktop grid background and
+    /// below every window (`INT-011`) — e.g. a future desktop-icons feature. Backward compatible: omitting
+    /// it renders nothing extra, the same DOM as before this parameter existed.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? BackgroundContent { get; set; }
 
     /// <summary>Gets or sets the focus request callback.</summary>
     [Parameter]
