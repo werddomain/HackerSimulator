@@ -197,8 +197,12 @@
             _subscribedToFileView = true;
             _fileView.OnPathChange += OnFileViewPathChanged;
             _fileView.Opened += OnFileViewItemOpened;
+            _fileView.SelectionChanged += OnFileViewSelectionChanged;
         }
     }
+
+    private void OnFileViewSelectionChanged(object? sender, FileViewSelectionChangedEventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
 
     private bool MatchesSearchQuery(FileViewItem item) =>
         string.IsNullOrWhiteSpace(_state.SearchQuery) ||
@@ -653,6 +657,7 @@
         {
             _fileView.OnPathChange -= OnFileViewPathChanged;
             _fileView.Opened -= OnFileViewItemOpened;
+            _fileView.SelectionChanged -= OnFileViewSelectionChanged;
         }
 
         _eventSub?.Dispose();

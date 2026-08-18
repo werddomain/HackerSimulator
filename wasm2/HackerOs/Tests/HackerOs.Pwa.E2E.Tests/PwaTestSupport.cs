@@ -235,7 +235,7 @@ internal static class PwaTestSupport
 
         ILocator row = page.Locator("tr.entry-row", new PageLocatorOptions { HasText = fileName });
         await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
-        await row.Locator("input[type=checkbox]").ClickAsync();
+        await row.ClickAsync();
 
         int countBefore = await page.EvaluateAsync<int>("window.__pwaCaptures.length");
         await page.GetByRole(AriaRole.Button, new() { Name = "Download" }).ClickAsync();
