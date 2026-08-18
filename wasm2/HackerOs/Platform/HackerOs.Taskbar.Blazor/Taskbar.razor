@@ -35,26 +35,23 @@
     </nav>
 
     <div class="taskbar-end">
-        @if (NotificationSource is not null)
-        {
-            <button type="button"
-                    class="notification-trigger @(NotificationSource.IsOpen ? "is-active" : "")"
-                    aria-label="Notifications (@NotificationSource.UnreadCount unread)"
-                    aria-expanded="@NotificationSource.IsOpen.ToString().ToLowerInvariant()"
-                    @onclick="() => NotificationSource.Toggle()">
-                <span class="notification-icon" aria-hidden="true">🔔</span>
-                @if (NotificationSource.UnreadCount > 0)
-                {
-                    <span class="notification-badge" role="status">@NotificationSource.UnreadCount</span>
-                }
-            </button>
-        }
-
         @if (StatusSource is not null)
         {
-            <div class="taskbar-clock" aria-label="System clock" role="timer">
-                <span class="clock-icon" aria-hidden="true">⏱</span>
-                <span class="clock-text">@FormattedTime</span>
+            <div class="taskbar-clock-region">
+                <button type="button"
+                        class="taskbar-clock @(ClockPanelSource?.IsOpen == true ? "is-active" : "")"
+                        aria-label="System clock, notifications, and calendar"
+                        aria-expanded="@((ClockPanelSource?.IsOpen ?? false).ToString().ToLowerInvariant())"
+                        @onclick="HandleClockPanelToggleClick">
+                    <span class="clock-icon" aria-hidden="true">⏱</span>
+                    <span class="clock-text">@FormattedTime</span>
+                </button>
+                @if (ClockPanelSource?.IsOpen == true && ClockPanelContent is not null)
+                {
+                    <div class="clock-panel-container">
+                        @ClockPanelContent
+                    </div>
+                }
             </div>
         }
 
@@ -87,9 +84,17 @@
     [Parameter]
     public ITaskbarStatusSource? StatusSource { get; set; }
 
-    /// <summary>Gets or sets the notification source. Hides the notification trigger when null.</summary>
+    /// <summary>Gets or sets the clock panel's open/closed state. The clock is inert when null.</summary>
     [Parameter]
-    public ITaskbarNotificationSource? NotificationSource { get; set; }
+    public ITaskbarClockPanelSource? ClockPanelSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the clock panel's content, rendered inside a container this component owns for
+    /// anchoring only — the taskbar never inspects or depends on what this fragment contains, so
+    /// the panel's design lives entirely with the host, outside this package.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ClockPanelContent { get; set; }
 
     /// <summary>Gets or sets the optional session commands. Hides the session control when null.</summary>
     [Parameter]
@@ -102,6 +107,8 @@
     private string FormattedTime => StatusSource?.UtcNow.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 
     private void HandleLauncherToggleClick() => Launcher?.Toggle();
+
+    private void HandleClockPanelToggleClick() => ClockPanelSource?.Toggle();
 
     /// <inheritdoc />
     protected override void OnInitialized()
@@ -121,9 +128,9 @@
             StatusSource.Changed += OnSourceChanged;
         }
 
-        if (NotificationSource is not null)
+        if (ClockPanelSource is not null)
         {
-            NotificationSource.Changed += OnSourceChanged;
+            ClockPanelSource.Changed += OnSourceChanged;
         }
     }
 
@@ -155,9 +162,9 @@
             StatusSource.Changed -= OnSourceChanged;
         }
 
-        if (NotificationSource is not null)
+        if (ClockPanelSource is not null)
         {
-            NotificationSource.Changed -= OnSourceChanged;
+            ClockPanelSource.Changed -= OnSourceChanged;
         }
     }
 }

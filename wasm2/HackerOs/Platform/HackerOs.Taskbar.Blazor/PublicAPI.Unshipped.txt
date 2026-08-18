@@ -1,4 +1,8 @@
 #nullable enable
+HackerOs.Taskbar.Blazor.ITaskbarClockPanelSource
+HackerOs.Taskbar.Blazor.ITaskbarClockPanelSource.Changed -> System.Action?
+HackerOs.Taskbar.Blazor.ITaskbarClockPanelSource.IsOpen.get -> bool
+HackerOs.Taskbar.Blazor.ITaskbarClockPanelSource.Toggle() -> void
 HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher
 HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Activate(HackerOs.Windowing.Abstractions.WindowId id) -> void
 HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher.Close(HackerOs.Windowing.Abstractions.WindowId id) -> void
@@ -8,11 +12,6 @@ HackerOs.Taskbar.Blazor.ITaskbarLauncher
 HackerOs.Taskbar.Blazor.ITaskbarLauncher.Changed -> System.Action?
 HackerOs.Taskbar.Blazor.ITaskbarLauncher.IsOpen.get -> bool
 HackerOs.Taskbar.Blazor.ITaskbarLauncher.Toggle() -> void
-HackerOs.Taskbar.Blazor.ITaskbarNotificationSource
-HackerOs.Taskbar.Blazor.ITaskbarNotificationSource.Changed -> System.Action?
-HackerOs.Taskbar.Blazor.ITaskbarNotificationSource.IsOpen.get -> bool
-HackerOs.Taskbar.Blazor.ITaskbarNotificationSource.Toggle() -> void
-HackerOs.Taskbar.Blazor.ITaskbarNotificationSource.UnreadCount.get -> int
 HackerOs.Taskbar.Blazor.ITaskbarSessionCommands
 HackerOs.Taskbar.Blazor.ITaskbarSessionCommands.RequestLogout() -> void
 HackerOs.Taskbar.Blazor.ITaskbarStatusSource
@@ -22,13 +21,15 @@ HackerOs.Taskbar.Blazor.ITaskbarWindowSource
 HackerOs.Taskbar.Blazor.ITaskbarWindowSource.Changed -> System.Action?
 HackerOs.Taskbar.Blazor.ITaskbarWindowSource.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Taskbar.Blazor.TaskbarWindowItem!>!
 HackerOs.Taskbar.Blazor.Taskbar
+HackerOs.Taskbar.Blazor.Taskbar.ClockPanelContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Taskbar.Blazor.Taskbar.ClockPanelContent.set -> void
+HackerOs.Taskbar.Blazor.Taskbar.ClockPanelSource.get -> HackerOs.Taskbar.Blazor.ITaskbarClockPanelSource?
+HackerOs.Taskbar.Blazor.Taskbar.ClockPanelSource.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.Commands.get -> HackerOs.Taskbar.Blazor.ITaskbarCommandDispatcher?
 HackerOs.Taskbar.Blazor.Taskbar.Commands.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.Dispose() -> void
 HackerOs.Taskbar.Blazor.Taskbar.Launcher.get -> HackerOs.Taskbar.Blazor.ITaskbarLauncher?
 HackerOs.Taskbar.Blazor.Taskbar.Launcher.set -> void
-HackerOs.Taskbar.Blazor.Taskbar.NotificationSource.get -> HackerOs.Taskbar.Blazor.ITaskbarNotificationSource?
-HackerOs.Taskbar.Blazor.Taskbar.NotificationSource.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.Options.get -> HackerOs.Taskbar.Blazor.TaskbarOptions!
 HackerOs.Taskbar.Blazor.Taskbar.Options.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.SessionCommands.get -> HackerOs.Taskbar.Blazor.ITaskbarSessionCommands?

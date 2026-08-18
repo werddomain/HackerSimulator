@@ -1,6 +1,4 @@
 using HackerOs.Platform.Blazor.Windows;
-using HackerOs.Simulation.Abstractions.Notifications;
-using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.Taskbar.Blazor;
 using HackerOs.Windowing.Core;
@@ -107,21 +105,15 @@ public sealed class TaskbarLauncherAdapter : ITaskbarLauncher
 }
 
 /// <summary>
-/// Owns the notification center's open/closed state and computes the unread count from the
-/// session's notification queue, matching the shell's original per-render computation.
+/// Owns the clock panel's open/closed state. Unlike the notification bell it replaces, this state
+/// now actually gates the panel's render in <c>DesktopShell</c> — the panel's own content (unread
+/// count included) is computed inside <c>ClockPanel</c>, not on this trigger contract, since the
+/// taskbar package must never need to know what's inside <c>ClockPanelContent</c>.
 /// </summary>
-public sealed class TaskbarNotificationSourceAdapter(
-    INotificationQueue notifications,
-    ISessionService sessionService,
-    ISimulationClock clock) : ITaskbarNotificationSource
+public sealed class TaskbarClockPanelSourceAdapter : ITaskbarClockPanelSource
 {
     /// <inheritdoc />
     public bool IsOpen { get; private set; }
-
-    /// <inheritdoc />
-    public int UnreadCount => notifications.GetActive(
-        sessionService.CurrentPrincipal?.UserId ?? default,
-        clock.UtcNow).Count;
 
     /// <inheritdoc />
     public event Action? Changed;
@@ -129,7 +121,7 @@ public sealed class TaskbarNotificationSourceAdapter(
     /// <inheritdoc />
     public void Toggle() => SetOpen(!IsOpen);
 
-    /// <summary>Closes the notification center.</summary>
+    /// <summary>Closes the clock panel.</summary>
     public void Close() => SetOpen(false);
 
     private void SetOpen(bool value)

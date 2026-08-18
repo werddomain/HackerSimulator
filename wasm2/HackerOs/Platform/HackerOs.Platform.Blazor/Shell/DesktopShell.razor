@@ -4,7 +4,7 @@
 @using HackerOs.Platform.Core.Discovery
 @using HackerOs.Platform.Core.FileSystem
 @using HackerOs.Platform.Core.Lifecycle
-@using HackerOs.Simulation.Abstractions.Notifications
+@using HackerOs.Platform.Core.Shell
 @using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.Simulation.Abstractions.Time
 @using HackerOs.Simulation.Abstractions.Events
@@ -12,7 +12,6 @@
 @implements IDisposable
 @inject WindowRuntime WindowRuntime
 @inject WindowLaunchCoordinator LaunchCoordinator
-@inject INotificationQueue NotificationQueue
 @inject AppLifecycleOrchestrator Orchestrator
 @inject IProcessManager ProcessManager
 @inject WindowCloseCoordinator CloseCoordinator
@@ -22,6 +21,7 @@
 @inject IEventBus EventBus
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
+@inject UiPlatformPreferenceService PlatformPreference
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -57,8 +57,6 @@
         <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" />
     }
 
-    <NotificationCenter OnNotificationDismissed="StateHasChanged" />
-
     @if (!string.IsNullOrEmpty(_launchError))
     {
         <aside class="lazy-launch-error" role="alert">@_launchError</aside>
@@ -73,7 +71,8 @@
                                       Commands="_taskbarCommands"
                                       Launcher="_launcher"
                                       StatusSource="_taskbarStatus"
-                                      NotificationSource="_notifications"
+                                      ClockPanelSource="_clockPanel"
+                                      ClockPanelContent="@ClockPanelFragment"
                                       SessionCommands="_taskbarSessionCommands" />
 
     @if (TestDemoEnabled)
@@ -96,9 +95,16 @@
     private TaskbarWindowSourceAdapter _taskbarWindowSource = null!;
     private TaskbarCommandDispatcherAdapter _taskbarCommands = null!;
     private TaskbarLauncherAdapter _launcher = null!;
-    private TaskbarNotificationSourceAdapter _notifications = null!;
+    private TaskbarClockPanelSourceAdapter _clockPanel = null!;
     private TaskbarStatusSourceAdapter _taskbarStatus = null!;
     private TaskbarSessionCommandsAdapter _taskbarSessionCommands = null!;
+
+    private RenderFragment ClockPanelFragment => builder =>
+    {
+        builder.OpenComponent<ClockPanel>(0);
+        builder.AddAttribute(1, nameof(ClockPanel.OnClose), EventCallback.Factory.Create(this, CloseClockPanel));
+        builder.CloseComponent();
+    };
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
@@ -127,11 +133,16 @@
         _launcher.Close();
     }
 
+    private void CloseClockPanel()
+    {
+        _clockPanel.Close();
+    }
+
     private void OpenLogout()
     {
         _isLogoutOpen = true;
         _launcher.Close();
-        _notifications.Close();
+        _clockPanel.Close();
         Rerender();
     }
 
@@ -248,10 +259,18 @@
         _taskbarCommands = new TaskbarCommandDispatcherAdapter(WindowRuntime, CloseCoordinator, CloseGuards);
         _launcher = new TaskbarLauncherAdapter();
         _launcher.Changed += Rerender;
-        _notifications = new TaskbarNotificationSourceAdapter(NotificationQueue, SessionService, SimulationClock);
-        _notifications.Changed += Rerender;
+        _clockPanel = new TaskbarClockPanelSourceAdapter();
+        _clockPanel.Changed += Rerender;
         _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
         _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
+
+        _ = InitializePlatformPreferenceAsync();
+    }
+
+    private async Task InitializePlatformPreferenceAsync()
+    {
+        await PlatformPreference.InitializeAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void Rerender()
@@ -319,9 +338,9 @@
             {
                 _launcher.Close();
             }
-            else if (_notifications.IsOpen)
+            else if (_clockPanel.IsOpen)
             {
-                _notifications.Close();
+                _clockPanel.Close();
             }
         }
     }
@@ -332,7 +351,7 @@
         FileDialogAdapter.Changed -= Rerender;
         _processSubscription?.Dispose();
         _launcher.Changed -= Rerender;
-        _notifications.Changed -= Rerender;
+        _clockPanel.Changed -= Rerender;
         _taskbarWindowSource.Dispose();
         _taskbarStatus.Dispose();
     }

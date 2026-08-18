@@ -23,8 +23,10 @@ using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Sessions;
+using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Platform.Blazor.Dialogs;
+using HackerOs.Platform.Blazor.Shell;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Windowing.Core;
@@ -363,6 +365,12 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IIconCatalog, IconCatalog>();
         services.AddSingleton<IShellIconProvider, DefaultShellIconProvider>();
 
+        // Depends on IJSRuntime through the browser probe — see this file's IJSRuntime scoping note.
+        services.AddScoped<IPlatformEnvironmentProbe, BrowserPlatformEnvironmentProbe>();
+        // Depends on IPlatformEnvironmentProbe, which is Scoped (see above) — see this file's
+        // IJSRuntime scoping note.
+        services.AddScoped<UiPlatformPreferenceService>();
+
         return services;
     }
 
@@ -376,6 +384,7 @@ public static class EcosystemServiceCollectionExtensions
     [
         PolicySettingsDocuments.CreateDefinition(),
         FileAssociationSettingsDocuments.CreateDefinition(),
-        HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition()
+        HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition(),
+        UiPlatformPreferenceSettingsDocuments.CreateDefinition()
     ];
 }

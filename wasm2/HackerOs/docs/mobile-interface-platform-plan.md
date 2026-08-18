@@ -1,9 +1,30 @@
 # Plan de plateforme et d’interface Mobile
 
-**Statut :** proposition fonctionnelle et technique  
+**Statut :** Phase 0 (fondation) faite le 2026-08-18 — voir §16 ; le reste (§14,
+`MOB-002` à `MOB-018`) reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
+
+## 0. Note de mise à jour (2026-08-18)
+
+Ce document a été écrit le 2026-08-03, **avant** l’extraction du moteur
+fenêtres/taskbar en packages autonomes (`HackerOs.Windowing.Core`,
+`HackerOs.Windowing.Abstractions`, `HackerOs.Windowing.Blazor`,
+`HackerOs.Taskbar.Blazor` — finalisée le 2026-08-17, voir
+[`window-taskbar-export-plan.md`](window-taskbar-export-plan.md) et
+[`progress-and-plan-2026-08-17.md`](progress-and-plan-2026-08-17.md)). Le texte
+original ci-dessous ne nomme jamais ces packages ; §16 fait le lien entre les
+concepts qu’il décrit et leur emplacement réel dans le code, et resséquence
+`MOB-002` à `MOB-018` en phases à la lumière de ce qui existe maintenant.
+
+Une première tranche (« Phase 0 ») a été implémentée le 2026-08-18 : elle pose
+`AppPlatformId`, la préférence `UiPlatformPreference` (persistance seule, pas
+encore de changement de shell), et — anticipant le besoin d’un point d’entrée
+UI pour ce toggle — une extensibilité `RenderFragment` sur le taskbar
+(`ITaskbarClockPanelSource`) permettant d’ouvrir un panneau
+notifications/calendrier/toggle en cliquant sur l’horloge, avec le contenu du
+panneau conçu entièrement en dehors du package taskbar. Détail complet en §16.
 
 ## 1. Objectif
 
@@ -522,7 +543,10 @@ activé automatiquement.
 
 ## 14. Plan d’implémentation
 
-- [ ] `MOB-001` Créer `AppPlatformId` et le registre extensible de plateformes.
+- [x] `MOB-001` Créer `AppPlatformId` et le registre extensible de plateformes.
+  **Phase 0, 2026-08-18** — `Shared/HackerOs.App.Abstractions/AppPlatformId.cs`
+  (type validé + `WellKnownAppPlatforms.Desktop`/`.Mobile`). Pas encore de
+  descripteurs de capacités (`MOB-002`, toujours ouvert).
 - [ ] `MOB-002` Définir les descripteurs de capacités de plateforme et les contrats
   du shell.
 - [ ] `MOB-003` Faire évoluer le manifeste vers plusieurs points d’entrée couvrant
@@ -531,10 +555,22 @@ activé automatiquement.
   validation, fixtures, CLI et templates.
 - [ ] `MOB-005` Implémenter `IAppPlatformEntryPointResolver` et l’intégrer à la
   découverte, au catalogue, aux intents et aux associations.
-- [ ] `MOB-006` Ajouter la préférence `Auto | Explicit` device-scoped et sa
-  migration.
-- [ ] `MOB-007` Implémenter `IPlatformEnvironmentProbe` Browser avec raisons de
-  décision testables.
+- [x] `MOB-006` Ajouter la préférence `Auto | Explicit` device-scoped et sa
+  migration. **Phase 0, 2026-08-18 — tranche persistance seule** :
+  `Platform/HackerOs.Platform.Core/Shell/UiPlatformPreferenceSettingsDocuments.cs`
+  + `UiPlatformPreferenceService.cs` (scope `OsAdmin`/`SyncEligible:false` en
+  attendant un `InstallationId` durable pour un vrai scope `AppDevice`, voir
+  §16.3), exposée dans le panneau horloge (§16.4). La séquence contrôlée en 9
+  étapes de §6.3 (avertir les apps sales, arrêter les instances UI avec la
+  raison `PlatformChanged`, reconstruire le shell...) reste à faire — ce lot ne
+  fait volontairement rien de plus que persister le choix et notifier un futur
+  abonné, sans jamais changer le rendu de `DesktopShell`.
+- [x] `MOB-007` Implémenter `IPlatformEnvironmentProbe` Browser avec raisons de
+  décision testables. **Phase 0, 2026-08-18** —
+  `Platform/HackerOs.Platform.Core/Shell/IPlatformEnvironmentProbe.cs`
+  (`PlatformEnvironmentPolicy.Decide`, pur et testable sans navigateur) +
+  `Platform/HackerOs.Platform.Blazor/Shell/BrowserPlatformEnvironmentProbe.cs`
+  (interop JS minimal, `wwwroot/platformEnvironmentProbe.js`).
 - [ ] `MOB-008` Implémenter le changement contrôlé de shell et la raison d’arrêt
   `PlatformChanged`.
 - [ ] `MOB-009` Créer le shell Mobile à surface unique plein écran.
@@ -573,4 +609,85 @@ Le support Mobile est terminé lorsque :
 - le Terminal Mobile fonctionne avec le clavier HackerOS sans clavier natif ;
 - la matrice unit/component/browser/PWA/accessibilité passe en Release ;
 - tous les manifestes, guides SDK et documents d’architecture sont synchronisés.
+
+## 16. Feuille de route par phases (ajouté 2026-08-18)
+
+### 16.1 Ce que « Phase 0 » a livré
+
+Voir `MOB-001`/`006`/`007` ci-dessus pour le détail fichier par fichier. En plus
+de ces trois tâches, Phase 0 a ajouté une brique qui n’était pas nommée dans ce
+document à l’origine : un point d’entrée UI réel pour le choix de plateforme.
+`HackerOs.Taskbar.Blazor.Taskbar` expose désormais `ITaskbarClockPanelSource` +
+un paramètre `RenderFragment? ClockPanelContent` — le taskbar possède
+uniquement le déclencheur (bouton horloge) et l’ancrage du panneau, jamais son
+contenu. `Platform/HackerOs.Platform.Blazor/Shell/ClockPanel.razor` (fourni par
+l’application hôte, hors du package taskbar) combine notifications, un
+calendrier minimal, et le sélecteur Auto/Desktop/Mobile branché sur
+`UiPlatformPreferenceService`. Ce même changement a fusionné l’ancienne cloche
+de notifications (`ITaskbarNotificationSource`, dont le panneau ne s’affichait
+jamais — bug préexistant) dans ce nouveau point d’entrée unique.
+
+Bascule le toggle ne change **pas** encore le rendu du shell : c’est une
+persistance de préférence uniquement, avec un événement `Changed` prêt à être
+consommé par une phase future (`MOB-008`/`009`).
+
+### 16.2 Rattachement aux packages réels
+
+Ce document, écrit avant l’extraction fenêtres/taskbar, ne nomme jamais les
+packages qui portent désormais les concepts qu’il décrit :
+
+- **§3 (descripteurs de capacités, `MOB-002`)** : contrat à définir aux côtés de
+  `HackerOs.Windowing.Abstractions` (mêmes conventions que `WindowId`/
+  `WindowBounds`/`WindowVisualState`).
+- **§7.1 (`SingleFullScreenSurface`, `MOB-009`)** : politique de présentation à
+  ajouter à `HackerOs.Windowing.Core`/`WindowRuntime` — **non vérifié** que le
+  moteur actuel (conçu pour des fenêtres flottantes) supporte une surface
+  unique non déplaçable/non redimensionnable ; un spike est nécessaire avant de
+  chiffrer `MOB-009` en détail.
+- **§7.2 (`MobileSystemNavigationBar.razor`, `MOB-010`)** : nouveau package
+  frère de `HackerOs.Taskbar.Blazor` (Mobile n’a pas de taskbar), pas une
+  modification de celui-ci.
+- **§6 (préférence et détection, `MOB-006`/`007`)** : fait en Phase 0, voir
+  §16.1.
+
+### 16.3 Risque ouvert : `InstallationId` non durable
+
+`UiPlatformPreference` (§6.1) doit rester local à l’appareil et ne jamais se
+synchroniser entre les appareils d’un même utilisateur. Le scope
+`SettingsScope.AppDevice` existe déjà pour ça, mais
+`EcosystemServiceCollectionExtensions.cs` régénère `InstallationId` à chaque
+démarrage (`Guid.NewGuid()`, jamais persisté) — l’utiliser casserait la
+persistance à chaque rechargement de page. Phase 0 utilise donc le scope
+`OsAdmin` + `SyncEligible:false` (même résultat pratique : pas de
+synchronisation), en notant la migration vers un vrai scope `AppDevice` comme
+suite mécanique une fois `InstallationId` rendu durable — pas un blocage pour
+la suite de ce plan.
+
+### 16.4 Séquencement proposé pour `MOB-002` à `MOB-018`
+
+```text
+Phase 1 — Manifeste et résolution de point d’entrée
+  MOB-002, MOB-003, MOB-004, MOB-005, MOB-014 (partiel : une app de référence)
+  Dépend de : AppPlatformId (Phase 0, fait)
+
+Phase 2 — Shell Mobile et changement contrôlé
+  MOB-008 (séquence complète en 9 étapes, Phase 0 n’a fait que la persistance)
+  MOB-009 ⚠ (voir §16.2 — spike de faisabilité requis avant chiffrage détaillé)
+  MOB-010, MOB-011, MOB-012, MOB-013
+  Dépend de : Phase 1 (les apps doivent déclarer un point d’entrée Mobile)
+
+Phase 3 — Clavier virtuel Terminal Mobile
+  MOB-015, MOB-016
+  Dépend de : Phase 2 (a besoin d’une vraie surface Mobile à laquelle s’attacher)
+
+Phase 4 — Durcissement
+  MOB-017 (matrice de tests complète), MOB-018 (SDK/docs/ADR/manifestes)
+  Dépend de : Phases 1-3
+```
+
+Ce séquencement est une proposition de dépendances, pas un engagement daté —
+à réviser/prioriser au démarrage de chaque phase selon la bande passante
+disponible, comme le fait déjà
+[`progress-and-plan-2026-08-17.md`](progress-and-plan-2026-08-17.md) §8 pour
+les autres chantiers.
 

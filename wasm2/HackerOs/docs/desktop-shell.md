@@ -14,7 +14,7 @@ The shell is implemented using collocated Blazor components and scoped CSS files
   component. It moved to the standalone `HackerOs.Taskbar.Blazor` package (see
   [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md), `EXT-WIN-007`/`008`)
   and is driven entirely by contracts (`ITaskbarWindowSource`, `ITaskbarCommandDispatcher`,
-  `ITaskbarLauncher`, `ITaskbarStatusSource`, `ITaskbarNotificationSource`,
+  `ITaskbarLauncher`, `ITaskbarStatusSource`, `ITaskbarClockPanelSource`,
   `ITaskbarSessionCommands`). `DesktopShell.razor` renders it with the fully-qualified tag
   and supplies HackerOS-specific implementations of those contracts from
   `Shell/TaskbarAdapters.cs` (binding to `WindowRuntime`, `AppCatalog`, `ISimulationClock`,
@@ -22,7 +22,12 @@ The shell is implemented using collocated Blazor components and scoped CSS files
   `Shell/Taskbar.razor/.css` was deleted once the migration was verified end-to-end in the
   browser with zero observable behavior change.
 - `AppLauncher.razor/.css`: Accessible application launcher bound to `AppCatalog`. Features search input, category filtering (System, Utilities, Games, All), keyboard navigation (Arrow keys/Enter/Escape), and `AppIntentDispatcher` launch triggers.
-- `NotificationCenter.razor/.css`: Toast overlay bound to `INotificationQueue`. Renders notification severity badges (Info, Warning, Error), source app, action triggers, and auto-dismiss.
+- `ClockPanel.razor/.css`: Panel rendered inside the taskbar clock's host-owned container
+  (`ITaskbarClockPanelSource`/`ClockPanelContent`, see
+  [`mobile-interface-platform-plan.md`](mobile-interface-platform-plan.md) Phase 0). Combines
+  notifications (bound to `INotificationQueue`, superseding the old always-on `NotificationCenter`
+  toast overlay), a minimal calendar, and the Auto/Desktop/Mobile platform-preference toggle
+  (`UiPlatformPreferenceService`).
 - `LogoutDialog.razor/.css`: Modal confirmation dialog for session logout/shutdown with active process warning list and clean session termination via `ISessionService`.
 
 ## Theme & Accessibility

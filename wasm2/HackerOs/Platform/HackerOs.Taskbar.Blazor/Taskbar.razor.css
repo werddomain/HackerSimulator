@@ -36,7 +36,7 @@
 
 .launcher-trigger,
 .taskbar-item,
-.notification-trigger,
+.taskbar-clock,
 .logout-trigger {
     display: inline-flex;
     align-items: center;
@@ -53,7 +53,7 @@
 
 .launcher-trigger:hover,
 .taskbar-item:hover,
-.notification-trigger:hover,
+.taskbar-clock:hover,
 .logout-trigger:hover {
     background: var(--hos-bg-elevated, #172025);
     border-color: var(--hos-border, #34444c);
@@ -62,14 +62,14 @@
 
 .launcher-trigger:focus-visible,
 .taskbar-item:focus-visible,
-.notification-trigger:focus-visible,
+.taskbar-clock:focus-visible,
 .logout-trigger:focus-visible {
     outline: 2px solid var(--hos-accent, #42d392);
     outline-offset: 1px;
 }
 
 .launcher-trigger.is-active,
-.notification-trigger.is-active {
+.taskbar-clock.is-active {
     background: var(--hos-accent-subtle, #173b2c);
     border-color: var(--hos-accent, #42d392);
     color: var(--hos-accent, #42d392);
@@ -103,34 +103,19 @@
     white-space: nowrap;
 }
 
-.notification-trigger {
+.taskbar-clock-region {
     position: relative;
 }
 
-.notification-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.1rem;
-    height: 1.1rem;
-    padding: 0 0.25rem;
-    border-radius: 999px;
-    background: var(--hos-error, #ff9a91);
-    color: #48120e;
-    font-size: 0.7rem;
-    font-weight: 700;
+.taskbar-clock {
+    font-size: 0.8rem;
 }
 
-.taskbar-clock {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0 0.5rem;
-    color: var(--hos-text-secondary, #a8bac4);
-    font-size: 0.8rem;
+.clock-panel-container {
+    position: absolute;
+    bottom: 3.25rem;
+    right: 0.5rem;
+    z-index: 950;
 }
 
 @media (max-width: 30rem) {

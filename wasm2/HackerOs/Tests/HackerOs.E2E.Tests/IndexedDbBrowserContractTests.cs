@@ -936,7 +936,7 @@ public sealed class IndexedDbBrowserContractTests
 
             ILocator launcher = page.GetByLabel("App launcher");
             Assert.Equal("false", await launcher.GetAttributeAsync("aria-expanded"));
-            await page.GetByLabel("Notifications (0 unread)")
+            await page.GetByLabel("System clock, notifications, and calendar")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             await Assertions.Expect(page.Locator(".clock-text")).ToHaveTextAsync("09:00:00");
             ILocator logout = page.GetByLabel("User session and logout");
@@ -965,11 +965,12 @@ public sealed class IndexedDbBrowserContractTests
             await page.GetByRole(AriaRole.Button, new() { Name = "Scenario Window 3 (background)" })
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-            // Notification and clock sources push changes without a taskbar-initiated command.
-            await page.GetByRole(AriaRole.Button, new() { Name = "Add notification" }).ClickAsync();
-            await page.GetByLabel("Notifications (1 unread)")
+            // The clock panel source pushes open/closed state without a taskbar-initiated
+            // command, and its content — supplied entirely by the host through ClockPanelContent —
+            // renders inside the container the taskbar itself owns for anchoring only.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle clock panel", Exact = true }).ClickAsync();
+            await page.Locator("[data-scenario-clock-panel]")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-            Assert.Equal("1", await page.Locator(".notification-badge").InnerTextAsync());
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Tick clock" }).ClickAsync();
             await Assertions.Expect(page.Locator(".clock-text")).ToHaveTextAsync("09:00:01");
@@ -1001,10 +1002,13 @@ public sealed class IndexedDbBrowserContractTests
             await page.GetByRole(AriaRole.Button, new() { Name = "Toggle status source" }).ClickAsync();
             await page.Locator(".taskbar-clock").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle notification source" }).ClickAsync();
-            await page.Locator(".notification-trigger").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
-            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle notification source" }).ClickAsync();
-            await page.Locator(".notification-trigger").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            // The clock button itself stays visible (StatusSource, not ClockPanelSource, controls
+            // that) — withholding ClockPanelSource only removes the panel it would otherwise show.
+            // The panel from the earlier "Toggle clock panel" click is still open at this point.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle clock panel source" }).ClickAsync();
+            await page.Locator("[data-scenario-clock-panel]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle clock panel source" }).ClickAsync();
+            await page.Locator("[data-scenario-clock-panel]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
             await page.GetByRole(AriaRole.Button, new() { Name = "Toggle session commands" }).ClickAsync();
             await logout.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });

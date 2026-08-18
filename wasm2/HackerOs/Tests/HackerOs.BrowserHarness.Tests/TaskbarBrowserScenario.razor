@@ -6,12 +6,12 @@
     <nav class="scenario-controls" aria-label="Taskbar test controls">
         <button type="button" @onclick="AddWindow">Add window</button>
         <button type="button" @onclick="RemoveLastWindow">Remove last window</button>
-        <button type="button" @onclick="BumpNotifications">Add notification</button>
+        <button type="button" @onclick="ToggleClockPanel">Toggle clock panel</button>
         <button type="button" @onclick="TickClock">Tick clock</button>
         <button type="button" @onclick="ToggleWindowSourcePresence">Toggle window source</button>
         <button type="button" @onclick="ToggleLauncherPresence">Toggle launcher</button>
         <button type="button" @onclick="ToggleStatusSourcePresence">Toggle status source</button>
-        <button type="button" @onclick="ToggleNotificationSourcePresence">Toggle notification source</button>
+        <button type="button" @onclick="ToggleClockPanelSourcePresence">Toggle clock panel source</button>
         <button type="button" @onclick="ToggleSessionCommandsPresence">Toggle session commands</button>
     </nav>
     <output role="status" data-scenario-log="@_log">@_log</output>
@@ -22,7 +22,8 @@
              Commands="_commands"
              Launcher="@(_launcherPresent ? _launcher : null)"
              StatusSource="@(_statusSourcePresent ? _statusSource : null)"
-             NotificationSource="@(_notificationSourcePresent ? _notificationSource : null)"
+             ClockPanelSource="@(_clockPanelSourcePresent ? _clockPanelSource : null)"
+             ClockPanelContent="@ClockPanelFragment"
              SessionCommands="@(_sessionCommandsPresent ? _sessionCommands : null)" />
 </section>
 
@@ -30,14 +31,22 @@
     private readonly FakeWindowSource _windowSource = new();
     private readonly FakeLauncher _launcher = new();
     private readonly FakeStatusSource _statusSource = new();
-    private readonly FakeNotificationSource _notificationSource = new();
+    private readonly FakeClockPanelSource _clockPanelSource = new();
     private FakeCommands _commands = null!;
     private FakeSessionCommands _sessionCommands = null!;
+
+    private static readonly RenderFragment ClockPanelFragment = builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "data-scenario-clock-panel", "ready");
+        builder.AddContent(2, "Clock panel content owned by the scenario host, not the taskbar.");
+        builder.CloseElement();
+    };
 
     private bool _windowSourcePresent = true;
     private bool _launcherPresent = true;
     private bool _statusSourcePresent = true;
-    private bool _notificationSourcePresent = true;
+    private bool _clockPanelSourcePresent = true;
     private bool _sessionCommandsPresent = true;
     private string _log = "Idle";
 
@@ -78,11 +87,10 @@
         }
     }
 
-    private void BumpNotifications()
+    private void ToggleClockPanel()
     {
-        _notificationSource.UnreadCount++;
-        _notificationSource.RaiseChanged();
-        Log($"Unread count is now {_notificationSource.UnreadCount}");
+        _clockPanelSource.Toggle();
+        Log($"Clock panel open: {_clockPanelSource.IsOpen}");
     }
 
     private void TickClock()
@@ -95,7 +103,7 @@
     private void ToggleWindowSourcePresence() { _windowSourcePresent = !_windowSourcePresent; Log($"Window source present: {_windowSourcePresent}"); }
     private void ToggleLauncherPresence() { _launcherPresent = !_launcherPresent; Log($"Launcher present: {_launcherPresent}"); }
     private void ToggleStatusSourcePresence() { _statusSourcePresent = !_statusSourcePresent; Log($"Status source present: {_statusSourcePresent}"); }
-    private void ToggleNotificationSourcePresence() { _notificationSourcePresent = !_notificationSourcePresent; Log($"Notification source present: {_notificationSourcePresent}"); }
+    private void ToggleClockPanelSourcePresence() { _clockPanelSourcePresent = !_clockPanelSourcePresent; Log($"Clock panel source present: {_clockPanelSourcePresent}"); }
     private void ToggleSessionCommandsPresence() { _sessionCommandsPresent = !_sessionCommandsPresent; Log($"Session commands present: {_sessionCommandsPresent}"); }
 
     private sealed class FakeWindowSource : ITaskbarWindowSource
@@ -191,10 +199,8 @@
         public void RaiseChanged() => Changed?.Invoke();
     }
 
-    private sealed class FakeNotificationSource : ITaskbarNotificationSource
+    private sealed class FakeClockPanelSource : ITaskbarClockPanelSource
     {
-        public int UnreadCount { get; set; }
-
         public bool IsOpen { get; private set; }
 
         public event Action? Changed;
@@ -204,8 +210,6 @@
             IsOpen = !IsOpen;
             Changed?.Invoke();
         }
-
-        public void RaiseChanged() => Changed?.Invoke();
     }
 
     private sealed class FakeSessionCommands(Action onLogout) : ITaskbarSessionCommands

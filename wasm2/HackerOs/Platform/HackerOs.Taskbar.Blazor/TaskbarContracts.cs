@@ -71,21 +71,18 @@ public interface ITaskbarStatusSource
 }
 
 /// <summary>
-/// Supplies the notification center's unread count and open state. No notification trigger
-/// renders when no source is supplied.
+/// Controls the host-provided clock panel (notifications, calendar, and platform-mode toggle,
+/// among other host-defined content). No clock trigger renders when no source is supplied.
 /// </summary>
-public interface ITaskbarNotificationSource
+public interface ITaskbarClockPanelSource
 {
-    /// <summary>Gets the current unread notification count.</summary>
-    int UnreadCount { get; }
-
-    /// <summary>Gets whether the notification center is currently open.</summary>
+    /// <summary>Gets whether the clock panel is currently open.</summary>
     bool IsOpen { get; }
 
-    /// <summary>Requests the notification center be opened or closed.</summary>
+    /// <summary>Requests the clock panel be opened or closed.</summary>
     void Toggle();
 
-    /// <summary>Raised when the unread count or open state changes.</summary>
+    /// <summary>Raised when <see cref="IsOpen"/> changes for a reason external to the taskbar (e.g. Escape).</summary>
     event Action? Changed;
 }
 

@@ -69,10 +69,17 @@ avant et après ce lot de travail ; n'affecte aucun test lié aux
 fenêtres/taskbar. Laissé pour un futur passage sur le sujet IndexedDB backup/
 recovery plutôt que traité ici.
 
-## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`)
+## 3. Plateforme Mobile (`mobile-interface-platform-plan.md`) — Phase 0 démarrée le 2026-08-18
 
-Toujours au stade "proposition fonctionnelle et technique" — les 18 tâches
-(`MOB-001` à `MOB-018`) sont toutes non cochées, aucun travail commencé.
+`MOB-001`, `MOB-006` (tranche persistance) et `MOB-007` sont faits — voir
+`mobile-interface-platform-plan.md` §14/§16 pour le détail fichier par fichier.
+Nouveauté par rapport au doc d'origine : le taskbar expose maintenant un point
+d'ancrage générique (`ITaskbarClockPanelSource` + `RenderFragment
+ClockPanelContent`) ouvert en cliquant l'horloge, et c'est là que vit le
+sélecteur Auto/Desktop/Mobile — ce sera l'emplacement de toggle pour la suite
+du plan. Le toggle persiste la préférence mais ne change pas encore le rendu du
+shell (`MOB-008`/`009`, phases futures). `MOB-002` à `MOB-018` restent à faire,
+reséquencés en 4 phases dans `mobile-interface-platform-plan.md` §16.4.
 
 Le document d'extraction fenêtres/taskbar référence déjà ce plan comme risque
 à éviter ("Rupture mobile : ne pas figer dans le moteur des hypothèses
