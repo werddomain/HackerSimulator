@@ -6,6 +6,10 @@
 
 ---
 
+**Before you start:** read [`wasm2/HackerOs/docs/common-pitfalls.md`](wasm2/HackerOs/docs/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, and E2E test harness setup. Each one was expensive to re-diagnose from scratch; don't repeat them.
+
+---
+
 ## I. CRITICAL DIRECTIVES:
 
 1.  **Strict Directory Structure for New Code:**

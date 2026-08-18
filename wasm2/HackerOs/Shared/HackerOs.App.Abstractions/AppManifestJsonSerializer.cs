@@ -36,6 +36,7 @@ public static class AppManifestJsonSerializer
             "presentation",
             "localizations",
             "capabilities",
+            "declaredTopicPermissions",
             "resources",
             "settings",
             "intents",
@@ -130,6 +131,9 @@ public static class AppManifestJsonSerializer
                     break;
                 case "localizations":
                     ValidateArray(property.Value, $"{path}.localizations", ["culture", "resourcePath"]);
+                    break;
+                case "declaredTopicPermissions":
+                    ValidateArray(property.Value, $"{path}.declaredTopicPermissions", ["id", "description"]);
                     break;
                 case "resources":
                     ValidateObject(property.Value, $"{path}.resources", ["baselineCpuWeight", "burstCpuWeight", "baselineMemoryWeight", "burstMemoryWeight", "baselineStorageIoWeight", "burstStorageIoWeight", "baselineNetworkIoWeight", "burstNetworkIoWeight"]);

@@ -32,10 +32,12 @@ internal static class E2ESupport
             RedirectStandardError = true,
             CreateNoWindow = true
         };
-        // Without this, the child process defaults to the Production environment, which
-        // makes Program.cs take the UseHsts()/UseExceptionHandler() branch instead of
-        // UseWebAssemblyDebugging() — the harness never becomes reachable and the test
-        // hangs until NavigateWhenReadyAsync's retry budget is exhausted.
+        // Without this, "dotnet run" defaults ASPNETCORE_ENVIRONMENT to Production when the shell
+        // that invoked `dotnet test` hasn't set it (e.g. plain CI shells). In Production,
+        // StaticAssetDevelopmentRuntimeHandler still runs but expects every static web asset to
+        // exist as a physical file under this project's own wwwroot, which fails for assets
+        // composed from referenced projects/packages (MudBlazor, HackerOs.Ecosystem) and 500s
+        // every request.
         startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         startInfo.ArgumentList.Add("run");
         startInfo.ArgumentList.Add("--configuration");
