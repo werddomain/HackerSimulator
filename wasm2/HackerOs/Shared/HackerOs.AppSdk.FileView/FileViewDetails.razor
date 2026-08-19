@@ -34,7 +34,7 @@
                 class="entry-row @(item.IsSelected ? "selected" : null)"
                 tabindex="@(IsTabStop(item) ? 0 : -1)"
                 draggable="@(Owner.AllowDragDrop ? "true" : "false")"
-                @onclick="@(args => OnRowClick(item, args))"
+                @onclick="@(args => OnRowClickAsync(item, args))"
                 @ondblclick="@(() => OnRowDoubleClickAsync(item))"
                 @oncontextmenu="@(args => OnRowContextMenuAsync(item, args))"
                 @oncontextmenu:preventDefault="true"
@@ -44,10 +44,11 @@
                 @ondrop="@(args => OnRowDropAsync(item, args))">
                 @foreach (FileViewColumn column in EffectiveColumns)
                 {
-                    <td role="gridcell">
+                    <td role="gridcell" class="@("file-view-details-column-"+ column.Key)">
                         @if (column.Key == NameColumnKey)
                         {
-                            <ShellIcon Icon="ResolveIcon(item)" Size="16" />
+
+                            <ShellIconLabel Icon="ResolveIcon(item)" Size="16">
                             @if (item.IsRenaming)
                             {
                                 <input class="file-view-rename-input"
@@ -62,6 +63,7 @@
                             {
                                 <span>@item.FileName</span>
                             }
+                            </ShellIconLabel>
                         }
                         else
                         {

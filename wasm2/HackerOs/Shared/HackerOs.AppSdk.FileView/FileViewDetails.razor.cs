@@ -13,10 +13,22 @@ public partial class FileViewDetails
     private static readonly IReadOnlyList<FileViewColumn> DefaultColumns =
     [
         new(NameColumnKey, "Name", static item => item.FileName),
-        new("kind", "Kind", static item => item.IsDirectory ? "Folder" : "File"),
+        new("type", "Type", static item => FormatType(item)),
         new("size", "Size", static item => item.Metadata is FileMetadata file ? file.Length : -1L),
         new("modified", "Modified", static item => item.Metadata.Timestamps.ContentModifiedAtUtc)
     ];
+
+    /// <summary>Formats one entry's Type column value: <c>"Folder"</c>, <c>".ext File"</c>, or plain <c>"File"</c> when it has no extension.</summary>
+    private static string FormatType(FileViewItem item)
+    {
+        if (item.IsDirectory)
+        {
+            return "Folder";
+        }
+
+        string? extension = GetExtension(item.FileName);
+        return extension is null ? "File" : $"{extension} File";
+    }
 
     private readonly Dictionary<FileViewItem, string> _renameBuffers = [];
     private string _sortColumnKey = NameColumnKey;
@@ -28,17 +40,22 @@ public partial class FileViewDetails
 
     private IReadOnlyList<FileViewColumn> EffectiveColumns => Owner.Columns ?? DefaultColumns;
 
-    private IEnumerable<FileViewItem> SortedItems
+    internal IEnumerable<FileViewItem> SortedItems
     {
         get
         {
             FileViewColumn column = EffectiveColumns.FirstOrDefault(c => c.Key == _sortColumnKey) ?? EffectiveColumns[0];
-            IOrderedEnumerable<FileViewItem> ordered = Owner.Items.OrderBy(column.SortAccessor);
-            return _sortDescending ? ordered.Reverse() : ordered;
+
+            // Folders always group before files, independent of sort column/direction — the
+            // selected sort only orders within each group, matching common file-explorer UX.
+            IOrderedEnumerable<FileViewItem> byGroup = Owner.Items.OrderBy(static item => item.IsDirectory ? 0 : 1);
+            return _sortDescending
+                ? byGroup.ThenByDescending(column.SortAccessor)
+                : byGroup.ThenBy(column.SortAccessor);
         }
     }
 
-    private void ToggleSort(string key)
+    internal void ToggleSort(string key)
     {
         if (_sortColumnKey == key)
         {
@@ -70,14 +87,34 @@ public partial class FileViewDetails
     internal bool IsTabStop(FileViewItem item) =>
         item.IsSelected || (Owner.SelectedItem is null && ReferenceEquals(item, SortedItems.FirstOrDefault()));
 
-    internal void OnRowClick(FileViewItem item, MouseEventArgs args) => item.Select(additive: args.CtrlKey);
-
-    internal Task OnRowDoubleClickAsync(FileViewItem item) => Owner.ActivateItemAsync(item);
-
-    private Task OnRowContextMenuAsync(FileViewItem item, MouseEventArgs args)
+    internal async Task OnRowClickAsync(FileViewItem item, MouseEventArgs args)
     {
+        await CommitPendingRenameElsewhereAsync(item);
+        item.Select(additive: args.CtrlKey);
+    }
+
+    internal async Task OnRowDoubleClickAsync(FileViewItem item)
+    {
+        await CommitPendingRenameElsewhereAsync(item);
+        await Owner.ActivateItemAsync(item);
+    }
+
+    private async Task OnRowContextMenuAsync(FileViewItem item, MouseEventArgs args)
+    {
+        await CommitPendingRenameElsewhereAsync(item);
         item.Select();
-        return Owner.OpenItemContextMenuAsync(args, item);
+        await Owner.OpenItemContextMenuAsync(args, item);
+    }
+
+    /// <summary>
+    /// Interacting with a different row while one item is mid-rename should accept that rename, not strand
+    /// its textbox open — the blur that would normally do this can lose the race against the click's own
+    /// re-render, so the click path commits explicitly instead of relying on it.
+    /// </summary>
+    private Task CommitPendingRenameElsewhereAsync(FileViewItem clicked)
+    {
+        FileViewItem? renaming = Owner.Items.FirstOrDefault(i => i.IsRenaming && !ReferenceEquals(i, clicked));
+        return renaming is null ? Task.CompletedTask : CommitRenameAsync(renaming);
     }
 
     internal Task OnRowKeyDownAsync(FileViewItem item, KeyboardEventArgs args) => args.Key switch
