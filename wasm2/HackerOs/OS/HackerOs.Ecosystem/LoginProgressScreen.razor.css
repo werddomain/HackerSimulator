@@ -4,8 +4,8 @@
     justify-content: center;
     min-height: 100vh;
     padding: 1.5rem;
-    background: radial-gradient(circle at center, #0f1a18 0%, #060b0a 100%);
-    color: #e7f7f1;
+    background: var(--hos-desktop-background, var(--hos-bg-base, #101417));
+    color: var(--hos-text-primary, #f4f7f8);
     font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
 }
 
@@ -16,11 +16,11 @@
     width: 100%;
     max-width: 28rem;
     padding: 2.5rem 2rem;
-    background: rgba(15, 26, 24, 0.85);
-    border: 1px solid #1f3d35;
-    border-radius: 8px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(66, 211, 146, 0.08);
-    backdrop-filter: blur(8px);
+    background: var(--hos-window-background, var(--hos-bg-elevated, #1b252a));
+    border: 1px solid var(--hos-window-focused-border, var(--hos-border, #3a4b53));
+    border-radius: var(--hos-window-radius, var(--hos-radius-lg, 0.7rem));
+    box-shadow: var(--hos-window-focused-shadow, var(--hos-shadow-lg, 0 20px 48px rgb(0 0 0 / 52%)));
+    backdrop-filter: var(--hos-window-backdrop-filter, none);
 }
 
 .boot-logo {
@@ -30,15 +30,14 @@
     width: 4rem;
     height: 4rem;
     margin-bottom: 1.25rem;
-    background: #091312;
-    border: 2px solid #42d392;
+    background: var(--hos-bg-base, #101417);
+    border: 2px solid var(--hos-accent, #42d392);
     border-radius: 50%;
-    box-shadow: 0 0 20px rgba(66, 211, 146, 0.35);
-    animation: pulse-glow 2s infinite ease-in-out;
+    box-shadow: 0 0 20px var(--hos-accent-glow, rgb(66 211 146 / 24%));
 }
 
 .logo-mark {
-    color: #42d392;
+    color: var(--hos-accent, #42d392);
     font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: -1px;
@@ -46,7 +45,7 @@
 
 .system-title {
     margin: 0;
-    color: #f4f7f8;
+    color: var(--hos-text-primary, #f4f7f8);
     font-size: 1.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -55,7 +54,7 @@
 
 .status-subtitle {
     margin: 0.4rem 0 2rem;
-    color: #8da49c;
+    color: var(--hos-text-secondary, #a8bac4);
     font-size: 0.9rem;
 }
 
@@ -67,17 +66,17 @@
 .progress-bar-track {
     width: 100%;
     height: 0.6rem;
-    background: #0d1715;
-    border: 1px solid #1d362e;
+    background: var(--hos-bg-base, #101417);
+    border: 1px solid var(--hos-border-subtle, #27343a);
     border-radius: 999px;
     overflow: hidden;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #28a76d 0%, #42d392 100%);
-    box-shadow: 0 0 12px rgba(66, 211, 146, 0.6);
-    transition: width 0.35s ease-out;
+    background: linear-gradient(90deg, var(--hos-accent, #42d392), var(--hos-accent-hover, #62e4aa));
+    box-shadow: 0 0 12px var(--hos-accent-glow, rgb(66 211 146 / 24%));
+    transition: width var(--hos-transition-normal, 160ms ease-out);
 }
 
 .progress-bar-fill.progress-33 {
@@ -105,12 +104,12 @@
 }
 
 .step-label {
-    color: #42d392;
+    color: var(--hos-accent, #42d392);
     font-weight: 500;
 }
 
 .step-percentage {
-    color: #a3c4b8;
+    color: var(--hos-text-secondary, #a8bac4);
     font-weight: 700;
 }
 
@@ -122,31 +121,37 @@
     margin: 0;
     padding: 0.8rem;
     list-style: none;
-    background: #08100f;
-    border: 1px solid #172d26;
-    border-radius: 4px;
+    background: var(--hos-bg-base, #101417);
+    border: 1px solid var(--hos-border-subtle, #27343a);
+    border-radius: var(--hos-radius-sm, 0.25rem);
 }
 
 .history-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #79998d;
+    color: var(--hos-text-secondary, #a8bac4);
     font-size: 0.8rem;
 }
 
 .check-mark {
-    color: #42d392;
+    color: var(--hos-success, #42d392);
     font-weight: 700;
 }
 
 @keyframes pulse-glow {
     0%, 100% {
-        box-shadow: 0 0 15px rgba(66, 211, 146, 0.25);
-        border-color: #38b47c;
+        box-shadow: 0 0 15px var(--hos-accent-glow, rgb(66 211 146 / 24%));
+        border-color: var(--hos-accent, #42d392);
     }
     50% {
-        box-shadow: 0 0 30px rgba(66, 211, 146, 0.55);
-        border-color: #55d6a1;
+        box-shadow: 0 0 30px color-mix(in srgb, var(--hos-accent, #42d392) 48%, transparent);
+        border-color: var(--hos-accent-hover, #62e4aa);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-motion="enabled"] .boot-logo {
+        animation: pulse-glow 2s infinite ease-in-out;
     }
 }

@@ -1,4 +1,5 @@
 using HackerOs.Tests.Support;
+using HackerOs.Theming.Abstractions;
 using Xunit;
 
 namespace HackerOs.Apps.Settings.Tests;
@@ -14,9 +15,11 @@ public sealed class AppearancePersistenceServiceTests
             DocumentPath, """{"schemaVersion":1,"accent":"cyan","animationsEnabled":false}""");
         AppearancePersistenceService service = new(gateway);
 
-        AppearanceSettings result = await service.ReadAsync();
+        ThemePreferences result = await service.ReadAsync();
 
-        Assert.Equal("cyan", result.Accent);
+        Assert.Equal(WellKnownThemeIds.HackerOs, result.DesktopThemeId);
+        Assert.Equal(WellKnownThemeIds.Android, result.MobileThemeId);
+        Assert.Equal(WellKnownAccentIds.Cyan, result.AccentId);
         Assert.False(result.AnimationsEnabled);
     }
 
@@ -26,9 +29,9 @@ public sealed class AppearancePersistenceServiceTests
         FakeAppSettingsGateway gateway = new();
         AppearancePersistenceService service = new(gateway);
 
-        AppearanceSettings result = await service.ReadAsync();
+        ThemePreferences result = await service.ReadAsync();
 
-        Assert.Equal(AppearanceSettings.Default, result);
+        Assert.Equal(ThemePreferences.Default, result);
     }
 
     [Fact]
@@ -38,12 +41,16 @@ public sealed class AppearancePersistenceServiceTests
             DocumentPath, """{"schemaVersion":1,"accent":"green","animationsEnabled":true}""", revision: 3);
         AppearancePersistenceService service = new(gateway);
 
-        bool succeeded = await service.WriteAsync("purple", false);
+        ThemePreferences expected = new(
+            WellKnownThemeIds.Windows7,
+            WellKnownThemeIds.Ios,
+            WellKnownAccentIds.Purple,
+            AnimationsEnabled: false);
+        bool succeeded = await service.WriteAsync(expected);
 
         Assert.True(succeeded);
-        AppearanceSettings reread = await service.ReadAsync();
-        Assert.Equal("purple", reread.Accent);
-        Assert.False(reread.AnimationsEnabled);
+        ThemePreferences reread = await service.ReadAsync();
+        Assert.Equal(expected, reread);
     }
 
     [Fact]
@@ -52,7 +59,10 @@ public sealed class AppearancePersistenceServiceTests
         FakeAppSettingsGateway gateway = new();
         AppearancePersistenceService service = new(gateway);
 
-        bool succeeded = await service.WriteAsync("cyan", true);
+        bool succeeded = await service.WriteAsync(ThemePreferences.Default with
+        {
+            AccentId = WellKnownAccentIds.Cyan
+        });
 
         Assert.False(succeeded);
     }

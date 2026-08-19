@@ -21,7 +21,12 @@ The shell is implemented using collocated Blazor components and scoped CSS files
   `INotificationQueue`, `ISessionService`, `AppIntentDispatcher`). The old
   `Shell/Taskbar.razor/.css` was deleted once the migration was verified end-to-end in the
   browser with zero observable behavior change.
-- `AppLauncher.razor/.css`: Accessible application launcher bound to `AppCatalog`. Features search input, category filtering (System, Utilities, Games, All), keyboard navigation (Arrow keys/Enter/Escape), and `AppIntentDispatcher` launch triggers.
+- `AppLauncher.razor/.css/.cs`: Windows 7-inspired two-column Start menu bound to
+  the trusted catalog/enablement/session state. It provides ordered per-user
+  quick-launch pins, dynamic presentation categories, search, keyboard
+  navigation, and stable File Explorer/Settings shortcuts. Every selection is
+  returned through the existing shell launch callback; see
+  [`start-menu.md`](start-menu.md).
 - `ClockPanel.razor/.css`: Panel rendered inside the taskbar clock's host-owned container
   (`ITaskbarClockPanelSource`/`ClockPanelContent`, see
   [`mobile-interface-platform-plan.md`](mobile-interface-platform-plan.md) Phase 0). Combines
@@ -32,7 +37,10 @@ The shell is implemented using collocated Blazor components and scoped CSS files
 
 ## Theme & Accessibility
 
-- Design system tokens (`--hos-*`) defined in `wwwroot/css/app.css` supply color palettes (Gothic/Hacker dark mode), monospace typography (`Cascadia Mono`), and surface boundaries.
+- Semantic design tokens (`--hos-*`) inherited from the root
+  `HackerOs.Theming.Blazor.ThemeScope` supply the selected desktop palette,
+  typography, shape, taskbar, launcher, and window treatment. See
+  [`theming.md`](theming.md); host `app.css` is not a second theme definition.
 - All interactive controls provide full keyboard navigation, focus indicators (`:focus-visible`), and ARIA attributes (`role="contentinfo"`, `role="tablist"`, `role="listbox"`, `role="status"`, `aria-live="polite"`).
 
 ## Key Decisions
@@ -43,7 +51,8 @@ The shell is implemented using collocated Blazor components and scoped CSS files
 ## Task List
 
 - [x] `P2-SHELL-001` Implement `DesktopShell.razor/.css` with work area, window outlet, taskbar, launcher, and notification outlets.
-- [x] `P2-SHELL-001A` Define shared shell design tokens in `:root` CSS custom properties.
+- [x] `P2-SHELL-001A` Define shared shell design tokens; these now live in the
+  `HackerOs.Theming.Blazor` RCL and are selected by one root scope.
 - [x] `P2-SHELL-002` Implement `Taskbar.razor/.css` from process/window state, simulation clock, and status.
 - [x] `P2-SHELL-003` Implement `AppLauncher.razor/.css` from `AppCatalog` with search, categories, keyboard nav, and launch intents.
 - [x] `P2-SHELL-004` Implement desktop shortcuts/settings policy.
@@ -55,3 +64,7 @@ The shell is implemented using collocated Blazor components and scoped CSS files
 - [x] `INT-011`/`INT-012`/`INT-013`/`INT-014` Add the `BackgroundContent` background-layer slot to
   `DesktopArea`/`DesktopShell` (infrastructure only, no desktop-icons feature) — see
   [`Global-FileView-And-MessagingSystem/integrationPlan.md` Phase 6](Global-FileView-And-MessagingSystem/integrationPlan.md#phase-6--desktopareadesktopshell-background-slot-infrastructure-only).
+- [x] Replace the launcher category bug with presentation-category filtering,
+  add the Windows 7 layout and quick links, and persist ordered per-user pins.
+- [x] Apply the shared desktop theme contract to the desktop, exported window
+  chrome, taskbar, and launcher without duplicating theme CSS in a host.

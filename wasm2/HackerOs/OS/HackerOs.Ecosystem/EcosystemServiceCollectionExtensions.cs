@@ -373,6 +373,8 @@ public static class EcosystemServiceCollectionExtensions
         // Depends on IPlatformEnvironmentProbe, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
+        services.AddScoped<HackerOs.Platform.Core.Appearance.ThemePreferenceService>();
+        services.AddScoped<StartMenuPreferencesService>();
         // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see
         // above) — see this file's IJSRuntime scoping note.
         services.AddScoped<PlatformShellSwitchCoordinator>();
@@ -391,6 +393,7 @@ public static class EcosystemServiceCollectionExtensions
         PolicySettingsDocuments.CreateDefinition(),
         FileAssociationSettingsDocuments.CreateDefinition(),
         HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition(),
+        StartMenuSettingsDocuments.CreateDefinition(),
         UiPlatformPreferenceSettingsDocuments.CreateDefinition()
     ];
 }

@@ -5,8 +5,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(10, 14, 17, 0.75);
-    backdrop-filter: blur(4px);
+    background: var(--hos-bg-overlay, rgb(4 8 10 / 72%));
+    backdrop-filter: var(--hos-taskbar-backdrop-filter, none);
 }
 
 .logout-dialog {
@@ -16,12 +16,11 @@
     gap: 1rem;
     padding: 1.25rem;
     border: 1px solid var(--hos-border, #34444c);
-    border-radius: 6px;
+    border-radius: var(--hos-radius-md, 0.45rem);
     background: var(--hos-bg-surface, #151c20);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: var(--hos-shadow-lg, 0 20px 48px rgb(0 0 0 / 52%));
     color: var(--hos-text-primary, #f4f7f8);
     font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
-    animation: dialog-pop 0.15s ease-out;
 }
 
 .dialog-header {
@@ -129,12 +128,12 @@ h2 {
 
 .btn-danger {
     border-color: var(--hos-error, #ff9a91);
-    background: #48120e;
-    color: #ff9a91;
+    background: color-mix(in srgb, var(--hos-error, #ff8f87) 18%, var(--hos-bg-base, #101417));
+    color: var(--hos-error, #ff8f87);
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: #601813;
+    background: color-mix(in srgb, var(--hos-error, #ff8f87) 28%, var(--hos-bg-base, #101417));
 }
 
 .btn-secondary:disabled,
@@ -151,5 +150,11 @@ h2 {
     to {
         transform: scale(1);
         opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-motion="enabled"] .logout-dialog {
+        animation: dialog-pop var(--hos-transition-normal, 160ms ease-out) both;
     }
 }

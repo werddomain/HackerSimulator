@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -166,15 +165,16 @@ internal static class E2ESupport
     public static async Task OpenAppAsync(IPage page, string appDisplayName, ITestOutputHelper output)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "App launcher" }).ClickAsync();
-        await page.GetByRole(AriaRole.Textbox, new() { Name = "Search applications" }).FillAsync(appDisplayName);
+        await page.GetByRole(AriaRole.Combobox, new() { Name = "Search applications" }).FillAsync(appDisplayName);
 
-        // The launcher's search is fuzzy, not a strict substring match — searching
-        // "Text Editor" also surfaces "Code Editor" (both share " Editor"). Anchor the
-        // accessible-name match to the start of the card's name so it can't collide
-        // with another app that happens to share a word.
-        ILocator option = page.GetByRole(AriaRole.Option, new() { NameRegex = new Regex($"^{Regex.Escape(appDisplayName)}") });
-        await option.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await option.ClickAsync();
+        // Each result exposes an exact primary command distinct from its adjacent Pin/Unpin
+        // control. Matching that stable accessible name avoids collisions between similarly
+        // named applications and remains independent of the launcher's visual layout.
+        ILocator launchButton = page.GetByRole(
+            AriaRole.Button,
+            new() { Name = $"Launch {appDisplayName}", Exact = true });
+        await launchButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await launchButton.ClickAsync();
         output.WriteLine($"[harness] launched app '{appDisplayName}'.");
     }
 

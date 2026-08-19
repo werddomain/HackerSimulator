@@ -1,188 +1,255 @@
-@using HackerOs.App.Abstractions
-@using HackerOs.Platform.Core
-@using HackerOs.Platform.Core.Intents
-@using HackerOs.Simulation.Abstractions.Sessions
-@using Microsoft.AspNetCore.Components.Web
-@inject AppCatalog Catalog
-@inject AppIntentDispatcher IntentDispatcher
-@inject ISessionService SessionService
+@using HackerOs.AppSdk.Icons
 
-<div class="launcher-popover" role="dialog" aria-label="Application launcher" @onkeydown="HandleKeyDownAsync">
-    <header class="launcher-header">
-        <div class="search-box">
-            <span class="search-icon" aria-hidden="true">🔍</span>
-            <input @ref="_searchInputRef"
-                   type="text"
-                   class="search-input"
-                   placeholder="Search applications..."
-                   aria-label="Search applications"
-                   @bind="_searchQuery"
-                   @bind:event="oninput" />
-        </div>
-    </header>
+<div class="launcher-overlay" @onclick="CloseAsync">
+    <section class="launcher-popover"
+             role="dialog"
+             aria-label="Start menu"
+             @onclick:stopPropagation="true"
+             @onkeydown="HandleDialogKeyDownAsync">
+        <header class="launcher-header">
+            <div class="launcher-brand" aria-hidden="true">
+                <HackerIcon Library="IconLibrary.Lucide" Name="blocks" Size="22" Title="" />
+                <span>HackerOS</span>
+            </div>
 
-    <div class="launcher-body">
-        <nav class="category-tabs" role="tablist" aria-label="Application categories">
-            @foreach (string category in _categories)
-            {
-                bool isSelected = StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, category);
+            <div class="user-identity">
+                <span class="user-avatar" aria-hidden="true">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="user-round" Size="28" Title="" />
+                </span>
+                <span class="user-copy">
+                    <strong>@PrincipalDisplayName</strong>
+                    <small>@PrincipalLoginName</small>
+                </span>
                 <button type="button"
-                        role="tab"
-                        class="tab-item @(isSelected ? "is-active" : "")"
-                        aria-selected="@isSelected.ToString().ToLowerInvariant()"
-                        @onclick="() => SelectCategory(category)">
-                    @category
+                        class="close-button"
+                        aria-label="Close Start menu"
+                        title="Close"
+                        @onclick="CloseAsync">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="17" Title="" />
                 </button>
-            }
-        </nav>
+            </div>
+        </header>
 
-        <div class="app-grid" role="listbox" aria-label="Available applications">
-            @if (FilteredApps.Count == 0)
-            {
-                <div class="empty-state" role="status">No applications match your search.</div>
-            }
-            else
-            {
-                @for (int index = 0; index < FilteredApps.Count; index++)
-                {
-                    AppManifest app = FilteredApps[index];
-                    bool isSelected = index == _selectedIndex;
-                    int currentIndex = index;
-                    <button type="button"
-                            role="option"
-                            class="app-card @(isSelected ? "is-focused" : "")"
-                            aria-selected="@isSelected.ToString().ToLowerInvariant()"
-                            @onclick="() => LaunchAppAsync(app)"
-                            @onmouseenter="() => SetSelectedIndex(currentIndex)">
-                        <div class="app-icon-container" aria-hidden="true">
-                            <span class="app-icon">🖥️</span>
+        <div class="launcher-layout">
+            <main class="launcher-main">
+                <div class="launcher-scroll">
+                    @if (!HasSearchQuery && _projection.PinnedApps.Count > 0)
+                    {
+                        <section class="pinned-section" aria-labelledby="launcher-pinned-heading">
+                            <div class="section-heading">
+                                <h2 id="launcher-pinned-heading">Pinned</h2>
+                                <span>@_projection.PinnedApps.Count</span>
+                            </div>
+                            <ul class="pinned-list">
+                                @for (int index = 0; index < _projection.PinnedApps.Count; index++)
+                                {
+                                    AppManifest app = _projection.PinnedApps[index];
+                                    int pinnedIndex = index;
+                                    <li class="pinned-row">
+                                        <button type="button"
+                                                class="app-launch-button"
+                                                aria-label="Launch @app.Name"
+                                                @onclick="() => LaunchAppAsync(app)">
+                                            <span class="app-icon-shell" aria-hidden="true">
+                                                <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />
+                                            </span>
+                                            <span class="app-copy">
+                                                <strong>@app.Name</strong>
+                                                <small>@app.Description</small>
+                                            </span>
+                                        </button>
+                                        <div class="pin-order-controls">
+                                            <button type="button"
+                                                    class="icon-action"
+                                                    disabled="@(pinnedIndex == 0 || _isUpdatingPreferences)"
+                                                    aria-label="Move @app.Name up"
+                                                    title="Move up"
+                                                    @onclick="() => MovePinnedAsync(app.Id, -1)">
+                                                <HackerIcon Library="IconLibrary.Lucide" Name="chevron-up" Size="15" Title="" />
+                                            </button>
+                                            <button type="button"
+                                                    class="icon-action"
+                                                    disabled="@(pinnedIndex == _projection.PinnedApps.Count - 1 || _isUpdatingPreferences)"
+                                                    aria-label="Move @app.Name down"
+                                                    title="Move down"
+                                                    @onclick="() => MovePinnedAsync(app.Id, 1)">
+                                                <HackerIcon Library="IconLibrary.Lucide" Name="chevron-down" Size="15" Title="" />
+                                            </button>
+                                            <button type="button"
+                                                    class="icon-action is-pinned"
+                                                    disabled="@(!CanManagePins)"
+                                                    aria-label="Unpin @app.Name from Start menu"
+                                                    aria-pressed="true"
+                                                    title="Unpin from Start menu"
+                                                    @onclick="() => TogglePinAsync(app.Id)">
+                                                <HackerIcon Library="IconLibrary.Lucide" Name="pin-off" Size="15" Title="" />
+                                            </button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    }
+
+                    <section class="programs-section" aria-labelledby="launcher-programs-heading">
+                        <div class="section-heading">
+                            <h2 id="launcher-programs-heading">@(HasSearchQuery ? "Search results" : "All Programs")</h2>
+                            <span>@_projection.VisibleApps.Count</span>
                         </div>
-                        <div class="app-details">
-                            <div class="app-title">@app.Name</div>
-                            <div class="app-description">@app.Description</div>
+
+                        @if (!HasSearchQuery && _projection.Categories.Count > 0)
+                        {
+                            <nav class="category-list" aria-label="Application categories">
+                                <button type="button"
+                                        class="category-button @(string.IsNullOrEmpty(_selectedCategory) ? "is-active" : null)"
+                                        aria-pressed="@string.IsNullOrEmpty(_selectedCategory)"
+                                        @onclick="() => SelectCategory(null)">
+                                    All
+                                </button>
+                                @foreach (string category in _projection.Categories)
+                                {
+                                    bool isSelected = StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, category);
+                                    <button type="button"
+                                            class="category-button @(isSelected ? "is-active" : null)"
+                                            aria-pressed="@isSelected"
+                                            @onclick="() => SelectCategory(category)">
+                                        @FormatCategory(category)
+                                    </button>
+                                }
+                            </nav>
+                        }
+
+                        <div id="launcher-app-list"
+                             class="app-list"
+                             role="grid"
+                             aria-label="@(HasSearchQuery ? "Application search results" : "Available applications")">
+                            @if (_projection.VisibleApps.Count == 0)
+                            {
+                                <div class="empty-state" role="row">
+                                    <div class="empty-state-content" role="gridcell">
+                                        <HackerIcon Library="IconLibrary.Lucide" Name="search-x" Size="28" Title="" />
+                                        <span role="status">No applications match your search.</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                @for (int index = 0; index < _projection.VisibleApps.Count; index++)
+                                {
+                                    AppManifest app = _projection.VisibleApps[index];
+                                    bool isSelected = index == _selectedIndex;
+                                    bool isPinned = IsPinned(app.Id);
+                                    int currentIndex = index;
+                                    <div id="@GetOptionId(app)"
+                                         class="app-row @(isSelected ? "is-focused" : null)"
+                                         role="row"
+                                         aria-selected="@isSelected"
+                                         @onmouseenter="() => SetSelectedIndex(currentIndex)">
+                                        <div class="app-launch-cell" role="gridcell">
+                                            <button type="button"
+                                                    class="app-launch-button"
+                                                    aria-label="Launch @app.Name"
+                                                    @onclick="() => LaunchAppAsync(app)">
+                                                <span class="app-icon-shell" aria-hidden="true">
+                                                    <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />
+                                                </span>
+                                                <span class="app-copy">
+                                                    <strong>@app.Name</strong>
+                                                    <small>@app.Description</small>
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div class="pin-cell" role="gridcell">
+                                            <button type="button"
+                                                    class="pin-toggle @(isPinned ? "is-pinned" : null)"
+                                                    disabled="@(!CanManagePins)"
+                                                    aria-label="@(isPinned ? $"Unpin {app.Name} from Start menu" : $"Pin {app.Name} to Start menu")"
+                                                    aria-pressed="@isPinned"
+                                                    title="@(isPinned ? "Unpin from Start menu" : "Pin to Start menu")"
+                                                    @onclick="() => TogglePinAsync(app.Id)">
+                                                <HackerIcon Library="IconLibrary.Lucide" Name="@(isPinned ? "pin-off" : "pin")" Size="16" Title="" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            }
                         </div>
-                    </button>
-                }
-            }
+                    </section>
+                </div>
+
+                <footer class="search-footer">
+                    <div class="search-box">
+                        <span class="search-icon" aria-hidden="true">
+                            <HackerIcon Library="IconLibrary.Lucide" Name="search" Size="17" Title="" />
+                        </span>
+                        <input id="launcher-search"
+                               @ref="_searchInputRef"
+                               type="search"
+                               class="search-input"
+                               value="@_searchQuery"
+                               placeholder="Search programs and files"
+                               autocomplete="off"
+                               spellcheck="false"
+                               role="combobox"
+                               aria-label="Search applications"
+                               aria-autocomplete="list"
+                               aria-haspopup="grid"
+                               aria-expanded="true"
+                               aria-controls="launcher-app-list"
+                               aria-activedescendant="@ActiveOptionId"
+                               @oninput="HandleSearchInput"
+                               @onkeydown="HandleSearchKeyDownAsync"
+                               @onkeydown:stopPropagation="true" />
+                        @if (HasSearchQuery)
+                        {
+                            <button type="button"
+                                    class="clear-search-button"
+                                    aria-label="Clear application search"
+                                    title="Clear search"
+                                    @onclick="ClearSearch">
+                                <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="15" Title="" />
+                            </button>
+                        }
+                    </div>
+                    <span class="visually-hidden" aria-live="polite">@SearchStatus</span>
+                </footer>
+            </main>
+
+            <aside class="quick-panel" aria-label="Quick access">
+                <h2>Quick access</h2>
+                <button type="button"
+                        class="quick-link"
+                        disabled="@(FileExplorerApp is null)"
+                        aria-label="Open File Explorer"
+                        @onclick="() => LaunchQuickAppAsync(FileExplorerAppId)">
+                    <span class="quick-icon" aria-hidden="true">
+                        <HackerIcon Library="IconLibrary.Lucide" Name="folder" Size="22" Title="" />
+                    </span>
+                    <span>
+                        <strong>File Explorer</strong>
+                        <small>Browse your home files</small>
+                    </span>
+                </button>
+                <button type="button"
+                        class="quick-link"
+                        disabled="@(SettingsApp is null)"
+                        aria-label="Open Settings"
+                        @onclick="() => LaunchQuickAppAsync(SettingsAppId)">
+                    <span class="quick-icon" aria-hidden="true">
+                        <HackerIcon Library="IconLibrary.Lucide" Name="settings" Size="22" Title="" />
+                    </span>
+                    <span>
+                        <strong>Settings</strong>
+                        <small>Personalize HackerOS</small>
+                    </span>
+                </button>
+
+                <div class="quick-panel-spacer"></div>
+                <div class="session-summary">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="shield-check" Size="17" Title="" />
+                    <span>Local session</span>
+                </div>
+            </aside>
         </div>
-    </div>
+    </section>
 </div>
-
-@code {
-    private ElementReference _searchInputRef;
-    private string _searchQuery = string.Empty;
-    private string _selectedCategory = "All";
-    private int _selectedIndex = 0;
-    private readonly string[] _categories = ["All", "System", "Utilities", "Games"];
-
-    [Parameter]
-    public EventCallback OnClose { get; set; }
-
-    [Parameter]
-    public EventCallback<AppManifest> OnAppSelected { get; set; }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                await _searchInputRef.FocusAsync();
-            }
-            catch (Exception)
-            {
-                // Element may not be focusable in headless DOM tests
-            }
-        }
-    }
-
-    private IReadOnlyList<AppManifest> FilteredApps
-    {
-        get
-        {
-            IEnumerable<AppManifest> apps = Catalog.Manifests.Values.Where(app => app.Kind == AppKind.Window);
-
-            if (!string.IsNullOrWhiteSpace(_selectedCategory) && !StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, "All"))
-            {
-                apps = apps.Where(app => StringComparer.OrdinalIgnoreCase.Equals(app.Kind.ToString(), _selectedCategory));
-            }
-
-            if (!string.IsNullOrWhiteSpace(_searchQuery))
-            {
-                apps = apps.Where(app =>
-                    app.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                    app.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                    app.Id.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
-            }
-
-            return [.. apps.OrderBy(app => app.Name, StringComparer.OrdinalIgnoreCase)];
-        }
-    }
-
-    private void SelectCategory(string category)
-    {
-        _selectedCategory = category;
-        _selectedIndex = 0;
-    }
-
-    private void SetSelectedIndex(int index)
-    {
-        _selectedIndex = index;
-    }
-
-    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
-    {
-        IReadOnlyList<AppManifest> apps = FilteredApps;
-        if (args.Key == "Escape")
-        {
-            await CloseAsync();
-        }
-        else if (args.Key == "ArrowDown")
-        {
-            if (apps.Count > 0)
-            {
-                _selectedIndex = (_selectedIndex + 1) % apps.Count;
-            }
-        }
-        else if (args.Key == "ArrowUp")
-        {
-            if (apps.Count > 0)
-            {
-                _selectedIndex = (_selectedIndex - 1 + apps.Count) % apps.Count;
-            }
-        }
-        else if (args.Key == "Enter")
-        {
-            if (_selectedIndex >= 0 && _selectedIndex < apps.Count)
-            {
-                await LaunchAppAsync(apps[_selectedIndex]);
-            }
-        }
-    }
-
-    private async Task LaunchAppAsync(AppManifest app)
-    {
-        if (OnAppSelected.HasDelegate)
-        {
-            await OnAppSelected.InvokeAsync(app);
-        }
-        else if (SessionService.CurrentPrincipal is AuthenticatedPrincipal principal)
-        {
-            await IntentDispatcher.DispatchAsync(new AppIntentRequest(
-                RequestId: Guid.NewGuid(),
-                CallerAppId: "org.hackeros.shell",
-                UserId: principal.UserId.ToString(),
-                Intent: new LaunchAppIntent(app.Id, [])), principal);
-        }
-
-        await CloseAsync();
-    }
-
-    private async Task CloseAsync()
-    {
-        if (OnClose.HasDelegate)
-        {
-            await OnClose.InvokeAsync();
-        }
-    }
-}

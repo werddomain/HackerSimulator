@@ -9,6 +9,34 @@ The exhaustive remaining work, maintenance rules, decisions, problems, and phase
 gates are maintained in `docs/integration-task-list.md`. This status file remains
 the concise implemented-state summary.
 
+## 2026-08-19 shared themes and Start menu expansion
+
+The former accent-only, Settings-window-owned DOM mutation has been replaced by
+a startup-owned shared theme boundary:
+
+- `HackerOs.Theming.Abstractions` defines seven desktop themes (HackerOS,
+  Windows 98/XP/7/10, macOS, Ubuntu), two mobile themes (Android, iOS), and the
+  bounded HackerOS accents.
+- `HackerOs.Theming.Blazor` publishes one static token asset plus reusable
+  `ThemeScope`/`ThemePreview` components. Windowing, taskbar, desktop/launcher,
+  and mobile-shell components consume the same semantic contract.
+- Appearance schema v2 persists independent desktop/mobile selections and
+  migrates v1 accent/motion documents without loss. The Ecosystem host restores
+  it after boot, before a desktop can be entered.
+- The launcher now follows a Windows 7 two-column layout, fixes presentation
+  category filtering, adds File Explorer/Settings quick links, and stores
+  ordered quick-launch pins per opaque local-user ID.
+- Arbitrary legacy `customCss` was intentionally not ported; themes remain
+  reviewed static data under design-system decision D-013 and ADR 0041.
+
+Implementation checklist:
+
+- [x] Audit the read-only legacy implementation and current project boundaries.
+- [x] Add the shared catalog, static theme RCL, schema migration, and pin store.
+- [x] Complete shell/Settings wiring and token migration.
+- [x] Complete focused tests, solution builds, and browser/static-asset checks.
+- [x] Publish architecture, usage, extension, persistence, and launcher docs.
+
 ## 2026-08-03 integration-audit remediation
 
 The audit baseline was reproduced before remediation. Server trimming/package
@@ -383,7 +411,7 @@ canonical settings document under `/etc/hackeros/policy.config`.
   gateway use, service shutdown, disable, and logout compose end to end
   (`P1-GATE-003`).
 - [x] Implement the platform window runtime and modal file dialog renderer (`P2-WIN`, `P2-DLG`).
-- [x] Scaffold and complete the PWA host composition root, boot coordinator, error boundary, recovery UI, global CSS tokens, and Release trim analyzer smoke tests (`P2-HOST-001` through `P2-HOST-010`).
+- [x] Scaffold and complete the PWA host composition root, boot coordinator, error boundary, recovery UI, shared RCL theme scope, and Release trim analyzer smoke tests (`P2-HOST-001` through `P2-HOST-010`).
 - [x] Implement Desktop Shell, Taskbar, App Launcher, Notification Center, and Session Logout UX (`P2-SHELL-001` through `P2-SHELL-009`).
 - [x] Establish Phase 2B App Project Standard (`P2-APPSTD-001` through `P2-APPSTD-005`) and implement the Terminal application (`org.hackeros.terminal`) under `Apps/System/HackerOs.Apps.Terminal/` (`P2-TERM-001` through `P2-TERM-009`).
 - [x] Implement Core Terminal Command Apps (`pwd`, `ls`, `cd`, `cat`, `echo`) under `Apps/Commands/` (`P2-CMD-001` through `P2-CMD-006`).
@@ -393,49 +421,43 @@ canonical settings document under `/etc/hackeros/policy.config`.
 - [x] Implement PWA Packaging, Offline Operation, and Updates (`OS/HackerOs.Ecosystem/wwwroot/`) (`P2-PWA-001` through `P2-PWA-007`).
 - [ ] Complete Phase 2 Acceptance and Exit Gate (`P2-ACC-SETUP-001` through `P2-GATE-005`). The evidence matrix exists, but published-PWA, accessibility, CI, and explicit approval gates remain reopened in `docs/phase-2-acceptance.md`.
 - [x] Implement Public SDK 1.0 Candidate (`P3-SDK-001` through `P3-SDK-010`). Created sample Window app, Terminal app, Service app, ADR 0019 (`docs/adr/0019-sdk-versioning-and-compatibility.md`), Manifest Validator CLI (`Tools/HackerOs.Tools.ManifestValidator/`), and Developer Guide (`docs/sdk/developer-guide.md`).
-- [x] Implement Accessibility, Localization, Theming, and Design System (`P3-UX-001` through `P3-UX-007`). Published `docs/design-system.md`, `docs/localization.md`, and `docs/accessibility.md`.
+- [x] Implement Accessibility, Localization, Theming, and Design System (`P3-UX-001` through `P3-UX-007`). The theming slice was expanded on 2026-08-19 into the shared nine-theme catalog documented by `docs/theming.md`; `docs/design-system.md`, `docs/localization.md`, and `docs/accessibility.md` remain the related contracts.
 - [ ] Implement Build-Known Lazy Loading (`P3-LAZY-001` through `P3-LAZY-007`). Hack Paint is declared as the first lazy assembly and has a typed, coalescing browser loader; deterministic descriptor registration and published/offline evidence remain open.
 - [x] Implement Migration Rules for Every Legacy Feature (`P4-RULE-001` through `P4-RULE-006`). Published `docs/migration/rules.md`. Phase 4 started.
 - [x] Implement Wave 2 OS Fundamentals (`P4-W2-001` through `P4-W2-008`). Ported Settings app (`org.hackeros.settings`), System Monitor (`org.hackeros.system-monitor`), and Error Log Viewer (`org.hackeros.error-log-viewer`). Published `docs/migration/wave-2.md`.
 - [ ] Complete Wave 3 Editing, Clipboard, and Drag/Drop (`P4-W3-001` through `P4-W3-007`). ADR 0020, the clipboard gateway, and drag payload exist. Nano is revalidated with its full-screen contract, VFS editor, Blazor Terminal adapter, lifecycle propagation, and browser key/render/cleanup evidence. Code Editor now has local CodeMirror 6, C# tab/document models, VFS-backed recovery, platform whole-window dirty-close protection, 20 focused tests, Chromium interaction/disposal, and axe evidence. A real rendered reload test plus published/offline integration remain open. Hack Paint remains a separate reopened Wave 5 item.
 - [x] Implement Wave 4 Simulated Network, Browser, and Websites (`P4-W4-001` through `P4-W4-007`). Created ADR 0021 (`docs/adr/0021-simulated-network-and-browser-rendering.md`), implemented simulated network domain, DNS, website controllers (`HackerSearch`, `HackMail`, `CryptoBank`, `DarkNet Market`, `HackerZ Forum`), Browser app (`org.hackeros.browser`), terminal commands (`ping`, `nmap`, `curl`), and unit test suite verifying zero real network calls. Published `docs/migration/wave-4.md`.
-- [ ] Complete Wave 5 Utility Apps and Commands (`P4-W5-APP-001` through `P4-W5-CMD-009`). Calculator, Theme Editor integration, and terminal commands are implemented. Hack Paint is reopened: its core now has authoritative RGBA history, pixel drawing, crop, and rotation tests, but canvas rendering, image/VFS round trips, browser dialogs, and Playwright pixel evidence remain outstanding.
+- [ ] Complete Wave 5 Utility Apps and Commands (`P4-W5-APP-001` through `P4-W5-CMD-009`). Calculator, the bounded Settings theme picker, and terminal commands are implemented. Hack Paint is reopened: its core now has authoritative RGBA history, pixel drawing, crop, and rotation tests, but canvas rendering, image/VFS round trips, browser dialogs, and Playwright pixel evidence remain outstanding.
 - [x] Create Gameplay V3 Analysis (`P4-W6-GATE-001`). Published `doc/wasm/gameplay-v3-analyse.md` defining gameplay domain architecture, contract generator, hardware simulation, exploit engine, player scripting sandbox, and encrypted save engine.
 - [x] Obtain Gameplay Domain Approval (`P4-W6-GATE-002`). Created ADR 0023 (`docs/adr/0023-optional-game-domain-and-proxy-fallback.md`) establishing optional Game Domain build dependency, capability `gameplay.domain.access`, and server proxy fallback routing for network commands (`ping`, `curl`, `cat`).
 - [x] Implement Wave 6 Gameplay Domains (`P4-W6-001` through `P4-W6-006`). Built `HackerOs.Game.Abstractions`, `HackerOs.Game.Core` (`InMemoryGameDomainGateway`, `NullGameDomainGateway`), contracts generator, hardware upgrade tree, economy payout engine, and automated unit test suite `HackerOs.Game.Tests`. Published `docs/migration/wave-6.md`.
 
 ## Validation
 
-The implementation is validated by solution build plus 344 focused tests:
-
-- 75 manifest, SemVer, authority, capability, grant, policy evaluation, intent,
-  build-profile, and path tests, including 12 manifest JSON Schema conformance
-  tests (one valid fixture per app kind, nine structural-violation fixtures)
-  and explicit invalid-fixture regression cases for every build-profile
-  validation error code.
-- 4 App SDK lifecycle tests.
-- 10 Blazor App SDK lifecycle and dialog tests.
-- 255 Platform Core tests: catalog, settings authorization, filesystem
-  projection, metadata, operation, streaming, authorization, routing,
-  traversal, repository, mounted-service/seed/projection/assembled-contract,
-  settings-scope, `.config` format, schema, protected policy document,
-  capability grant repository/expansion/audit, clean-profile default grant
-  seeder, Section 7 (session/process/clock/event/diagnostics/resource-
-  simulation), Section 7.1 (app execution context and scoped gateways),
-  Section 8 (entry-point discovery, lifecycle orchestration, file-association
-  resolution, capability-gated intent dispatch), and the Phase 1 exit-gate
-  headless kernel integration test.
-
-Validation command:
+The 2026-08-19 integrated gate builds every project and all three host
+compositions in Release with zero warnings/errors:
 
 ```powershell
-dotnet test HackerOs.sln --no-restore
+dotnet build HackerOs.sln --configuration Release --no-restore
 ```
+
+The shared-theme/Start-menu slice has 533 passing focused tests: Platform Core
+(431), Platform Blazor and render-tree coverage (65), Ecosystem composition
+(12), Settings persistence (5), icon SDK (16), and taskbar (4). The sequential
+real-browser accessibility scenario additionally exercises the actual desktop,
+the Windows 7-style launcher, File Explorer/Settings quick links, Settings,
+Code Editor, Hack Paint, a live HackerOS → Windows 7 → HackerOS scope change,
+and a 375×812 viewport; it reports no serious/critical axe finding.
+
+Both the offline Ecosystem PWA and the package-only sample publish successfully.
+Their output contains `_content/HackerOs.Theming.Blazor/themes.css`; the PWA
+service-worker manifest includes that exact asset. The reusable desktop closure
+also restores/builds/publishes from seven local `0.1.0-local` packages with no
+remaining project dependency.
 
 Warnings are treated as errors for every project under the solution directory,
 and the trim analyzer runs on every shipping (non-test) project so trimming/AOT
-reflection issues surface as ordinary build errors well before any host publish
-step exists.
+reflection issues surface as ordinary build errors.
 
 ---
 

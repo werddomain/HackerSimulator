@@ -9,7 +9,7 @@
     border: 1px solid var(--hos-border, #34444c);
     border-radius: 6px;
     background: var(--hos-bg-surface, #151c20);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--hos-shadow-md, 0 12px 28px rgb(0 0 0 / 38%));
     color: var(--hos-text-primary, #f4f7f8);
     font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
     font-size: 0.82rem;

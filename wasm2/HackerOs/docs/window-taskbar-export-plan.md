@@ -114,7 +114,10 @@ Elle doit contenir :
 - les contrats de source d’éléments pour la barre des tâches ;
 - les contrats de commandes de barre : activer, réduire, restaurer, fermer,
   afficher l’accueil ou ouvrir une surface fournie par l’hôte ;
-- des contrats de thème sous forme de noms de tokens, jamais de CSS arbitraire.
+- aucun modèle de thème hôte. Depuis la mise à jour du 2026-08-19, le catalogue
+  framework-neutral vit dans `HackerOs.Theming.Abstractions` et le vocabulaire
+  visuel/static asset dans `HackerOs.Theming.Blazor`; les packages de chrome
+  consomment uniquement les tokens `--hos-*`, jamais du CSS arbitraire.
 
 Le projet `Shared/HackerOs.AppSdk.Icons` existe déjà et fournit un modèle d’identité
 d’icône indépendant du rendu ; les contrats d’icônes de fenêtre et de barre des tâches
@@ -458,54 +461,63 @@ mais manquent dans un package.
   nouveau rendu automatique du parent ; corrigé par un appel explicite.
 - [x] `EXT-WIN-011` Créer un sample host interne sans dépendance à
   `HackerOs.Ecosystem`. `Samples/HackerOs.Windowing.SampleHost` ne référence
-  que `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor` et
-  `HackerOs.Taskbar.Blazor` ; sa propre source d'applications (deux
+  que la fermeture desktop exportable : `HackerOs.Theming.Abstractions`,
+  `HackerOs.Theming.Blazor`, `HackerOs.Windowing.Abstractions`,
+  `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor`,
+  `HackerOs.AppSdk.Icons` et `HackerOs.Taskbar.Blazor` ; sa propre source
+  d'applications (deux
   composants Blazor triviaux), ses propres adaptateurs de taskbar, et
   n'active ni notifications ni commandes de session (zones absentes
   proprement, vérifié au navigateur). Confirme que le moteur/chrome/taskbar
   exportés sont utilisables sans aucun type HackerOS.
 - [x] `EXT-WIN-012` Ajouter les métadonnées de packaging et produire des packages
-  NuGet locaux. `Platform/Packaging.props` (importé par les projets exportés,
-  4 depuis `EXT-WIN-001` : `HackerOs.Windowing.Abstractions`,
-  `HackerOs.Windowing.Core`, `HackerOs.Windowing.Blazor`,
-  `HackerOs.Taskbar.Blazor`)
-  fixe `Version=0.1.0-local`, `Authors`, `RepositoryUrl`/`RepositoryType`,
+  NuGet locaux. `Platform/Packaging.props` est importé par les sept projets de
+  la fermeture desktop : les quatre packages Windowing/Taskbar historiques,
+  `HackerOs.Theming.Abstractions`, `HackerOs.Theming.Blazor`, ainsi que
+  `HackerOs.AppSdk.Icons` (dépendance publique de Taskbar). Il fixe
+  `Version=0.1.0-local`, `Authors`, `RepositoryUrl`/`RepositoryType`,
   `PackageTags`, `PackageLicenseFile`/`PackageReadmeFile`,
   `GenerateDocumentationFile=true`, symboles `.snupkg`, et SourceLink GitHub
   (`EmbedUntrackedSources`). Chaque projet ajoute son `PackageId` et sa
-  `Description`. Un `README.md` a été ajouté dans chacun des 4 dossiers de
+  `Description`. Un `README.md` existe dans chacun des sept dossiers de
   projet. `dotnet pack -c Release -o artifacts/local-nupkg` produit
-  `HackerOs.Windowing.Abstractions`, `HackerOs.Windowing.Core`,
-  `HackerOs.Windowing.Blazor` et `HackerOs.Taskbar.Blazor`
+  les sept packages dans l'ordre topologique Theme contracts, Theme Blazor,
+  Windowing abstractions, Windowing core, Windowing Blazor, Icons, Taskbar
   (`.nupkg` + `.snupkg`) sans avertissement, y
-  compris sous `TreatWarningsAsErrors=true` avec doc XML générée — la
-  couverture XML publique exigée par cette tâche était donc déjà complète
-  avant packaging, aucun commentaire supplémentaire n'a été nécessaire.
+  compris sous `TreatWarningsAsErrors=true` avec doc XML générée. L'ajout
+  d'Icons à la fermeture a aussi complété les six commentaires XML publics
+  manquants de `IconCatalog`, sans changement comportemental.
   `artifacts/` et `*.nupkg` sont déjà couverts par le `.gitignore` du dépôt.
 - [x] `EXT-WIN-013` Tester un sample consommant uniquement les packages locaux.
   `Samples/HackerOs.Windowing.SampleHost/nuget.config` déclare une source
   locale (`<clear/>` + `nuget.org` + `../../artifacts/local-nupkg`). Le csproj
-  du sample a été temporairement basculé de `ProjectReference` vers
-  `PackageReference Version="0.1.0-local"` pour les 3 packages, restauré
-  (`dotnet restore`) et compilé (`dotnet build -c Debug`, 0 avertissement/0
-  erreur) en consommant réellement les `.nupkg` plutôt que les projets.
+  conserve les `ProjectReference` par défaut pour le développement, mais
+  `-p:UseLocalHackerOsPackages=true` les remplace par sept
+  `PackageReference Version="0.1.0-local"`. Le workflow dédié
+  `.github/workflows/window-taskbar-packages.yml` packe la fermeture dans
+  l'ordre topologique, restaure le sample dans un cache NuGet isolé, vérifie
+  que `project.assets.json` ne contient aucune dépendance de type `project`,
+  puis build et publie le sample en Release.
   Vérifié au navigateur (harness `hackeros-windowing-sample-host`, port 5254) :
   aucune erreur console, rendu identique (launcher + horloge, sans
   notifications/session comme prévu), et surtout les assets statiques
   packagés de la RCL (`DesktopArea.razor.js`, `WindowHost.razor.js`,
   `WindowChrome.razor.js`) se chargent en `200 OK` depuis
-  `_content/HackerOs.Windowing.Blazor/...` — preuve que le contenu
+  `_content/HackerOs.Windowing.Blazor/...` — preuve historique que le contenu
   `staticwebassets/` du `.nupkg` fonctionne à l'exécution, pas seulement par
-  coïncidence de référence de projet. Le geste de déplacement de fenêtre par
+  coïncidence de référence de projet. Le workflow vérifie en plus que
+  `_content/HackerOs.Theming.Blazor/themes.css` est physiquement présent dans
+  la publication package-only. Le geste de déplacement de fenêtre par
   pointeur (`pointerdown`/`pointermove`/`pointerup` synthétiques) a aussi été
   rejoué avec succès contre les assets packagés, avec un delta exact
-  (`+60,+30`). Le csproj du sample a ensuite été restauré à
-  `ProjectReference` (ergonomie de développement normale dans le dépôt) ;
-  `nuget.config` reste en place car inoffensif et permet de rejouer cette
-  vérification à tout moment.
+  (`+60,+30`). Le mode par défaut reste `ProjectReference` (ergonomie de
+  développement normale dans le dépôt) ; `nuget.config` et le mode
+  conditionnel permettent de rejouer la vérification sans éditer le csproj.
+  `HackerOs.MobileShell.Blazor` est package-ready et partage le thème, mais
+  reste volontairement hors de cette fermeture/test **desktop** EXT-WIN-013.
 - [x] `EXT-WIN-014` Ajouter baseline API, tests Release/trimming et documentation
   de versionnement. `Microsoft.CodeAnalysis.PublicApiAnalyzers` (3.3.4) est
-  référencé par les 4 projets exportés via `Packaging.props`. Chaque projet a
+  référencé par les sept projets de la fermeture via `Packaging.props`. Chaque projet a
   ses `PublicAPI.Shipped.txt` (vide — rien n'a encore été publié) et
   `PublicAPI.Unshipped.txt` (surface publique actuelle, générée avec
   `dotnet format analyzers --diagnostics RS0016 --include-generated`, seul
@@ -517,17 +529,17 @@ mais manquent dans un package.
   générées par Razor, qui n'ont pas de contexte `#nullable enable` et ne
   peuvent pas être corrigées à la main sans casser à chaque montée de
   version du SDK Razor. Toute évolution future de la surface publique de ces
-  4 projets fera échouer le build (RS0016/RS0017) tant que
+  sept projets fera échouer le build (RS0016/RS0017) tant que
   `PublicAPI.Unshipped.txt` n'est pas mis à jour — comportement voulu.
   Preuve Release/trimming : `dotnet publish
   Samples/HackerOs.Windowing.SampleHost -c Release` termine sans le moindre
   avertissement (aucun `warn`/`IL####` dans la sortie complète), l'IL Linker
-  tourne (« Optimisation des assemblages pour la taille ») et les 4
-  assemblys exportés (`HackerOs.Windowing.Abstractions` compris) apparaissent
+  tourne (« Optimisation des assemblages pour la taille ») et les sept
+  assemblages de la fermeture exportée apparaissent
   bien recadrés dans `wwwroot/_framework/` aux côtés du sample lui-même.
-  **Revérifié 2026-08-17** après l'ajout d'`HackerOs.Windowing.Abstractions` :
-  `dotnet pack -c Release -o artifacts/local-nupkg` produit les 4
-  `.nupkg`/`.snupkg` sans avertissement.
+  **Revérifié 2026-08-17** après l'ajout d'`HackerOs.Windowing.Abstractions`,
+  puis étendu le 2026-08-19 : le workflow produit maintenant les sept
+  `.nupkg`/`.snupkg` de la fermeture desktop sans avertissement.
 - [x] `EXT-WIN-015` Mettre à jour la solution, les documents d’architecture et la
   liste d’intégration. `HackerOs.sln` contient déjà les 6 projets exportés/tests/
   sample depuis les phases précédentes (aucun ajout requis ici). Mis à jour :
@@ -582,8 +594,12 @@ L’extraction est terminée lorsque :
 - [x] la publication Release ne produit aucun diagnostic inexpliqué
   (`EXT-WIN-014` : `dotnet publish -c Release` du sample, 0 avertissement) ;
 - [x] la documentation publique permet à un autre développeur d’intégrer les packages
-  sans lire leur code source (`README.md` dans chacun des 4 projets exportés,
+  sans lire leur code source (`README.md` dans chacun des sept projets de la fermeture,
   doc XML publique complète sous `GenerateDocumentationFile=true`).
+- [x] la même référence de projet peut appliquer les neuf thèmes au chrome et à
+  la taskbar via un unique `ThemeScope`, sans copie d'asset dans l'hôte ; voir
+  [`theming.md`](theming.md) et l'ADR 0041. Cette amélioration du 2026-08-19 ne
+  modifie pas les contrats du moteur headless.
 
 **État : extraction terminée le 2026-08-13, close pour de bon le 2026-08-17.**
 `EXT-WIN-001` à `015` sont tous complets ; voir la section 10 pour le détail

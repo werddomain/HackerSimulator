@@ -5,18 +5,29 @@
 .window-chrome {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    min-height: 2.5rem;
-    padding: 0.25rem 0.35rem 0.25rem 0.75rem;
-    gap: 0.75rem;
-    background: #111e1e;
-    border-bottom: 1px solid #29463f;
+    min-height: var(--hos-titlebar-height, 2.35rem);
+    padding: var(--hos-titlebar-padding, 0.25rem 0.35rem 0.25rem 0.65rem);
+    gap: 0.65rem;
+    overflow: hidden;
+    border-bottom: var(--hos-titlebar-border, 1px solid #29463f);
+    background: var(--hos-titlebar-background, #111e1e);
+    color: var(--hos-titlebar-text, #b9ccc6);
     user-select: none;
     touch-action: none;
+    transition:
+        background var(--hos-transition-fast, 120ms ease),
+        color var(--hos-transition-fast, 120ms ease);
+}
+
+.window-chrome.is-focused {
+    background: var(--hos-titlebar-focused-background, var(--hos-titlebar-background, #111e1e));
+    color: var(--hos-titlebar-focused-text, var(--hos-titlebar-text, #e7f7f1));
 }
 
 .window-identity {
+    order: var(--hos-window-identity-order, 0);
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
     min-width: 0;
     gap: 0.5rem;
@@ -26,10 +37,10 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: #e7f7f1;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 0.9rem;
-    font-weight: 600;
+    color: currentColor;
+    font-family: var(--hos-font-ui, system-ui, sans-serif);
+    font-size: var(--hos-titlebar-font-size, 0.86rem);
+    font-weight: var(--hos-titlebar-font-weight, 650);
     letter-spacing: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -39,45 +50,79 @@
     width: 1.15rem;
     height: 1.15rem;
     flex: 0 0 auto;
+    box-sizing: border-box;
+    padding: 0.08rem;
+    border: var(--hos-window-icon-border, 1px solid #35554c);
+    border-radius: var(--hos-window-icon-radius, 0.2rem);
+    background: var(--hos-window-icon-background, #0a1213);
     object-fit: contain;
 }
 
 .window-actions {
+    order: var(--hos-window-actions-order, 1);
     display: flex;
+    flex-direction: var(--hos-window-actions-direction, row);
     flex: 0 0 auto;
     align-items: center;
     gap: 0.15rem;
+    margin-inline-start: var(--hos-window-actions-margin-inline-start, auto);
 }
 
 .chrome-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: var(--hos-window-control-width, var(--hos-window-control-size, 1.7rem));
+    height: var(--hos-window-control-height, var(--hos-window-control-size, 1.7rem));
     padding: 0;
-    color: #a9c9c0;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
+    border: var(--hos-window-control-border, 1px solid #35554c);
+    border-radius: var(--hos-window-control-radius, 0.2rem);
+    background: var(--hos-window-control-background, #111e1f);
+    color: var(--hos-window-control-color, #b9ccc6);
+    box-shadow: var(--hos-window-control-shadow, none);
     cursor: pointer;
+    transition:
+        background var(--hos-transition-fast, 120ms ease),
+        color var(--hos-transition-fast, 120ms ease),
+        border-color var(--hos-transition-fast, 120ms ease);
 }
 
 .chrome-button:hover,
 .chrome-button:focus-visible {
-    color: #e7f7f1;
-    background: rgb(85 214 161 / 14%);
+    background: var(--hos-window-control-hover-background, #1a302b);
+    color: var(--hos-window-control-hover-color, #f4fff9);
 }
 
 .chrome-button:focus-visible {
-    outline: 2px solid #55d6a1;
+    outline: 2px solid var(--hos-focus-ring, #55d6a1);
     outline-offset: -2px;
+}
+
+.chrome-button-minimize {
+    order: var(--hos-window-minimize-order, 0);
+}
+
+.chrome-button-maximize {
+    order: var(--hos-window-maximize-order, 1);
+    background: var(--hos-window-maximize-background, var(--hos-window-control-background, #111e1f));
+}
+
+.chrome-button-maximize:hover,
+.chrome-button-maximize:focus-visible {
+    background: var(--hos-window-maximize-hover-background, var(--hos-window-control-hover-background, #1a302b));
+}
+
+.chrome-button-close {
+    order: var(--hos-window-close-order, 2);
+    border: var(--hos-window-close-border, var(--hos-window-control-border, 1px solid #35554c));
+    background: var(--hos-window-close-background, #281719);
+    color: var(--hos-window-close-color, #ffb3ad);
 }
 
 .chrome-button-close:hover,
 .chrome-button-close:focus-visible {
-    color: #ffb3b3;
-    background: rgb(220 60 60 / 20%);
+    background: var(--hos-window-close-hover-background, #8f2932);
+    color: var(--hos-window-close-hover-color, var(--hos-window-close-color, #ffb3ad));
 }
 
 .chrome-button-back svg {
@@ -96,6 +141,7 @@
     stroke: currentColor;
     stroke-width: 1.3;
     stroke-linecap: round;
+    opacity: var(--hos-window-control-icon-opacity, 1);
 }
 
 .chrome-button svg rect {
@@ -104,7 +150,7 @@
 }
 
 .chrome-button svg rect.chrome-icon-overlay {
-    fill: #0c1516;
+    fill: var(--hos-window-background, #0c1516);
     stroke: currentColor;
     stroke-width: 1;
 }

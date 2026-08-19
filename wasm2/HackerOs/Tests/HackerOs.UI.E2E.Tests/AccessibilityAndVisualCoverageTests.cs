@@ -56,8 +56,24 @@ public sealed class AccessibilityAndVisualCoverageTests(ITestOutputHelper output
             await ScanAndCaptureAsync(page, "desktop-idle-shell", screenshotDirectory, findings, output);
 
             await page.GetByRole(AriaRole.Button, new() { Name = "App launcher" }).ClickAsync();
-            await page.GetByRole(AriaRole.Textbox, new() { Name = "Search applications" })
-                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            try
+            {
+                await page.GetByRole(AriaRole.Combobox, new() { Name = "Search applications" })
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            }
+            catch (TimeoutException)
+            {
+                // A launcher mount failure previously surfaced only as an opaque locator timeout.
+                // Preserve the post-click frame and root text so CI identifies whether the trigger,
+                // component initialization, or the host error boundary failed.
+                string diagnosticPath = Path.Combine(screenshotDirectory, "desktop-app-launcher-timeout.png");
+                await page.ScreenshotAsync(new PageScreenshotOptions { Path = diagnosticPath, FullPage = true });
+                string expanded = await page.GetByRole(AriaRole.Button, new() { Name = "App launcher" })
+                    .GetAttributeAsync("aria-expanded") ?? "missing";
+                output.WriteLine($"[test] launcher timeout: aria-expanded={expanded}; screenshot={diagnosticPath}");
+                output.WriteLine("[test] root text after launcher click:\n" + await page.Locator("body").InnerTextAsync());
+                throw;
+            }
             await ScanAndCaptureAsync(page, "desktop-app-launcher", screenshotDirectory, findings, output);
             await page.Keyboard.PressAsync("Escape");
 
@@ -67,6 +83,10 @@ public sealed class AccessibilityAndVisualCoverageTests(ITestOutputHelper output
                 await page.WaitForTimeoutAsync(500); // let the window finish its mount animation/render
                 string surface = "desktop-" + appName.Replace(" ", "-", StringComparison.Ordinal).ToLowerInvariant();
                 await ScanAndCaptureAsync(page, surface, screenshotDirectory, findings, output);
+                if (string.Equals(appName, "Settings", StringComparison.Ordinal))
+                {
+                    await ExerciseDesktopThemeSwitchAsync(page, screenshotDirectory, findings, output);
+                }
             }
 
             // --- Mobile viewport: representative re-check (idle shell + one app window) ---
@@ -91,6 +111,23 @@ public sealed class AccessibilityAndVisualCoverageTests(ITestOutputHelper output
         {
             E2ESupport.StopProcess(server);
         }
+    }
+
+    /// <summary>Proves the real Settings picker updates the root scope before restoring the fixture theme.</summary>
+    private static async Task ExerciseDesktopThemeSwitchAsync(
+        IPage page,
+        string screenshotDirectory,
+        List<string> findings,
+        ITestOutputHelper output)
+    {
+        await page.GetByRole(AriaRole.Img, new() { Name = "Windows 7 theme preview" }).ClickAsync();
+        await page.Locator(".theme-scope[data-theme='windows-7'][data-form-factor='desktop']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15000 });
+        await ScanAndCaptureAsync(page, "desktop-settings-windows-7", screenshotDirectory, findings, output);
+
+        await page.GetByRole(AriaRole.Img, new() { Name = "HackerOS theme preview" }).ClickAsync();
+        await page.Locator(".theme-scope[data-theme='hackeros'][data-form-factor='desktop']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15000 });
     }
 
     /// <summary>Runs an axe scan (serious/critical only) and saves a full-page screenshot for one named surface.</summary>

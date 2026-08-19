@@ -17,6 +17,7 @@
     <ProjectReference Include="..\HackerOs.Taskbar.Blazor\HackerOs.Taskbar.Blazor.csproj" />
     <ProjectReference Include="..\HackerOs.MobileShell.Blazor\HackerOs.MobileShell.Blazor.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 

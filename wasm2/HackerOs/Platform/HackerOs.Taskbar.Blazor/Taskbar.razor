@@ -8,6 +8,7 @@
             <button type="button"
                     class="launcher-trigger @(Launcher.IsOpen ? "is-active" : "")"
                     aria-label="App launcher"
+                    aria-haspopup="dialog"
                     aria-expanded="@Launcher.IsOpen.ToString().ToLowerInvariant()"
                     @onclick="HandleLauncherToggleClick">
                 <span class="launcher-mark" aria-hidden="true">@Options.LauncherMark</span>
@@ -27,7 +28,16 @@
                         class="taskbar-item @(isFocused ? "is-active" : "") @(window.IsMinimized ? "is-minimized" : "")"
                         aria-label="@(window.Title) (@(isFocused ? "focused" : window.IsMinimized ? "minimized" : "background"))"
                         @onclick="() => HandleWindowItemClick(window)">
-                    <span class="item-icon" aria-hidden="true">🗔</span>
+                    <span class="item-icon" aria-hidden="true">
+                        @if (!string.IsNullOrWhiteSpace(window.IconAssetPath))
+                        {
+                            <img class="item-icon-image" src="@window.IconAssetPath" alt="" />
+                        }
+                        else
+                        {
+                            <HackerIcon Library="IconLibrary.Lucide" Name="app-window" Size="18" Title="" />
+                        }
+                    </span>
                     <span class="item-title">@window.Title</span>
                 </button>
             }
@@ -43,7 +53,9 @@
                         aria-label="System clock, notifications, and calendar"
                         aria-expanded="@((ClockPanelSource?.IsOpen ?? false).ToString().ToLowerInvariant())"
                         @onclick="HandleClockPanelToggleClick">
-                    <span class="clock-icon" aria-hidden="true">⏱</span>
+                    <span class="clock-icon" aria-hidden="true">
+                        <HackerIcon Library="IconLibrary.Lucide" Name="clock" Size="17" Title="" />
+                    </span>
                     <span class="clock-text">@FormattedTime</span>
                 </button>
                 @if (ClockPanelSource?.IsOpen == true && ClockPanelContent is not null)
@@ -61,7 +73,9 @@
                     class="logout-trigger"
                     aria-label="User session and logout"
                     @onclick="() => SessionCommands.RequestLogout()">
-                <span class="logout-icon" aria-hidden="true">⏻</span>
+                <span class="logout-icon" aria-hidden="true">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="power" Size="17" Title="" />
+                </span>
             </button>
         }
     </div>
