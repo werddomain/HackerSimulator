@@ -55,6 +55,119 @@ public sealed class AppIntentDispatcherTests
     }
 
     [Fact]
+    public async Task Starting_a_service_is_allowed_for_a_caller_in_the_same_assembly_without_any_capability()
+    {
+        // EchoManifest and WaiterServiceManifest both resolve their entry point in this test
+        // assembly, so they count as "the same package" for service-control purposes.
+        Fixture fixture = new(EchoManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, result.Status);
+        Assert.True(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+    }
+
+    [Fact]
+    public async Task Starting_a_service_is_denied_for_a_different_assembly_caller_without_services_manage()
+    {
+        // NotepadManifest resolves to a placeholder Window descriptor outside this test assembly,
+        // so it is not "the same package" as the service.
+        Fixture fixture = new(NotepadManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.notepad", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.CapabilityDenied, result.Status);
+        Assert.False(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+    }
+
+    [Fact]
+    public async Task Starting_a_service_succeeds_for_a_different_assembly_caller_holding_services_manage()
+    {
+        Fixture fixture = new(NotepadManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.notepad", principal, AppCapabilities.ServicesManage);
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.notepad", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, result.Status);
+    }
+
+    [Fact]
+    public async Task Controlling_a_non_service_target_is_rejected_even_from_the_same_assembly()
+    {
+        Fixture fixture = new(EchoManifest(), TextEditorManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.texteditor", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.NotAService, result.Status);
+    }
+
+    [Fact]
+    public async Task Controlling_an_unknown_app_id_is_not_found()
+    {
+        Fixture fixture = new(EchoManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.missing", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.NotFound, result.Status);
+    }
+
+    [Fact]
+    public async Task Stopping_a_service_from_the_same_assembly_stops_its_running_instance()
+    {
+        Fixture fixture = new(EchoManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await fixture.Dispatcher.StartServiceAsync("org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+        Assert.True(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StopServiceAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, result.Status);
+        Assert.False(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+    }
+
+    [Fact]
+    public async Task Setting_and_reading_back_a_services_start_mode_round_trips_for_a_same_assembly_caller()
+    {
+        Fixture fixture = new(EchoManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        ServiceControlDispatchResult setResult = await fixture.Dispatcher.SetServiceStartModeAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal, ServiceStartMode.Disabled);
+        (ServiceControlDispatchResult getResult, ServiceStartMode mode) = await fixture.Dispatcher.GetServiceStartModeAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, setResult.Status);
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, getResult.Status);
+        Assert.Equal(ServiceStartMode.Disabled, mode);
+    }
+
+    [Fact]
+    public async Task Starting_a_disabled_service_is_refused()
+    {
+        Fixture fixture = new(EchoManifest(), WaiterServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await fixture.Dispatcher.SetServiceStartModeAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal, ServiceStartMode.Disabled);
+
+        ServiceControlDispatchResult result = await fixture.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", principal.UserId.ToString(), "org.hackeros.waiter", principal);
+
+        Assert.Equal(ServiceControlDispatchStatus.ServiceDisabled, result.Status);
+        Assert.False(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+    }
+
+    [Fact]
     public async Task Execute_command_intent_resolves_a_terminal_app_by_its_command_name_and_runs_it()
     {
         Fixture fixture = new(EchoManifest());
@@ -290,6 +403,26 @@ public sealed class AppIntentDispatcherTests
         FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"])]
     };
 
+    private static AppManifest WaiterServiceManifest() => new()
+    {
+        Id = "org.hackeros.waiter",
+        Name = "Waiter",
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "Waits for cancellation.",
+        Kind = AppKind.Service,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(WaiterServiceApp).FullName!),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None
+    };
+
+    private sealed class WaiterServiceApp(AppManifest manifest) : ServiceAppBase(manifest)
+    {
+        protected override Task RunCoreAsync(IAppExecutionContext context, CancellationToken sessionCancellationToken) =>
+            Task.Delay(Timeout.InfiniteTimeSpan, sessionCancellationToken);
+    }
+
     private sealed class EchoTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
     {
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
@@ -420,7 +553,14 @@ public sealed class AppIntentDispatcherTests
             {
                 ["HackerOs.Platform.Core.Tests"] = typeof(Fixture).Assembly
             };
-            AppDiscoveryResult discovery = AppEntryPointDiscovery.Discover(catalog, hostAssemblies);
+
+            // Window apps in these tests always use a placeholder entry point (this project has no
+            // reference to the Blazor App SDK, so no real WindowAppBase-derived type can ever exist
+            // here) -- discover only the non-Window manifests so an intentionally-unresolvable
+            // Window entry never poisons AppDiscoveryResult.Descriptors (all-or-nothing per catalog)
+            // for the manifests that ARE meant to resolve for real.
+            AppCatalogBuildResult discoveryCatalogResult = AppCatalog.Build(manifests.Where(m => m.Kind != AppKind.Window));
+            AppDiscoveryResult discovery = AppEntryPointDiscovery.Discover(discoveryCatalogResult.Catalog!, hostAssemblies);
 
             Dictionary<string, AppDescriptor> descriptors = new(StringComparer.Ordinal);
             foreach (AppManifest manifest in manifests)
@@ -433,7 +573,7 @@ public sealed class AppIntentDispatcherTests
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
-            Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants);
+            Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }
 
         internal LocalSessionService Session { get; }

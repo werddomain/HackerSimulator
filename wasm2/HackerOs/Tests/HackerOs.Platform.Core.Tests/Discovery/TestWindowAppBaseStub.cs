@@ -8,3 +8,11 @@ namespace HackerOs.AppSdk.Blazor;
 /// <see cref="HackerOs.Platform.Core.Discovery.AppEntryPointDiscovery"/>).
 /// </summary>
 internal abstract class WindowAppBase;
+
+/// <summary>
+/// Local stand-in for the real Blazor <c>IAppBackHandler</c>, sharing its exact namespace and
+/// name so <see cref="HackerOs.Platform.Core.Discovery.AppEntryPointDiscovery"/>'s name-based
+/// interface matching resolves it identically without this test project referencing the real
+/// Blazor assembly. Members are irrelevant to discovery, which only checks interface identity.
+/// </summary>
+internal interface IAppBackHandler;

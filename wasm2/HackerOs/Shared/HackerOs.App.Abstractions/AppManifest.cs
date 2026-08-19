@@ -107,6 +107,17 @@ public sealed record AppManifest
     /// every other app kind.
     /// </summary>
     public bool AutoStart { get; init; }
+
+    /// <summary>
+    /// Gets whether this app participates in platform Back navigation
+    /// (docs/mobile-interface-platform-plan.md §8, <c>MOB-012</c>) — a Desktop-only chrome Back
+    /// button is shown for it, and the Mobile system navigation bar's triangle calls into it first.
+    /// Only <see cref="AppKind.Window"/> apps may declare this; <see cref="AppManifestValidator"/>
+    /// rejects it otherwise. Declaring it requires the resolved entry-point type to implement
+    /// <c>HackerOs.AppSdk.Blazor.IAppBackHandler</c> — enforced at discovery, not here, since this
+    /// project has no reference to the Blazor App SDK.
+    /// </summary>
+    public bool SupportsBack { get; init; }
 }
 
 /// <summary>

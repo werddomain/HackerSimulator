@@ -47,7 +47,8 @@ public static class AppManifestJsonSerializer
             "fileHandlers",
             "terminal",
             "singleInstancePerUser",
-            "autoStart"
+            "autoStart",
+            "supportsBack"
         });
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)

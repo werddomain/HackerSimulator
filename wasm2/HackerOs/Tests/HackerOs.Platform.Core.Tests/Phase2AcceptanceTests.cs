@@ -274,7 +274,7 @@ public sealed class Phase2AcceptanceTests
                 catalog, discovery.Descriptors!, enablement, ProcessManager, Grants, contextFactory, SettingsService);
 
             FileAssociationResolver fileAssociations = new(catalog, enablement, SettingsService);
-            Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, fileAssociations, Grants);
+            Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, fileAssociations, Grants, FileSystemService);
         }
 
         internal DateTimeOffset Now => _now;

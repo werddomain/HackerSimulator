@@ -55,6 +55,34 @@ public interface ICapabilityChecker
 }
 
 /// <summary>
+/// Carries one permission-class filesystem denial (missing capability, missing authority, or a
+/// denied selected-handle/mode check) raised through <see cref="IAppPermissionErrorGateway"/>.
+/// </summary>
+public sealed class AppPermissionErrorEventArgs(FileSystemError error) : EventArgs
+{
+    /// <summary>Gets the permission-class failure that triggered this notification.</summary>
+    public FileSystemError Error { get; } = error ?? throw new ArgumentNullException(nameof(error));
+
+    /// <summary>
+    /// Gets or sets whether a subscriber already surfaced this error to the user. Left
+    /// <see langword="false"/>, the window host shows a default error notification after every
+    /// subscriber has run.
+    /// </summary>
+    public bool ErrorHandled { get; set; }
+}
+
+/// <summary>
+/// Notifies subscribers when any gateway bound to this app instance denies an operation for a
+/// permission-class reason, so the window host can surface a default error notification when no
+/// app-level handler marks the error as already handled.
+/// </summary>
+public interface IAppPermissionErrorGateway
+{
+    /// <summary>Raised when a permission-class error occurs on a gateway bound to this app instance.</summary>
+    event EventHandler<AppPermissionErrorEventArgs>? PermissionDenied;
+}
+
+/// <summary>
 /// Provides one app instance's authorized filesystem access. Every call is evaluated against
 /// trusted OS policy for the bound app/user; the gateway never exposes the raw repository.
 /// </summary>
@@ -329,4 +357,70 @@ public interface IAppIntentGateway
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
     ValueTask<AppIntentOpenFileResult> OpenFileAsync(
         VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Identifies the stable outcome of one <see cref="IAppServiceControlGateway"/> request.</summary>
+public enum ServiceControlOutcome
+{
+    /// <summary>The request completed: the service was started/stopped, or its start mode was read/set.</summary>
+    Succeeded,
+
+    /// <summary>No catalog app matches the requested target ID.</summary>
+    NotFound,
+
+    /// <summary>The resolved target app is not a <see cref="AppKind.Service"/> app.</summary>
+    NotAService,
+
+    /// <summary>The target service's start mode is <see cref="ServiceStartMode.Disabled"/>; it cannot be started.</summary>
+    ServiceDisabled,
+
+    /// <summary>The target's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one <see cref="IAppServiceControlGateway"/> request.</summary>
+/// <param name="Outcome">Stable request outcome.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+public sealed record ServiceControlResult(ServiceControlOutcome Outcome, string? ErrorCode = null);
+
+/// <summary>
+/// Provides one app instance's authorized ability to start, stop, or reconfigure the start mode
+/// of a <see cref="AppKind.Service"/> app other than itself. Always permitted between apps whose
+/// entry points are compiled into the same assembly (a companion Window/Terminal app controlling
+/// its own bundled background service); any other caller needs
+/// <see cref="AppCapabilities.ServicesManage"/> (a "service manager" role, e.g. System Monitor).
+/// </summary>
+public interface IAppServiceControlGateway
+{
+    /// <summary>
+    /// Starts the target service, or focuses it if it is already running. Refused when the
+    /// service's effective start mode is <see cref="ServiceStartMode.Disabled"/>.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">
+    /// Policy denies control of this service: the caller is neither in the same assembly nor
+    /// holds <see cref="AppCapabilities.ServicesManage"/>.
+    /// </exception>
+    ValueTask<ServiceControlResult> StartAsync(string serviceAppId, CancellationToken cancellationToken = default);
+
+    /// <summary>Stops the target service if it is currently running.</summary>
+    /// <exception cref="AppGatewayAccessDeniedException">
+    /// Policy denies control of this service: the caller is neither in the same assembly nor
+    /// holds <see cref="AppCapabilities.ServicesManage"/>.
+    /// </exception>
+    ValueTask<ServiceControlResult> StopAsync(string serviceAppId, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the target service's effective start mode.</summary>
+    /// <exception cref="AppGatewayAccessDeniedException">
+    /// Policy denies control of this service: the caller is neither in the same assembly nor
+    /// holds <see cref="AppCapabilities.ServicesManage"/>.
+    /// </exception>
+    ValueTask<ServiceStartMode> GetStartModeAsync(string serviceAppId, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets the target service's effective start mode.</summary>
+    /// <exception cref="AppGatewayAccessDeniedException">
+    /// Policy denies control of this service: the caller is neither in the same assembly nor
+    /// holds <see cref="AppCapabilities.ServicesManage"/>.
+    /// </exception>
+    ValueTask<ServiceControlResult> SetStartModeAsync(
+        string serviceAppId, ServiceStartMode mode, CancellationToken cancellationToken = default);
 }

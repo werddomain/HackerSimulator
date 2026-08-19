@@ -25,6 +25,8 @@ public static class AppEntryPointDiscovery
         [AppKind.Service] = "HackerOs.AppSdk.ServiceAppBase"
     };
 
+    private const string AppBackHandlerInterfaceFullName = "HackerOs.AppSdk.Blazor.IAppBackHandler";
+
     /// <summary>
     /// Resolves every manifest in <paramref name="catalog"/> to a validated <see cref="AppDescriptor"/>.
     /// </summary>
@@ -121,6 +123,15 @@ public static class AppEntryPointDiscovery
                 continue;
             }
 
+            if (manifest.SupportsBack && !Implements(entryType, AppBackHandlerInterfaceFullName))
+            {
+                errors.Add(new AppDiscoveryError(
+                    "discovery.backHandler.missing",
+                    manifest.Id,
+                    $"Type '{entryType.FullName}' declares supportsBack but does not implement '{AppBackHandlerInterfaceFullName}'."));
+                continue;
+            }
+
             descriptors.Add(manifest.Id, new AppDescriptor(manifest, entryType, assembly));
         }
 
@@ -142,4 +153,13 @@ public static class AppEntryPointDiscovery
 
         return false;
     }
+
+    /// <summary>
+    /// Checks a type's implemented interfaces by full name, the same reflection-only,
+    /// no-project-reference approach <see cref="DerivesFrom"/> uses for base types.
+    /// </summary>
+    private static bool Implements(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type candidate,
+        string expectedInterfaceFullName) =>
+        candidate.GetInterfaces().Any(i => string.Equals(i.FullName, expectedInterfaceFullName, StringComparison.Ordinal));
 }

@@ -304,5 +304,6 @@ public sealed class WindowRuntime
             state.OwnerId,
             isFocused ?? state.IsFocused,
             state.Content,
-            state.OnRequestClose);
+            state.OnRequestClose,
+            state.SupportsBack);
 }

@@ -73,8 +73,9 @@ recovery plutôt que traité ici.
 
 `MOB-001`, `MOB-006` (tranche persistance), `MOB-007` (Phase 0), puis
 `MOB-002`, `MOB-003`, `MOB-004`, `MOB-005`, `MOB-014` (partiel, Phase 1), puis
-`MOB-008`, `MOB-009`, `MOB-010` (Phase 2, complète) sont faits — voir
-`mobile-interface-platform-plan.md` §14/§16 pour le détail fichier par fichier.
+`MOB-008`, `MOB-009`, `MOB-010`, `MOB-012`, `MOB-013` (Phase 2, complète et
+sa sous-tranche 2c) sont faits — voir `mobile-interface-platform-plan.md`
+§14/§16 pour le détail fichier par fichier.
 
 Phase 0 : le taskbar expose un point d'ancrage générique
 (`ITaskbarClockPanelSource` + `RenderFragment ClockPanelContent`) ouvert en
@@ -121,8 +122,22 @@ glissement depuis le haut de l'écran Mobile (`MobileShell.razor.js`,
 Auto/Desktop/Mobile) — remplace un premier bouton placeholder. Le
 filtrage launcher/intents/associations par plateforme (§6.3 étape 8) reste
 différé : aucun manifeste embarqué ne déclare de point d'entrée Mobile-only,
-donc rien n'est aujourd'hui incorrect à laisser non filtré. `MOB-011` à
-`MOB-018` restent à faire.
+donc rien n'est aujourd'hui incorrect à laisser non filtré.
+
+Phase 2c (sous-tranche, `MOB-012`/`MOB-013`) : le contrat SDK
+`IAppBackHandler` (`AppBackContracts.cs`) existe, `AppManifest.SupportsBack`
+déclare le support par point d'entrée, `AppEntryPointDiscovery` valide par
+réflexion (même motif que `DerivesFrom`) que le type déclaré implémente bien
+le contrat, et `AppBackHandlerRegistry` capture le composant vivant comme
+`WindowCloseGuardRegistry` le fait déjà pour la fermeture. `WindowChrome`
+affiche un bouton Back Desktop-only quand `Window.SupportsBack`, Mobile
+route son triangle système vers le même registre
+(`MobileNavigationCommandsAdapter.RequestBack`). Seule l'étape 2 de la
+séquence Back ordonnée de §7.3 est couverte (le handler applicatif) ; les
+étapes 1/3/4 (pile de dialogues, pile de navigation, fermeture-et-Home)
+attendent `MOB-011`. Bug latent réel trouvé par le nouveau test :
+`WindowRuntime.Copy()` oubliait de reporter `SupportsBack` lors de la
+création d'une fenêtre. `MOB-011`, `MOB-015` à `MOB-018` restent à faire.
 
 Le document d'extraction fenêtres/taskbar référence déjà ce plan comme risque
 à éviter ("Rupture mobile : ne pas figer dans le moteur des hypothèses

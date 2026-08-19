@@ -752,8 +752,11 @@ Phase 2 — Shell Mobile et changement contrôlé [FAITE le 2026-08-18]
   Phase 2a (sous-tranche) : MOB-009, MOB-010 — voir §16.6. Spike de faisabilité
   (§16.2) confirmé additif, pas de restructuration du moteur.
   Phase 2b (sous-tranche) : MOB-008, en version pragmatique — voir §16.7.
-  Reste hors Phase 2 : MOB-011, MOB-012, MOB-013 (pile de navigation, Recent,
-  IAppBackHandler — Back/Recent du MOB-010 restent des no-op en attendant)
+  Phase 2c (sous-tranche) : MOB-012, MOB-013 (contrat IAppBackHandler, bouton
+  Back Desktop, triangle Mobile appelle l'étape 2 de §7.3) — voir §16.9.
+  Reste hors Phase 2 : MOB-011 (pile de navigation, Recent — Recent du
+  MOB-010 et les étapes 1/3/4 de la séquence Back de §7.3 restent des no-op
+  en attendant)
   Dépend de : Phase 1 (les apps doivent déclarer un point d’entrée Mobile)
 
 Phase 3 — Clavier virtuel Terminal Mobile
@@ -975,4 +978,80 @@ séparé).
 - **`MobileShell` n'injecte plus `PlatformShellSwitchCoordinator` directement**
   — le volet réutilisant `ClockPanel` tel quel, c'est ce composant qui gère
   déjà tout le flux de changement de plateforme (Phase 2b ci-dessus).
+
+### 16.9 Contrat Back applicatif (`MOB-012`/`MOB-013`, post-§16.8)
+
+Livre le contrat SDK et l'étape 2 de la séquence Back ordonnée de §7.3 —
+« appeler le handler Back de l'application active si elle expose explicitement
+ce support ». `MOB-011` (pile de navigation, surface Recent) reste
+délibérément hors périmètre : c'est un sous-système plus large qui mérite sa
+propre tranche dédiée, pas un ajout incrémental à celle-ci.
+
+- **`Shared/HackerOs.AppSdk.Blazor/AppBackContracts.cs`** (nouveau) — le
+  contrat exact de §8 : `AppBackSource` (`SystemNavigationBar` /
+  `DesktopChromeButton` / `KeyboardShortcut`), `AppBackRequest`,
+  `AppBackResultStatus` (`Handled`/`NotHandled`/`Blocked`/
+  `ConfirmationRequired`/`Faulted`), `AppBackResult`, et `IAppBackHandler`
+  (`CanNavigateBack`, `CanNavigateBackChanged`, `NavigateBackAsync`).
+- **`AppManifest.SupportsBack`** (nouveau bool, `Window` uniquement — même
+  garde-fou que `FileHandlers`) déclare le support Back pour un point d'entrée
+  ou l'application partagée, comme demandé par §8. Le raccourci clavier
+  documenté dans §8 (« Le raccourci clavier documenté utilise le même
+  contrat ») n'est pas câblé dans cette tranche.
+- **`AppEntryPointDiscovery` valide la conformité par réflexion**, sans
+  référence de projet vers `HackerOs.AppSdk.Blazor` — même motif exact que
+  `DerivesFrom` pour les types de base : un nouveau helper `Implements`
+  compare `Type.GetInterfaces()` par nom complet. `manifest.SupportsBack ==
+  true` sans un type qui implémente `IAppBackHandler` échoue avec
+  `discovery.backHandler.missing`.
+- **`WindowRuntimeState.SupportsBack`** — champ déclaratif posé une seule fois
+  à la création de la fenêtre depuis `AppManifest.SupportsBack`
+  (`WindowLaunchCoordinator`), pas un miroir en direct de
+  `IAppBackHandler.CanNavigateBack`.
+- **Bug réel trouvé par le test, pas seulement latent** :
+  `WindowRuntime.Copy()` (le helper privé que `Create()` utilise pour poser
+  `zOrder`/`isFocused` sur l'état initial) oubliait de reporter
+  `SupportsBack` — toute fenêtre créée avec `supportsBack: true` perdait
+  silencieusement ce fait dès sa création. Détecté par
+  `WindowLaunchCoordinatorTests.Present_projects_the_manifests_supportsBack_declaration_onto_the_window`,
+  qui teste au niveau `WindowRuntime` réel (pas un double), corrigé en une
+  ligne.
+- **`AppBackHandlerRegistry` + capture dans `WindowAppRenderer`** — même motif
+  exact que `WindowCloseGuardRegistry`/`IWindowCloseGuard` (déjà en place pour
+  la fermeture) : `AddComponentReferenceCapture` récupère le composant rendu,
+  et s'il implémente `IAppBackHandler`, l'enregistre par `WindowId` dans un
+  registre DI singleton. Enregistrements sûrs par référence — la disposition
+  d'un ancien renderer ne peut pas retirer le handler d'un composant plus
+  récent pour la même fenêtre.
+- **Bouton Back dans `WindowChrome`, Desktop uniquement** — rendu
+  conditionnellement sur `Window.SupportsBack`, dans `.window-identity` avant
+  l'icône. Propagé `WindowChrome` → `WindowHost` → `DesktopArea` →
+  `DesktopShell.HandleBack`, qui appelle
+  `BackHandlers.NavigateBackAsync(id, new AppBackRequest(DesktopChromeButton))`.
+  Mobile ne duplique pas ce bouton par construction, pas par condition
+  explicite : `SingleSurfaceArea` rend toujours `WindowHost` avec
+  `ShowChrome="false"`, donc `WindowChrome` (et son bouton Back) n'y est
+  jamais instancié — conforme à §8 (« Ne pas dupliquer le bouton Back dans la
+  barre applicative » côté Mobile).
+- **`MobileNavigationCommandsAdapter.RequestBack`** appelle maintenant
+  `BackHandlers.NavigateBackAsync` pour la fenêtre primaire (même sélection
+  que `RequestHome`, via `SingleSurfacePresentationPolicy.SelectPrimary`), avec
+  `AppBackSource.SystemNavigationBar`. Implémenté en `async void` — choix
+  déjà correct pour le contrat synchrone existant
+  `IMobileNavigationCommands.RequestBack() -> void`, un fire-and-forget
+  déclenché par le clic du triangle système, pas une méthode dont l'appelant
+  attend un résultat.
+- **Écart documenté, volontairement différé** : §8 dit « Le bouton est
+  désactivé lorsque `CanNavigateBack` est faux. » Cette tranche ne câble pas
+  cet état — le bouton Desktop est toujours actif dès que `SupportsBack` est
+  vrai, sans écouter `IAppBackHandler.CanNavigateBackChanged`. Câbler l'état
+  vivant demanderait un canal de notification supplémentaire depuis le
+  composant capturé vers `WindowChrome` ; à faire dans une tranche
+  ultérieure si un besoin réel se présente.
+- **Seule l'étape 2 de la séquence ordonnée de §7.3 est livrée.** Les étapes 1
+  (pile de dialogues/modals système), 3 (pile de navigation applicative/shell)
+  et 4 (fermeture-et-retour-Home) attendent `MOB-011` ; un résultat
+  `NotHandled` (ou l'absence de handler) reste un no-op silencieux — c'est
+  l'issue terminale valide de l'étape 5 tant que les étapes précédentes
+  n'existent pas pour la prévenir.
 

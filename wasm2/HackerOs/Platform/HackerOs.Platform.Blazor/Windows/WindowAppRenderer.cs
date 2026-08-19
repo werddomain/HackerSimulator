@@ -12,6 +12,7 @@ namespace HackerOs.Platform.Blazor.Windows;
 public sealed class WindowAppRenderer : ComponentBase, IDisposable
 {
     private IDisposable? _closeGuardRegistration;
+    private IDisposable? _backHandlerRegistration;
 
     /// <summary>Gets or sets the authoritative window snapshot.</summary>
     [Parameter, EditorRequired]
@@ -28,6 +29,10 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     /// <summary>Gets or sets the platform registry for the rendered app's close guard.</summary>
     [Parameter, EditorRequired]
     public WindowCloseGuardRegistry CloseGuards { get; set; } = null!;
+
+    /// <summary>Gets or sets the platform registry for the rendered app's Back handler.</summary>
+    [Parameter, EditorRequired]
+    public AppBackHandlerRegistry BackHandlers { get; set; } = null!;
 
     /// <inheritdoc />
     protected override void OnParametersSet() =>
@@ -48,6 +53,11 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
         _closeGuardRegistration = component is IWindowCloseGuard guard
             ? CloseGuards.Register(Window.Id, guard)
             : null;
+
+        _backHandlerRegistration?.Dispose();
+        _backHandlerRegistration = component is IAppBackHandler backHandler
+            ? BackHandlers.Register(Window.Id, backHandler)
+            : null;
     }
 
     /// <inheritdoc />
@@ -55,5 +65,8 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     {
         _closeGuardRegistration?.Dispose();
         _closeGuardRegistration = null;
+
+        _backHandlerRegistration?.Dispose();
+        _backHandlerRegistration = null;
     }
 }

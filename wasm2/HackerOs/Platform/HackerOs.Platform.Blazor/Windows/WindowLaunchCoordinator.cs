@@ -75,7 +75,8 @@ public sealed class WindowLaunchCoordinator
             zOrder: 0,
             visualState: WindowVisualState.Normal,
             constraints: new WindowConstraints(isResizable: true, minWidth: 360, minHeight: 240),
-            modality: WindowModality.Modeless);
+            modality: WindowModality.Modeless,
+            supportsBack: manifest.SupportsBack);
         _windows.Apply(new CreateWindowCommand(state));
         return true;
     }

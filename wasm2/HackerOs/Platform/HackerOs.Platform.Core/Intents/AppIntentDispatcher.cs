@@ -1,7 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
@@ -51,6 +53,36 @@ public sealed record AppIntentDispatchResult(
     IReadOnlyList<string>? CandidateAppIds = null,
     string? ErrorCode = null);
 
+/// <summary>Identifies the stable outcome of one service-control request (start/stop/get/set start mode).</summary>
+public enum ServiceControlDispatchStatus
+{
+    /// <summary>The request completed: the service was started/stopped, or its start mode was read/set.</summary>
+    Succeeded,
+
+    /// <summary>No catalog app matches the requested target ID.</summary>
+    NotFound,
+
+    /// <summary>The resolved target app is not a <see cref="AppKind.Service"/> app.</summary>
+    NotAService,
+
+    /// <summary>
+    /// The caller is neither in the same assembly as the target service nor holds
+    /// <see cref="AppCapabilities.ServicesManage"/>.
+    /// </summary>
+    CapabilityDenied,
+
+    /// <summary>The target service's start mode is <see cref="ServiceStartMode.Disabled"/>; it cannot be started.</summary>
+    ServiceDisabled,
+
+    /// <summary>The target's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one service-control request.</summary>
+/// <param name="Status">Stable request outcome.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+public sealed record ServiceControlDispatchResult(ServiceControlDispatchStatus Status, string? ErrorCode = null);
+
 /// <summary>
 /// Capability-gates and dispatches every typed <see cref="IAppIntent"/> to the lifecycle
 /// orchestrator or file-association resolver, per `P1-APP-007`. This is the policy layer:
@@ -64,20 +96,23 @@ public sealed class AppIntentDispatcher
     private readonly IAppEnablementRegistry _enablement;
     private readonly FileAssociationResolver _associations;
     private readonly ICapabilityGrantRepository _grants;
+    private readonly IFileSystemService _fileSystem;
 
-    /// <summary>Initializes the dispatcher over the orchestrator, catalog, resolver, and grant repository.</summary>
+    /// <summary>Initializes the dispatcher over the orchestrator, catalog, resolver, grant repository, and filesystem.</summary>
     public AppIntentDispatcher(
         AppLifecycleOrchestrator orchestrator,
         AppCatalog catalog,
         IAppEnablementRegistry enablement,
         FileAssociationResolver associations,
-        ICapabilityGrantRepository grants)
+        ICapabilityGrantRepository grants,
+        IFileSystemService fileSystem)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
         _associations = associations ?? throw new ArgumentNullException(nameof(associations));
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
+        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     }
 
     /// <summary>Dispatches one intent request on behalf of an authenticated principal.</summary>
@@ -217,6 +252,126 @@ public sealed class AppIntentDispatcher
         // Actually focusing/rendering a settings surface belongs to the future window runtime
         // (Phase 2A); Section 8 only validates the target and acknowledges the request.
         return new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched);
+    }
+
+    /// <summary>
+    /// Starts one <see cref="AppKind.Service"/> app on behalf of a caller, authorized either
+    /// because the caller's entry point lives in the same assembly as the target service (a
+    /// companion Window/Terminal app controlling its own bundled service) or because the caller
+    /// holds <see cref="AppCapabilities.ServicesManage"/> (a "service manager" role, e.g. System
+    /// Monitor). Refuses when the target's effective start mode is <see cref="ServiceStartMode.Disabled"/>.
+    /// </summary>
+    public async ValueTask<ServiceControlDispatchResult> StartServiceAsync(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
+    {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
+        if (denial is not null)
+        {
+            return denial;
+        }
+
+        ServiceStartMode effectiveMode = await ServiceStartModeStore.ReadAsync(
+            _fileSystem,
+            principal.LoginName.Value,
+            targetAppId,
+            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
+            CancellationToken.None);
+        if (effectiveMode == ServiceStartMode.Disabled)
+        {
+            return new ServiceControlDispatchResult(ServiceControlDispatchStatus.ServiceDisabled, ErrorCode: "service.start.disabled");
+        }
+
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(targetAppId, principal, []));
+        return launch.Status switch
+        {
+            AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting =>
+                new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded),
+            _ => new ServiceControlDispatchResult(ServiceControlDispatchStatus.Faulted, ErrorCode: launch.ErrorCode)
+        };
+    }
+
+    /// <summary>Stops one <see cref="AppKind.Service"/> app on behalf of a caller; see <see cref="StartServiceAsync"/> for the authorization rule.</summary>
+    public async ValueTask<ServiceControlDispatchResult> StopServiceAsync(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
+    {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
+        if (denial is not null)
+        {
+            return denial;
+        }
+
+        await _orchestrator.StopServiceAsync(targetAppId);
+        return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
+    }
+
+    /// <summary>Reads one <see cref="AppKind.Service"/> app's effective start mode on behalf of a caller; see <see cref="StartServiceAsync"/> for the authorization rule.</summary>
+    public async ValueTask<(ServiceControlDispatchResult Result, ServiceStartMode Mode)> GetServiceStartModeAsync(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
+    {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
+        if (denial is not null)
+        {
+            return (denial, ServiceStartMode.Manual);
+        }
+
+        ServiceStartMode mode = await ServiceStartModeStore.ReadAsync(
+            _fileSystem,
+            principal.LoginName.Value,
+            targetAppId,
+            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
+            CancellationToken.None);
+        return (new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded), mode);
+    }
+
+    /// <summary>Sets one <see cref="AppKind.Service"/> app's effective start mode on behalf of a caller; see <see cref="StartServiceAsync"/> for the authorization rule.</summary>
+    public async ValueTask<ServiceControlDispatchResult> SetServiceStartModeAsync(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal, ServiceStartMode mode)
+    {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
+        if (denial is not null)
+        {
+            return denial;
+        }
+
+        await ServiceStartModeStore.WriteAsync(_fileSystem, principal.LoginName.Value, targetAppId, mode, CancellationToken.None);
+        return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
+    }
+
+    /// <summary>
+    /// Resolves and authorizes a service-control target: it must be a catalog <see cref="AppKind.Service"/>
+    /// app, and the caller must either share its resolved entry-point assembly or hold
+    /// <see cref="AppCapabilities.ServicesManage"/>. Returns <see langword="null"/> and the resolved
+    /// manifest when authorized; otherwise returns the denial result to return to the caller.
+    /// </summary>
+    private ServiceControlDispatchResult? AuthorizeServiceControl(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal, out AppManifest? target)
+    {
+        target = null;
+        if (!_catalog.Manifests.TryGetValue(targetAppId, out AppManifest? manifest))
+        {
+            return new ServiceControlDispatchResult(ServiceControlDispatchStatus.NotFound, ErrorCode: "service.not-found");
+        }
+
+        if (manifest.Kind != AppKind.Service)
+        {
+            return new ServiceControlDispatchResult(ServiceControlDispatchStatus.NotAService, ErrorCode: "service.not-a-service");
+        }
+
+        bool sameAssembly =
+            _orchestrator.TryGetDescriptor(callerAppId, out AppDescriptor? caller)
+            && _orchestrator.TryGetDescriptor(targetAppId, out AppDescriptor? targetDescriptor)
+            && ReferenceEquals(caller.Assembly, targetDescriptor.Assembly);
+
+        bool hasServicesManage = _grants.Evaluate(
+            callerAppId, userId, AppCapabilities.ServicesManage, principal.Authority, AppAuthority.User).Granted;
+
+        if (!sameAssembly && !hasServicesManage)
+        {
+            return new ServiceControlDispatchResult(ServiceControlDispatchStatus.CapabilityDenied, ErrorCode: "service.capability-denied");
+        }
+
+        target = manifest;
+        return null;
     }
 
     private static AppIntentDispatchResult ToDispatchResult(AppLaunchResult launch) => launch.Status switch

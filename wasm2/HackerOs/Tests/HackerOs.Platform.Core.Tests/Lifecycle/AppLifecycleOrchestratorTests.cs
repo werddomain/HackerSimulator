@@ -63,6 +63,61 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task StartAllServicesAsync_skips_a_service_whose_start_mode_is_disabled()
+    {
+        Fixture fixture = new(WaiterManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await SeedServiceStartModeAsync(fixture.FileSystemService, principal.LoginName.Value, "org.hackeros.waiter", ServiceStartMode.Disabled);
+
+        IReadOnlyList<AppLaunchResult> results = await fixture.Orchestrator.StartAllServicesAsync(principal);
+
+        Assert.Empty(results);
+        Assert.False(fixture.Manager.TryGetSingleton("org.hackeros.waiter", out _));
+    }
+
+    [Fact]
+    public async Task StartAllServicesAsync_skips_a_manual_service_but_it_can_still_be_launched_directly()
+    {
+        Fixture fixture = new(WaiterManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await SeedServiceStartModeAsync(fixture.FileSystemService, principal.LoginName.Value, "org.hackeros.waiter", ServiceStartMode.Manual);
+
+        IReadOnlyList<AppLaunchResult> autoStartResults = await fixture.Orchestrator.StartAllServicesAsync(principal);
+        Assert.Empty(autoStartResults);
+
+        AppLaunchResult directLaunch = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest("org.hackeros.waiter", principal, []));
+        Assert.Equal(AppLaunchStatus.Launched, directLaunch.Status);
+    }
+
+    [Fact]
+    public async Task StartAllServicesAsync_starts_an_automatic_service()
+    {
+        Fixture fixture = new(WaiterManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await SeedServiceStartModeAsync(fixture.FileSystemService, principal.LoginName.Value, "org.hackeros.waiter", ServiceStartMode.Automatic);
+
+        IReadOnlyList<AppLaunchResult> results = await fixture.Orchestrator.StartAllServicesAsync(principal);
+
+        AppLaunchResult result = Assert.Single(results);
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+    }
+
+    [Fact]
+    public async Task Starting_an_already_running_service_focuses_the_existing_instance_instead_of_duplicating_it()
+    {
+        Fixture fixture = new(WaiterManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult first = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.waiter", principal, []));
+        AppLaunchResult second = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.waiter", principal, []));
+
+        Assert.Equal(AppLaunchStatus.Launched, first.Status);
+        Assert.Equal(AppLaunchStatus.FocusedExisting, second.Status);
+        Assert.Equal(first.Process!.Pid, second.Process!.Pid);
+    }
+
+    [Fact]
     public async Task A_singleton_window_apps_second_launch_focuses_the_existing_instance()
     {
         Fixture fixture = new(SingletonWindowManifest());
@@ -379,6 +434,53 @@ public sealed class AppLifecycleOrchestratorTests
         }
     }
 
+    /// <summary>
+    /// Seeds a service's start-mode config file directly through the raw filesystem, mirroring the
+    /// path/format contract <c>ServiceStartModeStore</c> owns internally, so these tests exercise
+    /// <see cref="AppLifecycleOrchestrator.StartAllServicesAsync"/>'s read side without depending on
+    /// that internal type.
+    /// </summary>
+    private static async Task SeedServiceStartModeAsync(
+        FileSystemService fileSystem, string userName, string appId, ServiceStartMode mode)
+    {
+        AppOperationContext operationContext = new()
+        {
+            AppId = appId,
+            UserId = userName,
+            UserName = userName,
+            UserAuthority = AppAuthority.System,
+            GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal)
+            {
+                AppCapabilities.FileSystemPrivateRead,
+                AppCapabilities.FileSystemPrivateWrite
+            },
+            IsSystemOperation = true
+        };
+        FileSystemAuthorizationContext context = new(operationContext, groupIds: [], DateTimeOffset.UtcNow);
+
+        VirtualPath directory = VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}");
+        FileSystemMutationResult createDirectory = await fileSystem.CreateAsync(
+            new FileSystemCreateRequest(directory, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_000_000)), context);
+        Assert.True(createDirectory.Succeeded, createDirectory.Transaction.Error?.Code.ToString());
+
+        VirtualPath file = VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}/service.conf");
+        FileSystemMutationResult createFile = await fileSystem.CreateAsync(
+            new FileSystemCreateRequest(file, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_000_000)), context);
+        Assert.True(createFile.Succeeded, createFile.Transaction.Error?.Code.ToString());
+
+        FileSystemMutationResult write = await fileSystem.WriteAsync(new FileSystemWriteRequest(file), new TextSource($"StartMode={mode}\n"), context);
+        Assert.True(write.Succeeded, write.Transaction.Error?.Code.ToString());
+    }
+
+    private sealed class TextSource(string content) : IFileSystemContentSource
+    {
+        private readonly byte[] _bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        public FileSystemContentDescriptor Descriptor { get; } = FileSystemContentDescriptor.Text();
+        public long? Length => _bytes.LongLength;
+        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Stream>(new MemoryStream(_bytes, writable: false));
+    }
+
     private sealed class Fixture
     {
         private int _entryId = 1;
@@ -466,9 +568,11 @@ public sealed class AppLifecycleOrchestratorTests
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus,
-                descriptorLoader: null, catalogRepository, services);
+                descriptorLoader: null, catalogRepository, services, fileSystem);
+            FileSystemService = fileSystem;
         }
 
+        internal FileSystemService FileSystemService { get; }
         internal LocalSessionService Session { get; }
         internal InMemoryEventBus EventBus { get; }
         internal InMemoryProcessManager Manager { get; }

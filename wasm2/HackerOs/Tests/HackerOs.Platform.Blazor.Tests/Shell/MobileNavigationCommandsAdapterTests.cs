@@ -1,4 +1,6 @@
+using HackerOs.AppSdk.Blazor;
 using HackerOs.Platform.Blazor.Shell;
+using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Windowing.Core;
 using HackerOs.Windowing.Abstractions;
 
@@ -13,7 +15,7 @@ public sealed class MobileNavigationCommandsAdapterTests
         WindowRuntime runtime = new(new WindowBounds(0, 0, 375, 667));
         WindowRuntimeState window = CreateState(1);
         runtime.Apply(new CreateWindowCommand(window));
-        MobileNavigationCommandsAdapter adapter = new(runtime);
+        MobileNavigationCommandsAdapter adapter = new(runtime, new AppBackHandlerRegistry());
 
         adapter.RequestHome();
 
@@ -25,7 +27,7 @@ public sealed class MobileNavigationCommandsAdapterTests
     public void RequestHome_is_a_no_op_when_nothing_is_visible()
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 375, 667));
-        MobileNavigationCommandsAdapter adapter = new(runtime);
+        MobileNavigationCommandsAdapter adapter = new(runtime, new AppBackHandlerRegistry());
 
         adapter.RequestHome();
 
@@ -33,13 +35,45 @@ public sealed class MobileNavigationCommandsAdapterTests
     }
 
     [Fact]
-    public void RequestBack_and_RequestRecent_do_not_throw()
+    public void RequestBack_and_RequestRecent_do_not_throw_when_nothing_is_visible()
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 375, 667));
-        MobileNavigationCommandsAdapter adapter = new(runtime);
+        MobileNavigationCommandsAdapter adapter = new(runtime, new AppBackHandlerRegistry());
 
         adapter.RequestBack();
         adapter.RequestRecent();
+    }
+
+    [Fact]
+    public async Task RequestBack_invokes_the_primary_windows_registered_back_handler()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 375, 667));
+        WindowRuntimeState window = CreateState(1);
+        runtime.Apply(new CreateWindowCommand(window));
+        AppBackHandlerRegistry backHandlers = new();
+        TaskCompletionSource<AppBackRequest> invoked = new();
+        using IDisposable registration = backHandlers.Register(window.Id, new RecordingHandler(invoked));
+        MobileNavigationCommandsAdapter adapter = new(runtime, backHandlers);
+
+        adapter.RequestBack();
+
+        AppBackRequest request = await invoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(AppBackSource.SystemNavigationBar, request.Source);
+    }
+
+    private sealed class RecordingHandler(TaskCompletionSource<AppBackRequest> invoked) : IAppBackHandler
+    {
+        public bool CanNavigateBack => true;
+
+#pragma warning disable CS0067 // Required by IAppBackHandler; unused by this test stub.
+        public event Action? CanNavigateBackChanged;
+#pragma warning restore CS0067
+
+        public ValueTask<AppBackResult> NavigateBackAsync(AppBackRequest request, CancellationToken cancellationToken = default)
+        {
+            invoked.SetResult(request);
+            return ValueTask.FromResult(AppBackResult.Handled);
+        }
     }
 
     private static WindowRuntimeState CreateState(int seed) =>

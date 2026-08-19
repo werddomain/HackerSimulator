@@ -87,6 +87,31 @@ public interface IAppExecutionContext
     /// keep compiling; the trusted platform factory overrides it with a real implementation.
     /// </summary>
     IAppFileSystemWatchGateway Watch => new UnsupportedAppFileSystemWatchGateway();
+
+    /// <summary>
+    /// Gets this instance's authorized ability to start, stop, or reconfigure other
+    /// <see cref="AppKind.Service"/> apps. Defaults to an unsupported gateway so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    IAppServiceControlGateway Services => new UnsupportedAppServiceControlGateway();
+
+    /// <summary>
+    /// Gets this instance's permission-error notification gateway. Defaults to a no-op gateway so
+    /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
+    /// compiling; the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    IAppPermissionErrorGateway PermissionErrors => new NoOpAppPermissionErrorGateway();
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.PermissionErrors"/> for contexts that don't wire one up.</summary>
+file sealed class NoOpAppPermissionErrorGateway : IAppPermissionErrorGateway
+{
+    public event EventHandler<AppPermissionErrorEventArgs>? PermissionDenied
+    {
+        add { }
+        remove { }
+    }
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Intents"/> for contexts that don't wire one up.</summary>
@@ -107,4 +132,21 @@ file sealed class UnsupportedAppFileSystemWatchGateway : IAppFileSystemWatchGate
     public ValueTask<ITopicChannelSubscription<FileSystemChangeEvent>> WatchAsync(
         VirtualPath path, FileSystemWatchScope scope, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Watch gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Services"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppServiceControlGateway : IAppServiceControlGateway
+{
+    public ValueTask<ServiceControlResult> StartAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Services gateway.");
+
+    public ValueTask<ServiceControlResult> StopAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Services gateway.");
+
+    public ValueTask<ServiceStartMode> GetStartModeAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Services gateway.");
+
+    public ValueTask<ServiceControlResult> SetStartModeAsync(
+        string serviceAppId, ServiceStartMode mode, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Services gateway.");
 }

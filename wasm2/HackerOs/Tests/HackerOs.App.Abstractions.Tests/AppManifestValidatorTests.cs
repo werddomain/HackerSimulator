@@ -46,6 +46,30 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_accepts_supportsBack_for_window_apps()
+    {
+        AppManifest manifest = CreateValidManifest() with { SupportsBack = true };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_rejects_supportsBack_for_non_window_apps()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Kind = AppKind.Service,
+            SupportsBack = true
+        };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == "manifest.supportsBack.forbidden");
+    }
+
+    [Fact]
     public void Validate_rejects_an_inverted_sdk_version_range()
     {
         AppManifest manifest = CreateValidManifest() with

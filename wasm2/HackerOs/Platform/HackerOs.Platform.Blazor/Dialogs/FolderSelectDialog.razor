@@ -56,6 +56,7 @@
     private string _newFolderName = string.Empty;
     private string? _error;
     private bool _creating;
+    private bool _initialized;
     private VirtualPath SelectedPath => _selectedChild ?? _currentDirectory;
 
     private VirtualPath EffectiveInitialDirectory =>
@@ -64,6 +65,17 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // Only seed the browsed directory once. This component re-renders (and OnParametersSet
+        // re-runs) on every host shell render while the dialog is open, not only when Presentation
+        // actually changes; resetting _currentDirectory unconditionally on every call silently
+        // discarded folder navigation and selected the initial directory regardless of where the
+        // user had browsed to.
+        if (_initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
         _currentDirectory = EffectiveInitialDirectory;
     }
 

@@ -109,6 +109,12 @@ public sealed class AppExecutionContextFactory
             ? new AppIntentGateway(_intentDispatcherProvider, manifest.Id, userId, principal)
             : UnsupportedIntentGateway.Instance;
 
+        IAppServiceControlGateway services = _intentDispatcherProvider is not null
+            ? new AppServiceControlGateway(_intentDispatcherProvider, manifest.Id, userId, principal)
+            : UnsupportedServiceControlGateway.Instance;
+
+        AppPermissionErrorGateway permissionErrors = new();
+
         return new AppExecutionContext(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -119,7 +125,7 @@ public sealed class AppExecutionContextFactory
             process.Pid,
             cancellationToken,
             capabilities,
-            new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds),
+            new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
             new AppSettingsGateway(_settings, operationContext),
             new AppEventGateway(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString()),
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
@@ -128,7 +134,9 @@ public sealed class AppExecutionContextFactory
             new AppClockGateway(_clock),
             new AppProcessGateway(_processManager, capabilities, process.Pid),
             intents,
-            new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()));
+            new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
+            permissionErrors,
+            services);
     }
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
@@ -142,6 +150,28 @@ public sealed class AppExecutionContextFactory
 
         public ValueTask<AppIntentOpenFileResult> OpenFileAsync(
             VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
+    }
+
+    private sealed class UnsupportedServiceControlGateway : IAppServiceControlGateway
+    {
+        public static readonly UnsupportedServiceControlGateway Instance = new();
+
+        public ValueTask<ServiceControlResult> StartAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
+
+        public ValueTask<ServiceControlResult> StopAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
+
+        public ValueTask<ServiceStartMode> GetStartModeAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(
+                "This execution context factory was not configured with an app-intent dispatcher.");
+
+        public ValueTask<ServiceControlResult> SetStartModeAsync(
+            string serviceAppId, ServiceStartMode mode, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(
                 "This execution context factory was not configured with an app-intent dispatcher.");
     }

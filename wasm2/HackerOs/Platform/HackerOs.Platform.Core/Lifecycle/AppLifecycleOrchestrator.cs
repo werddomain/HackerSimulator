@@ -7,6 +7,7 @@ using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IAppDescriptorLoader? _descriptorLoader;
     private readonly IPersistentAppCatalogRepository? _catalogRepository;
     private readonly IServiceProvider? _services;
+    private readonly IFileSystemService? _fileSystem;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -60,6 +62,14 @@ public sealed class AppLifecycleOrchestrator
     /// <c>PingCommand</c>'s <c>IServerConnectionService</c>/<c>IProxyClient</c>). When omitted, only
     /// manifest-only constructors work — the previous, narrower behavior tests still rely on.
     /// </param>
+    /// <param name="fileSystem">
+    /// Optional trusted filesystem access used to resolve each <see cref="AppKind.Service"/> app's
+    /// live <see cref="ServiceStartMode"/> from its per-user config file (see
+    /// <see cref="ServiceStartModeStore"/>) before <see cref="StartAllServicesAsync"/> auto-starts
+    /// it. When omitted (e.g. in tests that don't exercise start-mode gating), every enabled
+    /// service is treated as <see cref="ServiceStartMode.Automatic"/> — the previous, narrower
+    /// behavior tests still rely on.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -71,7 +81,8 @@ public sealed class AppLifecycleOrchestrator
         IEventBus? eventBus = null,
         IAppDescriptorLoader? descriptorLoader = null,
         IPersistentAppCatalogRepository? catalogRepository = null,
-        IServiceProvider? services = null)
+        IServiceProvider? services = null,
+        IFileSystemService? fileSystem = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -84,6 +95,7 @@ public sealed class AppLifecycleOrchestrator
         _descriptorLoader = descriptorLoader;
         _catalogRepository = catalogRepository;
         _services = services;
+        _fileSystem = fileSystem;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -116,6 +128,14 @@ public sealed class AppLifecycleOrchestrator
 
     /// <summary>Gets the enablement registry so callers can check status without a separate wire-up.</summary>
     public IAppEnablementRegistry Enablement => _enablement;
+
+    /// <summary>
+    /// Attempts to resolve a catalog app's discovered descriptor, exposing its resolved entry-point
+    /// assembly for same-assembly authorization checks (e.g. a companion Window app controlling its
+    /// own bundled Service app's start/stop/start-mode via the app-facing service-control gateway).
+    /// </summary>
+    public bool TryGetDescriptor(string appId, [NotNullWhen(true)] out AppDescriptor? descriptor) =>
+        _descriptors.TryGetValue(appId, out descriptor);
 
     /// <summary>Attempts to resolve the active descriptor and context for a running process.</summary>
     public bool TryGetRunningInstance(ProcessId pid, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
@@ -203,9 +223,10 @@ public sealed class AppLifecycleOrchestrator
             return new AppLaunchResult(AppLaunchStatus.Disabled, ErrorCode: "lifecycle.app.disabled");
         }
 
-        if (descriptor.Manifest.Kind == AppKind.Window
-            && descriptor.Manifest.SingleInstancePerUser
-            && _processManager.TryGetSingleton(request.AppId, out ProcessRecord existing))
+        bool isImplicitlySingleton =
+            (descriptor.Manifest.Kind == AppKind.Window && descriptor.Manifest.SingleInstancePerUser)
+            || descriptor.Manifest.Kind == AppKind.Service;
+        if (isImplicitlySingleton && _processManager.TryGetSingleton(request.AppId, out ProcessRecord existing))
         {
             return new AppLaunchResult(AppLaunchStatus.FocusedExisting, existing);
         }
@@ -261,6 +282,20 @@ public sealed class AppLifecycleOrchestrator
             }
 
             if (!_enablement.IsEnabled(appId))
+            {
+                continue;
+            }
+
+            ServiceStartMode effectiveMode = _fileSystem is null
+                ? ServiceStartMode.Automatic
+                : await ServiceStartModeStore.ReadAsync(
+                    _fileSystem,
+                    principal.LoginName.Value,
+                    appId,
+                    descriptor.Manifest.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
+                    CancellationToken.None);
+
+            if (effectiveMode != ServiceStartMode.Automatic)
             {
                 continue;
             }
@@ -359,6 +394,21 @@ public sealed class AppLifecycleOrchestrator
 
         await StopInstanceAsync(pid, instance, reason);
         return true;
+    }
+
+    /// <summary>
+    /// Stops the running instance of one <see cref="AppKind.Service"/> app, identified by app ID
+    /// rather than process ID — services are implicitly singleton per user (see
+    /// <see cref="LaunchAsync"/>), so at most one running instance can exist.
+    /// </summary>
+    /// <param name="appId">Service app to stop.</param>
+    /// <param name="reason">Terminal reason recorded for the process.</param>
+    /// <returns><see langword="true"/> when a running instance was found and stopped.</returns>
+    public async Task<bool> StopServiceAsync(string appId, ProcessExitReason reason = ProcessExitReason.CloseRequested)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return _processManager.TryGetSingleton(appId, out ProcessRecord existing)
+            && await StopAsync(existing.Pid, reason);
     }
 
     /// <summary>

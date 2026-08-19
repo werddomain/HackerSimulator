@@ -222,6 +222,11 @@ public static partial class AppManifestValidator
             AddError(errors, "manifest.fileHandlers.forbidden", "fileHandlers", "Only window apps can declare file handlers.");
         }
 
+        if (manifest.Kind != AppKind.Window && manifest.SupportsBack)
+        {
+            AddError(errors, "manifest.supportsBack.forbidden", "supportsBack", "Only window apps can declare Back navigation support.");
+        }
+
         foreach (FileHandlerManifest handler in manifest.FileHandlers)
         {
             if (string.IsNullOrWhiteSpace(handler.MediaType) && handler.Extensions.Count == 0)

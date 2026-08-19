@@ -207,7 +207,7 @@ public sealed class AppIntentGatewayTests
             Orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
-            _dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants);
+            _dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }
 
         internal LocalSessionService Session { get; }

@@ -1,33 +1,72 @@
 .file-view-details {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.85rem;
 }
 
 .file-view-details thead th {
     text-align: left;
     cursor: pointer;
     user-select: none;
-    padding: 0.35rem 0.5rem;
+    padding: 0.45rem 0.6rem;
     position: sticky;
     top: 0;
+    background: var(--hos-bg-surface, #161b22);
+    border-bottom: 2px solid var(--hos-border-color, #30363d);
+    border-right: 1px solid var(--hos-border-color, #21262d);
+    color: var(--hos-text-secondary, #8b949e);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.file-view-details thead th:last-child {
+    border-right: none;
+}
+
+.file-view-details thead th:hover {
+    color: var(--hos-text-primary, #f0f6fc);
+}
+
+.file-view-details thead th span {
+    margin-left: 0.3rem;
 }
 
 .file-view-details tbody tr {
     cursor: default;
+    border-bottom: 1px solid var(--hos-border-color, #21262d);
 }
 
+    .file-view-details tbody .file-view-details-column-name ::deep .shell-icon {
+        margin-right: 4px;
+    }
+    .file-view-details tbody tr:hover {
+        background: var(--hos-bg-elevated, #21262d);
+    }
+
 .file-view-details tbody tr:focus-visible {
-    outline: 2px solid currentColor;
+    outline: 2px solid var(--hos-accent, #42d392);
     outline-offset: -2px;
 }
 
 .file-view-details tbody tr.selected {
-    background: color-mix(in srgb, currentColor 15%, transparent);
+    background: var(--hackeros-accent-glow, rgba(66, 211, 146, 0.16));
+}
+
+.file-view-details tbody tr.selected:hover {
+    background: var(--hackeros-accent-glow, rgba(66, 211, 146, 0.24));
 }
 
 .file-view-details td {
-    padding: 0.25rem 0.5rem;
+    padding: 0.3rem 0.6rem;
     vertical-align: middle;
+    border-right: 1px solid var(--hos-border-color, #21262d);
+}
+
+.file-view-details td:last-child {
+    border-right: none;
 }
 
 .file-view-rename-input {

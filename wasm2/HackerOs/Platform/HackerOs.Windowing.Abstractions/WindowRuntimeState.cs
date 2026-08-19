@@ -41,7 +41,8 @@ public sealed record WindowRuntimeState
         WindowId? ownerId = null,
         bool isFocused = false,
         RenderFragment? content = null,
-        Func<Task>? onRequestClose = null)
+        Func<Task>? onRequestClose = null,
+        bool supportsBack = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -81,6 +82,7 @@ public sealed record WindowRuntimeState
         IsFocused = isFocused;
         Content = content;
         OnRequestClose = onRequestClose;
+        SupportsBack = supportsBack;
     }
 
     /// <summary>Gets the window identity.</summary>
@@ -135,4 +137,12 @@ public sealed record WindowRuntimeState
     /// without the desktop shell special-casing it.
     /// </summary>
     public Func<Task>? OnRequestClose { get; }
+
+    /// <summary>
+    /// Gets whether the shell should present Back navigation chrome for this window, per
+    /// docs/mobile-interface-platform-plan.md §8 (<c>MOB-012</c>/<c>MOB-013</c>). Set once at
+    /// window-creation time from the launching app's manifest <c>supportsBack</c> declaration;
+    /// does not track the app's live <c>IAppBackHandler.CanNavigateBack</c> state.
+    /// </summary>
+    public bool SupportsBack { get; }
 }

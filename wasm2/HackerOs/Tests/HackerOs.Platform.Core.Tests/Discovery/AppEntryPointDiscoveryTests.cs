@@ -139,6 +139,36 @@ public sealed class AppEntryPointDiscoveryTests
         Assert.Equal(typeof(OtherTestWindowApp), mobileResult.Descriptors![manifest.Id].EntryPointType);
     }
 
+    [Fact]
+    public void Discover_rejects_a_supportsBack_manifest_whose_entry_point_does_not_implement_the_back_handler_interface()
+    {
+        AppManifest manifest = CreateManifest("org.hackeros.notes", AppKind.Window, typeof(TestWindowApp).FullName!) with
+        {
+            SupportsBack = true
+        };
+        AppCatalog catalog = BuildCatalog(manifest);
+
+        AppDiscoveryResult result = AppEntryPointDiscovery.Discover(catalog, HostAssemblies());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Code == "discovery.backHandler.missing" && e.AppId == manifest.Id);
+    }
+
+    [Fact]
+    public void Discover_resolves_a_supportsBack_manifest_whose_entry_point_implements_the_back_handler_interface()
+    {
+        AppManifest manifest = CreateManifest("org.hackeros.notes", AppKind.Window, typeof(TestBackHandlingWindowApp).FullName!) with
+        {
+            SupportsBack = true
+        };
+        AppCatalog catalog = BuildCatalog(manifest);
+
+        AppDiscoveryResult result = AppEntryPointDiscovery.Discover(catalog, HostAssemblies());
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(typeof(TestBackHandlingWindowApp), result.Descriptors![manifest.Id].EntryPointType);
+    }
+
     private static Dictionary<string, System.Reflection.Assembly> HostAssemblies() => new(StringComparer.Ordinal)
     {
         ["HackerOs.Platform.Core.Tests"] = typeof(AppEntryPointDiscoveryTests).Assembly
@@ -182,4 +212,6 @@ public sealed class AppEntryPointDiscoveryTests
     private sealed class TestWindowApp : HackerOs.AppSdk.Blazor.WindowAppBase;
 
     private sealed class OtherTestWindowApp : HackerOs.AppSdk.Blazor.WindowAppBase;
+
+    private sealed class TestBackHandlingWindowApp : HackerOs.AppSdk.Blazor.WindowAppBase, HackerOs.AppSdk.Blazor.IAppBackHandler;
 }

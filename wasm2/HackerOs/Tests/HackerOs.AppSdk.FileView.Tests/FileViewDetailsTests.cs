@@ -98,6 +98,40 @@ public sealed class FileViewDetailsTests
         Assert.Empty(module.Calls);
     }
 
+    [Fact]
+    public async Task SortedItems_defaults_to_folders_before_files_each_group_alphabetical()
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        await fixture.CreateFileAsync("/home/user/banana.txt");
+        await fixture.CreateDirectoryAsync("/home/user/Zebra");
+        await fixture.CreateFileAsync("/home/user/apple.txt");
+        await fixture.CreateDirectoryAsync("/home/user/Apricot");
+        (TestComponentRenderer renderer, TestableFileView view) = await RenderViewAsync(fixture);
+        TestableFileViewDetails details = await RenderDetailsAsync(renderer, view);
+
+        Assert.Equal(
+            ["Apricot", "Zebra", "apple.txt", "banana.txt"],
+            details.SortedItems.Select(item => item.FileName));
+    }
+
+    [Fact]
+    public async Task SortedItems_keeps_folders_grouped_first_when_sorted_by_another_column_descending()
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        await fixture.CreateFileAsync("/home/user/banana.txt");
+        await fixture.CreateDirectoryAsync("/home/user/Zebra");
+        await fixture.CreateFileAsync("/home/user/apple.txt");
+        await fixture.CreateDirectoryAsync("/home/user/Apricot");
+        (TestComponentRenderer renderer, TestableFileView view) = await RenderViewAsync(fixture);
+        TestableFileViewDetails details = await RenderDetailsAsync(renderer, view);
+
+        details.ToggleSort("name");
+
+        Assert.Equal(
+            ["Zebra", "Apricot", "banana.txt", "apple.txt"],
+            details.SortedItems.Select(item => item.FileName));
+    }
+
     private static async Task<(TestComponentRenderer Renderer, TestableFileView View)> RenderViewAsync(
         FileViewTestFixture fixture, IJSRuntime? jsRuntime = null)
     {

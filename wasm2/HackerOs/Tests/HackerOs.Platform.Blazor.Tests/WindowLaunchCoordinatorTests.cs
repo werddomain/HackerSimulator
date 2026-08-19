@@ -88,6 +88,34 @@ public sealed class WindowLaunchCoordinatorTests
     }
 
     [Fact]
+    public void Present_projects_the_manifests_supportsBack_declaration_onto_the_window()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest() with { SupportsBack = true };
+        ProcessRecord process = CreateProcess();
+
+        coordinator.Present(manifest, process);
+
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.True(window.SupportsBack);
+    }
+
+    [Fact]
+    public void Present_defaults_supportsBack_to_false_when_the_manifest_does_not_declare_it()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest();
+        ProcessRecord process = CreateProcess();
+
+        coordinator.Present(manifest, process);
+
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.False(window.SupportsBack);
+    }
+
+    [Fact]
     public void Present_process_overload_ignores_non_window_apps()
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));

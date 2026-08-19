@@ -100,7 +100,7 @@
     {
         get
         {
-            IEnumerable<AppManifest> apps = Catalog.Manifests.Values;
+            IEnumerable<AppManifest> apps = Catalog.Manifests.Values.Where(app => app.Kind == AppKind.Window);
 
             if (!string.IsNullOrWhiteSpace(_selectedCategory) && !StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, "All"))
             {

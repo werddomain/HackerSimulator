@@ -69,6 +69,33 @@ public sealed class WindowRuntimeStateTests
     }
 
     [Fact]
+    public void SupportsBack_defaults_to_false_for_source_compatibility()
+    {
+        WindowRuntimeState state = CreateState(WindowId.FromGuid(Guid.NewGuid()), WindowModality.Modeless, null);
+
+        Assert.False(state.SupportsBack);
+    }
+
+    [Fact]
+    public void SupportsBack_can_be_declared_true()
+    {
+        WindowRuntimeState state = new(
+            WindowId.FromGuid(Guid.NewGuid()),
+            "org.hackeros.settings",
+            WindowOwnerId.FromGuid(Guid.NewGuid()),
+            "Settings",
+            null,
+            new WindowBounds(10, 10, 640, 480),
+            null,
+            0,
+            WindowVisualState.Normal,
+            new WindowConstraints(true, 320, 240),
+            supportsBack: true);
+
+        Assert.True(state.SupportsBack);
+    }
+
+    [Fact]
     public void Owner_modal_window_requires_a_distinct_owner()
     {
         WindowId id = WindowId.FromGuid(Guid.NewGuid());

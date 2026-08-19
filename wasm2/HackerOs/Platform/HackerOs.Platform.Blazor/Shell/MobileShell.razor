@@ -7,6 +7,7 @@
 @inject WindowRuntime WindowRuntime
 @inject AppLifecycleOrchestrator Orchestrator
 @inject WindowCloseGuardRegistry CloseGuards
+@inject AppBackHandlerRegistry BackHandlers
 @inject IJSRuntime JSRuntime
 
 <div class="mobile-shell">
@@ -24,7 +25,8 @@
                     <WindowAppRenderer Window="window"
                                        Descriptor="descriptor"
                                        AppContext="context"
-                                       CloseGuards="CloseGuards" />
+                                       CloseGuards="CloseGuards"
+                                       BackHandlers="BackHandlers" />
                 }
                 else
                 {
@@ -73,7 +75,7 @@
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += Rerender;
-        _navigationCommands = new MobileNavigationCommandsAdapter(WindowRuntime);
+        _navigationCommands = new MobileNavigationCommandsAdapter(WindowRuntime, BackHandlers);
     }
 
     /// <inheritdoc />

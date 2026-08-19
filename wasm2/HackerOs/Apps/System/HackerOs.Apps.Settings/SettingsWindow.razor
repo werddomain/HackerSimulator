@@ -321,6 +321,11 @@
         !string.IsNullOrWhiteSpace(_username) &&
         !string.IsNullOrWhiteSpace(_password);
 
+    // Service apps are managed exclusively from System Monitor's Services tab, not here.
+    private async Task<List<PersistedAppCatalogEntry>> LoadInstalledAppsAsync() =>
+        [.. (await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken))
+            .Where(entry => entry.Manifest.Kind != AppKind.Service)];
+
     protected override async Task OnAppInitializedAsync()
     {
         _appearance = new AppearancePersistenceService(AppContext.Settings);
@@ -333,7 +338,7 @@
                 handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
             .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
 
-        _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+        _installedApps = await LoadInstalledAppsAsync();
 
         _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
     }
@@ -442,7 +447,7 @@
             }
 
             // A disable's dependency closure may have toggled more than the one row clicked.
-            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+            _installedApps = await LoadInstalledAppsAsync();
         }
         finally
         {
@@ -540,7 +545,7 @@
             await FileAssociationsSync.PullAsync(AppContext.CancellationToken);
             await AppCatalogSync.PushAsync(AppContext.CancellationToken);
             await AppCatalogSync.PullAsync(AppContext.CancellationToken);
-            _installedApps = [.. await AppCatalogRepository.ReadAllAsync(AppContext.CancellationToken)];
+            _installedApps = await LoadInstalledAppsAsync();
 
             _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
                 ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"

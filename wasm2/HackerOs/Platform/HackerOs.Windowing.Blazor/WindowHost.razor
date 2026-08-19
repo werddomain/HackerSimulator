@@ -28,6 +28,7 @@
                       OnMinimize="OnMinimize"
                       OnToggleMaximize="OnToggleMaximize"
                       OnClose="OnClose"
+                      OnBack="OnBack"
                       OnGesture="OnGesture" />
     }
     <div class="window-content">
@@ -69,6 +70,10 @@
     /// <summary>Gets or sets the close request callback.</summary>
     [Parameter]
     public EventCallback<WindowId> OnClose { get; set; }
+
+    /// <summary>Gets or sets the Back request callback.</summary>
+    [Parameter]
+    public EventCallback<WindowId> OnBack { get; set; }
 
     /// <summary>Gets or sets the pointer gesture command callback.</summary>
     [Parameter]

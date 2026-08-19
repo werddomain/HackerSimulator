@@ -56,6 +56,7 @@
     private string _fileName = string.Empty;
     private string? _error;
     private bool _checking;
+    private bool _initialized;
 
     private VirtualPath EffectiveInitialDirectory =>
         Presentation.Request.InitialDirectory ?? VirtualPath.Parse($"/home/{Presentation.UserId}");
@@ -63,11 +64,18 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        if (string.IsNullOrEmpty(_fileName))
+        // Only seed the file name and browsed directory once. This component re-renders (and
+        // OnParametersSet re-runs) on every host shell render while the dialog is open — e.g. on
+        // window focus changes — not only when Presentation actually changes; resetting _directory
+        // unconditionally on every call silently discarded folder navigation and saved into the
+        // initial directory regardless of where the user had browsed to.
+        if (_initialized)
         {
-            _fileName = Presentation.Request.SuggestedFileName ?? string.Empty;
+            return;
         }
 
+        _initialized = true;
+        _fileName = Presentation.Request.SuggestedFileName ?? string.Empty;
         _directory = EffectiveInitialDirectory;
     }
 

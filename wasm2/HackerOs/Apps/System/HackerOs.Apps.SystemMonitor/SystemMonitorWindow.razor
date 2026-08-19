@@ -1,6 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core
 @using HackerOs.Platform.Core.Lifecycle
 @using HackerOs.Simulation.Abstractions.Events
 @using HackerOs.Simulation.Abstractions.Processes
@@ -11,6 +12,7 @@
 @inject IProcessManager? ProcessManager
 @inject AppLifecycleOrchestrator? Orchestrator
 @inject IEventBus? EventBus
+@inject AppCatalog Catalog
 
 
 <div class="sysmon-container">
@@ -73,6 +75,50 @@
                 </div>
             </MudTabPanel>
 
+            <MudTabPanel Text="Services" Icon="@Icons.Material.Filled.Settings">
+                <div class="table-wrapper">
+                    <table class="sysmon-table">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>App ID</th>
+                                <th>Status</th>
+                                <th>Start Mode</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var service in _services)
+                            {
+                                <tr>
+                                    <td>@service.Name</td>
+                                    <td>@service.AppId</td>
+                                    <td><span class="status-badge">@(service.IsRunning ? "Running" : "Stopped")</span></td>
+                                    <td>
+                                        <select value="@service.StartMode" @onchange="@(e => SetServiceStartModeAsync(service.AppId, e.Value))">
+                                            @foreach (ServiceStartMode mode in Enum.GetValues<ServiceStartMode>())
+                                            {
+                                                <option value="@mode">@mode</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        @if (service.IsRunning)
+                                        {
+                                            <button class="sysmon-btn btn-danger" @onclick="@(() => StopServiceAsync(service.AppId))">Stop</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="sysmon-btn" disabled="@(service.StartMode == ServiceStartMode.Disabled)" @onclick="@(() => StartServiceAsync(service.AppId))">Start</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </MudTabPanel>
+
             <MudTabPanel Text="Hardware & System Info" Icon="@Icons.Material.Filled.Memory">
                 <div class="info-card">
                     <div class="info-row"><span>Host OS:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
@@ -109,16 +155,18 @@
     private long? _selectedPid;
     private IDisposable? _eventSubscription;
     private List<ProcessDisplayItem> _activeProcesses = [];
+    private List<ServiceDisplayItem> _services = [];
 
     protected override void OnAppInitialized()
     {
-         
+
         LoadProcesses();
         if (EventBus is not null)
         {
             _eventSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
         }
-        
+
+        _ = LoadServicesAsync();
     }
 
     private void OnProcessStateChanged(ProcessStateChangedEvent e)
@@ -163,7 +211,54 @@
             _selectedPid = null;
         }
     }
-    
+
+    private async Task LoadServicesAsync()
+    {
+        List<ServiceDisplayItem> loaded = [];
+        foreach (AppManifest manifest in Catalog.Manifests.Values.Where(m => m.Kind == AppKind.Service))
+        {
+            bool isRunning = ProcessManager is not null
+                && ProcessManager.GetActiveProcesses().Any(p => p.AppId == manifest.Id);
+
+            ServiceStartMode mode = ServiceStartMode.Manual;
+            try
+            {
+                mode = await AppContext.Services.GetStartModeAsync(manifest.Id);
+            }
+            catch (NotSupportedException)
+            {
+                // No service-control gateway wired up (e.g. a headless test harness) -- show
+                // Manual as a neutral default rather than failing the whole tab.
+            }
+
+            loaded.Add(new ServiceDisplayItem(manifest.Id, manifest.Name, isRunning, mode));
+        }
+
+        _services = [.. loaded.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)];
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartServiceAsync(string appId)
+    {
+        await AppContext.Services.StartAsync(appId);
+        await LoadServicesAsync();
+    }
+
+    private async Task StopServiceAsync(string appId)
+    {
+        await AppContext.Services.StopAsync(appId);
+        await LoadServicesAsync();
+    }
+
+    private async Task SetServiceStartModeAsync(string appId, object? value)
+    {
+        if (value is string text && Enum.TryParse(text, out ServiceStartMode mode))
+        {
+            await AppContext.Services.SetStartModeAsync(appId, mode);
+            await LoadServicesAsync();
+        }
+    }
+
     private void SelectProcess(long? pid)
     {
         _selectedPid = pid;
@@ -236,4 +331,6 @@
     }
 
     private record ProcessDisplayItem(long Pid, string Name, string AppId, int MemoryMb);
+
+    private record ServiceDisplayItem(string AppId, string Name, bool IsRunning, ServiceStartMode StartMode);
 }

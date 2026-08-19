@@ -321,13 +321,15 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IEventBus>(),
             descriptorLoaderProvider?.Invoke(provider),
             provider.GetRequiredService<IPersistentAppCatalogRepository>(),
-            provider));
+            provider,
+            provider.GetRequiredService<IFileSystemService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
             provider.GetRequiredService<FileAssociationResolver>(),
-            provider.GetRequiredService<ICapabilityGrantRepository>()));
+            provider.GetRequiredService<ICapabilityGrantRepository>(),
+            provider.GetRequiredService<IFileSystemService>()));
 
         services.AddSingleton<IFileSystemSelectedResourceHandleRegistry>(provider =>
             new FileSystemSelectedResourceHandleRegistry(
@@ -351,6 +353,7 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
         services.AddSingleton<WindowLaunchCoordinator>();
         services.AddSingleton<WindowCloseGuardRegistry>();
+        services.AddSingleton<AppBackHandlerRegistry>();
         // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<WindowCloseCoordinator>();

@@ -33,7 +33,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppClockGateway clock,
         IAppProcessGateway processes,
         IAppIntentGateway intents,
-        IAppFileSystemWatchGateway watch)
+        IAppFileSystemWatchGateway watch,
+        IAppPermissionErrorGateway permissionErrors,
+        IAppServiceControlGateway services)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -55,6 +57,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Processes = processes ?? throw new ArgumentNullException(nameof(processes));
         Intents = intents ?? throw new ArgumentNullException(nameof(intents));
         Watch = watch ?? throw new ArgumentNullException(nameof(watch));
+        PermissionErrors = permissionErrors ?? throw new ArgumentNullException(nameof(permissionErrors));
+        Services = services ?? throw new ArgumentNullException(nameof(services));
     }
 
     /// <inheritdoc />
@@ -113,4 +117,10 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppFileSystemWatchGateway Watch { get; }
+
+    /// <inheritdoc />
+    public IAppPermissionErrorGateway PermissionErrors { get; }
+
+    /// <inheritdoc />
+    public IAppServiceControlGateway Services { get; }
 }

@@ -220,7 +220,8 @@
       }
     },
     "singleInstancePerUser": { "type": "boolean" },
-    "autoStart": { "type": "boolean" }
+    "autoStart": { "type": "boolean" },
+    "supportsBack": { "type": "boolean" }
   },
   "allOf": [
     {

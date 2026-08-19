@@ -350,7 +350,7 @@ public partial class FileView : IAsyncDisposable
         {
             return;
         }
-
+        
         foreach (FileViewItem item in _selection)
         {
             item.IsSelected = false;

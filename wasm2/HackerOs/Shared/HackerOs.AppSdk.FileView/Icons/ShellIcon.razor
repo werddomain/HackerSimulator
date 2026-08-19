@@ -8,7 +8,7 @@
     @if (Icon is { Kind: ShellIconKind.Vector, LibraryOrPath: not null, Name: not null } vectorIcon
         && Enum.TryParse<IconLibrary>(vectorIcon.LibraryOrPath, out IconLibrary library))
     {
-        <HackerIcon Library="library" Name="vectorIcon.Name" Size="Size" />
+        <HackerIcon Library="library" Name="@vectorIcon.Name" Size="Size" />
     }
     else if (Icon is { Kind: ShellIconKind.Png, LibraryOrPath: not null })
     {

@@ -1,4 +1,5 @@
 @using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Blazor.Dialogs
 @using HackerOs.Platform.Blazor.Windows
 @using HackerOs.Platform.Core.Discovery
@@ -16,6 +17,7 @@
 @inject IProcessManager ProcessManager
 @inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
+@inject AppBackHandlerRegistry BackHandlers
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject IEventBus EventBus
@@ -30,6 +32,7 @@
                      OnMinimize="HandleMinimize"
                      OnToggleMaximize="HandleToggleMaximize"
                      OnClose="HandleClose"
+                     OnBack="HandleBack"
                      OnGesture="HandleGesture">
             <WindowContent Context="window">
                 @if (window.Content is not null)
@@ -41,7 +44,8 @@
                     <WindowAppRenderer Window="window"
                                        Descriptor="descriptor"
                                        AppContext="context"
-                                       CloseGuards="CloseGuards" />
+                                       CloseGuards="CloseGuards"
+                                       BackHandlers="BackHandlers" />
                 }
                 else
                 {
@@ -212,6 +216,15 @@
             cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken));
         StateHasChanged();
     }
+
+    private async Task HandleBack(WindowId id)
+    {
+        // Only step 2 of plan §7.3's ordered Back sequence — the app's declared IAppBackHandler.
+        // Steps 3-5 (navigation stack, close-and-go-Home fallback) require MOB-011, out of scope
+        // here; a NotHandled/no-handler result is a valid no-op for this slice.
+        await BackHandlers.NavigateBackAsync(id, new AppBackRequest(AppBackSource.DesktopChromeButton));
+    }
+
     private void HandleGesture(WindowCommand command)
     {
         try

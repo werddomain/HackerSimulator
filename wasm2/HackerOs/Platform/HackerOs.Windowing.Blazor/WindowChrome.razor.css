@@ -80,6 +80,15 @@
     background: rgb(220 60 60 / 20%);
 }
 
+.chrome-button-back svg {
+    fill: none;
+    stroke: currentColor;
+}
+
+.chrome-button-back svg polyline {
+    fill: none;
+}
+
 .chrome-button svg {
     width: 0.7rem;
     height: 0.7rem;

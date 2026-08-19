@@ -4,6 +4,8 @@ HackerOs.Windowing.Blazor.DesktopArea.BackgroundContent.get -> Microsoft.AspNetC
 HackerOs.Windowing.Blazor.DesktopArea.BackgroundContent.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.DesktopArea() -> void
 HackerOs.Windowing.Blazor.DesktopArea.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Windowing.Blazor.DesktopArea.OnBack.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.DesktopArea.OnBack.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
 HackerOs.Windowing.Blazor.DesktopArea.OnClose.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.OnDesktopResized(double width, double height) -> System.Threading.Tasks.Task!
@@ -37,6 +39,8 @@ HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.get -> System.Collections.Ge
 HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.set -> void
 HackerOs.Windowing.Blazor.WindowChrome
 HackerOs.Windowing.Blazor.WindowChrome.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Windowing.Blazor.WindowChrome.OnBack.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.WindowChrome.OnBack.set -> void
 HackerOs.Windowing.Blazor.WindowChrome.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
 HackerOs.Windowing.Blazor.WindowChrome.OnClose.set -> void
 HackerOs.Windowing.Blazor.WindowChrome.OnFocus.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
@@ -59,6 +63,8 @@ HackerOs.Windowing.Blazor.WindowHost.ChildContent.set -> void
 HackerOs.Windowing.Blazor.WindowHost.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Windowing.Blazor.WindowHost.IsInteractionBlocked.get -> bool
 HackerOs.Windowing.Blazor.WindowHost.IsInteractionBlocked.set -> void
+HackerOs.Windowing.Blazor.WindowHost.OnBack.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Windowing.Blazor.WindowHost.OnBack.set -> void
 HackerOs.Windowing.Blazor.WindowHost.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
 HackerOs.Windowing.Blazor.WindowHost.OnClose.set -> void
 HackerOs.Windowing.Blazor.WindowHost.OnFocus.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>

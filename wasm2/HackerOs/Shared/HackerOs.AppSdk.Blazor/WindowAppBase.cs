@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.AppSdk.Blazor;
@@ -14,6 +16,7 @@ namespace HackerOs.AppSdk.Blazor;
 public abstract class WindowAppBase : ComponentBase
 {
     private Guid? _boundInstanceId;
+    private bool _permissionErrorHandlerAttached;
 
     [Inject]
     private IWindowAppFrameworkLifecycle? FrameworkLifecycle { get; set; }
@@ -193,7 +196,43 @@ public abstract class WindowAppBase : ComponentBase
         }
 
         _boundInstanceId = AppContext.InstanceId;
+
+        if (!_permissionErrorHandlerAttached)
+        {
+            _permissionErrorHandlerAttached = true;
+            AppContext.PermissionErrors.PermissionDenied += HandlePermissionDenied;
+        }
     }
+
+    /// <summary>
+    /// Runs when a permission-class filesystem error (missing capability, missing authority, or a
+    /// denied selected-handle/mode check) is raised for this app instance. Override and set
+    /// <see cref="AppPermissionErrorEventArgs.ErrorHandled"/> to suppress the host's default error
+    /// notification when the app already surfaces this failure through its own UI.
+    /// </summary>
+    protected virtual void OnPermissionErrorRaised(AppPermissionErrorEventArgs e)
+    {
+    }
+
+    private async void HandlePermissionDenied(object? sender, AppPermissionErrorEventArgs e)
+    {
+        OnPermissionErrorRaised(e);
+        if (e.ErrorHandled)
+        {
+            return;
+        }
+
+        e.ErrorHandled = true;
+        await MessageBox("Permission Denied", DescribePermissionError(e.Error), MessageBoxType.Ok);
+    }
+
+    private static string DescribePermissionError(FileSystemError error) => error.Code switch
+    {
+        FileSystemErrorCode.PermissionDenied => $"You don't have permission to access '{error.Path}'.",
+        FileSystemErrorCode.CapabilityDenied => $"This app isn't authorized to access '{error.Path}'.",
+        FileSystemErrorCode.AuthorityDenied => $"This operation on '{error.Path}' requires elevated authority.",
+        _ => $"Access to '{error.Path}' was denied."
+    };
 
     private void EnsureFileDialogService()
     {

@@ -1,6 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
@@ -107,6 +108,13 @@
     private bool _conflictDetected = false;
     private IJSObjectReference? _module;
 
+    // The filesystem gateway used for the current document. Defaults to the app's
+    // capability-scoped gateway (home directory only). When the user picks a file or
+    // destination outside that scope via the Open/Save dialogs, this is replaced with
+    // a gateway carrying the handle issued for that specific resource, so subsequent
+    // reads/writes to the same path stay authorized (P2-TEXT-003).
+    private IAppFileSystemGateway _fileSystem = default!;
+
     /// <summary>
     /// Optional initial file path. When supplied by the window host (e.g. via an
     /// open/edit file intent), the editor loads that file immediately on startup (P2-TEXT-002).
@@ -127,6 +135,8 @@
 
     protected override async Task OnAppInitializedAsync()
     {
+        _fileSystem = AppContext.FileSystem;
+
         // Accept open/edit intent file paths passed by the window host (P2-TEXT-002)
         if (!string.IsNullOrWhiteSpace(LaunchFilePath))
         {
@@ -169,6 +179,7 @@
     {
         if (!await ConfirmDiscardDirtyAsync()) return;
         _doc.ResetToNew();
+        _fileSystem = AppContext.FileSystem;
         _conflictDetected = false;
         StateHasChanged();
     }
@@ -211,7 +222,9 @@
 
         if (result.Status == FileDialogStatus.Selected && result.Resources.Count > 0)
         {
-            await LoadFileAsync(result.Resources[0].Path);
+            SelectedFileResource selected = result.Resources[0];
+            _fileSystem = AppContext.FileSystem.WithSelectedHandle(selected.Handle);
+            await LoadFileAsync(selected.Path);
         }
     }
 
@@ -237,7 +250,7 @@
 
         try
         {
-            FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
+            FileSystemResult<FileSystemContentReadHandle> result = await _fileSystem.ReadAsync(
                 new FileSystemReadRequest(path), AppContext.CancellationToken);
 
             if (!result.Succeeded || result.Value is null)
@@ -329,6 +342,7 @@
 
         if (result.Status == FileDialogStatus.Selected && result.Resource is not null)
         {
+            _fileSystem = AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle);
             await WriteToDiskAsync(result.Resource.Path);
         }
     }
@@ -339,6 +353,7 @@
     /// </summary>
     private async Task WriteToDiskAsync(VirtualPath path)
     {
+        _suppressGenericPermissionNotice = true;
         try
         {
             long? expectedRevision = _doc.LoadedRevision;
@@ -349,7 +364,7 @@
                 // WriteAsync to replace (it requires the target to already exist). Create
                 // it first; an AlreadyExists failure means the user chose Save As over an
                 // existing file, so fall through to an unconditional overwrite below.
-                FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(
+                FileSystemMutationResult creation = await _fileSystem.CreateAsync(
                     new FileSystemCreateRequest(
                         path,
                         FileSystemEntryKind.File,
@@ -375,7 +390,7 @@
                 stream);
 
             // WriteAsync(request, content, ct) returns FileSystemMutationResult (P2-TEXT-003)
-            FileSystemMutationResult result = await AppContext.FileSystem.WriteAsync(
+            FileSystemMutationResult result = await _fileSystem.WriteAsync(
                 new FileSystemWriteRequest(path, expectedRevision),
                 source,
                 AppContext.CancellationToken);
@@ -403,6 +418,10 @@
         catch (Exception ex)
         {
             await ShowErrorDialogAsync("Save Failed", ex.Message);
+        }
+        finally
+        {
+            _suppressGenericPermissionNotice = false;
         }
 
         StateHasChanged();
@@ -572,6 +591,25 @@
         if (args.Value is string newContent)
         {
             _doc.Edit(newContent);
+        }
+    }
+
+    // ──────────────────────────── Permission-error notifications ─────────────────
+
+    /// <summary>
+    /// Set while <see cref="WriteToDiskAsync"/> is in flight, since it already inspects the
+    /// mutation result and shows its own tailored dialog (<see cref="ShowErrorDialogAsync"/>) for
+    /// every failure code, including permission-class ones. Left <see langword="false"/> at all
+    /// other times so read failures from <see cref="LoadFileAsync"/> — which today only surface
+    /// as inline overlay text — still get the host's default error notification.
+    /// </summary>
+    private bool _suppressGenericPermissionNotice;
+
+    protected override void OnPermissionErrorRaised(AppPermissionErrorEventArgs e)
+    {
+        if (_suppressGenericPermissionNotice)
+        {
+            e.ErrorHandled = true;
         }
     }
 

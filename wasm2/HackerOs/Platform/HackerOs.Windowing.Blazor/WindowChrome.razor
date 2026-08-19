@@ -6,6 +6,14 @@
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
 <header class="window-chrome" data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
     <div class="window-identity">
+        @if (Window.SupportsBack)
+        {
+            <button type="button" class="chrome-button chrome-button-back" aria-label="Back" title="Back" @onclick="BackAsync">
+                <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                    <polyline points="7,2 3,6 7,10" />
+                </svg>
+            </button>
+        }
         @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
         {
             <img class="window-icon" src="@Window.IconAssetPath" alt="" />
@@ -75,6 +83,14 @@
     [Parameter]
     public EventCallback<WindowId> OnClose { get; set; }
 
+    /// <summary>
+    /// Gets or sets the Back request callback, invoked when the user activates the chrome Back
+    /// button rendered for a window that declares <see cref="WindowRuntimeState.SupportsBack"/>,
+    /// per docs/mobile-interface-platform-plan.md §8 (<c>MOB-013</c>).
+    /// </summary>
+    [Parameter]
+    public EventCallback<WindowId> OnBack { get; set; }
+
     /// <summary>Gets or sets the C# command callback for pointer gestures.</summary>
     [Parameter]
     public EventCallback<WindowCommand> OnGesture { get; set; }
@@ -102,6 +118,12 @@
     {
         await OnFocus.InvokeAsync(Window.Id);
         await OnClose.InvokeAsync(Window.Id);
+    }
+
+    private async Task BackAsync()
+    {
+        await OnFocus.InvokeAsync(Window.Id);
+        await OnBack.InvokeAsync(Window.Id);
     }
 
     /// <inheritdoc />
