@@ -13,6 +13,22 @@ public sealed class AppearanceSettingsValidatorTests
     }
 
     [Fact]
+    public void Validate_LegacyVersionOneDocument_RemainsValidForMigration()
+    {
+        Assert.Empty(_validator.Validate(
+            """{"schemaVersion":1,"accent":"cyan","animationsEnabled":false}"""));
+    }
+
+    [Fact]
+    public void Validate_VersionTwoThemeFromWrongPlatform_ReportsAnError()
+    {
+        List<string> errors = [.. _validator.Validate(
+            """{"schemaVersion":2,"desktopThemeId":"android","mobileThemeId":"ios","accent":"green","animationsEnabled":true}""")];
+
+        Assert.Contains("appearance.desktop-theme-invalid", errors);
+    }
+
+    [Fact]
     public void Validate_UnknownAccent_ReportsAnError()
     {
         List<string> errors = [.. _validator.Validate(

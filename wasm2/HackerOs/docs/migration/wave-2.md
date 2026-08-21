@@ -16,5 +16,5 @@ This report documents the migration of legacy OS Fundamentals applications and c
 | `P4-W2-004` | Notifications | `src/core/components/notification.ts` | `Platform/HackerOs.Platform.Core/Notifications/` | `NotificationQueueTests` | **MIGRATED** |
 | `P4-W2-005` | Error Log Viewer | `src/apps/error-log-viewer.ts` | `Apps/System/HackerOs.Apps.ErrorLogViewer/` | `ErrorLogViewerWindowTests` | **MIGRATED** |
 | `P4-W2-006` | Local Authentication & Profiles | `src/core/user.ts` (ADR 0013) | `Platform/HackerOs.Platform.Core/Sessions/` | `LocalSessionServiceTests` | **MIGRATED** |
-| `P4-W2-007` | Theme Tokens & Settings | `src/core/theme*.ts` | `docs/design-system.md` & `SettingsWindow.razor` | `SettingsWindowTests` | **MIGRATED** |
+| `P4-W2-007` | Theme Tokens & Settings | `src/core/theme*.ts`, `src/core/themes/` | `HackerOs.Theming.Abstractions`, `HackerOs.Theming.Blazor`, appearance schema v2, `SettingsWindow.razor` | catalog/codec/Settings tests | **MIGRATED + EXPANDED** (9 bounded themes; no legacy arbitrary CSS) |
 | `P4-W2-008` | Wave 2 Verification | Entire solution | `dotnet test HackerOs.sln` | Solution unit test suite | **MIGRATED** |

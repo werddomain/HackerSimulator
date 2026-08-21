@@ -3,7 +3,8 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    color: var(--hackeros-window-text, #e7f7f1);
-    background: #07100f;
+    color: var(--hos-window-text, var(--hackeros-window-text, #e7f7f1));
+    background: var(--hos-mobile-surface-background, var(--hos-desktop-background, #07100f));
+    font-family: var(--hos-font-ui, system-ui, sans-serif);
     isolation: isolate;
 }

@@ -1,7 +1,30 @@
 @inject WindowRuntime WindowRuntime
 @implements IDisposable
+@using HackerOs.Theming.Abstractions
+@using HackerOs.Theming.Blazor
 
+<ThemeScope ThemeId="@_themeId"
+            Platform="ThemePlatform.Desktop"
+            AccentId="@_accentId"
+            AnimationsEnabled="true">
 <div class="sample-shell">
+    <form class="sample-theme-picker" aria-label="Sample chrome theme">
+        <label for="sample-theme">Theme</label>
+        <select id="sample-theme" @bind="_themeId">
+            @foreach (ThemeDefinition theme in ThemeCatalog.DesktopThemes)
+            {
+                <option value="@theme.Id">@theme.DisplayName</option>
+            }
+        </select>
+        <label for="sample-accent">HackerOS accent</label>
+        <select id="sample-accent" @bind="_accentId">
+            @foreach (string accentId in ThemeCatalog.AccentIds)
+            {
+                <option value="@accentId">@accentId</option>
+            }
+        </select>
+    </form>
+
     <div class="sample-workspace">
         <WindowSurface Runtime="WindowRuntime">
             <WindowContent Context="window">
@@ -31,9 +54,12 @@
              StatusSource="_status"
              Options="_options" />
 </div>
+</ThemeScope>
 
 @code {
     private readonly TaskbarOptions _options = new() { LauncherMark = "◆", LauncherLabel = "Apps" };
+    private string _themeId = WellKnownThemeIds.HackerOs;
+    private string _accentId = WellKnownAccentIds.Green;
     private SampleWindowSource _windowSource = null!;
     private SampleCommands _commands = null!;
     private SampleLauncher _launcher = null!;

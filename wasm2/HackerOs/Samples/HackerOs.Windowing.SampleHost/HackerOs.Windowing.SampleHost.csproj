@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Development uses source projects. CI sets this property to true to prove that the same
+         host restores, builds, and publishes from the isolated local NuGet feed only. -->
+    <UseLocalHackerOsPackages Condition="'$(UseLocalHackerOsPackages)' == ''">false</UseLocalHackerOsPackages>
+    <HackerOsLocalPackageVersion Condition="'$(HackerOsLocalPackageVersion)' == ''">0.1.0-local</HackerOsLocalPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,18 +15,32 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseLocalHackerOsPackages)' != 'true'">
     <!--
-      Deliberately only the three exported windowing/taskbar packages. No
-      HackerOs.Ecosystem, no HackerOs.Platform.*, no HackerOs.Apps.*, no
-      HackerOs.Simulation.Abstractions: this project is EXT-WIN-011's proof
-      that the extracted window engine, chrome, and taskbar are consumable
-      by a host with no knowledge of HackerOS's process/app model.
+      Deliberately only the seven projects in the desktop package dependency closure. No
+      HackerOs.Ecosystem, app projects, Platform.Core, or Simulation.Abstractions: this project
+      is EXT-WIN-011's proof that the extracted themes, window engine, chrome, icons, and taskbar
+      are consumable by a host with no knowledge of HackerOS's process/app model.
     -->
-    <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.Theming.Abstractions\HackerOs.Theming.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Blazor\HackerOs.Windowing.Blazor.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Taskbar.Blazor\HackerOs.Taskbar.Blazor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalHackerOsPackages)' == 'true'">
+    <!-- Keep every directly consumed package explicit. This catches missing packages and incorrect
+         transitive versions instead of allowing a ProjectReference to hide packaging defects. -->
+    <PackageReference Include="HackerOs.Theming.Abstractions" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.Theming.Blazor" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.Windowing.Abstractions" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.Windowing.Core" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.Windowing.Blazor" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.AppSdk.Icons" Version="$(HackerOsLocalPackageVersion)" />
+    <PackageReference Include="HackerOs.Taskbar.Blazor" Version="$(HackerOsLocalPackageVersion)" />
   </ItemGroup>
 
 </Project>

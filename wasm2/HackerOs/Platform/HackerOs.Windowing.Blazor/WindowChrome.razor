@@ -4,7 +4,7 @@
 @inject IJSRuntime JSRuntime
 
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
-<header class="window-chrome" data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
+<header class="window-chrome @(Window.IsFocused ? "is-focused" : "is-background")" data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
     <div class="window-identity">
         @if (Window.SupportsBack)
         {
@@ -21,12 +21,12 @@
         <h2 id="@TitleId">@Window.Title</h2>
     </div>
     <div class="window-actions" aria-label="Window controls">
-        <button type="button" class="chrome-button" aria-label="Minimize" title="Minimize" @onclick="MinimizeAsync">
+        <button type="button" class="chrome-button chrome-button-minimize" aria-label="Minimize" title="Minimize" @onclick="MinimizeAsync">
             <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                 <line x1="2" y1="9" x2="10" y2="9" />
             </svg>
         </button>
-        <button type="button" class="chrome-button" aria-label="@ToggleLabel" title="@ToggleLabel" @onclick="ToggleMaximizeAsync">
+        <button type="button" class="chrome-button chrome-button-maximize" aria-label="@ToggleLabel" title="@ToggleLabel" @onclick="ToggleMaximizeAsync">
             @if (Window.VisualState == WindowVisualState.Maximized)
             {
                 <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">

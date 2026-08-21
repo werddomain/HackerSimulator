@@ -23,6 +23,12 @@ Phase 1 headless profile slice.
   build-time selection shape for included packages, boot-critical status,
   default-enabled apps, required grants, default associations, locales, themes,
   and optional server features.
+- The runtime built-in catalog is now `HackerOs.Theming.Abstractions.ThemeCatalog`
+  (see [`theming.md`](theming.md)). `BuildProfileManifest.Themes` remains a
+  headless build-selection contract; it does not currently prune that catalog
+  or its shared static CSS asset. Wiring those IDs into packaging/allowlisting
+  requires explicit validation work rather than silently treating profile text
+  as a selector.
 - A Draft 2020-12 JSON Schema document,
   `Shared/HackerOs.App.Abstractions/Schema/manifest.schema.v1.json`, describes
   the equivalent lower-camel-case JSON shape with a stable `$id`

@@ -129,7 +129,7 @@ internal static class PwaTestSupport
     public static async Task OpenAppAsync(IPage page, string appDisplayName)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "App launcher" }).ClickAsync();
-        await page.GetByRole(AriaRole.Textbox, new() { Name = "Search applications" }).FillAsync(appDisplayName);
+        await page.GetByRole(AriaRole.Combobox, new() { Name = "Search applications" }).FillAsync(appDisplayName);
         ILocator option = page.GetByRole(AriaRole.Option, new() { NameRegex = new Regex($"^{Regex.Escape(appDisplayName)}") });
         await option.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await option.ClickAsync();

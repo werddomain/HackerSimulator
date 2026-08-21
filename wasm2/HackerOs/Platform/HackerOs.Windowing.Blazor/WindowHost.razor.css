@@ -10,15 +10,21 @@
     min-width: 20rem;
     min-height: 15rem;
     overflow: hidden;
-    background: #0c1516;
-    border: 1px solid #315249;
-    border-radius: 5px;
-    box-shadow: 0 16px 36px rgb(0 0 0 / 42%);
+    background: var(--hos-window-background, #0c1516);
+    border: var(--hos-window-border, 1px solid #315249);
+    border-radius: var(--hos-window-radius, 0.35rem);
+    color: var(--hos-window-text, #e7f7f1);
+    box-shadow: var(--hos-window-shadow, 0 16px 36px rgb(0 0 0 / 42%));
+    backdrop-filter: var(--hos-window-backdrop-filter, none);
+    font-family: var(--hos-font-ui, system-ui, sans-serif);
+    transition:
+        border-color var(--hos-transition-fast, 120ms ease),
+        box-shadow var(--hos-transition-fast, 120ms ease);
 }
 
 .window-host.is-focused {
-    border-color: #55d6a1;
-    box-shadow: 0 18px 42px rgb(0 0 0 / 52%), 0 0 0 1px rgb(85 214 161 / 22%);
+    border-color: var(--hos-window-focused-border, #55d6a1);
+    box-shadow: var(--hos-window-focused-shadow, 0 18px 42px rgb(0 0 0 / 52%));
 }
 
 .window-host.is-maximized {
@@ -32,6 +38,7 @@
     min-width: 0;
     min-height: 0;
     overflow: auto;
+    background: var(--hos-window-content-background, var(--hos-window-background, #0c1516));
 }
 
 @media (max-width: 40rem) {

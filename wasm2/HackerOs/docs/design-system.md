@@ -2,60 +2,28 @@
 
 ## Overview
 
-The HackerOS Design System enforces a **Modern Gothic / Hacker Console** aesthetic across the shell, platform controls, windows, dialogs, and first-party applications.
-It leverages MudBlazor platform wrappers combined strictly with component-scoped CSS files (`.razor.css`) and global CSS Custom Properties (`app.css`).
+The HackerOS Design System provides a polished HackerOS default while allowing
+the complete shell to adopt the built-in historical desktop and mobile themes.
+It combines MudBlazor platform wrappers with component-scoped CSS files
+(`.razor.css`) and the shared semantic properties owned by
+`HackerOs.Theming.Blazor`. See [`theming.md`](theming.md) for the catalog,
+runtime scope, persistence contract, and extension instructions.
 
 ---
 
 ## 1. Core Color Palette & Design Tokens
 
-All colors, surfaces, borders, and status indicators are controlled via CSS custom properties declared in `wwwroot/css/app.css`:
+Colors, surfaces, typography, borders, status, shape, motion, window chrome,
+taskbar/launcher, and mobile navigation are controlled by semantic `--hos-*`
+custom properties declared once in
+`Platform/HackerOs.Theming.Blazor/wwwroot/themes.css`. Component CSS consumes
+those properties with a safe fallback; it does not redefine a theme palette or
+branch on a theme ID. Compatibility `--hackeros-*` aliases exist only to keep
+older app CSS working while it moves to the semantic vocabulary.
 
-```css
-:root {
-  /* Surfaces */
-  --hackeros-bg-deep: #090d12;
-  --hackeros-surface-bg: #0d1117;
-  --hackeros-header-bg: #161b22;
-  --hackeros-card-bg: #21262d;
-  --hackeros-popover-bg: #1c2128;
-
-  /* Typography & Text Colors */
-  --hackeros-text-primary: #c9d1d9;
-  --hackeros-text-secondary: #8b949e;
-  --hackeros-text-disabled: #484f58;
-  --hackeros-text-accent: #42d392;
-  --hackeros-text-link: #58a6ff;
-
-  /* Borders & Dividers */
-  --hackeros-border: #30363d;
-  --hackeros-border-subtle: #21262d;
-  --hackeros-border-focus: #58a6ff;
-
-  /* Accent & Glow Effects */
-  --hackeros-accent: #42d392;
-  --hackeros-accent-glow: rgba(66, 211, 146, 0.25);
-  --hackeros-cyan: #38bdf8;
-  --hackeros-purple: #c084fc;
-
-  /* Status Colors */
-  --hackeros-status-success: #3fb950;
-  --hackeros-status-warning: #d29922;
-  --hackeros-status-danger: #f85149;
-  --hackeros-status-info: #58a6ff;
-
-  /* Motion & Transitions */
-  --hackeros-transition-fast: 120ms ease;
-  --hackeros-transition-normal: 200ms ease;
-
-  /* Z-Index Hierarchy */
-  --hackeros-z-desktop: 1;
-  --hackeros-z-window: 100;
-  --hackeros-z-taskbar: 1000;
-  --hackeros-z-modal: 5000;
-  --hackeros-z-notification: 9000;
-}
-```
+One validated `ThemeScope` at the composition root supplies the active values.
+Do not copy the RCL stylesheet into a host, inject tokens into
+`document.documentElement`, or wrap each window in another theme scope.
 
 ---
 
@@ -83,5 +51,7 @@ sizes (e.g. 28–56px) sparingly, for emphasis in detail panels or empty states.
 
 ## 4. Theme Boundary Security (DECISION: D-013)
 
-Themes in HackerOS customize visual appearance by altering CSS Custom Properties and JSON color values in `/etc/hackeros/theme.json`.
+Themes in HackerOS customize visual appearance through reviewed static CSS
+Custom Properties selected by IDs stored in
+`/etc/hackeros/appearance.json` (schema version 2).
 - **PROHIBITED:** Themes are data-only and static CSS assets. Themes CANNOT inject arbitrary JavaScript scripts, dynamic code, or unverified executable bundles into the browser runtime context.

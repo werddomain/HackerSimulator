@@ -4,15 +4,18 @@
 @using HackerOs.Platform.Core.ServerConnection
 @using HackerOs.Infrastructure.Browser.Schema
 @using HackerOs.Platform.Core
+@using HackerOs.Platform.Core.Appearance
 @using HackerOs.Platform.Core.Lifecycle
+@using HackerOs.Theming.Abstractions
+@using HackerOs.Theming.Blazor
 @using HackerOs.Simulation.Abstractions.ServerConnection
 @using System.Net.Http
 @using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
-@implements IAsyncDisposable
 @inject AppCatalog Catalog
 @inject IJSRuntime JS
+@inject ThemePreferenceService ThemePreference
 @inject IServerConnectionService ServerConnection
 @inject ISettingsSyncService SettingsSync
 @inject IFileSystemSyncService FileSystemSync
@@ -31,17 +34,63 @@
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header">
             <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
                 <div class="setting-group">
-                    <h4>Color Theme</h4>
-                    <p class="setting-desc">Select modern gothic system accent color token.</p>
-                    <div class="accent-options">
-                        <button class="accent-btn accent-green" @onclick='() => ChangeAccent("green")'>Green</button>
-                        <button class="accent-btn accent-cyan" @onclick='() => ChangeAccent("cyan")'>Cyan</button>
-                        <button class="accent-btn accent-purple" @onclick='() => ChangeAccent("purple")'>Purple</button>
+                    <h4>Desktop theme</h4>
+                    <p class="setting-desc">Applied to the desktop, windows, taskbar, and Start menu.</p>
+                    <div class="theme-options" aria-label="Desktop themes">
+                        @foreach (ThemeDefinition theme in ThemeCatalog.DesktopThemes)
+                        {
+                            <button type="button"
+                                    class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId)"
+                                    @onclick="() => ChangeDesktopTheme(theme.Id)">
+                                <ThemePreview ThemeId="@theme.Id"
+                                              AccentId="@_appearanceSettings.AccentId"
+                                              AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                <span class="theme-option-label">@theme.DisplayName</span>
+                            </button>
+                        }
                     </div>
                 </div>
                 <div class="setting-group">
+                    <h4>Mobile theme</h4>
+                    <p class="setting-desc">Saved independently and applied when the mobile shell is active.</p>
+                    <div class="theme-options mobile-theme-options" aria-label="Mobile themes">
+                        @foreach (ThemeDefinition theme in ThemeCatalog.MobileThemes)
+                        {
+                            <button type="button"
+                                    class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId)"
+                                    @onclick="() => ChangeMobileTheme(theme.Id)">
+                                <ThemePreview ThemeId="@theme.Id"
+                                              AccentId="@_appearanceSettings.AccentId"
+                                              AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                <span class="theme-option-label">@theme.DisplayName</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+                @if (CurrentDesktopThemeSupportsAccent)
+                {
+                    <div class="setting-group">
+                        <h4>HackerOS accent</h4>
+                        <p class="setting-desc">Accent colors are intentionally available only for the HackerOS theme.</p>
+                        <div class="accent-options" aria-label="HackerOS accent colors">
+                            @foreach (string accentId in ThemeCatalog.AccentIds)
+                            {
+                                <button type="button"
+                                        class="@AccentOptionClass(accentId)"
+                                        aria-pressed="@(accentId == _appearanceSettings.AccentId)"
+                                        @onclick="() => ChangeAccent(accentId)">
+                                    <span class="accent-swatch" aria-hidden="true"></span>
+                                    @accentId
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="setting-group">
                     <h4>Animations</h4>
-                    <MudSwitch T="bool" Value="@_animationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary" Label="Enable desktop transitions and micro-animations" />
+                    <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary" Label="Enable desktop transitions and micro-animations" />
                 </div>
             </MudTabPanel>
 
@@ -291,10 +340,8 @@
 
     private const string ResetConfirmPhrase = "RESET";
 
-    private bool _animationsEnabled = true;
-    private string _activeAccent = "green";
+    private ThemePreferences _appearanceSettings = ThemePreferences.Default;
     private AppearancePersistenceService? _appearance;
-    private IJSObjectReference? _module;
     private List<(string Extension, string AppName)> _fileHandlers = [];
     private List<PersistedAppCatalogEntry> _installedApps = [];
     private bool _isTogglingApp;
@@ -316,6 +363,10 @@
 
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
 
+    private bool CurrentDesktopThemeSupportsAccent =>
+        ThemeCatalog.TryGet(_appearanceSettings.DesktopThemeId, out ThemeDefinition? theme)
+        && theme is { SupportsAccentColor: true };
+
     private bool CanSubmitConnection =>
         Uri.TryCreate(_serverUrl, UriKind.Absolute, out _) &&
         !string.IsNullOrWhiteSpace(_username) &&
@@ -329,9 +380,7 @@
     protected override async Task OnAppInitializedAsync()
     {
         _appearance = new AppearancePersistenceService(AppContext.Settings);
-        AppearanceSettings current = await _appearance.ReadAsync(AppContext.CancellationToken);
-        _activeAccent = current.Accent;
-        _animationsEnabled = current.AnimationsEnabled;
+        _appearanceSettings = await _appearance.ReadAsync(AppContext.CancellationToken);
 
         _fileHandlers = [.. Catalog.Manifests.Values
             .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
@@ -343,75 +392,45 @@
         _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
     }
 
-    protected override async Task OnAppAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                _module = await JS.InvokeAsync<IJSObjectReference>(
-                    "import", "./_content/HackerOs.Apps.Settings/SettingsWindow.razor.js");
-                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
-                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
-            }
-            catch (Exception)
-            {
-                // Headless test DOM and unavailable-JS fallback: preferences still persist,
-                // just without a live visual application in this environment.
-            }
-        }
-    }
+    private Task ChangeDesktopTheme(string themeId) => PersistAppearanceAsync(
+        _appearanceSettings with { DesktopThemeId = themeId });
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_module is not null)
-        {
-            await _module.DisposeAsync();
-        }
-    }
+    private Task ChangeMobileTheme(string themeId) => PersistAppearanceAsync(
+        _appearanceSettings with { MobileThemeId = themeId });
 
-    private async Task ChangeAccent(string accent)
+    private Task ChangeAccent(string accentId) => PersistAppearanceAsync(
+        _appearanceSettings with { AccentId = accentId });
+
+    private Task ToggleAnimations(bool value) => PersistAppearanceAsync(
+        _appearanceSettings with { AnimationsEnabled = value });
+
+    private static string ThemeOptionClass(string themeId, string selectedThemeId) =>
+        string.Equals(themeId, selectedThemeId, StringComparison.Ordinal)
+            ? "theme-option is-selected"
+            : "theme-option";
+
+    private string AccentOptionClass(string accentId) =>
+        string.Equals(accentId, _appearanceSettings.AccentId, StringComparison.Ordinal)
+            ? $"accent-btn accent-{accentId} is-selected"
+            : $"accent-btn accent-{accentId}";
+
+    private async Task PersistAppearanceAsync(ThemePreferences next)
     {
-        string previous = _activeAccent;
-        _activeAccent = accent;
+        ThemePreferences previous = _appearanceSettings;
+        _appearanceSettings = next;
         StateHasChanged();
 
-        if (_module is not null)
+        if (_appearance is null
+            || !await _appearance.WriteAsync(next, AppContext.CancellationToken))
         {
-            await _module.InvokeVoidAsync("applyAccent", accent);
-        }
-
-        if (_appearance is null || !await _appearance.WriteAsync(accent, _animationsEnabled, AppContext.CancellationToken))
-        {
-            _activeAccent = previous;
-            if (_module is not null)
-            {
-                await _module.InvokeVoidAsync("applyAccent", previous);
-            }
+            _appearanceSettings = previous;
             StateHasChanged();
-        }
-    }
-
-    private async Task ToggleAnimations(bool value)
-    {
-        bool previous = _animationsEnabled;
-        _animationsEnabled = value;
-        StateHasChanged();
-
-        if (_module is not null)
-        {
-            await _module.InvokeVoidAsync("applyAnimations", value);
+            return;
         }
 
-        if (_appearance is null || !await _appearance.WriteAsync(_activeAccent, value, AppContext.CancellationToken))
-        {
-            _animationsEnabled = previous;
-            if (_module is not null)
-            {
-                await _module.InvokeVoidAsync("applyAnimations", previous);
-            }
-            StateHasChanged();
-        }
+        // The root ThemeScope owns live application. Refreshing the privileged read projection
+        // keeps the Settings app free of DOM mutation and applies the new tokens to every surface.
+        await ThemePreference.RefreshAsync(AppContext.CancellationToken);
     }
 
     private async Task ToggleAppEnabledAsync(string appId, bool enabled)
@@ -522,14 +541,8 @@
             await SettingsSync.PushAsync(AppContext.CancellationToken);
             await SettingsSync.PullAsync(AppContext.CancellationToken);
 
-            AppearanceSettings current = await _appearance!.ReadAsync(AppContext.CancellationToken);
-            _activeAccent = current.Accent;
-            _animationsEnabled = current.AnimationsEnabled;
-            if (_module is not null)
-            {
-                await _module.InvokeVoidAsync("applyAccent", _activeAccent);
-                await _module.InvokeVoidAsync("applyAnimations", _animationsEnabled);
-            }
+            _appearanceSettings = await _appearance!.ReadAsync(AppContext.CancellationToken);
+            await ThemePreference.RefreshAsync(AppContext.CancellationToken);
 
             // ADR 0030: push before pull, same order as Settings sync above — pushing first lets a
             // concurrent-edit conflict get detected and flagged before the pull step runs, so the

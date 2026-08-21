@@ -5,14 +5,9 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
-    background:
-        radial-gradient(ellipse at center, rgba(66, 211, 146, 0.04) 0%, transparent 70%),
-        linear-gradient(rgba(66, 211, 146, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(66, 211, 146, 0.02) 1px, transparent 1px),
-        var(--hos-bg-base, #101417);
-    background-size: 100% 100%, 32px 32px, 32px 32px;
+    background: var(--hos-desktop-background, var(--hos-bg-base, #101417));
     color: var(--hos-text-primary, #f4f7f8);
-    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+    font-family: var(--hos-font-ui, system-ui, sans-serif);
 }
 
 .desktop-workspace {
@@ -24,13 +19,13 @@
 .lazy-launch-error {
     position: absolute;
     right: 1rem;
-    bottom: 4.5rem;
+    bottom: calc(var(--hos-taskbar-height, 2.75rem) + 1.75rem);
     z-index: 5000;
     max-width: min(32rem, calc(100vw - 2rem));
     padding: 0.8rem 1rem;
-    border: 1px solid #ff5f6d;
-    border-radius: 0.35rem;
-    background: rgba(34, 10, 14, 0.96);
-    color: #ffd7dc;
-    box-shadow: 0 0 1.25rem rgba(255, 70, 90, 0.22);
+    border: 1px solid var(--hos-error, #ff8f87);
+    border-radius: var(--hos-radius-md, 0.45rem);
+    background: color-mix(in srgb, var(--hos-error, #ff8f87) 16%, var(--hos-bg-elevated, #1b252a));
+    color: var(--hos-text-primary, #f4f7f8);
+    box-shadow: 0 0 1.25rem color-mix(in srgb, var(--hos-error, #ff8f87) 24%, transparent);
 }

@@ -1,0 +1,13 @@
+@namespace HackerOs.Theming.Blazor
+
+<HeadContent>
+    <link rel="stylesheet" href="_content/HackerOs.Theming.Blazor/themes.css" />
+</HeadContent>
+
+<div class="theme-scope"
+     data-theme="@RenderState.Theme.Id"
+     data-form-factor="@RenderState.FormFactorId"
+     data-accent="@RenderState.AccentId"
+     data-motion="@RenderState.MotionId">
+    @ChildContent
+</div>

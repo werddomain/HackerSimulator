@@ -41,6 +41,7 @@ against the public SDK, without needing to touch platform internals.
 | [`icon-library.md`](icon-library.md) | Drawing icons (Bootstrap, Font Awesome, Lucide, Simple Icons, Material) from any app or the shell via `IIconCatalog`/`HackerIcon`. |
 | [`platform-ui-library.md`](platform-ui-library.md) | Where MudBlazor is (and isn't) allowed, and the wrapper conventions. |
 | [`design-system.md`](design-system.md) | Visual tokens and design-system specification. |
+| [`theming.md`](theming.md) | Shared theme catalog, runtime scope, semantic tokens, persistence, and the checklist for adding a theme. |
 | [`localization.md`](localization.md) | Globalization/localization architecture. |
 | [`accessibility.md`](accessibility.md) | WCAG 2.2 AA checklist and accessibility evidence. |
 | [`samples/service-app.md`](samples/service-app.md) | Worked example of a non-visual background service app. |
@@ -66,6 +67,7 @@ itself — filesystem, settings, security, window runtime, storage.
 | [`indexeddb-browser-contract-tests.md`](indexeddb-browser-contract-tests.md) | Real-Chromium proof for the IndexedDB contracts above. |
 | [`window-runtime.md`](window-runtime.md) | The C# owner of window identity, geometry, and lifecycle. |
 | [`desktop-shell.md`](desktop-shell.md) | Desktop workspace, taskbar, launcher, and notifications. |
+| [`start-menu.md`](start-menu.md) | Windows 7-inspired Start menu, quick links, and ordered per-user application pins. |
 | [`Global-FileView-And-MessagingSystem.md`](Global-FileView-And-MessagingSystem.md) | Design entry point for the reusable `FileView` control and the topic-based messaging/filesystem-watch extension to `IEventBus`; see the linked `FileViewControl.md`, `MessagingSystem.md`, and `integrationPlan.md`. |
 | [`ecosystem-host.md`](ecosystem-host.md) | The standalone `HackerOs.Ecosystem` PWA composition root. |
 | [`lazy-loading.md`](lazy-loading.md) | Build-known lazy assembly loading architecture. |
@@ -154,6 +156,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0038](adr/0038-emitter-authorized-topic-messaging.md) | Emitter-authorized topic messaging |
 | [0039](adr/0039-directory-open-file-association.md) | `inode/directory` media-type convention for directory file association |
 | [0040](adr/0040-declared-topic-permissions.md) | Declared topic permissions and optional per-channel access (tri-state `SharedChannelPolicy`) |
+| [0041](adr/0041-shared-theme-catalog-and-scoped-tokens.md) | Shared framework-neutral theme catalog and inherited Razor-library token scope |
 
 ## Migration history and project status
 

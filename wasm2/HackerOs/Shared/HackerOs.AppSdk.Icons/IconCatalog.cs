@@ -19,19 +19,23 @@ public sealed class IconCatalog : IIconCatalog
 
     private readonly Lazy<IReadOnlyDictionary<IconLibrary, IReadOnlyDictionary<string, IconDescriptor>>> _byLibrary;
 
+    /// <summary>Creates a lazily loaded catalog backed by the icon metadata embedded in this assembly.</summary>
     public IconCatalog()
     {
         _byLibrary = new Lazy<IReadOnlyDictionary<IconLibrary, IReadOnlyDictionary<string, IconDescriptor>>>(
             LoadAll, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<IconLibrary> Libraries { get; } = Enum.GetValues<IconLibrary>();
 
+    /// <inheritdoc />
     public int Count(IconLibrary? library = null) =>
         library is { } single
             ? _byLibrary.Value.TryGetValue(single, out var icons) ? icons.Count : 0
             : _byLibrary.Value.Values.Sum(icons => icons.Count);
 
+    /// <inheritdoc />
     public bool TryGet(IconLibrary library, string name, out IconDescriptor descriptor)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -45,11 +49,13 @@ public sealed class IconCatalog : IIconCatalog
         return false;
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<IconDescriptor> GetAll(IconLibrary? library = null) =>
         library is { } single
             ? _byLibrary.Value.TryGetValue(single, out var icons) ? [.. icons.Values] : []
             : [.. _byLibrary.Value.Values.SelectMany(icons => icons.Values)];
 
+    /// <inheritdoc />
     public IReadOnlyList<IconDescriptor> Search(string query, IconLibrary? library = null, int maxResults = 200)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxResults);

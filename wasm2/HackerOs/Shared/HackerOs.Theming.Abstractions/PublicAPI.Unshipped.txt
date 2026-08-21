@@ -1,0 +1,44 @@
+#nullable enable
+HackerOs.Theming.Abstractions.ThemeCatalog
+static HackerOs.Theming.Abstractions.ThemeCatalog.AccentIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.Theming.Abstractions.ThemeCatalog.AllThemes.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Theming.Abstractions.ThemeDefinition!>!
+static HackerOs.Theming.Abstractions.ThemeCatalog.DesktopThemes.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Theming.Abstractions.ThemeDefinition!>!
+static HackerOs.Theming.Abstractions.ThemeCatalog.Get(string! themeId) -> HackerOs.Theming.Abstractions.ThemeDefinition!
+static HackerOs.Theming.Abstractions.ThemeCatalog.GetThemes(HackerOs.Theming.Abstractions.ThemePlatform platform) -> System.Collections.Generic.IReadOnlyList<HackerOs.Theming.Abstractions.ThemeDefinition!>!
+static HackerOs.Theming.Abstractions.ThemeCatalog.IsKnownAccent(string? accentId) -> bool
+static HackerOs.Theming.Abstractions.ThemeCatalog.MobileThemes.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Theming.Abstractions.ThemeDefinition!>!
+static HackerOs.Theming.Abstractions.ThemeCatalog.TryGet(string? themeId, out HackerOs.Theming.Abstractions.ThemeDefinition? theme) -> bool
+HackerOs.Theming.Abstractions.ThemeDefinition
+HackerOs.Theming.Abstractions.ThemeDefinition.DisplayName.get -> string!
+HackerOs.Theming.Abstractions.ThemeDefinition.Id.get -> string!
+HackerOs.Theming.Abstractions.ThemeDefinition.Platform.get -> HackerOs.Theming.Abstractions.ThemePlatform
+HackerOs.Theming.Abstractions.ThemeDefinition.SupportsAccentColor.get -> bool
+HackerOs.Theming.Abstractions.ThemeDefinition.ThemeDefinition(string! id, string! displayName, HackerOs.Theming.Abstractions.ThemePlatform platform, bool supportsAccentColor = false) -> void
+HackerOs.Theming.Abstractions.ThemePlatform
+HackerOs.Theming.Abstractions.ThemePlatform.Desktop = 0 -> HackerOs.Theming.Abstractions.ThemePlatform
+HackerOs.Theming.Abstractions.ThemePlatform.Mobile = 1 -> HackerOs.Theming.Abstractions.ThemePlatform
+HackerOs.Theming.Abstractions.ThemePreferences
+HackerOs.Theming.Abstractions.ThemePreferences.AccentId.get -> string!
+HackerOs.Theming.Abstractions.ThemePreferences.AccentId.init -> void
+HackerOs.Theming.Abstractions.ThemePreferences.AnimationsEnabled.get -> bool
+HackerOs.Theming.Abstractions.ThemePreferences.AnimationsEnabled.init -> void
+static HackerOs.Theming.Abstractions.ThemePreferences.Default.get -> HackerOs.Theming.Abstractions.ThemePreferences!
+HackerOs.Theming.Abstractions.ThemePreferences.DesktopThemeId.get -> string!
+HackerOs.Theming.Abstractions.ThemePreferences.DesktopThemeId.init -> void
+HackerOs.Theming.Abstractions.ThemePreferences.MobileThemeId.get -> string!
+HackerOs.Theming.Abstractions.ThemePreferences.MobileThemeId.init -> void
+HackerOs.Theming.Abstractions.ThemePreferences.ThemePreferences(string! DesktopThemeId, string! MobileThemeId, string! AccentId, bool AnimationsEnabled) -> void
+HackerOs.Theming.Abstractions.WellKnownAccentIds
+const HackerOs.Theming.Abstractions.WellKnownAccentIds.Cyan = "cyan" -> string!
+const HackerOs.Theming.Abstractions.WellKnownAccentIds.Green = "green" -> string!
+const HackerOs.Theming.Abstractions.WellKnownAccentIds.Purple = "purple" -> string!
+HackerOs.Theming.Abstractions.WellKnownThemeIds
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Android = "android" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.HackerOs = "hackeros" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Ios = "ios" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.MacOs = "macos" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Ubuntu = "ubuntu" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Windows10 = "windows-10" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Windows7 = "windows-7" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.Windows98 = "windows-98" -> string!
+const HackerOs.Theming.Abstractions.WellKnownThemeIds.WindowsXp = "windows-xp" -> string!

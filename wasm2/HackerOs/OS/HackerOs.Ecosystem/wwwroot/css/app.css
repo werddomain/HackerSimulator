@@ -1,26 +1,8 @@
-:root {
-    --hos-bg-base: #101417;
-    --hos-bg-surface: #151c20;
-    --hos-bg-elevated: #172025;
-    --hos-accent: #42d392;
-    --hos-accent-hover: #52e3a2;
-    --hos-accent-subtle: #173b2c;
-    --hos-text-primary: #f4f7f8;
-    --hos-text-secondary: #a8bac4;
-    --hos-text-muted: #7a8e98;
-    --hos-border: #34444c;
-    --hos-border-subtle: #212c32;
-    --hos-error: #ff9a91;
-    --hos-warning: #d5a84f;
-    --hos-font-mono: "Cascadia Mono", Consolas, monospace;
-    --hos-font-serif: Georgia, serif;
-}
-
 html,
 body {
     margin: 0;
     min-height: 100%;
-    background: var(--hos-bg-base);
+    background: var(--hos-bg-base, #101417);
 }
 
 #blazor-error-ui {
@@ -33,7 +15,7 @@ body {
     padding: 0.75rem 1rem;
     background: #ffe8e6;
     color: #48120e;
-    font-family: var(--hos-font-mono);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
 }
 
 #blazor-error-ui .dismiss {
@@ -61,15 +43,15 @@ body {
 }
 
 .loading-progress circle:last-child {
-    stroke: var(--hos-accent);
+    stroke: var(--hos-accent, #42d392);
     stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
 }
 
 .loading-progress-text {
     position: absolute;
     inset: calc(20vh + 3.25rem) 0 auto;
-    color: var(--hos-text-primary);
-    font-family: var(--hos-font-mono);
+    color: var(--hos-text-primary, #f4f7f8);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
     text-align: center;
 }
 
@@ -77,12 +59,9 @@ body {
     content: var(--blazor-load-percentage-text, "Loading");
 }
 
-/* Settings window: MudTabs renders with MudBlazor's default light theme
-   (MudThemeProvider is never given a dark Theme), giving the tab header a
-   white background with light-theme text — insufficient WCAG contrast (axe
-   color-contrast). SettingsWindow.razor sets TabHeaderClass="hos-tab-header"
-   so this can target it without fighting MudBlazor's own specificity via
-   Blazor CSS isolation ::deep, which did not reliably reach this element. */
+/* SettingsWindow sets TabHeaderClass="hos-tab-header" because Blazor CSS
+   isolation cannot reliably reach MudTabs' generated header. Values still
+   come from the shared ThemeScope; this rule owns no palette. */
 .hos-tab-header {
     background-color: var(--hos-bg-elevated, #172025) !important;
 }

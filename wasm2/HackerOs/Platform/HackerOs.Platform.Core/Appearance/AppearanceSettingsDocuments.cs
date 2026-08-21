@@ -5,10 +5,9 @@ using HackerOs.Simulation.Abstractions.Settings;
 namespace HackerOs.Platform.Core.Appearance;
 
 /// <summary>
-/// Defines the protected desktop-appearance document exposed at
-/// <c>/etc/hackeros/appearance.json</c>, holding the active accent color and whether desktop
-/// animations are enabled. Single OS-wide document, matching the single-active-session model
-/// used elsewhere for system settings (e.g. file associations).
+/// Defines the protected appearance document exposed at <c>/etc/hackeros/appearance.json</c>.
+/// The version-2 document keeps separate desktop and mobile theme choices plus the shared accent
+/// and animation preferences so changing form factor does not discard either selection.
 /// </summary>
 public static class AppearanceSettingsDocuments
 {
@@ -19,7 +18,8 @@ public static class AppearanceSettingsDocuments
     public static VirtualPath Path { get; } = VirtualPath.Parse("/etc/hackeros/appearance.json");
 
     /// <summary>Gets the clean-profile default document content.</summary>
-    public const string EmptyDocumentContent = "{\"schemaVersion\":1,\"accent\":\"green\",\"animationsEnabled\":true}";
+    public const string EmptyDocumentContent =
+        "{\"schemaVersion\":2,\"desktopThemeId\":\"hackeros\",\"mobileThemeId\":\"android\",\"accent\":\"green\",\"animationsEnabled\":true}";
 
     /// <summary>Creates the clean-profile document definition for a settings service registration.</summary>
     /// <returns>

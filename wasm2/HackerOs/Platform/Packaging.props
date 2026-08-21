@@ -1,14 +1,16 @@
 <Project>
   <!--
-    Shared NuGet packaging metadata for the windowing/taskbar export
+    Shared NuGet packaging metadata for the reusable windowing, taskbar, theming, and supporting
+    contract packages in the desktop export
     (wasm2/HackerOs/docs/window-taskbar-export-plan.md, EXT-WIN-012). Imported only by
     the projects meant to ship as packages; most of the solution never imports this file.
 
-    Version is a single shared "0.1.0-local" across all three packages for this first
-    packaging pass; they can version independently once real consumers pin different
-    versions. Per the export plan, these are local-only: produced with `dotnet pack` and
-    consumed from a local NuGet feed, never pushed to a public source, until a dedicated
-    publish decision is made.
+    Version is a single shared "0.1.0-local" across the complete package dependency closure for
+    this first packaging pass; packages can version independently once real consumers pin
+    different versions. Per the export plan, these are local-only: produced with `dotnet pack`
+    and consumed from a local NuGet feed, never pushed to a public source, until a dedicated
+    publish decision is made. PackageTags below are a windowing-oriented default and individual
+    packages override them when another vocabulary is more accurate.
   -->
   <PropertyGroup>
     <!-- RS0041 fires on Razor-generated BuildRenderTree overrides because the Razor source

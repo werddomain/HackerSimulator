@@ -5,10 +5,10 @@
     width: min(44rem, calc(100vw - 2rem));
     height: min(34rem, calc(100vh - 2rem));
     padding: 0.9rem;
-    color: #d4f8e8;
-    background: #0d1819;
-    border: 1px solid #55d6a1;
-    box-shadow: 0 1.25rem 4rem #000b;
+    color: var(--hos-text-primary, #d4f8e8);
+    background: var(--hos-window-content-background, #0d1819);
+    border: var(--hos-window-border, 1px solid var(--hos-border, #55d6a1));
+    box-shadow: var(--hos-shadow-lg, 0 1.25rem 4rem rgba(0, 0, 0, 0.7));
 }
 
 header,
@@ -23,20 +23,50 @@ h2 {
     margin: 0;
     font-size: 1.05rem;
     letter-spacing: 0;
+    color: var(--hos-text-primary, #d4f8e8);
 }
 
 .filter-control {
     justify-content: flex-end;
-    color: #8fc8ae;
+    color: var(--hos-text-secondary, #8fc8ae);
 }
 
 select,
 button {
-    min-height: 2.25rem;
-    padding: 0.4rem 0.7rem;
-    color: #d4f8e8;
-    background: #132522;
-    border: 1px solid #315249;
+    min-height: var(--hos-control-height, 2.25rem);
+    padding: var(--hos-input-padding, 0.4rem 0.7rem);
+    font-family: inherit;
+    color: var(--hos-input-color, var(--hos-text-primary, #d4f8e8));
+    background: var(--hos-input-bg, #132522);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #315249));
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 0.25rem));
+    box-shadow: var(--hos-input-shadow, none);
+}
+
+button {
+    min-width: 5rem;
+    cursor: pointer;
+    color: var(--hos-btn-color, var(--hos-text-primary, #d4f8e8));
+    background: var(--hos-btn-bg, #132522);
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #315249));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 0.25rem));
+    box-shadow: var(--hos-btn-shadow, none);
+    font-weight: var(--hos-btn-font-weight, 500);
+    transition: background var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease);
+}
+
+button:hover:not(:disabled) {
+    background: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #182825));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #55d6a1));
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #ffffff));
+}
+
+button:active:not(:disabled) {
+    background: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
+    border-color: var(--hos-btn-active-border, var(--hos-accent, #55d6a1));
+    box-shadow: var(--hos-btn-active-shadow, none);
 }
 
 footer {
@@ -47,19 +77,32 @@ footer {
     min-width: 0;
     margin-right: auto;
     overflow: hidden;
-    color: #8fc8ae;
+    color: var(--hos-text-secondary, #8fc8ae);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 button.primary {
-    color: #07100d;
-    background: #55d6a1;
-    border-color: #55d6a1;
+    color: var(--hos-btn-primary-color, var(--hos-text-inverse, #07100d));
+    background: var(--hos-btn-primary-bg, var(--hos-accent, #55d6a1));
+    border: var(--hos-btn-primary-border, 1px solid var(--hos-accent, #55d6a1));
+    box-shadow: var(--hos-btn-primary-shadow, none);
+}
+
+button.primary:hover:not(:disabled) {
+    background: var(--hos-btn-primary-hover-bg, var(--hos-accent-hover, #75e8ba));
+    border-color: var(--hos-btn-primary-hover-border, var(--hos-accent-hover, #75e8ba));
+}
+
+button:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--hos-focus-ring, #55d6a1);
+    outline-offset: 2px;
 }
 
 button:disabled {
     opacity: 0.45;
+    cursor: not-allowed;
 }
 
 @media (max-width: 36rem) {
