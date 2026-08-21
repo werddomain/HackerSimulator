@@ -1,7 +1,9 @@
 .gothic-dialog {
-    background: var(--hos-bg-elevated, #161b22) !important;
+    background: var(--hos-window-content-background, var(--hos-bg-elevated, #161b22)) !important;
     color: var(--hos-text-primary, #f0f6fc) !important;
-    border: 1px solid var(--hos-border-glow, rgba(66, 211, 146, 0.3)) !important;
+    border: var(--hos-window-border, 1px solid var(--hos-accent-glow, rgba(66, 211, 146, 0.3))) !important;
+    border-radius: var(--hos-window-radius, var(--hos-radius-md, 0.45rem)) !important;
+    box-shadow: var(--hos-shadow-lg, 0 16px 36px rgba(0, 0, 0, 0.5)) !important;
     min-width: 320px;
 }
 

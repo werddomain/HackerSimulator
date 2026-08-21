@@ -1,6 +1,6 @@
 /* ==========================================================================
    BrowserWindow.razor.css — scoped styles for the simulated browser app.
-   All colours use the HackerOS custom property tokens so the browser
+   All colours use the HackerOS semantic tokens (--hos-*) so the browser
    inherits the active shell theme automatically.
    ========================================================================== */
 
@@ -11,9 +11,9 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    font-family: var(--hackeros-font-mono, "Courier New", monospace);
-    background: var(--hackeros-bg, #0d0d0d);
-    color: var(--hackeros-fg, #33ff33);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+    background: var(--hos-bg-base, #0d0d0d);
+    color: var(--hos-text-primary, #33ff33);
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
@@ -21,33 +21,45 @@
 .browser-toolbar {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    background: var(--hackeros-toolbar-bg, #111);
-    border-bottom: 1px solid var(--hackeros-border, #2a2a2a);
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #111));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #2a2a2a));
     flex-shrink: 0;
 }
 
 .nav-buttons {
     display: flex;
-    gap: 2px;
+    gap: 4px;
 }
 
 .nav-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--hackeros-fg, #33ff33);
+    background: var(--hos-btn-bg, transparent);
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #315249));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
+    box-shadow: var(--hos-btn-shadow, none);
+    color: var(--hos-btn-color, var(--hos-text-primary, #33ff33));
     cursor: pointer;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 14px;
-    transition: background 0.15s, border-color 0.15s;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: var(--hos-btn-font-weight, 500);
+    transition: background var(--hos-transition-fast, 0.15s),
+                border-color var(--hos-transition-fast, 0.15s),
+                color var(--hos-transition-fast, 0.15s);
     min-width: 28px;
 }
 
 .nav-btn:hover:not(:disabled) {
-    background: var(--hackeros-hover-bg, #1a1a1a);
-    border-color: var(--hackeros-accent, #33ff33);
+    background: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #1a1a1a));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #33ff33));
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #ffffff));
+}
+
+.nav-btn:active:not(:disabled) {
+    background: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
+    border-color: var(--hos-btn-active-border, var(--hos-accent, #33ff33));
+    box-shadow: var(--hos-btn-active-shadow, none);
 }
 
 .nav-btn:disabled {
@@ -62,36 +74,40 @@
 
 .address-input {
     width: 100%;
-    background: var(--hackeros-input-bg, #0a0a0a);
-    border: 1px solid var(--hackeros-border, #2a2a2a);
-    color: var(--hackeros-fg, #33ff33);
-    padding: 4px 8px;
+    background: var(--hos-input-bg, #0a0a0a);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #2a2a2a));
+    color: var(--hos-input-color, var(--hos-text-primary, #33ff33));
+    padding: var(--hos-input-padding, 4px 8px);
     font-family: inherit;
     font-size: 12px;
-    border-radius: 3px;
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 3px));
+    box-shadow: var(--hos-input-shadow, none);
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color var(--hos-transition-fast, 0.15s);
 }
 
 .address-input:focus {
-    border-color: var(--hackeros-accent, #33ff33);
-    box-shadow: 0 0 0 1px var(--hackeros-accent-dim, rgba(51,255,51,0.25));
+    border-color: var(--hos-input-focus-border, var(--hos-accent, #33ff33));
+    box-shadow: var(--hos-input-focus-ring, 0 0 0 1px var(--hos-accent, #33ff33));
 }
 
 .go-btn {
-    background: var(--hackeros-accent, #33ff33);
-    color: var(--hackeros-bg, #0d0d0d);
-    border: none;
+    background: var(--hos-btn-primary-bg, var(--hos-accent, #33ff33));
+    color: var(--hos-btn-primary-color, var(--hos-text-inverse, #0d0d0d));
+    border: var(--hos-btn-primary-border, none);
+    box-shadow: var(--hos-btn-primary-shadow, none);
     cursor: pointer;
-    padding: 4px 10px;
+    padding: 4px 12px;
     font-family: inherit;
     font-size: 12px;
     font-weight: 700;
-    border-radius: 3px;
-    transition: filter 0.15s;
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
+    transition: filter var(--hos-transition-fast, 0.15s);
 }
 
-.go-btn:hover { filter: brightness(1.15); }
+.go-btn:hover {
+    background: var(--hos-btn-primary-hover-bg, var(--hos-accent-hover, #75e8ba));
+}
 
 /* ── Content pane ─────────────────────────────────────────────────────────── */
 
@@ -100,6 +116,7 @@
     overflow-y: auto;
     padding: 16px;
     position: relative;
+    background: var(--hos-window-content-background, var(--hos-bg-base, #0d0d0d));
 }
 
 /* ── Loading indicator ───────────────────────────────────────────────────── */
@@ -111,6 +128,7 @@
     justify-content: center;
     height: 100%;
     gap: 16px;
+    color: var(--hos-text-secondary, #a8bac4);
 }
 
 .loading-label {
@@ -132,13 +150,13 @@
 
 .error-icon {
     font-size: 64px;
-    color: var(--hackeros-error, #ff3333);
+    color: var(--hos-error, #ff3333);
 }
 
 .error-title {
     font-size: 24px;
     margin: 0;
-    color: var(--hackeros-fg, #33ff33);
+    color: var(--hos-text-primary, #33ff33);
 }
 
 .error-url {
@@ -146,34 +164,39 @@
     opacity: 0.6;
     word-break: break-all;
     max-width: 480px;
+    color: var(--hos-text-secondary, #a8bac4);
 }
 
 .error-code {
     font-size: 12px;
-    color: var(--hackeros-error, #ff3333);
-    font-family: var(--hackeros-font-mono, monospace);
+    color: var(--hos-error, #ff3333);
+    font-family: var(--hos-font-mono, monospace);
 }
 
 .error-hint {
     font-size: 13px;
     opacity: 0.5;
     max-width: 400px;
+    color: var(--hos-text-muted, #6f838d);
 }
 
 .action-btn {
-    background: var(--hackeros-accent, #33ff33);
-    color: var(--hackeros-bg, #0d0d0d);
-    border: none;
+    background: var(--hos-btn-primary-bg, var(--hos-accent, #33ff33));
+    color: var(--hos-btn-primary-color, var(--hos-text-inverse, #0d0d0d));
+    border: var(--hos-btn-primary-border, none);
+    box-shadow: var(--hos-btn-primary-shadow, none);
     cursor: pointer;
     padding: 8px 20px;
     font-family: inherit;
     font-size: 13px;
     font-weight: 700;
-    border-radius: 3px;
-    transition: filter 0.15s;
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
+    transition: filter var(--hos-transition-fast, 0.15s);
 }
 
-.action-btn:hover { filter: brightness(1.15); }
+.action-btn:hover {
+    background: var(--hos-btn-primary-hover-bg, var(--hos-accent-hover, #75e8ba));
+}
 
 /* ── New-tab / home page ─────────────────────────────────────────────────── */
 
@@ -191,13 +214,14 @@
     font-size: 32px;
     margin: 0;
     letter-spacing: 2px;
-    color: var(--hackeros-accent, #33ff33);
-    text-shadow: 0 0 8px var(--hackeros-accent-dim, rgba(51,255,51,0.4));
+    color: var(--hos-accent, #33ff33);
+    text-shadow: 0 0 8px var(--hos-accent-glow, rgba(51,255,51,0.4));
 }
 
 .new-tab-subtitle {
     font-size: 13px;
-    opacity: 0.5;
+    color: var(--hos-text-secondary, #a8bac4);
+    opacity: 0.7;
 }
 
 .new-tab-bookmarks {
@@ -209,35 +233,39 @@
 }
 
 .bookmark-chip {
-    background: transparent;
-    border: 1px solid var(--hackeros-accent, #33ff33);
-    color: var(--hackeros-accent, #33ff33);
+    background: var(--hos-btn-bg, transparent);
+    border: var(--hos-btn-border, 1px solid var(--hos-accent, #33ff33));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
+    box-shadow: var(--hos-btn-shadow, none);
+    color: var(--hos-accent, #33ff33);
     cursor: pointer;
     padding: 6px 16px;
     font-family: inherit;
     font-size: 12px;
-    border-radius: 3px;
-    transition: background 0.15s;
+    font-weight: var(--hos-btn-font-weight, 500);
+    transition: background var(--hos-transition-fast, 0.15s),
+                color var(--hos-transition-fast, 0.15s);
 }
 
 .bookmark-chip:hover {
-    background: var(--hackeros-accent-dim, rgba(51,255,51,0.1));
+    background: var(--hos-accent-subtle, rgba(51,255,51,0.1));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #33ff33));
 }
 
 /* ── Status bar ──────────────────────────────────────────────────────────── */
 
 .browser-statusbar {
     flex-shrink: 0;
-    padding: 2px 8px;
+    padding: 4px 8px;
     font-size: 11px;
-    background: var(--hackeros-toolbar-bg, #111);
-    border-top: 1px solid var(--hackeros-border, #2a2a2a);
-    opacity: 0.7;
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #111));
+    border-top: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #2a2a2a));
+    color: var(--hos-text-secondary, #a8bac4);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .status-error {
-    color: var(--hackeros-error, #ff3333);
+    color: var(--hos-error, #ff3333);
 }

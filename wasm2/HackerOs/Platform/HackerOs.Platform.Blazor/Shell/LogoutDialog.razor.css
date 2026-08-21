@@ -67,7 +67,7 @@ h2 {
     max-height: 8rem;
     overflow-y: auto;
     border: 1px solid var(--hos-border-subtle, #212c32);
-    border-radius: 4px;
+    border-radius: var(--hos-radius-sm, 4px);
     background: var(--hos-bg-base, #101417);
 }
 
@@ -107,33 +107,39 @@ h2 {
 
 .btn-secondary,
 .btn-danger {
-    min-height: 2.25rem;
-    padding: 0.4rem 0.9rem;
-    border: 1px solid var(--hos-border, #34444c);
-    border-radius: 4px;
+    min-height: var(--hos-btn-min-height, 2.25rem);
+    padding: var(--hos-btn-padding, 0.4rem 0.9rem);
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #34444c));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-btn-shadow, none);
     font-family: inherit;
     font-size: 0.85rem;
+    font-weight: var(--hos-btn-font-weight, 500);
     cursor: pointer;
+    transition: background var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease);
 }
 
 .btn-secondary {
-    background: var(--hos-bg-base, #101417);
-    color: var(--hos-text-secondary, #a8bac4);
+    background: var(--hos-btn-bg, var(--hos-bg-base, #101417));
+    color: var(--hos-btn-color, var(--hos-text-secondary, #a8bac4));
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: var(--hos-bg-elevated, #172025);
-    color: var(--hos-text-primary, #f4f7f8);
+    background: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #172025));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #55d6a1));
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #f4f7f8));
 }
 
 .btn-danger {
-    border-color: var(--hos-error, #ff9a91);
-    background: color-mix(in srgb, var(--hos-error, #ff8f87) 18%, var(--hos-bg-base, #101417));
-    color: var(--hos-error, #ff8f87);
+    border-color: var(--hos-btn-danger-border, var(--hos-error, #ff9a91));
+    background: var(--hos-btn-danger-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 18%, var(--hos-bg-base, #101417)));
+    color: var(--hos-btn-danger-color, var(--hos-error, #ff8f87));
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--hos-error, #ff8f87) 28%, var(--hos-bg-base, #101417));
+    background: var(--hos-btn-danger-hover-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 28%, var(--hos-bg-base, #101417)));
 }
 
 .btn-secondary:disabled,

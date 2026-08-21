@@ -204,6 +204,7 @@
     padding-bottom: 6px;
     border-bottom: 1px solid var(--hos-border-subtle, #27343a);
 }
+}
 
 .info-line span {
     color: var(--hos-text-secondary, #a8bac4);
@@ -219,34 +220,39 @@
 
 .btn-danger,
 .btn-secondary {
-    min-height: 2.25rem;
-    padding: 6px 14px;
-    border-radius: var(--hos-radius-sm, 0.25rem);
+    min-height: var(--hos-btn-min-height, 2.25rem);
+    padding: var(--hos-btn-padding, 6px 14px);
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 0.25rem));
+    box-shadow: var(--hos-btn-shadow, none);
     font-family: inherit;
     font-size: 0.85rem;
-    font-weight: bold;
+    font-weight: var(--hos-btn-font-weight, bold);
     cursor: pointer;
+    transition: background var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease);
 }
 
 .btn-danger {
-    border: 1px solid var(--hos-error, #ff8f87);
-    background-color: color-mix(in srgb, var(--hos-error, #ff8f87) 18%, var(--hos-bg-base, #101417));
-    color: var(--hos-error, #ff8f87);
+    border: var(--hos-btn-danger-border, 1px solid var(--hos-error, #ff8f87));
+    background-color: var(--hos-btn-danger-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 18%, var(--hos-bg-base, #101417)));
+    color: var(--hos-btn-danger-color, var(--hos-error, #ff8f87));
 }
 
 .btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--hos-error, #ff8f87) 28%, var(--hos-bg-base, #101417));
+    background-color: var(--hos-btn-danger-hover-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 28%, var(--hos-bg-base, #101417)));
 }
 
 .btn-secondary {
-    border: 1px solid var(--hos-border, #3a4b53);
-    background-color: var(--hos-bg-base, #101417);
-    color: var(--hos-text-secondary, #a8bac4);
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #3a4b53));
+    background-color: var(--hos-btn-bg, var(--hos-bg-base, #101417));
+    color: var(--hos-btn-color, var(--hos-text-secondary, #a8bac4));
 }
 
 .btn-secondary:hover:not(:disabled) {
-    border-color: var(--hos-accent, #42d392);
-    color: var(--hos-text-primary, #f4f7f8);
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #42d392));
+    background-color: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #1b252a));
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #f4f7f8));
 }
 
 .btn-danger:disabled,
@@ -313,6 +319,7 @@
     font-size: 0.82rem;
     color: var(--hos-warning, #e0ad50);
 }
+}
 
 .reset-affected-list li {
     margin-bottom: 4px;
@@ -328,18 +335,20 @@
 .confirm-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid var(--hos-border, #3a4b53);
-    border-radius: var(--hos-radius-sm, 0.25rem);
-    background-color: var(--hos-bg-base, #101417);
-    color: var(--hos-text-primary, #f4f7f8);
+    padding: var(--hos-input-padding, 8px 10px);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #3a4b53));
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 0.25rem));
+    box-shadow: var(--hos-input-shadow, none);
+    background-color: var(--hos-input-bg, #101417);
+    color: var(--hos-input-color, var(--hos-text-primary, #f4f7f8));
     font-family: inherit;
     font-size: 0.9rem;
 }
 
 .confirm-input:focus {
     outline: none;
-    border-color: var(--hos-error, #ff8f87);
+    border-color: var(--hos-input-focus-border, var(--hos-error, #ff8f87));
+    box-shadow: var(--hos-input-focus-ring, 0 0 0 1px var(--hos-error, #ff8f87));
 }
 
 .dialog-error {

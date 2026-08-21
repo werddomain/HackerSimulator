@@ -3,9 +3,9 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: var(--hos-bg-base, #0d1117);
+    background: var(--hos-window-content-background, var(--hos-bg-base, #0d1117));
     color: var(--hos-text-primary, #e6edf3);
-    font-family: var(--hos-font-sans, "Inter", sans-serif);
+    font-family: var(--hos-font-ui, "Inter", sans-serif);
     overflow: hidden;
     outline: none;
 }
@@ -18,8 +18,8 @@
     gap: 0;
     padding: 0 0.5rem;
     height: 2rem;
-    background: var(--hos-bg-surface, #161b22);
-    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
     flex-shrink: 0;
     user-select: none;
 }
@@ -34,7 +34,7 @@
     font-size: 0.82rem;
     color: var(--hos-text-secondary, #8b949e);
     cursor: default;
-    border-radius: 4px;
+    border-radius: var(--hos-radius-sm, 4px);
 }
 
 .menu-group:hover .menu-label {
@@ -50,9 +50,9 @@
     z-index: 200;
     min-width: 140px;
     background: var(--hos-bg-elevated, #21262d);
-    border: 1px solid var(--hos-border-color, #30363d);
-    border-radius: 6px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--hos-border, #30363d);
+    border-radius: var(--hos-radius-sm, 6px);
+    box-shadow: var(--hos-shadow-md, 0 8px 24px rgba(0, 0, 0, 0.5));
     padding: 0.25rem 0;
 }
 
@@ -66,6 +66,7 @@
     padding: 0.3rem 0.9rem;
     text-align: left;
     font-size: 0.82rem;
+    font-family: inherit;
     background: transparent;
     border: none;
     color: var(--hos-text-primary, #e6edf3);
@@ -73,7 +74,7 @@
 }
 
 .menu-item:hover:not(:disabled) {
-    background: rgba(66, 211, 146, 0.12);
+    background: var(--hos-accent-subtle, rgba(66, 211, 146, 0.12));
     color: var(--hos-accent, #42d392);
 }
 
@@ -105,25 +106,28 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.3rem 0.75rem;
-    background: var(--hos-bg-surface, #161b22);
-    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
     flex-shrink: 0;
 }
 
 .find-input {
     flex: 1;
     max-width: 260px;
-    padding: 0.2rem 0.5rem;
-    background: var(--hos-bg-base, #0d1117);
-    border: 1px solid var(--hos-border-color, #30363d);
-    border-radius: 4px;
-    color: var(--hos-text-primary, #e6edf3);
+    padding: var(--hos-input-padding, 0.2rem 0.5rem);
+    background: var(--hos-input-bg, #0d1117);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #30363d));
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-input-shadow, none);
+    color: var(--hos-input-color, var(--hos-text-primary, #e6edf3));
+    font-family: inherit;
     font-size: 0.83rem;
     outline: none;
 }
 
 .find-input:focus {
-    border-color: var(--hos-accent, #42d392);
+    border-color: var(--hos-input-focus-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-input-focus-ring, 0 0 0 1px var(--hos-accent, #42d392));
 }
 
 .find-match-count {
@@ -135,20 +139,24 @@
 .find-nav-btn {
     width: 1.6rem;
     height: 1.6rem;
-    border: 1px solid var(--hos-border-color, #30363d);
-    background: var(--hos-bg-elevated, #21262d);
-    color: var(--hos-text-primary, #e6edf3);
-    border-radius: 4px;
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #30363d));
+    background: var(--hos-btn-bg, #21262d);
+    color: var(--hos-btn-color, var(--hos-text-primary, #e6edf3));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-btn-shadow, none);
     cursor: pointer;
     font-size: 0.82rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease);
 }
 
 .find-nav-btn:hover {
-    background: rgba(66, 211, 146, 0.12);
-    border-color: var(--hos-accent, #42d392);
+    background: var(--hos-btn-hover-bg, rgba(66, 211, 146, 0.12));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #42d392));
+    color: var(--hos-btn-hover-color, var(--hos-accent, #42d392));
 }
 
 .find-close-btn {
@@ -192,17 +200,19 @@
 }
 
 .retry-btn {
-    padding: 0.3rem 0.8rem;
-    border: 1px solid var(--hos-error, #ff9a91);
+    padding: var(--hos-btn-padding, 0.3rem 0.8rem);
+    border: var(--hos-btn-danger-border, 1px solid var(--hos-error, #ff9a91));
     background: transparent;
     color: var(--hos-error, #ff9a91);
-    border-radius: 4px;
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 4px));
     cursor: pointer;
+    font-family: inherit;
     font-size: 0.82rem;
+    transition: background var(--hos-transition-fast, 120ms ease);
 }
 
 .retry-btn:hover {
-    background: rgba(255, 154, 145, 0.12);
+    background: color-mix(in srgb, var(--hos-error, #ff9a91) 15%, transparent);
 }
 
 /* ─── Main Text Area ────────────────────────────────────────────────────────── */
@@ -212,7 +222,7 @@
     width: 100%;
     padding: 1rem 1.25rem;
     resize: none;
-    background: var(--hos-bg-base, #0d1117);
+    background: var(--hos-window-content-background, var(--hos-bg-base, #0d1117));
     color: var(--hos-text-primary, #e6edf3);
     font-family: var(--hos-font-mono, "JetBrains Mono", "Fira Code", monospace);
     font-size: 0.875rem;
@@ -225,8 +235,6 @@
     white-space: pre-wrap;
     word-wrap: break-word;
     box-sizing: border-box;
-    scrollbar-width: thin;
-    scrollbar-color: var(--hos-border-color, #30363d) transparent;
 }
 
 .editor-textarea::placeholder {
@@ -246,8 +254,8 @@
     gap: 0.5rem;
     padding: 0.25rem 0.75rem;
     height: 1.6rem;
-    background: var(--hos-bg-surface, #161b22);
-    border-top: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-top: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
     flex-shrink: 0;
     font-size: 0.75rem;
     color: var(--hos-text-muted, #6e7681);
@@ -263,7 +271,7 @@
 }
 
 .status-sep {
-    color: var(--hos-border-color, #30363d);
+    color: var(--hos-border-subtle, #30363d);
 }
 
 .status-media {

@@ -2,59 +2,71 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: var(--hackeros-surface-bg, #0d1117);
-    color: var(--hackeros-text-primary, #c9d1d9);
-    font-family: 'Consolas', 'Courier New', monospace;
+    background-color: var(--hos-window-content-background, var(--hos-bg-base, #0d1117));
+    color: var(--hos-text-primary, #c9d1d9);
+    font-family: var(--hos-font-mono, 'Cascadia Mono', Consolas, monospace);
 }
 
 .sysmon-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background-color: var(--hackeros-header-bg, #161b22);
-    border-bottom: 1px solid var(--hackeros-border, #30363d);
+    padding: 10px 16px;
+    background-color: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #30363d));
 }
 
 .sysmon-title {
     font-weight: bold;
-    color: var(--hackeros-accent, #42d392);
+    color: var(--hos-accent, #42d392);
 }
 
 .sysmon-btn {
-    background-color: #21262d;
-    color: #c9d1d9;
-    border: 1px solid #30363d;
-    border-radius: 4px;
-    padding: 6px 14px;
+    background-color: var(--hos-btn-bg, #21262d);
+    color: var(--hos-btn-color, var(--hos-text-primary, #c9d1d9));
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #30363d));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-btn-shadow, none);
+    padding: var(--hos-btn-padding, 6px 14px);
     cursor: pointer;
+    font-family: inherit;
     font-size: 13px;
-    font-weight: 600;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    font-weight: var(--hos-btn-font-weight, 600);
+    transition: background-color var(--hos-transition-fast, 0.15s ease),
+                border-color var(--hos-transition-fast, 0.15s ease),
+                color var(--hos-transition-fast, 0.15s ease);
 }
 
-.sysmon-btn:hover {
-    background-color: #30363d;
+.sysmon-btn:hover:not(:disabled) {
+    background-color: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #30363d));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #42d392));
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #fff));
+}
+
+.sysmon-btn:active:not(:disabled) {
+    background-color: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
+    border-color: var(--hos-btn-active-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-btn-active-shadow, none);
 }
 
 .sysmon-btn.btn-danger {
-    background-color: #8b2828;
-    color: #ffffff;
-    border-color: #a83232;
-    box-shadow: 0 0 8px rgba(248, 81, 73, 0.3);
+    background-color: var(--hos-btn-danger-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 20%, var(--hos-bg-base, #101417)));
+    color: var(--hos-btn-danger-color, var(--hos-error, #ff8f87));
+    border: var(--hos-btn-danger-border, 1px solid var(--hos-error, #a83232));
+    box-shadow: var(--hos-btn-danger-shadow, none);
 }
 
-.sysmon-btn.btn-danger:hover {
-    background-color: #b83232;
-    border-color: #d83a3a;
+.sysmon-btn.btn-danger:hover:not(:disabled) {
+    background-color: var(--hos-btn-danger-hover-bg, color-mix(in srgb, var(--hos-error, #ff8f87) 32%, var(--hos-bg-base, #101417)));
+    border-color: var(--hos-error, #d83a3a);
 }
 
 .sysmon-btn.btn-danger:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    background-color: #21262d;
-    color: #484f58;
-    border-color: #30363d;
+    background-color: var(--hos-btn-bg, #21262d);
+    color: var(--hos-text-muted, #484f58);
+    border-color: var(--hos-border-subtle, #30363d);
     box-shadow: none;
 }
 
@@ -72,9 +84,10 @@
 }
 
 .metric-card {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
+    background-color: var(--hos-card-bg, var(--hos-bg-surface, #161b22));
+    border: var(--hos-card-border, 1px solid var(--hos-border-subtle, #30363d));
+    border-radius: var(--hos-card-radius, var(--hos-radius-sm, 6px));
+    box-shadow: var(--hos-card-shadow, none);
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -82,13 +95,13 @@
 
 .metric-label {
     font-size: 12px;
-    color: #8b949e;
+    color: var(--hos-text-secondary, #8b949e);
 }
 
 .metric-val {
     font-size: 24px;
     font-weight: bold;
-    color: #58a6ff;
+    color: var(--hos-accent, #58a6ff);
     margin-top: 4px;
 }
 
@@ -99,9 +112,9 @@
 }
 
 .table-wrapper {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
+    background-color: var(--hos-bg-surface, #161b22);
+    border: var(--hos-table-border, 1px solid var(--hos-border-subtle, #30363d));
+    border-radius: var(--hos-radius-sm, 6px);
     overflow-x: auto;
 }
 
@@ -114,43 +127,44 @@
 .sysmon-table th, .sysmon-table td {
     padding: 10px 14px;
     text-align: left;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid var(--hos-border-subtle, #21262d);
 }
 
 .sysmon-table th {
-    background-color: #1c2128;
-    color: #8b949e;
+    background-color: var(--hos-table-header-bg, var(--hos-bg-elevated, #1c2128));
+    color: var(--hos-table-header-color, var(--hos-text-secondary, #8b949e));
     font-weight: 600;
 }
 
 .sysmon-table tr {
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--hos-transition-fast, 0.15s ease);
 }
 
 .sysmon-table tr:hover {
-    background-color: #21262d;
+    background-color: var(--hos-table-row-hover-bg, var(--hos-bg-elevated, #21262d));
 }
 
 .sysmon-table tr.selected {
-    background-color: #1f385c !important;
+    background-color: var(--hos-table-row-selected-bg, var(--hos-accent-subtle, #1f385c)) !important;
 }
 
 .sysmon-table tr.selected td {
-    background-color: #1f385c !important;
-    color: #ffffff !important;
+    background-color: var(--hos-table-row-selected-bg, var(--hos-accent-subtle, #1f385c)) !important;
+    color: var(--hos-table-row-selected-color, #ffffff) !important;
     font-weight: 600;
 }
 
 .status-badge {
-    color: #3fb950;
+    color: var(--hos-success, #3fb950);
     font-weight: bold;
 }
 
 .info-card {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
+    background-color: var(--hos-card-bg, var(--hos-bg-surface, #161b22));
+    border: var(--hos-card-border, 1px solid var(--hos-border-subtle, #30363d));
+    border-radius: var(--hos-card-radius, var(--hos-radius-sm, 6px));
+    box-shadow: var(--hos-card-shadow, none);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -161,9 +175,9 @@
     display: flex;
     justify-content: space-between;
     padding-bottom: 6px;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid var(--hos-border-subtle, #21262d);
 }
 
 .info-row span {
-    color: #8b949e;
+    color: var(--hos-text-secondary, #8b949e);
 }

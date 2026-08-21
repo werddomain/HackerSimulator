@@ -11,10 +11,10 @@
     padding: 0.45rem 0.6rem;
     position: sticky;
     top: 0;
-    background: var(--hos-bg-surface, #161b22);
-    border-bottom: 2px solid var(--hos-border-color, #30363d);
-    border-right: 1px solid var(--hos-border-color, #21262d);
-    color: var(--hos-text-secondary, #8b949e);
+    background: var(--hos-table-header-bg, var(--hos-bg-surface, #161b22));
+    border-bottom: 2px solid var(--hos-table-border, var(--hos-border, #30363d));
+    border-right: 1px solid var(--hos-border-subtle, #21262d);
+    color: var(--hos-table-header-color, var(--hos-text-secondary, #8b949e));
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -36,33 +36,35 @@
 
 .file-view-details tbody tr {
     cursor: default;
-    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    border-bottom: 1px solid var(--hos-border-subtle, #21262d);
 }
 
-    .file-view-details tbody .file-view-details-column-name ::deep .shell-icon {
-        margin-right: 4px;
-    }
-    .file-view-details tbody tr:hover {
-        background: var(--hos-bg-elevated, #21262d);
-    }
+.file-view-details tbody .file-view-details-column-name ::deep .shell-icon {
+    margin-right: 4px;
+}
+
+.file-view-details tbody tr:hover {
+    background: var(--hos-table-row-hover-bg, var(--hos-bg-elevated, #21262d));
+}
 
 .file-view-details tbody tr:focus-visible {
-    outline: 2px solid var(--hos-accent, #42d392);
+    outline: 2px solid var(--hos-focus-ring, var(--hos-accent, #42d392));
     outline-offset: -2px;
 }
 
 .file-view-details tbody tr.selected {
-    background: var(--hackeros-accent-glow, rgba(66, 211, 146, 0.16));
+    background: var(--hos-table-row-selected-bg, var(--hos-accent-subtle, rgba(66, 211, 146, 0.16)));
+    color: var(--hos-table-row-selected-color, var(--hos-text-primary, inherit));
 }
 
 .file-view-details tbody tr.selected:hover {
-    background: var(--hackeros-accent-glow, rgba(66, 211, 146, 0.24));
+    background: var(--hos-table-row-selected-bg, var(--hos-accent-subtle, rgba(66, 211, 146, 0.24)));
 }
 
 .file-view-details td {
     padding: 0.3rem 0.6rem;
     vertical-align: middle;
-    border-right: 1px solid var(--hos-border-color, #21262d);
+    border-right: 1px solid var(--hos-border-subtle, #21262d);
 }
 
 .file-view-details td:last-child {
@@ -72,9 +74,9 @@
 .file-view-rename-input {
     font: inherit;
     color: inherit;
-    background: transparent;
-    border: 1px solid currentColor;
-    border-radius: 2px;
+    background: var(--hos-input-bg, transparent);
+    border: var(--hos-input-border, 1px solid currentColor);
+    border-radius: var(--hos-input-radius, 2px);
     padding: 0 0.25rem;
     width: 100%;
 }

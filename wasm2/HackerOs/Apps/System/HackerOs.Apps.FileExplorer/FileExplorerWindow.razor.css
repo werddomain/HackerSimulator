@@ -3,9 +3,9 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: var(--hos-bg-base, #0d1114);
+    background: var(--hos-window-content-background, var(--hos-bg-base, #0d1114));
     color: var(--hos-text-primary, #f4f7f8);
-    font-family: var(--hos-font-sans, "Inter", sans-serif);
+    font-family: var(--hos-font-ui, "Inter", sans-serif);
     overflow: hidden;
 }
 
@@ -14,8 +14,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: var(--hos-bg-surface, #161b22);
-    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
 }
 
 .nav-buttons {
@@ -29,13 +29,16 @@
     justify-content: center;
     width: 1.9rem;
     height: 1.9rem;
-    border: 1px solid var(--hos-border-color, #30363d);
-    background: var(--hos-bg-elevated, #21262d);
-    color: var(--hos-text-primary, #f0f6fc);
-    border-radius: 6px;
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #30363d));
+    background: var(--hos-btn-bg, #21262d);
+    color: var(--hos-btn-color, var(--hos-text-primary, #f0f6fc));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 6px));
+    box-shadow: var(--hos-btn-shadow, none);
     cursor: pointer;
     font-size: 0.9rem;
-    transition: background var(--hackeros-transition-fast, 120ms ease), color var(--hackeros-transition-fast, 120ms ease), border-color var(--hackeros-transition-fast, 120ms ease);
+    transition: background var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease);
 }
 
 .nav-btn:disabled {
@@ -44,9 +47,15 @@
 }
 
 .nav-btn:hover:not(:disabled) {
-    background: var(--hos-accent, #42d392);
-    border-color: var(--hos-accent, #42d392);
-    color: #0d1114;
+    background: var(--hos-btn-hover-bg, var(--hos-accent, #42d392));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #42d392));
+    color: var(--hos-btn-hover-color, var(--hos-text-inverse, #0d1114));
+}
+
+.nav-btn:active:not(:disabled) {
+    background: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
+    border-color: var(--hos-btn-active-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-btn-active-shadow, none);
 }
 
 .address-bar {
@@ -56,14 +65,20 @@
 
 .address-input {
     width: 100%;
-    padding: 0.3rem 0.6rem;
-    background: var(--hos-bg-base, #0d1114);
-    border: 1px solid var(--hos-border-color, #30363d);
+    padding: var(--hos-input-padding, 0.3rem 0.6rem);
+    background: var(--hos-input-bg, #0d1114);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #30363d));
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-input-shadow, none);
     color: var(--hos-accent, #42d392);
     font-family: var(--hos-font-mono, monospace);
     font-size: 0.85rem;
-    border-radius: 4px;
     outline: none;
+}
+
+.address-input:focus {
+    border-color: var(--hos-input-focus-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-input-focus-ring, 0 0 0 1px var(--hos-accent, #42d392));
 }
 
 .search-box {
@@ -72,13 +87,19 @@
 
 .search-input {
     width: 100%;
-    padding: 0.3rem 0.6rem;
-    background: var(--hos-bg-base, #0d1114);
-    border: 1px solid var(--hos-border-color, #30363d);
-    color: var(--hos-text-primary, #f0f6fc);
+    padding: var(--hos-input-padding, 0.3rem 0.6rem);
+    background: var(--hos-input-bg, #0d1114);
+    border: var(--hos-input-border, 1px solid var(--hos-border, #30363d));
+    border-radius: var(--hos-input-radius, var(--hos-radius-sm, 4px));
+    box-shadow: var(--hos-input-shadow, none);
+    color: var(--hos-input-color, var(--hos-text-primary, #f0f6fc));
     font-size: 0.85rem;
-    border-radius: 4px;
     outline: none;
+}
+
+.search-input:focus {
+    border-color: var(--hos-input-focus-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-input-focus-ring, 0 0 0 1px var(--hos-accent, #42d392));
 }
 
 .view-toggle {
@@ -93,22 +114,26 @@
     width: 1.9rem;
     height: 1.9rem;
     padding: 0;
-    border: 1px solid var(--hos-border-color, #30363d);
-    background: var(--hos-bg-elevated, #21262d);
-    color: var(--hos-text-secondary, #8b949e);
-    border-radius: 6px;
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #30363d));
+    background: var(--hos-btn-bg, #21262d);
+    color: var(--hos-btn-color, var(--hos-text-secondary, #8b949e));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 6px));
+    box-shadow: var(--hos-btn-shadow, none);
     cursor: pointer;
-    transition: background var(--hackeros-transition-fast, 120ms ease), color var(--hackeros-transition-fast, 120ms ease);
+    transition: background var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease);
 }
 
 .view-btn:hover {
-    color: var(--hos-text-primary, #f0f6fc);
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #f0f6fc));
+    background: var(--hos-btn-hover-bg, var(--hos-bg-elevated, #30363d));
 }
 
 .view-btn.active {
-    background: var(--hos-accent, #42d392);
-    border-color: var(--hos-accent, #42d392);
-    color: #0d1114;
+    background: var(--hos-btn-primary-bg, var(--hos-accent, #42d392));
+    border-color: var(--hos-btn-primary-border, var(--hos-accent, #42d392));
+    color: var(--hos-btn-primary-color, var(--hos-text-inverse, #0d1114));
+    box-shadow: var(--hos-btn-primary-shadow, none);
 }
 
 .actions-toolbar {
@@ -116,42 +141,53 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.4rem 0.75rem;
-    background: var(--hos-bg-surface-dim, #11151a);
-    border-bottom: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #11151a));
+    border-bottom: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
 }
 
 .toolbar-divider {
     width: 1px;
     align-self: stretch;
     margin: 0 0.25rem;
-    background: var(--hos-border-color, #30363d);
+    background: var(--hos-border-subtle, #30363d);
 }
 
 .action-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.3rem 0.7rem;
+    padding: var(--hos-btn-padding, 0.3rem 0.7rem);
+    font-family: inherit;
     font-size: 0.8rem;
-    border: 1px solid var(--hos-border-color, #30363d);
-    background: var(--hos-bg-elevated, #21262d);
-    color: var(--hos-text-primary, #f0f6fc);
-    border-radius: 6px;
+    font-weight: var(--hos-btn-font-weight, 500);
+    border: var(--hos-btn-border, 1px solid var(--hos-border, #30363d));
+    background: var(--hos-btn-bg, #21262d);
+    color: var(--hos-btn-color, var(--hos-text-primary, #f0f6fc));
+    border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 6px));
+    box-shadow: var(--hos-btn-shadow, none);
     cursor: pointer;
     white-space: nowrap;
-    transition: background var(--hackeros-transition-fast, 120ms ease), border-color var(--hackeros-transition-fast, 120ms ease), color var(--hackeros-transition-fast, 120ms ease);
+    transition: background var(--hos-transition-fast, 120ms ease),
+                border-color var(--hos-transition-fast, 120ms ease),
+                color var(--hos-transition-fast, 120ms ease);
 }
 
 .action-btn:hover:not(:disabled) {
-    border-color: var(--hos-accent, #42d392);
-    color: var(--hos-accent, #42d392);
-    background: var(--hackeros-accent-glow, rgba(66, 211, 146, 0.1));
+    border-color: var(--hos-btn-hover-border, var(--hos-accent, #42d392));
+    color: var(--hos-btn-hover-color, var(--hos-accent, #42d392));
+    background: var(--hos-btn-hover-bg, rgba(66, 211, 146, 0.1));
+}
+
+.action-btn:active:not(:disabled) {
+    background: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
+    border-color: var(--hos-btn-active-border, var(--hos-accent, #42d392));
+    box-shadow: var(--hos-btn-active-shadow, none);
 }
 
 .action-btn.danger:hover:not(:disabled) {
-    border-color: var(--hos-error, #ff9a91);
-    color: var(--hos-error, #ff9a91);
-    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--hos-btn-danger-border, var(--hos-error, #ff9a91));
+    color: var(--hos-btn-danger-color, var(--hos-error, #ff9a91));
+    background: var(--hos-btn-danger-hover-bg, rgba(248, 81, 73, 0.1));
 }
 
 .action-btn:disabled {
@@ -181,8 +217,8 @@
 
 .explorer-statusbar {
     padding: 0.3rem 0.75rem;
-    background: var(--hos-bg-surface, #161b22);
-    border-top: 1px solid var(--hos-border-color, #21262d);
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-top: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #21262d));
     font-size: 0.78rem;
     color: var(--hos-text-secondary, #8b949e);
 }

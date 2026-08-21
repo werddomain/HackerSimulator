@@ -135,9 +135,13 @@ token, and theme selectors override the relevant groups:
 | Group | Representative tokens |
 | --- | --- |
 | Core surfaces | `--hos-bg-base`, `--hos-bg-surface`, `--hos-bg-elevated`, `--hos-bg-overlay` |
-| Text and state | `--hos-text-primary`, `--hos-text-secondary`, `--hos-text-muted`, `--hos-error`, `--hos-warning` |
+| Text and state | `--hos-text-primary`, `--hos-text-secondary`, `--hos-text-muted`, `--hos-text-inverse`, `--hos-error`, `--hos-warning`, `--hos-success`, `--hos-info` |
 | Accent/focus | `--hos-accent`, `--hos-accent-hover`, `--hos-accent-subtle`, `--hos-accent-glow`, `--hos-focus-ring` |
 | Shape/motion | `--hos-radius-*`, `--hos-shadow-*`, `--hos-transition-fast`, `--hos-transition-normal` |
+| Buttons & controls | `--hos-btn-bg`, `--hos-btn-color`, `--hos-btn-border`, `--hos-btn-radius`, `--hos-btn-shadow`, `--hos-btn-hover-*`, `--hos-btn-active-*`, `--hos-btn-primary-*`, `--hos-btn-danger-*` |
+| Inputs & forms | `--hos-input-bg`, `--hos-input-color`, `--hos-input-border`, `--hos-input-radius`, `--hos-input-shadow`, `--hos-input-focus-border`, `--hos-input-focus-ring` |
+| Toolbars & cards | `--hos-toolbar-bg`, `--hos-toolbar-border`, `--hos-card-bg`, `--hos-card-border`, `--hos-card-radius`, `--hos-card-shadow`, `--hos-badge-*` |
+| Tables & lists | `--hos-table-header-bg`, `--hos-table-header-color`, `--hos-table-border`, `--hos-table-row-hover-bg`, `--hos-table-row-selected-bg`, `--hos-table-row-selected-color` |
 | Desktop/window | `--hos-desktop-background`, `--hos-window-*`, `--hos-titlebar-*`, `--hos-window-control-*` |
 | Taskbar/launcher | `--hos-taskbar-*`, `--hos-taskbar-button-*`, `--hos-launcher-*` |
 | Mobile shell | `--hos-mobile-surface-background`, `--hos-mobile-nav-*`, `--hos-mobile-shade-*` |

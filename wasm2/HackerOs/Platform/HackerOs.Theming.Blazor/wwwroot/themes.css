@@ -57,7 +57,64 @@
     --hos-inset-highlight: inset 0 1px rgb(255 255 255 / 7%);
     --hos-transition-fast: 120ms ease;
     --hos-transition-normal: 180ms ease;
+    /* Controls, inputs, and buttons. */
     --hos-control-height: 2.25rem;
+    --hos-btn-bg: var(--hos-bg-surface);
+    --hos-btn-hover-bg: var(--hos-bg-elevated);
+    --hos-btn-active-bg: var(--hos-accent-subtle);
+    --hos-btn-color: var(--hos-text-primary);
+    --hos-btn-hover-color: var(--hos-text-primary);
+    --hos-btn-active-color: var(--hos-text-primary);
+    --hos-btn-border: 1px solid var(--hos-border);
+    --hos-btn-hover-border: var(--hos-border-strong);
+    --hos-btn-active-border: var(--hos-accent);
+    --hos-btn-radius: var(--hos-radius-sm);
+    --hos-btn-shadow: none;
+    --hos-btn-active-shadow: none;
+    --hos-btn-font-weight: 500;
+    --hos-btn-padding: 0.35rem 0.75rem;
+    --hos-btn-min-height: var(--hos-control-height, 2.25rem);
+
+    /* Primary and state buttons. */
+    --hos-btn-primary-bg: var(--hos-accent);
+    --hos-btn-primary-hover-bg: var(--hos-accent-hover);
+    --hos-btn-primary-active-bg: var(--hos-accent);
+    --hos-btn-primary-color: var(--hos-text-inverse);
+    --hos-btn-primary-border: 1px solid var(--hos-accent);
+    --hos-btn-primary-hover-border: var(--hos-accent-hover);
+    --hos-btn-primary-shadow: none;
+    --hos-btn-danger-bg: color-mix(in srgb, var(--hos-error) 20%, var(--hos-bg-base));
+    --hos-btn-danger-hover-bg: color-mix(in srgb, var(--hos-error) 30%, var(--hos-bg-base));
+    --hos-btn-danger-active-bg: var(--hos-error);
+    --hos-btn-danger-color: var(--hos-error);
+    --hos-btn-danger-border: 1px solid var(--hos-error);
+
+    /* Form controls & inputs. */
+    --hos-input-bg: var(--hos-bg-base);
+    --hos-input-color: var(--hos-text-primary);
+    --hos-input-border: 1px solid var(--hos-border);
+    --hos-input-focus-border: var(--hos-focus-ring);
+    --hos-input-focus-ring: 0 0 0 1px var(--hos-focus-ring);
+    --hos-input-radius: var(--hos-radius-sm);
+    --hos-input-shadow: none;
+    --hos-input-placeholder: var(--hos-text-muted);
+    --hos-input-padding: 0.35rem 0.65rem;
+
+    /* Surfaces, cards, toolbars, and tables. */
+    --hos-toolbar-bg: var(--hos-bg-surface);
+    --hos-toolbar-border: 1px solid var(--hos-border-subtle);
+    --hos-card-bg: var(--hos-bg-surface);
+    --hos-card-border: 1px solid var(--hos-border-subtle);
+    --hos-card-radius: var(--hos-radius-md);
+    --hos-card-shadow: var(--hos-shadow-sm);
+    --hos-table-header-bg: var(--hos-bg-elevated);
+    --hos-table-header-color: var(--hos-text-secondary);
+    --hos-table-border: 1px solid var(--hos-border-subtle);
+    --hos-table-row-hover-bg: var(--hos-bg-elevated);
+    --hos-table-row-selected-bg: var(--hos-accent-subtle);
+    --hos-table-row-selected-color: var(--hos-text-primary);
+    --hos-badge-bg: var(--hos-bg-elevated);
+    --hos-badge-color: var(--hos-text-secondary);
 
     /* Desktop and window chrome. */
     --hos-desktop-background: #07100f;
@@ -234,6 +291,22 @@
     --hos-desktop-background:
         radial-gradient(circle at 78% 18%, rgb(52 135 104 / 16%), transparent 34%),
         linear-gradient(145deg, #07100f, #0b1916 58%, #06100f);
+    --hos-btn-bg: #111a19;
+    --hos-btn-hover-bg: #182825;
+    --hos-btn-active-bg: #123a2b;
+    --hos-btn-color: #e7f7f1;
+    --hos-btn-border: 1px solid #315249;
+    --hos-btn-hover-border: #55d6a1;
+    --hos-btn-active-border: #55d6a1;
+    --hos-btn-radius: 0.25rem;
+    --hos-input-bg: #050b0a;
+    --hos-input-color: #e7f7f1;
+    --hos-input-border: 1px solid #315249;
+    --hos-toolbar-bg: #0c1516;
+    --hos-toolbar-border: 1px solid #203730;
+    --hos-table-header-bg: #101d1c;
+    --hos-table-row-hover-bg: #142422;
+    --hos-table-row-selected-bg: #123a2b;
     --hos-window-focused-border: #55d6a1;
     --hos-taskbar-active-indicator: #55d6a1;
     --hos-taskbar-button-active-border: #55d6a1;
@@ -320,6 +393,46 @@
     --hos-shadow-md: 4px 4px 0 rgb(0 0 0 / 55%);
     --hos-shadow-lg: 6px 6px 0 rgb(0 0 0 / 55%);
     --hos-inset-highlight: inset 1px 1px #fff, inset -1px -1px #808080;
+    --hos-btn-bg: #c0c0c0;
+    --hos-btn-hover-bg: #c0c0c0;
+    --hos-btn-active-bg: #c0c0c0;
+    --hos-btn-color: #000;
+    --hos-btn-hover-color: #000;
+    --hos-btn-active-color: #000;
+    --hos-btn-border: 1px solid #000;
+    --hos-btn-hover-border: #000;
+    --hos-btn-active-border: #000;
+    --hos-btn-radius: 0;
+    --hos-btn-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+    --hos-btn-active-shadow: inset 1px 1px #808080, inset -1px -1px #fff;
+    --hos-btn-primary-bg: #c0c0c0;
+    --hos-btn-primary-hover-bg: #c0c0c0;
+    --hos-btn-primary-active-bg: #c0c0c0;
+    --hos-btn-primary-color: #000;
+    --hos-btn-primary-border: 2px solid #000;
+    --hos-btn-primary-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+    --hos-btn-danger-bg: #c0c0c0;
+    --hos-btn-danger-color: #c00000;
+    --hos-btn-danger-border: 1px solid #000;
+    --hos-input-bg: #fff;
+    --hos-input-color: #000;
+    --hos-input-border: 1px solid #808080;
+    --hos-input-radius: 0;
+    --hos-input-shadow: inset 1px 1px #808080, inset -1px -1px #fff;
+    --hos-toolbar-bg: #c0c0c0;
+    --hos-toolbar-border: 1px solid #808080;
+    --hos-card-bg: #c0c0c0;
+    --hos-card-border: 1px solid #808080;
+    --hos-card-radius: 0;
+    --hos-card-shadow: inset 1px 1px #808080, inset -1px -1px #fff;
+    --hos-table-header-bg: #c0c0c0;
+    --hos-table-header-color: #000;
+    --hos-table-border: 1px solid #808080;
+    --hos-table-row-hover-bg: #000080;
+    --hos-table-row-selected-bg: #000080;
+    --hos-table-row-selected-color: #fff;
+    --hos-badge-bg: #c0c0c0;
+    --hos-badge-color: #000;
     --hos-desktop-background: #008080;
     --hos-desktop-grid-image: none;
     --hos-window-background: #c0c0c0;
@@ -423,6 +536,33 @@
     --hos-radius-sm: 0.25rem;
     --hos-radius-md: 0.55rem;
     --hos-radius-lg: 0.8rem;
+    --hos-btn-bg: linear-gradient(#ffffff, #ece9d8 60%, #ded7c2);
+    --hos-btn-hover-bg: linear-gradient(#ffffff, #f7f5ed 60%, #ede6d4);
+    --hos-btn-active-bg: #ded7c2;
+    --hos-btn-color: #12203a;
+    --hos-btn-border: 1px solid #3b73c5;
+    --hos-btn-hover-border: #174ea6;
+    --hos-btn-active-border: #174ea6;
+    --hos-btn-radius: 0.25rem;
+    --hos-btn-shadow: inset 0 1px #fff, 0 1px 2px rgb(0 38 91 / 15%);
+    --hos-btn-active-shadow: inset 0 1px 2px rgb(0 0 0 / 25%);
+    --hos-btn-primary-bg: linear-gradient(#5da1f6, #245edc 60%, #174ea6);
+    --hos-btn-primary-hover-bg: linear-gradient(#74b1f8, #3b73c5 60%, #1e5ac0);
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #174ea6;
+    --hos-btn-primary-shadow: inset 0 1px rgb(255 255 255 / 45%), 0 1px 3px rgb(0 38 91 / 25%);
+    --hos-input-bg: #fff;
+    --hos-input-color: #12203a;
+    --hos-input-border: 1px solid #7f9db9;
+    --hos-input-radius: 0.2rem;
+    --hos-toolbar-bg: #ece9d8;
+    --hos-toolbar-border: 1px solid #a6b8d8;
+    --hos-table-header-bg: #f5f4ea;
+    --hos-table-header-color: #12203a;
+    --hos-table-border: 1px solid #a6b8d8;
+    --hos-table-row-hover-bg: #dce8ff;
+    --hos-table-row-selected-bg: #245edc;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         radial-gradient(ellipse at 72% 74%, #6ac43f 0 16%, transparent 17%),
         linear-gradient(178deg, #5fb9f5 0 61%, #67bd45 62% 75%, #2d8d2e 76% 100%);
@@ -521,6 +661,32 @@
     --hos-shadow-sm: 0 3px 10px rgb(15 52 80 / 24%);
     --hos-shadow-md: 0 12px 32px rgb(15 52 80 / 34%);
     --hos-shadow-lg: 0 22px 50px rgb(15 52 80 / 44%);
+    --hos-btn-bg: linear-gradient(rgb(255 255 255 / 90%), rgb(221 236 248 / 85%));
+    --hos-btn-hover-bg: linear-gradient(#ffffff, #cae4fc);
+    --hos-btn-active-bg: #b9dcfa;
+    --hos-btn-color: #152331;
+    --hos-btn-border: 1px solid #739ab8;
+    --hos-btn-hover-border: #258bdc;
+    --hos-btn-active-border: #1676c4;
+    --hos-btn-radius: 0.25rem;
+    --hos-btn-shadow: inset 0 1px #fff, 0 1px 3px rgb(15 52 80 / 18%);
+    --hos-btn-primary-bg: linear-gradient(#3a9eeb, #1676c4);
+    --hos-btn-primary-hover-bg: linear-gradient(#56aef0, #258bdc);
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #105994;
+    --hos-btn-primary-shadow: inset 0 1px rgb(255 255 255 / 45%), 0 1px 4px rgb(22 118 196 / 35%);
+    --hos-input-bg: rgb(255 255 255 / 96%);
+    --hos-input-color: #152331;
+    --hos-input-border: 1px solid #739ab8;
+    --hos-input-radius: 0.25rem;
+    --hos-toolbar-bg: rgb(240 247 253 / 85%);
+    --hos-toolbar-border: 1px solid #adc3d3;
+    --hos-table-header-bg: rgb(229 242 251 / 90%);
+    --hos-table-header-color: #152331;
+    --hos-table-border: 1px solid #adc3d3;
+    --hos-table-row-hover-bg: #d9ecfb;
+    --hos-table-row-selected-bg: #1676c4;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         radial-gradient(circle at 74% 16%, rgb(255 255 255 / 60%), transparent 20%),
         radial-gradient(circle at 22% 76%, rgb(76 188 196 / 38%), transparent 30%),
@@ -619,6 +785,32 @@
     --hos-shadow-sm: 0 3px 12px rgb(0 0 0 / 22%);
     --hos-shadow-md: 0 10px 30px rgb(0 0 0 / 30%);
     --hos-shadow-lg: 0 18px 42px rgb(0 0 0 / 38%);
+    --hos-btn-bg: #e1e1e1;
+    --hos-btn-hover-bg: #e5e5e5;
+    --hos-btn-active-bg: #cccccc;
+    --hos-btn-color: #171717;
+    --hos-btn-border: 1px solid #adadad;
+    --hos-btn-hover-border: #0078d4;
+    --hos-btn-active-border: #0078d4;
+    --hos-btn-radius: 0;
+    --hos-btn-shadow: none;
+    --hos-btn-primary-bg: #0078d4;
+    --hos-btn-primary-hover-bg: #168de2;
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #0078d4;
+    --hos-btn-primary-shadow: none;
+    --hos-input-bg: #fff;
+    --hos-input-color: #171717;
+    --hos-input-border: 1px solid #8a8a8a;
+    --hos-input-radius: 0;
+    --hos-toolbar-bg: #f3f3f3;
+    --hos-toolbar-border: 1px solid #d2d2d2;
+    --hos-table-header-bg: #eaeaea;
+    --hos-table-header-color: #171717;
+    --hos-table-border: 1px solid #d2d2d2;
+    --hos-table-row-hover-bg: #e5e5e5;
+    --hos-table-row-selected-bg: #0078d4;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         linear-gradient(132deg, transparent 0 45%, rgb(255 255 255 / 9%) 45% 46%, transparent 46%),
         linear-gradient(145deg, #0067a8, #0b83cc 54%, #005b96);
@@ -722,6 +914,32 @@
     --hos-shadow-sm: 0 4px 14px rgb(28 38 52 / 16%);
     --hos-shadow-md: 0 14px 36px rgb(28 38 52 / 24%);
     --hos-shadow-lg: 0 24px 58px rgb(28 38 52 / 34%);
+    --hos-btn-bg: rgb(255 255 255 / 90%);
+    --hos-btn-hover-bg: #ffffff;
+    --hos-btn-active-bg: #e6e9ee;
+    --hos-btn-color: #202124;
+    --hos-btn-border: 1px solid rgb(65 71 79 / 24%);
+    --hos-btn-hover-border: rgb(65 71 79 / 40%);
+    --hos-btn-active-border: #0a84ff;
+    --hos-btn-radius: 0.35rem;
+    --hos-btn-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+    --hos-btn-primary-bg: #0a84ff;
+    --hos-btn-primary-hover-bg: #3198ff;
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #0066cc;
+    --hos-btn-primary-shadow: 0 1px 3px rgb(10 132 255 / 30%);
+    --hos-input-bg: #ffffff;
+    --hos-input-color: #202124;
+    --hos-input-border: 1px solid rgb(65 71 79 / 28%);
+    --hos-input-radius: 0.35rem;
+    --hos-toolbar-bg: rgb(245 247 250 / 85%);
+    --hos-toolbar-border: 1px solid rgb(65 71 79 / 18%);
+    --hos-table-header-bg: rgb(238 241 245 / 90%);
+    --hos-table-header-color: #5e6269;
+    --hos-table-border: 1px solid rgb(65 71 79 / 18%);
+    --hos-table-row-hover-bg: #dcebff;
+    --hos-table-row-selected-bg: #0a84ff;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         radial-gradient(circle at 24% 22%, rgb(255 255 255 / 58%), transparent 24%),
         radial-gradient(circle at 75% 78%, rgb(95 77 255 / 30%), transparent 32%),
@@ -837,6 +1055,32 @@
     --hos-radius-sm: 0.3rem;
     --hos-radius-md: 0.55rem;
     --hos-radius-lg: 0.8rem;
+    --hos-btn-bg: #382e37;
+    --hos-btn-hover-bg: #4a3d48;
+    --hos-btn-active-bg: #5a2c20;
+    --hos-btn-color: #f7f3f6;
+    --hos-btn-border: 1px solid #695360;
+    --hos-btn-hover-border: #e95420;
+    --hos-btn-active-border: #e95420;
+    --hos-btn-radius: 0.35rem;
+    --hos-btn-shadow: none;
+    --hos-btn-primary-bg: #e95420;
+    --hos-btn-primary-hover-bg: #f47142;
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #bd431b;
+    --hos-btn-primary-shadow: 0 1px 4px rgb(233 84 32 / 30%);
+    --hos-input-bg: #1c171a;
+    --hos-input-color: #f7f3f6;
+    --hos-input-border: 1px solid #695360;
+    --hos-input-radius: 0.35rem;
+    --hos-toolbar-bg: #2c252b;
+    --hos-toolbar-border: 1px solid #493b46;
+    --hos-table-header-bg: #3a3038;
+    --hos-table-header-color: #c9bec7;
+    --hos-table-border: 1px solid #493b46;
+    --hos-table-row-hover-bg: #453642;
+    --hos-table-row-selected-bg: #5a2c20;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         radial-gradient(circle at 75% 25%, rgb(233 84 32 / 28%), transparent 25%),
         radial-gradient(circle at 20% 72%, rgb(119 41 83 / 45%), transparent 31%),
@@ -937,6 +1181,32 @@
     --hos-shadow-sm: 0 2px 8px rgb(0 0 0 / 28%);
     --hos-shadow-md: 0 8px 26px rgb(0 0 0 / 38%);
     --hos-shadow-lg: 0 18px 44px rgb(0 0 0 / 48%);
+    --hos-btn-bg: #252a2f;
+    --hos-btn-hover-bg: #30363d;
+    --hos-btn-active-bg: #193b55;
+    --hos-btn-color: #e3e2e6;
+    --hos-btn-border: 1px solid #454b51;
+    --hos-btn-hover-border: #8dccff;
+    --hos-btn-active-border: #8dccff;
+    --hos-btn-radius: 999px;
+    --hos-btn-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+    --hos-btn-primary-bg: #8dccff;
+    --hos-btn-primary-hover-bg: #b3dcff;
+    --hos-btn-primary-color: #0d1f2d;
+    --hos-btn-primary-border: 1px solid #8dccff;
+    --hos-btn-primary-shadow: 0 2px 6px rgb(141 204 255 / 25%);
+    --hos-input-bg: #101417;
+    --hos-input-color: #e3e2e6;
+    --hos-input-border: 1px solid #454b51;
+    --hos-input-radius: 0.55rem;
+    --hos-toolbar-bg: #181c20;
+    --hos-toolbar-border: 1px solid #30353a;
+    --hos-table-header-bg: #252a2f;
+    --hos-table-header-color: #c3c7cc;
+    --hos-table-border: 1px solid #30353a;
+    --hos-table-row-hover-bg: #252a2f;
+    --hos-table-row-selected-bg: #193b55;
+    --hos-table-row-selected-color: #8dccff;
     --hos-desktop-background: linear-gradient(160deg, #0c2a3c, #102029 50%, #12171b);
     --hos-desktop-grid-image: none;
     --hos-window-background: #181c20;
@@ -1037,6 +1307,32 @@
     --hos-shadow-sm: 0 4px 14px rgb(27 42 66 / 14%);
     --hos-shadow-md: 0 12px 34px rgb(27 42 66 / 22%);
     --hos-shadow-lg: 0 22px 52px rgb(27 42 66 / 30%);
+    --hos-btn-bg: rgb(255 255 255 / 90%);
+    --hos-btn-hover-bg: #ffffff;
+    --hos-btn-active-bg: #e5e5ea;
+    --hos-btn-color: #1c1c1e;
+    --hos-btn-border: 1px solid rgb(60 60 67 / 24%);
+    --hos-btn-hover-border: #007aff;
+    --hos-btn-active-border: #007aff;
+    --hos-btn-radius: 0.65rem;
+    --hos-btn-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+    --hos-btn-primary-bg: #007aff;
+    --hos-btn-primary-hover-bg: #2b91ff;
+    --hos-btn-primary-color: #fff;
+    --hos-btn-primary-border: 1px solid #007aff;
+    --hos-btn-primary-shadow: 0 2px 8px rgb(0 122 255 / 25%);
+    --hos-input-bg: #ffffff;
+    --hos-input-color: #1c1c1e;
+    --hos-input-border: 1px solid rgb(60 60 67 / 24%);
+    --hos-input-radius: 0.55rem;
+    --hos-toolbar-bg: rgb(248 248 250 / 80%);
+    --hos-toolbar-border: 1px solid rgb(60 60 67 / 16%);
+    --hos-table-header-bg: rgb(235 235 240 / 85%);
+    --hos-table-header-color: #636366;
+    --hos-table-border: 1px solid rgb(60 60 67 / 16%);
+    --hos-table-row-hover-bg: #dcecff;
+    --hos-table-row-selected-bg: #007aff;
+    --hos-table-row-selected-color: #fff;
     --hos-desktop-background:
         radial-gradient(circle at 24% 22%, rgb(255 255 255 / 58%), transparent 25%),
         radial-gradient(circle at 75% 70%, rgb(255 78 145 / 32%), transparent 30%),
