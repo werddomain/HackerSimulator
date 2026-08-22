@@ -350,10 +350,18 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IFileDialogService>()));
         services.AddScoped<IDialogService>(provider => provider.GetRequiredService<DialogCoordinator>());
         services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
-        services.AddSingleton(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
-        services.AddSingleton<WindowLaunchCoordinator>();
-        services.AddSingleton<WindowCloseGuardRegistry>();
-        services.AddSingleton<AppBackHandlerRegistry>();
+        // Scoped, not Singleton: on the server host these back live desktop/window state for one
+        // circuit. A Singleton here outlives circuit reconnects (e.g. a hard browser reload, which
+        // tears down and recreates every Scoped service including AppLifecycleOrchestrator and its
+        // running app instances) — the previous circuit's WindowRuntime.Windows entries would
+        // survive with an OwnerInstanceId pointing at an app instance the new circuit's orchestrator
+        // never launched, so DesktopShell's Orchestrator.TryGetRunningInstance lookup permanently
+        // fails and the window is stuck rendering its dead "window-content-placeholder" fallback.
+        // No-op behavior change for the WASM host, which has exactly one implicit scope anyway.
+        services.AddScoped(_ => new WindowRuntime(new WindowBounds(0, 0, 1280, 720)));
+        services.AddScoped<WindowLaunchCoordinator>();
+        services.AddScoped<WindowCloseGuardRegistry>();
+        services.AddScoped<AppBackHandlerRegistry>();
         // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<WindowCloseCoordinator>();
