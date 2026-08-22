@@ -2,7 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
 using Xunit;
 
-namespace HackerOs.Apps.Terminal.Tests;
+namespace HackerOs.AppSdk.Terminal.Tests;
 
 public sealed class TerminalCommandResolverTests
 {

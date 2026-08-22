@@ -1,7 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
 
-namespace HackerOs.Apps.Terminal;
+namespace HackerOs.AppSdk.Terminal;
 
 /// <summary>Represents a resolved terminal command target from the AppCatalog.</summary>
 public sealed record TerminalCommandResolution(

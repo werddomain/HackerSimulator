@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Terminal\HackerOs.AppSdk.Terminal.csproj" />
   </ItemGroup>
 
 </Project>

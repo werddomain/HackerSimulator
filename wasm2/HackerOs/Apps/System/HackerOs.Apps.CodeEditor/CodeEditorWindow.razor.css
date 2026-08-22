@@ -1,6 +1,6 @@
 .code-editor {
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -19,7 +19,8 @@
     background: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
 }
 
-.file-actions {
+.file-actions,
+.view-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
@@ -68,6 +69,12 @@
 .language-select:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+.toolbar-btn.is-active {
+    color: var(--hos-btn-hover-color, var(--hos-text-primary, #ffffff));
+    border-color: var(--hos-accent, #58a6ff);
+    background: var(--hos-btn-active-bg, var(--hos-accent-subtle, #123a2b));
 }
 
 .language-label {
@@ -167,58 +174,124 @@
     background: color-mix(in srgb, var(--hos-success, #42d392) 20%, var(--hos-bg-base, #101417));
 }
 
-.editor-workspace,
-.editor-host {
+.editor-workspace {
+    display: flex;
     min-width: 0;
     min-height: 0;
     height: 100%;
     overflow: hidden;
 }
 
+.editor-sidebar {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: 15rem;
+    min-height: 0;
+    overflow: hidden;
+    border-right: 1px solid var(--hos-border-subtle, #30363d);
+    background: var(--hos-bg-surface, #161b22);
+}
+
+.sidebar-header {
+    flex: 0 0 auto;
+    padding: 0.4rem 0.6rem;
+    overflow: hidden;
+    color: var(--hos-text-secondary, #8b949e);
+    border-bottom: 1px solid var(--hos-border-subtle, #30363d);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.editor-sidebar ::deep .file-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
 .editor-host {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
     font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
     font-size: 0.86rem;
 }
 
-.editor-host ::deep .cm-editor {
-    height: 100%;
-    color: var(--hos-text-primary, #c9d1d9);
-    background: var(--hos-window-content-background, var(--hos-bg-base, #0d1117));
+.terminal-panel {
+    display: flex;
+    flex-direction: column;
+    height: 220px;
+    min-height: 0;
+    border-top: 1px solid var(--hos-border-subtle, #30363d);
+    background: var(--hos-bg-base, #0d1117);
 }
 
-.editor-host ::deep .cm-scroller {
-    overflow: auto;
-    font-family: inherit;
-}
-
-.editor-host ::deep .cm-content {
-    caret-color: var(--hos-accent, #58a6ff);
-}
-
-.editor-host ::deep .cm-cursor,
-.editor-host ::deep .cm-dropCursor {
-    border-left-color: var(--hos-accent, #58a6ff);
-}
-
-.editor-host ::deep .cm-gutters {
-    color: var(--hos-text-muted, #6e7681);
-    border-right-color: var(--hos-border-subtle, #30363d);
+.terminal-tabs {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--hos-border-subtle, #30363d);
     background: var(--hos-bg-surface, #161b22);
 }
 
-.editor-host ::deep .cm-activeLine,
-.editor-host ::deep .cm-activeLineGutter {
-    background: color-mix(in srgb, var(--hos-accent, #58a6ff) 10%, transparent);
+.terminal-tab-shell {
+    display: flex;
+    align-items: center;
+    border-right: 1px solid var(--hos-border-subtle, #30363d);
 }
 
-.editor-host ::deep .cm-selectionBackground,
-.editor-host ::deep .cm-content ::selection {
-    background: var(--hos-accent-subtle, #264f78);
+.terminal-tab-shell.is-active {
+    box-shadow: inset 0 2px var(--hos-accent, #39d353);
+    background: var(--hos-bg-base, #0d1117);
 }
 
-.editor-host ::deep .cm-focused {
-    outline: 2px solid var(--hos-focus-ring, #58a6ff);
-    outline-offset: -2px;
+.terminal-tab-select,
+.terminal-tab-close,
+.add-terminal-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--hos-text-primary, #c9d1d9);
+    font-family: inherit;
+}
+
+.terminal-tab-select {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.terminal-tab-close {
+    padding: 0 0.5rem;
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.terminal-tab-close:hover {
+    color: var(--hos-error, #ff8f87);
+}
+
+.add-terminal-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+}
+
+.terminal-instances {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+}
+
+.terminal-instance {
+    display: none;
+    height: 100%;
+}
+
+.terminal-instance.is-active {
+    display: block;
 }
 
 .editor-statusbar {

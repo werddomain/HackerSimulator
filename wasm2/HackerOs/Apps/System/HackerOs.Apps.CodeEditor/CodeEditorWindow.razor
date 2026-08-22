@@ -1,7 +1,12 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.FileView
+@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.AppSdk.Terminal
 @using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Gateways
+@using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -10,14 +15,23 @@
 @implements IWindowCloseGuard
 @inject IJSRuntime JavaScript
 @inject MudBlazor.IDialogService MudDialogService
+@inject ISessionService SessionService
 
 <section class="code-editor" @onkeydown="HandleShortcutAsync" aria-label="Code Editor">
     <header class="editor-toolbar">
         <div class="file-actions" role="toolbar" aria-label="File actions">
             <button id="code-new" class="toolbar-btn" @onclick="NewDocumentAsync">New</button>
             <button id="code-open" class="toolbar-btn" @onclick="OpenFileAsync">Open</button>
+            <button id="code-open-folder" class="toolbar-btn" @onclick="OpenFolderAsync">Open Folder</button>
             <button id="code-save" class="toolbar-btn" @onclick="SaveActiveAsync" disabled="@(ActiveDocument is null)">Save</button>
             <button id="code-save-as" class="toolbar-btn" @onclick="SaveActiveAsAsync" disabled="@(ActiveDocument is null)">Save As</button>
+        </div>
+
+        <div class="view-actions" role="toolbar" aria-label="View actions">
+            <button id="code-toggle-terminal"
+                    class="toolbar-btn @(_showTerminalPanel ? "is-active" : null)"
+                    aria-pressed="@_showTerminalPanel"
+                    @onclick="ToggleTerminalPanel">Terminal</button>
         </div>
 
         <label class="language-label" for="code-language">
@@ -69,8 +83,57 @@
     }
 
     <div class="editor-workspace">
+        @if (_openFolder is VirtualPath folder)
+        {
+            <aside class="editor-sidebar" aria-label="Folder explorer">
+                <div class="sidebar-header">@folder.Value</div>
+                <FileView @ref="_fileView"
+                          @key="folder"
+                          FileSystem="_openFolderFileSystem"
+                          Watch="AppContext.Watch"
+                          InitialDirectory="folder"
+                          Mode="FileViewMode.Tree"
+                          AllowMultiSelect="false"
+                          OwnerAppId="Manifest.Id" />
+            </aside>
+        }
         <div class="editor-host" @ref="_editorHost"></div>
     </div>
+
+    @if (_showTerminalPanel)
+    {
+        <section class="terminal-panel" aria-label="Integrated terminal">
+            <nav class="terminal-tabs" aria-label="Open terminals">
+                @for (int i = 0; i < _terminalTabIds.Count; i++)
+                {
+                    string tabId = _terminalTabIds[i];
+                    int tabNumber = i + 1;
+                    <div class="terminal-tab-shell @(tabId == _activeTerminalTabId ? "is-active" : null)">
+                        <button class="terminal-tab-select"
+                                aria-pressed="@(tabId == _activeTerminalTabId)"
+                                @onclick="() => ActivateTerminalTab(tabId)">Terminal @tabNumber</button>
+                        @if (_terminalTabIds.Count > 1)
+                        {
+                            <button class="terminal-tab-close"
+                                    aria-label="Close Terminal @tabNumber"
+                                    @onclick="() => CloseTerminalTab(tabId)">×</button>
+                        }
+                    </div>
+                }
+                <button class="add-terminal-btn" aria-label="Add terminal" @onclick="AddTerminalTab">+</button>
+            </nav>
+            <div class="terminal-instances">
+                @foreach (string tabId in _terminalTabIds)
+                {
+                    <div class="terminal-instance @(tabId == _activeTerminalTabId ? "is-active" : null)" @key="tabId">
+                        <TerminalPanel AppContext="AppContext"
+                                       CallerAppId="org.hackeros.code-editor"
+                                       InitialCwd="@TerminalInitialCwd()" />
+                    </div>
+                }
+            </div>
+        </section>
+    }
 
     <footer class="editor-statusbar" aria-label="Code editor status">
         <span>@(ActiveDocument?.Path?.Value ?? "Unsaved buffer")</span>
@@ -93,7 +156,7 @@
         EntryPoint = new AppEntryPointManifest("HackerOs.Apps.CodeEditor.dll", "HackerOs.Apps.CodeEditor.CodeEditorWindow"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("developer", AppLaunchVisibility.Visible, []),
-        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "clipboard.read", "clipboard.write"],
+        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "dialogs.folder-select", "clipboard.read", "clipboard.write"],
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = false
     };
@@ -112,6 +175,14 @@
     private string? _statusMessage;
     private bool _statusIsError;
     private bool _recoveryClearedOnClose;
+    private VirtualPath? _openFolder;
+    private IAppFileSystemGateway? _openFolderFileSystem;
+    private FileView? _fileView;
+    private bool _subscribedToFileView;
+    private bool _showTerminalPanel;
+    private readonly List<string> _terminalTabIds = ["terminal-1"];
+    private string _activeTerminalTabId = "terminal-1";
+    private int _terminalTabCounter = 1;
 
     /// <summary>Gets or sets an optional VFS path supplied by an open-file intent.</summary>
     [Parameter]
@@ -148,6 +219,16 @@
         if (!string.IsNullOrWhiteSpace(LaunchFilePath))
         {
             await LoadPathAsync(VirtualPath.Parse(LaunchFilePath), _fileService!);
+        }
+    }
+
+    protected override void OnAppAfterRender(bool firstRender)
+    {
+        base.OnAppAfterRender(firstRender);
+        if (_fileView is not null && !_subscribedToFileView)
+        {
+            _subscribedToFileView = true;
+            _fileView.Opened += OnFileViewOpened;
         }
     }
 
@@ -191,7 +272,7 @@
         }
     }
 
-    /// <summary>Receives content changes from the isolated CodeMirror instance.</summary>
+    /// <summary>Receives content changes from the isolated Monaco instance.</summary>
     [JSInvokable]
     public async Task OnEditorChanged(string content)
     {
@@ -255,6 +336,70 @@
             AppContext.FileSystem.WithSelectedHandle(selected.Handle));
         await LoadPathAsync(selected.Path, selectedService);
     }
+
+    private async Task OpenFolderAsync()
+    {
+        VirtualPath initialDirectory = _openFolder ?? VirtualPath.Parse(
+            SessionService.CurrentPrincipal?.HomePath ?? "/");
+        SelectFolderDialogResult result = await base.SelectFolderAsync(new SelectFolderDialogRequest
+        {
+            Title = "Open Folder",
+            InitialDirectory = initialDirectory
+        }, AppContext.CancellationToken);
+
+        if (result.Status != FileDialogStatus.Selected || result.Resource is null)
+        {
+            return;
+        }
+
+        _subscribedToFileView = false;
+        _openFolder = result.Resource.Path;
+        _openFolderFileSystem = AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle);
+        StateHasChanged();
+    }
+
+    /// <summary>Opens a file activated from the folder sidebar's tree into a new editor tab.</summary>
+    private async void OnFileViewOpened(object? sender, FileViewOpenedEventArgs e)
+    {
+        if (e.Item.IsDirectory || _openFolderFileSystem is null)
+        {
+            return;
+        }
+
+        await LoadPathAsync(e.Item.FullPath, new CodeEditorFileService(_openFolderFileSystem));
+    }
+
+    private void ToggleTerminalPanel() => _showTerminalPanel = !_showTerminalPanel;
+
+    private void AddTerminalTab()
+    {
+        _terminalTabCounter++;
+        string tabId = $"terminal-{_terminalTabCounter}";
+        _terminalTabIds.Add(tabId);
+        _activeTerminalTabId = tabId;
+    }
+
+    private void ActivateTerminalTab(string tabId) => _activeTerminalTabId = tabId;
+
+    private void CloseTerminalTab(string tabId)
+    {
+        if (_terminalTabIds.Count <= 1)
+        {
+            return;
+        }
+
+        int closedIndex = _terminalTabIds.IndexOf(tabId);
+        _terminalTabIds.Remove(tabId);
+
+        if (_activeTerminalTabId == tabId)
+        {
+            int nextIndex = Math.Min(closedIndex, _terminalTabIds.Count - 1);
+            _activeTerminalTabId = _terminalTabIds[nextIndex];
+        }
+    }
+
+    private string TerminalInitialCwd() =>
+        _openFolder?.Value ?? SessionService.CurrentPrincipal?.HomePath ?? "/home/user";
 
     private async Task LoadPathAsync(VirtualPath path, CodeEditorFileService service)
     {
@@ -323,6 +468,10 @@
         if (result.Succeeded)
         {
             SetStatus($"Saved {path.Value}.", isError: false);
+            if (_fileView is not null)
+            {
+                await _fileView.RefreshAsync();
+            }
         }
         else
         {
@@ -569,6 +718,11 @@
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        if (_fileView is not null)
+        {
+            _fileView.Opened -= OnFileViewOpened;
+        }
+
         _recoveryDebounce?.Cancel();
         _recoveryDebounce?.Dispose();
         if (!_recoveryClearedOnClose)

@@ -1,9 +1,9 @@
 using HackerOs.App.Abstractions;
-using HackerOs.Apps.Terminal;
+using HackerOs.AppSdk.Terminal;
 using HackerOs.Platform.Core;
 using Xunit;
 
-namespace HackerOs.Apps.Terminal.Tests;
+namespace HackerOs.AppSdk.Terminal.Tests;
 
 public sealed class TerminalSessionTests
 {

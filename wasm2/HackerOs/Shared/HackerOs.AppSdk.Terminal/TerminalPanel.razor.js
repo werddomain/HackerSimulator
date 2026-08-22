@@ -8,7 +8,9 @@ export function observeTerminal(element, dotNetReference) {
         const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.45;
         const columns = Math.max(1, Math.floor(element.clientWidth / cellWidth));
         const rows = Math.max(3, Math.floor(element.clientHeight / lineHeight));
-        dotNetReference.invokeMethodAsync("UpdateTerminalViewport", columns, rows);
+        // Fire-and-forget: a resize can fire after the .NET side disposes this component (e.g.
+        // closing one terminal tab among several) — the rejection is expected there, not a bug.
+        dotNetReference.invokeMethodAsync("UpdateTerminalViewport", columns, rows).catch(() => {});
     };
 
     const observer = new ResizeObserver(measure);

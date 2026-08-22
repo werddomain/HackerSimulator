@@ -1,8 +1,8 @@
 using HackerOs.AppSdk;
-using HackerOs.Apps.Terminal;
+using HackerOs.AppSdk.Terminal;
 using Xunit;
 
-namespace HackerOs.Apps.Terminal.Tests;
+namespace HackerOs.AppSdk.Terminal.Tests;
 
 public sealed class TerminalFullScreenSessionTests
 {

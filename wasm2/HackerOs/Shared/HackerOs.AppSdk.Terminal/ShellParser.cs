@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace HackerOs.Apps.Terminal;
+namespace HackerOs.AppSdk.Terminal;
 
 /// <summary>Represents a parsed shell command line or diagnostic error.</summary>
 public sealed record ShellParseResult(

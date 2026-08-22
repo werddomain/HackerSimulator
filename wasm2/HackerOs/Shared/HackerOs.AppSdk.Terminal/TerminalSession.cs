@@ -1,4 +1,4 @@
-namespace HackerOs.Apps.Terminal;
+namespace HackerOs.AppSdk.Terminal;
 
 /// <summary>
 /// Maintains interactive terminal session state including working directory, environment variables,

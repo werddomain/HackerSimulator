@@ -23,6 +23,7 @@
     "filesystem.user-home.write",
     "dialogs.file-open",
     "dialogs.file-save",
+    "dialogs.folder-select",
     "clipboard.read",
     "clipboard.write"
   ],

@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using HackerOs.AppSdk;
 
-namespace HackerOs.Apps.Terminal;
+namespace HackerOs.AppSdk.Terminal;
 
 /// <summary>
 /// Bridges renderer-independent full-screen commands to one Terminal window instance.
