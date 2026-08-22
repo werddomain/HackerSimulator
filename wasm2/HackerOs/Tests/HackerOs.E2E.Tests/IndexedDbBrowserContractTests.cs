@@ -775,7 +775,7 @@ public sealed class IndexedDbBrowserContractTests
         }
     }
 
-    /// <summary>Verifies the locally bundled CodeMirror editor, C# state callback, mode switch, and disposal.</summary>
+    /// <summary>Verifies the locally bundled Monaco editor, C# state callback, mode switch, and disposal.</summary>
     [Fact]
     public async Task Code_editor_local_bundle_edits_switches_mode_and_disposes_cleanly()
     {
@@ -799,12 +799,24 @@ public sealed class IndexedDbBrowserContractTests
 
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=code-editor");
             page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
-            ILocator editor = page.Locator(".cm-editor");
+            ILocator editor = page.Locator(".monaco-editor");
             await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-            ILocator content = page.Locator(".cm-content");
+            // Monaco's editable surface is a `div.native-edit-context` (Chrome's EditContext API),
+            // not a real <textarea>/contenteditable — FillAsync sets .value directly, which the
+            // EditContext-backed editor never observes, so content must go through real key events.
+            ILocator content = page.Locator(".native-edit-context");
             Assert.Equal("textbox", await content.GetAttributeAsync("role"));
 
-            await content.FillAsync("const answer = 42;");
+            // .native-edit-context is an accessibility-only proxy for Chrome's EditContext API —
+            // it sits underneath Monaco's own rendered text lines, so it can't be the click target
+            // (Playwright's actionability check finds .view-line intercepting the pointer). Click
+            // the visible editor surface to establish focus, same as a real user would, then type.
+            await editor.ClickAsync();
+            // PressSequentially types at the caret without clearing existing content (unlike the
+            // old FillAsync, which replaced .value outright) — select-all first so the assertion
+            // below checks the whole document, not the seed comment with this appended to it.
+            await content.PressAsync("ControlOrMeta+A");
+            await content.PressSequentiallyAsync("const answer = 42;");
             await page.WaitForFunctionAsync(
                 "() => document.querySelector('#code-editor-result')?.textContent === 'const answer = 42;'");
             Assert.Equal("edited", await page.Locator("#code-editor-result").GetAttributeAsync("data-status"));

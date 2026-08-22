@@ -3,9 +3,9 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JavaScript
 
-<section class="code-editor-proof" aria-label="CodeMirror browser contract">
+<section class="code-editor-proof" aria-label="Monaco browser contract">
     <header>
-        <h1>Local CodeMirror contract</h1>
+        <h1>Local Monaco contract</h1>
         <div role="toolbar" aria-label="Editor proof actions">
             <button @onclick="UseJsonAsync">Use JSON mode</button>
             <button @onclick="DisposeEditorAsync">Dispose editor</button>
@@ -32,7 +32,7 @@
             return;
         }
 
-        _document.TryEdit("// local CodeMirror bundle");
+        _document.TryEdit("// local Monaco bundle");
         _dotNetReference = DotNetObjectReference.Create(this);
         _module = await JavaScript.InvokeAsync<IJSObjectReference>(
             "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
