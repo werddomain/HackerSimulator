@@ -54,23 +54,35 @@ public sealed class CodeEditorRecoveryStore
 
     private readonly IAppFileSystemGateway _fileSystem;
     private readonly string _userId;
+    private readonly string _homePath;
 
-    /// <summary>Creates a recovery store for the current authenticated user.</summary>
-    public CodeEditorRecoveryStore(IAppFileSystemGateway fileSystem, string userId)
+    /// <summary>
+    /// Creates a recovery store for the current authenticated user.
+    /// </summary>
+    /// <param name="fileSystem">The app-scoped VFS gateway.</param>
+    /// <param name="userId">
+    /// Opaque user identity recorded in (and validated against) the recovery envelope — this is
+    /// <c>AppContext.UserId</c>, an internal id, not the login name used in VFS paths.
+    /// </param>
+    /// <param name="homePath">
+    /// The user's actual home directory (e.g. <c>SessionService.CurrentPrincipal.HomePath</c>),
+    /// used to build <see cref="RecoveryPath"/>. <c>AppContext.UserId</c> is not a path segment —
+    /// using it directly here previously pointed every recovery read/write at a nonexistent
+    /// <c>/home/{userId}</c> directory, so saves always failed with a raw "NotFound" status.
+    /// </param>
+    public CodeEditorRecoveryStore(IAppFileSystemGateway fileSystem, string userId, string homePath)
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        if (userId.Contains('/', StringComparison.Ordinal) || userId.Contains('\\', StringComparison.Ordinal))
-        {
-            throw new ArgumentException("User IDs used in recovery paths cannot contain path separators.", nameof(userId));
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(homePath);
 
         _userId = userId;
+        _homePath = homePath.TrimEnd('/');
     }
 
     /// <summary>Gets the app-private VFS recovery file path for the current user.</summary>
     public VirtualPath RecoveryPath => VirtualPath.Parse(
-        $"/home/{_userId}/.local/state/hackeros/code-editor/session.json");
+        $"{_homePath}/.local/state/hackeros/code-editor/session.json");
 
     /// <summary>Loads and validates the most recent recovery snapshot.</summary>
     public async ValueTask<CodeEditorRecoveryResult> LoadAsync(CancellationToken cancellationToken = default)
@@ -231,7 +243,7 @@ public sealed class CodeEditorRecoveryStore
     private async ValueTask<CodeEditorRecoveryResult> EnsureParentDirectoriesAsync(CancellationToken cancellationToken)
     {
         string[] segments = [".local", "state", "hackeros", "code-editor"];
-        VirtualPath current = VirtualPath.Parse($"/home/{_userId}");
+        VirtualPath current = VirtualPath.Parse(_homePath);
         foreach (string segment in segments)
         {
             VirtualPath next = VirtualPath.Parse($"{current.Value}/{segment}");

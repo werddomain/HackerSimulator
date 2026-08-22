@@ -1,12 +1,26 @@
 .code-editor {
-    display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
     overflow: hidden;
     color: var(--hos-text-primary, #c9d1d9);
     background: var(--hos-window-content-background, var(--hos-bg-base, #0d1117));
     font-family: var(--hos-font-ui, Inter, system-ui, sans-serif);
+}
+
+/*
+ * Flexbox, not grid: several sections here (.editor-message, .terminal-panel) render
+ * conditionally via @if. A fixed grid-template-rows assigns tracks by DOM position, so an
+ * absent optional row shifts every later section into the wrong track (e.g. .editor-workspace
+ * lands in an `auto` track sized to its content instead of the flexible one) — flex items just
+ * flow in order regardless of how many optional siblings are present.
+ */
+.editor-toolbar,
+.tab-strip,
+.editor-message,
+.editor-statusbar {
+    flex: 0 0 auto;
 }
 
 .editor-toolbar {
@@ -176,9 +190,9 @@
 
 .editor-workspace {
     display: flex;
+    flex: 1 1 auto;
     min-width: 0;
-    min-height: 0;
-    height: 100%;
+    min-height: 120px;
     overflow: hidden;
 }
 
@@ -223,8 +237,8 @@
 .terminal-panel {
     display: flex;
     flex-direction: column;
-    height: 220px;
-    min-height: 0;
+    flex: 0 1 220px;
+    min-height: 96px;
     border-top: 1px solid var(--hos-border-subtle, #30363d);
     background: var(--hos-bg-base, #0d1117);
 }

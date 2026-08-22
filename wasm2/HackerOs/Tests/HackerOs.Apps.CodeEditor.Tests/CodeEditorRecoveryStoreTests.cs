@@ -12,7 +12,7 @@ public sealed class CodeEditorRecoveryStoreTests
     public async Task Save_then_load_round_trips_dirty_tabs_and_active_selection()
     {
         MemoryFileSystemGateway gateway = new();
-        CodeEditorRecoveryStore store = new(gateway, "user");
+        CodeEditorRecoveryStore store = new(gateway, "user", "/home/user");
         CodeEditorSession session = new();
         CodeEditorDocument first = session.NewDocument();
         Assert.True(first.TryEdit("unsaved first").Succeeded);
@@ -34,10 +34,27 @@ public sealed class CodeEditorRecoveryStoreTests
     }
 
     [Fact]
+    public async Task Save_uses_the_supplied_home_path_not_the_opaque_user_id()
+    {
+        // AppContext.UserId is an internal identity, not the VFS folder name under /home — a
+        // store built from userId alone would target a nonexistent /home/{userId} directory and
+        // every save would fail with a raw "NotFound" status. Regression coverage for that bug.
+        MemoryFileSystemGateway gateway = new();
+        CodeEditorRecoveryStore store = new(gateway, "3f8a2b1c-guid-not-a-folder", "/home/user");
+        CodeEditorSession session = new();
+        session.NewDocument().TryEdit("uses real home path");
+
+        CodeEditorRecoveryResult saved = await store.SaveAsync(session.CaptureRecovery());
+
+        Assert.Equal(CodeEditorRecoveryStatus.Success, saved.Status);
+        Assert.Equal("/home/user/.local/state/hackeros/code-editor/session.json", store.RecoveryPath.Value);
+    }
+
+    [Fact]
     public async Task Clear_removes_only_the_app_private_recovery_file()
     {
         MemoryFileSystemGateway gateway = new();
-        CodeEditorRecoveryStore store = new(gateway, "user");
+        CodeEditorRecoveryStore store = new(gateway, "user", "/home/user");
         CodeEditorSession session = new();
         session.NewDocument().TryEdit("temporary recovery");
         await store.SaveAsync(session.CaptureRecovery());
@@ -53,7 +70,7 @@ public sealed class CodeEditorRecoveryStoreTests
     public async Task Malformed_recovery_is_typed_invalid_and_does_not_throw()
     {
         MemoryFileSystemGateway gateway = new();
-        CodeEditorRecoveryStore store = new(gateway, "user");
+        CodeEditorRecoveryStore store = new(gateway, "user", "/home/user");
         gateway.CreateDirectoriesFor(store.RecoveryPath);
         gateway.AddText(store.RecoveryPath, "{ not valid json", revision: 1);
 
@@ -67,7 +84,7 @@ public sealed class CodeEditorRecoveryStoreTests
     public async Task Vfs_denial_is_exposed_without_falling_back_to_browser_storage()
     {
         MemoryFileSystemGateway gateway = new() { DenyReads = true };
-        CodeEditorRecoveryStore store = new(gateway, "user");
+        CodeEditorRecoveryStore store = new(gateway, "user", "/home/user");
 
         CodeEditorRecoveryResult result = await store.LoadAsync();
 

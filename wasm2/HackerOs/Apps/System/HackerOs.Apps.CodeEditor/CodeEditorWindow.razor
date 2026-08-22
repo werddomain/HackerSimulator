@@ -156,7 +156,9 @@
         EntryPoint = new AppEntryPointManifest("HackerOs.Apps.CodeEditor.dll", "HackerOs.Apps.CodeEditor.CodeEditorWindow"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("developer", AppLaunchVisibility.Visible, []),
-        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "dialogs.folder-select", "clipboard.read", "clipboard.write"],
+        // apps.launch is required by AppIntentDispatcher.DispatchExecuteCommandAsync — the
+        // embedded terminal panel dispatches ExecuteCommandIntent under this app's CallerAppId.
+        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "dialogs.file-open", "dialogs.file-save", "dialogs.folder-select", "clipboard.read", "clipboard.write", "apps.launch"],
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = false
     };
@@ -193,7 +195,10 @@
     protected override void OnAppInitialized()
     {
         _fileService = new CodeEditorFileService(AppContext.FileSystem);
-        _recoveryStore = new CodeEditorRecoveryStore(AppContext.FileSystem, AppContext.UserId);
+        _recoveryStore = new CodeEditorRecoveryStore(
+            AppContext.FileSystem,
+            AppContext.UserId,
+            SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}");
         _session.NewDocument();
         _editorSyncRequired = true;
     }

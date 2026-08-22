@@ -25,7 +25,8 @@
     "dialogs.file-save",
     "dialogs.folder-select",
     "clipboard.read",
-    "clipboard.write"
+    "clipboard.write",
+    "apps.launch"
   ],
   "resources": {
     "baselineCpuWeight": 0.02,

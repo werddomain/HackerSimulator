@@ -24,6 +24,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "wasm2/HackerOs/Server/HackerOs.Server/HackerOs.Server.csproj", "--urls", "http://127.0.0.1:5255"],
       "port": 5255
+    },
+    {
+      "name": "hackeros-ecosystem",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "wasm2/HackerOs/OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj", "--urls", "http://127.0.0.1:5256"],
+      "port": 5256
     }
   ]
 }
