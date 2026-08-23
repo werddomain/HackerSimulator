@@ -15,7 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
     <ProjectReference Include="..\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
+    <ProjectReference Include="..\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

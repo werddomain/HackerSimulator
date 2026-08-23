@@ -2,10 +2,11 @@
 
 **Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
 résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shell
-Mobile), Phase 2b (`MOB-008`, changement de shell contrôlé) et Phase 2c
-(`MOB-012`/`MOB-013`, contrat Back applicatif — Phase 2 est donc close) faites
-le 2026-08-18/19 — voir §16 ; le reste (`MOB-011`, `MOB-015` à `MOB-018`)
-reste à l’état de proposition  
+Mobile), Phase 2b (`MOB-008`, changement de shell contrôlé), Phase 2c
+(`MOB-012`/`MOB-013`, contrat Back applicatif) et `MOB-011` (pile de
+navigation et surface Recent, complétant les étapes 1/3/4/5 de §7.3 — Phase 2
+est donc entièrement close) faites entre le 2026-08-18 et le 2026-08-23 — voir
+§16 ; le reste (`MOB-015` à `MOB-018`) reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
@@ -644,7 +645,8 @@ activé automatiquement.
   que `MOB-011`/`MOB-012` n’existent pas ; `Home` masque la surface active via
   Minimize sans terminer le processus (§7.4), implémenté dans
   `MobileNavigationCommandsAdapter`.
-- [ ] `MOB-011` Implémenter la pile de navigation et la surface Recent.
+- [x] `MOB-011` Implémenter la pile de navigation et la surface Recent.
+  **2026-08-23** — voir §16.10 pour le détail fichier par fichier.
 - [x] `MOB-012` Ajouter `IAppBackHandler`, ses événements et la validation de
   manifeste. **Phase 2c, 2026-08-19** — voir §16.9 pour le détail fichier par
   fichier (`AppBackContracts.cs`, `AppManifest.SupportsBack`,
@@ -1059,4 +1061,156 @@ propre tranche dédiée, pas un ajout incrémental à celle-ci.
   `NotHandled` (ou l'absence de handler) reste un no-op silencieux — c'est
   l'issue terminale valide de l'étape 5 tant que les étapes précédentes
   n'existent pas pour la prévenir.
+
+### 16.10 Ce que « MOB-011 » a livré (2026-08-23)
+
+Complète les étapes 1/3/4/5 de la séquence Back de §7.3 restées ouvertes
+depuis §16.9, et livre la surface Recent de §7.5, sans introduire de fixture
+lourde ni de nouveau moteur parallèle à `WindowRuntime`.
+
+- **`MobileNavigationHistory`** (nouveau,
+  `Platform/HackerOs.Platform.Blazor/Shell/`) — une pile de
+  `Stack<WindowId>` réactive : elle s'abonne à `WindowRuntime.StateChanged`,
+  recalcule `SingleSurfacePresentationPolicy.SelectPrimary` à chaque tick, et
+  empile l'ancien primaire dès qu'il change tant que la fenêtre existe encore
+  (fermée = jamais empilée). Ce diff réactif capture *tout* changement de
+  primaire — un intent qui lance une fenêtre, une activation depuis Recent,
+  n'importe quoi d'autre — sans qu'aucun site d'appel n'ait besoin de pousser
+  explicitement. `TryPopPrevious` ignore silencieusement les entrées
+  devenues obsolètes (fenêtre fermée depuis) et marque l'entrée retournée
+  comme un retour attendu (`_pendingReturn`) pour que le
+  `WindowFocusedEvent` qui suit ne soit pas ré-empilé comme une nouvelle
+  navigation avant.
+- **Étape 1 (dialogue/modal annulable)** : aucune pile de dialogues séparée
+  n'a été construite — la fenêtre primaire elle-même porte déjà
+  `Modality`/`OnRequestClose` (`WindowRuntimeState`), et
+  `SingleSurfacePresentationPolicy.SelectPrimary` fait déjà remonter une
+  boîte de dialogue owner-modal comme primaire pendant qu'elle est ouverte
+  (elle a le z-order le plus élevé). `RequestBack` traite donc
+  `Modality: OwnerModal` + `OnRequestClose` non nul comme le signal
+  « annulable » et route directement vers ce délégué — aucun nouveau
+  concept de pile de modals n'était nécessaire.
+- **Étape 3 (retour à l'entrée précédente)** : `history.TryPopPrevious`,
+  puis Restore (si minimisée) + Focus — même forme que
+  `TaskbarWindowInteraction.HandleClick` pour un item minimisé.
+  `SingleSurfaceArea.OnParametersSetAsync` (préexistant, non modifié)
+  reminimise automatiquement l'ancienne fenêtre primaire au prochain rendu ;
+  cette tranche n'a pas eu besoin de gérer elle-même la minimisation.
+- **Étape 4 (fermeture gardée et retour Home)** : `RequestBack` prend un
+  délégué `Func<WindowId, Task> closeWindow` plutôt que d'injecter
+  directement `WindowCloseCoordinator`/`WindowCloseGuardRegistry` — **aucun
+  test unitaire du dépôt ne construit ces deux services réels** (leur seul
+  consommateur, `PlatformShellSwitchCoordinatorTests`, utilise une fixture
+  privée de noyau complet à 12 paramètres) ; construire ça ici aurait fait
+  déborder cette tranche bien au-delà de « petite et autonome ». Le vrai
+  chemin gardé (`CloseCoordinator.CloseAsync(id, ct =>
+  CloseGuards.ConfirmCloseAsync(id, ct))`) est injecté depuis
+  `MobileShell.razor`, identique à ce que
+  `TaskbarCommandDispatcherAdapter.Close` fait déjà pour la taskbar — les
+  tests unitaires de l'adaptateur utilisent un simple délégué d'enregistrement
+  à la place, le vrai chemin gardé restant exercé par le test navigateur
+  E2E.
+- **Étape 0, ajout délibéré non nommé par §7.3** : un panneau de
+  notifications ouvert ou la surface Recent ouverte sont fermés en priorité
+  absolue avant tout le reste — c'est manifestement le vrai sommet de la
+  pile UI même si les 5 étapes littérales ne le nomment pas séparément
+  (même esprit que la « tranche pragmatique » déjà assumée pour `MOB-008`
+  en §16.7).
+- **Surface Recent** : `MobileRecentProjection` (nouveau, statique et pur,
+  même style que `SingleSurfacePresentationPolicy`) trie
+  `WindowRuntime.Windows` par `ZOrder` décroissant — le compteur de focus
+  monotone que `WindowRuntime` maintient déjà sert directement de signal de
+  récence, sans nouveau suivi. `MobileRecentItem`/`MobileRecentSurface`
+  (nouveaux, `HackerOs.MobileShell.Blazor`, miroir exact de la séparation
+  contrat-générique/projection-HackerOS déjà utilisée par
+  `HackerOs.Taskbar.Blazor`/`TaskbarWindowSourceAdapter`) n'affichent que
+  titre + icône — **aucun mécanisme de capture de miniature n'existe nulle
+  part dans le dépôt** ; la protection de preview de §7.5 est donc satisfaite
+  par omission (rien de sensible n'est jamais rendu) plutôt que par un
+  indicateur actif. Le filtrage par compatibilité de plateforme/activation
+  vivante n'est pas non plus appliqué, avec exactement le même raisonnement
+  que §16.5 pour le launcher : aucune app du catalogue actuel ne déclare de
+  point d'entrée Mobile-only, et désactiver une app pendant qu'une de ses
+  fenêtres reste ouverte est un cas non géré ailleurs non plus dans le dépôt.
+  Activer un item ferme la surface Recent et réutilise
+  `TaskbarCommandDispatcherAdapter` (construit une fois dans
+  `MobileShell.razor.OnInitialized`) pour Restore/Activate/Close — zéro
+  logique de fermeture dupliquée par rapport à la taskbar.
+- **`RequestHome` ne vide pas l'historique** : revenir plus tard vers une
+  app laisse toujours l'utilisateur remonter dans ce qu'elle avait, comme le
+  fait Android.
+- **Deux bugs réels trouvés par le test E2E, pas seulement latents** — aucun
+  des deux n'est causé par le code ajouté dans cette tranche ; les deux
+  existaient depuis les Phases 2a/2b et n'avaient jamais été détectés parce
+  qu'aucun test Mobile antérieur ne prenait de capture d'écran ni ne mesurait
+  de géométrie réelle (seuls le rôle/la visibilité ARIA étaient vérifiés,
+  insensibles à la hauteur de boîte) :
+  1. **`.mobile-shell` ne remplissait jamais l'écran.** Son `height: 100%`
+     remonte par `#ecosystem-host` jusqu'à `ThemeScope`, qui se rend en
+     `display: contents` — une valeur qui ne propage pas fiablement une base
+     de hauteur en pourcentage aux descendants selon les moteurs de rendu.
+     Résultat mesuré en E2E : `.mobile-shell` ne faisait que 61px de haut (la
+     hauteur naturelle de la barre système), avec `.mobile-shell-workspace`
+     (`flex: 1`) écrasé à 0 — rien sous la barre système n'était visible ni
+     atteignable, la barre elle-même se retrouvant collée en haut de l'écran
+     faute d'espace pour le contenu au-dessus. Corrigé en ancrant
+     `.mobile-shell` directement au viewport (`position: fixed; inset: 0;`)
+     au lieu de `width/height: 100%` — même mécanisme que les backdrops
+     shade/Recent, qui contourne entièrement la chaîne de pourcentage.
+  2. **`.mobile-shade-backdrop` (`position: fixed`, `z-index: 1100`,
+     introduit en Phase 2b) recouvrait physiquement `MobileSystemNavigationBar`**,
+     qui n'avait aucun `z-index` propre — une fois le bug 1 corrigé et la
+     barre système réellement en bas de l'écran, Playwright a échoué avec
+     « intercepts pointer events » en essayant de cliquer Back pendant que le
+     volet était ouvert. Concrètement, l'étape 0 de cette tranche (Back
+     ferme l'overlay en priorité) était inatteignable : impossible de
+     cliquer Back tant qu'un overlay couvrait la barre. Corrigé en donnant à
+     `.mobile-nav-bar` `position: relative` et `z-index: 1200` (au-dessus des
+     backdrops shade/Recent, tous deux à 1100) — la barre système reste
+     maintenant cliquable au-dessus de n'importe quel panneau, comme sur
+     Android réel.
+
+  Les deux bugs se masquaient l'un l'autre : tant que le bug 1 n'était pas
+  corrigé, la barre système et le volet occupaient la même bande de 61px en
+  haut de l'écran (le bug 2 était déjà présent mais se manifestait
+  différemment). Les trois tests E2E Mobile préexistants
+  (`PlatformShellSwitchTests`, `MobileNotificationShadeSwipeTests`,
+  `ClockPanelMobileToggleTests`) ont été rejoués après les deux correctifs et
+  passent toujours sans régression.
+- Tests : 4 nouveaux cas sur `MobileNavigationCommandsAdapterTests`
+  (annulation de dialogue, retour d'historique, fermeture gardée, fermeture
+  de l'overlay en priorité), `MobileNavigationHistoryTests` (5 cas :
+  empilage/dépilage, entrées obsolètes, non-ré-empilage du retour) et
+  `MobileRecentProjectionTests` (3 cas : tri, mapping, liste vide) — 16 tests
+  au total dans `HackerOs.Platform.Blazor.Tests`, tous construits contre un
+  vrai `WindowRuntime`/`AppBackHandlerRegistry`, aucun framework de mock.
+  `dotnet build HackerOs.sln --configuration Release` : 0 avertissement/0
+  erreur (a nécessité de régénérer `PublicAPI.Unshipped.txt` de
+  `HackerOs.MobileShell.Blazor` via `dotnet format analyzers
+  --diagnostics RS0016 --include-generated`, même procédure que
+  `EXT-WIN-014`).
+- **Constat fait en écrivant le test navigateur E2E, hors périmètre de cette
+  tranche** : aucune application réelle du catalogue `HackerOs.Ecosystem` ne
+  déclare de support Mobile (seul `HackerOs.Samples.PlatformApp`, projet de
+  démonstration isolé non câblé dans le catalogue de build, le fait — voir
+  `MOB-014`). Le launcher qui permettrait d'en lancer une est un chrome
+  Desktop-only (`AppLauncher.razor`, jamais composé dans `MobileShell`), et
+  `PlatformShellSwitchCoordinator.SelectWindowsNeedingRestart` arrête déjà
+  toute fenêtre dont l'app ne résout aucun point d'entrée sur la plateforme
+  cible — donc basculer vers Mobile avec une app Desktop ouverte la ferme
+  plutôt que de la faire apparaître. Concrètement : **aujourd'hui, aucune
+  fenêtre d'application réelle ne peut exister pendant que Mobile est actif**
+  via le produit réel. Le scénario multi-fenêtres Back/Recent est donc
+  entièrement prouvé au niveau unitaire ci-dessus contre un vrai
+  `WindowRuntime` (qui ne passe pas par ce filtrage de plateforme), et non
+  reproductible en E2E avec le catalogue actuel. Le test navigateur
+  (`MobileRecentAndOverlayBackTests.cs`) prouve à la place ce qui est
+  réellement observable aujourd'hui : l'étape 0 (fermeture prioritaire du
+  volet de notifications puis de Recent), l'état vide de Recent (« No recent
+  apps »), et l'absence d'erreur à l'étape 5 (no-op à Home). Ce n'est pas un
+  recul du périmètre de `MOB-011` — la logique multi-fenêtres est faite et
+  testée — c'est une limite pré-existante et documentée de ce que le
+  catalogue d'apps permet d'observer en conditions réelles tant qu'aucune
+  app ne déclare de variante Mobile (`MOB-014` ne couvre qu'un exemple de
+  démonstration isolé).
 

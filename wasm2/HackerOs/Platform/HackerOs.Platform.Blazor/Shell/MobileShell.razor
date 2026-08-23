@@ -6,6 +6,7 @@
 @implements IAsyncDisposable
 @inject WindowRuntime WindowRuntime
 @inject AppLifecycleOrchestrator Orchestrator
+@inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
 @inject IJSRuntime JSRuntime
@@ -53,6 +54,14 @@
         </div>
     }
 
+    @if (_showRecent)
+    {
+        <MobileRecentSurface Items="MobileRecentProjection.BuildItems(WindowRuntime.Windows)"
+                              OnActivate="ActivateRecent"
+                              OnClose="CloseRecentItem"
+                              OnDismiss="CloseRecent" />
+    }
+
     <MobileSystemNavigationBar Commands="_navigationCommands" />
 </div>
 
@@ -66,16 +75,28 @@
     /// <c>UiPlatformPreferenceService.Current.ActivePlatform</c> is Mobile.
     /// </summary>
     private MobileNavigationCommandsAdapter _navigationCommands = null!;
+    private MobileNavigationHistory _navigationHistory = null!;
+    private TaskbarCommandDispatcherAdapter _windowCommands = null!;
     private ElementReference _swipeHandleElement;
     private IJSObjectReference? _module;
     private DotNetObjectReference<MobileShell>? _selfReference;
     private bool _isShadeOpen;
+    private bool _showRecent;
 
     /// <inheritdoc />
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += Rerender;
-        _navigationCommands = new MobileNavigationCommandsAdapter(WindowRuntime, BackHandlers);
+        _navigationHistory = new MobileNavigationHistory(WindowRuntime);
+        _windowCommands = new TaskbarCommandDispatcherAdapter(WindowRuntime, CloseCoordinator, CloseGuards);
+        _navigationCommands = new MobileNavigationCommandsAdapter(
+            WindowRuntime,
+            BackHandlers,
+            _navigationHistory,
+            id => CloseCoordinator.CloseAsync(id, cancellationToken => CloseGuards.ConfirmCloseAsync(id, cancellationToken)),
+            () => _isShadeOpen || _showRecent,
+            CloseOverlays,
+            ToggleRecent);
     }
 
     /// <inheritdoc />
@@ -124,6 +145,42 @@
         StateHasChanged();
     }
 
+    private void ToggleRecent()
+    {
+        _showRecent = !_showRecent;
+        StateHasChanged();
+    }
+
+    private void CloseRecent()
+    {
+        _showRecent = false;
+        StateHasChanged();
+    }
+
+    /// <summary>Closes any shell-owned overlay, for <see cref="MobileNavigationCommandsAdapter"/>'s Back step 0.</summary>
+    private void CloseOverlays()
+    {
+        _isShadeOpen = false;
+        _showRecent = false;
+        StateHasChanged();
+    }
+
+    private void ActivateRecent(WindowId id)
+    {
+        // Same restore-then-focus shape TaskbarWindowInteraction.HandleClick already uses for a
+        // minimized item; Focus() throws if called on a still-minimized window.
+        WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
+        if (window is { VisualState: WindowVisualState.Minimized })
+        {
+            _windowCommands.Restore(id);
+        }
+
+        _windowCommands.Activate(id);
+        CloseRecent();
+    }
+
+    private void CloseRecentItem(WindowId id) => _windowCommands.Close(id);
+
     private void Rerender() => InvokeAsync(StateHasChanged);
 
     private void HandleFocus(WindowId id) => WindowRuntime.Apply(new FocusWindowCommand(id));
@@ -146,6 +203,7 @@
     public async ValueTask DisposeAsync()
     {
         WindowRuntime.StateChanged -= Rerender;
+        _navigationHistory.Dispose();
 
         if (_module is not null)
         {

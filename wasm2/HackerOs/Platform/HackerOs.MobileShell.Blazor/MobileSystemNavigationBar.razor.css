@@ -3,6 +3,11 @@
     align-items: center;
     justify-content: space-around;
     flex-shrink: 0;
+    /* Above the shade/Recent backdrops (z-index 1100): the system navigation bar must stay
+       reachable so Back can dismiss an open overlay (MOB-011 §7.3 step 0), matching real Android
+       where the system nav bar always sits above any app-drawn sheet. */
+    position: relative;
+    z-index: 1200;
     min-height: var(--hos-mobile-nav-height, 3.5rem);
     border-top: var(--hos-mobile-nav-border, 1px solid #315249);
     background: var(--hos-mobile-nav-background, #0c1516);
