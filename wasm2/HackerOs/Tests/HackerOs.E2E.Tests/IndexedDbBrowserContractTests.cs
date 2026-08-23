@@ -800,7 +800,11 @@ public sealed class IndexedDbBrowserContractTests
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=code-editor");
             page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
             ILocator editor = page.Locator(".monaco-editor");
-            await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            // Monaco's own bundle is ~3.6MB plus a ~6.7MB TS worker — first paint can exceed the
+            // default 30s wait under CPU contention (e.g. other test suites/builds running
+            // concurrently on the same machine), so this one gets a longer explicit budget like
+            // the rest of this suite's slower waits already have.
+            await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
             // Monaco's editable surface is a `div.native-edit-context` (Chrome's EditContext API),
             // not a real <textarea>/contenteditable — FillAsync sets .value directly, which the
             // EditContext-backed editor never observes, so content must go through real key events.

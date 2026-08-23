@@ -21,6 +21,19 @@ if (!document.querySelector(`link[href="${stylesheetHref}"]`)) {
   document.head.appendChild(link);
 }
 
+// Monaco cancels in-flight language-service work (worker RPC requests, validation, ...) when a
+// model or editor disposes mid-request. Its own errors.js explicitly excludes this exact error
+// shape from onUnexpectedError (see isCancellationError there: name === "Canceled" && message
+// === "Canceled"), but some internal call sites reject a bare promise with it instead of routing
+// through that filter, so it can still reach the page as an unhandled rejection. Suppress only
+// that precise, well-known shape; anything else still propagates normally.
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason;
+  if (reason instanceof Error && reason.name === "Canceled" && reason.message === "Canceled") {
+    event.preventDefault();
+  }
+});
+
 const WORKER_FILE_BY_LABEL = {
   json: "json.worker.js",
   css: "css.worker.js",
