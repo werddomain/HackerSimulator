@@ -2,8 +2,9 @@
 
 **Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
 résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shell
-Mobile) et Phase 2b (`MOB-008`, changement de shell contrôlé — Phase 2 est donc
-close) faites le 2026-08-18 — voir §16 ; le reste (§14, `MOB-011` à `MOB-018`)
+Mobile), Phase 2b (`MOB-008`, changement de shell contrôlé) et Phase 2c
+(`MOB-012`/`MOB-013`, contrat Back applicatif — Phase 2 est donc close) faites
+le 2026-08-18/19 — voir §16 ; le reste (`MOB-011`, `MOB-015` à `MOB-018`)
 reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
@@ -644,10 +645,14 @@ activé automatiquement.
   Minimize sans terminer le processus (§7.4), implémenté dans
   `MobileNavigationCommandsAdapter`.
 - [ ] `MOB-011` Implémenter la pile de navigation et la surface Recent.
-- [ ] `MOB-012` Ajouter `IAppBackHandler`, ses événements et la validation de
-  manifeste.
-- [ ] `MOB-013` Ajouter le bouton Back Desktop uniquement aux applications qui le
-  déclarent.
+- [x] `MOB-012` Ajouter `IAppBackHandler`, ses événements et la validation de
+  manifeste. **Phase 2c, 2026-08-19** — voir §16.9 pour le détail fichier par
+  fichier (`AppBackContracts.cs`, `AppManifest.SupportsBack`,
+  `AppBackHandlerRegistry`). `CanNavigateBackChanged` n'est pas encore câblé au
+  chrome (voir l'écart documenté en fin de §16.9).
+- [x] `MOB-013` Ajouter le bouton Back Desktop uniquement aux applications qui le
+  déclarent. **Phase 2c, 2026-08-19** — voir §16.9 (`WindowChrome`, Desktop
+  uniquement ; Mobile ne le duplique pas par construction, `ShowChrome=false`).
 - [x] `MOB-014` Ajouter les variantes Desktop/Mobile de référence sous un AppId
   commun et une application à point d’entrée partagé. **Phase 1, 2026-08-18 —
   tranche partielle : un seul point d’entrée partagé** (le premier exemple de
