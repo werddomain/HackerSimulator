@@ -529,3 +529,18 @@ phase actually delivers.
 - [x] `TopicMessagingContracts.cs`, `FileSystemWatchContracts.cs`, and the `HackerOs.AppSdk.FileView`
   project — long since grown past "skeletons" into the full implementation tracked by Phases 1 through 6
   above, all now complete.
+
+## Post-completion fixes (2026-08-19)
+
+Real usage the day after Phase 4 completed surfaced two `FileView` bugs, both now fixed (not tracked
+against a new `INT-xxx` item since they're fixes to already-`[x]` work, not new scope):
+
+- **Details column relabeled `Kind` → `Type`, with folder-first sort grouping added.** The originally
+  planned `Kind` column (`FileViewControl.md` line ~119) read poorly once real files were on screen;
+  it now reads `"Folder"` for directories and `".ext File"` (or `"File"`) otherwise, and folders always
+  sort before files regardless of the active sort column/direction. `FileViewControl.md` is updated to
+  match.
+- **In-place rename didn't commit when clicking a different row.** A blur-vs-click-re-render race left
+  the rename textbox open. `FileViewDetails.razor.cs` now explicitly commits any in-progress rename
+  (`CommitPendingRenameElsewhereAsync`) before handling a click, double-click, or context-menu on
+  another row.

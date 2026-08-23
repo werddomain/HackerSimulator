@@ -116,10 +116,15 @@ public sealed class FileViewItem
 state — switching `Mode` does not lose selection or scroll position further than necessary.
 
 - **Details**: a sortable table (`FileViewColumn` per column: `Key`, `Header`, `SortAccessor`,
-  optional fixed `Width`). Default columns: Name, Kind, Size, Modified — matching
+  optional fixed `Width`). Default columns: Name, Type, Size, Modified — matching
   `FileExplorerState`'s existing sort keys today, so migrating `FileExplorerWindow` (see
-  `integrationPlan.md`) is a like-for-like swap. Clicking a header toggles ascending/descending sort;
-  the active sort column/direction is exposed as `SortColumn`/`SortDescending` so a host can persist it.
+  `integrationPlan.md`) is a like-for-like swap. The `Type` column reads `"Folder"` for directories and
+  `".ext File"` (or plain `"File"` with no extension) otherwise — renamed and reformatted from the
+  originally planned `Kind` column on 2026-08-19 (`8cd6f4c`) to read better once real data was on
+  screen. Clicking a header toggles ascending/descending sort; the active sort column/direction is
+  exposed as `SortColumn`/`SortDescending` so a host can persist it. Independent of the selected sort,
+  folders always group before files — the sort only orders within each group, matching common
+  file-explorer UX (also added 2026-08-19).
 - **Icons**: a wrapping grid of tiles, icon-above-label, matching the existing "Grid" mode visually but
   renamed to `Icons` to match the request's terminology. High-density and multi-select via marquee
   drag are in scope; label wrapping/truncation follows `../design-system.md` tokens.
