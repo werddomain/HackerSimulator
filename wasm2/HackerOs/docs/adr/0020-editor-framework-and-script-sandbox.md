@@ -50,3 +50,21 @@ bundle produced by esbuild. `CodeEditorDocument`, `CodeEditorSession`, and
 recovery data in C#. The collocated JavaScript boundary owns only CodeMirror DOM
 creation, language reconfiguration, focus, content callbacks, and disposal.
 See `docs/code-editor.md` for passed evidence and remaining host integration.
+
+## Amendment (2026-08-21): CodeMirror replaced by Monaco
+
+The Framework Comparison Matrix above chose CodeMirror for its smaller
+payload; that choice is now superseded. The Code Editor was reworked to use
+Monaco Editor instead, matching the legacy JavaScript version's editor,
+alongside two additive features: an "Open Folder" tree view (reusing the
+shared `HackerOs.AppSdk.FileView` control) and an embedded terminal panel
+(the Terminal app's session/shell/rendering logic was extracted into a new
+shared `HackerOs.AppSdk.Terminal` library — `TerminalPanel` — so both the
+standalone Terminal app and the Code Editor's embedded terminal use the same
+component).
+
+The build pipeline, collocated-JS-boundary, and C#-owns-everything-else
+decisions above still hold verbatim — only the editor library and its bundle
+size changed. `docs/code-editor.md` describes the current Monaco-based
+architecture, build pipeline, and evidence; do not treat the 585,094-byte
+CodeMirror figure or the Bundle Size/Offline Cache rows above as current.

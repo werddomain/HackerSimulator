@@ -38,14 +38,16 @@ closing their remaining evidence gates.
 
 - CI now targets .NET 10 and `wasm2/HackerOs/HackerOs.sln`, but a successful
   GitHub-hosted run has not yet been presented.
-- Code Editor now has a locally bundled CodeMirror 6 surface, C#-owned tabs and
-  recovery snapshots, bounded VFS load/Save/Save As, typed denial/conflict
-  outcomes, deterministic disposal, a platform whole-window close guard, and
-  VFS-backed recovery persistence. Twenty focused editor tests, 28 platform
-  Blazor tests, Chromium interaction, and axe evidence pass. Real component
-  reload proof plus published/offline full-app integration remain open.
+- Code Editor now has a locally bundled Monaco Editor surface (replacing
+  CodeMirror on 2026-08-21, plus an Open Folder tree view and an embedded
+  terminal — see `docs/code-editor.md`), C#-owned tabs and recovery snapshots,
+  bounded VFS load/Save/Save As, typed denial/conflict outcomes, deterministic
+  disposal, a platform whole-window close guard, and VFS-backed recovery
+  persistence. Twenty focused editor tests, 28 platform Blazor tests, Chromium
+  interaction, and axe evidence pass. Real component reload proof plus
+  published/offline full-app integration remain open.
 - Axe 4.12.0 scans representative desktop/window/dialog, full-screen Terminal,
-  local CodeMirror, and Hack Paint canvas surfaces for serious and critical
+  local Monaco Code Editor, and Hack Paint canvas surfaces for serious and critical
   findings. Full app
   coverage and human assistive-technology evidence remain outstanding.
 - Proxy requests now verify durable device ownership/revocation, validate every
@@ -299,6 +301,16 @@ proof that runtime behavior has been implemented or tested.
     app-scoped VFS and malformed/denied recovery is typed. The item remains
     unchecked pending real component reload proof and published/offline full-app
     VFS coverage. See `docs/code-editor.md`.
+  - **Progress 2026-08-21/22 — REWORKED:** CodeMirror 6 was replaced by Monaco
+    Editor (own esbuild pipeline, per-worker bundles, no CDN dependency) to
+    match the legacy JS app's editor. An Open Folder tree view (shared
+    `FileView` control) and an embedded tabbed terminal (new shared
+    `HackerOs.AppSdk.Terminal` library, also now backing the standalone
+    Terminal app) were added. The Chromium contract test was updated for
+    Monaco's DOM (`.monaco-editor`/`.native-edit-context`) and a recovery-path
+    bug (using the opaque user ID instead of the home path, so saves silently
+    failed) was fixed. The item is still unchecked for the same reasons as
+    above. See `docs/code-editor.md`.
 
 - [x] **E-002 — Complete or explicitly defer Nano.**
   - Reopen `P4-W3-006`.
@@ -566,5 +578,5 @@ The dispatcher evidence includes
 `AppIntentDispatcherTests.Execute_command_passes_full_screen_session_through_dispatch_and_lifecycle`
 and
 `AppIntentDispatcherTests.Cancelling_full_screen_command_returns_shell_exit_130_and_restores_screen`.
-CodeMirror browser evidence is
+Code Editor browser evidence (Monaco since 2026-08-21) is
 `IndexedDbBrowserContractTests.Code_editor_local_bundle_edits_switches_mode_and_disposes_cleanly`.

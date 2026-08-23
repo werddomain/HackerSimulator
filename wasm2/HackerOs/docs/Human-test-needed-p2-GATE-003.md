@@ -8,7 +8,7 @@ The automated half of this is now real, executable evidence:
 
 - `Tests/HackerOs.E2E.Tests/IndexedDbBrowserContractTests.Representative_platform_surfaces_have_no_axe_violations`
   — 7 isolated-harness scenarios (idle, window, dialog, full-screen Terminal,
-  local CodeMirror, Hack Paint canvas, taskbar).
+  local Monaco Code Editor, Hack Paint canvas, taskbar).
 - `Tests/HackerOs.UI.E2E.Tests/AccessibilityAndVisualCoverageTests.Representative_real_app_surfaces_have_no_axe_violations_and_no_mobile_overflow`
   — the real desktop shell, launcher, File Explorer, Settings, Code Editor, and
   Hack Paint windows, axe-scanned and screenshotted at both desktop (1280×800)

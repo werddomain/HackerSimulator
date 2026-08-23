@@ -179,19 +179,17 @@ internal static class E2ESupport
     }
 
     /// <summary>
-    /// Selects one File Explorer entry by clicking its row checkbox directly
-    /// (FileExplorerWindow.razor: <c>&lt;tr class="entry-row"&gt;</c> with an
-    /// <c>&lt;input type="checkbox"&gt;</c> that calls <c>_state.ToggleSelection</c>).
-    /// Clicking the row's text via <c>GetByText</c> is ambiguous — it can resolve to
-    /// the wide <c>&lt;tr&gt;</c>, whose click lands on an unrelated column — so this
-    /// targets the one control whose only job is selection.
+    /// Selects one File Explorer entry by clicking its row directly (FileViewDetails.razor:
+    /// <c>&lt;tr class="entry-row"&gt;</c> has its own <c>@onclick</c> that calls
+    /// <c>FileViewItem.Select</c> — there is no separate checkbox control since
+    /// FileExplorerWindow was migrated onto the shared FileView component).
     /// </summary>
     public static async Task SelectFileExplorerEntryAsync(IPage page, string entryName, ITestOutputHelper output)
     {
         ILocator row = page.Locator("tr.entry-row", new PageLocatorOptions { HasText = entryName });
         await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await row.Locator("input[type=checkbox]").ClickAsync();
-        output.WriteLine($"[test] selected '{entryName}' via its row checkbox.");
+        await row.ClickAsync();
+        output.WriteLine($"[test] selected '{entryName}' via its row.");
     }
 
     /// <summary>

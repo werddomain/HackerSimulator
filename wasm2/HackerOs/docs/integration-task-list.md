@@ -1756,7 +1756,8 @@ capability; no arbitrary user script access to host internals.
 
 - [x] `P4-W3-001` Decide Monaco versus CodeMirror based on WASM payload,
   accessibility, offline assets, language support, worker loading, and licensing.
-  **DECISION: D-014**
+  **DECISION: D-014** — originally decided for CodeMirror; reversed to Monaco on
+  2026-08-21 to match the legacy JS app's editor (see ADR 0020's amendment).
 - [ ] `P4-W3-002` Port Code Editor behavior from `src/apps/code-editor.ts` in its
   own project with isolated editor host, files, tabs, syntax modes, and safe
   disposal.
@@ -1769,6 +1770,17 @@ capability; no arbitrary user script access to host internals.
     close guard and recovery now persists through the app-scoped VFS. Real
     rendered reload proof and published/offline full-app VFS evidence remain open;
     see `docs/code-editor.md`.
+  - **Progress 2026-08-21/22 — REWORKED:** CodeMirror was replaced by Monaco
+    Editor (own esbuild pipeline, per-worker bundles, no CDN dependency), an
+    Open Folder tree view was added (reusing the shared `FileView` control with
+    live directory watching), and an embedded tabbed terminal was added by
+    extracting the Terminal app's session/shell/rendering logic into a new
+    shared `HackerOs.AppSdk.Terminal` library (`TerminalPanel`). The Chromium
+    edit/mode/disposal contract test and the recovery store's home-path bug
+    (it was deriving the VFS path from the opaque user ID instead of the home
+    path, so every save silently failed) were also fixed. Real rendered reload
+    proof and published/offline full-app VFS evidence remain open; see
+    `docs/code-editor.md`.
 - [x] `P4-W3-003` Define user-script/exploit execution sandbox separately before
   enabling execution; editing does not imply execution permission.
 - [x] `P4-W3-004` Implement typed clipboard gateway for text and approved virtual
@@ -2146,7 +2158,7 @@ Add the resulting ADR path and mark the related task complete after approval.
 | D-011 | PWA cache/update strategy | Architecture + release | Published offline gate |
 | D-012 | SDK compatibility/deprecation policy | Product + SDK | SDK 1.0 freeze |
 | D-013 | Accepted in `docs/adr/0016-platform-ui-library.md` on 2026-08-02 | Architecture + UX/license review | Complex platform/app UI |
-| D-014 | Monaco versus CodeMirror | Architecture + UX/license review | Code Editor migration |
+| D-014 | Monaco versus CodeMirror | Architecture + UX/license review | Code Editor migration — decided CodeMirror 2026-08-03, reversed to Monaco 2026-08-21 (ADR 0020 amendment) |
 | D-015 | Safe simulated website rendering | Architecture + security | Browser/network wave |
 | D-016 | Multi-monitor product requirement | Product | Utility migration |
 | D-017 | Server identity/device authentication | Product + security | Optional server |

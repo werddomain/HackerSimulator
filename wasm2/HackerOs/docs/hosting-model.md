@@ -69,11 +69,13 @@ tree the other two hosts render, via Interactive Server render mode
 endpoints). This mirrors how `test/test` wires the shared component tree in,
 but as a real deployment target rather than a debug harness. **This host is
 single-tenant / single-active-circuit for this phase**: `AddHackerOsEcosystem`
-is reused completely unmodified, and nearly every service it registers is a
-process-wide singleton — correct for exactly one connected browser circuit
-(the same assumption `test/test` already makes), not for concurrent
-multi-user access. See ADR 0027 for the full reasoning and the enumerated
-singleton registrations this constraint rests on.
+is reused completely unmodified. Most of its services are now `AddScoped`
+(converted after ADR 0027 was accepted, by unrelated single-circuit
+correctness fixes — see that ADR's 2026-08-22 amendment), but every
+`IndexedDb*` repository still talks to the connected circuit's own browser
+IndexedDB rather than a shared server-side store, which is what actually
+blocks concurrent multi-user access — the same assumption `test/test` already
+makes. See ADR 0027 for the full reasoning.
 
 See [`server-security.md`](server-security.md) and
 [`server-backup-restore.md`](server-backup-restore.md) for the backend
@@ -84,11 +86,11 @@ capabilities, and ADR 0027 for the UI-hosting addition.
 Two extensions to the server-hosted UI added by ADR 0027 remain future work,
 not yet scheduled:
 
-- **Multi-tenant concurrent access.** Converting the composition root's
-  singleton registrations to circuit-scoped lifetimes, and replacing every
-  `IndexedDb*`-backed repository with an EF Core/SQLite-backed equivalent (browser
-  storage cannot be shared across users the way a database can). This needs
-  its own ADR once undertaken.
+- **Multi-tenant concurrent access.** Most of the composition root's services
+  are already circuit-scoped (see ADR 0027's amendment); replacing every
+  `IndexedDb*`-backed repository with an EF Core/SQLite-backed equivalent
+  (browser storage cannot be shared across users the way a database can)
+  remains the actual blocker. This needs its own ADR once undertaken.
 - **Direct service injection instead of HTTP.** Consuming
   `IAccountService`/`ISyncService`/`IProxyService` directly from UI code when
   hosted in `HackerOs.Server`, instead of over HTTP as the WASM hosts must.

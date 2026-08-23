@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace HackerOs.Pwa.E2E.Tests;
@@ -125,14 +124,21 @@ internal static class PwaTestSupport
     public static Task<string> GetAssetsManifestVersionAsync(IPage page) =>
         page.EvaluateAsync<string>("async () => (await (await fetch('service-worker-assets.js')).text()).match(/\"version\"\\s*:\\s*\"([^\"]+)\"/)[1]");
 
-    /// <summary>Opens an app from the App Launcher by its display name (same pattern as HackerOs.UI.E2E.Tests.E2ESupport).</summary>
+    /// <summary>
+    /// Opens an app from the App Launcher by its display name (same pattern as
+    /// HackerOs.UI.E2E.Tests.E2ESupport.OpenAppAsync). AppLauncher.razor renders each search
+    /// result as a grid row with a "Launch {name}" button — not an ARIA option — so the button's
+    /// accessible name is what must be matched here.
+    /// </summary>
     public static async Task OpenAppAsync(IPage page, string appDisplayName)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "App launcher" }).ClickAsync();
         await page.GetByRole(AriaRole.Combobox, new() { Name = "Search applications" }).FillAsync(appDisplayName);
-        ILocator option = page.GetByRole(AriaRole.Option, new() { NameRegex = new Regex($"^{Regex.Escape(appDisplayName)}") });
-        await option.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await option.ClickAsync();
+        ILocator launchButton = page.GetByRole(
+            AriaRole.Button,
+            new() { Name = $"Launch {appDisplayName}", Exact = true });
+        await launchButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await launchButton.ClickAsync();
     }
 
     /// <summary>

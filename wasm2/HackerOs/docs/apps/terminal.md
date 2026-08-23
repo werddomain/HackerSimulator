@@ -2,15 +2,17 @@
 
 ## Purpose
 
-`Apps/System/HackerOs.Apps.Terminal/` provides the interactive command-line interface and terminal emulator for HackerOS v3, implemented as a first-party `AppKind.Window` application.
+`Apps/System/HackerOs.Apps.Terminal/` provides the interactive command-line interface and terminal emulator for HackerOS v3, implemented as a first-party `AppKind.Window` application. Since the CodeEditor rework (2026-08-21), the actual session/shell/rendering logic lives in the shared `Shared/HackerOs.AppSdk.Terminal/` library so the Code Editor's embedded terminal can reuse it; this app is now a thin host around that library.
 
 ## Architecture
 
-- **`TerminalWindow.razor/.css`**: Primary window UI inheriting `WindowAppBase`. Renders prompt (`user@hackeros:path$`), terminal output buffer with stdout/stderr/system formatting, input line, and keyboard controls.
-- **`TerminalSession.cs`**: Encapsulates active session state: username, current working directory (`Cwd`), environment variables (`PATH`, `USER`, `HOME`, `TERM`, `SHELL`), command history navigation, and last exit status.
-- **`ShellParser.cs`**: Tokenizes and parses command lines according to ADR 0014 syntax rules (quotes, escaping, whitespace) and returns structured syntax diagnostics.
-- **`TerminalCommandResolver.cs`**: Resolves command names and static catalog aliases against `AppKind.Terminal` manifests registered in `AppCatalog`.
-- **`app.manifest.json`**: Manifest declaring reverse-domain ID `org.hackeros.terminal`, required capabilities (`apps.launch`, `filesystem.read`, `filesystem.write`, `process.read`, `process.write`, `notifications.post`, `settings.read`, `settings.write`), and single-instance user policy.
+- **`TerminalWindow.razor`** (`Apps/System/HackerOs.Apps.Terminal/`): Thin window host inheriting `WindowAppBase`. Its entire body is `<TerminalPanel AppContext="AppContext" CallerAppId="org.hackeros.terminal" />` — all terminal behavior below lives in the shared library, not this app.
+- **`TerminalPanel.razor/.css/.js`** (`Shared/HackerOs.AppSdk.Terminal/`): The actual terminal UI — prompt (`user@hackeros:path$`), output buffer with stdout/stderr/system formatting, input line, history/alias/autocomplete, and full-screen/alt-screen rendering via `TerminalScreen`. Takes `AppContext`, a `CallerAppId` (so capability checks and intent dispatch are attributed to whichever app embeds it), an `InitialUsername`, and an optional `InitialCwd`. The Code Editor embeds its own `TerminalPanel` instances (`CallerAppId="org.hackeros.code-editor"`) scoped to its currently open folder — see [`code-editor.md`](../code-editor.md).
+- **`TerminalSession.cs`** (`Shared/HackerOs.AppSdk.Terminal/`): Encapsulates active session state: username, current working directory (`Cwd`), environment variables (`PATH`, `USER`, `HOME`, `TERM`, `SHELL`), command history navigation, and last exit status.
+- **`ShellParser.cs`** (`Shared/HackerOs.AppSdk.Terminal/`): Tokenizes and parses command lines according to ADR 0014 syntax rules (quotes, escaping, whitespace) and returns structured syntax diagnostics.
+- **`TerminalCommandResolver.cs`** (`Shared/HackerOs.AppSdk.Terminal/`): Resolves command names and static catalog aliases against `AppKind.Terminal` manifests registered in `AppCatalog`.
+- **`TerminalFullScreenSession.cs`** (`Shared/HackerOs.AppSdk.Terminal/`): Implements `IFullScreenTerminalSession` for alt-screen apps (e.g. `nano`) launched from within a `TerminalPanel`.
+- **`app.manifest.json`** (`Apps/System/HackerOs.Apps.Terminal/`): Manifest declaring reverse-domain ID `org.hackeros.terminal`, required capabilities (`apps.launch`, `filesystem.read`, `filesystem.write`, `process.read`, `process.write`, `notifications.post`, `settings.read`, `settings.write`), and single-instance user policy.
 
 ## Interactive Controls & Shortcuts
 

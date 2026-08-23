@@ -230,6 +230,47 @@ code review) and are recorded here so they aren't rediscovered:
   this ADR — single-process, single-circuit, self-hosted-operator scope only,
   consistent with the multi-tenancy limitation above.
 
+## Amendment (2026-08-22): most enumerated singletons are already Scoped
+
+The Context section above enumerates ~15 `AddSingleton` registrations
+(`IProcessManager`, `AppLifecycleOrchestrator`, `WindowRuntime` and its
+coordinators, every `IndexedDb*` repository, etc.) as the thing a future
+multi-tenancy project would need to convert to circuit-scoped lifetimes. That
+enumeration is no longer accurate as a description of the current
+registrations, though the ADR's decision and consequences below still hold.
+
+Two unrelated fixes, both landed after this ADR was accepted, already
+converted most of that list to `AddScoped`:
+
+- **2026-08-18** (`a00b9597`, fixing the reusable-`FileView` migration's
+  hosting bugs): ~25 `IJSRuntime`-touching services were converted from
+  Singleton to Scoped because Blazor Web Apps construct-inject a component's
+  `[Inject]` properties during the static-SSR pass even with
+  `prerender: false` — the first resolution permanently captured an
+  unattached `IJSRuntime` and broke JS interop for every real circuit
+  afterward. This included `IProcessManager` and `AppLifecycleOrchestrator`.
+- **2026-08-22** (`a39040d0`, fixing a window-restore hang after a hard
+  reload): `WindowRuntime`, `WindowLaunchCoordinator`,
+  `WindowCloseGuardRegistry`, and `AppBackHandlerRegistry` were converted from
+  Singleton to Scoped because they still depended on the (by-then-Scoped)
+  orchestrator's per-circuit app instances; leaving them Singleton meant a
+  reload's fresh circuit inherited stale window entries pointing at app
+  instances that no longer existed.
+
+Neither fix was done *for* multi-tenancy — both target single-circuit
+correctness bugs (broken JS interop, a stuck window after reload) that this
+ADR's single-tenant/single-active-circuit phase does not otherwise address.
+They do not close `P5-UI-003` (see `docs/implementation-status.md`): the
+storage backend behind every `IndexedDb*` repository is still the connected
+circuit's own browser IndexedDB, not an EF Core/SQLite-backed store shared
+across circuits, so two concurrent users still cannot share sessions,
+filesystem, or capability grants the way a real multi-tenant backend would
+require. Scoped lifetime is a necessary precondition for that future work,
+not a substitute for it. Before relying on a specific service's current
+lifetime, check `AddHackerOsEcosystem` in
+`EcosystemServiceCollectionExtensions.cs` directly rather than this ADR's
+Context section.
+
 ## References
 
 - ADR 0009: Purpose-Built Window Runtime (JS interop isolation precedent)
