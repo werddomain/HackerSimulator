@@ -1,7 +1,9 @@
 {
   "version": "0.2.0",
   "configurations": [
-    {      "name": "Debug HackerGame (Chrome)",
+    
+    {     
+       "name": "Debug HackerGame (Chrome)",
       "type": "chrome",
       "request": "launch",
       "sourceMaps": true,
@@ -30,6 +32,73 @@
         "hidden": false,
         "group": "util",
         "order": 1
+      }
+    },
+    {
+      // Hosted Blazor WASM debug harness (wasm2/HackerOs/test/test), with the WASM (Mono)
+      // debugger attached — lets you set breakpoints in client-side Razor/C# code. Note:
+      // this is the debugger that can hit "fatal error loading metadata" flakiness in some
+      // VS Code / .NET SDK combinations; use "wasm (Ecosystem, no debugger)" below if so.
+      "name": "test (WASM debugging)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/wasm2/HackerOs/test/test",
+      "url": "https://localhost:7240",
+      "presentation": {
+        "hidden": false,
+        "group": "hackeros",
+        "order": 1
+      }
+    },
+    {
+      // Standalone WASM app (wasm2/HackerOs/OS/HackerOs.Ecosystem) launched as a plain
+      // .NET process — no WASM/Mono debugger is attached, only the thin dev-server host
+      // process. Use this to run the WASM client without triggering WASM debugger issues;
+      // breakpoints in client-side Razor/C# code will not be hit.
+      "name": "wasm (Ecosystem, no debugger)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-ecosystem",
+      "program": "${workspaceFolder}/wasm2/HackerOs/OS/HackerOs.Ecosystem/bin/Debug/net10.0/HackerOs.Ecosystem.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/wasm2/HackerOs/OS/HackerOs.Ecosystem",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "presentation": {
+        "hidden": false,
+        "group": "hackeros",
+        "order": 2
+      }
+    },
+    {
+      // Optional ASP.NET Core server (wasm2/HackerOs/Server/HackerOs.Server) — Blazor
+      // Server render mode plus the sync/identity/proxy APIs. Standard CoreCLR debugging
+      // (breakpoints work normally; there is no WASM client involved in this host).
+      "name": "server (HackerOs.Server)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-server",
+      "program": "${workspaceFolder}/wasm2/HackerOs/Server/HackerOs.Server/bin/Debug/net10.0/HackerOs.Server.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/wasm2/HackerOs/Server/HackerOs.Server",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "presentation": {
+        "hidden": false,
+        "group": "hackeros",
+        "order": 3
       }
     }
   ]
