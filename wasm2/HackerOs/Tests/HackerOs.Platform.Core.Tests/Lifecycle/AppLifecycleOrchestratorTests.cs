@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
@@ -287,6 +288,152 @@ public sealed class AppLifecycleOrchestratorTests
         Assert.Contains("constructor", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task A_valid_sudo_root_ticket_lets_the_launched_command_bypass_a_missing_capability()
+    {
+        InMemoryElevationTicketStore tickets = new();
+        Fixture fixture = new(tickets, RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        ElevationTicket ticket = tickets.Issue(ElevationScope.SudoRoot, "admin-id", "admin");
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [], ElevationToken: ticket.Token, ElevationScope: ElevationScope.SudoRoot));
+
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"OK{Environment.NewLine}", result.StandardOutput);
+    }
+
+    [Fact]
+    public async Task Without_an_elevation_token_the_same_command_is_denied_the_missing_capability()
+    {
+        Fixture fixture = new(RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest("org.hackeros.root-probe", principal, []));
+
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("CapabilityDenied", result.StandardOutput);
+    }
+
+    [Fact]
+    public async Task An_elevation_token_is_consumed_exactly_once()
+    {
+        InMemoryElevationTicketStore tickets = new();
+        Fixture fixture = new(tickets, RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        ElevationTicket ticket = tickets.Issue(ElevationScope.SudoRoot, "admin-id", "admin");
+
+        AppLaunchResult first = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [], ElevationToken: ticket.Token, ElevationScope: ElevationScope.SudoRoot));
+        AppLaunchResult second = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [], ElevationToken: ticket.Token, ElevationScope: ElevationScope.SudoRoot));
+
+        Assert.Equal(AppLaunchStatus.Launched, first.Status);
+        Assert.Equal(AppLaunchStatus.ElevationDenied, second.Status);
+    }
+
+    [Fact]
+    public async Task An_unknown_elevation_token_is_denied_without_launching_the_app()
+    {
+        Fixture fixture = new(new InMemoryElevationTicketStore(), RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [], ElevationToken: Guid.NewGuid(), ElevationScope: ElevationScope.SudoRoot));
+
+        Assert.Equal(AppLaunchStatus.ElevationDenied, result.Status);
+        Assert.Null(result.Process);
+    }
+
+    [Fact]
+    public async Task A_supplied_elevation_token_is_denied_when_no_ticket_store_is_configured()
+    {
+        // Regression guard: omitting the elevationTickets constructor parameter (the previous,
+        // narrower shape every existing Fixture overload still uses) must never silently grant
+        // elevation just because a caller happened to pass a token.
+        Fixture fixture = new(RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [], ElevationToken: Guid.NewGuid(), ElevationScope: ElevationScope.SudoRoot));
+
+        Assert.Equal(AppLaunchStatus.ElevationDenied, result.Status);
+    }
+
+    [Fact]
+    public async Task A_capability_approval_ticket_unblocks_exactly_its_matching_capability_and_path()
+    {
+        InMemoryElevationTicketStore tickets = new();
+        Fixture fixture = new(tickets, RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        ElevationTicket ticket = tickets.Issue(
+            ElevationScope.CapabilityApproval, "admin-id", "admin",
+            AppCapabilities.FileSystemSystemRead, VirtualPath.Parse("/etc"));
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [],
+            ElevationToken: ticket.Token, ElevationScope: ElevationScope.CapabilityApproval));
+
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"OK{Environment.NewLine}", result.StandardOutput);
+    }
+
+    [Fact]
+    public async Task A_capability_approval_ticket_unblocks_only_its_exact_capability_and_path()
+    {
+        InMemoryElevationTicketStore tickets = new();
+        Fixture fixture = new(tickets, RootProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        ElevationTicket wrongCapability = tickets.Issue(
+            ElevationScope.CapabilityApproval, "admin-id", "admin",
+            AppCapabilities.FileSystemSystemWrite, VirtualPath.Parse("/etc"));
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest(
+            "org.hackeros.root-probe", principal, [],
+            ElevationToken: wrongCapability.Token, ElevationScope: ElevationScope.CapabilityApproval));
+
+        Assert.Equal(AppLaunchStatus.Launched, result.Status);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("CapabilityDenied", result.StandardOutput);
+    }
+
+    private sealed class RootProbeTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            FileSystemResult<FileSystemEntrySnapshot> stat = await context.App.FileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse("/etc")), cancellationToken);
+            if (stat.Succeeded)
+            {
+                await context.StandardOutput.WriteLineAsync("OK".AsMemory(), cancellationToken);
+                return 0;
+            }
+
+            await context.StandardOutput.WriteLineAsync($"{stat.Error?.Code}".AsMemory(), cancellationToken);
+            return 1;
+        }
+    }
+
+    /// <summary>A Terminal command that declares no capabilities at all, used to probe elevation bypass behavior.</summary>
+    private static AppManifest RootProbeManifest() => new()
+    {
+        Id = "org.hackeros.root-probe",
+        Name = "RootProbe",
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "Stats /etc, which requires a capability this manifest never declares.",
+        Kind = AppKind.Terminal,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(RootProbeTerminalApp).FullName!),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None,
+        Terminal = new TerminalCommandManifest("root-probe", [], "root-probe")
+    };
+
     private interface IFakeInjectedService
     {
         string Value { get; }
@@ -489,22 +636,30 @@ public sealed class AppLifecycleOrchestratorTests
         private readonly LocalLoginName _aliceLoginName;
 
         internal Fixture(params AppManifest[] manifests)
-            : this(catalogRepository: null, services: null, manifests)
+            : this(catalogRepository: null, services: null, elevationTickets: null, manifests)
         {
         }
 
         internal Fixture(IPersistentAppCatalogRepository? catalogRepository, params AppManifest[] manifests)
-            : this(catalogRepository, services: null, manifests)
+            : this(catalogRepository, services: null, elevationTickets: null, manifests)
         {
         }
 
         internal Fixture(IServiceProvider services, params AppManifest[] manifests)
-            : this(catalogRepository: null, services, manifests)
+            : this(catalogRepository: null, services, elevationTickets: null, manifests)
+        {
+        }
+
+        internal Fixture(IElevationTicketStore elevationTickets, params AppManifest[] manifests)
+            : this(catalogRepository: null, services: null, elevationTickets, manifests)
         {
         }
 
         internal Fixture(
-            IPersistentAppCatalogRepository? catalogRepository, IServiceProvider? services, params AppManifest[] manifests)
+            IPersistentAppCatalogRepository? catalogRepository,
+            IServiceProvider? services,
+            IElevationTicketStore? elevationTickets,
+            params AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -568,7 +723,7 @@ public sealed class AppLifecycleOrchestratorTests
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus,
-                descriptorLoader: null, catalogRepository, services, fileSystem);
+                descriptorLoader: null, catalogRepository, services, fileSystem, elevationTickets);
             FileSystemService = fileSystem;
         }
 

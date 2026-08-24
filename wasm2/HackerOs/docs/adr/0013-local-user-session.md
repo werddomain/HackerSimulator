@@ -105,6 +105,13 @@ authorization result; it does not mutate the User session into an Administrator
 session, lend credentials to the app, or grant System authority. Persistent
 administrator actions remain unavailable without explicit reauthentication.
 
+**Exception:** see ADR 0042 for the terminal's `sudo` command, which intentionally grants
+full unrestricted root (`AppAuthority.System`) for exactly one launched command after live
+Administrator reauthentication — a deliberate, narrower exception to this section's "never
+grants System" rule, not a realization of the elevation model described above. The
+admin-approval prompt on a denied permission (also ADR 0042) stays within this section's
+intent: it never grants System, only a one-shot ticket scoped to the exact denied operation.
+
 Failed login/elevation attempts use bounded in-memory throttling and audit events.
 This improves UX/abuse resistance but is not presented as a tamper-resistant
 security control in client code.

@@ -1,3 +1,5 @@
+using HackerOs.App.Abstractions.Policy;
+
 namespace HackerOs.App.Abstractions;
 
 /// <summary>
@@ -85,9 +87,17 @@ public sealed record RevealFileIntent(VirtualPath Path) : IAppIntent
 /// </summary>
 /// <param name="CommandLine">Command line to parse and execute.</param>
 /// <param name="WorkingDirectory">Optional initial virtual working directory.</param>
+/// <param name="ElevationToken">
+/// Optional single-use elevation ticket token (`ADR 0042`), minted by <see cref="IElevationService"/>
+/// after live Administrator re-authentication — e.g. by the terminal's <c>sudo</c> built-in, or by a
+/// one-shot capability-approval retry. Consumed exactly once by the launch this intent triggers.
+/// </param>
+/// <param name="ElevationScope">The scope the ticket in <see cref="ElevationToken"/> authorizes.</param>
 public sealed record ExecuteCommandIntent(
     string CommandLine,
-    VirtualPath? WorkingDirectory = null) : IAppIntent
+    VirtualPath? WorkingDirectory = null,
+    Guid? ElevationToken = null,
+    ElevationScope? ElevationScope = null) : IAppIntent
 {
     /// <inheritdoc />
     public string IntentId => AppIntentIds.ExecuteCommand;

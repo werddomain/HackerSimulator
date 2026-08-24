@@ -175,6 +175,45 @@ public sealed record TextInputDialogResult(
     string? Value);
 
 /// <summary>
+/// Configures a credential-verification prompt (`ADR 0042`) — used to re-authenticate an enabled
+/// Administrator account, either to approve a denied permission for the requesting app instance, or
+/// (from the terminal's <c>sudo</c> built-in) to authorize elevating one launched command to full
+/// root. Never the requesting app's own credential: the login field always starts blank so any
+/// enabled Administrator can approve, mirroring an over-the-shoulder UAC-style prompt.
+/// </summary>
+public sealed record CredentialPromptDialogRequest
+{
+    /// <summary>Gets the dialog title.</summary>
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>Gets the human-readable description of what is being authorized.</summary>
+    public string Description { get; init; } = string.Empty;
+}
+
+/// <summary>Describes whether the user submitted credentials or cancelled a credential prompt.</summary>
+public enum CredentialPromptStatus
+{
+    /// <summary>The user submitted a login name and password.</summary>
+    Submitted,
+
+    /// <summary>The user cancelled the credential prompt.</summary>
+    Cancelled
+}
+
+/// <summary>
+/// Contains the raw, unverified credentials submitted to a credential prompt. The caller is
+/// responsible for verifying them (e.g. via <c>IAdminElevationVerifier</c>) — the dialog layer never
+/// performs authentication itself.
+/// </summary>
+/// <param name="Status">Dialog outcome.</param>
+/// <param name="LoginName">The submitted login name, or null if cancelled.</param>
+/// <param name="Password">The submitted password, or null if cancelled.</param>
+public sealed record CredentialPromptDialogResult(
+    CredentialPromptStatus Status,
+    string? LoginName,
+    string? Password);
+
+/// <summary>
 /// Displays modal system dialogs (including file dialogs, message boxes, and text inputs) on behalf of a window app.
 /// </summary>
 public interface IDialogService : IFileDialogService
@@ -189,5 +228,11 @@ public interface IDialogService : IFileDialogService
     ValueTask<TextInputDialogResult> TextInputAsync(
         IAppExecutionContext context,
         TextInputDialogRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Displays a credential prompt scoped to the requesting app instance (`ADR 0042`).</summary>
+    ValueTask<CredentialPromptDialogResult> CredentialPromptAsync(
+        IAppExecutionContext context,
+        CredentialPromptDialogRequest request,
         CancellationToken cancellationToken = default);
 }

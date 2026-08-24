@@ -129,6 +129,98 @@ public sealed class FileSystemAuthorizationTests
         Assert.Equal(FileSystemErrorCode.PermissionDenied, mode.Error?.Code);
     }
 
+    [Fact]
+    public void Root_elevation_bypasses_authority_capability_and_mode_checks()
+    {
+        FileSystemAuthorizationContext context = new(
+            CreateOperationContext(AppAuthority.User, []) with { IsRootElevated = true },
+            ["users"],
+            Now);
+
+        FileSystemAuthorizationResult result = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemWrite,
+            FileSystemAccess.Write,
+            FileSystemHandleAccess.Write,
+            AppAuthority.Administrator);
+
+        Assert.True(result.Allowed);
+        Assert.Null(result.Error);
+    }
+
+    [Fact]
+    public void One_shot_elevation_ticket_unblocks_exactly_one_matching_call()
+    {
+        OneShotElevationGrantSet oneShot = new();
+        oneShot.Grant(AppCapabilities.FileSystemSystemRead, Path);
+        FileSystemAuthorizationContext context = new(
+            CreateOperationContext(AppAuthority.User, []) with { OneShotElevation = oneShot },
+            ["users"],
+            Now);
+
+        FileSystemAuthorizationResult first = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemRead,
+            FileSystemAccess.Read,
+            FileSystemHandleAccess.Read);
+        FileSystemAuthorizationResult second = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemRead,
+            FileSystemAccess.Read,
+            FileSystemHandleAccess.Read);
+
+        Assert.True(first.Allowed);
+        Assert.False(second.Allowed);
+        Assert.Equal(FileSystemErrorCode.CapabilityDenied, second.Error?.Code);
+    }
+
+    [Fact]
+    public void One_shot_elevation_ticket_does_not_unblock_a_different_path_or_capability()
+    {
+        OneShotElevationGrantSet oneShot = new();
+        oneShot.Grant(AppCapabilities.FileSystemSystemRead, Path);
+        FileSystemAuthorizationContext context = new(
+            CreateOperationContext(AppAuthority.User, []) with { OneShotElevation = oneShot },
+            ["users"],
+            Now);
+
+        FileSystemAuthorizationResult differentPath = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemRead,
+            FileSystemAccess.Read,
+            FileSystemHandleAccess.Read,
+            path: VirtualPath.Parse("/home/user/Documents/other.txt"));
+        FileSystemAuthorizationResult differentCapability = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemWrite,
+            FileSystemAccess.Write,
+            FileSystemHandleAccess.Write);
+
+        Assert.False(differentPath.Allowed);
+        Assert.False(differentCapability.Allowed);
+    }
+
+    [Fact]
+    public void Denial_errors_always_carry_the_required_capability()
+    {
+        FileSystemAuthorizationContext context = CreateContext(AppAuthority.User, ["users"]);
+
+        FileSystemAuthorizationResult result = Authorize(
+            context,
+            CreateMetadata("other", "other", 0x0000),
+            AppCapabilities.FileSystemSystemRead,
+            FileSystemAccess.Read,
+            FileSystemHandleAccess.Read);
+
+        Assert.Equal(FileSystemErrorCode.CapabilityDenied, result.Error?.Code);
+        Assert.Equal(AppCapabilities.FileSystemSystemRead, result.Error?.RequiredCapability);
+    }
+
     private FileSystemAuthorizationResult Authorize(
         FileSystemAuthorizationContext context,
         FileSystemEntryMetadata metadata,

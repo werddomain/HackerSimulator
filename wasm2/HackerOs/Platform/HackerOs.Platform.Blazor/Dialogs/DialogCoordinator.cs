@@ -33,6 +33,16 @@ public sealed record TextInputPresentation(
     TextInputDialogRequest Request)
     : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
 
+/// <summary>Describes an active credential-prompt presentation (`ADR 0042`).</summary>
+public sealed record CredentialPromptPresentation(
+    Guid Id,
+    string AppId,
+    Guid AppInstanceId,
+    ProcessId ProcessId,
+    string UserId,
+    CredentialPromptDialogRequest Request)
+    : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
+
 /// <summary>
 /// Coordinates basic modal dialogs (MessageBox, TextInput) for applications,
 /// delegating file-system dialogs to <see cref="IFileDialogService"/>.
@@ -135,6 +145,34 @@ public sealed class DialogCoordinator : IDialogService, IDisposable
                 id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, request),
             static () => new TextInputDialogResult(TextInputStatus.Cancelled, null),
             cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public ValueTask<CredentialPromptDialogResult> CredentialPromptAsync(
+        IAppExecutionContext context,
+        CredentialPromptDialogRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(request);
+
+        Guid id = Guid.NewGuid();
+        return Enqueue<CredentialPromptDialogResult>(
+            new CredentialPromptPresentation(
+                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, request),
+            static () => new CredentialPromptDialogResult(CredentialPromptStatus.Cancelled, null, null),
+            cancellationToken);
+    }
+
+    /// <summary>Completes the active credential-prompt request with the submitted login/password.</summary>
+    public bool SelectCredentialPrompt(Guid requestId, string loginName, string password)
+    {
+        if (FindActive(requestId) is not CredentialPromptPresentation)
+        {
+            return false;
+        }
+
+        return Complete(requestId, new CredentialPromptDialogResult(CredentialPromptStatus.Submitted, loginName, password));
     }
 
     /// <summary>Completes the active message-box request with the clicked button result.</summary>

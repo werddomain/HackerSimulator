@@ -1,6 +1,8 @@
 @namespace HackerOs.AppSdk.Terminal
 @using HackerOs.App.Abstractions
+@using HackerOs.App.Abstractions.Policy
 @using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Core
 @using HackerOs.Platform.Core.Intents
 @using HackerOs.Simulation.Abstractions.Diagnostics
@@ -13,6 +15,8 @@
 @inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
 @inject IJSRuntime JavaScript
+@inject IDialogService Dialogs
+@inject IElevationService Elevation
 
 @*
     Reusable terminal control (session/shell/rendering) extracted from the standalone Terminal app so
@@ -247,6 +251,43 @@
             }
         }
 
+        Guid? elevationToken = null;
+        ElevationScope? elevationScope = null;
+
+        if (cmd == "sudo")
+        {
+            if (args.Count == 0)
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, "sudo: usage: sudo <command> [args...]", OutputType.Error));
+                _session.LastExitCode = 1;
+                return;
+            }
+
+            ElevationRequestResult? sudoApproval = await RequestElevationAsync(
+                "Administrator Authorization Required",
+                $"Run as root: {string.Join(" ", args)}",
+                (loginName, password, ct) => Elevation.RequestSudoAsync(loginName, password, ct));
+
+            if (sudoApproval is not { Success: true })
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, "sudo: authentication failed", OutputType.Error));
+                _session.LastExitCode = 1;
+                return;
+            }
+
+            cmd = args[0];
+            args = args.Skip(1).ToArray();
+            elevationToken = sudoApproval.Token;
+            elevationScope = ElevationScope.SudoRoot;
+
+            if (cmd is "cd" or "pwd" or "clear" or "help" or "sudo")
+            {
+                _lines.Add(new TerminalOutputLine(string.Empty, $"sudo: {cmd}: command not found", OutputType.Error));
+                _session.LastExitCode = 1;
+                return;
+            }
+        }
+
         if (cmd == "clear")
         {
             ClearBuffer();
@@ -269,7 +310,10 @@
 
             if (!stat.Succeeded || stat.Value is null)
             {
-                _lines.Add(new TerminalOutputLine(string.Empty, $"cd: {targetPath}: No such file or directory", OutputType.Error));
+                string message = stat.Error?.Code is FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied
+                    ? $"cd: {targetPath}: Permission denied"
+                    : $"cd: {targetPath}: No such file or directory";
+                _lines.Add(new TerminalOutputLine(string.Empty, message, OutputType.Error));
                 _session.LastExitCode = 1;
             }
             else if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
@@ -305,7 +349,7 @@
                 return;
             }
 
-            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help", OutputType.System));
+            _lines.Add(new TerminalOutputLine(string.Empty, "Built-in commands: clear, cd, pwd, help, sudo", OutputType.System));
             _lines.Add(new TerminalOutputLine(string.Empty, "Catalog commands: " + string.Join(", ", GetCatalogCommands()), OutputType.System));
             _lines.Add(new TerminalOutputLine(string.Empty, "Type 'help <command>' for usage.", OutputType.System));
             _session.LastExitCode = 0;
@@ -333,7 +377,8 @@
                     CallerAppId: CallerAppId,
                     UserId: principal.UserId.ToString(),
                     Intent: new ExecuteCommandIntent(
-                        $"{cmd} {string.Join(" ", args)}".Trim(), VirtualPath.Parse(_session.Cwd))),
+                        $"{cmd} {string.Join(" ", args)}".Trim(), VirtualPath.Parse(_session.Cwd),
+                        elevationToken, elevationScope)),
                     principal,
                     _fullScreenSession,
                     _activeCts.Token);
@@ -349,6 +394,43 @@
                         _lines.Add(new TerminalOutputLine(string.Empty, result.StandardError, OutputType.Stderr));
                     }
                     _session.LastExitCode = result.ExitCode ?? 0;
+
+                    if (result.ExitCode is not 0
+                        && elevationToken is null
+                        && result.PermissionDenials is { Count: > 0 } denials
+                        && denials[0].RequiredCapability is { } requiredCapability)
+                    {
+                        FileSystemError denied = denials[0];
+                        ElevationRequestResult? approval = await RequestElevationAsync(
+                            "Permission Denied — Request Approval?",
+                            $"'{cmd}' was denied {denied.Code} on '{denied.Path}'. Approve this one operation?",
+                            (loginName, password, ct) => Elevation.RequestCapabilityApprovalAsync(
+                                loginName, password, requiredCapability, denied.Path, ct));
+
+                        if (approval is { Success: true })
+                        {
+                            AppIntentDispatchResult retryResult = await IntentDispatcher.DispatchAsync(new AppIntentRequest(
+                                RequestId: Guid.NewGuid(),
+                                CallerAppId: CallerAppId,
+                                UserId: principal.UserId.ToString(),
+                                Intent: new ExecuteCommandIntent(
+                                    $"{cmd} {string.Join(" ", args)}".Trim(), VirtualPath.Parse(_session.Cwd),
+                                    approval.Token, ElevationScope.CapabilityApproval)),
+                                principal,
+                                _fullScreenSession,
+                                _activeCts.Token);
+
+                            if (!string.IsNullOrEmpty(retryResult.StandardOutput))
+                            {
+                                _lines.Add(new TerminalOutputLine(string.Empty, retryResult.StandardOutput, OutputType.Stdout));
+                            }
+                            if (!string.IsNullOrEmpty(retryResult.StandardError))
+                            {
+                                _lines.Add(new TerminalOutputLine(string.Empty, retryResult.StandardError, OutputType.Stderr));
+                            }
+                            _session.LastExitCode = retryResult.ExitCode ?? 0;
+                        }
+                    }
                 }
                 else
                 {
@@ -368,6 +450,30 @@
                 _activeCts = null;
             }
         }
+    }
+
+    /// <summary>
+    /// Prompts for an enabled Administrator's credentials and, if submitted, verifies them and mints
+    /// the requested elevation ticket via <paramref name="requestTicket"/> (`ADR 0042`). Returns null
+    /// if the prompt was cancelled; otherwise the (possibly unsuccessful) verification result.
+    /// </summary>
+    private async Task<ElevationRequestResult?> RequestElevationAsync(
+        string title,
+        string description,
+        Func<string, string, CancellationToken, Task<ElevationRequestResult>> requestTicket)
+    {
+        CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest
+        {
+            Title = title,
+            Description = description
+        });
+
+        if (prompt.Status != CredentialPromptStatus.Submitted)
+        {
+            return null;
+        }
+
+        return await requestTicket(prompt.LoginName!, prompt.Password!, AppContext.CancellationToken);
     }
 
     private void CancelActiveCommand()
@@ -392,7 +498,7 @@
             return;
         }
 
-        List<string> candidates = ["clear", "cd", "pwd", "help"];
+        List<string> candidates = ["clear", "cd", "pwd", "help", "sudo"];
         candidates.AddRange(GetCatalogCommands());
 
         string matches = candidates.FirstOrDefault(c => c.StartsWith(_inputBuffer, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;

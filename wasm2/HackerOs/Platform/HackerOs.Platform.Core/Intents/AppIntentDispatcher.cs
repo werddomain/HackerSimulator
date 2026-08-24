@@ -31,7 +31,10 @@ public enum AppIntentDispatchStatus
     TargetInvalid,
 
     /// <summary>The resolved target's entry point faulted while starting or executing.</summary>
-    EntryPointFault
+    EntryPointFault,
+
+    /// <summary>The supplied elevation token was missing, expired, wrong-scope, or already consumed (`ADR 0042`).</summary>
+    ElevationDenied
 }
 
 /// <summary>Contains the result of dispatching one <see cref="IAppIntent"/>, per `P1-APP-007`.</summary>
@@ -43,6 +46,10 @@ public enum AppIntentDispatchStatus
 /// <param name="StandardError">Captured standard error for a completed Terminal launch.</param>
 /// <param name="CandidateAppIds">Candidate app IDs, populated for <see cref="AppIntentDispatchStatus.ChooserRequired"/>.</param>
 /// <param name="ErrorCode">Stable machine-readable error code when dispatch did not succeed.</param>
+/// <param name="PermissionDenials">
+/// Filesystem permission-class errors raised while a completed Terminal launch ran (`ADR 0042`),
+/// forwarded from <see cref="AppLaunchResult.PermissionDenials"/>.
+/// </param>
 public sealed record AppIntentDispatchResult(
     AppIntentDispatchStatus Status,
     ProcessRecord? Process = null,
@@ -51,7 +58,8 @@ public sealed record AppIntentDispatchResult(
     string? StandardOutput = null,
     string? StandardError = null,
     IReadOnlyList<string>? CandidateAppIds = null,
-    string? ErrorCode = null);
+    string? ErrorCode = null,
+    IReadOnlyList<FileSystemError>? PermissionDenials = null);
 
 /// <summary>Identifies the stable outcome of one service-control request (start/stop/get/set start mode).</summary>
 public enum ServiceControlDispatchStatus
@@ -232,7 +240,9 @@ public sealed class AppIntentDispatcher
         }
 
         AppLaunchResult launch = await _orchestrator.LaunchAsync(
-            new AppLaunchRequest(target.Id, principal, arguments, WorkingDirectory: intent.WorkingDirectory),
+            new AppLaunchRequest(
+                target.Id, principal, arguments, WorkingDirectory: intent.WorkingDirectory,
+                ElevationToken: intent.ElevationToken, ElevationScope: intent.ElevationScope),
             fullScreen, cancellationToken);
         return ToDispatchResult(launch);
     }
@@ -377,9 +387,11 @@ public sealed class AppIntentDispatcher
     private static AppIntentDispatchResult ToDispatchResult(AppLaunchResult launch) => launch.Status switch
     {
         AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting => new AppIntentDispatchResult(
-            AppIntentDispatchStatus.Dispatched, launch.Process, launch.Context, launch.ExitCode, launch.StandardOutput, launch.StandardError),
+            AppIntentDispatchStatus.Dispatched, launch.Process, launch.Context, launch.ExitCode, launch.StandardOutput,
+            launch.StandardError, PermissionDenials: launch.PermissionDenials),
         AppLaunchStatus.NotFound => new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: launch.ErrorCode),
         AppLaunchStatus.Disabled => new AppIntentDispatchResult(AppIntentDispatchStatus.Disabled, ErrorCode: launch.ErrorCode),
+        AppLaunchStatus.ElevationDenied => new AppIntentDispatchResult(AppIntentDispatchStatus.ElevationDenied, ErrorCode: launch.ErrorCode),
         _ => new AppIntentDispatchResult(AppIntentDispatchStatus.EntryPointFault, launch.Process, launch.Context, ErrorCode: launch.ErrorCode)
     };
 }

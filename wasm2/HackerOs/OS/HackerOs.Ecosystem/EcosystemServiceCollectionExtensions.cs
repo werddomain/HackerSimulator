@@ -13,6 +13,7 @@ using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
@@ -239,6 +240,23 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
 
+        // Admin re-authentication elevation (ADR 0042) — powers the terminal's `sudo` built-in and
+        // the admin-approval prompt on a denied permission. Never touches ISessionService's own
+        // state machine; verifies credentials and mints short-lived, single-use tickets only.
+        services.AddScoped<IElevationTicketStore, InMemoryElevationTicketStore>();
+        services.AddScoped<IAdminElevationVerifier>(provider =>
+        {
+            WebCryptoPasswordHasher elevationHasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
+            return new AdminElevationVerifier(
+                provider.GetRequiredService<ILocalUserRepository>(),
+                provider.GetRequiredService<IAuditLog>(),
+                asyncHasher: (password, salt, iterations, length, ct) =>
+                    elevationHasher.DeriveKeyAsync(password, salt, iterations, length, ct));
+        });
+        services.AddScoped<IElevationService>(provider => new ElevationService(
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IElevationTicketStore>()));
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -322,7 +340,8 @@ public static class EcosystemServiceCollectionExtensions
             descriptorLoaderProvider?.Invoke(provider),
             provider.GetRequiredService<IPersistentAppCatalogRepository>(),
             provider,
-            provider.GetRequiredService<IFileSystemService>()));
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<IElevationTicketStore>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

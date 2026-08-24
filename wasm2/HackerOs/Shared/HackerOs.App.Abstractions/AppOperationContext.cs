@@ -29,13 +29,28 @@ public sealed record AppOperationContext
     /// </summary>
     public bool IsSystemOperation { get; init; }
 
+    /// <summary>
+    /// Gets whether this one launched command was elevated to full unrestricted root via <c>sudo</c>
+    /// (`ADR 0042`). Unlike <see cref="IsSystemOperation"/>, this is set only for one user-invoked
+    /// terminal command after live Administrator re-authentication; it is never used for trusted
+    /// platform-owned operations.
+    /// </summary>
+    public bool IsRootElevated { get; init; }
+
+    /// <summary>
+    /// Gets this operation's live one-shot elevation tickets, minted only after an admin-approval
+    /// dialog verifies an enabled Administrator. Never null so callers can grant into it without a
+    /// null check; empty by default.
+    /// </summary>
+    public OneShotElevationGrantSet OneShotElevation { get; init; } = new();
+
     /// <summary>Gets the authority used for this operation.</summary>
     public AppAuthority EffectiveAuthority =>
-        IsSystemOperation ? AppAuthority.System : UserAuthority;
+        IsSystemOperation || IsRootElevated ? AppAuthority.System : UserAuthority;
 
     /// <summary>Determines whether an exact capability was granted.</summary>
     /// <param name="capability">Capability required by the operation.</param>
-    /// <returns><see langword="true"/> when trusted policy granted it exactly.</returns>
+    /// <returns><see langword="true"/> when trusted policy granted it exactly, or the operation is root-elevated.</returns>
     public bool HasCapability(string capability) =>
-        AppCapabilityPolicy.IsGranted(GrantedCapabilities, capability);
+        IsRootElevated || AppCapabilityPolicy.IsGranted(GrantedCapabilities, capability);
 }

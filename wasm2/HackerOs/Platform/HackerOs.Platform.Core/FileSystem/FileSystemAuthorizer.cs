@@ -12,6 +12,11 @@ public sealed class FileSystemAuthorizer : IFileSystemAuthorizer
         ArgumentNullException.ThrowIfNull(request);
         AppOperationContext operationContext = request.Context.OperationContext;
 
+        if (operationContext.OneShotElevation.TryConsume(request.RequiredCapability, request.Path))
+        {
+            return FileSystemAuthorizationResult.Permit();
+        }
+
         if (!AppAuthorityPolicy.Satisfies(operationContext.EffectiveAuthority, request.MinimumAuthority))
         {
             return Deny(request, FileSystemErrorCode.AuthorityDenied);
@@ -59,5 +64,6 @@ public sealed class FileSystemAuthorizer : IFileSystemAuthorizer
     private static FileSystemAuthorizationResult Deny(
         FileSystemAuthorizationRequest request,
         FileSystemErrorCode code) =>
-        FileSystemAuthorizationResult.Deny(new FileSystemError(request.Operation, code, request.Path));
+        FileSystemAuthorizationResult.Deny(new FileSystemError(
+            request.Operation, code, request.Path, requiredCapability: request.RequiredCapability));
 }

@@ -74,12 +74,23 @@ public sealed class AppExecutionContextFactory
     /// <param name="process">Process record hosting this app instance; must already be active.</param>
     /// <param name="grantedCapabilities">Exact capabilities trusted policy granted for this instance.</param>
     /// <param name="instanceId">Explicit instance ID, or <see langword="null"/> to generate one.</param>
+    /// <param name="isRootElevated">
+    /// Whether this one launch was elevated to full unrestricted root via <c>sudo</c> (`ADR 0042`),
+    /// after a caller-supplied elevation ticket was already consumed.
+    /// </param>
+    /// <param name="oneShotElevation">
+    /// A live one-shot elevation ticket set to bind into this instance, when the caller pre-filled
+    /// one from an already-consumed capability-approval ticket; otherwise a fresh empty set is used
+    /// so an app can still receive a same-instance admin-approval grant later.
+    /// </param>
     public IAppExecutionContext Create(
         AppManifest manifest,
         AuthenticatedPrincipal principal,
         ProcessRecord process,
         IReadOnlySet<string> grantedCapabilities,
-        Guid? instanceId = null)
+        Guid? instanceId = null,
+        bool isRootElevated = false,
+        OneShotElevationGrantSet? oneShotElevation = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(principal);
@@ -97,7 +108,9 @@ public sealed class AppExecutionContextFactory
             UserName = userName,
             UserAuthority = principal.Authority,
             GrantedCapabilities = grantedCapabilities,
-            IsSystemOperation = false
+            IsSystemOperation = false,
+            IsRootElevated = isRootElevated,
+            OneShotElevation = oneShotElevation ?? new OneShotElevationGrantSet()
         };
 
         ICapabilityChecker capabilities = new AppCapabilityChecker(
@@ -136,7 +149,8 @@ public sealed class AppExecutionContextFactory
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,
-            services);
+            services,
+            operationContext.OneShotElevation);
     }
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway

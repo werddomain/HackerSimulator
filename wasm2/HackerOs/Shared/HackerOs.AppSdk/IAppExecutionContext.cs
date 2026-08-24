@@ -102,6 +102,16 @@ public interface IAppExecutionContext
     /// compiling; the trusted platform factory overrides it with a real implementation.
     /// </summary>
     IAppPermissionErrorGateway PermissionErrors => new NoOpAppPermissionErrorGateway();
+
+    /// <summary>
+    /// Gets this instance's live one-shot elevation ticket set (`ADR 0042`). An app grants into it
+    /// only after the platform's admin-approval dialog verifies an enabled Administrator; a ticket
+    /// unblocks exactly the next matching (capability, path) filesystem denial, then is consumed.
+    /// Defaults to a fresh, always-empty instance so existing <see cref="IAppExecutionContext"/>
+    /// implementations that predate this member keep compiling; the trusted platform factory
+    /// overrides it with the same live instance <see cref="HackerOs.App.Abstractions.AppOperationContext"/> reads.
+    /// </summary>
+    OneShotElevationGrantSet OneShotElevation => new();
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.PermissionErrors"/> for contexts that don't wire one up.</summary>

@@ -174,6 +174,7 @@ public sealed class FileDialogWindowAdapter : IDisposable
         {
             MessageBoxPresentation => (460, 220),
             TextInputPresentation => (480, 240),
+            CredentialPromptPresentation => (420, 300),
             _ => (480, 240)
         };
 
@@ -264,6 +265,13 @@ public sealed class FileDialogWindowAdapter : IDisposable
             builder.AddAttribute(2, nameof(TextInputDialog.Coordinator), _basicCoordinator);
             builder.CloseComponent();
         },
+        CredentialPromptPresentation credentialPrompt => builder =>
+        {
+            builder.OpenComponent<CredentialPromptDialog>(0);
+            builder.AddAttribute(1, nameof(CredentialPromptDialog.Presentation), credentialPrompt);
+            builder.AddAttribute(2, nameof(CredentialPromptDialog.Coordinator), _basicCoordinator);
+            builder.CloseComponent();
+        },
         _ => throw new NotSupportedException($"Unsupported dialog presentation '{presentation.GetType()}'."),
     };
 
@@ -279,6 +287,7 @@ public sealed class FileDialogWindowAdapter : IDisposable
     {
         MessageBoxPresentation msgBox => !string.IsNullOrWhiteSpace(msgBox.Request.Title) ? msgBox.Request.Title : "Message",
         TextInputPresentation input => !string.IsNullOrWhiteSpace(input.Request.Title) ? input.Request.Title : "Input",
+        CredentialPromptPresentation credential => !string.IsNullOrWhiteSpace(credential.Request.Title) ? credential.Request.Title : "Authorization Required",
         _ => "Dialog",
     };
 }

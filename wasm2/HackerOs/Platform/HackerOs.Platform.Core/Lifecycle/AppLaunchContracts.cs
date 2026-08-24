@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
@@ -18,12 +20,19 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// launch (e.g. the invoking shell's current directory); defaults to the principal's home when
 /// omitted, instead of always starting at the filesystem root.
 /// </param>
+/// <param name="ElevationToken">
+/// Optional single-use elevation ticket token (`ADR 0042`), minted by <see cref="IElevationService"/>.
+/// Consumed exactly once against <see cref="ElevationScope"/> before this launch proceeds.
+/// </param>
+/// <param name="ElevationScope">The scope the ticket in <see cref="ElevationToken"/> authorizes.</param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
     IReadOnlyList<string> Arguments,
     ProcessId? ParentPid = null,
-    VirtualPath? WorkingDirectory = null);
+    VirtualPath? WorkingDirectory = null,
+    Guid? ElevationToken = null,
+    ElevationScope? ElevationScope = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus
@@ -41,7 +50,10 @@ public enum AppLaunchStatus
     Disabled,
 
     /// <summary>The entry point threw while starting or executing.</summary>
-    EntryPointFault
+    EntryPointFault,
+
+    /// <summary>The supplied elevation token was missing, expired, wrong-scope, or already consumed (`ADR 0042`).</summary>
+    ElevationDenied
 }
 
 /// <summary>Contains the result of one launch attempt, including any fault, per `P1-APP-004`.</summary>
@@ -56,6 +68,10 @@ public enum AppLaunchStatus
 /// <param name="StandardError">Captured standard error for a completed Terminal launch.</param>
 /// <param name="ErrorCode">Stable machine-readable error code when the launch did not succeed.</param>
 /// <param name="ErrorMessage">Human-readable diagnostic, populated for <see cref="AppLaunchStatus.EntryPointFault"/>.</param>
+/// <param name="PermissionDenials">
+/// Filesystem permission-class errors raised while a completed Terminal launch ran (`ADR 0042`), so
+/// the caller can offer an admin-approval retry without the command itself needing to report them.
+/// </param>
 public sealed record AppLaunchResult(
     AppLaunchStatus Status,
     ProcessRecord? Process = null,
@@ -64,7 +80,8 @@ public sealed record AppLaunchResult(
     string? StandardOutput = null,
     string? StandardError = null,
     string? ErrorCode = null,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    IReadOnlyList<FileSystemError>? PermissionDenials = null)
 {
     /// <summary>Gets whether the app is now running (or already was, for a focused singleton).</summary>
     public bool IsSuccess => Status is AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting;

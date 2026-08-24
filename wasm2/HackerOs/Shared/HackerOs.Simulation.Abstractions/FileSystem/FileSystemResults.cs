@@ -113,11 +113,17 @@ public sealed record FileSystemError
     /// <param name="code">Provider-neutral failure code.</param>
     /// <param name="path">Primary path involved, when available.</param>
     /// <param name="relatedPath">Secondary source or destination path, when available.</param>
+    /// <param name="requiredCapability">
+    /// The exact broad capability policy required for this operation, when known — populated for
+    /// authority/capability/permission denials so an admin-approval prompt (`ADR 0042`) knows exactly
+    /// what to grant.
+    /// </param>
     public FileSystemError(
         FileSystemOperation operation,
         FileSystemErrorCode code,
         VirtualPath? path = null,
-        VirtualPath? relatedPath = null)
+        VirtualPath? relatedPath = null,
+        string? requiredCapability = null)
     {
         if (!Enum.IsDefined(operation))
         {
@@ -133,6 +139,7 @@ public sealed record FileSystemError
         Code = code;
         Path = path;
         RelatedPath = relatedPath;
+        RequiredCapability = requiredCapability;
     }
 
     /// <summary>Gets the operation that failed.</summary>
@@ -146,6 +153,9 @@ public sealed record FileSystemError
 
     /// <summary>Gets the secondary source or destination path, when available.</summary>
     public VirtualPath? RelatedPath { get; }
+
+    /// <summary>Gets the exact broad capability policy required for this operation, when known.</summary>
+    public string? RequiredCapability { get; }
 }
 
 /// <summary>Contains either one successful filesystem value or one stable error.</summary>

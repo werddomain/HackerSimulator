@@ -35,7 +35,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppIntentGateway intents,
         IAppFileSystemWatchGateway watch,
         IAppPermissionErrorGateway permissionErrors,
-        IAppServiceControlGateway services)
+        IAppServiceControlGateway services,
+        OneShotElevationGrantSet oneShotElevation)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -59,6 +60,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Watch = watch ?? throw new ArgumentNullException(nameof(watch));
         PermissionErrors = permissionErrors ?? throw new ArgumentNullException(nameof(permissionErrors));
         Services = services ?? throw new ArgumentNullException(nameof(services));
+        OneShotElevation = oneShotElevation ?? throw new ArgumentNullException(nameof(oneShotElevation));
     }
 
     /// <inheritdoc />
@@ -123,4 +125,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppServiceControlGateway Services { get; }
+
+    /// <inheritdoc />
+    public OneShotElevationGrantSet OneShotElevation { get; }
 }

@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -36,6 +37,14 @@ public abstract class WindowAppBase : ComponentBase
     /// <summary>Gets or sets the ecosystem-owned dialog service.</summary>
     [Inject]
     protected IDialogService Dialogs { get; set; } = default!;
+
+    /// <summary>
+    /// Gets or sets the admin-credential verifier used to offer an approval prompt on a denied
+    /// permission (`ADR 0042`). Optional: when unavailable (e.g. in tests), a denial simply falls
+    /// back to the plain "Permission Denied" message.
+    /// </summary>
+    [Inject]
+    protected IAdminElevationVerifier? ElevationVerifier { get; set; }
 
     /// <summary>Gets the validated window app manifest.</summary>
     protected AppManifest Manifest => AppContext.Manifest;
@@ -223,6 +232,33 @@ public abstract class WindowAppBase : ComponentBase
         }
 
         e.ErrorHandled = true;
+
+        if (ElevationVerifier is not null && e.Error.RequiredCapability is not null)
+        {
+            EnsureBasicDialogService();
+            CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest
+            {
+                Title = "Permission Denied — Request Approval?",
+                Description = $"'{Manifest.Name}' was denied access to '{e.Error.Path}'. " +
+                    "Enter an enabled Administrator's credentials to approve this one action."
+            });
+
+            if (prompt.Status == CredentialPromptStatus.Submitted)
+            {
+                AdminElevationVerificationResult verification = await ElevationVerifier.VerifyAsync(
+                    prompt.LoginName!, prompt.Password!);
+                if (verification.Success)
+                {
+                    AppContext.OneShotElevation.Grant(e.Error.RequiredCapability, e.Error.Path);
+                    await MessageBox(
+                        "Access Approved",
+                        "An administrator approved this action once. Please try the action again.",
+                        MessageBoxType.Ok);
+                    return;
+                }
+            }
+        }
+
         await MessageBox("Permission Denied", DescribePermissionError(e.Error), MessageBoxType.Ok);
     }
 

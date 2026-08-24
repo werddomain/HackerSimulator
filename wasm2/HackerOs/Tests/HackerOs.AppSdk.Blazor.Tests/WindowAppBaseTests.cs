@@ -1,7 +1,9 @@
 using System.Reflection;
 using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -117,9 +119,91 @@ public sealed class WindowAppBaseTests
         Assert.Equal("SubmittedText", result.Value);
     }
 
+    [Fact]
+    public void A_denied_permission_falls_back_to_the_plain_message_when_no_elevation_verifier_is_configured()
+    {
+        FakeDialogService dialogs = new();
+        TestExecutionContext context = new(TestManifest());
+        TestWindowApp app = CreateWindowApp(dialogs: dialogs, context: context);
+        app.InvokeInitialized();
+
+        context.PermissionErrorsGateway.Raise(new AppPermissionErrorEventArgs(
+            new FileSystemError(
+                FileSystemOperation.Stat, FileSystemErrorCode.CapabilityDenied,
+                VirtualPath.Parse("/etc"), requiredCapability: "filesystem.system.read")));
+
+        Assert.NotNull(dialogs.LastMessageBoxRequest);
+        Assert.Equal("Permission Denied", dialogs.LastMessageBoxRequest.Title);
+        Assert.Null(dialogs.LastCredentialPromptRequest);
+    }
+
+    [Fact]
+    public void An_approved_elevation_grants_a_one_shot_ticket_instead_of_showing_permission_denied()
+    {
+        FakeDialogService dialogs = new()
+        {
+            NextCredentialPromptResult = new CredentialPromptDialogResult(CredentialPromptStatus.Submitted, "admin", "hunter2")
+        };
+        FakeAdminElevationVerifier verifier = new()
+        {
+            NextResult = new AdminElevationVerificationResult(true, "admin-id", "admin", null)
+        };
+        TestExecutionContext context = new(TestManifest());
+        TestWindowApp app = CreateWindowApp(dialogs: dialogs, elevationVerifier: verifier, context: context);
+        app.InvokeInitialized();
+        VirtualPath deniedPath = VirtualPath.Parse("/etc");
+
+        context.PermissionErrorsGateway.Raise(new AppPermissionErrorEventArgs(
+            new FileSystemError(
+                FileSystemOperation.Stat, FileSystemErrorCode.CapabilityDenied,
+                deniedPath, requiredCapability: "filesystem.system.read")));
+
+        Assert.NotNull(dialogs.LastCredentialPromptRequest);
+        Assert.Equal("admin", verifier.LastLoginName);
+        Assert.Equal("hunter2", verifier.LastPassword);
+        Assert.True(context.OneShotElevation.TryConsume("filesystem.system.read", deniedPath));
+        Assert.Equal("Access Approved", dialogs.LastMessageBoxRequest?.Title);
+    }
+
+    [Fact]
+    public void A_cancelled_or_denied_elevation_prompt_falls_back_to_the_plain_message()
+    {
+        FakeDialogService dialogs = new()
+        {
+            NextCredentialPromptResult = new CredentialPromptDialogResult(CredentialPromptStatus.Cancelled, null, null)
+        };
+        FakeAdminElevationVerifier verifier = new();
+        TestExecutionContext context = new(TestManifest());
+        TestWindowApp app = CreateWindowApp(dialogs: dialogs, elevationVerifier: verifier, context: context);
+        app.InvokeInitialized();
+
+        context.PermissionErrorsGateway.Raise(new AppPermissionErrorEventArgs(
+            new FileSystemError(
+                FileSystemOperation.Stat, FileSystemErrorCode.CapabilityDenied,
+                VirtualPath.Parse("/etc"), requiredCapability: "filesystem.system.read")));
+
+        Assert.Equal("Permission Denied", dialogs.LastMessageBoxRequest?.Title);
+    }
+
+    private static AppManifest TestManifest() => new()
+    {
+        Id = "org.hackeros.test-window",
+        Name = "Test Window",
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "Window App SDK test component.",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.AppSdk.Blazor.Tests", "TestWindowApp"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None
+    };
+
     private static TestWindowApp CreateWindowApp(
         AppKind kind = AppKind.Window,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        IAdminElevationVerifier? elevationVerifier = null,
+        TestExecutionContext? context = null)
     {
         AppManifest manifest = new()
         {
@@ -136,17 +220,18 @@ public sealed class WindowAppBaseTests
         };
 
         FakeDialogService fakeService = dialogs as FakeDialogService ?? new FakeDialogService();
-        TestWindowApp app = new(fakeService);
-        app.BindContext(new TestExecutionContext(manifest));
+        TestWindowApp app = new(fakeService, elevationVerifier);
+        app.BindContext(context ?? new TestExecutionContext(manifest));
         return app;
     }
 
     private sealed class TestWindowApp : WindowAppBase
     {
-        public TestWindowApp(IDialogService dialogs)
+        public TestWindowApp(IDialogService dialogs, IAdminElevationVerifier? elevationVerifier = null)
         {
             Dialogs = dialogs;
             FileDialogs = dialogs;
+            ElevationVerifier = elevationVerifier;
         }
 
         public bool AfterRenderCalled { get; private set; }
@@ -240,10 +325,34 @@ public sealed class WindowAppBaseTests
             LastTextInputRequest = request;
             return ValueTask.FromResult(new TextInputDialogResult(TextInputStatus.Submitted, "SubmittedText"));
         }
+
+        public CredentialPromptDialogRequest? LastCredentialPromptRequest { get; private set; }
+
+        public CredentialPromptDialogResult NextCredentialPromptResult { get; set; } =
+            new(CredentialPromptStatus.Cancelled, null, null);
+
+        public ValueTask<CredentialPromptDialogResult> CredentialPromptAsync(
+            IAppExecutionContext context,
+            CredentialPromptDialogRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastContext = context;
+            LastCredentialPromptRequest = request;
+            return ValueTask.FromResult(NextCredentialPromptResult);
+        }
+    }
+
+    private sealed class FakePermissionErrorGateway : IAppPermissionErrorGateway
+    {
+        public event EventHandler<AppPermissionErrorEventArgs>? PermissionDenied;
+
+        public void Raise(AppPermissionErrorEventArgs e) => PermissionDenied?.Invoke(this, e);
     }
 
     private sealed class TestExecutionContext(AppManifest manifest) : IAppExecutionContext
     {
+        public FakePermissionErrorGateway PermissionErrorsGateway { get; } = new();
+
         public AppManifest Manifest { get; } = manifest;
 
         public Guid InstanceId { get; } = Guid.NewGuid();
@@ -277,5 +386,27 @@ public sealed class WindowAppBaseTests
         public IAppClockGateway Clock => throw new NotSupportedException();
 
         public IAppProcessGateway Processes => throw new NotSupportedException();
+
+        public IAppPermissionErrorGateway PermissionErrors => PermissionErrorsGateway;
+
+        public OneShotElevationGrantSet OneShotElevation { get; } = new();
+    }
+
+    private sealed class FakeAdminElevationVerifier : IAdminElevationVerifier
+    {
+        public AdminElevationVerificationResult NextResult { get; set; } =
+            AdminElevationVerificationResult.Failed("not-configured");
+
+        public string? LastLoginName { get; private set; }
+
+        public string? LastPassword { get; private set; }
+
+        public Task<AdminElevationVerificationResult> VerifyAsync(
+            string loginName, string password, CancellationToken cancellationToken = default)
+        {
+            LastLoginName = loginName;
+            LastPassword = password;
+            return Task.FromResult(NextResult);
+        }
     }
 }

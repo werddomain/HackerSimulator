@@ -8,6 +8,7 @@ using HackerOs.Platform.Core.Intents;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IPersistentAppCatalogRepository? _catalogRepository;
     private readonly IServiceProvider? _services;
     private readonly IFileSystemService? _fileSystem;
+    private readonly IElevationTicketStore? _elevationTickets;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -70,6 +72,12 @@ public sealed class AppLifecycleOrchestrator
     /// service is treated as <see cref="ServiceStartMode.Automatic"/> — the previous, narrower
     /// behavior tests still rely on.
     /// </param>
+    /// <param name="elevationTickets">
+    /// Optional single-use elevation ticket store (`ADR 0042`). When a <see cref="AppLaunchRequest.ElevationToken"/>
+    /// is supplied, <see cref="LaunchAsync"/> consumes it here before starting the app. When omitted
+    /// (e.g. in tests that don't exercise elevation), a supplied token is always denied — the
+    /// previous, narrower behavior tests still rely on.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -82,7 +90,8 @@ public sealed class AppLifecycleOrchestrator
         IAppDescriptorLoader? descriptorLoader = null,
         IPersistentAppCatalogRepository? catalogRepository = null,
         IServiceProvider? services = null,
-        IFileSystemService? fileSystem = null)
+        IFileSystemService? fileSystem = null,
+        IElevationTicketStore? elevationTickets = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -96,6 +105,7 @@ public sealed class AppLifecycleOrchestrator
         _catalogRepository = catalogRepository;
         _services = services;
         _fileSystem = fileSystem;
+        _elevationTickets = elevationTickets;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -231,6 +241,28 @@ public sealed class AppLifecycleOrchestrator
             return new AppLaunchResult(AppLaunchStatus.FocusedExisting, existing);
         }
 
+        bool isRootElevated = false;
+        OneShotElevationGrantSet? oneShotElevation = null;
+        if (request.ElevationToken is Guid elevationToken && request.ElevationScope is ElevationScope elevationScope)
+        {
+            if (_elevationTickets is null
+                || !_elevationTickets.TryConsume(elevationToken, elevationScope, out ElevationTicket? ticket)
+                || ticket is null)
+            {
+                return new AppLaunchResult(AppLaunchStatus.ElevationDenied, ErrorCode: "lifecycle.elevation.denied");
+            }
+
+            if (elevationScope == ElevationScope.SudoRoot)
+            {
+                isRootElevated = true;
+            }
+            else if (ticket.Capability is not null)
+            {
+                oneShotElevation = new OneShotElevationGrantSet();
+                oneShotElevation.Grant(ticket.Capability, ticket.Path);
+            }
+        }
+
         HashSet<string> grantedCapabilities = ComputeGrantedCapabilities(descriptor.Manifest, request.Principal);
         ProcessRecord process = _processManager.Start(new ProcessStartRequest(
             request.ParentPid,
@@ -242,7 +274,8 @@ public sealed class AppLifecycleOrchestrator
             ResourceProfile.None));
 
         IAppExecutionContext context = _contextFactory.Create(
-            descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value);
+            descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
+            isRootElevated, oneShotElevation);
 
         try
         {
@@ -542,6 +575,10 @@ public sealed class AppLifecycleOrchestrator
             new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = principal.HomePath },
             fullScreen);
 
+        List<FileSystemError> permissionDenials = [];
+        void OnPermissionDenied(object? sender, AppPermissionErrorEventArgs e) => permissionDenials.Add(e.Error);
+        context.PermissionErrors.PermissionDenied += OnPermissionDenied;
+
         int exitCode;
         try
         {
@@ -551,9 +588,15 @@ public sealed class AppLifecycleOrchestrator
         {
             exitCode = 130;
         }
+        finally
+        {
+            context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
+        }
+
         ProcessRecord stopped = _processManager.Complete(process.Pid, exitCode);
         return new AppLaunchResult(
-            AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString());
+            AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString(),
+            PermissionDenials: permissionDenials);
     }
 
     private AppLaunchResult StartService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
