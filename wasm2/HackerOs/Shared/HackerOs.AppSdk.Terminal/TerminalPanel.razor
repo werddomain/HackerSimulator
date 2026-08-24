@@ -3,6 +3,7 @@
 @using HackerOs.App.Abstractions.Policy
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.VirtualKeyboard
 @using HackerOs.Platform.Core
 @using HackerOs.Platform.Core.Intents
 @using HackerOs.Simulation.Abstractions.Diagnostics
@@ -62,6 +63,7 @@
                    type="text"
                    class="terminal-input"
                    aria-label="Terminal command input"
+                   inputmode="@(UseVirtualKeyboard ? "none" : null)"
                    @bind="_inputBuffer"
                    @bind:event="oninput" />
         </div>
@@ -90,6 +92,23 @@
     /// </summary>
     [Parameter]
     public string? InitialCwd { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether input is driven by a <c>HackerOs.AppSdk.VirtualKeyboard</c> control
+    /// instead of the physical keyboard. When true, the line-mode input gets
+    /// <c>inputmode="none"</c> so a touch focus does not open the platform's native keyboard —
+    /// callers are expected to route key presses through <see cref="PushVirtualKey"/> instead.
+    /// </summary>
+    [Parameter]
+    public bool UseVirtualKeyboard { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user requests to exit via Ctrl+D on an empty
+    /// input line (matching a real shell's EOF convention). Unbound by default: this session does
+    /// not decide how "exit" should be handled by itself — it only offers the hook.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnExitRequested { get; set; }
 
     private ElementReference _outputBufferRef;
     private ElementReference _inputRef;
@@ -195,6 +214,14 @@
         {
             ClearBuffer();
         }
+        else if (args.Key == "d" && args.CtrlKey)
+        {
+            await RequestExitOnEmptyLineAsync();
+        }
+        else if (args.Key == "Escape")
+        {
+            _inputBuffer = string.Empty;
+        }
         else if (args.Key == "Tab")
         {
             AutoCompleteInput();
@@ -205,6 +232,105 @@
     {
         _fullScreenSession?.TryPostKey(keyEvent);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Routes one key press from a <c>VirtualKeyboard</c> into the same actions the physical
+    /// keyboard already triggers. Full-screen apps (e.g. <c>nano</c>) receive it through the exact
+    /// dispatch surface <see cref="HandleFullScreenKeyAsync"/> already uses, so they gain
+    /// virtual-keyboard support with no changes of their own. Line-mode input is mutated directly
+    /// in C# rather than by synthesizing a DOM event: browsers do not apply default text-editing
+    /// behavior (character insertion, backspace) to programmatically dispatched key events.
+    /// </summary>
+    public async Task PushVirtualKey(VirtualKeyPressedEvent evt)
+    {
+        if (_isFullScreen)
+        {
+            if (TryMapToTerminalKey(evt, out TerminalKeyEvent terminalKeyEvent))
+            {
+                _fullScreenSession?.TryPostKey(terminalKeyEvent);
+            }
+
+            return;
+        }
+
+        switch (evt.Key)
+        {
+            case VirtualKey.Character when evt.Control && evt.Text == "c":
+                CancelActiveCommand();
+                break;
+            case VirtualKey.Character when evt.Control && evt.Text == "l":
+                ClearBuffer();
+                break;
+            case VirtualKey.Character when evt.Control && evt.Text == "d":
+                await RequestExitOnEmptyLineAsync();
+                break;
+            case VirtualKey.Character when !evt.Control && evt.Text is not null:
+                _inputBuffer += evt.Text;
+                break;
+            case VirtualKey.Backspace when _inputBuffer.Length > 0:
+                _inputBuffer = _inputBuffer[..^1];
+                break;
+            case VirtualKey.Enter:
+                await ExecuteInputAsync();
+                break;
+            case VirtualKey.ArrowUp:
+                if (_session.NavigateHistory(-1, _inputBuffer) is { } previous)
+                {
+                    _inputBuffer = previous;
+                }
+                break;
+            case VirtualKey.ArrowDown:
+                if (_session.NavigateHistory(1, _inputBuffer) is { } next)
+                {
+                    _inputBuffer = next;
+                }
+                break;
+            case VirtualKey.Tab:
+                AutoCompleteInput();
+                break;
+            case VirtualKey.Escape:
+                _inputBuffer = string.Empty;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Ctrl+D matches a real shell's EOF convention: meaningful only on an empty line, a no-op
+    /// otherwise. Invokes <see cref="OnExitRequested"/> if a host bound it; this session does not
+    /// decide by itself what "exit" means (e.g. closing a window) — that's a host concern.
+    /// </summary>
+    private Task RequestExitOnEmptyLineAsync() =>
+        _inputBuffer.Length == 0 ? OnExitRequested.InvokeAsync() : Task.CompletedTask;
+
+    private static bool TryMapToTerminalKey(VirtualKeyPressedEvent evt, out TerminalKeyEvent terminalKeyEvent)
+    {
+        TerminalKey? key = evt.Key switch
+        {
+            VirtualKey.Character => TerminalKey.Character,
+            VirtualKey.Enter => TerminalKey.Enter,
+            VirtualKey.Backspace => TerminalKey.Backspace,
+            VirtualKey.Delete => TerminalKey.Delete,
+            VirtualKey.Escape => TerminalKey.Escape,
+            VirtualKey.ArrowLeft => TerminalKey.ArrowLeft,
+            VirtualKey.ArrowRight => TerminalKey.ArrowRight,
+            VirtualKey.ArrowUp => TerminalKey.ArrowUp,
+            VirtualKey.ArrowDown => TerminalKey.ArrowDown,
+            VirtualKey.Home => TerminalKey.Home,
+            VirtualKey.End => TerminalKey.End,
+            VirtualKey.PageUp => TerminalKey.PageUp,
+            VirtualKey.PageDown => TerminalKey.PageDown,
+            _ => null,
+        };
+
+        if (key is null)
+        {
+            terminalKeyEvent = default!;
+            return false;
+        }
+
+        terminalKeyEvent = new TerminalKeyEvent(key.Value, evt.Text, evt.Control, evt.Alt, evt.Shift);
+        return true;
     }
 
     private async Task ExecuteInputAsync()

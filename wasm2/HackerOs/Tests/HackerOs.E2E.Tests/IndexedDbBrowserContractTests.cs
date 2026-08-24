@@ -775,6 +775,63 @@ public sealed class IndexedDbBrowserContractTests
         }
     }
 
+    /// <summary>
+    /// Verifies the reusable VirtualKeyboard/VirtualKeyboardHost package in a real browser: on-screen
+    /// taps reach the full-screen terminal through the same TerminalKeyEvent pipeline real key
+    /// presses use, and no native input/contenteditable element exists anywhere to ever trigger a
+    /// platform on-screen keyboard.
+    /// </summary>
+    [Fact]
+    public async Task Virtual_keyboard_drives_the_full_screen_terminal_without_a_native_input()
+    {
+        string solutionDirectory = FindSolutionDirectory();
+        int port = ReservePort();
+        string address = $"http://127.0.0.1:{port}";
+        using Process server = StartHarness(solutionDirectory, address);
+
+        try
+        {
+            using IPlaywright playwright = await Playwright.CreateAsync();
+            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+                new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+            IPage page = await browser.NewPageAsync();
+            List<string> failures = [];
+            page.Console += (_, message) =>
+            {
+                if (message.Type == "error") failures.Add($"console: {message.Text}");
+            };
+            page.PageError += (_, error) => failures.Add($"page: {error}");
+
+            await NavigateWhenReadyAsync(page, $"{address}/?scenario=virtual-keyboard-terminal");
+            page.RequestFailed += (_, request) => failures.Add($"network: {request.Method} {request.Url}");
+
+            Assert.Equal(0, await page.Locator("input, [contenteditable]").CountAsync());
+
+            ILocator screen = page.Locator("[data-terminal-full-screen]");
+            await screen.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "a", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "b", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "⌫", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "c", Exact = true }).ClickAsync();
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#virtual-keyboard-terminal-result')?.textContent === 'ac'");
+            Assert.Contains("ac", await screen.InnerTextAsync(), StringComparison.Ordinal);
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Ctrl", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "x", Exact = true }).ClickAsync();
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#virtual-keyboard-terminal-result')?.dataset.status === 'exited'");
+            Assert.Equal(0, await page.Locator("[data-terminal-full-screen]").CountAsync());
+            Assert.Equal(0, await page.Locator("input, [contenteditable]").CountAsync());
+            Assert.Empty(failures);
+        }
+        finally
+        {
+            StopProcess(server);
+        }
+    }
+
     /// <summary>Verifies the locally bundled Monaco editor, C# state callback, mode switch, and disposal.</summary>
     [Fact]
     public async Task Code_editor_local_bundle_edits_switches_mode_and_disposes_cleanly()

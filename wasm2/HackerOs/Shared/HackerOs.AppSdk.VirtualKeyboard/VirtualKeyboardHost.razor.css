@@ -1,0 +1,14 @@
+.virtual-keyboard-host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.vk-host-content {
+    flex: 1;
+    min-height: 0;
+    /* Not `auto`: a child that wants its own scrolling (e.g. a terminal) already provides it.
+       Wrapping it in a second scroll container here would risk a nested scrollbar. */
+    overflow: hidden;
+}

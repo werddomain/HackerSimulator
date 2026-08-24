@@ -1,0 +1,175 @@
+@namespace HackerOs.AppSdk.VirtualKeyboard
+@implements IDisposable
+
+@*
+    Deliberately simpler than a real keyboard: Shift/Ctrl/Alt are single "sticky" toggles consumed
+    by the next non-modifier key (no separate caps-lock, no held-vs-latched distinction). This
+    control never needs to fill an arbitrary focused text field (see package README), so it only
+    needs to describe intent to the host via OnKeyPressed -- the host decides what a key means.
+*@
+<div class="virtual-keyboard" role="group" aria-label="Virtual keyboard">
+    @if (Options.ShowModifierRow)
+    {
+        <div class="vk-row vk-row-modifiers">
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Escape)">Esc</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Tab)">Tab</button>
+            <button type="button"
+                    class="vk-key vk-key-modifier @(_controlActive ? "is-active" : "")"
+                    aria-pressed="@_controlActive.ToString().ToLowerInvariant()"
+                    @onclick="ToggleControl">@Options.ControlLabel</button>
+            <button type="button"
+                    class="vk-key vk-key-modifier @(_altActive ? "is-active" : "")"
+                    aria-pressed="@_altActive.ToString().ToLowerInvariant()"
+                    @onclick="ToggleAlt">@Options.AltLabel</button>
+            <button type="button" class="vk-key vk-key-wide"
+                    @onpointerdown="() => StartRepeatAsync(VirtualKey.Delete)"
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">Del</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Home)">Home</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.End)">End</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageUp)">PgUp</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageDown)">PgDn</button>
+        </div>
+    }
+
+    <div class="vk-row">
+        @foreach (char c in "1234567890")
+        {
+            <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@c</button>
+        }
+    </div>
+
+    <div class="vk-row">
+        @foreach (char c in "qwertyuiop")
+        {
+            <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@DisplayChar(c)</button>
+        }
+    </div>
+
+    <div class="vk-row">
+        @foreach (char c in "asdfghjkl")
+        {
+            <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@DisplayChar(c)</button>
+        }
+    </div>
+
+    <div class="vk-row">
+        <button type="button"
+                class="vk-key vk-key-wide vk-key-modifier @(_shiftActive ? "is-active" : "")"
+                aria-pressed="@_shiftActive.ToString().ToLowerInvariant()"
+                @onclick="ToggleShift">@Options.ShiftLabel</button>
+        @foreach (char c in "zxcvbnm")
+        {
+            <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@DisplayChar(c)</button>
+        }
+        <button type="button" class="vk-key vk-key-wide"
+                @onpointerdown="() => StartRepeatAsync(VirtualKey.Backspace)"
+                @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">⌫</button>
+    </div>
+
+    @if (Options.ShowSymbolRow)
+    {
+        <div class="vk-row">
+            @foreach (char c in "/-_.|><~*'\"\\")
+            {
+                <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@c</button>
+            }
+        </div>
+    }
+
+    <div class="vk-row">
+        @if (Options.ShowArrowKeys)
+        {
+            <button type="button" class="vk-key"
+                    @onpointerdown="() => StartRepeatAsync(VirtualKey.ArrowLeft)"
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">◄</button>
+            <button type="button" class="vk-key"
+                    @onpointerdown="() => StartRepeatAsync(VirtualKey.ArrowUp)"
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">▲</button>
+            <button type="button" class="vk-key"
+                    @onpointerdown="() => StartRepeatAsync(VirtualKey.ArrowDown)"
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">▼</button>
+            <button type="button" class="vk-key"
+                    @onpointerdown="() => StartRepeatAsync(VirtualKey.ArrowRight)"
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">►</button>
+        }
+        <button type="button" class="vk-key vk-key-space" @onclick="() => RaiseCharacterAsync(' ')">Space</button>
+        <button type="button" class="vk-key vk-key-wide vk-key-enter" @onclick="() => RaiseAsync(VirtualKey.Enter)">Enter</button>
+    </div>
+</div>
+
+@code {
+    private const int MaxAutoRepeats = 40;
+    private static readonly TimeSpan RepeatInterval = TimeSpan.FromMilliseconds(80);
+
+    /// <summary>Gets or sets which key rows render.</summary>
+    [Parameter]
+    public VirtualKeyboardOptions Options { get; set; } = new();
+
+    /// <summary>Gets or sets the callback invoked for every key press.</summary>
+    [Parameter]
+    public EventCallback<VirtualKeyPressedEvent> OnKeyPressed { get; set; }
+
+    private bool _shiftActive;
+    private bool _controlActive;
+    private bool _altActive;
+    private CancellationTokenSource? _repeatCts;
+
+    private char DisplayChar(char c) => _shiftActive ? char.ToUpperInvariant(c) : c;
+
+    private void ToggleShift() => _shiftActive = !_shiftActive;
+
+    private void ToggleControl() => _controlActive = !_controlActive;
+
+    private void ToggleAlt() => _altActive = !_altActive;
+
+    private Task RaiseCharacterAsync(char c)
+    {
+        string text = _shiftActive ? char.ToUpperInvariant(c).ToString() : c.ToString();
+        return RaiseAsync(VirtualKey.Character, text);
+    }
+
+    private async Task RaiseAsync(VirtualKey key, string? text = null)
+    {
+        VirtualKeyPressedEvent evt = new(key, text, _controlActive, _altActive, _shiftActive);
+        // Sticky modifiers are consumed by the next non-modifier key -- deliberately simpler than
+        // a real keyboard's held-vs-latched distinction (see package README).
+        _shiftActive = false;
+        _controlActive = false;
+        _altActive = false;
+        await OnKeyPressed.InvokeAsync(evt);
+    }
+
+    /// <summary>
+    /// Starts a bounded auto-repeat for keys where holding down is expected (Backspace, arrows,
+    /// Delete) -- capped by <see cref="MaxAutoRepeats"/> so a stuck pointer event can never repeat
+    /// forever. No prior long-press pattern exists elsewhere in this codebase to reuse.
+    /// </summary>
+    private async Task StartRepeatAsync(VirtualKey key)
+    {
+        StopRepeat();
+        CancellationTokenSource cts = new();
+        _repeatCts = cts;
+        await RaiseAsync(key);
+        try
+        {
+            using PeriodicTimer timer = new(RepeatInterval);
+            for (int i = 0; i < MaxAutoRepeats && await timer.WaitForNextTickAsync(cts.Token); i++)
+            {
+                await RaiseAsync(key);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void StopRepeat()
+    {
+        _repeatCts?.Cancel();
+        _repeatCts?.Dispose();
+        _repeatCts = null;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => StopRepeat();
+}

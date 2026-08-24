@@ -5,8 +5,10 @@ résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shel
 Mobile), Phase 2b (`MOB-008`, changement de shell contrôlé), Phase 2c
 (`MOB-012`/`MOB-013`, contrat Back applicatif) et `MOB-011` (pile de
 navigation et surface Recent, complétant les étapes 1/3/4/5 de §7.3 — Phase 2
-est donc entièrement close) faites entre le 2026-08-18 et le 2026-08-23 — voir
-§16 ; le reste (`MOB-015` à `MOB-018`) reste à l’état de proposition  
+est donc entièrement close) faites entre le 2026-08-18 et le 2026-08-23, puis
+`MOB-015` (clavier virtuel réutilisable, généralisé au-delà du seul Terminal —
+voir §16.11) faite le 2026-08-23 — voir §16 ; le reste (`MOB-016` à `MOB-018`)
+reste à l’état de proposition  
 **Modes initiaux :** `desktop`, `mobile`  
 **Extensibilité requise :** ajout ultérieur d’autres plateformes sans refonte du
 manifeste ou du catalogue
@@ -667,7 +669,9 @@ activé automatiquement.
   Comme les samples existants, ce projet n’est pas câblé dans le catalogue de
   build de `HackerOs.Ecosystem` — c’est un projet de démonstration/test isolé,
   pas une app réellement lancable dans le shell.
-- [ ] `MOB-015` Implémenter le clavier virtuel HackerOS du Terminal Mobile.
+- [x] `MOB-015` Implémenter le clavier virtuel HackerOS du Terminal Mobile.
+  **2026-08-23** — généralisé en un contrôle réutilisable indépendant du
+  Terminal, voir §16.11.
 - [ ] `MOB-016` Adapter le viewport terminal, les safe areas et l’orientation.
 - [ ] `MOB-017` Ajouter tests unitaires, composants, Playwright, accessibilité et
   PWA pour la matrice complète.
@@ -1213,4 +1217,95 @@ lourde ni de nouveau moteur parallèle à `WindowRuntime`.
   catalogue d'apps permet d'observer en conditions réelles tant qu'aucune
   app ne déclare de variante Mobile (`MOB-014` ne couvre qu'un exemple de
   démonstration isolé).
+
+### 16.11 Ce que « MOB-015 » a livré (2026-08-23) — clavier virtuel réutilisable
+
+Le clavier virtuel du §9 est livré, mais généralisé au-delà du Terminal seul,
+sur demande explicite en session : un contrôle réutilisable et un conteneur
+« façon SplitContainer » qui rétrécit une région de contenu quand le clavier
+se déploie en dessous, plutôt qu'un composant Terminal-only. Le Terminal est
+le premier consommateur, pas le seul possible.
+
+- **`Shared/HackerOs.AppSdk.VirtualKeyboard/` (nouveau, zéro dépendance)** —
+  package RCL rejoignant le lot exportable (`Packaging.props`, PublicAPI,
+  README), sans aucune référence à HackerOS ou au Terminal :
+  - `VirtualKey`/`VirtualKeyPressedEvent` : contrat de touche indépendant du
+    renderer, calqué sur la forme de `TerminalKeyEvent` (`Shared/HackerOs.AppSdk/
+    FullScreenTerminalContracts.cs`) pour un mapping direct, mais possédé par
+    ce nouveau package plutôt que par le Terminal.
+  - `VirtualKeyboardOptions` : bascules par rangée (modificateurs, symboles,
+    flèches), même forme que `MobileSystemNavigationBarOptions`.
+  - `VirtualKeyboard.razor` : rendu 100% boutons — aucun `<input>`/
+    `contenteditable` nulle part, ce qui garantit structurellement qu'il ne
+    peut jamais déclencher un clavier natif. Modificateurs Shift/Ctrl/Alt
+    « collants », consommés par la touche suivante — délibérément plus
+    simple qu'un vrai clavier (pas de verrouillage majuscules séparé), la
+    surface ne devant jamais remplir une zone de texte standard. Répétition
+    bornée (`PeriodicTimer`, 40 répétitions max) pour Backspace/flèches —
+    terrain neuf, aucun motif de répétition longue durée n'existait ailleurs
+    dans ce dépôt.
+  - `VirtualKeyboardHost.razor` : le conteneur réutilisable. Aucune détection
+    `ResizeObserver`/`visualViewport` — le rétrécissement de la région de
+    contenu (`flex:1`) quand le clavier apparaît est un simple reflow flexbox
+    conditionnel, puisque ce clavier ne détecte pas un clavier natif : il en
+    tient lieu.
+- **Intégration Terminal (`Shared/HackerOs.AppSdk.Terminal/TerminalPanel.razor`)**,
+  pas dans le nouveau package : nouveaux `UseVirtualKeyboard` (pose
+  `inputmode="none"` sur l'`<input>` de mode ligne), `OnExitRequested`
+  (non lié par défaut) et `PushVirtualKey(VirtualKeyPressedEvent)`. En mode
+  plein écran, route vers `TerminalFullScreenSession.TryPostKey` — le même
+  point d'entrée que `HandleFullScreenKeyAsync` utilise déjà, donc `nano` et
+  toute autre commande plein écran héritent du support clavier virtuel sans
+  aucun changement. En mode ligne, manipule `_inputBuffer` directement en C#
+  plutôt que de synthétiser un `KeyboardEvent` DOM — les navigateurs
+  n'appliquent pas le comportement d'édition de texte par défaut à un
+  événement clavier envoyé par programme (non « trusted »).
+  - **Ctrl+D** (aucun précédent existant) : n'agit que sur une ligne vide
+    (comme un vrai shell — EOF seulement en ligne vide), invoque
+    `OnExitRequested` si lié. Ligne non vide : no-op.
+  - **Escape** (aucun précédent en mode ligne) : vide seulement la ligne en
+    cours, distinct de Ctrl+L (vide le scrollback) et Ctrl+C (annule la
+    commande active) — reprend le sens déjà établi ailleurs dans ce dépôt
+    (`nano`/`PromptAsync` traite déjà `TerminalKey.Escape` comme « annuler
+    l'édition en cours »).
+- **Câblage dans un vrai shell Mobile explicitement hors périmètre** — aucune
+  app du catalogue (Terminal compris) ne déclare de support Mobile
+  aujourd'hui (constat de `MOB-011`), donc il n'existe aucun Terminal Mobile
+  réel à câbler. Cette tranche livre l'infrastructure réutilisable et le
+  point d'intégration côté Terminal ; l'activer réellement dans un Terminal
+  Mobile reste un suivi conditionné à `MOB-014` couvrant une vraie variante
+  Mobile.
+- **Preuve navigateur, cadrée pour éviter une fixture lourde** —
+  `TerminalPanel` exige un vrai `IAppExecutionContext` ; en construire un
+  faux dans le harness aurait demandé le même type de fixture complète que
+  celle jugée disproportionnée pour `WindowCloseCoordinator` pendant
+  `MOB-011`. Le nouveau scénario `Tests/HackerOs.BrowserHarness.Tests/
+  VirtualKeyboardTerminalBrowserScenario.razor` reprend plutôt le motif déjà
+  autonome de `TerminalFullScreenBrowserScenario.razor` (boucle plein écran
+  auto-suffisante, sans `AppContext`), enveloppé dans `VirtualKeyboardHost`.
+  Le test Playwright `Virtual_keyboard_drives_the_full_screen_terminal_without_a_native_input`
+  (`Tests/HackerOs.E2E.Tests/IndexedDbBrowserContractTests.cs`) tape des
+  lettres et Ctrl+X à l'écran, confirme que le terminal les reçoit via le
+  pipeline `TerminalKeyEvent` existant, et vérifie qu'aucun `<input>`/
+  `[contenteditable]` n'existe nulle part dans la page. **Non couvert par un
+  test automatisé cette fois-ci** : le nouveau comportement de mode ligne de
+  `TerminalPanel` (`PushVirtualKey`, Ctrl+D, Escape) — cohérent avec le fait
+  que les branches existantes de `HandleKeyDownAsync` n'ont elles-mêmes
+  jamais eu de couverture automatisée dans ce dépôt (pas de bUnit ici, preuve
+  UI seulement via le harness navigateur).
+- **Non vérifié dans cette tranche** : l'hypothèse que le pipeline existant
+  `ResizeObserver` → `UpdateTerminalViewport` → `TryPostKey(Resize)` reflow
+  déjà correctement une commande plein écran quand le clavier apparaît/
+  disparaît en direct — le nouveau scénario affiche le clavier de façon
+  statique (`IsKeyboardVisible="true"` fixe) et ne teste jamais la
+  bascule. Reste à vérifier concrètement quand `MOB-016` sera attaqué, pas
+  supposé acquis.
+- Tests : 4 nouveaux cas unitaires (`Tests/HackerOs.AppSdk.VirtualKeyboard.Tests`)
+  pour `VirtualKeyboardOptions`/`VirtualKeyPressedEvent`, plus le nouveau test
+  E2E ci-dessus. `dotnet build HackerOs.sln --configuration Release` : 0
+  avertissement/0 erreur (a nécessité de régénérer `PublicAPI.Unshipped.txt`
+  via `dotnet format analyzers --diagnostics RS0016 --include-generated`,
+  même procédure que pour `HackerOs.MobileShell.Blazor` pendant `MOB-011`).
+  Les suites `HackerOs.AppSdk.Terminal.Tests` (9/9) et le test E2E plein écran
+  préexistant ont été rejoués : aucune régression.
 

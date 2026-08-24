@@ -33,6 +33,10 @@
     {
         <TerminalFullScreenBrowserScenario />
     }
+    else if (IsVirtualKeyboardTerminalScenario)
+    {
+        <VirtualKeyboardTerminalBrowserScenario />
+    }
     else if (IsCodeEditorScenario)
     {
         <CodeEditorBrowserScenario />
@@ -61,6 +65,7 @@
     private bool IsWindowScenario => new Uri(Navigation.Uri).Query.Contains("scenario=window", StringComparison.Ordinal);
     private bool IsDialogScenario => new Uri(Navigation.Uri).Query.Contains("scenario=dialog", StringComparison.Ordinal);
     private bool IsTerminalFullScreenScenario => new Uri(Navigation.Uri).Query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal);
+    private bool IsVirtualKeyboardTerminalScenario => new Uri(Navigation.Uri).Query.Contains("scenario=virtual-keyboard-terminal", StringComparison.Ordinal);
     private bool IsCodeEditorScenario => new Uri(Navigation.Uri).Query.Contains("scenario=code-editor", StringComparison.Ordinal);
     private bool IsHackPaintScenario => new Uri(Navigation.Uri).Query.Contains("scenario=hack-paint", StringComparison.Ordinal);
     private bool IsTaskbarScenario => new Uri(Navigation.Uri).Query.Contains("scenario=taskbar", StringComparison.Ordinal);
@@ -80,6 +85,7 @@
             if (query.Contains("scenario=window", StringComparison.Ordinal)
                 || query.Contains("scenario=dialog", StringComparison.Ordinal)
                 || query.Contains("scenario=terminal-full-screen", StringComparison.Ordinal)
+                || query.Contains("scenario=virtual-keyboard-terminal", StringComparison.Ordinal)
                 || query.Contains("scenario=code-editor", StringComparison.Ordinal)
                 || query.Contains("scenario=hack-paint", StringComparison.Ordinal)
                 || query.Contains("scenario=taskbar", StringComparison.Ordinal))

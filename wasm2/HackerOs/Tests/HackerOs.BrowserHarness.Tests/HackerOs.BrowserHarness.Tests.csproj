@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Core\HackerOs.Windowing.Core.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Windowing.Abstractions\HackerOs.Windowing.Abstractions.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.VirtualKeyboard\HackerOs.AppSdk.VirtualKeyboard.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
   </ItemGroup>
