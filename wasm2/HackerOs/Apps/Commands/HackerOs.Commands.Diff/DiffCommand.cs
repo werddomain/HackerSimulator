@@ -22,7 +22,7 @@ public sealed class DiffCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Diff.dll", "HackerOs.Commands.Diff.DiffCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("diff", [], "diff [-u] <file1> <file2>"),
         SingleInstancePerUser = false

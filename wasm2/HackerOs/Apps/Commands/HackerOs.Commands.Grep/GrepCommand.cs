@@ -24,7 +24,7 @@ public sealed class GrepCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Grep.dll", "HackerOs.Commands.Grep.GrepCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("grep", [], "grep [-i] [-n] [-v] <pattern> [file...]"),
         SingleInstancePerUser = false

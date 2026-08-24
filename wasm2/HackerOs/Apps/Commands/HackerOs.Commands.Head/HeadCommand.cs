@@ -22,7 +22,7 @@ public sealed class HeadCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Head.dll", "HackerOs.Commands.Head.HeadCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("head", [], "head [-n count] [file...]"),
         SingleInstancePerUser = false

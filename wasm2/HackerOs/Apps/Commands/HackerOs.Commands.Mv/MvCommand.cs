@@ -22,7 +22,7 @@ public sealed class MvCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Mv.dll", "HackerOs.Commands.Mv.MvCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("mv", [], "mv <source...> <destination>"),
         SingleInstancePerUser = false

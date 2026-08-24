@@ -19,7 +19,8 @@
     "iconAssetPaths": []
   },
   "capabilities": [
-    "filesystem.user-home.read"
+    "filesystem.user-home.read",
+    "filesystem.system.read"
   ],
   "resources": {
     "baselineCpuWeight": 0.02,

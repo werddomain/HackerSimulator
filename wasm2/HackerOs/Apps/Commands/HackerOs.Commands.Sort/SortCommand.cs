@@ -22,7 +22,7 @@ public sealed class SortCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Sort.dll", "HackerOs.Commands.Sort.SortCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("sort", [], "sort [-r] [-n] [-u] [file...]"),
         SingleInstancePerUser = false

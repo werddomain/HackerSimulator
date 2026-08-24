@@ -20,6 +20,7 @@
   },
   "capabilities": [
     "filesystem.user-home.read",
+    "filesystem.system.read",
     "network.simulated.read",
     "network.real.access"
   ],

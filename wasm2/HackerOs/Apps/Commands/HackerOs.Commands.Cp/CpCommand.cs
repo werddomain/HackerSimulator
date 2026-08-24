@@ -22,7 +22,7 @@ public sealed class CpCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Cp.dll", "HackerOs.Commands.Cp.CpCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("cp", [], "cp [-r|-R] <source...> <destination>"),
         SingleInstancePerUser = false

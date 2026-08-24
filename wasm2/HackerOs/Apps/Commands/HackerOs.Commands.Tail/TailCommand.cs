@@ -22,7 +22,7 @@ public sealed class TailCommand : TerminalAppBase
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Tail.dll", "HackerOs.Commands.Tail.TailCommand"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead],
+        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("tail", [], "tail [-n count] [file...]"),
         SingleInstancePerUser = false

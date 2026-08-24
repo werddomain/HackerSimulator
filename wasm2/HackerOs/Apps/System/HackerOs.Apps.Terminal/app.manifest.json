@@ -22,6 +22,7 @@
     "apps.launch",
     "filesystem.user-home.read",
     "filesystem.user-home.write",
+    "filesystem.system.read",
     "process.list",
     "process.manage",
     "notifications.post",

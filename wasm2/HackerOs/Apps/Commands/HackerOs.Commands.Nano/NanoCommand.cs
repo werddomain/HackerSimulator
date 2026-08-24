@@ -26,7 +26,7 @@ public sealed class NanoCommand : TerminalAppBase
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("system", AppLaunchVisibility.Hidden, []),
         Terminal = new TerminalCommandManifest("nano", [], "nano [file]"),
-        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write"],
+        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "filesystem.system.read", "filesystem.system.write"],
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = false
     };
