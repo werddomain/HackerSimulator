@@ -8,6 +8,8 @@ namespace HackerOs.Tools.ManifestGenerator;
 /// <list type="bullet">
 /// <item><c>generate</c>: run by the <c>GenerateHackerOsAppManifests</c> MSBuild target after an app
 /// project compiles; writes its <c>manifest.json</c>.</item>
+/// <item><c>aggregate</c>: run by the <c>CollectHackerOsBuiltInApplications</c> MSBuild target of a
+/// host; writes its <c>BuiltInApplications.json</c>.</item>
 /// <item><c>validate &lt;file&gt;</c>: strict schema-v1 read and <c>AppManifestValidator</c> pass on
 /// one manifest file (absorbs the former <c>HackerOs.Tools.ManifestValidator</c>).</item>
 /// </list>
@@ -31,6 +33,7 @@ public static class Program
             return args[0] switch
             {
                 "generate" => Generate(ParseOptions(args.AsSpan(1))),
+                "aggregate" => Aggregate(ParseOptions(args.AsSpan(1))),
                 "validate" when args.Length == 2 => Validate(args[1]),
                 _ => Fail("ManifestGenerator", new GeneratorDiagnostic(GeneratorCodes.InvalidArguments, "arguments", $"Unknown command line: {string.Join(' ', args)}"))
             };
@@ -93,6 +96,30 @@ public static class Program
         }
     }
 
+    /// <summary>
+    /// <c>aggregate --project &lt;host csproj&gt; --apps &lt;list file&gt; --output &lt;json&gt;</c>. The output is
+    /// rewritten only when its bytes change, so the host does not recompile needlessly.
+    /// </summary>
+    private static int Aggregate(IReadOnlyDictionary<string, string> options)
+    {
+        string project = Path.GetFullPath(Required(options, "project"));
+        string output = Path.GetFullPath(Required(options, "output"));
+        string listFile = Required(options, "apps");
+        IReadOnlyList<AggregationInput> inputs = File.Exists(listFile)
+            ? BuiltInApplicationsAggregator.ParseList(File.ReadAllLines(listFile))
+            : [];
+
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate(inputs);
+        if (result.Json is null)
+        {
+            return Fail(project, [.. result.Diagnostics]);
+        }
+
+        ManifestWriter.WriteIfChanged(output, result.Json);
+        Console.WriteLine($"HackerOS built-in applications: {inputs.Count} app(s) -> {output}");
+        return 0;
+    }
+
     private static int Validate(string manifestPath)
     {
         if (!File.Exists(manifestPath))
@@ -145,6 +172,7 @@ public static class Program
     {
         Console.WriteLine("HackerOS manifest generator (ADR 0047)");
         Console.WriteLine("  generate --assembly <app.dll> --project <app.csproj> --stamp <file> [--dependencies <list file>]");
+        Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json>");
         Console.WriteLine("  validate <manifest.json>");
     }
 }

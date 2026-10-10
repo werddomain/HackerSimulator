@@ -430,9 +430,9 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Tests de contrat pour chaque point.
 
 ### Phase 2 — Modèle d'app
-- [ ] Créer `AppDefinition` et l'attribut `[AppManifest]`.
-- [ ] Créer la tâche MSBuild de génération de `manifest.json` par app, avec validation.
-- [ ] Créer la tâche d'agrégation `BuiltInApplications.json` et le `.targets` « une référence suffit ».
+- [x] Créer `AppDefinition` et l'attribut `[AppManifest]` ([`app-model.md`](app-model.md)).
+- [x] Créer la tâche MSBuild de génération de `manifest.json` par app, avec validation.
+- [x] Créer la tâche d'agrégation `BuiltInApplications.json` et le `.targets` « une référence suffit ».
 - [ ] Migrer les apps existantes, puis supprimer `app.manifest.json` écrits à la main et `StaticManifest`.
 - [ ] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
 - [ ] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.

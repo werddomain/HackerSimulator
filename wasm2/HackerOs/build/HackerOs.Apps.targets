@@ -8,6 +8,14 @@
                                     project's [AppManifest] classes. Errors are HOSAPPnnnn.
       GetHackerOsAppManifests       query target used by hosts: the manifest files of this project
                                     and the name of its assembly.
+
+    Host projects ($(HackerOsAppHost) == true, today only OS/HackerOs.Ecosystem):
+      CollectHackerOsBuiltInApplications
+                                    after ResolveProjectReferences, asks every direct ProjectReference
+                                    for its manifests, aggregates them (with the reference's
+                                    IsSystemApp metadata) into BuiltInApplications.json, embeds it as
+                                    HackerOs.BuiltInApplications.json and marks each app assembly
+                                    BlazorWebAssemblyLazyLoad. Installing an app = one ProjectReference.
   -->
 
   <PropertyGroup>
@@ -22,6 +30,7 @@
     -->
     <HackerOsAppProject Condition="'$(HackerOsAppProject)' == '' and $([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)').ToLowerInvariant().StartsWith('$(_HackerOsAppsRoot.ToLowerInvariant())')) and !Exists('$(MSBuildProjectDirectory)/app.manifest.json')">true</HackerOsAppProject>
     <HackerOsAppProject Condition="'$(HackerOsAppProject)' == ''">false</HackerOsAppProject>
+    <HackerOsAppHost Condition="'$(HackerOsAppHost)' == ''">false</HackerOsAppHost>
 
     <HackerOsManifestGeneratorProject Condition="'$(HackerOsManifestGeneratorProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.ManifestGenerator/HackerOs.Tools.ManifestGenerator.csproj</HackerOsManifestGeneratorProject>
     <_HackerOsDotnetHost>$(DOTNET_HOST_PATH)</_HackerOsDotnetHost>
@@ -32,7 +41,7 @@
     Build order only: the generator must be built before an app runs it. PrivateAssets keeps the
     tool (which needs the server-side ASP.NET Core framework) out of every host's dependency graph.
   -->
-  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
+  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true' or '$(HackerOsAppHost)' == 'true'">
     <ProjectReference Include="$(HackerOsManifestGeneratorProject)"
                       ReferenceOutputAssembly="false"
                       Private="false"
@@ -58,15 +67,18 @@
     </PropertyGroup>
   </Target>
 
-  <Target Name="_HackerOsResolveManifestGenerator"
-          DependsOnTargets="_HackerOsAppManifestPaths"
-          Condition="'$(HackerOsAppProject)' == 'true'">
+  <Target Name="_HackerOsResolveManifestGeneratorPath">
     <MSBuild Projects="$(HackerOsManifestGeneratorProject)"
              Targets="GetTargetPath"
              Properties="Configuration=$(Configuration)"
              RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
       <Output TaskParameter="TargetOutputs" PropertyName="_HackerOsManifestGeneratorPath" />
     </MSBuild>
+  </Target>
+
+  <Target Name="_HackerOsResolveManifestGenerator"
+          DependsOnTargets="_HackerOsAppManifestPaths;_HackerOsResolveManifestGeneratorPath"
+          Condition="'$(HackerOsAppProject)' == 'true'">
 
     <ItemGroup>
       <_HackerOsManifestDependency Include="@(ReferenceCopyLocalPaths->'%(FullPath)')" Condition="'%(Extension)' == '.dll'" />
@@ -120,6 +132,78 @@
                                   AssemblyName="$(AssemblyName)"
                                   AssemblyFileName="$(TargetFileName)"
                                   AppProject="$(MSBuildProjectFullPath)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- ===================================================================================== -->
+  <!-- Host aggregation (ADR 0047 §3-4)                                                       -->
+  <!-- ===================================================================================== -->
+
+  <Target Name="_HackerOsSelectAppReferences">
+    <ItemGroup>
+      <_HackerOsAppReference Include="@(_MSBuildProjectReferenceExistent)"
+                             Condition="'%(_MSBuildProjectReferenceExistent.ReferenceOutputAssembly)' != 'false'" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Target batching: one run per referenced project, so the manifests it returns can be tagged with
+    that reference's IsSystemApp metadata (ADR 0048). Non-app projects return nothing.
+  -->
+  <Target Name="_HackerOsCollectAppManifestsFromReference"
+          DependsOnTargets="_HackerOsSelectAppReferences"
+          Outputs="%(_HackerOsAppReference.Identity)">
+    <MSBuild Projects="@(_HackerOsAppReference)"
+             Targets="GetHackerOsAppManifests"
+             BuildInParallel="$(BuildInParallel)"
+             Properties="%(_HackerOsAppReference.SetConfiguration); %(_HackerOsAppReference.SetPlatform); %(_HackerOsAppReference.SetTargetFramework)"
+             RemoveProperties="%(_HackerOsAppReference.GlobalPropertiesToRemove)$(_GlobalPropertiesToRemoveFromProjectReferences)"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_HackerOsReferenceManifest" />
+    </MSBuild>
+    <ItemGroup>
+      <_HackerOsBuiltInManifest Include="@(_HackerOsReferenceManifest)"
+                                IsSystemApp="@(_HackerOsAppReference->'%(IsSystemApp)')" />
+      <_HackerOsReferenceManifest Remove="@(_HackerOsReferenceManifest)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CollectHackerOsBuiltInApplications"
+          AfterTargets="ResolveProjectReferences"
+          DependsOnTargets="_HackerOsResolveManifestGeneratorPath;_HackerOsCollectAppManifestsFromReference"
+          Condition="'$(HackerOsAppHost)' == 'true'">
+    <PropertyGroup>
+      <_HackerOsBuiltInApplicationsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuiltInApplications.json'))</_HackerOsBuiltInApplicationsFile>
+      <_HackerOsBuiltInApplicationsList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-builtin-applications.txt'))</_HackerOsBuiltInApplicationsList>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- "<IsSystemApp>|<path>"; an empty flag (metadata not set) means false. -->
+      <_HackerOsBuiltInListLine Include="@(_HackerOsBuiltInManifest->'%(IsSystemApp)|%(Identity)')" />
+      <_HackerOsLazyAssembly Include="@(_HackerOsBuiltInManifest->'%(AssemblyFileName)'->Distinct())" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_HackerOsBuiltInApplicationsList)"
+                      Lines="@(_HackerOsBuiltInListLine)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+
+    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; aggregate --project &quot;$(MSBuildProjectFullPath)&quot; --apps &quot;$(_HackerOsBuiltInApplicationsList)&quot; --output &quot;$(_HackerOsBuiltInApplicationsFile)&quot;"
+          StandardOutputImportance="low"
+          IgnoreExitCode="true"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+      <Output TaskParameter="ExitCode" PropertyName="_HackerOsAggregateExitCode" />
+    </Exec>
+    <Error Condition="'$(_HackerOsAggregateExitCode)' != '' and '$(_HackerOsAggregateExitCode)' != '0' and '$(_HackerOsAggregateExitCode)' != '1'"
+           Code="HOSAPP0099"
+           Text="The HackerOS manifest generator failed with exit code $(_HackerOsAggregateExitCode) without reporting a diagnostic." />
+
+    <ItemGroup>
+      <EmbeddedResource Include="$(_HackerOsBuiltInApplicationsFile)"
+                        LogicalName="HackerOs.BuiltInApplications.json"
+                        Condition="Exists('$(_HackerOsBuiltInApplicationsFile)')" />
+      <!-- Remove first: a host may still list a migrated app by hand during the transition. -->
+      <BlazorWebAssemblyLazyLoad Remove="@(_HackerOsLazyAssembly)" />
+      <BlazorWebAssemblyLazyLoad Include="@(_HackerOsLazyAssembly)" />
+      <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList)" />
     </ItemGroup>
   </Target>
 </Project>
