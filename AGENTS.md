@@ -6,7 +6,7 @@
 
 ---
 
-**Before you start:** read [`wasm2/HackerOs/docs/common-pitfalls.md`](wasm2/HackerOs/docs/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, and E2E test harness setup. Each one was expensive to re-diagnose from scratch; don't repeat them.
+**Before you start:** read [`wasm2/HackerOs/docs/old/common-pitfalls.md`](wasm2/HackerOs/docs/old/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, and E2E test harness setup. Each one was expensive to re-diagnose from scratch; don't repeat them.
 
 ---
 
@@ -15,7 +15,7 @@
 1.  **Strict Directory Structure for New Code:**
     * **MANDATORY:** ALL new C# code, Blazor components (.razor files), WASM interop logic, helper classes, services, or any other source code files you generate **MUST** be created and located **exclusively within the `wasm2\HackerOs\` directory** or its subdirectories.
     * **ABSOLUTELY PROHIBITED:** Under **NO circumstances** are you to create, modify, or place any new code files within the `src/` directory. `src/` is the legacy TypeScript implementation, kept **read-only** as a behavioral reference (existing feature rules, UI intent, data shapes) when porting something to `wasm2/HackerOs/`. It is not a dependency of the WASM solution.
-    * **Three host projects currently serve `wasm2/HackerOs/`** (see [`wasm2/HackerOs/docs/hosting-model.md`](wasm2/HackerOs/docs/hosting-model.md) for the full picture):
+    * **Three host projects currently serve `wasm2/HackerOs/`** (see [`wasm2/HackerOs/docs/old/hosting-model.md`](wasm2/HackerOs/docs/old/hosting-model.md) for the full picture):
         * `OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj` — the standalone, self-contained Blazor WebAssembly PWA (own `wwwroot/index.html`). This is the production/offline-first host and must always work with no server present.
         * `test/test/test.csproj` — a Blazor Web App used only to debug the same WASM components interactively (`Components/App.razor`, `AddInteractiveWebAssemblyRenderMode`). Not a distribution target.
         * `Server/HackerOs.Server/HackerOs.Server.csproj` — the **optional** ASP.NET Core backend (sync, identity, HTTP/TCP/UDP proxy). Today it is a separate API process, not a UI host. It is a documented future goal for this project to also become a third UI host (serving the same Razor components with backend contracts/services injected), but that capability does not exist yet — do not assume it when implementing.
@@ -37,7 +37,7 @@
 1.  **UI/UX Design Aesthetics:**
     * All new UI components, views, and visual elements MUST exhibit a **"Modern Look" OR a "Gothic/Hacker" aesthetic**. Strive for visually distinct, thematic, and polished designs.
     * Avoid generic, unstyled, or purely functional appearances. Consider elements like color schemes (e.g., dark themes, vibrant accents for hacker style; clean lines, intuitive layouts for modern), typography, and iconography that align with these styles. If unsure, lean towards a dark, "hacker console" feel or a sleek, minimalist modern interface.
-    * **Tools**: Use MudBlazor (see ADR 0016 / [`docs/platform-ui-library.md`](wasm2/HackerOs/docs/platform-ui-library.md)) only for complex interaction surfaces — menus, data grids, tabs, validated forms, dialogs, and comparable selectors — ideally behind a Platform-owned wrapper. Native Blazor and scoped CSS remain required for desktop, window chrome, taskbar, launcher layout, and simple controls. MudBlazor types must never appear in App Abstractions, App SDK contracts, Simulation Abstractions, Platform Core, or Browser Infrastructure.
+    * **Tools**: Use MudBlazor (see ADR 0016 / [`docs/old/platform-ui-library.md`](wasm2/HackerOs/docs/old/platform-ui-library.md)) only for complex interaction surfaces — menus, data grids, tabs, validated forms, dialogs, and comparable selectors — ideally behind a Platform-owned wrapper. Native Blazor and scoped CSS remain required for desktop, window chrome, taskbar, launcher layout, and simple controls. MudBlazor types must never appear in App Abstractions, App SDK contracts, Simulation Abstractions, Platform Core, or Browser Infrastructure.
 
 2.  **Collocated Component Assets — No Inline CSS/JS in Markup:**
     * **MANDATORY:** All CSS and JavaScript for a Blazor component **MUST** live in scoped, collocated files next to that component, not inline in the `.razor` markup. For a component `MyComponent.razor`: styles go in `MyComponent.razor.css`, component-scoped script goes in `MyComponent.razor.js`, and a non-trivial code-behind goes in `MyComponent.razor.cs`.
@@ -85,14 +85,14 @@
         * **Key Decisions:** Any important design choices made.
         * **Task List (copy or link to the completed task list you created).**
     * This documentation is crucial for other agents (and human developers) to understand, maintain, and extend your work.
-    * `wasm2/HackerOs/docs/implementation-status.md` is the current, authoritative state of the migration — read it first. `wasm2/HackerOs/docs/integration-task-list.md` records the plan as it was drafted and is a useful historical/background reference, but the actual path taken has diverged from it in places; treat it as context, not as a queue of tasks to execute verbatim.
+    * [`wasm2/HackerOs/docs/ecosystem-rebuild-plan.md`](wasm2/HackerOs/docs/ecosystem-rebuild-plan.md) is the current, authoritative direction for the ecosystem (validated 2026-10-10) — read it first. Documents written before that plan live in `wasm2/HackerOs/docs/old/` (including `implementation-status.md` and `integration-task-list.md`); they remain useful technical background but are no longer the source of direction.
 
 4.  **Documentation Is Part of "Done" — Not Just for New Features:**
     * **MANDATORY:** Before considering any change complete, check whether it makes an existing doc under `wasm2/HackerOs/docs/` wrong or incomplete — a changed behavior, a renamed contract, a superseded decision, a new host/project — and update that doc in the **same** change. Creating a doc for a brand-new feature is not enough if the change also silently invalidates something already written elsewhere.
     * If a change contradicts an accepted ADR, do not leave the ADR silently wrong: either the change is out of scope until a new ADR supersedes it, or a new ADR must be added recording the supersession (never edit an accepted ADR's decision in place — add a new one that references it).
     * If you are not sure a doc needs updating, search `wasm2/HackerOs/docs/` (including `docs/adr/`) for the feature/contract name before finishing, rather than assuming no doc mentions it.
     * A change that touches public API surface, manifests, capabilities, settings, or host composition and ships with no doc/ADR update should be treated as incomplete, the same way shipping with no tests would be.
-    * [`wasm2/HackerOs/docs/README.md`](wasm2/HackerOs/docs/README.md) is the audience-organized index of every doc in that folder. Adding, renaming, or removing a doc **MUST** update that index in the same change.
+    * [`wasm2/HackerOs/docs/README.md`](wasm2/HackerOs/docs/README.md) is the index of every doc in that folder (archived docs are indexed by `docs/old/README.md`). Adding, renaming, or removing a doc **MUST** update that index in the same change.
 
 ---
 

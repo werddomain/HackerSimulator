@@ -4,7 +4,7 @@
 
 Publish a versioned JSON Schema for `app.manifest.json` that structurally
 validates every field introduced by migration analysis section 7.2, per
-[ADR 0010](adr/0010-manifest-json-and-schema.md). This document also now
+[ADR 0010](../adr/0010-manifest-json-and-schema.md). This document also now
 captures the first build-profile contract used to select included apps, grants,
 defaults, associations, locales, themes, and optional server features for the
 Phase 1 headless profile slice.

@@ -12,7 +12,7 @@ survives a page reload without a server. This document tracks section 10
 
 `P2-IDB-001` through `P2-IDB-003` are complete. The browser support baseline and
 IndexedDB adapter approach are decided in
-[ADR 0015](./adr/0015-browser-storage-and-indexeddb-adapter.md) (`D-008`), and
+[ADR 0015](../adr/0015-browser-storage-and-indexeddb-adapter.md) (`D-008`), and
 the concrete database/object-store/index/transaction-boundary schema is
 declared in
 `Infrastructure/HackerOs.Infrastructure.Browser/Schema/HackerOsIndexedDbSchema.cs`.
@@ -226,8 +226,8 @@ rendering and real-browser recovery evidence remain separate tasks.
 
 ## References
 
-- [ADR 0015](./adr/0015-browser-storage-and-indexeddb-adapter.md)
-- [ADR 0018](./adr/0018-indexeddb-failure-and-recovery-policy.md)
+- [ADR 0015](../adr/0015-browser-storage-and-indexeddb-adapter.md)
+- [ADR 0018](../adr/0018-indexeddb-failure-and-recovery-policy.md)
 - [IndexedDB migrations](./indexeddb-migrations.md)
 - [IndexedDB backup and restore](./indexeddb-backup-restore.md)
 - `Infrastructure/HackerOs.Infrastructure.Browser/Schema/HackerOsIndexedDbSchema.cs`

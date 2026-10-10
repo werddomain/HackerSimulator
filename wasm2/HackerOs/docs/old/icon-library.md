@@ -13,7 +13,7 @@ app — and the OS shell itself — access to five icon libraries as themeable i
 | Lucide | `IconLibrary.Lucide` | ISC | 2,007 | Stroke/outline (Feather-lineage) |
 | Simple Icons | `IconLibrary.SimpleIcons` | CC0-1.0 | 3,453 | Brand/technology logos |
 
-See ADR [0026](adr/0026-icon-library-support.md) for why these libraries and this
+See ADR [0026](../adr/0026-icon-library-support.md) for why these libraries and this
 storage format were chosen, and for the measured WASM payload cost.
 
 Material icons aren't duplicated into this package — MudBlazor 9.7.0 (an existing
@@ -105,7 +105,7 @@ This downloads the four npm packages (`bootstrap-icons`, `@fortawesome/fontaweso
 free`, `lucide-static`, `simple-icons`) and regenerates
 `Shared/HackerOs.AppSdk.Icons/Data/*.json` in place. Review the diff, bump the package
 versions recorded in `Tools/icon-import/package.json` and in ADR
-[0026](adr/0026-icon-library-support.md)'s license table, and run
+[0026](../adr/0026-icon-library-support.md)'s license table, and run
 `dotnet test Tests/HackerOs.AppSdk.Icons.Tests` before committing — its tests assert
 minimum icon counts per library and spot-check well-known icon names, which catches a
 malformed or truncated regeneration.

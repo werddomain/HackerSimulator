@@ -60,9 +60,9 @@ the browser-independent window runtime depend on Blazor, MudBlazor, or a host.
 
 ## References
 
-- [`../theming.md`](../theming.md) — theme API, token contract, and extension
+- [`../theming.md`](../old/theming.md) — theme API, token contract, and extension
   checklist.
-- [`../design-system.md`](../design-system.md) — component styling and theme
+- [`../design-system.md`](../old/design-system.md) — component styling and theme
   security rules.
 - [ADR 0016](0016-platform-ui-library.md) — MudBlazor ownership boundary.
 - [ADR 0007](0007-enforce-collocated-razor-assets.md) — collocated component

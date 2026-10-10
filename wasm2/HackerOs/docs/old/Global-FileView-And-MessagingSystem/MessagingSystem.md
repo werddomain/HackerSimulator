@@ -46,7 +46,7 @@ mechanism:
 Removing `IAppEventGateway.Publish<TEvent>` for arbitrary platform event types is a breaking change to a
 Phase 1 baseline contract (`P1-SYS-008`, `P1-EXEC-004` in `../integration-task-list.md`). Per this repo's
 `AGENTS.md`, that requires its own ADR before implementation; this document specifies the target shape,
-and [ADR 0038](../adr/0038-emitter-authorized-topic-messaging.md) accepts it, including the concrete
+and [ADR 0038](../../adr/0038-emitter-authorized-topic-messaging.md) accepts it, including the concrete
 per-call-site migration table.
 
 ## Topic naming
@@ -180,7 +180,7 @@ public interface IAppEventGateway
 
 ## Shared channels and optional per-channel access
 
-**Implemented**, per [ADR 0040](../adr/0040-declared-topic-permissions.md) — a permission requirement is
+**Implemented**, per [ADR 0040](../../adr/0040-declared-topic-permissions.md) — a permission requirement is
 entirely optional and chosen per direction (publish/subscribe) by the channel's owner at registration
 time, not a fixed feature every shared channel must use:
 
@@ -221,7 +221,7 @@ public sealed record SharedChannelPolicy(
 ## Declared topic permissions
 
 **Implemented** (`Shared/HackerOs.App.Abstractions/TopicPermissions.cs`), per
-[ADR 0040](../adr/0040-declared-topic-permissions.md) — lets an app gate its own shared channel behind a
+[ADR 0040](../../adr/0040-declared-topic-permissions.md) — lets an app gate its own shared channel behind a
 permission it defines itself, e.g. `FileExplorer` requiring a permission before another app may command
 it to change directory, without adding a per-app entry to the fixed, centrally curated `AppCapabilities`
 OS-resource catalog (ADR 0003).

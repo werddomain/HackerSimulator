@@ -44,7 +44,7 @@ platform-to-app notifications (starting with filesystem-directory-change events 
 second parallel system.
 
 The full specification this ADR accepts is
-[`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../Global-FileView-And-MessagingSystem/MessagingSystem.md);
+[`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../old/Global-FileView-And-MessagingSystem/MessagingSystem.md);
 this ADR records the binding architectural commitments and the concrete migration table, not the complete
 contract shapes (those are specified in full there and in the already-added skeleton
 `TopicMessagingContracts.cs`/`FileSystemWatchContracts.cs`).
@@ -111,10 +111,10 @@ exact-capability-matching precedent.
 
 ## References
 
-- [`../Global-FileView-And-MessagingSystem.md`](../Global-FileView-And-MessagingSystem.md) and
-  [`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../Global-FileView-And-MessagingSystem/MessagingSystem.md) —
+- [`../Global-FileView-And-MessagingSystem.md`](../old/Global-FileView-And-MessagingSystem.md) and
+  [`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../old/Global-FileView-And-MessagingSystem/MessagingSystem.md) —
   full specification.
-- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md) —
+- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md) —
   Phase 1 (`MSG-001`–`MSG-005`) and Phase 2 (`MSG-006`–`MSG-010`).
 - `Shared/HackerOs.Simulation.Abstractions/Events/TopicMessagingContracts.cs` and
   `Shared/HackerOs.Simulation.Abstractions/FileSystem/FileSystemWatchContracts.cs` — accepted contract

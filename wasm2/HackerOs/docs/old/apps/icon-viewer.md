@@ -6,7 +6,7 @@
 copy a ready-to-use snippet for every icon bundled with HackerOS: Bootstrap Icons,
 Font Awesome (solid/regular/brands), Lucide, and Simple Icons, via the shared
 `IIconCatalog` (see [`../icon-library.md`](../icon-library.md) and ADR
-[0026](../adr/0026-icon-library-support.md)), plus MudBlazor's bundled Material Design
+[0026](../../adr/0026-icon-library-support.md)), plus MudBlazor's bundled Material Design
 icons for comparison.
 
 ## Layout
@@ -34,7 +34,7 @@ writing to the clipboard directly. HackerOS's capability model defines
 `IAppExecutionContext` yet; calling the real browser Clipboard API directly from app
 code would bypass the deny-by-default capability model the platform is built on (ADR
 0002). Plain text selection needs no capability grant, so it's the compliant choice
-today. See ADR [0026](../adr/0026-icon-library-support.md) for the full reasoning.
+today. See ADR [0026](../../adr/0026-icon-library-support.md) for the full reasoning.
 
 ## Manifest
 

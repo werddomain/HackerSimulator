@@ -25,7 +25,7 @@ picker/browser surface (upload dialogs, archive-contents viewers), which today w
 to duplicate `FileExplorerWindow`'s inline logic.
 
 The full functional and API specification this ADR accepts is
-[`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../Global-FileView-And-MessagingSystem/FileViewControl.md);
+[`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../old/Global-FileView-And-MessagingSystem/FileViewControl.md);
 this ADR records the binding architectural commitments, not the complete spec.
 
 ## Decision
@@ -64,7 +64,7 @@ under these binding constraints:
    favor of hosting `FileView`. `FileExplorerWindow` retains only host chrome it is uniquely responsible
    for — toolbar, breadcrumb/address bar, `OpenWithDialog`, `FilePropertiesDialog` — none of which move
    into `FileView`. This migration is tracked as Phase 4 of
-   [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md)
+   [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md)
    and is not itself accepted by this ADR beyond committing to it as the intended direction; the inline
    code is deleted once the migration lands, not kept as a parallel fallback path.
 
@@ -87,13 +87,13 @@ under these binding constraints:
 
 ## References
 
-- [`../Global-FileView-And-MessagingSystem.md`](../Global-FileView-And-MessagingSystem.md) and
-  [`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../Global-FileView-And-MessagingSystem/FileViewControl.md) —
+- [`../Global-FileView-And-MessagingSystem.md`](../old/Global-FileView-And-MessagingSystem.md) and
+  [`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../old/Global-FileView-And-MessagingSystem/FileViewControl.md) —
   full specification.
-- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md) —
+- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md) —
   phased implementation plan (Phase 3 builds the control, Phase 4 migrates `FileExplorerWindow`).
 - ADR 0016: Platform UI Library Boundary (MudBlazor) — the complex-surface carve-out this decision relies on.
-- [`../apps/file-explorer.md`](../apps/file-explorer.md) — current `FileExplorerWindow` architecture this
+- [`../apps/file-explorer.md`](../old/apps/file-explorer.md) — current `FileExplorerWindow` architecture this
   ADR commits to changing.
 - ADR 0038: Emitter-Authorized Topic Messaging — source of the filesystem-watch API `FileView`'s `Watch`
   parameter consumes.

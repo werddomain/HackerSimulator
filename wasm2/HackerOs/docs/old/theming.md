@@ -64,7 +64,7 @@ write or sync refresh. Component libraries consume CSS variables only and do
 not know about persistence.
 
 This boundary is recorded by
-[ADR 0041](adr/0041-shared-theme-catalog-and-scoped-tokens.md).
+[ADR 0041](../adr/0041-shared-theme-catalog-and-scoped-tokens.md).
 
 ## Applying a theme
 
