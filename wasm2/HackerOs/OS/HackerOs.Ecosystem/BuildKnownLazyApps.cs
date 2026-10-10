@@ -10,32 +10,24 @@ namespace HackerOs.Ecosystem;
 /// aggregates from every referenced app's generated <c>manifest.json</c> (ADR 0047 §3, §5). Only
 /// JSON is read: app assemblies stay lazy and their <c>AppDefinition</c> classes are never
 /// instantiated at runtime.
+/// System apps (ADR 0048 §1) are exposed by <see cref="AppCatalog.SystemAppIds"/> and
+/// <see cref="AppCatalog.IsSystemApp"/> on <see cref="Catalog"/>.
 /// TRANSITION (until <c>rebuild/2-app-migration</c>): apps not migrated yet still embed their
 /// hand-written <c>app.manifest.json</c> as <c>HackerOs.Ecosystem.Manifests.*</c> resources, which
-/// are merged in; they are never system apps.
+/// are merged in. The build renames the resource of a legacy app whose <c>ProjectReference</c>
+/// carries <c>IsSystemApp="true"</c> to <c>HackerOs.Ecosystem.Manifests.System.*</c>
+/// (<c>_HackerOsMarkLegacySystemManifests</c> in <c>build/HackerOs.Apps.targets</c>), so the
+/// <c>ProjectReference</c> stays the only source of the system flag for them too.
 /// </remarks>
 public static class BuildKnownLazyApps
 {
     private const string LegacyManifestResourcePrefix = "HackerOs.Ecosystem.Manifests.";
+    private const string LegacySystemManifestResourcePrefix = "HackerOs.Ecosystem.Manifests.System.";
 
     private static readonly IReadOnlyList<BuiltInApplication> Applications = ReadApplications();
 
     /// <summary>Gets the validated immutable catalog used for lazy descriptor discovery.</summary>
     public static AppCatalog Catalog { get; } = CreateCatalog();
-
-    /// <summary>
-    /// Gets the ids of the apps the host declared system apps (<c>IsSystemApp</c> on their
-    /// <c>ProjectReference</c>, ADR 0048). Policy for them lands with <c>rebuild/2-system-apps</c>.
-    /// </summary>
-    public static IReadOnlySet<string> SystemAppIds { get; } = Applications
-        .Where(application => application.IsSystemApp)
-        .Select(application => application.Manifest.Id)
-        .ToHashSet(StringComparer.Ordinal);
-
-    /// <summary>Gets whether <paramref name="appId"/> is a built-in system app.</summary>
-    /// <param name="appId">Application identifier.</param>
-    /// <returns><see langword="true"/> when the host declared the app a system app.</returns>
-    public static bool IsSystemApp(string appId) => SystemAppIds.Contains(appId);
 
     private static AppCatalog CreateCatalog()
     {
@@ -44,7 +36,7 @@ public static class BuildKnownLazyApps
             throw new InvalidOperationException("The build contains no embedded first-party app manifests.");
         }
 
-        AppCatalogBuildResult result = AppCatalog.Build(Applications.Select(application => application.Manifest));
+        AppCatalogBuildResult result = AppCatalog.BuildFromBuiltInApplications(Applications);
         return result.Catalog ?? throw new InvalidOperationException(
             $"The build-known lazy catalog is invalid: {string.Join("; ", result.Errors.Select(error => error.Message))}");
     }
@@ -67,7 +59,9 @@ public static class BuildKnownLazyApps
             .Where(name => name.StartsWith(LegacyManifestResourcePrefix, StringComparison.Ordinal)
                 && name.EndsWith(".json", StringComparison.Ordinal))
             .OrderBy(name => name, StringComparer.Ordinal)
-            .Select(name => new BuiltInApplication(IsSystemApp: false, ReadLegacyManifest(hostAssembly, name))));
+            .Select(name => new BuiltInApplication(
+                IsSystemApp: name.StartsWith(LegacySystemManifestResourcePrefix, StringComparison.Ordinal),
+                ReadLegacyManifest(hostAssembly, name))));
         return applications;
     }
 

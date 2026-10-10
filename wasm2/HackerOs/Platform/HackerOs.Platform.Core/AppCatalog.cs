@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Collections.ObjectModel;
 using HackerOs.App.Abstractions;
 
@@ -10,11 +11,13 @@ public sealed class AppCatalog
 {
     private AppCatalog(
         IReadOnlyDictionary<string, AppManifest> manifests,
-        IReadOnlyList<string> activationOrder)
+        IReadOnlyList<string> activationOrder,
+        IReadOnlySet<string> systemAppIds)
     {
         Manifests = manifests;
         ActivationOrder = activationOrder;
         DeactivationOrder = activationOrder.Reverse().ToArray();
+        SystemAppIds = systemAppIds;
     }
 
     /// <summary>Gets manifests keyed by immutable app ID.</summary>
@@ -26,12 +29,59 @@ public sealed class AppCatalog
     /// <summary>Gets app IDs with dependents ordered before dependencies.</summary>
     public IReadOnlyList<string> DeactivationOrder { get; }
 
+    /// <summary>
+    /// Gets the IDs of the apps the host declared system apps (ADR 0048 §1). A system app cannot be
+    /// uninstalled and receives its dangerous capabilities without approval (ADR 0049).
+    /// </summary>
+    /// <remarks>
+    /// The set only comes from trusted host input: the <c>isSystemApp</c> flags of the host's
+    /// <c>BuiltInApplications.json</c>, written by the build from the <c>IsSystemApp</c> metadata of
+    /// its <c>ProjectReference</c>. Neither <see cref="AppManifest"/> nor <c>AppDefinition</c> can
+    /// carry the flag, so an app can never declare itself a system app.
+    /// </remarks>
+    public IReadOnlySet<string> SystemAppIds { get; }
+
+    /// <summary>Gets whether <paramref name="appId"/> is a system app of this catalog.</summary>
+    /// <param name="appId">Application identifier (ordinal comparison).</param>
+    /// <returns><see langword="true"/> when the host declared the app a system app.</returns>
+    public bool IsSystemApp(string appId)
+    {
+        ArgumentNullException.ThrowIfNull(appId);
+        return SystemAppIds.Contains(appId);
+    }
+
     /// <summary>Builds a catalog without loading or executing app assemblies.</summary>
     /// <param name="manifests">Candidate manifests selected by the build or package policy.</param>
+    /// <returns>A catalog with no system app, or every deterministic validation error.</returns>
+    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests) => Build(manifests, []);
+
+    /// <summary>
+    /// Builds a host catalog from its aggregated <c>BuiltInApplications.json</c> entries: the
+    /// manifests, plus the system-app flags the host wrote for them (ADR 0048 §1).
+    /// </summary>
+    /// <param name="applications">Built-in applications read from the host resource.</param>
     /// <returns>A catalog or every deterministic validation error.</returns>
-    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests)
+    public static AppCatalogBuildResult BuildFromBuiltInApplications(IEnumerable<BuiltInApplication> applications)
+    {
+        ArgumentNullException.ThrowIfNull(applications);
+        BuiltInApplication[] items = applications.ToArray();
+        return Build(
+            items.Select(item => item.Manifest),
+            items.Where(item => item.IsSystemApp).Select(item => item.Manifest.Id));
+    }
+
+    /// <summary>Builds a catalog without loading or executing app assemblies.</summary>
+    /// <param name="manifests">Candidate manifests selected by the build or package policy.</param>
+    /// <param name="systemAppIds">
+    /// IDs the trusted host declared system apps. Each must name a manifest of the catalog
+    /// (<c>catalog.system-app.unknown</c> otherwise), so a typo cannot silently leave an app
+    /// uninstallable or unprotected.
+    /// </param>
+    /// <returns>A catalog or every deterministic validation error.</returns>
+    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests, IEnumerable<string> systemAppIds)
     {
         ArgumentNullException.ThrowIfNull(manifests);
+        ArgumentNullException.ThrowIfNull(systemAppIds);
 
         AppManifest[] candidates = manifests.ToArray();
         List<AppCatalogError> errors = [];
@@ -57,6 +107,18 @@ public sealed class AppCatalog
             }
         }
 
+        HashSet<string> systemIds = new(StringComparer.Ordinal);
+        foreach (string systemAppId in systemAppIds.Order(StringComparer.Ordinal))
+        {
+            if (systemIds.Add(systemAppId) && !byId.ContainsKey(systemAppId))
+            {
+                errors.Add(new AppCatalogError(
+                    "catalog.system-app.unknown",
+                    systemAppId,
+                    $"System app '{systemAppId}' is not part of the catalog."));
+            }
+        }
+
         if (errors.Count > 0)
         {
             return new AppCatalogBuildResult(null, errors);
@@ -77,7 +139,7 @@ public sealed class AppCatalog
         ReadOnlyDictionary<string, AppManifest> readOnlyManifests =
             new(new Dictionary<string, AppManifest>(byId, StringComparer.Ordinal));
         return new AppCatalogBuildResult(
-            new AppCatalog(readOnlyManifests, activationOrder),
+            new AppCatalog(readOnlyManifests, activationOrder, systemIds.ToFrozenSet(StringComparer.Ordinal)),
             []);
     }
 
