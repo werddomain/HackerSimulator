@@ -5,6 +5,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Notifications;
@@ -31,6 +32,7 @@ public sealed class AppExecutionContextFactory
     private readonly ISimulationClock _clock;
     private readonly IProcessManager _processManager;
     private readonly Func<AppIntentDispatcher>? _intentDispatcherProvider;
+    private readonly LogFileWriter? _logWriter;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -39,6 +41,11 @@ public sealed class AppExecutionContextFactory
     /// depends on the app lifecycle orchestrator, which itself depends on this factory to create
     /// execution contexts for newly launched processes -- an eager dependency here would be
     /// circular. Pass <see langword="null"/> (e.g. in tests) to leave app-launch unsupported.
+    /// </param>
+    /// <param name="logWriter">
+    /// Platform log writer the <see cref="IAppExecutionContext.Logging"/> gateway appends to
+    /// (<c>/var/log/apps/&lt;appId&gt;.log</c>, ADR 0045); <see langword="null"/> keeps app logs in
+    /// the in-memory buffer only.
     /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
@@ -49,7 +56,8 @@ public sealed class AppExecutionContextFactory
         IDiagnosticSink diagnostics,
         ISimulationClock clock,
         IProcessManager processManager,
-        Func<AppIntentDispatcher>? intentDispatcherProvider = null)
+        Func<AppIntentDispatcher>? intentDispatcherProvider = null,
+        LogFileWriter? logWriter = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -60,6 +68,7 @@ public sealed class AppExecutionContextFactory
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _intentDispatcherProvider = intentDispatcherProvider;
+        _logWriter = logWriter;
     }
 
     /// <summary>
@@ -103,6 +112,7 @@ public sealed class AppExecutionContextFactory
             AppId = manifest.Id,
             UserId = userId,
             UserName = userName,
+            ProcessId = process.Pid.Value,
             UserAuthority = principal.Authority,
             GrantedCapabilities = grantedCapabilities,
             IsSystemOperation = false,
@@ -124,8 +134,10 @@ public sealed class AppExecutionContextFactory
             : UnsupportedServiceControlGateway.Instance;
 
         AppPermissionErrorGateway permissionErrors = new();
+        AppEventGateway events = new(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString());
+        AppClockGateway clock = new(_clock);
 
-        return new AppExecutionContext(
+        AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
             userId,
@@ -136,18 +148,22 @@ public sealed class AppExecutionContextFactory
             cancellationToken,
             capabilities,
             new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
-            principal.HomePath,
-            new AppEventGateway(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString()),
+            events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
-            new AppLoggingGateway(_diagnostics, _clock, manifest.Id),
-            new AppDiagnosticsGateway(_diagnostics, capabilities),
-            new AppClockGateway(_clock),
+            new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),
+            clock,
             new AppProcessGateway(_processManager, capabilities, process.Pid),
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,
             services,
-            operationContext.OneShotElevation);
+            operationContext.OneShotElevation,
+            principal.HomePath);
+
+        // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
+        events.BindAmbientContext(context);
+        clock.BindAmbientContext(context);
+        return context;
     }
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway

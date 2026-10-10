@@ -418,13 +418,13 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
   - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
 
 ### Phase 1 — Fichiers
-- [ ] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
-- [ ] Créer les exceptions `Hack*` et la traduction depuis `FileSystemErrorCode`.
-- [ ] Mettre en place le contexte d'exécution ambiant positionné par l'OS.
+- [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
+- [x] Créer les exceptions `Hack*` et la traduction depuis `FileSystemErrorCode`.
+- [x] Mettre en place le contexte d'exécution ambiant positionné par l'OS. Voir [`hack-file-api.md`](hack-file-api.md).
 - [ ] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes.
 - [ ] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides.
 - [ ] Créer l'API typée de paramètres et adapter l'app Paramètres.
-- [ ] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer.
+- [x] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer ([`logging.md`](logging.md)).
 - [ ] Monter `/proc` et `/dev` en virtuel.
 - [ ] Tests de contrat pour chaque point.
 

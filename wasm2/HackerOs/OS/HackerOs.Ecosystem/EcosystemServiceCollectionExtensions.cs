@@ -2,7 +2,6 @@ using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.Catalog;
 using HackerOs.Infrastructure.Browser.FileSystem;
-using HackerOs.Infrastructure.Browser.Diagnostics;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Policy;
 using HackerOs.Infrastructure.Browser.ServerConnection;
@@ -17,6 +16,7 @@ using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Network;
@@ -74,47 +74,47 @@ public static class EcosystemServiceCollectionExtensions
         services.AddMudServices();
 
         services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<ISimulationClock>(_ => new ManualSimulationClock(
+        // One ManualSimulationClock, driven in live hosts by SimulationClockDriver (ADR 0012);
+        // the boot sequence starts the driver.
+        services.AddSingleton(_ => new ManualSimulationClock(
             DateTimeOffset.UtcNow,
             TimeSpan.FromMilliseconds(100)));
+        services.AddSingleton<ISimulationClock>(provider => provider.GetRequiredService<ManualSimulationClock>());
+        services.AddSingleton(provider => new SimulationClockDriver(
+            provider.GetRequiredService<ManualSimulationClock>(),
+            provider.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ISimulationRandom>(_ => new SeededSimulationRandom(1));
 
         services.AddSingleton<IDiagnosticRedactor>(_ => new SensitiveKeyDiagnosticRedactor());
         services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
+        // In-memory buffer of recent entries for live viewers and the boot error screen. Logs
+        // themselves are files under /var/log, written only by LogFileWriter (ADR 0045).
         services.AddSingleton<IDiagnosticSink>(provider => new EventPublishingDiagnosticSink(
             new BoundedDiagnosticSink(1024),
             provider.GetRequiredService<IEventBus>()));
-        services.AddSingleton<IAuditLog>(_ => new BoundedAuditLog(512));
-        services.AddScoped<IndexedDbDiagnosticRepository>(provider => new IndexedDbDiagnosticRepository(
-            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-            provider.GetRequiredService<IDiagnosticRedactor>(),
-            1024));
-        services.AddScoped<IPersistentDiagnosticRepository>(provider =>
-            provider.GetRequiredService<IndexedDbDiagnosticRepository>());
-        // ILoggerProvider must stay Singleton — ASP.NET Core builds the host's ILoggerFactory
-        // once, before any circuit exists, so it can never depend on a Scoped service. This is
-        // fine for WASM hosts (IJSRuntime is available immediately there, no circuit concept),
-        // but the server host construct-injecting a Scoped IPersistentDiagnosticRepository here
-        // would violate scope validation at the moment ASP.NET Core eagerly builds every
-        // registered ILoggerProvider — see the comment where Server/HackerOs.Server/Program.cs
-        // strips this exact descriptor back out for that host, right after calling this method.
+        services.AddSingleton(provider => new LogFileWriter(
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IDiagnosticSink>(),
+            provider.GetRequiredService<IEventBus>()));
+        services.AddSingleton<IAuditLog>(provider => new FileAuditLog(
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<IDiagnosticRedactor>()));
+        // Every dependency is a singleton, so the host's root ILoggerFactory can build this provider
+        // before any Blazor scope exists. ILogger<T> entries land in /var/log/syslog.
         services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
             provider.GetRequiredService<IDiagnosticSink>(),
-            provider.GetRequiredService<IPersistentDiagnosticRepository>(),
-            provider.GetRequiredService<ISimulationClock>()));
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IDiagnosticRedactor>()));
         // Keep this provider scoped to HackerOS's own log categories: the ASP.NET Core host
         // (Kestrel, hosting lifetime, HTTPS redirection, etc.) also resolves every registered
-        // ILoggerProvider, and its framework-internal chatter isn't a HackerOS diagnostic event
-        // -- and on the server side, IJSRuntime can't reach a real IndexedDB, so every one of
-        // those entries would otherwise fail to persist.
+        // ILoggerProvider, and its framework-internal chatter isn't a HackerOS diagnostic event.
         services.AddLogging(builder =>
         {
             builder.AddFilter<HackerOsDiagnosticLoggerProvider>("Microsoft", LogLevel.None);
             builder.AddFilter<HackerOsDiagnosticLoggerProvider>("System", LogLevel.None);
         });
 
-        // Depends on IPersistentDiagnosticRepository, which is Scoped (see above) — see this
-        // file's IJSRuntime scoping note.
         services.AddScoped<HostExceptionReporter>();
         services.AddSingleton<INotificationQueue>(_ => new InMemoryNotificationQueue(100));
 
@@ -154,8 +154,24 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IndexedDbFileSystemBootstrapper>();
         services.AddScoped<IFileSystemProvider>(provider =>
             provider.GetRequiredService<IndexedDbFileSystemProvider>());
+        // /proc and /dev are virtual, read-only mounts computed on every read and never written to
+        // IndexedDB (ADR 0046). The process manager is resolved lazily: it depends on the session
+        // service, which depends on FileSystemSeeder, which reaches /proc through this router.
         services.AddScoped<IFileSystemMountRouter>(provider =>
-            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>()));
+            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>(),
+            [
+                new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, new ProcFileSystemProvider(
+                    () => provider.GetRequiredService<IProcessManager>(),
+                    provider.GetRequiredService<IResourceSimulator>(),
+                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<ISimulationClock>(),
+                    process => provider.GetRequiredService<ISessionService>().CurrentPrincipal is { } principal
+                        && principal.UserId == process.UserId
+                            ? principal.LoginName.Value
+                            : null)),
+                new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
+                    provider.GetRequiredService<ISimulationClock>()))
+            ]));
         // Depends on IFileSystemMountRouter, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<IFileSystemPathResolver, FileSystemPathResolver>();
@@ -314,7 +330,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessManager>(),
             // Resolved lazily: AppIntentDispatcher depends (transitively, via AppLifecycleOrchestrator)
             // on this very factory, so eagerly injecting it here would be circular.
-            intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>()));
+            intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>(),
+            logWriter: provider.GetRequiredService<LogFileWriter>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),

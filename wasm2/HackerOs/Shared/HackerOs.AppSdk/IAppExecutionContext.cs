@@ -29,10 +29,12 @@ public interface IAppExecutionContext
     string UserId { get; }
 
     /// <summary>
-    /// Gets the acting user's home directory (<c>/home/&lt;login&gt;</c>), where the user layer of
-    /// settings lives (<c>~/.config/&lt;appId&gt;/</c>, ADR 0044). Defaults to
-    /// <c>/home/{UserId}</c> so existing <see cref="IAppExecutionContext"/> implementations keep
-    /// compiling; the trusted platform factory overrides it with the principal's real home path.
+    /// Gets the acting user's canonical home directory (<c>/home/{login}</c>), used by
+    /// <see cref="HackExecutionContext"/> as the default working directory and by
+    /// <see cref="IO.HackPath.GetFullPath(string)"/> to expand <c>~</c>, and as the root of the user settings layer
+    /// (<c>~/.config/&lt;appId&gt;/</c>, ADR 0044). Defaults to
+    /// <c>/home/{UserId}</c> so existing implementations keep compiling; the trusted platform
+    /// factory overrides it with the principal's real home path (ADR 0043).
     /// </summary>
     string HomeDirectory => $"/home/{UserId}";
 
@@ -66,11 +68,11 @@ public interface IAppExecutionContext
     /// <summary>Gets this instance's authorized notification-posting gateway.</summary>
     IAppNotificationGateway Notifications { get; }
 
-    /// <summary>Gets this instance's structured diagnostic logging gateway.</summary>
+    /// <summary>
+    /// Gets this instance's structured diagnostic logging gateway. Entries land in
+    /// <c>/var/log/apps/&lt;appId&gt;.log</c> (ADR 0045); reading logs back is plain file access.
+    /// </summary>
     IAppLoggingGateway Logging { get; }
-
-    /// <summary>Gets this instance's authorized diagnostic-log read gateway.</summary>
-    IAppDiagnosticsGateway Diagnostics { get; }
 
     /// <summary>Gets this instance's read-only deterministic simulation clock gateway.</summary>
     IAppClockGateway Clock { get; }

@@ -159,6 +159,21 @@ public sealed class HackSettingsTests
     }
 
     [Fact]
+    public async Task Ambient_context_overloads_act_as_the_ambient_app()
+    {
+        (SettingsFilesHarness harness, TestAppContext app) = await CreateAsync();
+
+        using (HackExecutionContext.Enter(app))
+        {
+            await HackSettings.SetAsync("Editor.tab-size", 8);
+            Assert.Equal(8, await HackSettings.GetAsync<int>("Editor.tab-size"));
+        }
+
+        Assert.Equal("[Editor]\ntab-size=8\n", await harness.ReadAsync(UserFile));
+        await Assert.ThrowsAsync<HackExecutionContextMissingException>(() => HackSettings.GetAsync<int>("Editor.tab-size").AsTask());
+    }
+
+    [Fact]
     public async Task Undeclared_key_or_wrong_type_is_a_programming_error()
     {
         (_, TestAppContext app) = await CreateAsync();
@@ -237,7 +252,6 @@ public sealed class HackSettingsTests
         public ICapabilityChecker Capabilities => throw new NotSupportedException();
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
-        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
         public IAppClockGateway Clock => throw new NotSupportedException();
         public IAppProcessGateway Processes => throw new NotSupportedException();
 

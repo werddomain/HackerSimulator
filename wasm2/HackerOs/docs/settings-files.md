@@ -83,8 +83,9 @@ Une autre app n'a aucun accès au dossier privé `~/.config/<appId>/` d'une app.
 ### Dans une app
 
 Le schéma vient de `AppManifest.Settings` (clés, types, valeurs par défaut,
-groupes). L'app passe explicitement son contexte en phase 1 ; des surcharges
-sans contexte s'ajouteront quand le contexte ambiant de l'ADR 0043 existera.
+groupes). Chaque méthode existe avec le contexte de l'app en paramètre, et sans
+lui : elle utilise alors le contexte ambiant de l'ADR 0043
+(`HackExecutionContext.Current`), comme l'API de fichiers `Hack*`.
 
 ```csharp
 await using HackSettingsDocument settings = await HackSettings.OpenAsync(AppContext);
@@ -96,6 +97,7 @@ await settings.SetAsync("Editor.tab-size", 2);              // couche utilisateu
 await settings.ResetAsync("theme");                         // retire la valeur utilisateur
 
 int size = await HackSettings.GetAsync<int>(AppContext, "Editor.tab-size"); // lecture ponctuelle
+int same = await HackSettings.GetAsync<int>("Editor.tab-size");             // contexte ambiant
 ```
 
 - Une clé non déclarée ou un type incompatible lève `ArgumentException`.

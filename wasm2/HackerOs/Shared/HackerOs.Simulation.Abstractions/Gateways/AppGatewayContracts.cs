@@ -208,21 +208,6 @@ public interface IAppLoggingGateway
     void Log(DiagnosticSeverity severity, string message, IReadOnlyDictionary<string, string>? properties = null);
 }
 
-/// <summary>
-/// Provides one app instance's authorized read access to system diagnostic log entries,
-/// requiring <see cref="AppCapabilities.DiagnosticsRead"/>.
-/// </summary>
-public interface IAppDiagnosticsGateway
-{
-    /// <summary>Gets every retained diagnostic entry, oldest first.</summary>
-    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsRead"/>.</exception>
-    IReadOnlyList<DiagnosticEntry> Entries { get; }
-
-    /// <summary>Discards every retained diagnostic entry.</summary>
-    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsClear"/>.</exception>
-    void Clear();
-}
-
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>
 public interface IAppClockGateway
 {

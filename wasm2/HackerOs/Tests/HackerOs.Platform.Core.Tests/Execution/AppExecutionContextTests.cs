@@ -273,6 +273,36 @@ public sealed class AppExecutionContextTests
         }
     }
 
+    [Fact]
+    public async Task Context_home_directory_is_the_principals_login_home_not_its_user_id()
+    {
+        Fixture fixture = new();
+        IAppExecutionContext context = await fixture.CreateContextAsync([]);
+
+        Assert.Equal("/home/alice", context.HomeDirectory);
+    }
+
+    [Fact]
+    public async Task Clock_callbacks_and_event_handlers_run_inside_the_subscribing_apps_ambient_context()
+    {
+        // ADR 0043: a gateway callback runs on the publisher's flow, so the gateway re-enters its own app.
+        Fixture fixture = new();
+        IAppExecutionContext context = await fixture.CreateContextAsync([]);
+        IAppExecutionContext? seenByClock = null;
+        IAppExecutionContext? seenByEvent = null;
+        context.Clock.Schedule(TimeSpan.FromSeconds(1), () => seenByClock = HackExecutionContext.CurrentOrNull);
+        using IDisposable subscription = context.Events.Subscribe<AmbientProbeEvent>(_ => seenByEvent = HackExecutionContext.CurrentOrNull);
+
+        fixture.Clock.Advance();
+        fixture.EventBus.Publish(new AmbientProbeEvent());
+
+        Assert.Same(context, seenByClock);
+        Assert.Same(context, seenByEvent);
+        Assert.Null(HackExecutionContext.CurrentOrNull);
+    }
+
+    private sealed record AmbientProbeEvent;
+
     private sealed class Fixture
     {
         private int _entryId = 1;

@@ -20,9 +20,9 @@ namespace HackerOs.AppSdk.Settings;
 /// await settings.SetAsync("theme", "light");
 /// </code>
 /// <para>
-/// Phase 1 takes the app's <see cref="IAppExecutionContext"/> explicitly. When the ambient context of
-/// ADR 0043 (<c>HackExecutionContext</c>) is available, context-free overloads with the same names
-/// are added on top of these; this API does not change.
+/// Each method exists in two forms: one taking the app's <see cref="IAppExecutionContext"/>
+/// explicitly, and one using the ambient context of ADR 0043 (<see cref="HackExecutionContext.Current"/>),
+/// like the <c>Hack*</c> file API.
 /// </para>
 /// </remarks>
 public static partial class HackSettings
@@ -81,6 +81,31 @@ public static partial class HackSettings
         await using HackSettingsDocument document = await OpenAsync(context, DefaultDocumentId, cancellationToken).ConfigureAwait(false);
         await document.SetAsync(qualifiedKey, value, SettingLayer.User, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Opens one settings document of the ambient app (<see cref="HackExecutionContext.Current"/>).</summary>
+    /// <param name="documentId">Document name, i.e. the file name without <c>.config</c>.</param>
+    /// <param name="cancellationToken">Cancels the initial reads.</param>
+    /// <exception cref="HackExecutionContextMissingException">No ambient app context is active.</exception>
+    /// <exception cref="InvalidOperationException">The app declares no settings schema.</exception>
+    public static ValueTask<HackSettingsDocument> OpenAsync(
+        string documentId = DefaultDocumentId,
+        CancellationToken cancellationToken = default) =>
+        OpenAsync(HackExecutionContext.Current, documentId, cancellationToken);
+
+    /// <summary>Reads one value of the ambient app's default document.</summary>
+    /// <typeparam name="T">See <see cref="HackSettingsDocument.Get{T}"/>.</typeparam>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, as declared.</param>
+    /// <param name="cancellationToken">Cancels the reads.</param>
+    public static ValueTask<T> GetAsync<T>(string qualifiedKey, CancellationToken cancellationToken = default) =>
+        GetAsync<T>(HackExecutionContext.Current, qualifiedKey, cancellationToken);
+
+    /// <summary>Writes one value to the user layer of the ambient app's default document.</summary>
+    /// <typeparam name="T">See <see cref="HackSettingsDocument.Get{T}"/>.</typeparam>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, as declared.</param>
+    /// <param name="value">New value.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    public static ValueTask SetAsync<T>(string qualifiedKey, T value, CancellationToken cancellationToken = default) =>
+        SetAsync(HackExecutionContext.Current, qualifiedKey, value, cancellationToken);
 
     private static void ValidateDocumentId(string documentId)
     {

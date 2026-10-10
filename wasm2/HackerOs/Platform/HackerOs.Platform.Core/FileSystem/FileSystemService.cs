@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Events;
+using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
@@ -13,7 +14,8 @@ namespace HackerOs.Platform.Core.FileSystem;
 /// <c>docs/Global-FileView-And-MessagingSystem/MessagingSystem.md</c> (<c>MSG-011</c>/<c>MSG-012</c>).
 /// The <c>shared/filesystem/changed</c> channel is registered once, in this singleton's constructor,
 /// owner-only for publish under <see cref="KernelPublisherIdentity"/> so no app can ever forge a change
-/// notification.
+/// notification. Paths owned by an <see cref="IVirtualFileSystemProvider"/> (<c>/proc</c>, <c>/dev</c>)
+/// never publish one (ADR 0046).
 /// </remarks>
 public sealed class FileSystemService : IFileSystemService
 {
@@ -655,6 +657,13 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemChangeKind kind,
         VirtualPath? movedToPath = null)
     {
+        // Virtual mounts (/proc, /dev) are computed on read and never change "on disk": like
+        // inotify on Linux's /proc, they never raise change notifications (ADR 0046).
+        if (_router.Resolve(affectedPath).Mount.Provider is IVirtualFileSystemProvider)
+        {
+            return;
+        }
+
         TopicName topic = FileSystemTopics.ForDirectory(GetParent(affectedPath));
         _topicBus.Publish(
             topic,

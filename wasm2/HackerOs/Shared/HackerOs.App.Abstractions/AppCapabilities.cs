@@ -111,10 +111,18 @@ public static class AppCapabilities
     /// </summary>
     public const string NetworkRealAccess = "network.real.access";
 
-    /// <summary>Read structured diagnostic log entries recorded across the system.</summary>
+    /// <summary>
+    /// Read structured diagnostic log entries recorded across the system. No longer evaluated since
+    /// ADR 0045 (logs are files under <c>/var/log</c>, read with file rights); kept in the catalog
+    /// until the phase 2 permissions ADR.
+    /// </summary>
     public const string DiagnosticsRead = "diagnostics.read";
 
-    /// <summary>Clear structured diagnostic log entries recorded across the system.</summary>
+    /// <summary>
+    /// Clear structured diagnostic log entries recorded across the system. No longer evaluated since
+    /// ADR 0045 (clearing is truncating a <c>/var/log</c> file); kept in the catalog until the phase 2
+    /// permissions ADR.
+    /// </summary>
     public const string DiagnosticsClear = "diagnostics.clear";
 
     private static readonly FrozenSet<string> KnownIdentifiers = new[]

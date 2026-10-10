@@ -25,18 +25,17 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         CancellationToken cancellationToken,
         ICapabilityChecker capabilities,
         IAppFileSystemGateway fileSystem,
-        string homeDirectory,
         IAppEventGateway events,
         IAppNotificationGateway notifications,
         IAppLoggingGateway logging,
-        IAppDiagnosticsGateway diagnostics,
         IAppClockGateway clock,
         IAppProcessGateway processes,
         IAppIntentGateway intents,
         IAppFileSystemWatchGateway watch,
         IAppPermissionErrorGateway permissionErrors,
         IAppServiceControlGateway services,
-        OneShotElevationGrantSet oneShotElevation)
+        OneShotElevationGrantSet oneShotElevation,
+        string? homeDirectory = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -49,12 +48,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         CancellationToken = cancellationToken;
         Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
-        HomeDirectory = homeDirectory;
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
         Logging = logging ?? throw new ArgumentNullException(nameof(logging));
-        Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Processes = processes ?? throw new ArgumentNullException(nameof(processes));
         Intents = intents ?? throw new ArgumentNullException(nameof(intents));
@@ -62,7 +58,11 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         PermissionErrors = permissionErrors ?? throw new ArgumentNullException(nameof(permissionErrors));
         Services = services ?? throw new ArgumentNullException(nameof(services));
         OneShotElevation = oneShotElevation ?? throw new ArgumentNullException(nameof(oneShotElevation));
+        HomeDirectory = homeDirectory ?? $"/home/{userId}";
     }
+
+    /// <inheritdoc />
+    public string HomeDirectory { get; }
 
     /// <inheritdoc />
     public AppManifest Manifest { get; }
@@ -95,9 +95,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public IAppFileSystemGateway FileSystem { get; }
 
     /// <inheritdoc />
-    public string HomeDirectory { get; }
-
-    /// <inheritdoc />
     public IAppEventGateway Events { get; }
 
     /// <inheritdoc />
@@ -106,8 +103,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// <inheritdoc />
     public IAppLoggingGateway Logging { get; }
 
-    /// <inheritdoc />
-    public IAppDiagnosticsGateway Diagnostics { get; }
 
     /// <inheritdoc />
     public IAppClockGateway Clock { get; }
