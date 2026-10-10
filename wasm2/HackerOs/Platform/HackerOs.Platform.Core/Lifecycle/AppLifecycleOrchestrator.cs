@@ -13,6 +13,8 @@ using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 
+using HackerOs.Platform.Core.Settings;
+
 namespace HackerOs.Platform.Core.Lifecycle;
 
 /// <summary>
@@ -30,7 +32,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IProcessManager _processManager;
     private readonly ICapabilityGrantRepository _grants;
     private readonly AppExecutionContextFactory _contextFactory;
-    private readonly ISettingsDocumentService _settings;
+    private readonly IOsSettingsService _settings;
     private readonly IEventBus? _eventBus;
     private readonly IAppDescriptorLoader? _descriptorLoader;
     private readonly IPersistentAppCatalogRepository? _catalogRepository;
@@ -47,7 +49,7 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="processManager">Process lifecycle manager backing every launch.</param>
     /// <param name="grants">Capability grant repository used to compute each launch's granted set.</param>
     /// <param name="contextFactory">Trusted execution-context factory.</param>
-    /// <param name="settings">Canonical settings service, used to invalidate stale file-association defaults on disable.</param>
+    /// <param name="settings">OS settings files, used to invalidate stale file-association defaults on disable.</param>
     /// <param name="eventBus">Optional typed event bus for cross-subsystem lifecycle cleanup.</param>
     /// <param name="descriptorLoader">Optional lazy descriptor loader for assemblies not eagerly discovered.</param>
     /// <param name="catalogRepository">
@@ -85,7 +87,7 @@ public sealed class AppLifecycleOrchestrator
         IProcessManager processManager,
         ICapabilityGrantRepository grants,
         AppExecutionContextFactory contextFactory,
-        ISettingsDocumentService settings,
+        IOsSettingsService settings,
         IEventBus? eventBus = null,
         IAppDescriptorLoader? descriptorLoader = null,
         IPersistentAppCatalogRepository? catalogRepository = null,
@@ -702,26 +704,14 @@ public sealed class AppLifecycleOrchestrator
 
     private async Task InvalidateAssociationDefaultsAsync(string disabledAppId)
     {
-        AppOperationContext systemContext = new()
-        {
-            AppId = "org.hackeros.settings",
-            UserId = "system",
-            UserAuthority = AppAuthority.System,
-            GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal)
-            {
-                AppCapabilities.FileAssociationsRead,
-                AppCapabilities.FileAssociationsWrite
-            },
-            IsSystemOperation = true
-        };
-
-        SettingsReadResult read = await _settings.ReadAsync(FileAssociationSettingsDocuments.Path, systemContext);
-        if (read.Status != SettingsReadStatus.Success || read.Document is null)
+        // Audited system operation: /etc/hackeros/file-associations.json belongs to system.
+        string? content = await _settings.ReadFileAsync(FileAssociationSettingsDocuments.File);
+        if (content is null)
         {
             return;
         }
 
-        FileAssociationIndex index = FileAssociationIndex.Build(read.Document.Content);
+        FileAssociationIndex index = FileAssociationIndex.Build(content);
         if (!index.Entries.Any(entry => entry.AppId == disabledAppId))
         {
             return;
@@ -729,9 +719,7 @@ public sealed class AppLifecycleOrchestrator
 
         string updated = FileAssociationIndex.Serialize(
             index.Entries.Where(entry => entry.AppId != disabledAppId).ToArray());
-        await _settings.WriteAsync(
-            new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, updated, read.Document.Revision),
-            systemContext);
+        await _settings.WriteFileAsync(FileAssociationSettingsDocuments.File, updated);
     }
 
     /// <summary>Tracks one currently running app instance so it can be stopped later.</summary>

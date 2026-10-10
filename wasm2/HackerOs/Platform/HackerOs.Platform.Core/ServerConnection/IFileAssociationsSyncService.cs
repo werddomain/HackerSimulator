@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Intents;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Server.Contracts.Sync;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.ServerConnection;
@@ -11,12 +12,10 @@ using HackerOs.Simulation.Abstractions.Sync;
 namespace HackerOs.Platform.Core.ServerConnection;
 
 /// <summary>
-/// Pushes/pulls the single <see cref="FileAssociationSettingsDocuments"/> document to/from the
-/// optional server's FileAssociations sync domain (ADR 0033). A narrow sibling of
-/// <see cref="ISettingsSyncService"/> rather than a generalization of it: <c>SyncDomain.FileAssociations</c>
-/// is a distinct, separately-partitioned domain server-side from <c>SyncDomain.Settings</c>, so routing
-/// this one document through <see cref="SettingsSyncService"/> (which hard-codes <c>SyncDomain.Settings</c>)
-/// would silently sync it into the wrong domain. A no-op when this device isn't connected.
+/// Pushes/pulls the single <see cref="FileAssociationSettingsDocuments"/> file
+/// (<c>/etc/hackeros/file-associations.json</c>) to/from the optional server's FileAssociations sync
+/// domain (ADR 0033). Since ADR 0044 the document is an ordinary system file; this service reads and
+/// writes it as an audited system operation. A no-op when this device isn't connected.
 /// </summary>
 public interface IFileAssociationsSyncService
 {
@@ -29,23 +28,12 @@ public interface IFileAssociationsSyncService
 
 /// <summary>Default <see cref="IFileAssociationsSyncService"/> implementation.</summary>
 public sealed class FileAssociationsSyncService(
-    ISettingsDocumentService settings,
+    IOsSettingsService settings,
     IServerConnectionService connection,
     ISyncClient syncClient,
     ISyncCursorRepository cursors,
     ISyncRecordStateRepository recordState) : IFileAssociationsSyncService
 {
-    // Same fixed system operation context ADR 0029's SettingsSyncService uses — an OS-level
-    // background concern, not any one user's.
-    private static readonly AppOperationContext SystemContext = new()
-    {
-        AppId = "org.hackeros.sync",
-        UserId = "system",
-        UserAuthority = AppAuthority.System,
-        GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
-        IsSystemOperation = true
-    };
-
     private static readonly Guid RecordId = ComputeRecordId(FileAssociationSettingsDocuments.Key);
 
     public async Task PushAsync(CancellationToken cancellationToken = default)
@@ -57,14 +45,13 @@ public sealed class FileAssociationsSyncService(
             return;
         }
 
-        SettingsReadResult read = await settings.ReadAsync(
-            FileAssociationSettingsDocuments.Path, SystemContext, cancellationToken).ConfigureAwait(false);
-        if (read.Status != SettingsReadStatus.Success || read.Document is null)
+        string? content = await settings.ReadFileAsync(FileAssociationSettingsDocuments.File, cancellationToken).ConfigureAwait(false);
+        if (content is null)
         {
             return;
         }
 
-        string contentHash = ComputeHash(read.Document.Content);
+        string contentHash = ComputeHash(content);
         SyncRecordTrackingState? tracked = await recordState.GetAsync(
             SyncDomain.FileAssociations, RecordId, cancellationToken).ConfigureAwait(false);
         if (tracked is not null && string.Equals(tracked.ContentHash, contentHash, StringComparison.Ordinal))
@@ -84,7 +71,7 @@ public sealed class FileAssociationsSyncService(
             ServerReceivedUtc: null,
             contentHash,
             IsTombstone: false,
-            read.Document.Content);
+            content);
 
         PushResponse response = await syncClient.PushAsync(
             new Uri(state.ServerBaseUrl),
@@ -129,14 +116,13 @@ public sealed class FileAssociationsSyncService(
                     continue; // Tombstoned, or not our one document (shouldn't happen for this domain).
                 }
 
-                SettingsReadResult current = await settings.ReadAsync(
-                    FileAssociationSettingsDocuments.Path, SystemContext, cancellationToken).ConfigureAwait(false);
-                long expectedRevision = current.Document?.Revision ?? 0;
-                await settings.WriteAsync(
-                    new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, envelope.PayloadJson, expectedRevision),
-                    SystemContext, cancellationToken).ConfigureAwait(false);
-                // A Conflict here (a concurrent local write mid-pull) is not retried — the next pull
-                // cycle re-applies the same envelope, matching ADR 0029's Settings adapter.
+                if (new FileAssociationSettingsValidator().Validate(envelope.PayloadJson).Count != 0)
+                {
+                    continue; // Never write an invalid remote copy over the local file.
+                }
+
+                await settings.WriteFileAsync(FileAssociationSettingsDocuments.File, envelope.PayloadJson, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
 
                 await recordState.SetAsync(
                     SyncDomain.FileAssociations, envelope.RecordId, envelope.Revision, envelope.ContentHash, cancellationToken)

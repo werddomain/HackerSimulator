@@ -156,8 +156,8 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
             ? []
             :
             [
-                eventBus.Subscribe<SessionActivatedEvent>(_ => _ = OnSessionChangedAsync()),
-                eventBus.Subscribe<SessionLoggedOutEvent>(_ => _ = OnSessionChangedAsync())
+                eventBus.Subscribe<SessionActivatedEvent>(_ => { Task ignored = OnSessionChangedAsync(); }),
+                eventBus.Subscribe<SessionLoggedOutEvent>(_ => { Task ignored = OnSessionChangedAsync(); })
             ];
     }
 
@@ -434,7 +434,11 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
                     throw new InvalidOperationException($"OS settings document '{document.DocumentId}' has no user layer.");
                 }
 
-                principal ??= throw new InvalidOperationException("The user settings layer needs an active session.");
+                if (principal is null)
+                {
+                    throw new InvalidOperationException("The user settings layer needs an active session.");
+                }
+
                 path = document.GetUserPath(principal.HomePath);
                 gateway = writer ?? CreateUserGateway(principal);
                 break;

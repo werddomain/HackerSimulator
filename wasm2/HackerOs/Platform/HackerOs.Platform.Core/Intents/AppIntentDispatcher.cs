@@ -177,16 +177,7 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
         }
 
-        AppOperationContext readContext = new()
-        {
-            AppId = request.CallerAppId,
-            UserId = request.UserId,
-            UserAuthority = principal.Authority,
-            GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal) { AppCapabilities.FileAssociationsRead },
-            IsSystemOperation = false
-        };
-
-        FileHandlerResolution resolution = await _associations.ResolveAsync(intent, readContext);
+        FileHandlerResolution resolution = await _associations.ResolveAsync(intent);
         switch (resolution.Status)
         {
             case FileHandlerResolutionStatus.ChooserRequired:
