@@ -198,7 +198,8 @@ utilisées par son `StaticManifest`.
 
 ### Commandes intégrées : un seul projet (ADR 0051)
 
-Depuis le chantier `rebuild/3-commands-merge`, les 28 commandes intégrées sont
+Depuis le chantier `rebuild/3-commands-merge`, les commandes intégrées (28, puis
+29 avec `trash` du chantier `rebuild/3-trash`, voir [`trash.md`](trash.md)) sont
 dans un seul projet, `Apps/Commands/HackerOs.Commands/HackerOs.Commands.csproj` :
 
 - un dossier par commande (`Cat/CatApp.cs`, `Cat/CatCommand.cs`), chacune garde
@@ -348,7 +349,7 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 
 | Système | Non système (désinstallables) |
 |---|---|
-| Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 28 commandes (projet `HackerOs.Commands`) | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
+| Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 29 commandes (projet `HackerOs.Commands`) | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
 
 Effets du statut : une app système n'est pas désinstallable (voir
 [`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités

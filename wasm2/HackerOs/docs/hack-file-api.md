@@ -27,6 +27,7 @@ de permission restent appliqués exactement comme avant.
 |---|---|---|
 | `HackExecutionContext` | `Shared/HackerOs.AppSdk/HackExecutionContext.cs` | Contexte ambiant (`AsyncLocal`) : `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)`. Depuis la phase 3, `WorkingDirectory` est le répertoire du processus (`HackEnvironment`, [`process-environment.md`](process-environment.md)), sauf répertoire fixé par `Enter`. |
 | `IAppExecutionContext.HomeDirectory` | `Shared/HackerOs.AppSdk/IAppExecutionContext.cs` | Dossier personnel `/home/<login>` (membre par défaut `/home/{UserId}`, remplacé par la plateforme). Sert à `~` et au répertoire courant par défaut. |
+| `IAppExecutionContext.IsRootElevated` | `Shared/HackerOs.AppSdk/IAppExecutionContext.cs` | Lancement en root complet par `sudo` (ADR 0042), membre par défaut `false`. Ne change pas `HomeDirectory` ; sert à la corbeille de l'utilisateur effectif (`/root/.local/share/Trash`, [`trash.md`](trash.md)). |
 | `HackFile`, `HackDirectory`, `HackPath` | `Shared/HackerOs.AppSdk/IO/` | Façades statiques. `HackPath` est pur, sauf `GetFullPath(path)`. |
 | `HackFileSystemInfo`, `HackFileInfo`, `HackDirectoryInfo` | `IO/HackFileSystemInfo.cs` | Instantanés de métadonnées (`GetAsync`, `RefreshAsync`). |
 | `HackFileStream` | `IO/HackFileStream.cs` | Flux de lecture (enveloppe la lecture du moteur) ou d'écriture (tampon mémoire publié en une écriture atomique). |
@@ -101,7 +102,9 @@ catch (HackFileConflictException conflit)
   sont publiés avec le type `text/plain`.
 - `CopyAsync`/`MoveAsync` entre deux montages : la façade copie le flux (en gardant
   les bits du fichier source) puis supprime la source.
-- `HackFile.DeleteAsync` supprime définitivement (la corbeille arrive en phase 3).
+- `HackFile.DeleteAsync` supprime définitivement, comme `System.IO`. Pour une
+  suppression réversible, `HackTrash.MoveToTrashAsync` (phase 3, voir
+  [`trash.md`](trash.md)).
 
 ### Flux
 

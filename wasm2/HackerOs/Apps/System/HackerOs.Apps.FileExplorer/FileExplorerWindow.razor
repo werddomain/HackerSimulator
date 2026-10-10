@@ -10,6 +10,7 @@
 @using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.AppSdk.Blazor.Interop
 @using HackerOs.AppSdk.Icons
+@using HackerOs.AppSdk.IO
 @using System.IO.Compression
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
@@ -26,11 +27,14 @@
 @*
     Hosts FileView (Shared/HackerOs.AppSdk.FileView) for listing/selection/rename/drag-drop/context-menu —
     this window keeps only the chrome FileView deliberately doesn't own: toolbar, address bar, search box,
-    view-mode toggle, and the OpenWithDialog/FilePropertiesDialog modals (ADR 0037, INT-001/INT-002).
+    view-mode toggle, the "Places" sidebar with the Trash view (TrashView, ADR 0052), and the
+    OpenWithDialog/FilePropertiesDialog modals (ADR 0037, INT-001/INT-002).
     FileView exposes no public Create/Delete methods (only its own internal context-menu wires those), so
     the toolbar's New Folder/New File/Delete/Compress/Extract actions call AppContext.FileSystem directly —
     the same raw gateway calls FileView's own internal handlers make, just from this assembly instead of
-    that one — then refresh FileView. Rename/Properties/Open With instead go through FileView's public
+    that one — then refresh FileView. Deletion is the exception: FileView hands its Delete key, Shift+Delete
+    and menu entries to OnDeleteRequestedAsync, which moves the items to the trash (HackTrash) or, after a
+    confirmation, deletes them permanently (ADR 0052, section 5). Rename/Properties/Open With instead go through FileView's public
     FileViewItem/SelectedItem surface directly, with zero duplicated logic.
 *@
 <div class="file-explorer-container">
@@ -75,6 +79,25 @@
         </div>
     </div>
 
+    <div class="explorer-body">
+    <!-- Places sidebar -->
+    <nav class="explorer-sidebar" aria-label="Places">
+        <div class="sidebar-heading">Places</div>
+        <button class="sidebar-entry @(!_showTrash && _state.CurrentPath == GetHomePath() ? "active" : "")" @onclick="NavigateHomeAsync" title="Home">
+            <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" /> <span>Home</span>
+        </button>
+        <button class="sidebar-entry @(_showTrash ? "active" : "")" @onclick="ShowTrashAsync" title="Trash">
+            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Trash</span>
+        </button>
+    </nav>
+
+    <div class="explorer-main">
+    @if (_showTrash)
+    {
+        <TrashView @ref="_trashView" Restored="OnTrashRestoredAsync" />
+    }
+
+    <div class="explorer-files @(_showTrash ? "hidden" : "")">
     <!-- Actions Toolbar -->
     <div class="actions-toolbar">
         <button class="action-btn" @onclick="CreateFolderAsync" title="New Folder">
@@ -86,7 +109,7 @@
         <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="RenameSelected" title="Rename">
             <HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> <span>Rename</span>
         </button>
-        <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="Delete">
+        <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="Move to Trash (Del)">
             <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Delete</span>
         </button>
         <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="ShowPropertiesAsync" title="Properties">
@@ -132,6 +155,7 @@
                   @bind-Mode="_state.ViewMode"
                   Filter="_searchFilter"
                   ContextMenuProviders="_contextMenuProviders"
+                  DeleteRequested="OnDeleteRequestedAsync"
                   OwnerAppId="Manifest.Id" />
     </div>
 
@@ -142,6 +166,9 @@
         {
             <span> | @SelectedCount selected</span>
         }
+    </div>
+    </div>
+    </div>
     </div>
 
 </div>
@@ -157,6 +184,8 @@
     private Func<FileViewItem, bool> _searchFilter = default!;
     private IReadOnlyList<IFileViewContextMenuProvider> _contextMenuProviders = [];
     private bool _subscribedToFileView;
+    private bool _showTrash;
+    private TrashView? _trashView;
 
     private int SelectedCount => _fileView?.SelectedItems.Count ?? 0;
 
@@ -220,6 +249,7 @@
 
     private void OnFileViewPathChanged(object? sender, FileViewPathChangedEventArgs e)
     {
+        _showTrash = false;
         _state.NavigateTo(e.Path.Value);
         _addressInput = _state.CurrentPath;
         _errorMessage = null;
@@ -236,6 +266,7 @@
 
     private async Task NavigateFileViewAsync(string path)
     {
+        _showTrash = false;
         if (_fileView is null) return;
 
         try
@@ -422,24 +453,78 @@
     /// <summary>Uses FileView's own inline rename (label ↔ textbox swap) — no modal dialog, unlike every other action here.</summary>
     private void RenameSelected() => _fileView?.SelectedItem?.Rename();
 
-    private async Task DeleteSelectedAsync()
+    /// <summary>Toolbar "Delete": moves the selection to the trash, without confirmation (it is reversible).</summary>
+    private Task DeleteSelectedAsync() =>
+        _fileView is null || _fileView.SelectedItems.Count == 0
+            ? Task.CompletedTask
+            : DeleteItemsAsync(_fileView.SelectedItems.ToList(), permanent: false);
+
+    /// <summary>FileView's Delete key, Shift+Delete and context-menu entries (ADR 0052, section 5).</summary>
+    private Task OnDeleteRequestedAsync(FileViewDeleteRequestedEventArgs e) => DeleteItemsAsync(e.Items, e.Permanent);
+
+    /// <summary>
+    /// Moves <paramref name="items"/> to the trash, or — for Shift+Delete / "Delete permanently" and only
+    /// after a confirmation — deletes them for good. Runs as this app (ambient scope of the event handler),
+    /// so the usual file permissions and capabilities apply.
+    /// </summary>
+    private async Task DeleteItemsAsync(IReadOnlyList<FileViewItem> items, bool permanent)
     {
-        if (_fileView is null || _fileView.SelectedItems.Count == 0) return;
+        if (_fileView is null || items.Count == 0) return;
 
-        FileSystemResult<FileSystemEntrySnapshot> parentStat = await AppContext.FileSystem.StatAsync(
-            new FileSystemStatRequest(_fileView.CurrentDirectory), AppContext.CancellationToken);
-        long parentRevision = parentStat.Succeeded && parentStat.Value is not null ? parentStat.Value.Metadata.Revision : 1;
-
-        foreach (FileViewItem item in _fileView.SelectedItems.ToList())
+        if (permanent)
         {
-            await AppContext.FileSystem.DeleteAsync(
-                new FileSystemDeleteRequest(item.FullPath, item.Metadata.Revision, parentRevision, recursive: true),
-                AppContext.CancellationToken);
+            string question = items.Count == 1
+                ? $"Permanently delete '{items[0].FileName}'? This cannot be undone."
+                : $"Permanently delete these {items.Count} items? This cannot be undone.";
+            MessageBoxDialogResult answer = await base.MessageBox("Delete permanently", question, MessageBoxType.YesNo);
+            if (answer.Result != MessageBoxResult.Yes) return;
         }
 
+        List<string> failures = [];
+        foreach (FileViewItem item in items)
+        {
+            try
+            {
+                if (!permanent)
+                {
+                    await HackTrash.MoveToTrashAsync(item.FullPath.Value, AppContext.CancellationToken);
+                }
+                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
+                {
+                    await HackDirectory.DeleteAsync(item.FullPath.Value, recursive: true, AppContext.CancellationToken);
+                }
+                else
+                {
+                    await HackFile.DeleteAsync(item.FullPath.Value, AppContext.CancellationToken);
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                failures.Add($"'{item.FileName}': permission denied");
+            }
+            catch (IOException ex)
+            {
+                failures.Add($"'{item.FileName}': {ex.Message}");
+            }
+        }
+
+        _errorMessage = failures.Count == 0 ? null : "Could not delete " + string.Join("; ", failures);
         _fileView.ClearSelect();
         await _fileView.RefreshAsync();
     }
+
+    private async Task ShowTrashAsync()
+    {
+        _showTrash = true;
+        _errorMessage = null;
+        if (_trashView is not null)
+        {
+            await _trashView.ReloadAsync();
+        }
+    }
+
+    /// <summary>Restored elements may have landed in the folder FileView is showing.</summary>
+    private Task OnTrashRestoredAsync(IReadOnlyList<string> paths) => _fileView?.RefreshAsync() ?? Task.CompletedTask;
 
     private async Task UploadFilesAsync(InputFileChangeEventArgs e)
     {

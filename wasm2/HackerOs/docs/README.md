@@ -24,6 +24,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`process-environment.md`](process-environment.md) | Environnement de processus (phase 3, ADR 0050 et 0053) : arguments, répertoire courant et variables par processus, `/etc/environment`, `/etc/hostname`, `/proc/<pid>/cmdline`, `environ`, `cwd`, `HackEnvironment`. |
 | [`shell-interpreter.md`](shell-interpreter.md) | Interpréteur du shell `hsh` (phase 3, ADR 0050) : grammaire (`\|`, `>`, `>>`, `&&`, `$VAR`, `$?`, `~`), tubes concurrents, redirections, `ShellSession`, sortie au fil de l'eau dans le terminal, `ExecuteCommandIntent` par l'interpréteur. |
 | [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
+| [`trash.md`](trash.md) | Corbeille (phase 3, ADR 0052) : format freedesktop sous `~/.local/share/Trash`, API `HackTrash`, `rm` vers la corbeille et `rm --permanent`, commande `trash`, `FileView.DeleteRequested` et vue Corbeille de l'explorateur. |
 
 ## Décisions d'architecture
 

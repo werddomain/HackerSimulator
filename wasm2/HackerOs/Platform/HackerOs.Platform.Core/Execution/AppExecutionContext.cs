@@ -36,7 +36,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppServiceControlGateway services,
         OneShotElevationGrantSet oneShotElevation,
         string? homeDirectory = null,
-        IAppEnvironmentGateway? environment = null)
+        IAppEnvironmentGateway? environment = null,
+        bool isRootElevated = false)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -62,10 +63,14 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         HomeDirectory = homeDirectory ?? $"/home/{userId}";
         Environment = environment
             ?? new DetachedAppEnvironmentGateway(manifest.Id, HomeDirectory, userId, static () => "hackeros");
+        IsRootElevated = isRootElevated;
     }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }
+
+    /// <inheritdoc />
+    public bool IsRootElevated { get; }
 
     /// <inheritdoc />
     public string HomeDirectory { get; }
