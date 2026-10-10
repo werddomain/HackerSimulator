@@ -23,6 +23,12 @@ public sealed class TerminalSession
         _environment["PATH"] = "/bin:/usr/bin";
     }
 
+    /// <summary>
+    /// Gets or sets the machine name shown in the prompt: the terminal sets it from
+    /// <c>/etc/hostname</c> (ADR 0050, section 6).
+    /// </summary>
+    public string HostName { get; set; } = "hackeros";
+
     /// <summary>Gets the acting session user name.</summary>
     public string Username { get; private set; }
 
@@ -129,7 +135,7 @@ public sealed class TerminalSession
         _environment[name] = value;
     }
 
-    /// <summary>Gets the formatted prompt string (e.g. <c>user@hackeros:/home/user$</c>).</summary>
+    /// <summary>Gets the formatted prompt string (e.g. <c>user@hackeros:~$</c>, host from <see cref="HostName"/>).</summary>
     public string GetPrompt()
     {
         string displayPath = Cwd;
@@ -139,7 +145,7 @@ public sealed class TerminalSession
         }
 
         char promptChar = Username == "root" ? '#' : '$';
-        return $"{Username}@hackeros:{displayPath}{promptChar}";
+        return $"{Username}@{HostName}:{displayPath}{promptChar}";
     }
 
     private static string NormalizePath(string rawPath)

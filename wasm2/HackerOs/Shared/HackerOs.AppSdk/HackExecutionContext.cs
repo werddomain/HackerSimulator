@@ -40,7 +40,11 @@ public static class HackExecutionContext
     /// <summary>Gets the context of the app running the current code, or <see langword="null"/> outside any scope.</summary>
     public static IAppExecutionContext? CurrentOrNull => CurrentFrame.Value?.App;
 
-    /// <summary>Gets the canonical absolute working directory of the code currently running.</summary>
+    /// <summary>
+    /// Gets the canonical absolute working directory of the code currently running: the working
+    /// directory of its process (ADR 0050, section 6), unless the scope was opened with an explicit
+    /// one that no <see cref="HackEnvironment.SetCurrentDirectoryAsync"/> has replaced since.
+    /// </summary>
     /// <exception cref="HackExecutionContextMissingException">No scope is active.</exception>
     public static string WorkingDirectory => RequireFrame().WorkingDirectory;
 
@@ -50,8 +54,9 @@ public static class HackExecutionContext
     /// </summary>
     /// <param name="context">The app context to make ambient.</param>
     /// <param name="workingDirectory">
-    /// Absolute working directory; <see langword="null"/> means the user's home directory
-    /// (<see cref="IAppExecutionContext.HomeDirectory"/>).
+    /// Absolute working directory pinned for this scope; <see langword="null"/> follows the
+    /// process's own working directory (<see cref="IAppExecutionContext.Environment"/>), which is
+    /// the home directory for a process started from the desktop.
     /// </param>
     /// <returns>A scope whose disposal restores the previous ambient context.</returns>
     /// <exception cref="ArgumentException"><paramref name="workingDirectory"/> is not a valid absolute path.</exception>
@@ -59,10 +64,22 @@ public static class HackExecutionContext
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        string directory = Canonicalize(workingDirectory ?? context.HomeDirectory, nameof(workingDirectory));
+        string? directory = workingDirectory is null ? null : Canonicalize(workingDirectory, nameof(workingDirectory));
         HackAmbientFrame? previous = CurrentFrame.Value;
         CurrentFrame.Value = new HackAmbientFrame(context, directory);
         return new Scope(previous);
+    }
+
+    /// <summary>
+    /// Drops the working directory pinned by <see cref="Enter"/> on the current scope, so it follows
+    /// the process's directory again. Called after the process changed directory.
+    /// </summary>
+    internal static void UnpinWorkingDirectory()
+    {
+        if (CurrentFrame.Value is { } frame)
+        {
+            frame.PinnedDirectory = null;
+        }
     }
 
     private static HackAmbientFrame RequireFrame() =>
@@ -80,8 +97,20 @@ public static class HackExecutionContext
         }
     }
 
-    /// <summary>One ambient frame: the running app and its working directory.</summary>
-    private sealed record HackAmbientFrame(IAppExecutionContext App, string WorkingDirectory);
+    /// <summary>
+    /// One ambient frame: the running app and an optional pinned working directory. The frame is
+    /// shared by every flow that inherited it, so unpinning it is seen by all of them, like a
+    /// process-wide <c>chdir</c>.
+    /// </summary>
+    private sealed class HackAmbientFrame(IAppExecutionContext app, string? pinnedDirectory)
+    {
+        public IAppExecutionContext App { get; } = app;
+
+        public string? PinnedDirectory { get; set; } = pinnedDirectory;
+
+        // The process table only ever stores canonical paths, so no re-parse is needed.
+        public string WorkingDirectory => PinnedDirectory ?? App.Environment.CurrentDirectory;
+    }
 
     /// <summary>Restores the previous frame exactly once.</summary>
     private sealed class Scope(HackAmbientFrame? previous) : IDisposable

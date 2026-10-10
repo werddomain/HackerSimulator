@@ -21,9 +21,11 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// <c>IAppProcessGateway.ListProcesses</c>. An invisible PID answers <see cref="FileSystemErrorCode.NotFound"/>.
 /// </para>
 /// <para>
-/// <b>Phase 1 limits.</b> <c>cmdline</c> holds only the app ID, <c>environ</c> is empty and
-/// <c>cwd</c> points at the owner's home directory, until the phase 3 shell gives processes
-/// arguments, an environment and a working directory.
+/// <b>Process state (ADR 0050, section 5).</b> <c>cmdline</c>, <c>environ</c> and <c>cwd</c> come
+/// from the <see cref="IProcessEnvironmentTable"/>: the arguments each followed by NUL, the
+/// <c>NAME=value</c> pairs each followed by NUL, and a link to the real working directory. Without
+/// a table (older wiring, some tests), they fall back to the app ID, an empty file and the owner's
+/// home directory.
 /// </para>
 /// </remarks>
 public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
@@ -43,6 +45,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private readonly IResourceSimulator _resources;
     private readonly VirtualHardwareProfile _hardware;
     private readonly Func<ProcessRecord, string?>? _userNameResolver;
+    private readonly Func<IProcessEnvironmentTable?>? _environments;
 
     /// <summary>Initializes the <c>/proc</c> provider.</summary>
     /// <param name="processManager">
@@ -59,19 +62,25 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// name is used for its own processes and the raw user ID otherwise.
     /// </param>
     /// <param name="transactionIdFactory">Optional deterministic transaction ID source for tests.</param>
+    /// <param name="environments">
+    /// Lazily resolves the per-process environment table behind <c>cmdline</c>, <c>environ</c> and
+    /// <c>cwd</c> (lazy for the same cycle as <paramref name="processManager"/>).
+    /// </param>
     public ProcFileSystemProvider(
         Func<IProcessManager> processManager,
         IResourceSimulator resources,
         VirtualHardwareProfile hardware,
         ISimulationClock clock,
         Func<ProcessRecord, string?>? userNameResolver = null,
-        Func<Guid>? transactionIdFactory = null)
+        Func<Guid>? transactionIdFactory = null,
+        Func<IProcessEnvironmentTable?>? environments = null)
         : base(DefaultMountPath, clock, transactionIdFactory)
     {
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _resources = resources ?? throw new ArgumentNullException(nameof(resources));
         _hardware = hardware ?? throw new ArgumentNullException(nameof(hardware));
         _userNameResolver = userNameResolver;
+        _environments = environments;
     }
 
     /// <inheritdoc />
@@ -193,7 +202,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             "status" or "cmdline" => File(path, owner, owner, PublicFileMode, started),
             "environ" => File(path, owner, owner, PrivateFileMode, started),
-            "cwd" => Link(path, owner, owner, started, $"/home/{HomeName(process, context)}"),
+            "cwd" => Link(path, owner, owner, started,
+                EnvironmentOf(process)?.WorkingDirectory ?? $"/home/{HomeName(process, context)}"),
             _ => null
         };
     }
@@ -249,12 +259,20 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private string RenderProcessFile(ProcessRecord process, string entry) => entry switch
     {
         "status" => RenderStatus(process),
-        // ProcessRecord has no arguments yet (phase 3): the app ID alone, NUL-terminated like Linux.
-        "cmdline" => $"{process.AppId}\0",
-        // Per-process environments arrive with the phase 3 shell (D13).
-        "environ" => string.Empty,
+        // Linux terminates every argument and every NAME=value pair with NUL.
+        "cmdline" => EnvironmentOf(process) is { } state
+            ? string.Concat(state.Arguments.Select(static argument => argument + "\0"))
+            : $"{process.AppId}\0",
+        "environ" => EnvironmentOf(process) is { } environment
+            ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
+            : string.Empty,
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
+
+    private ProcessEnvironmentSnapshot? EnvironmentOf(ProcessRecord process) =>
+        _environments?.Invoke() is { } table && table.TryGet(process.Pid, out ProcessEnvironmentSnapshot snapshot)
+            ? snapshot
+            : null;
 
     private string RenderStatus(ProcessRecord process)
     {

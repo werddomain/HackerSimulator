@@ -27,6 +27,7 @@ public sealed class MinimalAppExecutionContext(
     SessionId? sessionId = null,
     IAppFileSystemWatchGateway? watch = null,
     string? homeDirectory = null,
+    IAppEnvironmentGateway? environment = null,
     bool isRootElevated = false) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
@@ -50,6 +51,8 @@ public sealed class MinimalAppExecutionContext(
     public IAppIntentGateway Intents => intents ?? throw Unsupported(nameof(Intents));
     public IAppFileSystemWatchGateway Watch => watch ?? throw Unsupported(nameof(Watch));
     public string HomeDirectory { get; } = homeDirectory ?? $"/home/{userId}";
+    public IAppEnvironmentGateway Environment { get; } =
+        environment ?? new FakeAppEnvironmentGateway(homeDirectory ?? $"/home/{userId}", userId);
     public bool IsRootElevated { get; } = isRootElevated;
 
     private static NotSupportedException Unsupported(string gatewayName) =>

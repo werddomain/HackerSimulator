@@ -3,6 +3,7 @@ using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -28,7 +29,7 @@ internal sealed class VirtualFileSystemFixture
     {
         Clock = new ManualSimulationClock(BootUtc, TimeSpan.FromMilliseconds(100));
         Root = new MutationCountingProvider(new InMemoryFileSystemRepository());
-        Proc = new ProcFileSystemProvider(() => Processes, Resources, Hardware, Clock);
+        Proc = new ProcFileSystemProvider(() => Processes, Resources, Hardware, Clock, environments: () => Environments);
         Dev = new DevFileSystemProvider(Clock);
         Router = new FileSystemMountRouter(Root,
         [
@@ -43,6 +44,9 @@ internal sealed class VirtualFileSystemFixture
     internal ManualSimulationClock Clock { get; }
 
     internal FakeProcessManager Processes { get; } = new();
+
+    /// <summary>Per-process environment table read by <c>/proc</c>; empty unless a test fills it.</summary>
+    internal InMemoryProcessEnvironmentTable Environments { get; } = new();
 
     internal FakeResourceSimulator Resources { get; } = new();
 

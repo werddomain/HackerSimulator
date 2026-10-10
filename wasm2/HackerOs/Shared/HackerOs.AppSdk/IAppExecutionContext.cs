@@ -128,6 +128,38 @@ public interface IAppExecutionContext
     /// overrides it with the same live instance <see cref="HackerOs.App.Abstractions.AppOperationContext"/> reads.
     /// </summary>
     OneShotElevationGrantSet OneShotElevation => new();
+
+    /// <summary>
+    /// Gets this instance's own process environment: arguments, working directory, environment
+    /// variables, user and machine names (ADR 0050, section 6), read by <c>HackEnvironment</c>.
+    /// Defaults to a detached, read-only view (home directory, <c>HOME</c> only) so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with the live process entry.
+    /// </summary>
+    IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Environment"/> for contexts with no live process environment.</summary>
+file sealed class DetachedAppEnvironmentGateway(IAppExecutionContext context) : IAppEnvironmentGateway
+{
+    public string CurrentDirectory => context.HomeDirectory;
+
+    public string UserName => context.UserId;
+
+    public string MachineName => "hackeros";
+
+    public IReadOnlyList<string> GetCommandLineArgs() => [context.Manifest.Id];
+
+    public string? GetVariable(string name) => name == "HOME" ? context.HomeDirectory : null;
+
+    public IReadOnlyDictionary<string, string> GetVariables() =>
+        new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = context.HomeDirectory };
+
+    public void SetCurrentDirectory(VirtualPath directory) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation has no live process environment.");
+
+    public void SetVariable(string name, string? value) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation has no live process environment.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.PermissionErrors"/> for contexts that don't wire one up.</summary>
