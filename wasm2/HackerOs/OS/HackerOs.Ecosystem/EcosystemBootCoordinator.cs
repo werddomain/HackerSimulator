@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Settings;
@@ -20,12 +21,13 @@ public sealed class EcosystemBootCoordinator
     private readonly IPersistentCapabilityGrantRepository _grants;
     private readonly IPersistentAppCatalogRepository _catalog;
     private readonly AppCatalog _selectedCatalog;
-    private readonly AppEnablementRegistry _enablement;
+    private readonly AppEnablementToFilesMigration _appsMigration;
     private readonly ILocalGroupRepository _groups;
     private readonly ILocalUserRepository _users;
     private readonly LogFileWriter? _logWriter;
     private readonly IFileSystemService? _fileSystem;
     private readonly SimulationClockDriver? _clockDriver;
+    private readonly AppInstallationService? _installation;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="logWriter">
@@ -33,19 +35,25 @@ public sealed class EcosystemBootCoordinator
     /// queued since startup reach <c>/var/log</c> (ADR 0045). Optional for headless tests.
     /// </param>
     /// <param name="fileSystem">Mounted filesystem the log writer is attached to.</param>
+    /// <param name="appsMigration">Installs <c>/etc/hackeros/apps.config</c> and copies the retired enablement flags into it (ADR 0048).</param>
     /// <param name="clockDriver">Driver started at boot so simulated time advances (ADR 0012).</param>
+    /// <param name="installation">
+    /// Installation service started once the machine file exists, so an app uninstalled in
+    /// <c>apps.config</c> is blocked from the first launch attempt. Optional for headless tests.
+    /// </param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
         IPersistentCapabilityGrantRepository grants,
         IPersistentAppCatalogRepository catalog,
         AppCatalog selectedCatalog,
-        AppEnablementRegistry enablement,
+        AppEnablementToFilesMigration appsMigration,
         ILocalGroupRepository groups,
         ILocalUserRepository users,
         LogFileWriter? logWriter = null,
         IFileSystemService? fileSystem = null,
-        SimulationClockDriver? clockDriver = null)
+        SimulationClockDriver? clockDriver = null,
+        AppInstallationService? installation = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -53,12 +61,13 @@ public sealed class EcosystemBootCoordinator
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _selectedCatalog = selectedCatalog ?? throw new ArgumentNullException(nameof(selectedCatalog));
-        _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
+        _appsMigration = appsMigration ?? throw new ArgumentNullException(nameof(appsMigration));
         _groups = groups ?? throw new ArgumentNullException(nameof(groups));
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _logWriter = logWriter;
         _fileSystem = fileSystem;
         _clockDriver = clockDriver;
+        _installation = installation;
     }
 
     /// <summary>
@@ -108,10 +117,14 @@ public sealed class EcosystemBootCoordinator
         IReadOnlyList<PersistedAppCatalogEntry> catalog = await catalogTask.ConfigureAwait(false);
         IReadOnlyList<LocalUser> users = await usersTask.ConfigureAwait(false);
 
-        // Hydrate live enablement enforcement from durable state (ADR 0032) — without this, a
-        // disable from a prior run (or a future sync pull) would only be enforced once someone
-        // happened to toggle the app again, not from the first launch attempt after boot.
-        _enablement.MarkDisabled(catalog.Where(entry => !entry.IsEnabled).Select(entry => entry.Manifest.Id));
+        // Uninstalls are files since ADR 0048: install /etc/hackeros/apps.config (copying the retired
+        // IsEnabled flags once), then enforce it before any login so an uninstalled app is blocked
+        // from the first launch attempt. The user layer is applied at each login.
+        await _appsMigration.MigrateAsync(catalog, cancellationToken).ConfigureAwait(false);
+        if (_installation is not null)
+        {
+            await _installation.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _logWriter?.Write(
             LogFileTarget.Syslog,

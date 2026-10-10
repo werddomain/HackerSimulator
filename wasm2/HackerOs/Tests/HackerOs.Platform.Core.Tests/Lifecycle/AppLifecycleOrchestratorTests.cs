@@ -234,33 +234,7 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
-    public async Task DisableAsync_persists_through_the_catalog_repository_when_supplied()
-    {
-        FakeAppCatalogRepository catalogRepository = new();
-        Fixture fixture = new(catalogRepository, EchoManifest());
-        await fixture.LoginAsync();
-
-        await fixture.Orchestrator.DisableAsync("org.hackeros.echo");
-
-        Assert.Equal(("org.hackeros.echo", false), Assert.Single(catalogRepository.Calls));
-    }
-
-    [Fact]
-    public async Task EnableAsync_persists_through_the_catalog_repository_when_supplied()
-    {
-        FakeAppCatalogRepository catalogRepository = new();
-        Fixture fixture = new(catalogRepository, EchoManifest());
-        await fixture.LoginAsync();
-        await fixture.Orchestrator.DisableAsync("org.hackeros.echo");
-        catalogRepository.Calls.Clear();
-
-        await fixture.Orchestrator.EnableAsync("org.hackeros.echo");
-
-        Assert.Equal(("org.hackeros.echo", true), Assert.Single(catalogRepository.Calls));
-    }
-
-    [Fact]
-    public async Task DisableAsync_and_EnableAsync_work_unchanged_when_no_catalog_repository_is_supplied()
+    public async Task DisableAsync_and_EnableAsync_round_trip_in_memory_only()
     {
         Fixture fixture = new(EchoManifest());
         await fixture.LoginAsync();
@@ -667,27 +641,21 @@ public sealed class AppLifecycleOrchestratorTests
         private readonly LocalLoginName _aliceLoginName;
 
         internal Fixture(params AppManifest[] manifests)
-            : this(catalogRepository: null, services: null, elevationTickets: null, manifests)
-        {
-        }
-
-        internal Fixture(IPersistentAppCatalogRepository? catalogRepository, params AppManifest[] manifests)
-            : this(catalogRepository, services: null, elevationTickets: null, manifests)
+            : this(services: null, elevationTickets: null, manifests)
         {
         }
 
         internal Fixture(IServiceProvider services, params AppManifest[] manifests)
-            : this(catalogRepository: null, services, elevationTickets: null, manifests)
+            : this(services, elevationTickets: null, manifests)
         {
         }
 
         internal Fixture(IElevationTicketStore elevationTickets, params AppManifest[] manifests)
-            : this(catalogRepository: null, services: null, elevationTickets, manifests)
+            : this(services: null, elevationTickets, manifests)
         {
         }
 
         internal Fixture(
-            IPersistentAppCatalogRepository? catalogRepository,
             IServiceProvider? services,
             IElevationTicketStore? elevationTickets,
             params AppManifest[] manifests)
@@ -753,8 +721,8 @@ public sealed class AppLifecycleOrchestratorTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus,
-                descriptorLoader: null, catalogRepository, services, fileSystem, elevationTickets);
+                catalog, descriptors, enablement, Manager, Grants, contextFactory, EventBus,
+                descriptorLoader: null, services, fileSystem, elevationTickets);
             FileSystemService = fileSystem;
         }
 
@@ -772,23 +740,5 @@ public sealed class AppLifecycleOrchestratorTests
         {
             public override DateTimeOffset GetUtcNow() => now;
         }
-    }
-
-    private sealed class FakeAppCatalogRepository : IPersistentAppCatalogRepository
-    {
-        public List<(string AppId, bool Enabled)> Calls { get; } = [];
-
-        public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReconcileAsync(
-            IEnumerable<AppManifest> selectedManifests, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public ValueTask<bool> SetEnabledAsync(string appId, bool enabled, CancellationToken cancellationToken = default)
-        {
-            Calls.Add((appId, enabled));
-            return ValueTask.FromResult(true);
-        }
-
-        public ValueTask<IReadOnlyList<PersistedAppCatalogEntry>> ReadAllAsync(CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("Not exercised by these tests.");
     }
 }

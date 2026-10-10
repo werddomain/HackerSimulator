@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Lifecycle;
 using Xunit;
 
 namespace HackerOs.AppSdk.Terminal.Tests;
@@ -35,6 +36,22 @@ public sealed class TerminalCommandResolverTests
 
         Assert.Single(commands);
         Assert.Equal("cmd", commands[0].Terminal!.Name);
+    }
+
+    [Fact]
+    public void Uninstalled_commands_are_neither_resolved_nor_listed()
+    {
+        // ADR 0048: an uninstalled command answers "command not found", like a removed binary.
+        AppCatalog catalog = BuildCatalog(
+            Manifest("org.example.cmd", "cmd", "a real command", "cmd"),
+            Manifest("org.example.gone", "gone", "an uninstalled command", "gone"));
+        AppEnablementRegistry enablement = new(catalog);
+        enablement.MarkDisabled(["org.example.gone"]);
+        TerminalCommandResolver resolver = new(catalog, enablement);
+
+        Assert.Null(resolver.Resolve("gone", []));
+        Assert.NotNull(resolver.Resolve("cmd", []));
+        Assert.Equal(["cmd"], resolver.GetTerminalCommands().Select(m => m.Terminal!.Name));
     }
 
     private static AppCatalog BuildCatalog(params AppManifest[] manifests)

@@ -206,7 +206,7 @@ public sealed class AppIntentGatewayTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings);
+                catalog, descriptors, enablement, Manager, Grants, contextFactory);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
             _dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }

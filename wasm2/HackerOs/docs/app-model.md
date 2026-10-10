@@ -328,9 +328,9 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 |---|---|
 | Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 24 commandes | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
 
-Les effets du statut (refus de la désinstallation, capacités dangereuses
-accordées d'office) arrivent avec `rebuild/2-app-uninstall` (ADR 0048 §2-6) et
-l'ADR 0049 ; ce chantier ne fait qu'exposer l'information.
+Effets du statut : une app système n'est pas désinstallable (voir
+[`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités
+dangereuses accordées d'office arrivent avec l'ADR 0049.
 
 ### Tests
 
@@ -352,4 +352,5 @@ l'ADR 0049 ; ce chantier ne fait qu'exposer l'information.
 - [x] `rebuild/2-manifest-generator` : `Tools/HackerOs.Tools.ManifestGenerator` (`generate`, `validate`), `build/HackerOs.Apps.targets`, cibles `GenerateHackerOsAppManifests` et `GetHackerOsAppManifests`, erreurs `HOSAPP*`, projets de test, Calculator migrée en exemple.
 - [x] `rebuild/2-builtin-applications` : cible `CollectHackerOsBuiltInApplications`, `BuiltInApplications.json` embarqué, lazy load automatique, `BuildKnownLazyApps` lit le nouveau fichier, `IsSystemApp` transporté.
 - [x] `rebuild/2-system-apps` (ADR 0048) : `AppCatalog.SystemAppIds` et `IsSystemApp`, `AppCatalog.Build(manifests, systemAppIds)` et `BuildFromBuiltInApplications`, `IsSystemApp="true"` posé sur les `ProjectReference` de l'Ecosystem, pont de transition `_HackerOsMarkLegacySystemManifests`, tests.
+- [x] `rebuild/2-app-uninstall` (ADR 0048 §2-6) : désinstallation par `apps.config`, voir [`app-installation.md`](app-installation.md).
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

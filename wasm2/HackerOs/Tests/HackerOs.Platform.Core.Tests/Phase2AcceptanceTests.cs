@@ -291,7 +291,7 @@ public sealed class Phase2AcceptanceTests
             Assert.True(discovery.IsSuccess, string.Join(", ", discovery.Errors.Select(e => e.Message)));
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, discovery.Descriptors!, enablement, ProcessManager, Grants, contextFactory, SettingsService);
+                catalog, discovery.Descriptors!, enablement, ProcessManager, Grants, contextFactory);
 
             FileAssociationResolver fileAssociations = new(catalog, enablement, SettingsService);
             Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, fileAssociations, Grants, FileSystemService);

@@ -1,0 +1,134 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.Platform.Core.Apps
+
+<div class="setting-group">
+    <h4>Installed Applications</h4>
+    <p class="setting-desc">
+        Uninstalling an app hides it everywhere, blocks every way to start it and stops its running
+        windows. Nothing is deleted: its settings and your files stay in place for a reinstall.
+        The list lives in <code>~/.config/hackeros/apps.config</code> (for you) and
+        <code>/etc/hackeros/apps.config</code> (for every user, administrators only).
+    </p>
+
+    <div class="apps-list" role="list">
+        @foreach (AppManifest app in Applications)
+        {
+            @Row(app)
+        }
+    </div>
+
+    @if (Commands.Count > 0)
+    {
+        <details class="commands-group">
+            <summary>Terminal commands (@Commands.Count) — part of the system, always installed</summary>
+            <div class="apps-list" role="list">
+                @foreach (AppManifest command in Commands)
+                {
+                    @Row(command)
+                }
+            </div>
+        </details>
+    }
+
+    @if (_pending is null && !string.IsNullOrEmpty(_message))
+    {
+        <p class="apps-message" role="alert">@_message</p>
+    }
+</div>
+
+@if (_pending is not null)
+{
+    <div class="apps-backdrop" @onclick="CancelUninstall">
+        <div class="apps-dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="uninstall-title"
+             @onclick:stopPropagation>
+            <header class="apps-dialog-header">
+                <span class="apps-dialog-mark" aria-hidden="true">⏏</span>
+                <h2 id="uninstall-title">Uninstall @_pending.Name?</h2>
+            </header>
+
+            <div class="apps-dialog-body">
+                @if (_pendingClosure.Count > 1)
+                {
+                    <p>These apps need it and will be uninstalled too:</p>
+                    <ul class="closure-list">
+                        @foreach (string dependentId in _pendingClosure.Where(id => id != _pending.Id))
+                        {
+                            <li>@NameOf(dependentId)</li>
+                        }
+                    </ul>
+                }
+
+                <p>Running windows are closed. Settings and files are kept.</p>
+
+                @if (IsAdministrator)
+                {
+                    <div class="scope-options" role="radiogroup" aria-label="Uninstall for">
+                        <button type="button" role="radio"
+                                aria-checked="@(_scope == AppInstallationScope.User ? "true" : "false")"
+                                class="@ScopeClass(AppInstallationScope.User)"
+                                @onclick="() => _scope = AppInstallationScope.User">
+                            Only for me
+                        </button>
+                        <button type="button" role="radio"
+                                aria-checked="@(_scope == AppInstallationScope.Machine ? "true" : "false")"
+                                class="@ScopeClass(AppInstallationScope.Machine)"
+                                @onclick="() => _scope = AppInstallationScope.Machine">
+                            For all users
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <p>This uninstalls it for you only.</p>
+                }
+
+                @if (!string.IsNullOrEmpty(_message))
+                {
+                    <p class="apps-message" role="alert">@_message</p>
+                }
+            </div>
+
+            <footer class="apps-dialog-footer">
+                <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="CancelUninstall">Cancel</button>
+                <button type="button" class="apps-btn apps-btn-danger" disabled="@_isBusy" @onclick="ConfirmUninstallAsync">
+                    @(_isBusy ? "Uninstalling..." : "Uninstall")
+                </button>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>One app line: identity, badge, and the one action its state allows.</summary>
+    private RenderFragment Row(AppManifest app) => __builder =>
+    {
+        AppInstallationState state = StateOf(app.Id);
+        <div class="app-row @RowClass(state)" role="listitem">
+            <div class="app-identity">
+                <span class="app-name">@app.Name</span>
+                <span class="app-meta">@app.PublisherId · v@(app.Version)</span>
+            </div>
+            <div class="app-actions">
+                @switch (state)
+                {
+                    case AppInstallationState.System:
+                        <span class="app-badge app-badge-system" title="System apps cannot be uninstalled">System</span>
+                        break;
+                    case AppInstallationState.Installed:
+                        <button type="button" class="apps-btn apps-btn-danger" disabled="@_isBusy" @onclick="() => AskUninstall(app)">Uninstall</button>
+                        break;
+                    case AppInstallationState.UninstalledForMachine when !IsAdministrator:
+                        <span class="app-badge app-badge-locked">Uninstalled by the administrator</span>
+                        break;
+                    default:
+                        <span class="app-badge">@(state == AppInstallationState.UninstalledForMachine ? "Uninstalled for all users" : "Uninstalled")</span>
+                        <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="() => ReinstallAsync(app, state)">Reinstall</button>
+                        break;
+                }
+            </div>
+        </div>
+    };
+}

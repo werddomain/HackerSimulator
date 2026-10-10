@@ -572,7 +572,7 @@ public sealed class AppIntentDispatcherTests
             }
 
             AppEnablementRegistry enablement = new(catalog);
-            Orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings);
+            Orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, Grants, contextFactory);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
             Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }

@@ -13,6 +13,7 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject AppCatalog Catalog
+@inject HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry Enablement
 @inject AppIntentDispatcher IntentDispatcher
 @inject ISessionService SessionService
 @inject IJSRuntime JavaScript
@@ -129,7 +130,7 @@
     protected override void OnInitialized()
     {
         _session = new TerminalSession(InitialUsername, InitialCwd ?? "/home/user");
-        _resolver = new TerminalCommandResolver(Catalog);
+        _resolver = new TerminalCommandResolver(Catalog, Enablement);
         if (SessionService.CurrentPrincipal is { } principal)
         {
             _session.InitializeUser(principal.LoginName.Value, principal.HomePath);
@@ -670,8 +671,9 @@
 
     private IEnumerable<string> GetCatalogCommands()
     {
-        return Catalog.Manifests.Values
-            .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
+        // Uninstalled commands (ADR 0048) are neither listed by help nor offered by completion.
+        return (_resolver ?? new TerminalCommandResolver(Catalog, Enablement))
+            .GetTerminalCommands()
             .Select(m => m.Terminal!.Name);
     }
 
