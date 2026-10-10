@@ -81,7 +81,7 @@ public static class FileExplorerWindow
 ```
 
 This ADR documents the convention; adopting it in the real `HackerOs.Apps.FileExplorer` is deferred to
-Phase 4 of [`integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md), once it
+Phase 4 of [`integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md), once it
 hosts `FileView`.
 
 ### 2. `SharedChannelPolicy` becomes an explicit, optional, per-direction tri-state
@@ -177,7 +177,7 @@ exists only at `Grant()`/manifest-validation time). A `SharedChannelPolicy` buil
 
 - ADR 0038: Emitter-Authorized Topic Messaging — the base model this ADR extends.
 - ADR 0003: Exact Capability Matching — the fixed-catalog invariant this ADR deliberately does not alter.
-- [`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../Global-FileView-And-MessagingSystem/MessagingSystem.md) —
+- [`../Global-FileView-And-MessagingSystem/MessagingSystem.md`](../old/Global-FileView-And-MessagingSystem/MessagingSystem.md) —
   updated with the tri-state `SharedChannelPolicy` and Declared Topic Permissions sections.
 - `Shared/HackerOs.App.Abstractions/TopicPermissions.cs`,
   `Shared/HackerOs.Simulation.Abstractions/Events/TopicMessagingContracts.cs` (`TopicPermissionNames`),

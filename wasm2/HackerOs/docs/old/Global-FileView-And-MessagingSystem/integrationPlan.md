@@ -18,16 +18,16 @@ skeleton described in its own "Skeleton delivered now" note.
 
 - [x] `ADR-FV-1` Record acceptance of `FileView` as the canonical file-listing control and the resulting
   deprecation path for `FileExplorerWindow`'s inline Details/Grid rendering.
-  — [ADR 0037](../adr/0037-reusable-file-view-control.md), accepted 2026-08-17.
+  — [ADR 0037](../../adr/0037-reusable-file-view-control.md), accepted 2026-08-17.
 - [x] `ADR-MSG-1` Record acceptance of the emitter-authorized topic messaging model and the breaking
   removal of unrestricted `IAppEventGateway.Publish<TEvent>` for platform event types (see
   [`MessagingSystem.md`](MessagingSystem.md#breaking-change-notice)). Enumerates every existing
   `.Publish(` call site in the solution and states, per site, whether it stays on the kernel-only lane or
-  moves to an app-owned topic. — [ADR 0038](../adr/0038-emitter-authorized-topic-messaging.md), accepted
+  moves to an app-owned topic. — [ADR 0038](../../adr/0038-emitter-authorized-topic-messaging.md), accepted
   2026-08-17.
 - [x] `ADR-INT-1` Record acceptance of the `inode/directory` media-type convention for directory file
   associations (see Phase 5 below).
-  — [ADR 0039](../adr/0039-directory-open-file-association.md), accepted 2026-08-17.
+  — [ADR 0039](../../adr/0039-directory-open-file-association.md), accepted 2026-08-17.
 
 **Validation:** Each ADR is accepted and linked from [`../README.md`](../README.md) before its dependent
 phase begins, per this repo's `AGENTS.md` documentation-maintenance rule. All three are linked there now;
@@ -80,7 +80,7 @@ including a DI-graph assertion that `ITopicMessageBus` resolves), and `HackerOs.
 `AppManifestValidator.cs`, `Policy/CapabilityGrant.cs`, `Schema/manifest.schema.v1.json`);
 `Shared/HackerOs.Simulation.Abstractions/Events/TopicMessagingContracts.cs` (`TopicPermissionNames`
 extension methods); tests in `Tests/HackerOs.App.Abstractions.Tests/`.
-**Prerequisites:** Phase 1 (`MSG-001`–`MSG-005`); [ADR 0040](../adr/0040-declared-topic-permissions.md).
+**Prerequisites:** Phase 1 (`MSG-001`–`MSG-005`); [ADR 0040](../../adr/0040-declared-topic-permissions.md).
 **Explicit exclusions:** No approval/permissions UI (future work, not started); `HackerOs.Apps.FileExplorer`
 does not yet declare or use any topic permission (deferred to Phase 4, alongside the `Topics`/`Messages`
 convention — see [`MessagingSystem.md`](MessagingSystem.md#process-targeted-topics-and-inter-app-messaging)).

@@ -7,7 +7,7 @@ It illustrates how a background task derives `ServiceAppBase`, runs during an ac
 to session cancellation signals, publishes typed events on its own topic via `IAppEventGateway`'s topic-bus
 members, and cleans up without leaving volatile state across session restarts. It is also the first real
 example of the app-owned topic messaging lane described in
-[`docs/adr/0038-emitter-authorized-topic-messaging.md`](../adr/0038-emitter-authorized-topic-messaging.md).
+[`docs/adr/0038-emitter-authorized-topic-messaging.md`](../../adr/0038-emitter-authorized-topic-messaging.md).
 
 ## Architecture
 

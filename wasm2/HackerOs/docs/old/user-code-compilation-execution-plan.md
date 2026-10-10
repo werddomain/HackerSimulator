@@ -16,7 +16,7 @@ chantier est un jour priorisé.
 
 ## 2. Contexte et documents liés
 
-- [ADR 0020](adr/0020-editor-framework-and-script-sandbox.md) sépare
+- [ADR 0020](../adr/0020-editor-framework-and-script-sandbox.md) sépare
   strictement l'édition de code (`vfs.read`/`vfs.write`, aucune exécution) de
   l'exécution d'un script/programme utilisateur, contrôlée par la capacité
   `user-scripts.execute` et destinée à tourner dans un sandbox isolé. Ce plan
@@ -26,7 +26,7 @@ chantier est un jour priorisé.
 - [`code-editor.md`](code-editor.md) documente l'éditeur actuel, qui n'a et ne
   doit garder aucune capacité de compilation ou d'exécution tant que ce plan
   (ou une ADR qui en découle) n'est pas accepté.
-- [ADR 0023](adr/0023-optional-game-domain-and-proxy-fallback.md) établit déjà
+- [ADR 0023](../adr/0023-optional-game-domain-and-proxy-fallback.md) établit déjà
   le pattern architectural repris ici : une interface partagée dans un projet
   `*.Abstractions`, avec plusieurs implémentations (locale, proxy serveur,
   fallback) sélectionnées par DI/capability manifest — voir `IGameDomainGateway`.
@@ -107,8 +107,8 @@ Sur le modèle de `IGameDomainGateway` (ADR 0023) :
 
 ## 7. Documents de référence
 
-- [ADR 0020 — Code editor framework and script sandbox policy](adr/0020-editor-framework-and-script-sandbox.md)
-- [ADR 0023 — Optional Game Domain integration and network proxy fallback](adr/0023-optional-game-domain-and-proxy-fallback.md)
+- [ADR 0020 — Code editor framework and script sandbox policy](../adr/0020-editor-framework-and-script-sandbox.md)
+- [ADR 0023 — Optional Game Domain integration and network proxy fallback](../adr/0023-optional-game-domain-and-proxy-fallback.md)
 - [`code-editor.md`](code-editor.md)
 - [`server-implementation-pass.md`](server-implementation-pass.md)
 - [`progress-and-plan-2026-08-17.md`](progress-and-plan-2026-08-17.md)

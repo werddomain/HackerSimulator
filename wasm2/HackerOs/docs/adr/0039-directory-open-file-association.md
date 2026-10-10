@@ -48,7 +48,7 @@ internally and never dispatches an intent for one.
 
 This ADR accepts the convention and the resolver behavior it relies on; it does **not** accept the
 manifest/seed changes themselves as already done — those are tracked as `INT-006` through `INT-010` in
-[`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md).
+[`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md).
 
 ## Consequences
 
@@ -62,17 +62,17 @@ manifest/seed changes themselves as already done — those are tracked as `INT-0
 - `Platform/HackerOs.Platform.Core/Intents/FileAssociationResolver.cs` gains its first regression test
   exercising directory resolution (`INT-007`) — a codepath that has existed since `P1-APP-009` but was
   never exercised for a directory target.
-- [`../app-intents-and-associations.md`](../app-intents-and-associations.md) must document the
+- [`../app-intents-and-associations.md`](../old/app-intents-and-associations.md) must document the
   `inode/directory` convention in the same change that implements it (`INT-010`), per this repo's
   documentation-maintenance rule.
 
 ## References
 
-- [`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../Global-FileView-And-MessagingSystem/FileViewControl.md#folder-double-click-behavior) —
+- [`../Global-FileView-And-MessagingSystem/FileViewControl.md`](../old/Global-FileView-And-MessagingSystem/FileViewControl.md#folder-double-click-behavior) —
   the `NewWindow` activation mode this convention serves.
-- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../Global-FileView-And-MessagingSystem/integrationPlan.md) —
+- [`../Global-FileView-And-MessagingSystem/integrationPlan.md`](../old/Global-FileView-And-MessagingSystem/integrationPlan.md) —
   Phase 5 (`INT-006`–`INT-010`).
-- [`../app-intents-and-associations.md`](../app-intents-and-associations.md) — the existing intent
+- [`../app-intents-and-associations.md`](../old/app-intents-and-associations.md) — the existing intent
   dispatch/association pipeline this convention reuses unchanged.
 - `Shared/HackerOs.App.Abstractions/AppManifest.cs` (`FileHandlerManifest`) and
   `Platform/HackerOs.Platform.Core/Intents/FileAssociationResolver.cs` — the existing contracts/logic this

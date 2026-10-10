@@ -30,18 +30,18 @@ itération.
 
 ## 2. Contexte et documents liés
 
-- [ADR 0021](adr/0021-simulated-network-and-browser-rendering.md) — a
+- [ADR 0021](../adr/0021-simulated-network-and-browser-rendering.md) — a
   délibérément rejeté le rendu HTML brut/iframe pour les **sites simulés**
   (`ISimulatedWebsiteController`/`SimulatedPage`), pour des raisons de
   testabilité et de sécurité XSS. Ce plan **ne remet pas en cause cette
   décision** : les projets Web réels sont un mécanisme séparé et parallèle
   (§4, §6), pas une extension du modèle `SimulatedPage`.
-- [ADR 0023](adr/0023-optional-game-domain-and-proxy-fallback.md) — établit le
+- [ADR 0023](../adr/0023-optional-game-domain-and-proxy-fallback.md) — établit le
   pattern de gateway à double implémentation (locale / proxy serveur /
   fallback) via DI + capacité manifeste, repris ici pour la résolution
   WebAssembly-vs-Server et pour la résolution DNS unifiée (§7).
-- [ADR 0027](adr/0027-server-hosted-blazor-ui.md) et
-  [ADR 0028](adr/0028-client-side-server-connection.md) — `Server/HackerOs.Server`
+- [ADR 0027](../adr/0027-server-hosted-blazor-ui.md) et
+  [ADR 0028](../adr/0028-client-side-server-connection.md) — `Server/HackerOs.Server`
   héberge déjà l'arbre de composants Razor et un `IProxyClient` pour les
   commandes réseau réelles ; le mode Server de ce plan réutilise ces deux
   mécanismes plutôt que d'en inventer un troisième.
@@ -54,7 +54,7 @@ itération.
   (`BlazorWebAssemblyLazyLoad`, `WebAssemblyLazyAssemblyTransport`,
   `BuildKnownLazyAppDescriptorRegistry`) réutilisé tel quel pour le mode
   WebAssembly (§5).
-- [ADR 0020](adr/0020-editor-framework-and-script-sandbox.md) et
+- [ADR 0020](../adr/0020-editor-framework-and-script-sandbox.md) et
   [`code-editor.md`](code-editor.md) — bornent strictement l'éditeur à
   `vfs.read`/`vfs.write` ; toute exécution reste derrière
   `user-scripts.execute`. Le scaffolding de fichiers (§8, phase 1) respecte
@@ -359,11 +359,11 @@ dans cet ordre (chaque étape peut être une ADR séparée) :
 
 ## 11. Documents de référence
 
-- [ADR 0020](adr/0020-editor-framework-and-script-sandbox.md)
-- [ADR 0021](adr/0021-simulated-network-and-browser-rendering.md)
-- [ADR 0023](adr/0023-optional-game-domain-and-proxy-fallback.md)
-- [ADR 0027](adr/0027-server-hosted-blazor-ui.md)
-- [ADR 0028](adr/0028-client-side-server-connection.md)
+- [ADR 0020](../adr/0020-editor-framework-and-script-sandbox.md)
+- [ADR 0021](../adr/0021-simulated-network-and-browser-rendering.md)
+- [ADR 0023](../adr/0023-optional-game-domain-and-proxy-fallback.md)
+- [ADR 0027](../adr/0027-server-hosted-blazor-ui.md)
+- [ADR 0028](../adr/0028-client-side-server-connection.md)
 - [`user-code-compilation-execution-plan.md`](user-code-compilation-execution-plan.md)
 - [`lazy-loading.md`](lazy-loading.md)
 - [`hosting-model.md`](hosting-model.md)

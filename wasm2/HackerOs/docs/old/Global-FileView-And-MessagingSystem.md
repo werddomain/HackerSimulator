@@ -103,16 +103,16 @@ Per this repo's `AGENTS.md`, an accepted architecture decision needs a numbered 
 `wasm2/HackerOs/docs/adr/`. All three this design required are now accepted and linked from
 [`../README.md`](README.md); `integrationPlan.md`'s Phase 0 is complete and Phase 1 onward may begin:
 
-- [ADR 0037](adr/0037-reusable-file-view-control.md) — `FileView` as the canonical file-listing control,
+- [ADR 0037](../adr/0037-reusable-file-view-control.md) — `FileView` as the canonical file-listing control,
   and the resulting deprecation of `FileExplorerWindow`'s inline Details/Grid rendering in favor of
   hosting `FileView`.
-- [ADR 0038](adr/0038-emitter-authorized-topic-messaging.md) — emitter-authorized topic messaging
+- [ADR 0038](../adr/0038-emitter-authorized-topic-messaging.md) — emitter-authorized topic messaging
   superseding unrestricted `IAppEventGateway.Publish<TEvent>`, a breaking contract change to the Phase 1
   baseline (`P1-SYS-008`), with a concrete migration table for every existing publish call site. See
   [`MessagingSystem.md`](Global-FileView-And-MessagingSystem/MessagingSystem.md#breaking-change-notice).
-- [ADR 0039](adr/0039-directory-open-file-association.md) — the `inode/directory` media-type convention so
+- [ADR 0039](../adr/0039-directory-open-file-association.md) — the `inode/directory` media-type convention so
   "open a folder in a new window" goes through the existing `IAppIntentGateway.OpenFileAsync`/
   `FileAssociationResolver` machinery instead of a bespoke path.
-- [ADR 0040](adr/0040-declared-topic-permissions.md) — declared topic permissions (an app-declared,
+- [ADR 0040](../adr/0040-declared-topic-permissions.md) — declared topic permissions (an app-declared,
   optional permission gating its own shared channel, reusing the existing capability-grant flow) and the
   tri-state `SharedChannelPolicy` access model this depends on.

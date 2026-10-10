@@ -33,18 +33,19 @@ directory. Blazor components will use collocated `.razor`, `.razor.css`, and
 
 ## Documentation
 
-[`docs/README.md`](docs/README.md) is the full documentation index, organized
-by audience (start here, building an app, platform core, built-in apps,
-optional server, ADRs, migration history). The list below is a short curated
-subset:
+[`docs/README.md`](docs/README.md) is the documentation index. Start with
+[`docs/ecosystem-rebuild-plan.md`](docs/ecosystem-rebuild-plan.md), the
+validated plan (2026-10-10, in French) that now sets the ecosystem's direction.
+Documents written before that plan are archived in `docs/old/` and indexed by
+[`docs/old/README.md`](docs/old/README.md); they remain useful technical
+background:
 
-- `docs/integration-task-list.md`: exhaustive remaining integration plan and
-    execution source of truth.
-- `docs/implementation-status.md`: migration progress and next gate.
-- `docs/app-contracts.md`: implemented manifest and lifecycle contracts.
-- `docs/settings-system.md`: canonical settings and filesystem projection.
-- `docs/app-catalog.md`: deterministic manifest and dependency catalog.
-- `docs/blazor-app-sdk.md`: window lifecycle, dialogs, and scoped assets.
-- `docs/hosting-model.md`: the three host projects (Ecosystem, test debug
+- `docs/old/implementation-status.md`: migration progress before the rebuild plan.
+- `docs/old/integration-task-list.md`: the original integration plan.
+- `docs/old/app-contracts.md`: current manifest and lifecycle contracts.
+- `docs/old/settings-system.md`: current settings and filesystem projection.
+- `docs/old/app-catalog.md`: deterministic manifest and dependency catalog.
+- `docs/old/blazor-app-sdk.md`: window lifecycle, dialogs, and scoped assets.
+- `docs/old/hosting-model.md`: the three host projects (Ecosystem, test debug
     harness, optional Server) and the future Server-as-host direction.
 - `docs/adr/`: accepted architecture decisions.
