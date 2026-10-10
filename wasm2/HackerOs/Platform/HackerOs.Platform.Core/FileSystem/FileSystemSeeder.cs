@@ -28,6 +28,7 @@ public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider
         await EnsureDirectoryAsync("/tmp", 0x01FF, system, cancellationToken);
         await EnsureDirectoryAsync("/var", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/var/log", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/var/log/apps", 0x01ED, system, cancellationToken);
 
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);

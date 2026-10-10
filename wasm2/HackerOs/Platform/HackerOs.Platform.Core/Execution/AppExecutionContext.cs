@@ -29,7 +29,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppEventGateway events,
         IAppNotificationGateway notifications,
         IAppLoggingGateway logging,
-        IAppDiagnosticsGateway diagnostics,
         IAppClockGateway clock,
         IAppProcessGateway processes,
         IAppIntentGateway intents,
@@ -53,7 +52,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
         Logging = logging ?? throw new ArgumentNullException(nameof(logging));
-        Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Processes = processes ?? throw new ArgumentNullException(nameof(processes));
         Intents = intents ?? throw new ArgumentNullException(nameof(intents));
@@ -105,8 +103,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// <inheritdoc />
     public IAppLoggingGateway Logging { get; }
 
-    /// <inheritdoc />
-    public IAppDiagnosticsGateway Diagnostics { get; }
 
     /// <inheritdoc />
     public IAppClockGateway Clock { get; }

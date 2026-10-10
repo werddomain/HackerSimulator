@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Logging;
 using HackerOs.Ecosystem;
 using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
@@ -28,28 +27,13 @@ builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
 builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
     BuildKnownLazyApps.Catalog,
     provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
-int serviceCountBeforeEcosystem = builder.Services.Count;
 builder.Services.AddHackerOsEcosystem(
     BuildKnownLazyApps.Catalog,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
 
-// AddHackerOsEcosystem registers HackerOsDiagnosticLoggerProvider as ILoggerProvider, which
-// construct-injects the Scoped IPersistentDiagnosticRepository (Scoped because it construct-
-// injects IJSRuntime — see EcosystemServiceCollectionExtensions.cs's scoping note). That
-// shape is functionally harmless in WASM (IJSRuntime is available immediately, no circuit
-// concept, so nothing is actually broken at runtime), but WebAssemblyHostBuilder.Build()
-// validates it strictly anyway and throws "Cannot resolve scoped service ... from root
-// provider". Removing only the descriptor AddHackerOsEcosystem just added (mirrors
-// Server/HackerOs.Server/Program.cs's identical fix for the same captive dependency) keeps
-// the diagnostic sink itself intact; only its ILoggerFactory bridge is skipped for this host.
-for (int i = builder.Services.Count - 1; i >= serviceCountBeforeEcosystem; i--)
-{
-    if (builder.Services[i].ServiceType == typeof(ILoggerProvider))
-    {
-        builder.Services.RemoveAt(i);
-    }
-}
+// AddHackerOsEcosystem's ILoggerProvider (HackerOsDiagnosticLoggerProvider) depends only on
+// singletons since ADR 0045, so this host keeps it: ILogger<T> entries land in /var/log/syslog.
 
 await builder.Build().RunAsync();
 

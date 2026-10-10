@@ -19,8 +19,8 @@
     "iconAssetPaths": []
   },
   "capabilities": [
-    "diagnostics.read",
-    "diagnostics.clear"
+    "filesystem.system.read",
+    "filesystem.system.write"
   ],
   "resources": {
     "baselineCpuWeight": 0.02,
