@@ -60,9 +60,6 @@ public interface IAppExecutionContext
     /// <summary>Gets this instance's authorized, capability-checked filesystem gateway.</summary>
     IAppFileSystemGateway FileSystem { get; }
 
-    /// <summary>Gets this instance's authorized canonical settings gateway.</summary>
-    IAppSettingsGateway Settings { get; }
-
     /// <summary>Gets this instance's typed event bus gateway.</summary>
     IAppEventGateway Events { get; }
 

@@ -23,6 +23,8 @@
     "settings.write",
     "settings.system.read",
     "settings.system.write",
+    "filesystem.system.read",
+    "filesystem.system.write",
     "file-associations.read",
     "file-associations.write",
     "process.list"

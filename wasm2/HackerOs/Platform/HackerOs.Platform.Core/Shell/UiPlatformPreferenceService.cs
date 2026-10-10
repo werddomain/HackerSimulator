@@ -93,15 +93,17 @@ public sealed class UiPlatformPreferenceService : IDisposable
         OsSettingsDocument document = UiPlatformPreferenceSettingsDocuments.Document;
         try
         {
-            await _settings.SetAsync(
+            // Both keys in one edit, so a reader never sees "explicit" with the previous platform.
+            await _settings.SetManyAsync(
                 document,
-                UiPlatformPreferenceSettingsDocuments.SelectionSourceKey,
-                selectionSource == UiPlatformSelectionSource.Explicit ? "explicit" : "auto",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            await _settings.SetAsync(
-                document,
-                UiPlatformPreferenceSettingsDocuments.ExplicitPlatformKey,
-                explicitPlatformId?.Value ?? string.Empty,
+                [
+                    new KeyValuePair<string, string>(
+                        UiPlatformPreferenceSettingsDocuments.SelectionSourceKey,
+                        selectionSource == UiPlatformSelectionSource.Explicit ? "explicit" : "auto"),
+                    new KeyValuePair<string, string>(
+                        UiPlatformPreferenceSettingsDocuments.ExplicitPlatformKey,
+                        explicitPlatformId?.Value ?? string.Empty)
+                ],
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidOperationException)

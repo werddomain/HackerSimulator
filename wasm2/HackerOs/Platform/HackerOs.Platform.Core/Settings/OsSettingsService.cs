@@ -58,6 +58,26 @@ public interface IOsSettingsService
         IAppFileSystemGateway? writer = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Writes several values to one layer in a single file edit, so a system-layer change needs one
+    /// administrator approval rather than one per key. Nothing is written when any key is
+    /// undeclared, invalid or (for the user layer) locked.
+    /// </summary>
+    /// <param name="document">Document to write.</param>
+    /// <param name="values">Declared keys and their serialized values.</param>
+    /// <param name="target">Layer to write.</param>
+    /// <param name="writer">See <see cref="SetAsync"/>.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="ArgumentException">A key is undeclared or a value invalid.</exception>
+    /// <exception cref="InvalidOperationException">A key is locked, or the user layer is unavailable.</exception>
+    /// <exception cref="UnauthorizedAccessException">The file's permissions deny the write.</exception>
+    ValueTask SetManyAsync(
+        OsSettingsDocument document,
+        IReadOnlyList<KeyValuePair<string, string>> values,
+        SettingLayer target = SettingLayer.User,
+        IAppFileSystemGateway? writer = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Removes one key from one layer so the next layer applies again.</summary>
     /// <param name="document">Document to write.</param>
     /// <param name="qualifiedKey">Declared key.</param>
@@ -202,7 +222,7 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async ValueTask SetAsync(
+    public ValueTask SetAsync(
         OsSettingsDocument document,
         string qualifiedKey,
         string value,
@@ -210,23 +230,51 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
         IAppFileSystemGateway? writer = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(value);
-        SettingFieldDeclaration field = RequireField(document, qualifiedKey);
-        if (!SettingValueCodec.TryNormalize(field, value, out string normalized))
+        return SetManyAsync(document, [new KeyValuePair<string, string>(qualifiedKey, value)], target, writer, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask SetManyAsync(
+        OsSettingsDocument document,
+        IReadOnlyList<KeyValuePair<string, string>> values,
+        SettingLayer target = SettingLayer.User,
+        IAppFileSystemGateway? writer = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(values);
+        if (values.Count == 0)
         {
-            throw new ArgumentException(
-                $"Value '{value}' is invalid for setting '{qualifiedKey}' (expected {SettingValueCodec.DescribeExpected(field)}).",
-                nameof(value));
+            return;
+        }
+
+        // Validate everything first: a batch is written whole or not at all.
+        List<(SettingFieldDeclaration Field, string Value)> normalizedValues = [];
+        foreach ((string qualifiedKey, string value) in values)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            SettingFieldDeclaration field = RequireField(document, qualifiedKey);
+            if (!SettingValueCodec.TryNormalize(field, value, out string normalized))
+            {
+                throw new ArgumentException(
+                    $"Value '{value}' is invalid for setting '{qualifiedKey}' (expected {SettingValueCodec.DescribeExpected(field)}).",
+                    nameof(values));
+            }
+
+            normalizedValues.Add((field, normalized));
         }
 
         if (target == SettingLayer.User)
         {
             LayeredConfigSnapshot current = await ReadAsync(document, cancellationToken).ConfigureAwait(false);
-            if (current.LockedKeys.Contains(field.QualifiedKey))
+            foreach ((SettingFieldDeclaration field, _) in normalizedValues)
             {
-                throw new InvalidOperationException(
-                    $"Setting '{field.QualifiedKey}' is locked by the administrator in {document.SystemPath}.");
+                if (current.LockedKeys.Contains(field.QualifiedKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Setting '{field.QualifiedKey}' is locked by the administrator in {document.SystemPath}.");
+                }
             }
         }
 
@@ -234,7 +282,16 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
             document,
             target,
             writer,
-            content => ConfigDocumentEditor.SetValue(content, field.Group, field.Key, normalized),
+            content =>
+            {
+                string edited = content ?? string.Empty;
+                foreach ((SettingFieldDeclaration field, string normalized) in normalizedValues)
+                {
+                    edited = ConfigDocumentEditor.SetValue(edited, field.Group, field.Key, normalized);
+                }
+
+                return edited;
+            },
             createIfMissing: true,
             cancellationToken).ConfigureAwait(false);
     }

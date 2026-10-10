@@ -65,14 +65,17 @@ public sealed class ThemePreferenceService : IDisposable
             (AppearanceSettingsDocuments.AnimationsKey, preferences.AnimationsEnabled ? "true" : "false")
         ];
 
+        // The user layer only records what differs from the effective value, so untouched keys keep
+        // following the administrator's defaults. A system write records the whole set, in one edit,
+        // because it defines the default every user starts from.
         LayeredConfigSnapshot current = Snapshot ?? await _settings.ReadAsync(document, cancellationToken).ConfigureAwait(false);
-        foreach ((string key, string value) in desired)
-        {
-            if (current.Values[key] != value || (target == SettingLayer.System && current.Sources[key] == SettingLayer.Default))
-            {
-                await _settings.SetAsync(document, key, value, target, writer, cancellationToken).ConfigureAwait(false);
-            }
-        }
+        KeyValuePair<string, string>[] changes =
+        [
+            .. desired
+                .Where(entry => target == SettingLayer.System || current.Values[entry.Key] != entry.Value)
+                .Select(entry => new KeyValuePair<string, string>(entry.Key, entry.Value))
+        ];
+        await _settings.SetManyAsync(document, changes, target, writer, cancellationToken).ConfigureAwait(false);
 
         await RefreshCoreAsync(raiseEvent: true, cancellationToken).ConfigureAwait(false);
     }

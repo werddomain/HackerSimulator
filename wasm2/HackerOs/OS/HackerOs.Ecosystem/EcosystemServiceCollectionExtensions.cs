@@ -24,6 +24,7 @@ using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Sessions;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Platform.Blazor.Dialogs;
@@ -38,6 +39,7 @@ using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
@@ -137,12 +139,10 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<ILocalGroupRepository>(provider =>
             provider.GetRequiredService<IndexedDbLocalGroupRepository>());
 
-        services.AddScoped<IndexedDbSettingsDocumentService>(provider =>
-            new IndexedDbSettingsDocumentService(
-                provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                CreateSystemSettingsDefinitions()));
-        services.AddScoped<ISettingsDocumentService>(provider =>
-            provider.GetRequiredService<IndexedDbSettingsDocumentService>());
+        // Settings are files (ADR 0044). The retired IndexedDB settings store is only read once by
+        // the migration below; it is never written again.
+        services.AddScoped<ILegacySettingsStore>(provider =>
+            new IndexedDbLegacySettingsStore(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<IndexedDbCapabilityGrantRepository>();
         services.AddScoped<IPersistentCapabilityGrantRepository>(provider =>
             provider.GetRequiredService<IndexedDbCapabilityGrantRepository>());
@@ -162,6 +162,20 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IFileSystemAuthorizer, FileSystemAuthorizer>();
         services.AddScoped<IFileSystemService, FileSystemService>();
         services.AddTransient<FileSystemSeeder>();
+        // Depends on IFileSystemService, which is Scoped (see above) — see this file's IJSRuntime
+        // scoping note.
+        services.AddScoped<SettingsStoreToFilesMigration>(provider => new SettingsStoreToFilesMigration(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<ILegacySettingsStore>(),
+            provider.GetService<ILogger<SettingsStoreToFilesMigration>>()));
+        services.AddScoped<IOsSettingsService>(provider => new OsSettingsService(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetService<ITopicMessageBus>(),
+            provider.GetService<IEventBus>(),
+            provider.GetService<ILogger<OsSettingsService>>()));
 
         services.AddScoped<WebCryptoPasswordHasher>(provider =>
             new WebCryptoPasswordHasher(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
@@ -188,22 +202,17 @@ public static class EcosystemServiceCollectionExtensions
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
         });
 
-        // Settings domain sync (ADR 0029) — reuses the connection above; a no-op when disconnected.
+        // Sync plumbing shared by every domain below; each is a no-op when disconnected. Settings
+        // have no domain of their own anymore: user settings are home files carried by FileSystem
+        // sync (ADR 0044 section 10).
         services.AddScoped<ISyncCursorRepository>(provider =>
             new IndexedDbSyncCursorRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<ISyncRecordStateRepository>(provider =>
             new IndexedDbSyncRecordStateRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.TryAddSingleton<ISyncClient, HttpSyncClient>();
-        services.AddScoped<ISettingsSyncService>(provider => new SettingsSyncService(
-            CreateSystemSettingsDefinitions(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
-            provider.GetRequiredService<IServerConnectionService>(),
-            provider.GetRequiredService<ISyncClient>(),
-            provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
 
         // FileSystem domain sync (ADR 0030) — reuses the same connection and sync scaffolding as
-        // Settings sync above; scoped to the active session's own /home/{userId}, so a no-op when
+        // above; scoped to the active session's own /home/{userId}, so a no-op when
         // disconnected or no session is active.
         services.AddSingleton<IContentTransferClient, HttpContentTransferClient>();
         services.AddScoped<IFileSystemSyncService>(provider => new FileSystemSyncService(
@@ -224,10 +233,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncCursorRepository>()));
 
         // FileAssociations + AppCatalog domain sync (ADR 0033) — completes the original five-domain
-        // sync roadmap. FileAssociations reuses the Settings-document plumbing under its own domain
+        // sync roadmap. FileAssociations syncs /etc/hackeros/file-associations.json under its own domain
         // string; AppCatalog syncs only the ADR 0032 enablement flag, never the manifest.
         services.AddScoped<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
-            provider.GetRequiredService<ISettingsDocumentService>(),
+            provider.GetRequiredService<IOsSettingsService>(),
             provider.GetRequiredService<IServerConnectionService>(),
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
@@ -271,7 +280,8 @@ public static class EcosystemServiceCollectionExtensions
                 asyncHasher: (password, salt, iterations, length, ct) =>
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct),
                 grantRepository: provider.GetService<ICapabilityGrantRepository>(),
-                catalog: provider.GetService<AppCatalog>());
+                catalog: provider.GetService<AppCatalog>(),
+                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>());
         });
         services.AddScoped<IProcessManager>(provider =>
             new InMemoryProcessManager(
@@ -296,7 +306,6 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<AppExecutionContextFactory>(provider => new AppExecutionContextFactory(
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<IFileSystemService>(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
             provider.GetRequiredService<ITopicMessageBus>(),
             provider.GetRequiredService<INotificationQueue>(),
@@ -309,7 +318,7 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
-            provider.GetRequiredService<ISettingsDocumentService>()));
+            provider.GetRequiredService<IOsSettingsService>()));
 
         // Simulated network (ADR 0034) — smoke-test seed only, not the full "Game domain" content
         // pack ADR 0023 scoped separately. Enough for curl/ping/nmap's simulated path to work now
@@ -335,7 +344,7 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessManager>(),
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<AppExecutionContextFactory>(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
+            provider.GetRequiredService<IOsSettingsService>(),
             provider.GetRequiredService<IEventBus>(),
             descriptorLoaderProvider?.Invoke(provider),
             provider.GetRequiredService<IPersistentAppCatalogRepository>(),
@@ -401,6 +410,7 @@ public static class EcosystemServiceCollectionExtensions
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
         services.AddScoped<HackerOs.Platform.Core.Appearance.ThemePreferenceService>();
+        services.AddScoped<WindowGeometryPersistence>();
         services.AddScoped<StartMenuPreferencesService>();
         // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see
         // above) — see this file's IJSRuntime scoping note.
@@ -414,13 +424,4 @@ public static class EcosystemServiceCollectionExtensions
         AppCatalogBuildResult result = AppCatalog.Build([]);
         return result.Catalog ?? throw new InvalidOperationException("The empty app catalog must be valid.");
     }
-
-    private static SettingsDocumentDefinition[] CreateSystemSettingsDefinitions() =>
-    [
-        PolicySettingsDocuments.CreateDefinition(),
-        FileAssociationSettingsDocuments.CreateDefinition(),
-        HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition(),
-        StartMenuSettingsDocuments.CreateDefinition(),
-        UiPlatformPreferenceSettingsDocuments.CreateDefinition()
-    ];
 }
