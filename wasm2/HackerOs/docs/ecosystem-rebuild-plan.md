@@ -397,6 +397,7 @@ pas modifié.
 | [0056](adr/0056-sdk-apis-for-system-apps.md) API du SDK qui remplacent les services internes | complète 0044, 0048, 0049 | section 8.1 : une API et une capacité par besoin des apps système |
 | [0057](adr/0057-proc-metrics-for-task-manager.md) Mesures système dans `/proc` et `HackDriveInfo` | complète 0046 | section 8.2, gestionnaire de tâches |
 | [0058](adr/0058-base-app-features.md) Fonctionnalités des apps de base | — | D22, section 8.2, chantiers `rebuild/4-*` |
+| [0059](adr/0059-sdk-boundary-diagnostic-codes.md) Codes des diagnostics de la frontière du SDK | 0055 (numéros des codes) | `HOSAPP0030` et `HOSAPP0031`, les numéros de l'ADR 0055 étant déjà pris |
 
 ## 11. Points de détail à fixer dans les ADR
 
@@ -455,6 +456,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 ### Phase 4 — SDK complet et apps de base
 - [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
 - [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
+  - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
 - [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
 - [ ] Éditeur : remplacer et tout remplacer.

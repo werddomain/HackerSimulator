@@ -46,6 +46,31 @@ public sealed class MsBuildIntegrationTests
     }
 
     [Fact]
+    public async Task App_referencing_platform_core_fails_with_HOSAPP0030()
+    {
+        (int exitCode, string output) = await BuildFixtureAsync("ForbiddenReference");
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains("error HOSAPP0030", output, StringComparison.Ordinal);
+        Assert.Contains("Platform/HackerOs.Platform.Core/HackerOs.Platform.Core.csproj", output, StringComparison.Ordinal);
+        // Allowed references (App Abstractions, AppSdk) and the generator's build-order reference are not reported.
+        Assert.DoesNotContain("HackerOs.AppSdk.csproj' ", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("ManifestGenerator.csproj'", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task App_injecting_an_os_service_fails_with_HOSAPP0031_and_writes_no_manifest()
+    {
+        (int exitCode, string output) = await BuildFixtureAsync("ForbiddenInjection");
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains("error HOSAPP0031", output, StringComparison.Ordinal);
+        Assert.Contains("ISessionService", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("HOSAPP0099", output, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(FixtureDirectory("ForbiddenInjection"), "manifest.json")));
+    }
+
+    [Fact]
     public async Task Host_embeds_BuiltInApplications_with_system_flags_and_ignores_non_app_projects()
     {
         (int exitCode, string output) = await BuildFixtureAsync("Host");

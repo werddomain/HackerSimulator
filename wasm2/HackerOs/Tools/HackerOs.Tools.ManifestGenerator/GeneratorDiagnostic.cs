@@ -14,8 +14,12 @@ public sealed record GeneratorDiagnostic(string Code, string Subject, string Mes
     /// reports it as a real build error attributed to <paramref name="origin"/>.
     /// </summary>
     /// <param name="origin">Project or file path shown as the error origin.</param>
+    /// <param name="severity">
+    /// <c>error</c> (default) or <c>warning</c>; a warning is used for an SDK boundary violation of a
+    /// project still listed in <c>HackerOsSdkBoundaryExemption</c> (ADR 0055 §6).
+    /// </param>
     /// <returns>One line, e.g. <c>/x/App.csproj : error HOSAPP0005: [Ns.MyApp] ...</c>.</returns>
-    public string ToMsBuildLine(string origin) => $"{origin} : error {Code}: [{Subject}] {Message}";
+    public string ToMsBuildLine(string origin, string severity = "error") => $"{origin} : {severity} {Code}: [{Subject}] {Message}";
 }
 
 /// <summary>Catalog of the stable diagnostic codes emitted by the generator.</summary>
@@ -53,6 +57,19 @@ public static class GeneratorCodes
 
     /// <summary>Two <c>[AppManifest]</c> classes of one assembly declare the same app id.</summary>
     public const string DuplicateIdInAssembly = "HOSAPP0011";
+
+    /// <summary>
+    /// The app project references a project outside the SDK boundary (ADR 0055 §2). Emitted by the
+    /// <c>ValidateHackerOsSdkBoundary</c> MSBuild target, not by this tool; listed here so the catalog
+    /// of codes stays in one place. ADR 0059 gives it this number (ADR 0055 said HOSAPP0002, already taken).
+    /// </summary>
+    public const string ForbiddenReference = "HOSAPP0030";
+
+    /// <summary>
+    /// The app injects a service that is neither an SDK type, a MudBlazor service nor
+    /// <c>IJSRuntime</c> (ADR 0055 §3). ADR 0059 gives it this number (ADR 0055 said HOSAPP0003, already taken).
+    /// </summary>
+    public const string ForbiddenInjection = "HOSAPP0031";
 
     /// <summary>A manifest file read back during aggregation is missing or not strict schema-v1 JSON.</summary>
     public const string UnreadableManifest = "HOSAPP0020";

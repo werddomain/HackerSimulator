@@ -158,6 +158,8 @@ avec le nom complet de la classe en cause : `App.csproj : error HOSAPP0005: [Ns.
 | `HOSAPP0011` | Deux classes de la même assembly déclarent le même identifiant. |
 | `HOSAPP0020` | Agrégation : fichier manifeste absent ou JSON non strict. |
 | `HOSAPP0021` | Agrégation : catalogue invalide (identifiant en double, dépendance manquante ou cyclique). |
+| `HOSAPP0030` | Frontière du SDK : `ProjectReference` interdite dans un projet d'app (ADR 0055 §2, numéro fixé par l'ADR 0059). Émis par la cible `ValidateHackerOsSdkBoundary`. Voir [`app-sdk.md`](app-sdk.md). |
+| `HOSAPP0031` | Frontière du SDK : service injecté qui n'est ni un type du SDK, ni MudBlazor, ni `IJSRuntime` (ADR 0055 §3, ADR 0059). Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0090` | Arguments de l'outil invalides. |
 | `HOSAPP0091` | Assembly de l'app impossible à charger. |
 | `HOSAPP0099` | L'outil a échoué sans diagnostic (plantage). |

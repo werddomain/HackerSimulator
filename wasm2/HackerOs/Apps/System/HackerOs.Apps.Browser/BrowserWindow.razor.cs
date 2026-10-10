@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Blazor;
-using HackerOs.Platform.Core.Network;
 using HackerOs.Simulation.Abstractions.Network;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
