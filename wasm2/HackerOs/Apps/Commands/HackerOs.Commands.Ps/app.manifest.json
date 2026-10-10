@@ -19,7 +19,8 @@
     "iconAssetPaths": []
   },
   "capabilities": [
-    "process.list"
+    "process.list",
+    "filesystem.system.read"
   ],
   "resources": {
     "baselineCpuWeight": 0.01,

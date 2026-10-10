@@ -80,7 +80,13 @@ public sealed class LsCommand : TerminalAppBase
             {
                 foreach (FileSystemDirectoryItem item in sorted)
                 {
-                    string kindChar = item.Metadata.Kind == FileSystemEntryKind.Directory ? "d" : "-";
+                    string kindChar = item.Metadata.Kind switch
+                    {
+                        FileSystemEntryKind.Directory => "d",
+                        FileSystemEntryKind.SymbolicLink => "l",
+                        FileSystemEntryKind.CharacterDevice => "c",
+                        _ => "-"
+                    };
                     string mode = item.Metadata.Permissions.Owner.HasFlag(FileSystemAccess.Read) ? "r" : "-";
                     mode += item.Metadata.Permissions.Owner.HasFlag(FileSystemAccess.Write) ? "w" : "-";
                     mode += item.Metadata.Permissions.Owner.HasFlag(FileSystemAccess.Execute) ? "x" : "-";
