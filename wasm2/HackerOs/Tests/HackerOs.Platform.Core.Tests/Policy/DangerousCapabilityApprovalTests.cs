@@ -501,7 +501,7 @@ public sealed class DangerousCapabilityApprovalTests
                 StringComparer.Ordinal);
             DangerousCapabilityGate gate = new(Catalog, Files.Grants, Store, Files.Settings, Verifier, Audit, Prompt);
             return new AppLifecycleOrchestrator(
-                Catalog, descriptors, new AppEnablementRegistry(Catalog), manager, Files.Grants, contextFactory, Files.Settings,
+                Catalog, descriptors, new AppEnablementRegistry(Catalog), manager, Files.Grants, contextFactory,
                 Files.EventBus, elevationTickets: tickets, dangerousCapabilityGate: gate);
         }
     }
