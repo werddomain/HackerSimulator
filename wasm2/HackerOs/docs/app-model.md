@@ -234,16 +234,21 @@ n'est jamais écrit à la main ni versionné.
 ### Lecture au démarrage
 
 `BuildKnownLazyApps` lit la ressource `HackerOs.BuiltInApplications.json` et
-expose, en plus de `Catalog`, `SystemAppIds` et `IsSystemApp(appId)`. Seul le
+construit `Catalog` avec `AppCatalog.BuildFromBuiltInApplications` : le catalogue
+porte les drapeaux système (voir « Apps système » ci-dessous). Seul le
 JSON est lu : les DLL d'apps restent chargées au premier lancement et les
 classes `AppDefinition` ne sont jamais instanciées au runtime.
 
 **Transition (jusqu'à `rebuild/2-app-migration`)** : les apps pas encore migrées
 gardent leur `app.manifest.json` embarqué à la main
 (`HackerOs.Ecosystem.Manifests.*`) et leur ligne `BlazorWebAssemblyLazyLoad` dans
-`HackerOs.Ecosystem.csproj` ; `BuildKnownLazyApps` fusionne les deux sources (une
-app héritée n'est jamais système). Une app migrée ne doit plus figurer dans ces
-listes : sa `ProjectReference` suffit, comme pour Calculator.
+`HackerOs.Ecosystem.csproj` ; `BuildKnownLazyApps` fusionne les deux sources. Pour
+qu'une app héritée suive elle aussi la `ProjectReference`, la cible
+`_HackerOsMarkLegacySystemManifests` renomme la ressource d'une app héritée dont
+la `ProjectReference` porte `IsSystemApp="true"` en
+`HackerOs.Ecosystem.Manifests.System.*`, et `BuildKnownLazyApps` la lit comme
+système. Une app migrée ne doit plus figurer dans ces listes : sa
+`ProjectReference` suffit, comme pour Calculator.
 
 ### Installer une app
 
@@ -265,6 +270,57 @@ système. Rien d'autre.
   toujours les 36 apps ; Calculator vient de la ressource agrégée, sans ressource
   écrite à la main, et son assembly est dans la liste de chargement différé.
 
+## Apps système (ADR 0048 §1)
+
+### Source de confiance
+
+Le statut système se déclare **uniquement** sur la `ProjectReference` de l'hôte
+(`IsSystemApp="true"`), recopié par l'agrégation dans `isSystemApp`. Ni
+`AppDefinition`, ni `[AppManifest]`, ni le schéma de `manifest.json` n'ont de champ
+pour cela : un `manifest.json` qui contient `isSystemApp` est rejeté par le
+désérialiseur strict. Une app installée au runtime par le futur magasin sera donc
+toujours non système.
+
+### API
+
+`AppCatalog` (`Platform/HackerOs.Platform.Core/AppCatalog.cs`) :
+
+| Membre | Rôle |
+|---|---|
+| `SystemAppIds` | ensemble (ordinal, figé) des identifiants système du catalogue |
+| `IsSystemApp(appId)` | `true` si l'hôte a déclaré l'app système |
+| `Build(manifests)` | catalogue sans app système (tests, catalogue vide) |
+| `Build(manifests, systemAppIds)` | catalogue avec la liste système de l'hôte |
+| `BuildFromBuiltInApplications(applications)` | raccourci depuis les entrées de `BuiltInApplications.json` |
+
+Un identifiant système absent des manifestes fait échouer la construction
+(`catalog.system-app.unknown`) : une faute de frappe ne peut pas laisser une app
+sans protection. `BuildKnownLazyApps.Catalog` est le catalogue injecté par les
+hôtes (`Program.cs`) ; les services de l'OS lisent donc
+`AppCatalog.IsSystemApp` depuis l'injection de dépendances.
+
+### Apps système de l'hôte Ecosystem
+
+| Système | Non système (désinstallables) |
+|---|---|
+| Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 24 commandes | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
+
+Les effets du statut (refus de la désinstallation, capacités dangereuses
+accordées d'office) arrivent avec `rebuild/2-app-uninstall` (ADR 0048 §2-6) et
+l'ADR 0049 ; ce chantier ne fait qu'exposer l'information.
+
+### Tests
+
+- `AppCatalogTests` (`HackerOs.Platform.Core.Tests`) : pas d'app système par
+  défaut, ensemble exposé et comparaison ordinale, identifiant inconnu refusé,
+  drapeau pris de chaque entrée `BuiltInApplication`.
+- `SystemAppTrustTests` (`HackerOs.App.Abstractions.Tests`) : aucun membre
+  « SystemApp » sur `AppDefinition`, `AppManifest`, `[AppManifest]` ; un
+  `manifest.json` qui revendique `isSystemApp` est rejeté.
+- `BuildKnownLazyAppsTests.System_apps_follow_the_host_ProjectReference_metadata`
+  (`HackerOs.Ecosystem.Tests`) : l'ensemble système du catalogue de l'hôte est
+  exactement la table ci-dessus.
+
 ## Tâches
 
 - [x] `rebuild/2-app-definition` : `AppDefinition`, `[AppManifest]`,
@@ -272,4 +328,5 @@ système. Rien d'autre.
   (`Tests/HackerOs.App.Abstractions.Tests/Definition`).
 - [x] `rebuild/2-manifest-generator` : `Tools/HackerOs.Tools.ManifestGenerator` (`generate`, `validate`), `build/HackerOs.Apps.targets`, cibles `GenerateHackerOsAppManifests` et `GetHackerOsAppManifests`, erreurs `HOSAPP*`, projets de test, Calculator migrée en exemple.
 - [x] `rebuild/2-builtin-applications` : cible `CollectHackerOsBuiltInApplications`, `BuiltInApplications.json` embarqué, lazy load automatique, `BuildKnownLazyApps` lit le nouveau fichier, `IsSystemApp` transporté.
-- [ ] `rebuild/2-app-migration` : classes `[AppManifest]` pour les autres apps, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».
+- [x] `rebuild/2-system-apps` (ADR 0048) : `AppCatalog.SystemAppIds` et `IsSystemApp`, `AppCatalog.Build(manifests, systemAppIds)` et `BuildFromBuiltInApplications`, `IsSystemApp="true"` posé sur les `ProjectReference` de l'Ecosystem, pont de transition `_HackerOsMarkLegacySystemManifests`, tests.
+- [ ] `rebuild/2-app-migration` : classes `[AppManifest]` pour les autres apps, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte (et de la cible `_HackerOsMarkLegacySystemManifests` avec elles), de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

@@ -86,6 +86,56 @@ public sealed class AppCatalogTests
         Assert.Contains(result.Errors, error => error.Code == "catalog.app-id.duplicate");
     }
 
+    [Fact]
+    public void Build_without_system_ids_has_no_system_app()
+    {
+        AppCatalog catalog = AppCatalog.Build([CreateManifest("org.hackeros.files")]).Catalog!;
+
+        Assert.Empty(catalog.SystemAppIds);
+        Assert.False(catalog.IsSystemApp("org.hackeros.files"));
+    }
+
+    [Fact]
+    public void Build_exposes_host_declared_system_apps()
+    {
+        AppCatalogBuildResult result = AppCatalog.Build(
+            [CreateManifest("org.hackeros.files"), CreateManifest("org.hackeros.paint")],
+            ["org.hackeros.files", "org.hackeros.files"]);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(["org.hackeros.files"], result.Catalog!.SystemAppIds);
+        Assert.True(result.Catalog.IsSystemApp("org.hackeros.files"));
+        Assert.False(result.Catalog.IsSystemApp("org.hackeros.paint"));
+        // Ordinal: the flag is bound to the exact immutable id.
+        Assert.False(result.Catalog.IsSystemApp("ORG.HACKEROS.FILES"));
+        Assert.False(result.Catalog.IsSystemApp("org.hackeros.unknown"));
+    }
+
+    [Fact]
+    public void Build_rejects_system_id_outside_the_catalog()
+    {
+        AppCatalogBuildResult result = AppCatalog.Build([CreateManifest("org.hackeros.files")], ["org.hackeros.termnial"]);
+
+        Assert.False(result.IsSuccess);
+        AppCatalogError error = Assert.Single(result.Errors);
+        Assert.Equal("catalog.system-app.unknown", error.Code);
+        Assert.Equal("org.hackeros.termnial", error.AppId);
+    }
+
+    [Fact]
+    public void BuildFromBuiltInApplications_takes_the_system_flag_of_each_entry()
+    {
+        AppCatalogBuildResult result = AppCatalog.BuildFromBuiltInApplications(
+        [
+            new BuiltInApplication(IsSystemApp: true, CreateManifest("org.hackeros.terminal")),
+            new BuiltInApplication(IsSystemApp: false, CreateManifest("org.hackeros.paint")),
+        ]);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(["org.hackeros.terminal"], result.Catalog!.SystemAppIds);
+        Assert.Equal(["org.hackeros.paint", "org.hackeros.terminal"], result.Catalog.ActivationOrder);
+    }
+
     private static AppManifest CreateManifest(
         string appId,
         string version = "1.0.0",

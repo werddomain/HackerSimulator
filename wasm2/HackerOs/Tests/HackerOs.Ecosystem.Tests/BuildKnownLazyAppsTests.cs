@@ -52,7 +52,44 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Contains("org.hackeros.calculator", BuildKnownLazyApps.Catalog.Manifests.Keys);
         Assert.Contains("HackerOs.Apps.Calculator.dll", BuildKnownLazyAssemblies.Names);
 
-        // No ProjectReference carries IsSystemApp yet (ADR 0048 lands in rebuild/2-system-apps).
-        Assert.All(builtIn, item => Assert.False(BuildKnownLazyApps.IsSystemApp(item.Manifest.Id)));
+        // Calculator's ProjectReference has no IsSystemApp metadata (ADR 0048 §1).
+        Assert.False(calculator.IsSystemApp);
+        Assert.False(BuildKnownLazyApps.Catalog.IsSystemApp("org.hackeros.calculator"));
+    }
+
+    [Fact]
+    public void System_apps_follow_the_host_ProjectReference_metadata()
+    {
+        AppCatalog catalog = BuildKnownLazyApps.Catalog;
+        string[] systemWindows =
+        [
+            "org.hackeros.error-log-viewer",
+            "org.hackeros.file-explorer",
+            "org.hackeros.settings",
+            "org.hackeros.system-monitor",
+            "org.hackeros.terminal",
+            "org.hackeros.text-editor",
+        ];
+        string[] uninstallable =
+        [
+            "org.hackeros.browser",
+            "org.hackeros.calculator",
+            "org.hackeros.code-editor",
+            "org.hackeros.diagnostic",
+            "org.hackeros.hack-paint",
+            "org.hackeros.icon-viewer",
+        ];
+
+        // ADR 0048 §1 table: every command is a system app, like coreutils.
+        string[] commands = [.. catalog.Manifests.Values
+            .Where(manifest => manifest.Kind == AppKind.Terminal)
+            .Select(manifest => manifest.Id)];
+        Assert.Equal(24, commands.Length);
+
+        Assert.Equal(
+            systemWindows.Concat(commands).Order(StringComparer.Ordinal),
+            catalog.SystemAppIds.Order(StringComparer.Ordinal));
+        Assert.All(uninstallable, appId => Assert.False(catalog.IsSystemApp(appId)));
+        Assert.Equal(catalog.Manifests.Count, catalog.SystemAppIds.Count + uninstallable.Length);
     }
 }

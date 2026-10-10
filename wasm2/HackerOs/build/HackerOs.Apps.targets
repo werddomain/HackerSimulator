@@ -206,4 +206,27 @@
       <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList)" />
     </ItemGroup>
   </Target>
+  <!--
+    TRANSITION (until rebuild/2-app-migration, ADR 0048 §1): a host still embeds the hand-written
+    app.manifest.json of unmigrated apps by hand. When the ProjectReference of such an app carries
+    IsSystemApp="true", its resource is renamed $(RootNamespace).Manifests.System.<file> so the
+    runtime (BuildKnownLazyApps) reads the flag from the reference, like the aggregated
+    BuiltInApplications.json does for migrated apps. Remove with the manual EmbeddedResource lists.
+  -->
+  <Target Name="_HackerOsMarkLegacySystemManifests"
+          BeforeTargets="PrepareResourceNames"
+          Condition="'$(HackerOsAppHost)' == 'true'">
+    <ItemGroup>
+      <_HackerOsSystemReferenceDirectory Include="@(ProjectReference->'%(RootDir)%(Directory)'->ToLowerInvariant())"
+                                         Condition="'%(ProjectReference.IsSystemApp)' == 'true'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_HackerOsSystemReferenceDirectories>;@(_HackerOsSystemReferenceDirectory);</_HackerOsSystemReferenceDirectories>
+    </PropertyGroup>
+    <ItemGroup>
+      <EmbeddedResource Condition="'%(EmbeddedResource.Filename)%(EmbeddedResource.Extension)' == 'app.manifest.json' and '%(EmbeddedResource.Link)' != '' and $(_HackerOsSystemReferenceDirectories.Contains($([System.String]::Copy(';%(EmbeddedResource.RootDir)%(EmbeddedResource.Directory);').ToLowerInvariant())))">
+        <LogicalName>$(RootNamespace).Manifests.System.$([System.IO.Path]::GetFileName($([System.String]::Copy('%(EmbeddedResource.Link)').Replace('\', '/'))))</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
 </Project>
