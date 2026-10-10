@@ -1,0 +1,77 @@
+@using HackerOs.AppSdk.IO
+@using HackerOs.AppSdk.Icons
+@inherits HackerOs.AppSdk.Blazor.HackComponentBase
+
+@*
+    Trash view of the file explorer (ADR 0052, section 5). It lists HackTrash.GetItemsAsync — never the
+    raw ~/.local/share/Trash folders — and offers Restore, Delete permanently and Empty trash.
+*@
+<div class="trash-view">
+    <div class="trash-toolbar">
+        <span class="trash-title">
+            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> Trash
+        </span>
+        <span class="trash-spacer"></span>
+        <button class="trash-btn" disabled="@(_selected.Count == 0 || _busy)" @onclick="RestoreSelectedAsync" title="Restore">
+            <HackerIcon Library="IconLibrary.Lucide" Name="archive-restore" Size="16" /> <span>Restore</span>
+        </button>
+        <button class="trash-btn danger" disabled="@(_selected.Count == 0 || _busy)" @onclick="DeleteSelectedAsync" title="Delete permanently">
+            <HackerIcon Library="IconLibrary.Lucide" Name="octagon-x" Size="16" /> <span>Delete permanently</span>
+        </button>
+        <button class="trash-btn danger" disabled="@(_items.Count == 0 || _busy)" @onclick="EmptyAsync" title="Empty trash">
+            <HackerIcon Library="IconLibrary.Lucide" Name="trash" Size="16" /> <span>Empty trash</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="trash-error">@_error</div>
+    }
+
+    @if (_items.Count == 0)
+    {
+        <div class="trash-empty">The trash is empty.</div>
+    }
+    else
+    {
+        <div class="trash-list">
+        <table class="trash-table" role="grid" aria-label="Trash">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Original location</th>
+                    <th>Deleted</th>
+                    <th class="size">Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (HackTrashItem item in _items)
+                {
+                    <tr class="@(_selected.Contains(item.Name) ? "selected" : null)"
+                        tabindex="0"
+                        aria-selected="@_selected.Contains(item.Name)"
+                        @onclick="args => Select(item, args)"
+                        @ondblclick="() => RestoreAsync([item])"
+                        @onkeydown="args => OnRowKeyDownAsync(item, args)">
+                        <td class="name">
+                            <HackerIcon Library="IconLibrary.Lucide" Name="@(item.IsDirectory ? "folder" : "file")" Size="14" />
+                            @DisplayName(item)
+                        </td>
+                        <td class="origin">@OriginalLocation(item)</td>
+                        <td class="date">@FormatDate(item.DeletedAt)</td>
+                        <td class="size">@FormatBytes(item.Length)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+
+    <div class="trash-statusbar">
+        <span>@_items.Count item(s)</span>
+        @if (_selected.Count > 0)
+        {
+            <span> | @_selected.Count selected</span>
+        }
+    </div>
+</div>

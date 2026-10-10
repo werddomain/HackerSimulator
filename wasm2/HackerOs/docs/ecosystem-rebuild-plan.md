@@ -445,7 +445,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Ajouter répertoire courant et environnement par processus.
 - [ ] Fusionner les 28 projets de commandes et rendre `cd`, `pwd`, `clear`, `help` normales.
   - [x] Fusion des 28 projets dans `HackerOs.Commands`, une seule `ProjectReference` dans l'hôte (`rebuild/3-commands-merge`, ADR 0051 §1, [`app-model.md`](app-model.md#commandes-intégrées--un-seul-projet-adr-0051)).
-- [ ] Implémenter la corbeille et l'API `HackTrash`.
+- [x] Implémenter la corbeille et l'API `HackTrash` (`rebuild/3-trash`, ADR 0052, [`trash.md`](trash.md)).
 
 ### Phase 4 — SDK complet et apps de base
 - [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.

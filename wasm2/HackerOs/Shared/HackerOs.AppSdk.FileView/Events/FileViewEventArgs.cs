@@ -97,6 +97,23 @@ public sealed class FileViewDeletingEventArgs(IReadOnlyList<FileViewItem> items)
     public IReadOnlyList<FileViewItem> Items { get; } = items;
 }
 
+/// <summary>
+/// Hands a delete action initiated through <see cref="FileView"/>'s own UI (Delete key, Shift+Delete,
+/// context menu) to the host, when the host supplied <see cref="FileView.DeleteRequested"/> — for
+/// instance to move the items to the trash instead of deleting them (ADR 0052, section 5).
+/// </summary>
+public sealed class FileViewDeleteRequestedEventArgs(IReadOnlyList<FileViewItem> items, bool permanent) : EventArgs
+{
+    /// <summary>Gets the items the user asked to delete.</summary>
+    public IReadOnlyList<FileViewItem> Items { get; } = items;
+
+    /// <summary>
+    /// Gets whether the user asked for a permanent deletion (Shift+Delete or "Delete permanently")
+    /// rather than the default, reversible one.
+    /// </summary>
+    public bool Permanent { get; } = permanent;
+}
+
 /// <summary>Raised after a delete action has completed.</summary>
 public sealed class FileViewDeletedEventArgs(IReadOnlyList<VirtualPath> paths) : EventArgs
 {

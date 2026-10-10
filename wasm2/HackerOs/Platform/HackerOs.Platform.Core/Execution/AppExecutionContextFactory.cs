@@ -173,7 +173,8 @@ public sealed class AppExecutionContextFactory
             principal.HomePath,
             _environments is null
                 ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
-                : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath));
+                : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath),
+            isRootElevated);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);

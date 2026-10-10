@@ -102,7 +102,7 @@ public partial class FileViewTreeNode
     {
         "Enter" => Owner.ActivateItemAsync(Node.Item),
         "F2" => RenameAsync(),
-        "Delete" => DeleteAsync(),
+        "Delete" => DeleteAsync(args.ShiftKey),
         "ArrowRight" => ExpandKeyAsync(),
         "ArrowLeft" => CollapseKey(),
         "ArrowDown" => MoveActiveAsync(1),
@@ -154,10 +154,10 @@ public partial class FileViewTreeNode
         return Task.CompletedTask;
     }
 
-    private Task DeleteAsync()
+    private Task DeleteAsync(bool permanent)
     {
         Node.Item.Select();
-        return Owner.DeleteSelectedAsync();
+        return Owner.DeleteSelectedAsync(permanent);
     }
 
     private string GetRenameBuffer() => _renameBuffer ??= Node.Item.FileName;
