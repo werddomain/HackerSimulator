@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <!-- ADR 0051: the shell tests run the catalog's real cd, export, help, sudo... end to end. -->
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
   </ItemGroup>
 
 </Project>

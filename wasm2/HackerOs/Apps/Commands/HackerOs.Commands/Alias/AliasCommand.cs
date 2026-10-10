@@ -11,9 +11,9 @@ namespace HackerOs.Commands.Alias;
 /// <c>~/.hackeros/aliases</c> so they survive across terminal sessions.
 /// </summary>
 /// <remarks>
-/// <c>rmalias</c>/<c>unalias</c> are dispatched here as <c>alias -r &lt;name...&gt;</c> by the
-/// terminal's alias-expansion step (see <c>TerminalWindow.razor</c>), since a command instance
-/// has no way to observe which of its manifest-declared aliases it was invoked as.
+/// <c>rmalias</c> and <c>unalias</c> are static aliases declared by the manifest (ADR 0051,
+/// section 4). Like a multi-call binary, the command reads the name it was invoked as from
+/// <c>argv[0]</c> and behaves as <c>alias -r</c> for those two; the shell no longer rewrites them.
 /// </remarks>
 public sealed class AliasCommand : TerminalAppBase
 {
@@ -26,7 +26,7 @@ public sealed class AliasCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        bool remove = false;
+        bool remove = InvokedAs(context) is "unalias" or "rmalias";
         List<string> positional = [];
         foreach (string arg in context.Arguments)
         {
@@ -117,6 +117,21 @@ public sealed class AliasCommand : TerminalAppBase
         }
 
         return exitCode;
+    }
+
+    /// <summary>The name this process was invoked as (<c>argv[0]</c>), or <c>alias</c> when unknown.</summary>
+    private static string InvokedAs(TerminalExecutionContext context)
+    {
+        try
+        {
+            IReadOnlyList<string> argv = context.App.Environment.GetCommandLineArgs();
+            return argv.Count > 0 ? argv[0] : "alias";
+        }
+        catch (NotSupportedException)
+        {
+            // A context with no live process (a host-less test double): plain `alias`.
+            return "alias";
+        }
     }
 
     private static async Task<(Dictionary<string, string> Aliases, long? FileRevision)> LoadAliasesAsync(

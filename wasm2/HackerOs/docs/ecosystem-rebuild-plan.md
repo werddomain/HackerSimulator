@@ -441,10 +441,11 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
   - [x] Classement des capacités, retrait de `settings.*` et `diagnostics.*`, seeder selon le statut système (`rebuild/2-capability-classification`, [`capabilities.md`](capabilities.md)).
 
 ### Phase 3 — Shell, commandes et corbeille
-- [ ] Étendre le parseur : pipes, redirections, `&&`, variables.
-- [ ] Ajouter répertoire courant et environnement par processus.
-- [ ] Fusionner les 28 projets de commandes et rendre `cd`, `pwd`, `clear`, `help` normales.
+- [x] Étendre le parseur : pipes, redirections, `&&`, variables (`rebuild/3-shell-interpreter`, ADR 0050 et 0054, [`shell-interpreter.md`](shell-interpreter.md)).
+- [x] Ajouter répertoire courant et environnement par processus (`rebuild/3-process-environment`, ADR 0050 et 0053, [`process-environment.md`](process-environment.md)).
+- [x] Fusionner les 28 projets de commandes et rendre `cd`, `pwd`, `clear`, `help` normales.
   - [x] Fusion des 28 projets dans `HackerOs.Commands`, une seule `ProjectReference` dans l'hôte (`rebuild/3-commands-merge`, ADR 0051 §1, [`app-model.md`](app-model.md#commandes-intégrées--un-seul-projet-adr-0051)).
+  - [x] `cd`, `pwd`, `clear`, `help`, `sudo`, `export`, `unset`, `env` du catalogue, `IShellSession` et `shell.control`, plus aucun nom codé en dur dans le terminal (`rebuild/3-shell-commands`, ADR 0051 §2-5, [`shell-commands.md`](shell-commands.md)).
 - [x] Implémenter la corbeille et l'API `HackTrash` (`rebuild/3-trash`, ADR 0052, [`trash.md`](trash.md)).
 
 ### Phase 4 — SDK complet et apps de base

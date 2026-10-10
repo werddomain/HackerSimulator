@@ -4,55 +4,68 @@ using HackerOs.AppSdk;
 namespace HackerOs.Commands.Help;
 
 /// <summary>
-/// Implements the <c>help</c> / <c>man</c> terminal command (`P4-W5-CMD-007`).
-/// Displays manual pages and command usage listings.
+/// Implements <c>help [command]</c> / <c>man</c> (ADR 0051, section 4): lists the commands
+/// installed right now, read from the shell (<see cref="IShellSession.GetCommands"/>), or prints
+/// one command's usage. Nothing is hard-coded: a third-party command appears as soon as it is
+/// installed and disappears when it is uninstalled.
 /// </summary>
 public sealed class HelpCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public HelpCommand(AppManifest manifest) : base(manifest) { }
 
-    public override ValueTask<int> ExecuteAsync(
+    /// <inheritdoc />
+    public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (context.Arguments.Count == 0)
+        TextWriter output = context.StandardOutput;
+        if (context.Shell is not { } shell)
         {
-            context.StandardOutput.WriteLine("HackerOS Shell Commands Reference:");
-            context.StandardOutput.WriteLine("  Filesystem:  ls, cd, pwd, cat, mkdir, touch, rm, cp, mv, chmod, find, grep, head, tail, sort, wc, diff");
-            context.StandardOutput.WriteLine("  Network:     ping, nmap, curl");
-            context.StandardOutput.WriteLine("  Process:     ps, kill, launch");
-            context.StandardOutput.WriteLine("  Utilities:   echo, clear, help, man, alias, addalias, rmalias, nano");
-            context.StandardOutput.WriteLine();
-            context.StandardOutput.WriteLine("Type 'help <command>' or 'man <command>' for specific command details.");
-            return ValueTask.FromResult(0);
+            await context.StandardError.WriteLineAsync("help: no shell session");
+            return 1;
         }
 
-        string cmd = context.Arguments[0].ToLowerInvariant();
-        switch (cmd)
+        IReadOnlyList<ShellCommandInfo> commands = shell.GetCommands();
+        if (context.Arguments.Count > 0)
         {
-            case "ping":
-                context.StandardOutput.WriteLine("PING(1)                     HackerOS Manual                    PING(1)");
-                context.StandardOutput.WriteLine("NAME: ping - send ICMP ECHO_REQUEST to simulated network hosts");
-                context.StandardOutput.WriteLine("USAGE: ping <hostname|ip>");
-                break;
-            case "nmap":
-                context.StandardOutput.WriteLine("NMAP(1)                     HackerOS Manual                    NMAP(1)");
-                context.StandardOutput.WriteLine("NAME: nmap - simulated Network Mapper and port scanner");
-                context.StandardOutput.WriteLine("USAGE: nmap [-p <range>] [-sV] [-O] <target>");
-                break;
-            case "curl":
-                context.StandardOutput.WriteLine("CURL(1)                     HackerOS Manual                    CURL(1)");
-                context.StandardOutput.WriteLine("NAME: curl - transfer data from simulated website URLs");
-                context.StandardOutput.WriteLine("USAGE: curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>");
-                break;
-            default:
-                context.StandardOutput.WriteLine($"Manual entry for '{cmd}': usage: {cmd} [options]");
-                break;
+            int status = 0;
+            foreach (string name in context.Arguments)
+            {
+                ShellCommandInfo? command = commands.FirstOrDefault(c =>
+                    string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
+                    || c.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)));
+                if (command is null)
+                {
+                    await context.StandardError.WriteLineAsync($"help: no help topics match '{name}'");
+                    status = 1;
+                    continue;
+                }
+
+                await output.WriteLineAsync($"{command.Name} - {command.Description}");
+                await output.WriteLineAsync($"usage: {command.Usage}");
+                if (command.Aliases.Count > 0)
+                {
+                    await output.WriteLineAsync($"aliases: {string.Join(", ", command.Aliases)}");
+                }
+            }
+
+            return status;
         }
 
-        return ValueTask.FromResult(0);
+        await output.WriteLineAsync("HackerOS shell (hsh). Installed commands:");
+        int width = commands.Count == 0 ? 0 : commands.Max(c => c.Name.Length);
+        foreach (ShellCommandInfo command in commands)
+        {
+            await output.WriteLineAsync($"  {command.Name.PadRight(width)}  {command.Description}");
+        }
+
+        await output.WriteLineAsync();
+        await output.WriteLineAsync("Operators: cmd | cmd, cmd > file, cmd >> file, cmd && cmd, $VAR, ${VAR}, $?, ~");
+        await output.WriteLineAsync("Type 'help <command>' for its usage.");
+        return 0;
     }
 }

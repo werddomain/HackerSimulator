@@ -4,6 +4,7 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Core.Shell;
 
@@ -35,16 +36,6 @@ public sealed class ShellInterpreter
 
     private static readonly Encoding FileEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
-    /// <summary>
-    /// Aliases the shell itself provides: the historical <c>unalias</c> and <c>rmalias</c>
-    /// spellings of <c>alias -r</c>.
-    /// </summary>
-    private static readonly IReadOnlyDictionary<string, string[]> StaticAliases = new Dictionary<string, string[]>(StringComparer.Ordinal)
-    {
-        ["unalias"] = ["alias", "-r"],
-        ["rmalias"] = ["alias", "-r"]
-    };
-
     private readonly AppLifecycleOrchestrator _orchestrator;
     private readonly IAppEnablementRegistry _enablement;
 
@@ -61,6 +52,16 @@ public sealed class ShellInterpreter
 
     /// <summary>Gets the command lookup (installed or not), shared with <c>help</c> and completion.</summary>
     public ShellCommandResolver Resolver { get; }
+
+    /// <summary>
+    /// Gets the installed commands, ordered by name: what <c>help</c> lists through
+    /// <see cref="IShellSession.GetCommands"/> and what the terminal completes (ADR 0051, section 2).
+    /// </summary>
+    public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() =>
+        [.. Resolver.GetTerminalCommands()
+            .Where(manifest => _enablement.IsEnabled(manifest.Id))
+            .Select(manifest => new ShellCommandInfo(
+                manifest.Terminal!.Name, manifest.Terminal.Aliases, manifest.Terminal.Usage, manifest.Description))];
 
     /// <summary>Runs one line in <paramref name="session"/>.</summary>
     /// <param name="session">The shell: process, environment, <c>$?</c>.</param>
@@ -146,7 +147,8 @@ public sealed class ShellInterpreter
         {
             ShellPipe? input = index == 0 ? null : pipes[index - 1];
             ShellPipe? output = index == stages.Count - 1 ? null : pipes[index];
-            running[index] = RunStageAsync(session, stages[index], input, output, options, line, elevation: null, pipelineCancellation.Token);
+            running[index] = RunStageAsync(
+                session, stages[index], input, output, options, line, elevation: null, piped: stages.Count > 1, pipelineCancellation.Token);
         }
 
         StageOutcome[] outcomes = await Task.WhenAll(running).ConfigureAwait(false);
@@ -164,7 +166,7 @@ public sealed class ShellInterpreter
                 new ShellPermissionDenial(stages[0].Arguments[0], last.Denials[0]), cancellationToken).ConfigureAwait(false);
             if (ticket is not null)
             {
-                last = await RunStageAsync(session, stages[0], null, null, options, line, ticket, cancellationToken).ConfigureAwait(false);
+                last = await RunStageAsync(session, stages[0], null, null, options, line, ticket, piped: false, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -180,6 +182,7 @@ public sealed class ShellInterpreter
         ShellExecutionOptions options,
         LineState line,
         ShellElevation? elevation,
+        bool piped,
         CancellationToken cancellationToken)
     {
         TextReader input = inputPipe?.Reader ?? TextReader.Null;
@@ -237,11 +240,11 @@ public sealed class ShellInterpreter
                 return StageOutcome.Completed(0, [], elevated: false);
             }
 
-            return await LaunchAsync(session, stage.Arguments, input, output, error, options, line, elevation, cancellationToken).ConfigureAwait(false);
+            return await LaunchAsync(session, stage.Arguments, input, output, error, options, line, elevation, piped, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    /// <summary>Resolves and starts one command (after built-ins), as a child of the shell's process.</summary>
+    /// <summary>Resolves and starts one command, as a child of the shell's process.</summary>
     private async Task<StageOutcome> LaunchAsync(
         ShellSession session,
         IReadOnlyList<string> arguments,
@@ -251,24 +254,9 @@ public sealed class ShellInterpreter
         ShellExecutionOptions options,
         LineState line,
         ShellElevation? elevation,
+        bool piped,
         CancellationToken cancellationToken)
     {
-        if (options.Builtins is { } builtins)
-        {
-            ShellBuiltinResult builtin = await builtins.TryRunAsync(
-                new ShellBuiltinInvocation(session, arguments, input, output, error), cancellationToken).ConfigureAwait(false);
-            if (builtin.ExitCode is { } builtinExit)
-            {
-                return StageOutcome.Completed(builtinExit, [], elevated: false);
-            }
-
-            if (builtin.Arguments is { } rewritten)
-            {
-                arguments = rewritten;
-                elevation = builtin.Elevation ?? elevation;
-            }
-        }
-
         string name = arguments[0];
         ShellCommandResolution? resolution = Resolver.Resolve(name, [.. arguments.Skip(1)]);
         if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
@@ -277,39 +265,126 @@ public sealed class ShellInterpreter
             return StageOutcome.Failed(CommandNotFoundExitCode, resolution is null ? ShellFailure.CommandNotFound : ShellFailure.Disabled);
         }
 
+        // ADR 0051 section 3: a command declaring shell.control run by an interactive shell acts on
+        // the shell itself, or on a copy inside a pipe (a subshell, whose changes are lost). The
+        // orchestrator still hands it over only if the capability is granted.
+        IShellSession? shell = session.IsInteractive && DeclaresShellControl(resolution.Manifest)
+            ? new ShellSessionAccess(this, piped ? session.Fork() : session, options, input)
+            : null;
+
         elevation ??= line.TakeElevation();
+        StageOutcome outcome = await StartAsync(
+            "hsh", session, resolution, session.ProcessId, input, output, error, options, elevation, shell, cancellationToken).ConfigureAwait(false);
+        line.AddDenials(outcome.Denials);
+        return outcome;
+    }
+
+    /// <summary>
+    /// <c>sudo</c>'s side of the shell (ADR 0051, section 4; ADR 0042): refuses a shell built-in,
+    /// asks an administrator's credentials, then runs the command as root, as a child of the caller
+    /// (the <c>sudo</c> process) in the shell's directory, without access to the shell.
+    /// </summary>
+    internal async ValueTask<int> RunElevatedAsync(
+        ShellSession session,
+        IReadOnlyList<string> arguments,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        ShellExecutionOptions options,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(output);
+        ArgumentNullException.ThrowIfNull(error);
+        if (arguments.Count == 0 || string.IsNullOrEmpty(arguments[0]))
+        {
+            throw new ArgumentException("A command name is required.", nameof(arguments));
+        }
+
+        string name = arguments[0];
+        ShellCommandResolution? resolution = Resolver.Resolve(name, [.. arguments.Skip(1)]);
+        if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
+        {
+            await error.WriteLineAsync($"sudo: {name}: command not found").ConfigureAwait(false);
+            return 1;
+        }
+
+        if (DeclaresShellControl(resolution.Manifest))
+        {
+            // The target never reaches the shell: an elevated `cd` would have nothing to act on.
+            await error.WriteLineAsync($"sudo: {name}: shell builtin").ConfigureAwait(false);
+            return 1;
+        }
+
+        if (options.CredentialPrompt is not { } prompt)
+        {
+            await error.WriteLineAsync("sudo: a terminal is required to read the password").ConfigureAwait(false);
+            return 1;
+        }
+
+        ShellElevation? ticket = await prompt($"Run as root: {string.Join(" ", arguments)}", cancellationToken).ConfigureAwait(false);
+        if (ticket is null)
+        {
+            await error.WriteLineAsync("sudo: authentication failed").ConfigureAwait(false);
+            return 1;
+        }
+
+        // Only the command is elevated: a redirection was already opened by the unelevated shell,
+        // so `sudo echo x > /etc/f` fails as on Linux.
+        ProcessId? parent = HackExecutionContext.CurrentOrNull?.ProcessId ?? session.ProcessId;
+        StageOutcome outcome = await StartAsync(
+            "sudo", session, resolution, parent, input, output, error, options, ticket, shell: null, cancellationToken).ConfigureAwait(false);
+        return outcome.ExitCode;
+    }
+
+    /// <summary>Starts a resolved command through the orchestrator and maps its launch status to an exit code.</summary>
+    private async Task<StageOutcome> StartAsync(
+        string caller,
+        ShellSession session,
+        ShellCommandResolution resolution,
+        ProcessId? parent,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        ShellExecutionOptions options,
+        ShellElevation? elevation,
+        IShellSession? shell,
+        CancellationToken cancellationToken)
+    {
+        string name = resolution.CommandName;
         AppLaunchResult launch = await _orchestrator.LaunchAsync(
             new AppLaunchRequest(
                 resolution.AppId,
                 session.Principal,
                 resolution.Arguments,
-                ParentPid: session.ProcessId,
+                ParentPid: parent,
                 WorkingDirectory: VirtualPath.Parse(session.CurrentDirectory),
                 ElevationToken: elevation?.Token,
                 ElevationScope: elevation?.Scope,
                 ApprovalPrompt: options.ApprovalPrompt,
                 // A shell with no process of its own passes its environment explicitly.
-                Environment: session.ProcessId is null ? session.GetVariables() : null,
+                Environment: parent is null ? session.GetVariables() : null,
                 StandardInput: input,
                 StandardOutput: output,
-                StandardError: error),
+                StandardError: error,
+                Shell: shell,
+                CommandName: name),
             options.FullScreen,
             cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<FileSystemError> denials = launch.PermissionDenials ?? [];
-        line.AddDenials(denials);
         switch (launch.Status)
         {
             case AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting:
                 return StageOutcome.Completed(launch.ExitCode ?? 0, denials, elevation is not null);
             case AppLaunchStatus.NotFound:
-                await error.WriteLineAsync($"hsh: {name}: command not found").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
                 return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.CommandNotFound);
             case AppLaunchStatus.Disabled:
-                await error.WriteLineAsync($"hsh: {name}: command not found").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
                 return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.Disabled);
             case AppLaunchStatus.ElevationDenied:
-                await error.WriteLineAsync($"hsh: {name}: elevation denied").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: {name}: elevation denied").ConfigureAwait(false);
                 return StageOutcome.Failed(1, ShellFailure.ElevationDenied);
             default:
                 if (cancellationToken.IsCancellationRequested)
@@ -317,10 +392,14 @@ public sealed class ShellInterpreter
                     return StageOutcome.Failed(InterruptedExitCode, ShellFailure.None);
                 }
 
-                await error.WriteLineAsync($"hsh: {name}: {launch.ErrorMessage ?? launch.ErrorCode}").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: {name}: {launch.ErrorMessage ?? launch.ErrorCode}").ConfigureAwait(false);
                 return StageOutcome.Failed(1, ShellFailure.Fault);
         }
     }
+
+    /// <summary>Whether a command asks for its calling shell (ADR 0051, section 3).</summary>
+    private static bool DeclaresShellControl(AppManifest manifest) =>
+        manifest.Capabilities.Contains(AppCapabilities.ShellControl, StringComparer.Ordinal);
 
     /// <summary>
     /// Expands one command's words (ADR 0050, section 3) and applies alias substitution to its
@@ -335,12 +414,6 @@ public sealed class ShellInterpreter
 
         if (words.Count > 0 && words[0].PlainText is { } name && name != "alias")
         {
-            if (StaticAliases.TryGetValue(name, out string[]? replacement))
-            {
-                List<string> arguments = [.. replacement, .. words.Skip(1).Select(word => Expand(word, session))];
-                return new ExpandedStage(arguments, [.. redirections.Select(r => (r.Kind, Expand(r.Target, session)))], null);
-            }
-
             string? value = await TryReadAliasAsync(session, name, cancellationToken).ConfigureAwait(false);
             if (value is not null)
             {

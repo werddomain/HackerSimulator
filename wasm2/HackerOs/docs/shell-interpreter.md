@@ -24,11 +24,12 @@ Tout est dans `Platform/HackerOs.Platform.Core/Shell/` :
 |---|---|
 | `ShellParser` | Découpe la ligne (lexer) puis vérifie la grammaire ; renvoie un `ShellCommandList` ou un `ShellSyntaxError` (code, message, position, longueur). Ne lève jamais d'exception pour une saisie. |
 | `ShellSyntax.cs` | L'arbre : `ShellCommandList` → `ShellPipeline` → `ShellCommand` (mots + redirections) ; un `ShellWord` garde ses morceaux (`ShellLiteralPart`, `ShellVariablePart`, `ShellExitStatusPart`, `ShellTildePart`) pour développer sans jamais relire le résultat comme de la syntaxe. Codes d'erreur dans `ShellSyntaxErrorCodes`. |
-| `ShellInterpreter` | Exécute l'arbre : expansion, alias, redirections, tubes, built-ins de l'hôte, lancement par `AppLifecycleOrchestrator`, codes de sortie. |
-| `ShellSession` | État d'un shell : son processus (celui de l'app hôte), l'historique, `LastExitCode`. Le répertoire et l'environnement sont **ceux du processus**, lus par `IAppEnvironmentGateway`. `ChangeDirectoryAsync` fait le `cd` (vérification, `PWD`, `OLDPWD`). |
+| `ShellInterpreter` | Exécute l'arbre : expansion, alias, redirections, tubes, lancement par `AppLifecycleOrchestrator`, codes de sortie. Fournit aussi `GetInstalledCommands()` et l'exécution élevée de `sudo` ([`shell-commands.md`](shell-commands.md)). |
+| `ShellSession` | État d'un shell : son processus (celui de l'app hôte), l'historique, `LastExitCode`. Le répertoire et l'environnement sont **ceux du processus**, lus par `IAppEnvironmentGateway`. `ChangeDirectoryAsync` fait le `cd` (vérification, `PWD`, `OLDPWD`) ; `Fork()` donne la copie d'un sous-shell. |
 | `ShellPipe` | Tube en mémoire de 64 Ki caractères entre deux étapes. |
 | `ShellCommandResolver` | Recherche d'une commande (nom, alias de manifeste ou identifiant d'app) dans le catalogue ; déplacé depuis `TerminalCommandResolver`. |
-| `ShellExecution.cs` | `ShellExecutionOptions`, `ShellExecutionResult`, `ShellFailure`, `IShellBuiltins`, `ShellElevation`. |
+| `ShellExecution.cs` | `ShellExecutionOptions` (dont `CredentialPrompt` pour `sudo`), `ShellExecutionResult`, `ShellFailure`, `ShellElevation`. |
+| `ShellSessionAccess` | `IShellSession` remis aux commandes qui déclarent `shell.control` (ADR 0051, [`shell-commands.md`](shell-commands.md)). |
 | `ShellErrorText` | Texte court d'une erreur de fichier (`No such file or directory`, `Permission denied`…). |
 
 Côté terminal (`Shared/HackerOs.AppSdk.Terminal/`) :
@@ -37,7 +38,7 @@ Côté terminal (`Shared/HackerOs.AppSdk.Terminal/`) :
 |---|---|
 | `TerminalPanel` | Édition de ligne, affichage, historique au clavier, complétion, fenêtre d'identifiants. Chaque ligne passe par `ShellInterpreter.ExecuteAsync`. |
 | `TerminalOutputWriter` | `TextWriter` qui pousse chaque morceau écrit vers l'affichage : la sortie apparaît pendant que la commande tourne. Une ligne reste « ouverte » jusqu'à son `\n`. |
-| `TerminalBuiltins` | Built-ins provisoires `cd`, `pwd`, `clear`, `help`, `sudo` (implémentation de `IShellBuiltins`), jusqu'au chantier `3-shell-commands`. |
+| `TerminalControlSequenceDecoder` | Interprète les séquences d'effacement (`ESC[2J`) écrites par `clear` et consomme les autres séquences CSI. |
 
 `ShellParser` et `TerminalSession` de `HackerOs.AppSdk.Terminal` ont disparu.
 
@@ -79,8 +80,9 @@ Juste avant de lancer un pipeline, pour toutes ses étapes à la fois :
 - **Alias** : si le premier mot est un mot simple non entre guillemets, le
   shell cherche `nom=valeur` dans `~/.hackeros/aliases` (lu avec l'identité de
   l'hôte). La valeur doit être une commande simple ; elle remplace le premier
-  mot. `unalias` et `rmalias` sont des alias statiques de `alias -r`. `alias`
-  lui-même n'est jamais remplacé.
+  mot. `alias` lui-même n'est jamais remplacé. `unalias` et `rmalias` ne sont
+  plus réécrits par le shell : ce sont des alias du manifeste d'`alias`, qui
+  lit son `argv[0]` ([`shell-commands.md`](shell-commands.md)).
 
 ## Exécution
 
@@ -113,10 +115,11 @@ Juste avant de lancer un pipeline, pour toutes ses étapes à la fois :
 - **Processus** : chaque étape est lancée avec `ParentPid` = processus du shell
   et `WorkingDirectory` = répertoire du shell. `ps` montre donc
   `terminal → grep, wc`.
-- **Built-ins** : `ShellExecutionOptions.Builtins` est consulté pour chaque
-  étape avant le catalogue. Il peut terminer la commande ou la réécrire avec
-  un jeton (`sudo`). Comme sous Linux, `sudo echo x > /etc/f` échoue : la
-  redirection est ouverte par le shell non élevé.
+- **Aucun built-in** : toute commande vient du catalogue (ADR 0051). Celles
+  qui agissent sur le shell (`cd`, `export`, `sudo`…) passent par
+  `IShellSession` ([`shell-commands.md`](shell-commands.md)). Comme sous Linux,
+  `sudo echo x > /etc/f` échoue : la redirection est ouverte par le shell non
+  élevé.
 - **Approbation ponctuelle** (ADR 0042) : si un pipeline d'une seule commande
   échoue sur un refus de permission, `PermissionApproval` peut fournir un
   jeton ; la commande est relancée une fois avec lui.
@@ -129,10 +132,9 @@ répertoire de ce processus au démarrage. L'invite vient du processus :
 `utilisateur@machine:répertoire$` (machine lue dans `/etc/hostname`), `~` pour le dossier personnel,
 `#` pour root.
 
-Les noms `cd`, `pwd`, `clear`, `help` et `sudo` restent codés en dur
-(`TerminalBuiltins.Names`) et masqués de la liste du catalogue ; le chantier
-`3-shell-commands` les remplacera par les commandes du catalogue et
-`IShellSession` (ADR 0051).
+Le terminal ne connaît aucun nom de commande : `cd`, `clear`, `help`, `sudo`
+sont des commandes du catalogue, et la complétion propose les commandes
+installées ([`shell-commands.md`](shell-commands.md)).
 
 ## `ExecuteCommandIntent`
 
@@ -164,7 +166,8 @@ le code de sortie (une erreur de syntaxe donne `Dispatched`, code `2` et
 - `Tests/HackerOs.Platform.Core.Tests/Shell/ShellInterpreterTests.cs` : bout en
   bout avec orchestrateur, processus et fichiers réels (arguments, tubes,
   `yes | head1` → 141, `&&`, `$?`, variables, redirections, parent et
-  répertoire, interruption, built-ins, alias, `ExecuteCommandIntent`).
+  répertoire, interruption, alias, `ExecuteCommandIntent`, et les commandes
+  du shell de [`shell-commands.md`](shell-commands.md)).
 - `Tests/HackerOs.Platform.Core.Tests/Shell/ShellCommandResolverTests.cs`.
 
 ## Liste des tâches
@@ -179,4 +182,4 @@ le code de sortie (une erreur de syntaxe donne `Dispatched`, code `2` et
 - [x] Commandes enfants du processus du terminal, dans son répertoire.
 - [x] `ExecuteCommandIntent` par l'interpréteur.
 - [x] Suppression de `ShellParser` et `TerminalSession` du terminal.
-- [ ] `cd`, `export`, `sudo`… du catalogue et `IShellSession` (chantier `3-shell-commands`).
+- [x] `cd`, `export`, `sudo`… du catalogue et `IShellSession` (chantier `3-shell-commands`, [`shell-commands.md`](shell-commands.md)).

@@ -1,11 +1,14 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Platform.Core.Shell;
 
 namespace HackerOs.Commands.Cd;
 
 /// <summary>
-/// Implements the <c>cd</c> terminal command (`P2-CMD-003`).
+/// Implements <c>cd [directory|-]</c> (ADR 0051, section 4). Like the bash built-in, it changes
+/// the directory of the shell that ran it, through <see cref="TerminalExecutionContext.Shell"/>
+/// (capability <c>shell.control</c>), not its own: the change is visible to the rest of an
+/// <c>&amp;&amp;</c> list and to every command started afterwards.
 /// </summary>
 public sealed class CdCommand : TerminalAppBase
 {
@@ -20,72 +23,62 @@ public sealed class CdCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        string targetDirectory = context.Arguments.Count > 0 ? context.Arguments[0] : "~";
-        if (targetDirectory == "~")
+        if (context.Shell is not { } shell)
         {
-            targetDirectory = context.Environment.TryGetValue("HOME", out string? home) ? home : "/home/user";
-        }
-
-        string resolvedPath = ResolvePath(context.WorkingDirectory, targetDirectory);
-        FileSystemResult<FileSystemEntrySnapshot> stat = await context.App.FileSystem.StatAsync(
-            new FileSystemStatRequest(VirtualPath.Parse(resolvedPath)), cancellationToken);
-
-        if (!stat.Succeeded || stat.Value is null)
-        {
-            if (stat.Error?.Code == FileSystemErrorCode.PermissionDenied || stat.Error?.Code == FileSystemErrorCode.CapabilityDenied)
-            {
-                context.StandardError.WriteLine($"cd: {targetDirectory}: Permission denied");
-            }
-            else
-            {
-                context.StandardError.WriteLine($"cd: {targetDirectory}: No such file or directory");
-            }
+            await context.StandardError.WriteLineAsync("cd: no shell session");
             return 1;
         }
 
-        if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
+        if (context.Arguments.Count > 1)
         {
-            context.StandardError.WriteLine($"cd: {targetDirectory}: Not a directory");
+            await context.StandardError.WriteLineAsync("cd: too many arguments");
             return 1;
         }
 
-        context.StandardOutput.WriteLine(resolvedPath);
+        // `cd` alone goes to HOME, `cd -` to OLDPWD (and prints it), as in bash.
+        string target;
+        bool printTarget = false;
+        if (context.Arguments.Count == 0)
+        {
+            if (!shell.Environment.TryGetValue("HOME", out string? home) || home.Length == 0)
+            {
+                await context.StandardError.WriteLineAsync("cd: HOME not set");
+                return 1;
+            }
+
+            target = home;
+        }
+        else if (context.Arguments[0] == "-")
+        {
+            if (!shell.Environment.TryGetValue("OLDPWD", out string? previous) || previous.Length == 0)
+            {
+                await context.StandardError.WriteLineAsync("cd: OLDPWD not set");
+                return 1;
+            }
+
+            target = previous;
+            printTarget = true;
+        }
+        else
+        {
+            target = context.Arguments[0];
+        }
+
+        try
+        {
+            await shell.ChangeDirectoryAsync(target, cancellationToken);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            await context.StandardError.WriteLineAsync($"cd: {target}: {ShellErrorText.Describe(exception)}");
+            return 1;
+        }
+
+        if (printTarget)
+        {
+            await context.StandardOutput.WriteLineAsync(shell.WorkingDirectory);
+        }
+
         return 0;
-    }
-
-    private static string ResolvePath(string cwd, string target)
-    {
-        if (target.StartsWith('/'))
-        {
-            return NormalizePath(target);
-        }
-        return NormalizePath($"{cwd.TrimEnd('/')}/{target}");
-    }
-
-    private static string NormalizePath(string rawPath)
-    {
-        string[] segments = rawPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        Stack<string> stack = new();
-
-        foreach (string segment in segments)
-        {
-            if (segment == ".")
-            {
-                continue;
-            }
-            if (segment == "..")
-            {
-                if (stack.Count > 0)
-                {
-                    stack.Pop();
-                }
-            }
-            else
-            {
-                stack.Push(segment);
-            }
-        }
-
-        return "/" + string.Join('/', stack.ToArray().Reverse());
     }
 }

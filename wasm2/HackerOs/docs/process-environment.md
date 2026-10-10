@@ -79,7 +79,8 @@ string host = HackEnvironment.MachineName;                  // /etc/hostname
 
 Toutes les opérations visent le processus courant. Une commande qui fait
 `export` ou `cd` ne change pas le shell qui l'a lancée : c'est le rôle de
-l'accès contrôlé au shell (ADR 0051, chantier `3-shell-commands`).
+l'accès contrôlé au shell (ADR 0051, `IShellSession`, voir
+[`shell-commands.md`](shell-commands.md)).
 
 `TerminalExecutionContext.WorkingDirectory` et `Environment` restent, pour la
 compatibilité : ils donnent l'état du processus au démarrage de la commande

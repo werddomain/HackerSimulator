@@ -63,6 +63,7 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.NetworkSimulatedWrite, CapabilityRisk.Normal },
         { AppCapabilities.NetworkRealAccess, CapabilityRisk.Dangerous },
         { AppCapabilities.GameplayDomainAccess, CapabilityRisk.Normal },
+        { AppCapabilities.ShellControl, CapabilityRisk.Normal },
     };
 
     [Theory]

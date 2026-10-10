@@ -39,6 +39,7 @@ classement.
 | `network.simulated.read`, `network.simulated.write` | normale |
 | `network.real.access` | **dangereuse** |
 | `gameplay.domain.access` | normale |
+| `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |
 
 Les phrases de risque sont celles de la table de l'ADR 0049.
 

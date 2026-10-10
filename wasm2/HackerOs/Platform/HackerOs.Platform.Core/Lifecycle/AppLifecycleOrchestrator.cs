@@ -316,8 +316,9 @@ public sealed class AppLifecycleOrchestrator
             request.Principal.UserId,
             request.Principal.SessionId,
             ResourceProfile.None,
-            // argv: the command name the user typed resolves to this manifest name (ADR 0050).
-            [descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
+            // argv[0] is the name the command was invoked as (an alias such as `unalias` included),
+            // otherwise the manifest's command name (ADR 0050).
+            [request.CommandName ?? descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
             workingDirectory,
             environment));
 
@@ -330,7 +331,10 @@ public sealed class AppLifecycleOrchestrator
             return descriptor.Manifest.Kind switch
             {
                 AppKind.Terminal => await RunTerminalAsync(
-                    descriptor, process, context, request, fullScreen, cancellationToken),
+                    descriptor, process, context, request, fullScreen,
+                    // ADR 0051 section 3: the shell reaches only a command granted shell.control.
+                    grantedCapabilities.Contains(AppCapabilities.ShellControl) ? request.Shell : null,
+                    cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
@@ -589,6 +593,7 @@ public sealed class AppLifecycleOrchestrator
         IAppExecutionContext context,
         AppLaunchRequest request,
         IFullScreenTerminalSession? fullScreen,
+        IShellSession? shell,
         CancellationToken cancellationToken)
     {
         _processManager.MarkRunning(process.Pid);
@@ -613,7 +618,8 @@ public sealed class AppLifecycleOrchestrator
             request.StandardError ?? bufferedError!,
             processEnvironment.CurrentDirectory,
             processEnvironment.GetVariables(),
-            fullScreen);
+            fullScreen,
+            shell);
 
         List<FileSystemError> permissionDenials = [];
         void OnPermissionDenied(object? sender, AppPermissionErrorEventArgs e) => permissionDenials.Add(e.Error);
