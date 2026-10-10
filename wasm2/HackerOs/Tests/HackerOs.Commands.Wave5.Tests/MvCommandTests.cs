@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Mv;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class MvCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/source.txt", "hello");
         TerminalExecutionContext context = CreateContext(fs, "source.txt", "renamed.txt");
 
-        int exitCode = await new MvCommand(MvCommand.StaticManifest)
+        int exitCode = await new MvCommand(AppDefinitionMapper.ToManifest(new MvApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -27,7 +28,7 @@ public sealed class MvCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "missing.txt", "renamed.txt");
 
-        int exitCode = await new MvCommand(MvCommand.StaticManifest)
+        int exitCode = await new MvCommand(AppDefinitionMapper.ToManifest(new MvApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -39,7 +40,7 @@ public sealed class MvCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/source.txt", "hello");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user/source.txt");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(MvCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new MvApp()), fileSystem: racing),
             ["source.txt", "renamed.txt"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -47,7 +48,7 @@ public sealed class MvCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new MvCommand(MvCommand.StaticManifest)
+        int exitCode = await new MvCommand(AppDefinitionMapper.ToManifest(new MvApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -58,7 +59,7 @@ public sealed class MvCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(MvCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new MvApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

@@ -21,29 +21,12 @@ public class SampleTickerService : ServiceAppBase
     /// <summary>This app's manifest ID, also the owning namespace for <see cref="SampleTickerTopics"/>.</summary>
     public const string AppId = "org.hackeros.samples.service-app";
 
-    private static readonly AppManifest StaticManifest = new()
-    {
-        SchemaVersion = 1,
-        Id = AppId,
-        Name = "Sample Ticker Service",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Deterministic status and ticker background service for HackerOS sessions",
-        Kind = AppKind.Service,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Samples.ServiceApp.dll", "HackerOs.Samples.ServiceApp.SampleTickerService"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = ["notifications.post"],
-        Resources = new AppResourceProfileManifest(0.01, 0.05, 0.02, 0.05, 0.0, 0.0, 0.0, 0.0),
-        AutoStart = true
-    };
-
     private long _tickCount;
     private bool _isStopping;
     private readonly TimeSpan _tickInterval;
 
     public SampleTickerService()
-        : this(StaticManifest, TimeSpan.FromSeconds(1))
+        : this(AppDefinitionMapper.ToManifest(new ServiceSampleApp()), TimeSpan.FromSeconds(1))
     {
     }
 

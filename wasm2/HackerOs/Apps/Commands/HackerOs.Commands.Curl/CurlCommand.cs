@@ -23,25 +23,6 @@ namespace HackerOs.Commands.Curl;
 /// </summary>
 public sealed class CurlCommand : TerminalAppBase
 {
-    /// <summary>Static manifest for test validation without a DI container.</summary>
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.curl",
-        Name = "curl",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Simulated URL data transfer command",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Curl.dll", "HackerOs.Commands.Curl.CurlCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("network", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite, AppCapabilities.NetworkRealAccess],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("curl", [], "curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>"),
-        SingleInstancePerUser = false
-    };
-
     private readonly ISimulatedNetworkService _network;
     private readonly IServerConnectionService _connection;
     private readonly IProxyClient _proxy;

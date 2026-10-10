@@ -21,7 +21,10 @@ public sealed class PlatformSampleApp : AppDefinition
     /// <inheritdoc />
     public override Type EntryPoint => typeof(PlatformDemoWindow);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// One shared entry point covering both platforms (plan §4.1's first example): a single
+    /// component reused across <c>desktop</c> and <c>mobile</c> rather than one variant per platform.
+    /// </summary>
     public override Type? MobileEntryPoint => typeof(PlatformDemoWindow);
 
     /// <inheritdoc />

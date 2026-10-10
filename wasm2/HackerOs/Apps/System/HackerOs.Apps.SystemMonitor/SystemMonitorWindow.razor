@@ -132,23 +132,6 @@
 </div>
 
 @code {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.system-monitor",
-        Name = "System Monitor",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "System resource performance monitoring, process manager, memory usage, and background service diagnostics",
-        Kind = AppKind.Window,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.SystemMonitor.dll", "HackerOs.Apps.SystemMonitor.SystemMonitorWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
-        Capabilities = ["process.list", "process.manage", "services.manage"],
-        Resources = AppResourceProfileManifest.None,
-        SingleInstancePerUser = true
-    };
-
     private double _cpuPercent = 12.5;
     private double _ramPercent = 28.4;
     private double _diskPercent = 42.0;

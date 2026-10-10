@@ -23,25 +23,6 @@ public sealed class NmapCommand : TerminalAppBase
     private const int DefaultFirstPort = 1;
     private const int DefaultLastPort  = 1000;
 
-    /// <summary>Static manifest for test validation without a DI container.</summary>
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.nmap",
-        Name = "nmap",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Simulated network mapper",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Nmap.dll", "HackerOs.Commands.Nmap.NmapCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("network", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkRealAccess],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("nmap", [], "nmap [-p <range>] [-sV] [-O] <target>"),
-        SingleInstancePerUser = false
-    };
-
     private readonly ISimulatedNetworkService _network;
     private readonly IServerConnectionService _connection;
     private readonly IProxyClient _proxy;

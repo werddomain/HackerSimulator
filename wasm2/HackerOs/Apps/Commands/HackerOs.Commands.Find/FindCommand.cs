@@ -11,24 +11,6 @@ namespace HackerOs.Commands.Find;
 /// </summary>
 public sealed class FindCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.find",
-        Name = "find",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Search directory hierarchy",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Find.dll", "HackerOs.Commands.Find.FindCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("find", [], "find [path] [-name pattern] [-type f|d]"),
-        SingleInstancePerUser = false
-    };
-
     public FindCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

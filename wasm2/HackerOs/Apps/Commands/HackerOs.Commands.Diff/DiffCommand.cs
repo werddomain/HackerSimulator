@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Diff;
 /// </summary>
 public sealed class DiffCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.diff",
-        Name = "diff",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Compare files line by line",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Diff.dll", "HackerOs.Commands.Diff.DiffCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("diff", [], "diff [-u] <file1> <file2>"),
-        SingleInstancePerUser = false
-    };
-
     public DiffCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

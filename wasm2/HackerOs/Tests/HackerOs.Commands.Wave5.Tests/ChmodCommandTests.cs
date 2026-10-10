@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Chmod;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class ChmodCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/script.sh", "echo hi");
         TerminalExecutionContext context = CreateContext(fs, "755", "script.sh");
 
-        int exitCode = await new ChmodCommand(ChmodCommand.StaticManifest)
+        int exitCode = await new ChmodCommand(AppDefinitionMapper.ToManifest(new ChmodApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -25,7 +26,7 @@ public sealed class ChmodCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "755", "missing.sh");
 
-        int exitCode = await new ChmodCommand(ChmodCommand.StaticManifest)
+        int exitCode = await new ChmodCommand(AppDefinitionMapper.ToManifest(new ChmodApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -37,7 +38,7 @@ public sealed class ChmodCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/script.sh", "echo hi");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user/script.sh");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(ChmodCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new ChmodApp()), fileSystem: racing),
             ["755", "script.sh"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -45,7 +46,7 @@ public sealed class ChmodCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new ChmodCommand(ChmodCommand.StaticManifest)
+        int exitCode = await new ChmodCommand(AppDefinitionMapper.ToManifest(new ChmodApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -58,7 +59,7 @@ public sealed class ChmodCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/script.sh");
         TerminalExecutionContext context = CreateContext(fs, "notoctal", "script.sh");
 
-        int exitCode = await new ChmodCommand(ChmodCommand.StaticManifest)
+        int exitCode = await new ChmodCommand(AppDefinitionMapper.ToManifest(new ChmodApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -66,7 +67,7 @@ public sealed class ChmodCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(ChmodCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new ChmodApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

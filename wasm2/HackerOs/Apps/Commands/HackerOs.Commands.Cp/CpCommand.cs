@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Cp;
 /// </summary>
 public sealed class CpCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.cp",
-        Name = "cp",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Copy files and directories",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Cp.dll", "HackerOs.Commands.Cp.CpCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("cp", [], "cp [-r|-R] <source...> <destination>"),
-        SingleInstancePerUser = false
-    };
-
     public CpCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

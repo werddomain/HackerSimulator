@@ -13,18 +13,18 @@ namespace HackerOs.Samples.PlatformApp.Tests;
 public sealed class PlatformDemoWindowTests
 {
     [Fact]
-    public void StaticManifest_declares_platform_not_legacy_entryPoint()
+    public void Definition_declares_platform_not_legacy_entryPoint()
     {
-        AppManifest manifest = PlatformDemoWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new PlatformSampleApp());
 
         Assert.Null(manifest.EntryPoint);
         Assert.NotNull(manifest.Platform);
     }
 
     [Fact]
-    public void StaticManifest_is_valid()
+    public void Definition_manifest_is_valid()
     {
-        ManifestValidationResult result = AppManifestValidator.Validate(PlatformDemoWindow.StaticManifest);
+        ManifestValidationResult result = AppManifestValidator.Validate(AppDefinitionMapper.ToManifest(new PlatformSampleApp()));
 
         Assert.True(result.IsValid, string.Join(", ", result.Errors.Select(e => $"{e.Code}: {e.Message}")));
     }
@@ -32,7 +32,7 @@ public sealed class PlatformDemoWindowTests
     [Fact]
     public void Resolve_finds_the_same_shared_entry_point_for_desktop_and_mobile()
     {
-        AppManifest manifest = PlatformDemoWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new PlatformSampleApp());
 
         AppPlatformEntryPointResolution desktop = AppPlatformEntryPointResolver.Instance.Resolve(manifest, WellKnownAppPlatforms.Desktop);
         AppPlatformEntryPointResolution mobile = AppPlatformEntryPointResolver.Instance.Resolve(manifest, WellKnownAppPlatforms.Mobile);
@@ -46,7 +46,7 @@ public sealed class PlatformDemoWindowTests
     [Fact]
     public void Discovery_resolves_the_component_type_on_both_platforms()
     {
-        AppManifest manifest = PlatformDemoWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new PlatformSampleApp());
         AppCatalogBuildResult catalogResult = AppCatalog.Build([manifest]);
         Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
 
@@ -65,32 +65,22 @@ public sealed class PlatformDemoWindowTests
     }
 
     [Fact]
-    public void Checked_in_manifest_json_matches_StaticManifest_platform_declaration()
+    public void Generated_manifest_json_matches_the_definition_platform_declaration()
     {
         string manifestPath = FindCheckedInManifestPath();
         AppManifest fromDisk = AppManifestJsonSerializer.DeserializeStrict(File.ReadAllText(manifestPath));
 
-        // Source-generated deserialization leaves omitted interface-typed collection properties
-        // null rather than running the record's [] field initializer (same gap documented in
-        // Tools/HackerOs.Tools.ManifestValidator/Program.cs); normalize before validating.
-        fromDisk = fromDisk with
-        {
-            Localizations = fromDisk.Localizations ?? [],
-            Capabilities = fromDisk.Capabilities ?? [],
-            Intents = fromDisk.Intents ?? [],
-            Dependencies = fromDisk.Dependencies ?? [],
-            Assets = fromDisk.Assets ?? [],
-            FileHandlers = fromDisk.FileHandlers ?? []
-        };
+        // Omitted optional collections deserialize as null; normalize before validating.
+        fromDisk = AppManifestJsonSerializer.NormalizeOptionalCollections(fromDisk);
 
         ManifestValidationResult result = AppManifestValidator.Validate(fromDisk);
         Assert.True(result.IsValid, string.Join(", ", result.Errors.Select(e => $"{e.Code}: {e.Message}")));
 
-        Assert.Equal(PlatformDemoWindow.StaticManifest.Id, fromDisk.Id);
+        Assert.Equal(AppDefinitionMapper.ToManifest(new PlatformSampleApp()).Id, fromDisk.Id);
         Assert.Null(fromDisk.EntryPoint);
         Assert.NotNull(fromDisk.Platform);
         Assert.Equal(
-            [.. PlatformDemoWindow.StaticManifest.Platform!.Supported.OrderBy(v => v, StringComparer.Ordinal)],
+            [.. AppDefinitionMapper.ToManifest(new PlatformSampleApp()).Platform!.Supported.OrderBy(v => v, StringComparer.Ordinal)],
             fromDisk.Platform!.Supported.OrderBy(v => v, StringComparer.Ordinal).ToArray());
     }
 
@@ -102,7 +92,7 @@ public sealed class PlatformDemoWindowTests
             string candidate = Path.Combine(directory, "HackerOs.sln");
             if (File.Exists(candidate))
             {
-                return Path.Combine(directory, "Apps", "Samples", "HackerOs.Samples.PlatformApp", "app.manifest.json");
+                return Path.Combine(directory, "Apps", "Samples", "HackerOs.Samples.PlatformApp", "manifest.json");
             }
 
             directory = Path.GetDirectoryName(directory);

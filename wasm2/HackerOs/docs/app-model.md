@@ -133,7 +133,7 @@ main est écrasée au build suivant.
 
 | Élément | Rôle |
 | --- | --- |
-| `$(HackerOsAppProject)` | `true` par défaut sous `Apps/` ; un projet ailleurs la positionne lui-même. **Transition :** un projet qui a encore un `app.manifest.json` écrit à la main n'est pas un projet d'app pour le générateur ; cette exception disparaît avec `rebuild/2-app-migration`. |
+| `$(HackerOsAppProject)` | `true` par défaut sous `Apps/` ; un projet ailleurs la positionne lui-même. Il n'y a pas d'exception : un projet sous `Apps/` sans classe `[AppManifest]` échoue avec `HOSAPP0001`. |
 | `ProjectReference` vers le générateur | Ajoutée automatiquement aux projets d'app pour l'ordre de build (`ReferenceOutputAssembly=false`, `PrivateAssets=all` : l'outil n'entre jamais dans le graphe d'un hôte WebAssembly). |
 | Cible `GenerateHackerOsAppManifests` | Après `CopyFilesToOutputDirectory`. Incrémentale : entrées = assembly compilée, outil, liste des dépendances, manifestes existants ; sortie = fichier témoin. |
 | Cible `GetHackerOsAppManifests` | Cible de requête pour l'hôte : les manifestes du projet, avec les métadonnées `AssemblyName`, `AssemblyFileName` et `AppProject`. Vide pour un projet qui n'est pas une app. |
@@ -165,12 +165,39 @@ avec le nom complet de la classe en cause : `App.csproj : error HOSAPP0005: [Ns.
 Les dépendances entre apps ne sont pas vérifiées à la génération (une seule app
 est connue) : elles le sont à l'agrégation dans l'hôte.
 
-### App migrée en exemple
+### Migration des apps
 
-`Apps/System/HackerOs.Apps.Calculator` a sa classe `CalculatorApp` et son
-`manifest.json` généré ; son `app.manifest.json` est supprimé. Le manifeste
-généré est sémantiquement identique à l'ancien. Les autres apps gardent leur
-`app.manifest.json` jusqu'au chantier `rebuild/2-app-migration`.
+Les 44 projets sous `Apps/` (12 apps, 28 commandes, 4 exemples) ont leur classe
+`[AppManifest]` et leur `manifest.json` généré ; il ne reste aucun
+`app.manifest.json` écrit à la main ni aucun champ `StaticManifest`.
+`Apps/System/HackerOs.Apps.Calculator` (`CalculatorApp`) a servi d'exemple.
+
+Convention de nommage de la classe : nom du point d'entrée sans le suffixe
+`Window` ou `Command`, suivi de `App` (`CalculatorWindow` → `CalculatorApp`,
+`RmCommand` → `RmApp`). Les exemples, dont le point d'entrée porte déjà ce genre
+de nom, utilisent `<Projet>SampleApp` (`TerminalSampleApp`, `WindowSampleApp`,
+`ServiceSampleApp`, `PlatformSampleApp`). La classe est dans le namespace de son
+point d'entrée.
+
+Les valeurs viennent de l'ancien `app.manifest.json`, qui faisait foi au runtime :
+quand un `StaticManifest` C# divergeait (profil de ressources `None`, description
+abrégée), c'est le JSON qui a été repris. Le code et les tests qui lisaient
+`StaticManifest` utilisent `AppDefinitionMapper.ToManifest(new XxxApp())` ; c'est
+aussi le cas des constructeurs sans paramètre de `SampleTerminalApp` et
+`SampleTickerService`.
+
+Vérification : un test de migration temporaire
+(`LegacyManifestMigrationTests`, commit `feat(app-model): [AppManifest] classes
+for the 43 remaining apps`) a comparé, pour les 43 apps, le `manifest.json`
+généré et l'ancien fichier après lecture stricte, normalisation des collections
+facultatives et sérialisation canonique : 43 égaux. Il a été supprimé avec les
+anciens fichiers. Seul écart corrigé avant comparaison : le `app.manifest.json`
+de l'exemple TerminalApp utilisait les clés hors schéma `commandName` et
+`helpSummary` (refusées en lecture stricte) ; ce sont `name` et `usage`, déjà
+utilisées par son `StaticManifest`.
+
+`HackerOs.Commands.Cd`, `Pwd`, `Clear` et `Help` ont aussi leur classe mais
+restent non référencés par l'hôte jusqu'à la phase 3 (ADR 0034).
 
 ### Tests
 
@@ -239,16 +266,11 @@ porte les drapeaux système (voir « Apps système » ci-dessous). Seul le
 JSON est lu : les DLL d'apps restent chargées au premier lancement et les
 classes `AppDefinition` ne sont jamais instanciées au runtime.
 
-**Transition (jusqu'à `rebuild/2-app-migration`)** : les apps pas encore migrées
-gardent leur `app.manifest.json` embarqué à la main
-(`HackerOs.Ecosystem.Manifests.*`) et leur ligne `BlazorWebAssemblyLazyLoad` dans
-`HackerOs.Ecosystem.csproj` ; `BuildKnownLazyApps` fusionne les deux sources. Pour
-qu'une app héritée suive elle aussi la `ProjectReference`, la cible
-`_HackerOsMarkLegacySystemManifests` renomme la ressource d'une app héritée dont
-la `ProjectReference` porte `IsSystemApp="true"` en
-`HackerOs.Ecosystem.Manifests.System.*`, et `BuildKnownLazyApps` la lit comme
-système. Une app migrée ne doit plus figurer dans ces listes : sa
-`ProjectReference` suffit, comme pour Calculator.
+C'est la seule source : `HackerOs.Ecosystem.csproj` n'embarque plus de manifeste
+à la main (`HackerOs.Ecosystem.Manifests.*`) et n'a plus de liste
+`BlazorWebAssemblyLazyLoad`, et la cible de transition
+`_HackerOsMarkLegacySystemManifests` a disparu avec elles : `IsSystemApp` vient
+seulement de `BuiltInApplications.json`. Une ressource absente est une erreur au démarrage.
 
 ### Installer une app
 
@@ -267,8 +289,9 @@ système. Rien d'autre.
   `Tests/ManifestGenerator.Fixtures.Host` (une app système, un projet à deux apps,
   un projet qui n'est pas une app, ignoré).
 - `BuildKnownLazyAppsTests` (`HackerOs.Ecosystem.Tests`) : le catalogue contient
-  toujours les 36 apps ; Calculator vient de la ressource agrégée, sans ressource
-  écrite à la main, et son assembly est dans la liste de chargement différé.
+  toujours les 36 apps ; toutes viennent de la ressource agrégée (aucune ressource
+  `HackerOs.Ecosystem.Manifests.*`), et la liste de chargement différé est
+  exactement celle de leurs assemblies.
 
 ## Apps système (ADR 0048 §1)
 
@@ -329,4 +352,4 @@ l'ADR 0049 ; ce chantier ne fait qu'exposer l'information.
 - [x] `rebuild/2-manifest-generator` : `Tools/HackerOs.Tools.ManifestGenerator` (`generate`, `validate`), `build/HackerOs.Apps.targets`, cibles `GenerateHackerOsAppManifests` et `GetHackerOsAppManifests`, erreurs `HOSAPP*`, projets de test, Calculator migrée en exemple.
 - [x] `rebuild/2-builtin-applications` : cible `CollectHackerOsBuiltInApplications`, `BuiltInApplications.json` embarqué, lazy load automatique, `BuildKnownLazyApps` lit le nouveau fichier, `IsSystemApp` transporté.
 - [x] `rebuild/2-system-apps` (ADR 0048) : `AppCatalog.SystemAppIds` et `IsSystemApp`, `AppCatalog.Build(manifests, systemAppIds)` et `BuildFromBuiltInApplications`, `IsSystemApp="true"` posé sur les `ProjectReference` de l'Ecosystem, pont de transition `_HackerOsMarkLegacySystemManifests`, tests.
-- [ ] `rebuild/2-app-migration` : classes `[AppManifest]` pour les autres apps, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte (et de la cible `_HackerOsMarkLegacySystemManifests` avec elles), de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».
+- [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

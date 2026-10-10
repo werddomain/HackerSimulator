@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Rm;
 /// </summary>
 public sealed class RmCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.rm",
-        Name = "rm",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Remove files or directories",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Rm.dll", "HackerOs.Commands.Rm.RmCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("rm", [], "rm [-r|-R] [-f] <file...>"),
-        SingleInstancePerUser = false
-    };
-
     public RmCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

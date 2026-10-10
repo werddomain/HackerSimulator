@@ -145,7 +145,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task PingCommand_ExecutesSuccessfully_ForUpHost()
     {
-        var cmd = new PingCommand(PingCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -163,7 +163,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task PingCommand_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new PingCommand(PingCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -178,7 +178,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task NmapCommand_ScansPorts_And_FormatsOutput()
     {
-        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -200,7 +200,7 @@ public sealed class Wave4NetworkTests
     {
         // A port range (the default, or an explicit "-p 1-100") must never trigger a real probe --
         // only an explicit single port does. UnusedProxyClient throws if called, proving this.
-        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -215,7 +215,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task NmapCommand_SinglePortAgainstUnknownHost_WithoutServerConnection_ReportsHostDown()
     {
-        var cmd = new NmapCommand(NmapCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -235,7 +235,7 @@ public sealed class Wave4NetworkTests
         ProxyTcpProbeState probeState, string expectedLabel)
     {
         var cmd = new NmapCommand(
-            NmapCommand.StaticManifest,
+            AppDefinitionMapper.ToManifest(new NmapApp()),
             _network,
             new ConnectedServerConnectionService(),
             new SuccessTcpProbeProxyClient(probeState));
@@ -255,7 +255,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FetchesPage_And_PrintsSections()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -273,7 +273,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_WithHeadersOnly_PrintsHttpStatus()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -291,7 +291,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_HeadersOnly_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -307,7 +307,7 @@ public sealed class Wave4NetworkTests
     public async Task CurlCommand_HeadersOnly_UnknownHost_WithServerConnection_UsesRealProxyHead()
     {
         var cmd = new CurlCommand(
-            CurlCommand.StaticManifest,
+            AppDefinitionMapper.ToManifest(new CurlApp()),
             _network,
             new ConnectedServerConnectionService(),
             new SuccessProxyClient());
@@ -329,7 +329,7 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FullBody_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new CurlCommand(CurlCommand.StaticManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -345,7 +345,7 @@ public sealed class Wave4NetworkTests
     public async Task CurlCommand_FullBody_UnknownHost_WithServerConnection_FetchesRealBody()
     {
         var cmd = new CurlCommand(
-            CurlCommand.StaticManifest,
+            AppDefinitionMapper.ToManifest(new CurlApp()),
             _network,
             new ConnectedServerConnectionService(),
             new SuccessBodyProxyClient(200, "hello from the real internet"));
@@ -364,7 +364,7 @@ public sealed class Wave4NetworkTests
     public async Task CurlCommand_FullBody_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
     {
         var cmd = new CurlCommand(
-            CurlCommand.StaticManifest,
+            AppDefinitionMapper.ToManifest(new CurlApp()),
             _network,
             new ConnectedServerConnectionService(),
             new SuccessBodyProxyClient(404, "Not Found"));
@@ -491,7 +491,7 @@ public sealed class Wave4NetworkTests
         TextWriter stdout,
         TextWriter stderr)
     {
-        var manifest = PingCommand.StaticManifest;
+        var manifest = AppDefinitionMapper.ToManifest(new PingApp());
         var app = new StubAppExecutionContext(manifest);
 
         return new TerminalExecutionContext(

@@ -16,24 +16,6 @@ public partial class ErrorLogViewerWindow
     /// <summary>Maximum rows rendered per tab; the newest are shown first.</summary>
     public const int MaxDisplayedRows = 2000;
 
-    /// <summary>Gets the static manifest; it must match <c>app.manifest.json</c>.</summary>
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.error-log-viewer",
-        Name = "Error Log Viewer",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "System diagnostic error log viewer, stack trace inspector, and event log manager",
-        Kind = AppKind.Window,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.ErrorLogViewer.dll", "HackerOs.Apps.ErrorLogViewer.ErrorLogViewerWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
-        Capabilities = [AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        SingleInstancePerUser = true
-    };
-
     private readonly Dictionary<VirtualPath, LogFileContent> _contents = [];
     private readonly List<ITopicChannelSubscription<FileSystemChangeEvent>> _watches = [];
     private readonly CancellationTokenSource _lifetime = new();

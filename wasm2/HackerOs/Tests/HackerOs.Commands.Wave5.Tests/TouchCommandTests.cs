@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Touch;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class TouchCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "newfile.txt");
 
-        int exitCode = await new TouchCommand(TouchCommand.StaticManifest)
+        int exitCode = await new TouchCommand(AppDefinitionMapper.ToManifest(new TouchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -26,7 +27,7 @@ public sealed class TouchCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/existing.txt", "hello");
         TerminalExecutionContext context = CreateContext(fs, "existing.txt");
 
-        int exitCode = await new TouchCommand(TouchCommand.StaticManifest)
+        int exitCode = await new TouchCommand(AppDefinitionMapper.ToManifest(new TouchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -39,7 +40,7 @@ public sealed class TouchCommandTests
         FakeAppFileSystemGateway fs = new();
         TerminalExecutionContext context = CreateContext(fs, "newfile.txt");
 
-        int exitCode = await new TouchCommand(TouchCommand.StaticManifest)
+        int exitCode = await new TouchCommand(AppDefinitionMapper.ToManifest(new TouchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -52,7 +53,7 @@ public sealed class TouchCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(TouchCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new TouchApp()), fileSystem: racing),
             ["newfile.txt"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -60,7 +61,7 @@ public sealed class TouchCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new TouchCommand(TouchCommand.StaticManifest)
+        int exitCode = await new TouchCommand(AppDefinitionMapper.ToManifest(new TouchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -69,7 +70,7 @@ public sealed class TouchCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(TouchCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new TouchApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

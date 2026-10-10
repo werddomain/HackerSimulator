@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Cp;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class CpCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/source.txt", "hello");
         TerminalExecutionContext context = CreateContext(fs, "source.txt", "copy.txt");
 
-        int exitCode = await new CpCommand(CpCommand.StaticManifest)
+        int exitCode = await new CpCommand(AppDefinitionMapper.ToManifest(new CpApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -27,7 +28,7 @@ public sealed class CpCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "missing.txt", "copy.txt");
 
-        int exitCode = await new CpCommand(CpCommand.StaticManifest)
+        int exitCode = await new CpCommand(AppDefinitionMapper.ToManifest(new CpApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -40,7 +41,7 @@ public sealed class CpCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/source.txt", "hello");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user/source.txt");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(CpCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new CpApp()), fileSystem: racing),
             ["source.txt", "copy.txt"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -48,7 +49,7 @@ public sealed class CpCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new CpCommand(CpCommand.StaticManifest)
+        int exitCode = await new CpCommand(AppDefinitionMapper.ToManifest(new CpApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -58,7 +59,7 @@ public sealed class CpCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(CpCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new CpApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

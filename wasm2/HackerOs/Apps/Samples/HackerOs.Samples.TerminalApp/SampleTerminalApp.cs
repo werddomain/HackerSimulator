@@ -20,25 +20,8 @@ namespace HackerOs.Samples.TerminalApp;
 /// </remarks>
 public class SampleTerminalApp : TerminalAppBase
 {
-    private static readonly AppManifest StaticManifest = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.samples.terminal-app",
-        Name = "Sample Terminal App",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Complete sample Terminal command application",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Samples.TerminalApp.dll", "HackerOs.Samples.TerminalApp.SampleTerminalApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
-        Terminal = new TerminalCommandManifest("sample-cmd", ["sample"], "Executes sample SDK terminal command"),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
-        Resources = AppResourceProfileManifest.None
-    };
-
     public SampleTerminalApp()
-        : this(StaticManifest)
+        : this(AppDefinitionMapper.ToManifest(new TerminalSampleApp()))
     {
     }
 

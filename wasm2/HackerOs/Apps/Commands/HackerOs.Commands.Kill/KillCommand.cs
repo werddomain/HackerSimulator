@@ -11,24 +11,6 @@ namespace HackerOs.Commands.Kill;
 /// </summary>
 public sealed class KillCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.kill",
-        Name = "kill",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Terminate process",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Kill.dll", "HackerOs.Commands.Kill.KillCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.ProcessManage],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("kill", [], "kill [-9] <pid...>"),
-        SingleInstancePerUser = false
-    };
-
     public KillCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

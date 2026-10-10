@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Chmod;
 /// </summary>
 public sealed class ChmodCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.chmod",
-        Name = "chmod",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Change file permissions mode bits",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Chmod.dll", "HackerOs.Commands.Chmod.ChmodCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("chmod", [], "chmod <mode> <file...>"),
-        SingleInstancePerUser = false
-    };
-
     public ChmodCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(
