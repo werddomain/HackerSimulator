@@ -112,6 +112,18 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
             FileAssociationSettingsDocuments.File.Resolve(null),
             FileAssociationSettingsDocuments.DefaultContent,
             cancellationToken).ConfigureAwait(false);
+
+        // ADR 0049: the dangerous-capability policy and the (empty) machine decisions.
+        await WriteIfAbsentAsync(
+            system,
+            SecuritySettingsDocuments.Document.SystemPath,
+            SecuritySettingsDocuments.DefaultContent,
+            cancellationToken).ConfigureAwait(false);
+        await WriteIfAbsentAsync(
+            system,
+            AppPermissionsDocument.MachineFile.Resolve(null),
+            AppPermissionsDocument.DefaultMachineContent,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -128,11 +129,16 @@ public sealed class AppIntentDispatcher
     /// <param name="principal">Authenticated principal the request runs as. Must match <paramref name="request"/>'s user.</param>
     /// <param name="fullScreen">Optional alternate-screen renderer supplied to an executed Terminal command.</param>
     /// <param name="cancellationToken">Cancels command execution without affecting unrelated intents.</param>
+    /// <param name="approvalPrompt">
+    /// Optional prompt for an executed command's pending dangerous capabilities (ADR 0049 section 5):
+    /// the terminal's text mode. Other intents use the host's overlay.
+    /// </param>
     public async ValueTask<AppIntentDispatchResult> DispatchAsync(
         AppIntentRequest request,
         AuthenticatedPrincipal principal,
         IFullScreenTerminalSession? fullScreen = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IDangerousCapabilityApprovalPrompt? approvalPrompt = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(principal);
@@ -146,7 +152,7 @@ public sealed class AppIntentDispatcher
             LaunchAppIntent launch => await DispatchLaunchAsync(request, launch, principal),
             OpenFileIntent openFile => await DispatchOpenFileAsync(request, openFile, principal),
             ExecuteCommandIntent execute => await DispatchExecuteCommandAsync(
-                request, execute, principal, fullScreen, cancellationToken),
+                request, execute, principal, fullScreen, approvalPrompt, cancellationToken),
             RevealFileIntent => new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched),
             ShowAppSettingsIntent showSettings => DispatchShowSettings(showSettings),
             _ => new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.unknown")
@@ -198,6 +204,7 @@ public sealed class AppIntentDispatcher
         ExecuteCommandIntent intent,
         AuthenticatedPrincipal principal,
         IFullScreenTerminalSession? fullScreen,
+        IDangerousCapabilityApprovalPrompt? approvalPrompt,
         CancellationToken cancellationToken)
     {
         if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
@@ -233,7 +240,8 @@ public sealed class AppIntentDispatcher
         AppLaunchResult launch = await _orchestrator.LaunchAsync(
             new AppLaunchRequest(
                 target.Id, principal, arguments, WorkingDirectory: intent.WorkingDirectory,
-                ElevationToken: intent.ElevationToken, ElevationScope: intent.ElevationScope),
+                ElevationToken: intent.ElevationToken, ElevationScope: intent.ElevationScope,
+                ApprovalPrompt: approvalPrompt),
             fullScreen, cancellationToken);
         return ToDispatchResult(launch);
     }

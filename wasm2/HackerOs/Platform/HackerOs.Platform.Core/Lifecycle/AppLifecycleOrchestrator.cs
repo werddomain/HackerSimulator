@@ -5,6 +5,7 @@ using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Intents;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -37,6 +38,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IServiceProvider? _services;
     private readonly IFileSystemService? _fileSystem;
     private readonly IElevationTicketStore? _elevationTickets;
+    private readonly IDangerousCapabilityGate? _dangerousCapabilityGate;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -71,6 +73,13 @@ public sealed class AppLifecycleOrchestrator
     /// (e.g. in tests that don't exercise elevation), a supplied token is always denied — the
     /// previous, narrower behavior tests still rely on.
     /// </param>
+    /// <param name="dangerousCapabilityGate">
+    /// Optional launch gate of ADR 0049 section 5. When supplied, every launch of an app declaring
+    /// a dangerous capability goes through it before the process is created (approval overlay,
+    /// <c>auth.log</c>, grants aligned with <c>app-permissions.config</c>), and policy <c>block</c>
+    /// refuses the one-shot approval of ADR 0042 for those capabilities. When omitted, a non-system
+    /// app simply never holds a dangerous capability (the login seeder withholds them).
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -82,7 +91,8 @@ public sealed class AppLifecycleOrchestrator
         IAppDescriptorLoader? descriptorLoader = null,
         IServiceProvider? services = null,
         IFileSystemService? fileSystem = null,
-        IElevationTicketStore? elevationTickets = null)
+        IElevationTicketStore? elevationTickets = null,
+        IDangerousCapabilityGate? dangerousCapabilityGate = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -95,6 +105,7 @@ public sealed class AppLifecycleOrchestrator
         _services = services;
         _fileSystem = fileSystem;
         _elevationTickets = elevationTickets;
+        _dangerousCapabilityGate = dangerousCapabilityGate;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -231,7 +242,7 @@ public sealed class AppLifecycleOrchestrator
         }
 
         bool isRootElevated = false;
-        OneShotElevationGrantSet? oneShotElevation = null;
+        ElevationTicket? capabilityTicket = null;
         if (request.ElevationToken is Guid elevationToken && request.ElevationScope is ElevationScope elevationScope)
         {
             if (_elevationTickets is null
@@ -247,9 +258,42 @@ public sealed class AppLifecycleOrchestrator
             }
             else if (ticket.Capability is not null)
             {
-                oneShotElevation = new OneShotElevationGrantSet();
-                oneShotElevation.Grant(ticket.Capability, ticket.Path);
+                capabilityTicket = ticket;
             }
+        }
+
+        // ADR 0049 section 5: decide pending dangerous capabilities before the process exists, so
+        // the instance's capabilities are frozen at launch with the administrator's answer.
+        DangerousCapabilityGateResult? dangerous = null;
+        if (_dangerousCapabilityGate is not null
+            && DangerousCapabilityEvaluator.DeclaresDangerousCapabilities(descriptor.Manifest))
+        {
+            dangerous = await _dangerousCapabilityGate
+                .EnsureDecidedAsync(descriptor.Manifest, request.Principal, request.ApprovalPrompt, request.Interactive, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        OneShotElevationGrantSet? oneShotElevation = null;
+        if (dangerous is { BlocksOneShotApproval: true })
+        {
+            // ADR 0049 section 3: under policy block the one-shot approval of ADR 0042 is refused
+            // for every dangerous capability of a non-system app (sudo is not concerned).
+            if (capabilityTicket?.Capability is { } ticketCapability && AppCapabilities.IsDangerous(ticketCapability))
+            {
+                return new AppLaunchResult(AppLaunchStatus.ElevationDenied, ErrorCode: "lifecycle.elevation.blocked-by-policy");
+            }
+
+            oneShotElevation = new OneShotElevationGrantSet();
+            foreach (string capability in AppCapabilities.All.Where(AppCapabilities.IsDangerous))
+            {
+                oneShotElevation.Block(capability);
+            }
+        }
+
+        if (capabilityTicket is not null)
+        {
+            oneShotElevation ??= new OneShotElevationGrantSet();
+            oneShotElevation.Grant(capabilityTicket.Capability!, capabilityTicket.Path);
         }
 
         HashSet<string> grantedCapabilities = ComputeGrantedCapabilities(descriptor.Manifest, request.Principal);
@@ -322,7 +366,8 @@ public sealed class AppLifecycleOrchestrator
                 continue;
             }
 
-            results.Add(await LaunchAsync(new AppLaunchRequest(appId, principal, [])));
+            // Nobody is watching an auto-start: pending dangerous capabilities are deferred (ADR 0049 section 5.4).
+            results.Add(await LaunchAsync(new AppLaunchRequest(appId, principal, [], Interactive: false)));
         }
 
         return results;
