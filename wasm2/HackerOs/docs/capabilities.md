@@ -9,9 +9,11 @@ normales et dangereuses (ADR 0049, section 1) et la règle d'attribution du
 seeder (ADR 0049, section 2).
 
 La fenêtre d'approbation administrateur, `security.config`,
-`app-permissions.config` et `auth.log` (ADR 0049, sections 3 à 8) sont le
-chantier suivant, `rebuild/2-dangerous-approval`. Tant qu'il n'est pas fait,
-une capacité dangereuse d'une app non système n'est **jamais** accordée.
+`app-permissions.config` et `auth.log` (ADR 0049, sections 3 à 8) sont décrits
+dans [`dangerous-capability-approval.md`](dangerous-capability-approval.md). À
+la connexion, une capacité dangereuse d'une app non système n'est **jamais**
+accordée : seule la passerelle de lancement l'accorde, après une décision
+« allow » d'un administrateur.
 
 ## Catalogue et classement
 
@@ -73,7 +75,7 @@ avec `isSystemApp = AppCatalog.IsSystemApp(manifest.Id)` (ADR 0048).
 | App | Capacité normale déclarée | Capacité dangereuse déclarée |
 |---|---|---|
 | Système | accordée, source `BuildProfile` | accordée, source `SystemPolicy` |
-| Non système | accordée, source `BuildProfile` | **non accordée** (en attente d'approbation) |
+| Non système | accordée, source `BuildProfile` | **non accordée** ; la passerelle de lancement l'accorde (source `AdministratorApproval`) si une décision « allow » existe |
 
 Une capacité non déclarée n'est jamais accordée. `AppLifecycleOrchestrator`
 calcule les capacités d'une instance à partir du dépôt de grants : une app non
@@ -112,6 +114,7 @@ clé inconnue.
   `diagnostics.*` (catalogue, définitions d'app, manifestes générés, tests,
   `SettingsScopePolicy`), seeder selon le statut système, retrait de
   `capabilityGrantsLocked`.
-- [ ] `rebuild/2-dangerous-approval` : `security.config`,
+- [x] `rebuild/2-dangerous-approval` (voir
+  [`dangerous-capability-approval.md`](dangerous-capability-approval.md)) : `security.config`,
   `app-permissions.config`, `IDangerousCapabilityGate` au lancement, fenêtre
   spéciale, mode texte du terminal, `auth.log`, vue Permissions des Paramètres.

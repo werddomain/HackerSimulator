@@ -1,0 +1,101 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.Platform.Core.Policy
+@using HackerOs.Simulation.Abstractions.Sessions
+
+@*
+    Settings > Applications > Permissions (ADR 0049 section 7). Kept apart from the Installed Apps
+    tab (ADR 0048) so the two evolve independently.
+*@
+<div class="permissions-panel">
+    @if (_administration is null)
+    {
+        <p class="setting-desc">Les permissions des applications ne sont pas disponibles sur cet hôte.</p>
+    }
+    else
+    {
+        <section class="setting-group permissions-policy">
+            <h4>Capacités dangereuses des apps non système</h4>
+            <p class="setting-desc">
+                Politique de <code>/etc/hackeros/security.config</code>. Chaque changement demande un administrateur
+                et prend effet au prochain lancement de l'app.
+            </p>
+            <div class="policy-options" role="radiogroup" aria-label="Politique des capacités dangereuses">
+                <button type="button" role="radio" class="@PolicyClass(DangerousCapabilityPolicy.Prompt)"
+                        aria-checked="@(_policy == DangerousCapabilityPolicy.Prompt)"
+                        disabled="@_isBusy"
+                        @onclick="() => ChangePolicyAsync(DangerousCapabilityPolicy.Prompt)">
+                    Demander à un administrateur
+                </button>
+                <button type="button" role="radio" class="@PolicyClass(DangerousCapabilityPolicy.Block)"
+                        aria-checked="@(_policy == DangerousCapabilityPolicy.Block)"
+                        disabled="@_isBusy"
+                        @onclick="() => ChangePolicyAsync(DangerousCapabilityPolicy.Block)">
+                    Toujours bloquer
+                </button>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <div class="permissions-message" role="status">@_message</div>
+        }
+
+        @if (_overview.Count == 0)
+        {
+            <p class="setting-desc">Aucune application installée ne déclare de capacité dangereuse.</p>
+        }
+
+        @foreach (AppPermissionOverview app in _overview)
+        {
+            <section key="@app.Manifest.Id" class="setting-group permissions-app">
+                <header class="permissions-app-header">
+                    <span class="permissions-app-name">@app.Manifest.Name</span>
+                    <code class="permissions-app-id">@app.Manifest.Id</code>
+                    <span class="@(app.IsSystemApp ? "app-kind-badge system" : "app-kind-badge")">
+                        @(app.IsSystemApp ? "App système" : "App non système")
+                    </span>
+                </header>
+                <ul class="permissions-capabilities">
+                    @foreach (DangerousCapabilityStatus capability in app.Capabilities)
+                    {
+                        <li key="@capability.Capability" class="permissions-capability">
+                            <div class="permissions-capability-text">
+                                <span class="permissions-capability-title">@capability.Description.Title</span>
+                                <code>@capability.Capability</code>
+                                <span class="permissions-capability-risk">@capability.Description.RiskDescription</span>
+                            </div>
+                            <span class="@StateClass(capability.State)">@StateLabel(capability.State)</span>
+                            @if (!app.IsSystemApp)
+                            {
+                                <div class="permissions-actions">
+                                    @if (capability.State == DangerousCapabilityState.DeniedByUser)
+                                    {
+                                        <button type="button" class="btn-secondary" disabled="@_isBusy"
+                                                @onclick="() => RemoveOwnDenialAsync(app, capability)">Retirer mon refus</button>
+                                    }
+                                    @if (capability.State is not DangerousCapabilityState.Allowed and not DangerousCapabilityState.BlockedByPolicy)
+                                    {
+                                        <button type="button" class="btn-danger" disabled="@_isBusy"
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, AppPermissionDecision.Allow)">Autoriser pour la machine</button>
+                                    }
+                                    @if (capability.State == DangerousCapabilityState.Allowed)
+                                    {
+                                        <button type="button" class="btn-secondary" disabled="@_isBusy"
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, AppPermissionDecision.Deny)">Révoquer</button>
+                                    }
+                                    @if (capability.State == DangerousCapabilityState.DeniedByAdministrator)
+                                    {
+                                        <button type="button" class="btn-secondary" disabled="@_isBusy"
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, null)">Redemander au lancement</button>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    }
+</div>
