@@ -196,8 +196,30 @@ de l'exemple TerminalApp utilisait les clés hors schéma `commandName` et
 `helpSummary` (refusées en lecture stricte) ; ce sont `name` et `usage`, déjà
 utilisées par son `StaticManifest`.
 
-`HackerOs.Commands.Cd`, `Pwd`, `Clear` et `Help` ont aussi leur classe mais
-restent non référencés par l'hôte jusqu'à la phase 3 (ADR 0034).
+### Commandes intégrées : un seul projet (ADR 0051)
+
+Depuis le chantier `rebuild/3-commands-merge`, les 28 commandes intégrées sont
+dans un seul projet, `Apps/Commands/HackerOs.Commands/HackerOs.Commands.csproj` :
+
+- un dossier par commande (`Cat/CatApp.cs`, `Cat/CatCommand.cs`), chacune garde
+  son espace de noms (`HackerOs.Commands.Cat`) et sa classe `[AppManifest]` ;
+- le générateur écrit `manifests/<appId>.json` (forme « plusieurs classes ») ;
+  seul `entryPoint.assembly` change, il vaut `HackerOs.Commands.dll` ;
+- **les identifiants d'app ne changent pas** (`org.hackeros.cmd.cat`,
+  `org.hackeros.commands.curl`…) : `apps.config`, `app-permissions.config` et
+  les alias existants restent valides ;
+- l'hôte n'a qu'une `ProjectReference ... IsSystemApp="true"` pour toutes les
+  commandes ; l'assembly est chargée à la demande en un seul bloc
+  (`BuildKnownLazyAssemblies.Names` la contient une seule fois) ;
+- les projets de tests (`HackerOs.Commands.Tests`, `HackerOs.Commands.Wave5.Tests`,
+  `HackerOs.Commands.Nano.Tests`, `HackerOs.Network.Tests`) référencent ce projet.
+
+`cd`, `pwd`, `clear` et `help` sont donc installées comme les autres
+commandes, mais `TerminalPanel` les intercepte encore (avec `sudo`) et ne les
+liste qu'une fois, comme commandes internes. Le chantier
+`rebuild/3-shell-commands` (ADR 0051 sections 2 à 5) retire ces noms codés en
+dur. Une commande tierce reste un projet à part (modèle :
+`Apps/Samples/HackerOs.Samples.TerminalApp`).
 
 ### Tests
 
@@ -326,7 +348,7 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 
 | Système | Non système (désinstallables) |
 |---|---|
-| Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 24 commandes | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
+| Terminal, File Explorer, Settings, Text Editor, System Monitor, Error Log Viewer, et les 28 commandes (projet `HackerOs.Commands`) | Browser, Calculator, Code Editor, Diagnostic, HackPaint, Icon Viewer |
 
 Effets du statut : une app système n'est pas désinstallable (voir
 [`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités

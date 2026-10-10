@@ -11,7 +11,7 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        Assert.Equal(36, catalog.Manifests.Count);
+        Assert.Equal(40, catalog.Manifests.Count);
         Assert.Contains("org.hackeros.browser", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.diagnostic", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.hack-paint", catalog.Manifests.Keys);
@@ -19,10 +19,11 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Contains("org.hackeros.commands.curl", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.ping", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.nmap", catalog.Manifests.Keys);
-        Assert.DoesNotContain("org.hackeros.commands.cd", catalog.Manifests.Keys);
-        Assert.DoesNotContain("org.hackeros.commands.pwd", catalog.Manifests.Keys);
-        Assert.DoesNotContain("org.hackeros.commands.clear", catalog.Manifests.Keys);
-        Assert.DoesNotContain("org.hackeros.commands.help", catalog.Manifests.Keys);
+        // ADR 0051: cd/pwd/clear/help ship with the other commands in HackerOs.Commands.
+        Assert.Contains("org.hackeros.cmd.cd", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.cmd.pwd", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.clear", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.help", catalog.Manifests.Keys);
 
         // Window/service apps (the launcher-visible desktop suite) stay Visible; terminal
         // commands are deliberately Hidden — they're invoked by name from the terminal, not
@@ -30,7 +31,9 @@ public sealed class BuildKnownLazyAppsTests
         Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
             manifest.Kind == AppKind.Terminal ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
-        Assert.Equal(36, BuildKnownLazyAssemblies.Names.Count);
+        // One assembly per window app, plus the single HackerOs.Commands assembly (ADR 0051).
+        Assert.Equal(13, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Contains("HackerOs.Commands.dll", BuildKnownLazyAssemblies.Names);
     }
 
     [Fact]
@@ -51,7 +54,7 @@ public sealed class BuildKnownLazyAppsTests
             builtIn.Select(item => item.Manifest.Id).Order(StringComparer.Ordinal),
             BuildKnownLazyApps.Catalog.Manifests.Keys.Order(StringComparer.Ordinal));
         Assert.Equal(
-            builtIn.Select(item => item.Manifest.EntryPoint!.Assembly).Order(StringComparer.Ordinal),
+            builtIn.Select(item => item.Manifest.EntryPoint!.Assembly).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal),
             BuildKnownLazyAssemblies.Names.Order(StringComparer.Ordinal));
 
         BuiltInApplication calculator = Assert.Single(builtIn, item => item.Manifest.Id == "org.hackeros.calculator");
@@ -89,7 +92,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(24, commands.Length);
+        Assert.Equal(28, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

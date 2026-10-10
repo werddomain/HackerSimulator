@@ -690,9 +690,13 @@
     private IEnumerable<string> GetCatalogCommands()
     {
         // Uninstalled commands (ADR 0048) are neither listed by help nor offered by completion.
+        // ADR 0051: cd/pwd/clear/help are now installed with the other commands, but this panel
+        // still intercepts them (and sudo) and lists them as built-ins; skip them here so help does
+        // not show them twice. Removed with the hard-coded names by rebuild/3-shell-commands.
         return (_resolver ?? new TerminalCommandResolver(Catalog, Enablement))
             .GetTerminalCommands()
-            .Select(m => m.Terminal!.Name);
+            .Select(m => m.Terminal!.Name)
+            .Where(name => name is not ("cd" or "pwd" or "clear" or "help" or "sudo"));
     }
 
     /// <summary>Receives character-cell dimensions from the collocated resize observer.</summary>

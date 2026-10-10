@@ -46,37 +46,11 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" IsSystemApp="true" />
     <!--
-      cd/pwd/clear/help are deliberately not wired here: TerminalWindow.razor intercepts those exact
-      command names before catalog resolution ever runs (hardcoded built-ins), so their catalog
-      command projects (HackerOs.Commands.Cd/Pwd/Clear/Help) would be permanently unreachable dead
-      entries if referenced, and would misleadingly show up in both the "Built-in" and "Catalog" lists
-      in `help`'s own output. See docs/adr/0034-wire-terminal-command-catalog.md.
+      ADR 0051: every built-in terminal command is in one project (one assembly, lazy-loaded as a
+      whole). cd/pwd/clear/help are now part of it; the terminal still intercepts those names until
+      the rebuild/3-shell-commands chantier routes them through the catalog.
     -->
-
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Alias\HackerOs.Commands.Alias.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Chmod\HackerOs.Commands.Chmod.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cp\HackerOs.Commands.Cp.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Curl\HackerOs.Commands.Curl.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Diff\HackerOs.Commands.Diff.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Echo\HackerOs.Commands.Echo.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Find\HackerOs.Commands.Find.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Grep\HackerOs.Commands.Grep.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Head\HackerOs.Commands.Head.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Kill\HackerOs.Commands.Kill.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Launch\HackerOs.Commands.Launch.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ls\HackerOs.Commands.Ls.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mkdir\HackerOs.Commands.Mkdir.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mv\HackerOs.Commands.Mv.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nano\HackerOs.Commands.Nano.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nmap\HackerOs.Commands.Nmap.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ping\HackerOs.Commands.Ping.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ps\HackerOs.Commands.Ps.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Rm\HackerOs.Commands.Rm.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Sort\HackerOs.Commands.Sort.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Tail\HackerOs.Commands.Tail.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Touch\HackerOs.Commands.Touch.csproj" IsSystemApp="true" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Wc\HackerOs.Commands.Wc.csproj" IsSystemApp="true" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" IsSystemApp="true" />
   </ItemGroup>
 
   <ItemGroup>
