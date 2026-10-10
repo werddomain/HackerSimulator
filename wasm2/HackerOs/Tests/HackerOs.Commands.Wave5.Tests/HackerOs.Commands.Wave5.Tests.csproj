@@ -33,6 +33,7 @@
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mkdir\HackerOs.Commands.Mkdir.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Mv\HackerOs.Commands.Mv.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ps\HackerOs.Commands.Ps.csproj" />
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Rm\HackerOs.Commands.Rm.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Sort\HackerOs.Commands.Sort.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Tail\HackerOs.Commands.Tail.csproj" />

@@ -16,6 +16,7 @@ using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Network;
@@ -153,8 +154,24 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IndexedDbFileSystemBootstrapper>();
         services.AddScoped<IFileSystemProvider>(provider =>
             provider.GetRequiredService<IndexedDbFileSystemProvider>());
+        // /proc and /dev are virtual, read-only mounts computed on every read and never written to
+        // IndexedDB (ADR 0046). The process manager is resolved lazily: it depends on the session
+        // service, which depends on FileSystemSeeder, which reaches /proc through this router.
         services.AddScoped<IFileSystemMountRouter>(provider =>
-            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>()));
+            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>(),
+            [
+                new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, new ProcFileSystemProvider(
+                    () => provider.GetRequiredService<IProcessManager>(),
+                    provider.GetRequiredService<IResourceSimulator>(),
+                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<ISimulationClock>(),
+                    process => provider.GetRequiredService<ISessionService>().CurrentPrincipal is { } principal
+                        && principal.UserId == process.UserId
+                            ? principal.LoginName.Value
+                            : null)),
+                new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
+                    provider.GetRequiredService<ISimulationClock>()))
+            ]));
         // Depends on IFileSystemMountRouter, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<IFileSystemPathResolver, FileSystemPathResolver>();

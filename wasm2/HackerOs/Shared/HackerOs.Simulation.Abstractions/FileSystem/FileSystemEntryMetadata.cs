@@ -12,7 +12,14 @@ public enum FileSystemEntryKind
     Directory,
 
     /// <summary>A symbolic link containing an absolute or relative virtual target.</summary>
-    SymbolicLink
+    SymbolicLink,
+
+    /// <summary>
+    /// A character device such as <c>/dev/null</c> (ADR 0046). Only virtual providers expose this
+    /// kind; persistent providers refuse to create it with
+    /// <see cref="FileSystemErrorCode.UnsupportedOperation"/>.
+    /// </summary>
+    CharacterDevice
 }
 
 /// <summary>Groups the UTC timestamps persisted for an entry.</summary>
@@ -259,6 +266,37 @@ public sealed record SymbolicLinkMetadata : FileSystemEntryMetadata
 
         return normalized;
     }
+}
+
+/// <summary>
+/// Contains metadata for a character device exposed by a virtual provider (ADR 0046).
+/// </summary>
+/// <remarks>
+/// A device has no stored content and no meaningful length: reads are streamed by the provider
+/// until end of stream (or forever for <c>/dev/zero</c>), exactly like a Linux character device.
+/// </remarks>
+public sealed record CharacterDeviceMetadata : FileSystemEntryMetadata
+{
+    /// <summary>Initializes character-device metadata.</summary>
+    /// <param name="id">Stable entry identity.</param>
+    /// <param name="ownerId">Owning user identity.</param>
+    /// <param name="groupId">Owning group identity.</param>
+    /// <param name="permissions">Owner/group/other permission mode.</param>
+    /// <param name="timestamps">Entry timestamps.</param>
+    /// <param name="revision">Positive optimistic concurrency revision.</param>
+    public CharacterDeviceMetadata(
+        FileSystemEntryId id,
+        string ownerId,
+        string groupId,
+        FileSystemPermissions permissions,
+        FileSystemTimestamps timestamps,
+        long revision)
+        : base(id, ownerId, groupId, permissions, timestamps, revision)
+    {
+    }
+
+    /// <inheritdoc />
+    public override FileSystemEntryKind Kind => FileSystemEntryKind.CharacterDevice;
 }
 
 /// <summary>

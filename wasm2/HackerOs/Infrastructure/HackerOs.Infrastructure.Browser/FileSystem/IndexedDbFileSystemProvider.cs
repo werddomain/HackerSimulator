@@ -163,6 +163,12 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
             return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.ProtectedEntry, request.Path);
         }
 
+        // Character devices are virtual-only (/dev, ADR 0046): never persisted to IndexedDB.
+        if (request.Kind == FileSystemEntryKind.CharacterDevice)
+        {
+            return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.UnsupportedOperation, request.Path);
+        }
+
         try
         {
             if (await _reader.ResolveAsync(request.Path, cancellationToken).ConfigureAwait(false) is not null)
