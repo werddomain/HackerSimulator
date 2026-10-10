@@ -153,6 +153,10 @@
                 </div>
             </MudTabPanel>
 
+            <MudTabPanel Text="Permissions" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                <AppPermissionsPanel AppContext="AppContext" Dialogs="Dialogs" />
+            </MudTabPanel>
+
             <MudTabPanel Text="Installed Apps" Icon="@Icons.Material.Filled.Apps">
                 <InstalledAppsPanel AppContext="@AppContext" />
             </MudTabPanel>

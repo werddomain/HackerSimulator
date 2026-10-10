@@ -11,7 +11,7 @@ Error Log Viewer les lisent avec les droits de fichier ordinaires.
 | Fichier | Contenu | Mode |
 |---|---|---|
 | `/var/log/syslog` | `ILogger<T>` de la plateforme, démarrage (`kernel`), pannes de l'hôte (`ecosystem-host`), lignes perdues (`logging`) | `system:system 0644` |
-| `/var/log/auth.log` | `IAuditLog` (`session.login`, `session.elevate`…) | `system:system 0600` |
+| `/var/log/auth.log` | `IAuditLog` (`session.login`, `session.elevate`, `capability.*` de l'ADR 0049…) | `system:system 0600` |
 | `/var/log/apps/<appId>.log` | `IAppExecutionContext.Logging` de l'app | `system:system 0644` |
 
 ## Architecture

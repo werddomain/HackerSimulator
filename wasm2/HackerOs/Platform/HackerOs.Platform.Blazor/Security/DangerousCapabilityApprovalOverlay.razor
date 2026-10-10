@@ -1,0 +1,94 @@
+@using HackerOs.AppSdk.Icons
+@using HackerOs.Platform.Core.Policy
+@implements IDisposable
+
+@*
+    Secure-desktop approval of ADR 0049 section 6. Rendered by the platform shell above every window
+    and the taskbar, never inside an app window, so an app can neither draw over it nor imitate it.
+*@
+@if (_current is { } pending)
+{
+    DangerousCapabilityApprovalRequest request = pending.Request;
+    <div class="dca-veil"
+         @onkeydown="HandleKeyDownAsync"
+         @onkeydown:stopPropagation="true"
+         @onclick:stopPropagation="true"
+         @oncontextmenu:preventDefault="true">
+        <section class="dca-window"
+                 role="alertdialog"
+                 aria-modal="true"
+                 aria-labelledby="dca-title"
+                 aria-describedby="dca-subtitle">
+            <header class="dca-banner">
+                <HackerIcon Library="IconLibrary.Lucide" Name="shield-alert" Size="28" Title="" class="dca-shield" />
+                <div>
+                    <h2 id="dca-title">Autorisation administrateur requise</h2>
+                    <p id="dca-subtitle">Une application demande des capacités dangereuses.</p>
+                </div>
+            </header>
+
+            <div class="dca-body">
+                <div class="dca-app">
+                    <div class="dca-app-icon" aria-hidden="true">
+                        <HackerIcon Library="IconLibrary.Lucide" Name="app-window" Size="32" Title="" />
+                    </div>
+                    <dl class="dca-app-facts">
+                        <dt class="dca-app-name">@request.Manifest.Name</dt>
+                        <dd class="dca-app-badge">App non système</dd>
+                        <dd><span class="dca-label">Identifiant</span> <code>@request.Manifest.Id</code></dd>
+                        <dd><span class="dca-label">Éditeur</span> @request.Manifest.PublisherId</dd>
+                        <dd><span class="dca-label">Version</span> @request.Manifest.Version</dd>
+                    </dl>
+                </div>
+
+                <h3 class="dca-section-title">Capacités demandées</h3>
+                <ul class="dca-capabilities">
+                    @foreach (CapabilityDescription capability in request.Capabilities)
+                    {
+                        <li key="@capability.Capability" class="dca-capability">
+                            <span class="dca-capability-title">@capability.Title</span>
+                            <code class="dca-capability-id">@capability.Capability</code>
+                            <span class="dca-capability-risk">@capability.RiskDescription</span>
+                        </li>
+                    }
+                </ul>
+
+                <form class="dca-credentials" @onsubmit="ApproveAsync" @onsubmit:preventDefault="true">
+                    <label>
+                        <span>Nom d'administrateur</span>
+                        <input @ref="_loginInput"
+                               type="text"
+                               autocomplete="username"
+                               spellcheck="false"
+                               disabled="@_isVerifying"
+                               @bind="_login"
+                               @bind:event="oninput" />
+                    </label>
+                    <label>
+                        <span>Mot de passe</span>
+                        <input @ref="_passwordInput"
+                               type="password"
+                               autocomplete="current-password"
+                               disabled="@_isVerifying"
+                               @bind="_password"
+                               @bind:event="oninput" />
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <p class="dca-error" role="alert">@_error</p>
+                    }
+
+                    <div class="dca-actions">
+                        <button type="button" class="dca-refuse" disabled="@_isVerifying" @onclick="Refuse">Refuser</button>
+                        <button type="submit" class="dca-approve" disabled="@(!CanApprove)">
+                            @(_isVerifying ? "Vérification..." : "Autoriser")
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <footer class="dca-footer">Cette décision sera inscrite dans /var/log/auth.log</footer>
+        </section>
+    </div>
+}

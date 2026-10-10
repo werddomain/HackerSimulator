@@ -259,7 +259,11 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
 
         e.ErrorHandled = true;
 
-        if (ElevationVerifier is not null && e.Error.RequiredCapability is not null)
+        // ADR 0049 section 3: under dangerousCapabilities=block, a dangerous capability of a
+        // non-system app cannot be approved once either, so no prompt is offered.
+        if (ElevationVerifier is not null
+            && e.Error.RequiredCapability is not null
+            && !AppContext.OneShotElevation.IsBlocked(e.Error.RequiredCapability))
         {
             EnsureBasicDialogService();
             CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest

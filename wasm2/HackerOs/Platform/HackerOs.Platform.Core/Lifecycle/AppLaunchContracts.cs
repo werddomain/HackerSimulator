@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -25,6 +26,14 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// Consumed exactly once against <see cref="ElevationScope"/> before this launch proceeds.
 /// </param>
 /// <param name="ElevationScope">The scope the ticket in <see cref="ElevationToken"/> authorizes.</param>
+/// <param name="ApprovalPrompt">
+/// Prompt for pending dangerous capabilities (ADR 0049 section 5); the terminal passes its text
+/// mode. <see langword="null"/> uses the host's default (the secure-desktop overlay).
+/// </param>
+/// <param name="Interactive">
+/// <see langword="false"/> for a launch nobody is watching (a service auto-started with the
+/// session): pending dangerous capabilities are then deferred instead of prompted.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -32,7 +41,9 @@ public sealed record AppLaunchRequest(
     ProcessId? ParentPid = null,
     VirtualPath? WorkingDirectory = null,
     Guid? ElevationToken = null,
-    ElevationScope? ElevationScope = null);
+    ElevationScope? ElevationScope = null,
+    IDangerousCapabilityApprovalPrompt? ApprovalPrompt = null,
+    bool Interactive = true);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

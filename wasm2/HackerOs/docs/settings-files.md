@@ -19,6 +19,8 @@ migration, en lecture seule.
 | Réglages d'une app | `/etc/<appId>/<document>.config` | `~/.config/<appId>/<document>.config` |
 | Réglages de l'OS (apparence, interface, menu Démarrer) | `/etc/hackeros/<document>.config` | `~/.config/hackeros/<document>.config` |
 | Politique (`policy.config`) | `/etc/hackeros/policy.config` | aucune (document `SystemOnly`) |
+| Politique des capacités dangereuses (`security.config`, ADR 0049) | `/etc/hackeros/security.config` | aucune (document `SystemOnly`) |
+| Décisions sur les capacités dangereuses (ADR 0049) | `/etc/hackeros/app-permissions.config` (`allow`/`deny`) | `~/.config/hackeros/app-permissions.config` (`deny` seulement) |
 | Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` |
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
 | Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |

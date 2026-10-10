@@ -126,11 +126,15 @@
     private IJSObjectReference? _module;
     private IJSObjectReference? _resizeObserver;
     private DotNetObjectReference<TerminalPanel>? _dotNetReference;
+    private TerminalDangerousCapabilityApprovalPrompt? _approvalPrompt;
 
     protected override void OnInitialized()
     {
         _session = new TerminalSession(InitialUsername, InitialCwd ?? "/home/user");
         _resolver = new TerminalCommandResolver(Catalog, Enablement);
+        // ADR 0049 section 5: a third-party command's pending dangerous capabilities are asked
+        // here, in text mode, rather than with the desktop overlay.
+        _approvalPrompt = new TerminalDangerousCapabilityApprovalPrompt(Dialogs, AppContext, WriteApprovalLineAsync);
         if (SessionService.CurrentPrincipal is { } principal)
         {
             _session.InitializeUser(principal.LoginName.Value, principal.HomePath);
@@ -508,7 +512,8 @@
                         elevationToken, elevationScope)),
                     principal,
                     _fullScreenSession,
-                    _activeCts.Token);
+                    _activeCts.Token,
+                    _approvalPrompt);
 
                 if (result.Status == AppIntentDispatchStatus.Dispatched)
                 {
@@ -545,7 +550,8 @@
                                     approval.Token, ElevationScope.CapabilityApproval)),
                                 principal,
                                 _fullScreenSession,
-                                _activeCts.Token);
+                                _activeCts.Token,
+                                _approvalPrompt);
 
                             if (!string.IsNullOrEmpty(retryResult.StandardOutput))
                             {
@@ -601,6 +607,18 @@
         }
 
         return await requestTicket(prompt.LoginName!, prompt.Password!, AppContext.CancellationToken);
+    }
+
+    /// <summary>Appends one line of the text-mode dangerous-capability approval (ADR 0049) and re-renders.</summary>
+    private Task WriteApprovalLineAsync(string text, TerminalApprovalLineKind kind)
+    {
+        _lines.Add(new TerminalOutputLine(string.Empty, text, kind switch
+        {
+            TerminalApprovalLineKind.Warning => OutputType.Stderr,
+            TerminalApprovalLineKind.Error => OutputType.Error,
+            _ => OutputType.System
+        }));
+        return InvokeAsync(StateHasChanged);
     }
 
     private void CancelActiveCommand()

@@ -29,6 +29,7 @@ using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Platform.Blazor.Dialogs;
+using HackerOs.Platform.Blazor.Security;
 using HackerOs.Platform.Blazor.Shell;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
@@ -276,6 +277,30 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IAdminElevationVerifier>(),
             provider.GetRequiredService<IElevationTicketStore>()));
 
+        // Dangerous capabilities (ADR 0049): remembered decisions, the launch gate and its
+        // secure-desktop overlay (the broker is the host's default approval prompt), and the
+        // administration behind Settings > Permissions. Scoped: they read the session user's files.
+        services.AddScoped<IAppPermissionStore>(provider => new AppPermissionStore(
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetService<ILogger<AppPermissionStore>>()));
+        services.AddScoped<DangerousCapabilityApprovalBroker>();
+        services.AddScoped<IDangerousCapabilityApprovalPrompt>(provider =>
+            provider.GetRequiredService<DangerousCapabilityApprovalBroker>());
+        services.AddScoped<IDangerousCapabilityGate>(provider => new DangerousCapabilityGate(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<ICapabilityGrantRepository>(),
+            provider.GetRequiredService<IAppPermissionStore>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetRequiredService<IDangerousCapabilityApprovalPrompt>()));
+        services.AddScoped<AppPermissionAdministration>(provider => new AppPermissionAdministration(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppPermissionStore>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>()));
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -359,7 +384,8 @@ public static class EcosystemServiceCollectionExtensions
             descriptorLoaderProvider?.Invoke(provider),
             provider,
             provider.GetRequiredService<IFileSystemService>(),
-            provider.GetRequiredService<IElevationTicketStore>()));
+            provider.GetRequiredService<IElevationTicketStore>(),
+            provider.GetRequiredService<IDangerousCapabilityGate>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.
