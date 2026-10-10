@@ -1,54 +1,45 @@
-using HackerOs.App.Abstractions;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Simulation.Abstractions.Settings;
 
 namespace HackerOs.Platform.Core.Intents;
 
 /// <summary>
-/// Defines the protected file-association document exposed at
-/// <c>/etc/hackeros/file-associations.json</c>, per `P1-APP-008A`.
+/// Defines the administrator file-association document <c>/etc/hackeros/file-associations.json</c>,
+/// per `P1-APP-008A` and ADR 0044 section 8.
 /// </summary>
 /// <remarks>
-/// Per ADR 0011, this single registered path is the sole approved strict-JSON exception to the
-/// otherwise Linux-like <c>.config</c> settings format; it is never duplicated as an independent
-/// ordinary file. Each entry stores an explicit, administrator-configured default handler for one
-/// extension or media type. Apps that are not named here are still discoverable candidates
-/// through their own manifest's <see cref="FileHandlerManifest"/> declarations
+/// A strict-JSON, whole-file exception to the line-based <c>.config</c> format (ADR 0011), system
+/// layer only. Each entry stores an explicit, administrator-configured default handler for one
+/// extension or media type. Apps that are not named here are still discoverable candidates through
+/// their own manifest's <see cref="App.Abstractions.FileHandlerManifest"/> declarations
 /// (see <see cref="FileAssociationIndex"/> and <see cref="FileAssociationResolver"/>).
 /// </remarks>
 public static class FileAssociationSettingsDocuments
 {
-    /// <summary>Gets the canonical OS-administrator repository identity.</summary>
+    /// <summary>
+    /// Gets the historical settings-store identity, kept only as the stable record id of the
+    /// FileAssociations sync domain (ADR 0033) and for the migration of ADR 0044.
+    /// </summary>
     public static SettingsDocumentKey Key { get; } = SettingsDocumentKey.ForOsAdmin("file-associations");
 
-    /// <summary>Gets the registered virtual path of the protected file-association document.</summary>
-    public static VirtualPath Path { get; } = VirtualPath.Parse("/etc/hackeros/file-associations.json");
+    /// <summary>Gets the file.</summary>
+    public static OsSettingsFile File { get; } = new(OsSettingsLocation.System, "file-associations.json");
 
     /// <summary>
-    /// Gets the clean-profile default document content — despite the name (kept for parity with
-    /// <c>AppearanceSettingsDocuments.EmptyDocumentContent</c>, which is likewise not literally empty),
-    /// this seeds <c>org.hackeros.file-explorer</c> as the protected default handler for
-    /// <c>inode/directory</c> (`INT-009`), so directory-open intents resolve to a
-    /// <see cref="FileHandlerResolutionStatus.ConfiguredDefault"/> out of the box instead of
-    /// falling through to <see cref="FileHandlerResolutionStatus.SoleCandidate"/>/chooser logic.
+    /// Gets the built-in content used while the file is absent or invalid: it makes
+    /// <c>org.hackeros.file-explorer</c> the default handler for <c>inode/directory</c> (`INT-009`),
+    /// so directory-open intents resolve to a <see cref="FileHandlerResolutionStatus.ConfiguredDefault"/>
+    /// out of the box instead of falling through to the chooser.
     /// </summary>
-    public const string EmptyDocumentContent =
+    public const string DefaultContent =
         "{\"schemaVersion\":1,\"associations\":[{\"mediaType\":\"inode/directory\",\"appId\":\"org.hackeros.file-explorer\",\"actions\":[\"open\"]}]}";
 
-    /// <summary>Creates the clean-profile document definition for a settings service registration.</summary>
-    /// <returns>
-    /// A definition any authenticated user may read (resolving file associations is a routine
-    /// user operation), but that requires Administrator write authority to change, per ADR 0011.
-    /// </returns>
-    public static SettingsDocumentDefinition CreateDefinition() => new(
-        Path,
-        Key,
-        EmptyDocumentContent,
-        "application/json",
-        AppCapabilities.FileAssociationsRead,
-        AppCapabilities.FileAssociationsWrite,
-        AppAuthority.User,
-        AppAuthority.Administrator,
-        new FileAssociationSettingsValidator(),
-        SyncEligible: true);
+    /// <summary>Reads the effective document (the file, or <see cref="DefaultContent"/>).</summary>
+    /// <param name="settings">OS settings service.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    public static ValueTask<string> ReadAsync(IOsSettingsService settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return settings.ReadValidatedFileAsync(File, new FileAssociationSettingsValidator(), DefaultContent, cancellationToken);
+    }
 }

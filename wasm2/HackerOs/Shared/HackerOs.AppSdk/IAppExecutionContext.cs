@@ -28,6 +28,14 @@ public interface IAppExecutionContext
     /// <summary>Gets the authenticated user identifier that initiated the operation.</summary>
     string UserId { get; }
 
+    /// <summary>
+    /// Gets the acting user's home directory (<c>/home/&lt;login&gt;</c>), where the user layer of
+    /// settings lives (<c>~/.config/&lt;appId&gt;/</c>, ADR 0044). Defaults to
+    /// <c>/home/{UserId}</c> so existing <see cref="IAppExecutionContext"/> implementations keep
+    /// compiling; the trusted platform factory overrides it with the principal's real home path.
+    /// </summary>
+    string HomeDirectory => $"/home/{UserId}";
+
     /// <summary>Gets the acting user's authority for this operation.</summary>
     AppAuthority UserAuthority { get; }
 
