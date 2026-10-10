@@ -124,7 +124,6 @@ public sealed class WindowAppRenderValidatorTests
 
         public IAppFileSystemGateway FileSystem => throw new NotSupportedException();
 
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
 
         public IAppEventGateway Events => throw new NotSupportedException();
 

@@ -1,126 +1,114 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using HackerOs.App.Abstractions;
-using HackerOs.Simulation.Abstractions;
+using System.Globalization;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Simulation.Abstractions.Settings;
-using HackerOs.Windowing.Core;
 using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Windows;
 
-/// <summary>Creates canonical app/user/device settings definitions for eligible window geometry.</summary>
+/// <summary>
+/// Locates the window geometry state file of one app:
+/// <c>~/.local/state/hackeros/windows/&lt;appId&gt;.config</c>. Geometry is device-local state, not a
+/// preference, so it lives outside <c>~/.config</c> and is never synchronized (ADR 0044 section 10).
+/// </summary>
 public static class WindowGeometrySettings
 {
-    /// <summary>Stable document ID used for window geometry only.</summary>
-    public const string DocumentId = "window-geometry";
-
-    /// <summary>Creates one definition to register during user-session composition.</summary>
-    public static SettingsDocumentDefinition CreateDefinition(
-        string appId,
-        string userId,
-        string installationId)
+    /// <summary>Gets the state file of <paramref name="appId"/>.</summary>
+    /// <param name="appId">Reverse-DNS app identifier.</param>
+    public static OsSettingsFile GetFile(string appId)
     {
-        SettingsDocumentKey key = SettingsDocumentKey.ForAppUserDevice(appId, userId, installationId, DocumentId);
-        return new SettingsDocumentDefinition(
-            SettingsDocumentPathFactory.GetProjectionPath(key),
-            key,
-            "{\"hasValue\":false,\"x\":0,\"y\":0,\"width\":1,\"height\":1}",
-            "application/json",
-            AppCapabilities.SettingsRead,
-            AppCapabilities.SettingsWrite,
-            AppAuthority.User,
-            AppAuthority.User,
-            WindowGeometryValidator.Instance);
-    }
-
-    private sealed class WindowGeometryValidator : ISettingsDocumentValidator
-    {
-        public static WindowGeometryValidator Instance { get; } = new();
-
-        public IReadOnlyList<string> Validate(string content)
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        if (appId.Contains('/', StringComparison.Ordinal) || appId.Contains("..", StringComparison.Ordinal))
         {
-            try
-            {
-                WindowGeometryDocument? document = JsonSerializer.Deserialize(
-                    content,
-                    WindowGeometryJsonContext.Default.WindowGeometryDocument);
-                if (document is null || document.Width <= 0 || document.Height <= 0
-                    || !double.IsFinite(document.X) || !double.IsFinite(document.Y)
-                    || !double.IsFinite(document.Width) || !double.IsFinite(document.Height))
-                {
-                    return ["window.geometry.invalid"];
-                }
-
-                return [];
-            }
-            catch (JsonException)
-            {
-                return ["window.geometry.invalid-json"];
-            }
+            throw new ArgumentException("An app id cannot contain path separators.", nameof(appId));
         }
+
+        return new OsSettingsFile(OsSettingsLocation.UserState, $"windows/{appId}.config");
     }
 
-}
-
-internal sealed record WindowGeometryDocument(bool HasValue, double X, double Y, double Width, double Height);
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(WindowGeometryDocument))]
-internal sealed partial class WindowGeometryJsonContext : JsonSerializerContext;
-
-/// <summary>Persists and restores eligible window geometry without volatile app state.</summary>
-public sealed class WindowGeometryPersistence(ISettingsDocumentService settings)
-{
-    private readonly ISettingsDocumentService _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-
-    /// <summary>Reads saved geometry, returning <see langword="null"/> for a clean profile.</summary>
-    public async ValueTask<WindowBounds?> RestoreAsync(
-        SettingsDocumentDefinition definition,
-        AppOperationContext context,
-        CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Parses a geometry file (<c>x=</c>, <c>y=</c>, <c>width=</c>, <c>height=</c>, invariant culture).
+    /// Returns <see langword="null"/> for an empty, partial or invalid file: a bad state file only
+    /// means the window opens at its default place.
+    /// </summary>
+    /// <param name="content">File content, or <see langword="null"/> when absent.</param>
+    public static WindowBounds? Parse(string? content)
     {
-        SettingsReadResult result = await _settings.ReadAsync(definition.Path, context, cancellationToken);
-        if (result.Status != SettingsReadStatus.Success || result.Document is null)
+        if (string.IsNullOrWhiteSpace(content))
         {
             return null;
         }
 
-        WindowGeometryDocument document =
-            JsonSerializer.Deserialize(result.Document.Content, WindowGeometryJsonContext.Default.WindowGeometryDocument)
-            ?? throw new InvalidDataException("Window geometry document is empty.");
-        return document.HasValue
-            ? new WindowBounds(document.X, document.Y, document.Width, document.Height)
+        Dictionary<string, double> values = new(StringComparer.Ordinal);
+        foreach (ConfigLine line in ConfigDocumentLines.Parse(content))
+        {
+            if (line.Kind == ConfigLineKind.KeyValue && line.Group is null && line.Key is { } key
+                && double.TryParse(line.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number)
+                && double.IsFinite(number))
+            {
+                values[key] = number;
+            }
+        }
+
+        return values.TryGetValue("x", out double x)
+            && values.TryGetValue("y", out double y)
+            && values.TryGetValue("width", out double width) && width > 0
+            && values.TryGetValue("height", out double height) && height > 0
+            ? new WindowBounds(x, y, width, height)
             : null;
     }
 
+    /// <summary>Serializes geometry in the format read by <see cref="Parse"/>.</summary>
+    /// <param name="bounds">Window bounds to save.</param>
+    public static string Serialize(WindowBounds bounds) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"x={bounds.X}\ny={bounds.Y}\nwidth={bounds.Width}\nheight={bounds.Height}\n");
+}
+
+/// <summary>Persists and restores eligible window geometry without volatile app state.</summary>
+public sealed class WindowGeometryPersistence(IOsSettingsService settings)
+{
+    private readonly IOsSettingsService _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
+    /// <summary>Reads saved geometry, returning <see langword="null"/> for a clean profile or an unreadable file.</summary>
+    /// <param name="appId">App whose window is restored.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    public async ValueTask<WindowBounds?> RestoreAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        string? content = await _settings
+            .ReadFileAsync(WindowGeometrySettings.GetFile(appId), cancellationToken)
+            .ConfigureAwait(false);
+        return WindowGeometrySettings.Parse(content);
+    }
+
     /// <summary>Saves geometry when persistence is explicitly eligible.</summary>
-    public async ValueTask<SettingsWriteStatus> SaveAsync(
-        SettingsDocumentDefinition definition,
+    /// <param name="appId">App whose window is saved.</param>
+    /// <param name="bounds">Current window bounds.</param>
+    /// <param name="isEligible">Whether the window opted into geometry persistence.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns><see langword="true"/> when the file was written.</returns>
+    public async ValueTask<bool> SaveAsync(
+        string appId,
         WindowBounds bounds,
         bool isEligible,
-        AppOperationContext context,
         CancellationToken cancellationToken = default)
     {
-        if (!isEligible)
+        if (!isEligible || bounds.Width <= 0 || bounds.Height <= 0)
         {
-            return SettingsWriteStatus.Denied;
+            return false;
         }
 
-        SettingsReadResult current = await _settings.ReadAsync(definition.Path, context, cancellationToken);
-        if (current.Status != SettingsReadStatus.Success || current.Document is null)
+        try
         {
-            return current.Status == SettingsReadStatus.Denied
-                ? SettingsWriteStatus.Denied
-                : SettingsWriteStatus.NotFound;
+            await _settings
+                .WriteFileAsync(WindowGeometrySettings.GetFile(appId), WindowGeometrySettings.Serialize(bounds), cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            return true;
         }
-
-        string content = JsonSerializer.Serialize(
-            new WindowGeometryDocument(true, bounds.X, bounds.Y, bounds.Width, bounds.Height),
-            WindowGeometryJsonContext.Default.WindowGeometryDocument);
-        SettingsWriteResult result = await _settings.WriteAsync(
-            new SettingsWriteRequest(definition.Path, content, current.Document.Revision),
-            context,
-            cancellationToken);
-        return result.Status;
+        catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException or IOException)
+        {
+            // No session, or a home the user cannot write: geometry is best effort.
+            return false;
+        }
     }
 }

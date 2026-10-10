@@ -1,6 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Lifecycle;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Settings;
 
 namespace HackerOs.Platform.Core.Intents;
 
@@ -44,10 +44,10 @@ public sealed class FileAssociationResolver
 {
     private readonly AppCatalog _catalog;
     private readonly IAppEnablementRegistry _enablement;
-    private readonly ISettingsDocumentService _settings;
+    private readonly IOsSettingsService _settings;
 
-    /// <summary>Initializes the resolver over a catalog, enablement registry, and settings service.</summary>
-    public FileAssociationResolver(AppCatalog catalog, IAppEnablementRegistry enablement, ISettingsDocumentService settings)
+    /// <summary>Initializes the resolver over a catalog, enablement registry, and the OS settings files.</summary>
+    public FileAssociationResolver(AppCatalog catalog, IAppEnablementRegistry enablement, IOsSettingsService settings)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
@@ -56,11 +56,10 @@ public sealed class FileAssociationResolver
 
     /// <summary>Resolves an <see cref="OpenFileIntent"/> to a target app, or to a chooser/failure outcome.</summary>
     /// <param name="intent">Intent describing the target file, action, and any explicit preference.</param>
-    /// <param name="readContext">Trusted operation context used to read the association document.</param>
-    public async ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, AppOperationContext readContext)
+    /// <param name="cancellationToken">Cancels the read of the association document.</param>
+    public async ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(intent);
-        ArgumentNullException.ThrowIfNull(readContext);
 
         string? extension = GetExtension(intent.Path);
         string action = intent.Action == FileIntentAction.Edit ? "edit" : "open";
@@ -75,16 +74,15 @@ public sealed class FileAssociationResolver
                 : new FileHandlerResolution(FileHandlerResolutionStatus.TargetInvalid, null, []);
         }
 
-        SettingsReadResult read = await _settings.ReadAsync(FileAssociationSettingsDocuments.Path, readContext);
-        if (read.Status == SettingsReadStatus.Success && read.Document is not null)
+        // /etc/hackeros/file-associations.json is world-readable (0644): resolving a handler is a
+        // routine user operation, so the OS reads it as itself.
+        string content = await FileAssociationSettingsDocuments.ReadAsync(_settings, cancellationToken).ConfigureAwait(false);
+        FileAssociationIndex index = FileAssociationIndex.Build(content);
+        if (index.TryGetDefault(extension, intent.MediaType, action, out FileAssociationEntry entry)
+            && _enablement.IsEnabled(entry.AppId)
+            && _catalog.Manifests.ContainsKey(entry.AppId))
         {
-            FileAssociationIndex index = FileAssociationIndex.Build(read.Document.Content);
-            if (index.TryGetDefault(extension, intent.MediaType, action, out FileAssociationEntry entry)
-                && _enablement.IsEnabled(entry.AppId)
-                && _catalog.Manifests.ContainsKey(entry.AppId))
-            {
-                return new FileHandlerResolution(FileHandlerResolutionStatus.ConfiguredDefault, entry.AppId, [entry.AppId]);
-            }
+            return new FileHandlerResolution(FileHandlerResolutionStatus.ConfiguredDefault, entry.AppId, [entry.AppId]);
         }
 
         string[] candidates = [.. _catalog.Manifests.Values

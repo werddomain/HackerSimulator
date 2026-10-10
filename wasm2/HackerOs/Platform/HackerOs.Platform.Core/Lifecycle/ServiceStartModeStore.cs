@@ -6,7 +6,7 @@ namespace HackerOs.Platform.Core.Lifecycle;
 
 /// <summary>
 /// Reads and writes the per-user, per-service start-mode config file at
-/// <c>/home/{userName}/.config/apps/{appId}/service.conf</c> -- the live, Linux-rc-style
+/// <c>/home/{userName}/.config/{appId}/service.conf</c> -- the live, Linux-rc-style
 /// enabled/disabled state that lives alongside, but independently of, the manifest's
 /// <see cref="AppManifest.AutoStart"/> preset. Every call here is trusted, system-authority IO:
 /// callers are expected to have already authorized the request one layer up (same-assembly or
@@ -91,14 +91,14 @@ internal static class ServiceStartModeStore
     }
 
     private static VirtualPath GetDirectoryPath(string userName, string appId) =>
-        VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}");
+        VirtualPath.Parse($"/home/{userName}/.config/{appId}");
 
     private static VirtualPath GetConfigPath(string userName, string appId) =>
-        VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}/service.conf");
+        VirtualPath.Parse($"/home/{userName}/.config/{appId}/service.conf");
 
     private static FileSystemAuthorizationContext BuildContext(string userName, string appId)
     {
-        // A path under /home/{user}/.config/apps/{appId} resolves to the app-private capability
+        // A path under /home/{user}/.config/{appId} resolves to the app-private capability
         // pair (FileSystemService.ResolveCapability), not the broader user-home one -- this is the
         // service's own private config, not general home access. UserName must be the real login
         // name (not a literal "system") so that path-prefix match succeeds.

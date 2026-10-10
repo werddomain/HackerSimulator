@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
@@ -635,12 +636,12 @@ public sealed class AppLifecycleOrchestratorTests
         };
         FileSystemAuthorizationContext context = new(operationContext, groupIds: [], DateTimeOffset.UtcNow);
 
-        VirtualPath directory = VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}");
+        VirtualPath directory = VirtualPath.Parse($"/home/{userName}/.config/{appId}");
         FileSystemMutationResult createDirectory = await fileSystem.CreateAsync(
             new FileSystemCreateRequest(directory, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_000_000)), context);
         Assert.True(createDirectory.Succeeded, createDirectory.Transaction.Error?.Code.ToString());
 
-        VirtualPath file = VirtualPath.Parse($"/home/{userName}/.config/apps/{appId}/service.conf");
+        VirtualPath file = VirtualPath.Parse($"/home/{userName}/.config/{appId}/service.conf");
         FileSystemMutationResult createFile = await fileSystem.CreateAsync(
             new FileSystemCreateRequest(file, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_000_000)), context);
         Assert.True(createFile.Succeeded, createFile.Transaction.Error?.Code.ToString());
@@ -723,9 +724,9 @@ public sealed class AppLifecycleOrchestratorTests
             Manager = new InMemoryProcessManager(clock, Session, EventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
+            Settings = new OsSettingsService(fileSystem, Session, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, EventBus, topicBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
@@ -762,7 +763,7 @@ public sealed class AppLifecycleOrchestratorTests
         internal InMemoryEventBus EventBus { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
+        internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
 
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");

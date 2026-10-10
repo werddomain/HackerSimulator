@@ -221,7 +221,6 @@ public sealed class CoreCommandsTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities => throw new NotImplementedException();
         public IAppFileSystemGateway FileSystem { get; }
-        public IAppSettingsGateway Settings => throw new NotImplementedException();
         public IAppEventGateway Events => throw new NotImplementedException();
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging => throw new NotImplementedException();

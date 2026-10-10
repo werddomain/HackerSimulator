@@ -157,7 +157,6 @@ public sealed class SampleTickerServiceTests
 
         public ICapabilityChecker Capabilities => throw new NotImplementedException();
         public IAppFileSystemGateway FileSystem => throw new NotImplementedException();
-        public IAppSettingsGateway Settings => throw new NotImplementedException();
         public IAppEventGateway Events { get; }
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging { get; }

@@ -132,16 +132,6 @@ public interface IAppFileSystemGateway
     IAppFileSystemGateway WithSelectedHandle(FileSystemSelectedResourceHandle handle);
 }
 
-/// <summary>Provides one app instance's authorized canonical settings access.</summary>
-public interface IAppSettingsGateway
-{
-    /// <summary>Reads the current revision of one settings document.</summary>
-    ValueTask<SettingsReadResult> ReadAsync(VirtualPath path, CancellationToken cancellationToken = default);
-
-    /// <summary>Atomically validates and replaces one settings document.</summary>
-    ValueTask<SettingsWriteResult> WriteAsync(SettingsWriteRequest request, CancellationToken cancellationToken = default);
-}
-
 /// <summary>
 /// Provides one app instance's typed event bus access. Subscriptions are attributed to the
 /// app instance so platform code can trace and, if necessary, force-dispose leaked subscriptions.

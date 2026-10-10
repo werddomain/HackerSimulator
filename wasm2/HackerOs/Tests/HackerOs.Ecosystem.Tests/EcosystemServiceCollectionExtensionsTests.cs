@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.Ecosystem;
@@ -22,6 +23,7 @@ using HackerOs.Windowing.Core;
 using HackerOs.Windowing.Abstractions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Ecosystem.Tests;
@@ -35,6 +37,10 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         services.AddSingleton<NavigationManager, TestNavigationManager>();
         services.AddSingleton<IJSRuntime, NonInvokedJsRuntime>();
         services.AddHackerOsEcosystem();
+        // The settings services take an ILogger<T> (ADR 0044 warnings). Strip the WASM-only
+        // diagnostic ILoggerProvider exactly as the server host does (Server/HackerOs.Server/Program.cs):
+        // its singleton-over-scoped edge is accepted in WASM but rejected by scope validation.
+        services.RemoveAll<Microsoft.Extensions.Logging.ILoggerProvider>();
 
         await using ServiceProvider rootProvider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
@@ -52,7 +58,9 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         Assert.Same(
             provider.GetRequiredService<IndexedDbCapabilityGrantRepository>(),
             provider.GetRequiredService<IPersistentCapabilityGrantRepository>());
-        Assert.NotNull(provider.GetRequiredService<ISettingsDocumentService>());
+        Assert.IsType<OsSettingsService>(provider.GetRequiredService<IOsSettingsService>());
+        Assert.NotNull(provider.GetRequiredService<SettingsStoreToFilesMigration>());
+        Assert.NotNull(provider.GetRequiredService<HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence>());
         Assert.NotNull(provider.GetRequiredService<IFileSystemService>());
         Assert.NotNull(provider.GetRequiredService<ISessionService>());
         Assert.NotNull(provider.GetRequiredService<IProcessManager>());

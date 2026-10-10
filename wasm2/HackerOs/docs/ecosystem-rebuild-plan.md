@@ -152,6 +152,8 @@ dépendance à Blazor, utilisable par les apps fenêtre, terminal et service.
 
 ### 5.2 Paramètres en fichiers
 
+Mise en œuvre : [`settings-files.md`](settings-files.md).
+
 - **Source de vérité :** le fichier. Le magasin IndexedDB `settings` séparé
   disparaît pour les paramètres d'app et de système. Une migration copie les
   valeurs existantes dans les fichiers au premier démarrage.

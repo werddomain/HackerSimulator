@@ -1,6 +1,6 @@
-using System.Text.Json;
 using HackerOs.App.Abstractions;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Simulation.Abstractions.Settings;
 
 namespace HackerOs.Platform.Core.Shell;
 
@@ -27,78 +27,57 @@ public sealed record UiPlatformPreferenceState(
     AppPlatformId ActivePlatform);
 
 /// <summary>
-/// Owns the device-local <c>UiPlatformPreference</c> settings document (see
+/// Owns the layered <c>ui-platform-preference</c> settings document (see
 /// <see cref="UiPlatformPreferenceSettingsDocuments"/>) and exposes it live to the shell.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is a first Phase-0 slice of docs/mobile-interface-platform-plan.md §6 — it persists the
+/// This is a first Phase-0 slice of docs/old/mobile-interface-platform-plan.md §6 — it persists the
 /// Auto/Desktop/Mobile choice and recomputes <see cref="UiPlatformPreferenceState.ActivePlatform"/>
-/// live, but does not itself change shell rendering. The full controlled 9-step switch sequence
-/// (§6.3: warn dirty apps, stop UI instances with a typed <c>PlatformChanged</c> reason, rebuild the
-/// shell, etc.) is a later phase — a future consumer subscribes to <see cref="Changed"/> and drives
-/// that sequence without this service needing to change.
+/// live, but does not itself change shell rendering. A consumer subscribes to <see cref="Changed"/>
+/// and drives the switch sequence.
 /// </para>
 /// <para>
-/// This service reads/writes the settings document directly through <see cref="ISettingsDocumentService"/>
-/// rather than through an app-scoped <c>IAppSettingsGateway</c> (compare the Appearance app's
-/// persistence service): shell chrome is not a launched app instance, so it has no app-scoped
-/// gateway to use. It instead builds its own trusted, audited <see cref="AppOperationContext"/>
-/// with <see cref="AppOperationContext.IsSystemOperation"/> set — the same pattern
-/// <c>SettingsSyncService</c> already uses for OS-level background settings access.
+/// The choice is a file (ADR 0044): the machine default in
+/// <c>/etc/hackeros/ui-platform-preference.config</c>, the session user's own choice in
+/// <c>~/.config/hackeros/ui-platform-preference.config</c>. The shell writes the user layer with the
+/// user's own rights through <see cref="IOsSettingsService"/>.
 /// </para>
 /// </remarks>
 public sealed class UiPlatformPreferenceService : IDisposable
 {
-    private static readonly AppOperationContext SystemContext = new()
-    {
-        AppId = "org.hackeros.shell",
-        UserId = "system",
-        UserAuthority = AppAuthority.System,
-        GrantedCapabilities = new HashSet<string>(
-            [AppCapabilities.SettingsSystemRead, AppCapabilities.SettingsSystemWrite],
-            StringComparer.Ordinal),
-        IsSystemOperation = true
-    };
-
-    private readonly ISettingsDocumentService _settings;
+    private readonly SemaphoreSlim _reloadGate = new(1, 1);
+    private readonly IOsSettingsService _settings;
     private readonly IPlatformEnvironmentProbe _probe;
 
     private UiPlatformSelectionSource _selectionSource = UiPlatformSelectionSource.Auto;
     private AppPlatformId? _explicitPlatformId;
-    private long _revision;
 
-    /// <summary>Creates the preference service over the canonical settings document service and environment probe.</summary>
-    public UiPlatformPreferenceService(ISettingsDocumentService settings, IPlatformEnvironmentProbe probe)
+    /// <summary>Creates the preference service over the OS settings files and the environment probe.</summary>
+    public UiPlatformPreferenceService(IOsSettingsService settings, IPlatformEnvironmentProbe probe)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _probe = probe ?? throw new ArgumentNullException(nameof(probe));
         _probe.Changed += OnProbeChanged;
+        _settings.DocumentChanged += OnDocumentChanged;
     }
 
     /// <summary>Gets the current preference state. Reflects the document's clean-profile default until <see cref="InitializeAsync"/> completes.</summary>
     public UiPlatformPreferenceState Current { get; private set; } =
         new(UiPlatformSelectionSource.Auto, null, WellKnownAppPlatforms.Desktop);
 
-    /// <summary>Raised when <see cref="Current"/> changes, whether from a user choice or the environment probe.</summary>
+    /// <summary>Raised when <see cref="Current"/> changes, whether from a user choice, a file edit, or the environment probe.</summary>
     public event Action? Changed;
 
-    /// <summary>Loads the persisted preference and starts the environment probe.</summary>
+    /// <summary>Loads the persisted preference, starts the environment probe and watches the files.</summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await _probe.InitializeAsync(cancellationToken).ConfigureAwait(false);
-
-        SettingsReadResult read = await _settings.ReadAsync(
-            UiPlatformPreferenceSettingsDocuments.Path, SystemContext, cancellationToken).ConfigureAwait(false);
-        if (read is { Status: SettingsReadStatus.Success, Document: { } document })
-        {
-            ApplyDocument(document.Content, document.Revision);
-        }
-
-        RecomputeAndNotify(raiseEvent: false);
+        await ReloadAsync(raiseEvent: false, cancellationToken).ConfigureAwait(false);
+        await _settings.WatchAsync(UiPlatformPreferenceSettingsDocuments.Document, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Sets an explicit platform choice and persists it.</summary>
+    /// <summary>Sets an explicit platform choice and persists it in the user layer.</summary>
     public Task SetExplicitAsync(AppPlatformId platformId, CancellationToken cancellationToken = default) =>
         WriteAsync(UiPlatformSelectionSource.Explicit, platformId, cancellationToken);
 
@@ -111,58 +90,102 @@ public sealed class UiPlatformPreferenceService : IDisposable
         AppPlatformId? explicitPlatformId,
         CancellationToken cancellationToken)
     {
-        string content = Serialize(selectionSource, explicitPlatformId);
-        SettingsWriteResult write = await _settings.WriteAsync(
-            new SettingsWriteRequest(UiPlatformPreferenceSettingsDocuments.Path, content, _revision),
-            SystemContext,
-            cancellationToken).ConfigureAwait(false);
-
-        if (write is { Status: SettingsWriteStatus.Success, Document: { } document })
+        OsSettingsDocument document = UiPlatformPreferenceSettingsDocuments.Document;
+        try
         {
-            ApplyDocument(document.Content, document.Revision);
-            RecomputeAndNotify(raiseEvent: true);
-            return;
+            // Both keys in one edit, so a reader never sees "explicit" with the previous platform.
+            await _settings.SetManyAsync(
+                document,
+                [
+                    new KeyValuePair<string, string>(
+                        UiPlatformPreferenceSettingsDocuments.SelectionSourceKey,
+                        selectionSource == UiPlatformSelectionSource.Explicit ? "explicit" : "auto"),
+                    new KeyValuePair<string, string>(
+                        UiPlatformPreferenceSettingsDocuments.ExplicitPlatformKey,
+                        explicitPlatformId?.Value ?? string.Empty)
+                ],
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException)
+        {
+            // No session yet, or an administrator locked the choice: keep what the files say.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The user may not write the file: keep what the files say.
         }
 
-        // Optimistic-concurrency conflict or a rejected write: re-read to reconcile with whatever
-        // is actually persisted rather than leaving in-memory state pointing at a stale revision.
-        SettingsReadResult read = await _settings.ReadAsync(
-            UiPlatformPreferenceSettingsDocuments.Path, SystemContext, cancellationToken).ConfigureAwait(false);
-        if (read is { Status: SettingsReadStatus.Success, Document: { } current })
+        await ReloadAsync(raiseEvent: true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Loads and applies the files under a gate: a change notification arriving mid-write would
+    /// otherwise let a stale load interleave with the fresh one and drop the new choice.
+    /// </summary>
+    private async Task ReloadAsync(bool raiseEvent, CancellationToken cancellationToken)
+    {
+        await _reloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool changed;
+        try
         {
-            ApplyDocument(current.Content, current.Revision);
-            RecomputeAndNotify(raiseEvent: true);
+            await LoadAsync(cancellationToken).ConfigureAwait(false);
+            changed = Recompute();
+        }
+        finally
+        {
+            _reloadGate.Release();
+        }
+
+        if (raiseEvent && changed)
+        {
+            Changed?.Invoke();
         }
     }
 
-    private void ApplyDocument(string content, long revision)
+    private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        _revision = revision;
-        using JsonDocument document = JsonDocument.Parse(content);
-        JsonElement root = document.RootElement;
-
-        _selectionSource = root.TryGetProperty("selectionSource", out JsonElement sourceElement)
-            && sourceElement.GetString() == "explicit"
-                ? UiPlatformSelectionSource.Explicit
-                : UiPlatformSelectionSource.Auto;
-
+        LayeredConfigSnapshot snapshot = await _settings
+            .ReadAsync(UiPlatformPreferenceSettingsDocuments.Document, cancellationToken)
+            .ConfigureAwait(false);
+        _selectionSource = snapshot.Values[UiPlatformPreferenceSettingsDocuments.SelectionSourceKey] == "explicit"
+            ? UiPlatformSelectionSource.Explicit
+            : UiPlatformSelectionSource.Auto;
         _explicitPlatformId = _selectionSource == UiPlatformSelectionSource.Explicit
-            && root.TryGetProperty("explicitPlatformId", out JsonElement idElement)
-            && AppPlatformId.TryParse(idElement.GetString(), out AppPlatformId parsed)
+            && AppPlatformId.TryParse(snapshot.Values[UiPlatformPreferenceSettingsDocuments.ExplicitPlatformKey], out AppPlatformId parsed)
                 ? parsed
                 : null;
     }
 
-    private static string Serialize(UiPlatformSelectionSource selectionSource, AppPlatformId? explicitPlatformId)
+    private void OnDocumentChanged(object? sender, OsSettingsChangedEventArgs args)
     {
-        string sourceText = selectionSource == UiPlatformSelectionSource.Explicit ? "explicit" : "auto";
-        string idText = explicitPlatformId is { } id ? $"\"{id.Value}\"" : "null";
-        return $"{{\"schemaVersion\":1,\"selectionSource\":\"{sourceText}\",\"explicitPlatformId\":{idText}}}";
+        if (args.Concerns(UiPlatformPreferenceSettingsDocuments.Document.DocumentId))
+        {
+            _ = ReloadInBackgroundAsync();
+        }
     }
 
-    private void OnProbeChanged() => RecomputeAndNotify(raiseEvent: true);
+    private async Task ReloadInBackgroundAsync()
+    {
+        try
+        {
+            await ReloadAsync(raiseEvent: true, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // Keep the last good state; the settings service already logged the read problem.
+        }
+    }
 
-    private void RecomputeAndNotify(bool raiseEvent)
+    private void OnProbeChanged()
+    {
+        if (Recompute())
+        {
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Recomputes <see cref="Current"/>; returns whether it changed.</summary>
+    private bool Recompute()
     {
         AppPlatformId active = _selectionSource == UiPlatformSelectionSource.Explicit && _explicitPlatformId is { } explicitId
             ? explicitId
@@ -171,13 +194,14 @@ public sealed class UiPlatformPreferenceService : IDisposable
         UiPlatformPreferenceState next = new(_selectionSource, _explicitPlatformId, active);
         bool changed = next != Current;
         Current = next;
-
-        if (raiseEvent && changed)
-        {
-            Changed?.Invoke();
-        }
+        return changed;
     }
 
     /// <inheritdoc />
-    public void Dispose() => _probe.Changed -= OnProbeChanged;
+    public void Dispose()
+    {
+        _probe.Changed -= OnProbeChanged;
+        _settings.DocumentChanged -= OnDocumentChanged;
+        _reloadGate.Dispose();
+    }
 }

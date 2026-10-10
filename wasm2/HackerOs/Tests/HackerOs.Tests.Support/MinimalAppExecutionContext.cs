@@ -15,7 +15,6 @@ namespace HackerOs.Tests.Support;
 public sealed class MinimalAppExecutionContext(
     AppManifest manifest,
     IAppFileSystemGateway? fileSystem = null,
-    IAppSettingsGateway? settings = null,
     IAppEventGateway? events = null,
     IAppNotificationGateway? notifications = null,
     IAppLoggingGateway? logging = null,
@@ -42,7 +41,6 @@ public sealed class MinimalAppExecutionContext(
     public ICapabilityChecker Capabilities =>
         capabilities ?? throw Unsupported(nameof(Capabilities));
     public IAppFileSystemGateway FileSystem { get; } = fileSystem ?? new FakeAppFileSystemGateway();
-    public IAppSettingsGateway Settings => settings ?? throw Unsupported(nameof(Settings));
     public IAppEventGateway Events => events ?? throw Unsupported(nameof(Events));
     public IAppNotificationGateway Notifications => notifications ?? throw Unsupported(nameof(Notifications));
     public IAppLoggingGateway Logging => logging ?? throw Unsupported(nameof(Logging));

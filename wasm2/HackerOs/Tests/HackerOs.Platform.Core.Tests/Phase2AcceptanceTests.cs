@@ -154,17 +154,36 @@ public sealed class Phase2AcceptanceTests
         TestHarness harness = new(TerminalManifest);
         AuthenticatedPrincipal userPrincipal = await harness.Session.LoginAsync(harness.AliceLoginName, "hunter2");
 
-        // User read of file-associations settings
-        SettingsReadResult userRead = await harness.SettingsService.ReadAsync(
-            FileAssociationSettingsDocuments.Path,
-            harness.CreateSettingsContext(userPrincipal, "org.hackeros.shell"));
-        Assert.Equal(SettingsReadStatus.Success, userRead.Status);
+        // Settings are files (ADR 0044): the installation writes /etc/hackeros as root.
+        await harness.SettingsService.WriteFileAsync(
+            FileAssociationSettingsDocuments.File, FileAssociationSettingsDocuments.DefaultContent);
 
-        // Ordinary User write is denied
-        SettingsWriteResult userWrite = await harness.SettingsService.WriteAsync(
-            new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, "{}", userRead.Document!.Revision),
-            harness.CreateSettingsContext(userPrincipal, "org.hackeros.shell"));
-        Assert.Equal(SettingsWriteStatus.Denied, userWrite.Status);
+        // Every user reads the machine-wide file...
+        Assert.Equal(
+            FileAssociationSettingsDocuments.DefaultContent,
+            await harness.SettingsService.ReadFileAsync(FileAssociationSettingsDocuments.File));
+
+        // ...but an ordinary user's write is denied by the file's mode bits, even when the app
+        // holds the system-write capability: permissions, not capabilities alone, decide.
+        AppOperationContext userContext = harness.CreateSettingsContext(userPrincipal, "org.hackeros.shell");
+        AppFileSystemGateway userGateway = new(
+            harness.FileSystemService,
+            harness.Clock,
+            userContext with
+            {
+                UserName = userPrincipal.LoginName.Value,
+                GrantedCapabilities = new HashSet<string>(userContext.GrantedCapabilities, StringComparer.Ordinal)
+                {
+                    AppCapabilities.FileSystemSystemWrite
+                }
+            },
+            [.. userPrincipal.GroupIds.Select(group => group.ToString())]);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => harness.SettingsService
+            .WriteFileAsync(FileAssociationSettingsDocuments.File, "{}", userGateway)
+            .AsTask());
+        Assert.Equal(
+            FileAssociationSettingsDocuments.DefaultContent,
+            await harness.SettingsService.ReadFileAsync(FileAssociationSettingsDocuments.File));
     }
 
     // ──────────────────────────── P2-ACC-013 & P2-ACC-014 ─────────────────────────
@@ -252,12 +271,13 @@ public sealed class Phase2AcceptanceTests
                 InstallationId.FromGuid(Guid.NewGuid()), DeviceId.FromGuid(Guid.NewGuid()), () => _now);
 
             ManualSimulationClock clock = new(_now, TimeSpan.FromSeconds(1));
+            Clock = clock;
             ProcessManager = new InMemoryProcessManager(clock, Session, eventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            SettingsService = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
+            SettingsService = new OsSettingsService(FileSystemService, Session, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, FileSystemService, SettingsService, eventBus, topicBus, notifications, diagnostics, clock, ProcessManager);
+                Grants, FileSystemService, eventBus, topicBus, notifications, diagnostics, clock, ProcessManager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join("; ", catalogResult.Errors.Select(e => e.Message)));
@@ -283,7 +303,8 @@ public sealed class Phase2AcceptanceTests
         internal LocalSessionService Session { get; }
         internal InMemoryProcessManager ProcessManager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService SettingsService { get; }
+        internal IOsSettingsService SettingsService { get; }
+        internal ManualSimulationClock Clock { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal AppIntentDispatcher Dispatcher { get; }
         internal BoundedAuditLog AuditLog { get; }

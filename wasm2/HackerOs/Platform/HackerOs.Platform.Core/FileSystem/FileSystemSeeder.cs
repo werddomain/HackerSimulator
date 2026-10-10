@@ -45,14 +45,23 @@ public sealed class FileSystemSeeder(
         await EnsureMountPointAsync("/proc", 0x016D, system, cancellationToken);
         await EnsureMountPointAsync("/dev", 0x01ED, system, cancellationToken);
 
+        // ADR 0044: OS settings (system layer) and OS state such as migration markers.
+        await EnsureDirectoryAsync("/etc/hackeros", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/var/lib", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/var/lib/hackeros", 0x01ED, system, cancellationToken);
+
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);
         await EnsureDirectoryAsync($"{home}/Desktop", 0x01C0, userProvisioning, cancellationToken);
         await EnsureDirectoryAsync($"{home}/Documents", 0x01C0, userProvisioning, cancellationToken);
         await EnsureDirectoryAsync($"{home}/Downloads", 0x01C0, userProvisioning, cancellationToken);
         await EnsureDirectoryAsync($"{home}/.config", 0x01C0, userProvisioning, cancellationToken);
-        await EnsureDirectoryAsync($"{home}/.config/hackeros", 0x01C0, userProvisioning, cancellationToken);
-        await EnsureDirectoryAsync($"{home}/.config/apps", 0x01C0, userProvisioning, cancellationToken);
+        // ADR 0044: settings directories are 0755 like on Linux; the 0700 home already keeps
+        // other users out. ~/.config/<appId>/ is created by HackSettings on first write.
+        await EnsureDirectoryAsync($"{home}/.config/hackeros", 0x01ED, userProvisioning, cancellationToken);
+        await EnsureDirectoryAsync($"{home}/.local", 0x01ED, userProvisioning, cancellationToken);
+        await EnsureDirectoryAsync($"{home}/.local/state", 0x01ED, userProvisioning, cancellationToken);
+        await EnsureDirectoryAsync($"{home}/.local/state/hackeros", 0x01ED, userProvisioning, cancellationToken);
     }
 
     /// <summary>

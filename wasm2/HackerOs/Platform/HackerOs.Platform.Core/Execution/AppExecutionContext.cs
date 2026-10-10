@@ -25,7 +25,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         CancellationToken cancellationToken,
         ICapabilityChecker capabilities,
         IAppFileSystemGateway fileSystem,
-        IAppSettingsGateway settings,
         IAppEventGateway events,
         IAppNotificationGateway notifications,
         IAppLoggingGateway logging,
@@ -49,7 +48,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         CancellationToken = cancellationToken;
         Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
         Logging = logging ?? throw new ArgumentNullException(nameof(logging));
@@ -95,9 +93,6 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppFileSystemGateway FileSystem { get; }
-
-    /// <inheritdoc />
-    public IAppSettingsGateway Settings { get; }
 
     /// <inheritdoc />
     public IAppEventGateway Events { get; }

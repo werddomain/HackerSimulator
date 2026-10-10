@@ -13,6 +13,12 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`logging.md`](logging.md) | Journaux en fichiers sous `/var/log` (ADR 0045) : format de ligne, `LogFileWriter`, rotation, Error Log Viewer, moteur d'horloge. |
 | [`virtual-proc-and-dev.md`](virtual-proc-and-dev.md) | Phase 1, section 5.4 : fournisseurs virtuels `/proc` et `/dev` (contenu, visibilité, montage, `ps` sur `/proc`). |
 
+## Sous-systèmes
+
+| Document | Rôle |
+| --- | --- |
+| [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
+
 ## Décisions d'architecture
 
 | Dossier | Rôle |

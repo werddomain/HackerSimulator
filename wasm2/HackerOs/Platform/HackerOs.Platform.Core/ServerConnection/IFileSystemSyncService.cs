@@ -14,8 +14,10 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// <summary>
 /// Pushes/pulls filesystem entries under the active user's <c>/home/{userId}</c> to/from the
 /// optional server's FileSystem sync domain (ADR 0030). A no-op when this device isn't connected
-/// or no session is active — unlike <see cref="ISettingsSyncService"/>, this domain has no
-/// meaningful OS-level context to act under without a logged-in user's own home directory.
+/// or no session is active: this domain has no meaningful OS-level context to act under without a
+/// logged-in user's own home directory. Since ADR 0044 this is also how user settings
+/// (<c>~/.config/&lt;appId&gt;/</c>) travel; device-local state under <c>~/.local/state/</c>
+/// (window geometry, migration markers) is never pushed nor applied.
 /// </summary>
 public interface IFileSystemSyncService
 {
@@ -233,6 +235,12 @@ public sealed class FileSystemSyncService(
         FileSystemSyncPayload payload,
         CancellationToken cancellationToken)
     {
+        if (IsDeviceLocal(payload.RelativePath))
+        {
+            // Another device's local state (ADR 0044 section 10) never overrides this device's.
+            return;
+        }
+
         VirtualPath path = VirtualPath.Parse($"{homePath.Value}/{payload.RelativePath}");
         FileSystemPermissions permissions = FileSystemPermissions.FromMode(payload.PermissionMode);
 
@@ -290,6 +298,11 @@ public sealed class FileSystemSyncService(
             foreach (FileSystemDirectoryItem item in enumerated.Value!.Entries)
             {
                 VirtualPath childPath = VirtualPath.Parse($"{directory.Value}/{item.Name.Value}");
+                if (IsDeviceLocal(GetRelativePath(root, childPath)))
+                {
+                    continue;
+                }
+
                 results.Add((childPath, item.Metadata));
                 if (item.Metadata.Kind == FileSystemEntryKind.Directory)
                 {
@@ -377,6 +390,16 @@ public sealed class FileSystemSyncService(
             principal.GroupIds.Select(group => group.ToString()),
             DateTimeOffset.UtcNow);
     }
+
+    /// <summary>
+    /// Gets whether a home-relative path is device-local state excluded from sync:
+    /// <c>.local/state</c> and everything below it (ADR 0044 section 10).
+    /// </summary>
+    public static bool IsDeviceLocal(string relativePath) =>
+        relativePath == DeviceLocalStateRoot
+        || relativePath.StartsWith($"{DeviceLocalStateRoot}/", StringComparison.Ordinal);
+
+    private const string DeviceLocalStateRoot = ".local/state";
 
     private static string GetRelativePath(VirtualPath homePath, VirtualPath path) =>
         path.Value[(homePath.Value.Length + 1)..];

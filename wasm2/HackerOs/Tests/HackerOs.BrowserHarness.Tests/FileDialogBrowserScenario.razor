@@ -189,7 +189,6 @@
         public ICapabilityChecker Capabilities { get; } = new AllowCapabilityChecker();
         public HarnessFileSystemGateway FileSystemGateway { get; } = new();
         public IAppFileSystemGateway FileSystem => FileSystemGateway;
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
         public IAppLoggingGateway Logging => throw new NotSupportedException();

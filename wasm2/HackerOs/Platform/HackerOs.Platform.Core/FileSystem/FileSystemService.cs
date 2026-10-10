@@ -583,15 +583,25 @@ public sealed class FileSystemService : IFileSystemService
     {
         string userId = context.OperationContext.UserId;
         string? username = context.OperationContext.UserName;
+        string appId = context.OperationContext.AppId;
 
-        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}/.config/apps/{context.OperationContext.AppId}"))
+        // ADR 0044: an app's own user settings layer, ~/.config/<appId>/, is app-private storage.
+        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}/.config/{appId}"))
         {
             return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
         }
 
-        if (IsWithin(path, $"/home/{userId}/.config/apps/{context.OperationContext.AppId}"))
+        if (IsWithin(path, $"/home/{userId}/.config/{appId}"))
         {
             return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
+        }
+
+        // ADR 0044: an app reads its own system settings layer, /etc/<appId>/, without the broad
+        // filesystem.system.read; writing it stays filesystem.system.write plus Administrator
+        // authority and mode bits (the files belong to system:system).
+        if (!isWrite && IsWithin(path, $"/etc/{appId}"))
+        {
+            return AppCapabilities.FileSystemPrivateRead;
         }
 
         if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}"))

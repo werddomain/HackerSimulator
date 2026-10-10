@@ -1,3 +1,5 @@
+using HackerOs.App.Abstractions;
+
 namespace HackerOs.Simulation.Abstractions.Settings;
 
 /// <summary>
@@ -82,6 +84,13 @@ public sealed class SettingsSchema
         foreach (SettingFieldDeclaration field in copied)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(field.Key);
+            if (string.Equals(field.Group, LayeredConfigResolver.LockedSectionName, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"Setting '{field.QualifiedKey}' uses the reserved group name '{LayeredConfigResolver.LockedSectionName}' (ADR 0044).",
+                    nameof(fields));
+            }
+
             if (field.ValueType == SettingValueType.Enum
                 && (field.AllowedValues is null || field.AllowedValues.Count == 0))
             {
@@ -100,6 +109,28 @@ public sealed class SettingsSchema
 
         SchemaVersion = schemaVersion;
         MigrationIds = migrationIds?.ToArray() ?? [];
+    }
+
+    /// <summary>
+    /// Converts a manifest-declared settings schema (<see cref="AppManifest.Settings"/>) into the
+    /// engine's schema. The manifest's per-field scope is not part of the file model of ADR 0044
+    /// and is ignored here.
+    /// </summary>
+    /// <param name="manifest">Validated manifest settings declaration.</param>
+    /// <returns>The equivalent schema.</returns>
+    public static SettingsSchema FromManifest(AppSettingsSchemaManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return new SettingsSchema(
+            manifest.SchemaVersion,
+            manifest.Fields.Select(static field => new SettingFieldDeclaration(
+                field.Key,
+                (SettingValueType)(int)field.ValueType,
+                field.DefaultValue,
+                (SettingSensitivity)(int)field.Sensitivity,
+                field.AllowedValues,
+                field.Group)),
+            manifest.MigrationIds);
     }
 
     /// <summary>Gets the current schema/migration version written into every document.</summary>

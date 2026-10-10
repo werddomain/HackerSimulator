@@ -31,7 +31,8 @@ public interface IAppExecutionContext
     /// <summary>
     /// Gets the acting user's canonical home directory (<c>/home/{login}</c>), used by
     /// <see cref="HackExecutionContext"/> as the default working directory and by
-    /// <see cref="IO.HackPath.GetFullPath(string)"/> to expand <c>~</c>. Defaults to
+    /// <see cref="IO.HackPath.GetFullPath(string)"/> to expand <c>~</c>, and as the root of the user settings layer
+    /// (<c>~/.config/&lt;appId&gt;/</c>, ADR 0044). Defaults to
     /// <c>/home/{UserId}</c> so existing implementations keep compiling; the trusted platform
     /// factory overrides it with the principal's real home path (ADR 0043).
     /// </summary>
@@ -60,9 +61,6 @@ public interface IAppExecutionContext
 
     /// <summary>Gets this instance's authorized, capability-checked filesystem gateway.</summary>
     IAppFileSystemGateway FileSystem { get; }
-
-    /// <summary>Gets this instance's authorized canonical settings gateway.</summary>
-    IAppSettingsGateway Settings { get; }
 
     /// <summary>Gets this instance's typed event bus gateway.</summary>
     IAppEventGateway Events { get; }

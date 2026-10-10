@@ -346,10 +346,9 @@ public sealed class AppExecutionContextTests
             Manager = new InMemoryProcessManager(Clock, Session, EventBus);
             Notifications = new InMemoryNotificationQueue(maxEntriesPerUser: 20);
             Diagnostics = new BoundedDiagnosticSink(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([]);
             Registry = new FileSystemSelectedResourceHandleRegistry(Clock, Grants, EventBus);
             Factory = new AppExecutionContextFactory(
-                Grants, FileSystem, Settings, EventBus, TopicBus, Notifications, Diagnostics, Clock, Manager);
+                Grants, FileSystem, EventBus, TopicBus, Notifications, Diagnostics, Clock, Manager);
 
             Manifest = new AppManifest
             {
@@ -380,7 +379,6 @@ public sealed class AppExecutionContextTests
         internal CapabilityGrantRepository Grants { get; }
         internal InMemoryNotificationQueue Notifications { get; }
         internal BoundedDiagnosticSink Diagnostics { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
         internal FileSystemSelectedResourceHandleRegistry Registry { get; }
         internal AppExecutionContextFactory Factory { get; }
         internal LocalLoginName AliceLoginName { get; }

@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Platform.Core.FileSystem;
@@ -31,6 +32,7 @@ public sealed class LocalSessionService : ISessionService
     private readonly ILoginProgressTracker _progressTracker;
     private readonly ICapabilityGrantRepository? _grantRepository;
     private readonly AppCatalog? _catalog;
+    private readonly IUserProfileInitializer? _profileInitializer;
 
     /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
     /// <param name="users">Repository used to look up and authenticate local users.</param>
@@ -44,6 +46,10 @@ public sealed class LocalSessionService : ISessionService
     /// <param name="asyncHasher">Optional asynchronous key derivation delegate (e.g. Web Crypto API interop).</param>
     /// <param name="grantRepository">Optional capability grant repository used to seed user capability grants on login.</param>
     /// <param name="catalog">Optional app catalog containing app manifests with declared capabilities.</param>
+    /// <param name="profileInitializer">
+    /// Optional per-user preparation run right after the home directory is seeded, before the
+    /// session becomes active (the one-time settings-to-files migration of ADR 0044).
+    /// </param>
     public LocalSessionService(
         ILocalUserRepository users,
         FileSystemSeeder homeSeeder,
@@ -55,7 +61,8 @@ public sealed class LocalSessionService : ISessionService
         ILoginProgressTracker? progressTracker = null,
         KeyDerivationAsyncDelegate? asyncHasher = null,
         ICapabilityGrantRepository? grantRepository = null,
-        AppCatalog? catalog = null)
+        AppCatalog? catalog = null,
+        IUserProfileInitializer? profileInitializer = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _homeSeeder = homeSeeder ?? throw new ArgumentNullException(nameof(homeSeeder));
@@ -68,6 +75,7 @@ public sealed class LocalSessionService : ISessionService
         _asyncHasher = asyncHasher;
         _grantRepository = grantRepository;
         _catalog = catalog;
+        _profileInitializer = profileInitializer;
     }
 
     /// <inheritdoc />
@@ -133,6 +141,11 @@ public sealed class LocalSessionService : ISessionService
             using (_progressTracker.BeginStep("Ensure data integrity"))
             {
                 await _homeSeeder.SeedAsync(user.LoginName.Value, user.PrimaryGroupId.ToString(), cancellationToken);
+                if (_profileInitializer is not null)
+                {
+                    await _profileInitializer.InitializeAsync(user, cancellationToken).ConfigureAwait(false);
+                }
+
                 if (_grantRepository is not null && _catalog is not null)
                 {
                     string userId = user.Id.ToString();

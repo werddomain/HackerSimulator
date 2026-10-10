@@ -1,10 +1,10 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
-using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -16,7 +16,7 @@ namespace HackerOs.Ecosystem;
 public sealed class EcosystemBootCoordinator
 {
     private readonly IndexedDbFileSystemBootstrapper _fileSystemBootstrapper;
-    private readonly IndexedDbSettingsDocumentService _settings;
+    private readonly SettingsStoreToFilesMigration _settingsMigration;
     private readonly IPersistentCapabilityGrantRepository _grants;
     private readonly IPersistentAppCatalogRepository _catalog;
     private readonly AppCatalog _selectedCatalog;
@@ -36,7 +36,7 @@ public sealed class EcosystemBootCoordinator
     /// <param name="clockDriver">Driver started at boot so simulated time advances (ADR 0012).</param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
-        IndexedDbSettingsDocumentService settings,
+        SettingsStoreToFilesMigration settingsMigration,
         IPersistentCapabilityGrantRepository grants,
         IPersistentAppCatalogRepository catalog,
         AppCatalog selectedCatalog,
@@ -49,7 +49,7 @@ public sealed class EcosystemBootCoordinator
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settingsMigration = settingsMigration ?? throw new ArgumentNullException(nameof(settingsMigration));
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _selectedCatalog = selectedCatalog ?? throw new ArgumentNullException(nameof(selectedCatalog));
@@ -80,7 +80,9 @@ public sealed class EcosystemBootCoordinator
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
-        Task settingsTask = _settings.InitializeAsync(cancellationToken).AsTask();
+        // Settings are files (ADR 0044): ensure /etc/hackeros exists, copy the retired IndexedDB
+        // settings store once, and write the commented installation defaults when absent.
+        Task settingsTask = _settingsMigration.MigrateSystemAsync(cancellationToken).AsTask();
         Task<long> policyRevisionTask = _grants.GetCurrentPolicyRevisionAsync(cancellationToken).AsTask();
         Task<IReadOnlyList<PersistedAppCatalogEntry>> catalogTask = _catalog.ReconcileAsync(
             _selectedCatalog.Manifests.Values,

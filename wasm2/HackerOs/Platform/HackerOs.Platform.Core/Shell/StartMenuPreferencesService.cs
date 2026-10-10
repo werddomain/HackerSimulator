@@ -1,40 +1,37 @@
 using HackerOs.App.Abstractions;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Platform.Core.Shell;
 
 /// <summary>
-/// Maintains and atomically persists ordered quick-launch pins for every local user. The service
-/// deliberately knows nothing about the live app catalog: syntactically valid unavailable IDs are
-/// retained so temporarily disabled or unmounted applications regain their pins when available.
+/// Maintains and persists the session user's ordered quick-launch pins in
+/// <c>~/.config/hackeros/start-menu.json</c> (ADR 0044 section 8). The service deliberately knows
+/// nothing about the live app catalog: syntactically valid unavailable IDs are retained so
+/// temporarily disabled or unmounted applications regain their pins when available.
 /// </summary>
+/// <remarks>
+/// Each user's pins live in that user's own home, so file permissions isolate profiles: only the
+/// session user's profile is ever loaded, and mutating another user's profile is refused.
+/// </remarks>
 public sealed class StartMenuPreferencesService : IDisposable
 {
     private static readonly IReadOnlyList<string> EmptyPins = Array.AsReadOnly(Array.Empty<string>());
 
-    private static readonly AppOperationContext SystemContext = new()
-    {
-        AppId = "org.hackeros.shell",
-        UserId = "system",
-        UserAuthority = AppAuthority.System,
-        GrantedCapabilities = new HashSet<string>(
-            [AppCapabilities.SettingsSystemRead, AppCapabilities.SettingsSystemWrite],
-            StringComparer.Ordinal),
-        IsSystemOperation = true
-    };
-
-    private readonly ISettingsDocumentService _settings;
+    private readonly IOsSettingsService _settings;
+    private readonly ISessionService _session;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private Dictionary<LocalUserId, IReadOnlyList<string>> _profiles = [];
-    private long _revision;
     private bool _initialized;
 
-    /// <summary>Creates a scoped start-menu preference service over the canonical settings service.</summary>
-    /// <param name="settings">Authorized settings document service used for atomic reads and writes.</param>
-    public StartMenuPreferencesService(ISettingsDocumentService settings)
+    /// <summary>Creates a scoped start-menu preference service over the session user's settings file.</summary>
+    /// <param name="settings">OS settings files.</param>
+    /// <param name="session">Session service identifying whose pins are loaded.</param>
+    public StartMenuPreferencesService(IOsSettingsService settings, ISessionService session)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _settings.DocumentChanged += OnDocumentChanged;
     }
 
     /// <summary>Raised whenever an optimistic update or reconciliation changes any user's pins.</summary>
@@ -191,8 +188,13 @@ public sealed class StartMenuPreferencesService : IDisposable
                 _initialized = true;
             }
 
+            if (_session.CurrentPrincipal?.UserId != userId)
+            {
+                // Another user's pins live in that user's home, which this session cannot write.
+                return false;
+            }
+
             Dictionary<LocalUserId, IReadOnlyList<string>> persistedProfiles = _profiles;
-            long persistedRevision = _revision;
             Dictionary<LocalUserId, IReadOnlyList<string>> candidate = CloneProfiles(_profiles);
             List<string> pins = candidate.TryGetValue(userId, out IReadOnlyList<string>? existing)
                 ? [.. existing]
@@ -212,41 +214,24 @@ public sealed class StartMenuPreferencesService : IDisposable
                 candidate[userId] = Array.AsReadOnly(pins.ToArray());
             }
 
-            // Apply before I/O for an immediately responsive shell. A rejected optimistic write is
-            // reconciled from the canonical document below, including a visible rollback if needed.
-            ApplyProfiles(candidate, persistedRevision, raiseEvent: true);
-            SettingsWriteResult write;
+            // Apply before I/O for an immediately responsive shell; a failed write rolls back visibly.
+            ApplyProfiles(candidate, raiseEvent: true);
             try
             {
-                write = await _settings.WriteAsync(
-                    new SettingsWriteRequest(
-                        StartMenuSettingsDocuments.Path,
-                        StartMenuSettingsCodec.Encode(candidate),
-                        persistedRevision),
-                    SystemContext,
-                    cancellationToken).ConfigureAwait(false);
+                await _settings.WriteFileAsync(
+                    StartMenuSettingsDocuments.File,
+                    StartMenuSettingsCodec.Encode(candidate),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch
             {
-                // Cancellation and transport/storage failures must not leave the scoped projection
-                // claiming an uncommitted pin order.
-                ApplyProfiles(persistedProfiles, persistedRevision, raiseEvent: true);
+                // Cancellation and storage failures must not leave the projection claiming an
+                // uncommitted pin order.
+                ApplyProfiles(persistedProfiles, raiseEvent: true);
                 throw;
             }
 
-            if (write is { Status: SettingsWriteStatus.Success, Document: { } committed }
-                && StartMenuSettingsCodec.TryDecode(committed.Content, out Dictionary<LocalUserId, IReadOnlyList<string>> committedProfiles))
-            {
-                ApplyProfiles(committedProfiles, committed.Revision, raiseEvent: true);
-                return true;
-            }
-
-            if (!await RefreshCoreAsync(raiseEvent: true, cancellationToken).ConfigureAwait(false))
-            {
-                ApplyProfiles(persistedProfiles, persistedRevision, raiseEvent: true);
-            }
-
-            return false;
+            return true;
         }
         finally
         {
@@ -256,31 +241,63 @@ public sealed class StartMenuPreferencesService : IDisposable
 
     private async Task<bool> RefreshCoreAsync(bool raiseEvent, CancellationToken cancellationToken)
     {
-        SettingsReadResult read = await _settings.ReadAsync(
-            StartMenuSettingsDocuments.Path,
-            SystemContext,
-            cancellationToken).ConfigureAwait(false);
+        AuthenticatedPrincipal? principal = _session.CurrentPrincipal;
+        if (principal is null)
+        {
+            ApplyProfiles([], raiseEvent);
+            return true;
+        }
 
-        if (read is not { Status: SettingsReadStatus.Success, Document: { } document }
-            || !StartMenuSettingsCodec.TryDecode(
-                document.Content,
-                out Dictionary<LocalUserId, IReadOnlyList<string>> profiles))
+        string content = await _settings.ReadValidatedFileAsync(
+            StartMenuSettingsDocuments.File,
+            new StartMenuSettingsValidator(),
+            StartMenuSettingsDocuments.EmptyDocumentContent,
+            cancellationToken).ConfigureAwait(false);
+        if (!StartMenuSettingsCodec.TryDecode(content, out Dictionary<LocalUserId, IReadOnlyList<string>> profiles))
         {
             return false;
         }
 
-        ApplyProfiles(profiles, document.Revision, raiseEvent);
+        // Only the session user's own profile counts, even if the file names others.
+        Dictionary<LocalUserId, IReadOnlyList<string>> own = profiles.TryGetValue(principal.UserId, out IReadOnlyList<string>? pins)
+            ? new() { [principal.UserId] = pins }
+            : [];
+        ApplyProfiles(own, raiseEvent);
         return true;
     }
 
-    private void ApplyProfiles(
-        Dictionary<LocalUserId, IReadOnlyList<string>> profiles,
-        long revision,
-        bool raiseEvent)
+    private void OnDocumentChanged(object? sender, OsSettingsChangedEventArgs args)
+    {
+        if (args.Concerns(StartMenuSettingsDocuments.File.RelativePath))
+        {
+            _ = RefreshInBackgroundAsync();
+        }
+    }
+
+    private async Task RefreshInBackgroundAsync()
+    {
+        try
+        {
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await RefreshCoreAsync(raiseEvent: true, CancellationToken.None).ConfigureAwait(false);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ObjectDisposedException)
+        {
+            // Keep the last good pins.
+        }
+    }
+
+    private void ApplyProfiles(Dictionary<LocalUserId, IReadOnlyList<string>> profiles, bool raiseEvent)
     {
         bool changed = !ProfilesEqual(_profiles, profiles);
         _profiles = profiles;
-        _revision = revision;
         if (raiseEvent && changed)
         {
             Changed?.Invoke();
@@ -333,5 +350,9 @@ public sealed class StartMenuPreferencesService : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose() => _gate.Dispose();
+    public void Dispose()
+    {
+        _settings.DocumentChanged -= OnDocumentChanged;
+        _gate.Dispose();
+    }
 }

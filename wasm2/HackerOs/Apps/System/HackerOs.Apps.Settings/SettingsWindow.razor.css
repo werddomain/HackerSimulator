@@ -374,3 +374,47 @@
         padding: 0.5rem;
     }
 }
+
+/* Layer picker (ADR 0044): "only me" writes ~/.config, "all users" writes /etc. */
+.layer-options {
+    display: inline-flex;
+    margin: 6px 0 10px;
+    border: 1px solid var(--hos-border, #3a4b53);
+    border-radius: var(--hos-radius-md, 0.45rem);
+    overflow: hidden;
+}
+
+.layer-option {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--hos-text-secondary, #a9b6bc);
+    font: inherit;
+    cursor: pointer;
+}
+
+.layer-option + .layer-option {
+    border-left: 1px solid var(--hos-border, #3a4b53);
+}
+
+.layer-option.is-selected {
+    background-color: color-mix(in srgb, var(--hos-accent, #42d392) 22%, transparent);
+    color: var(--hos-text-primary, #f4f7f8);
+}
+
+.layer-picker code {
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    color: var(--hos-accent, #42d392);
+}
+
+.layer-message {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--hos-warning, #e0a43a);
+}
+
+.theme-option:disabled,
+.accent-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

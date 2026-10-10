@@ -9,6 +9,7 @@
 @using HackerOs.Theming.Abstractions
 @using HackerOs.Theming.Blazor
 @using HackerOs.Simulation.Abstractions.ServerConnection
+@using HackerOs.Simulation.Abstractions.Settings
 @using System.Net.Http
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -17,7 +18,6 @@
 @inject IJSRuntime JS
 @inject ThemePreferenceService ThemePreference
 @inject IServerConnectionService ServerConnection
-@inject ISettingsSyncService SettingsSync
 @inject IFileSystemSyncService FileSystemSync
 @inject IGrantsSyncService GrantsSync
 @inject IFileAssociationsSyncService FileAssociationsSync
@@ -33,8 +33,33 @@
     <div class="settings-body">
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header">
             <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
+                <div class="setting-group layer-picker">
+                    <h4>Apply changes to</h4>
+                    <p class="setting-desc">
+                        Your choices are saved in <code>~/.config/hackeros/appearance.config</code>.
+                        The default for every user lives in <code>/etc/hackeros/appearance.config</code> and needs administrator approval.
+                    </p>
+                    <div class="layer-options" role="radiogroup" aria-label="Settings layer">
+                        <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.User)"
+                                aria-checked="@(_targetLayer == SettingLayer.User)"
+                                @onclick="() => SelectLayer(SettingLayer.User)">Only me</button>
+                        <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.System)"
+                                aria-checked="@(_targetLayer == SettingLayer.System)"
+                                @onclick="() => SelectLayer(SettingLayer.System)">All users (system default)</button>
+                    </div>
+                    @if (_targetLayer == SettingLayer.System)
+                    {
+                        <button type="button" class="btn-secondary" disabled="@_isSavingAppearance" @onclick="ApplyCurrentAsSystemDefaultAsync">
+                            Save the current look as the system default
+                        </button>
+                    }
+                    @if (!string.IsNullOrEmpty(_appearanceMessage))
+                    {
+                        <div class="layer-message" role="status">@_appearanceMessage</div>
+                    }
+                </div>
                 <div class="setting-group">
-                    <h4>Desktop theme</h4>
+                    <h4>Desktop theme <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.DesktopThemeKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.DesktopThemeKey)" /></h4>
                     <p class="setting-desc">Applied to the desktop, windows, taskbar, and Start menu.</p>
                     <div class="theme-options" aria-label="Desktop themes">
                         @foreach (ThemeDefinition theme in ThemeCatalog.DesktopThemes)
@@ -42,6 +67,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId)"
+                                    disabled="@IsBlocked(AppearanceSettingsDocuments.DesktopThemeKey)"
                                     @onclick="() => ChangeDesktopTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -52,7 +78,7 @@
                     </div>
                 </div>
                 <div class="setting-group">
-                    <h4>Mobile theme</h4>
+                    <h4>Mobile theme <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.MobileThemeKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.MobileThemeKey)" /></h4>
                     <p class="setting-desc">Saved independently and applied when the mobile shell is active.</p>
                     <div class="theme-options mobile-theme-options" aria-label="Mobile themes">
                         @foreach (ThemeDefinition theme in ThemeCatalog.MobileThemes)
@@ -60,6 +86,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId)"
+                                    disabled="@IsBlocked(AppearanceSettingsDocuments.MobileThemeKey)"
                                     @onclick="() => ChangeMobileTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -72,7 +99,7 @@
                 @if (CurrentDesktopThemeSupportsAccent)
                 {
                     <div class="setting-group">
-                        <h4>HackerOS accent</h4>
+                        <h4>HackerOS accent <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.AccentKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.AccentKey)" /></h4>
                         <p class="setting-desc">Accent colors are intentionally available only for the HackerOS theme.</p>
                         <div class="accent-options" aria-label="HackerOS accent colors">
                             @foreach (string accentId in ThemeCatalog.AccentIds)
@@ -80,6 +107,7 @@
                                 <button type="button"
                                         class="@AccentOptionClass(accentId)"
                                         aria-pressed="@(accentId == _appearanceSettings.AccentId)"
+                                        disabled="@IsBlocked(AppearanceSettingsDocuments.AccentKey)"
                                         @onclick="() => ChangeAccent(accentId)">
                                     <span class="accent-swatch" aria-hidden="true"></span>
                                     @accentId
@@ -89,8 +117,10 @@
                     </div>
                 }
                 <div class="setting-group">
-                    <h4>Animations</h4>
-                    <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary" Label="Enable desktop transitions and micro-animations" />
+                    <h4>Animations <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.AnimationsKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.AnimationsKey)" /></h4>
+                    <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary"
+                               Disabled="@IsBlocked(AppearanceSettingsDocuments.AnimationsKey)"
+                               Label="Enable desktop transitions and micro-animations" />
                 </div>
             </MudTabPanel>
 
@@ -333,7 +363,7 @@
         EntryPoint = new AppEntryPointManifest("HackerOs.Apps.Settings.dll", "HackerOs.Apps.Settings.SettingsWindow"),
         SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
         Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
-        Capabilities = ["settings.read", "settings.write", "settings.system.read", "settings.system.write", "file-associations.read", "file-associations.write", "process.list"],
+        Capabilities = ["settings.read", "settings.write", "settings.system.read", "settings.system.write", "filesystem.system.read", "filesystem.system.write", "file-associations.read", "file-associations.write", "process.list"],
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = true
     };
@@ -341,7 +371,9 @@
     private const string ResetConfirmPhrase = "RESET";
 
     private ThemePreferences _appearanceSettings = ThemePreferences.Default;
-    private AppearancePersistenceService? _appearance;
+    private SettingLayer _targetLayer = SettingLayer.User;
+    private bool _isSavingAppearance;
+    private string? _appearanceMessage;
     private List<(string Extension, string AppName)> _fileHandlers = [];
     private List<PersistedAppCatalogEntry> _installedApps = [];
     private bool _isTogglingApp;
@@ -379,8 +411,8 @@
 
     protected override async Task OnAppInitializedAsync()
     {
-        _appearance = new AppearancePersistenceService(AppContext.Settings);
-        _appearanceSettings = await _appearance.ReadAsync(AppContext.CancellationToken);
+        await ThemePreference.RefreshAsync(AppContext.CancellationToken);
+        _appearanceSettings = ThemePreference.Current;
 
         _fileHandlers = [.. Catalog.Manifests.Values
             .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
@@ -414,23 +446,72 @@
             ? $"accent-btn accent-{accentId} is-selected"
             : $"accent-btn accent-{accentId}";
 
+    private string LayerOptionClass(SettingLayer layer) =>
+        layer == _targetLayer ? "layer-option is-selected" : "layer-option";
+
+    private void SelectLayer(SettingLayer layer)
+    {
+        _targetLayer = layer;
+        _appearanceMessage = null;
+    }
+
+    /// <summary>Gets which layer currently provides <paramref name="key"/> (ADR 0044 section 3).</summary>
+    private SettingLayer SourceOf(string key) =>
+        ThemePreference.Snapshot?.Sources.TryGetValue(key, out SettingLayer source) == true ? source : SettingLayer.Default;
+
+    private bool IsLocked(string key) => ThemePreference.Snapshot?.LockedKeys.Contains(key) == true;
+
+    /// <summary>A locked key cannot be changed for oneself; the system default stays editable.</summary>
+    private bool IsBlocked(string key) => _targetLayer == SettingLayer.User && IsLocked(key);
+
+    private Task ApplyCurrentAsSystemDefaultAsync() => PersistAppearanceAsync(_appearanceSettings);
+
     private async Task PersistAppearanceAsync(ThemePreferences next)
     {
-        ThemePreferences previous = _appearanceSettings;
-        _appearanceSettings = next;
-        StateHasChanged();
-
-        if (_appearance is null
-            || !await _appearance.WriteAsync(next, AppContext.CancellationToken))
+        if (_isSavingAppearance)
         {
-            _appearanceSettings = previous;
-            StateHasChanged();
             return;
         }
 
-        // The root ThemeScope owns live application. Refreshing the privileged read projection
-        // keeps the Settings app free of DOM mutation and applies the new tokens to every surface.
-        await ThemePreference.RefreshAsync(AppContext.CancellationToken);
+        ThemePreferences previous = _appearanceSettings;
+        _appearanceSettings = next;
+        _appearanceMessage = null;
+        _isSavingAppearance = true;
+        StateHasChanged();
+
+        try
+        {
+            // The system layer is written with this app's own filesystem gateway, so a denied write
+            // raises the administrator approval prompt of ADR 0042; the user layer is the session
+            // user's own home file. ThemeScope applies the new effective value everywhere.
+            await ThemePreference.SetAsync(
+                next,
+                _targetLayer,
+                _targetLayer == SettingLayer.System ? AppContext.FileSystem : null,
+                AppContext.CancellationToken);
+            _appearanceMessage = _targetLayer == SettingLayer.System
+                ? "Saved as the default for every user."
+                : null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _appearanceMessage = ex.Message;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _appearanceMessage = "Administrator approval is required to change the system default. Approve the prompt, then apply again.";
+        }
+        catch (IOException ex)
+        {
+            _appearanceMessage = $"Could not save the settings file: {ex.Message}";
+        }
+        finally
+        {
+            _isSavingAppearance = false;
+        }
+
+        _appearanceSettings = ThemePreference.Snapshot is null ? previous : ThemePreference.Current;
+        StateHasChanged();
     }
 
     private async Task ToggleAppEnabledAsync(string appId, bool enabled)
@@ -538,17 +619,15 @@
 
         try
         {
-            await SettingsSync.PushAsync(AppContext.CancellationToken);
-            await SettingsSync.PullAsync(AppContext.CancellationToken);
-
-            _appearanceSettings = await _appearance!.ReadAsync(AppContext.CancellationToken);
-            await ThemePreference.RefreshAsync(AppContext.CancellationToken);
-
-            // ADR 0030: push before pull, same order as Settings sync above — pushing first lets a
-            // concurrent-edit conflict get detected and flagged before the pull step runs, so the
-            // pull's conflict guard (skip any record this push just flagged) has something to check.
+            // ADR 0030: push before pull — pushing first lets a concurrent-edit conflict get
+            // detected and flagged before the pull step runs, so the pull's conflict guard (skip
+            // any record this push just flagged) has something to check. User settings are home
+            // files (ADR 0044), so they travel with this domain.
             await FileSystemSync.PushAsync(AppContext.CancellationToken);
             await FileSystemSync.PullAsync(AppContext.CancellationToken);
+
+            await ThemePreference.RefreshAsync(AppContext.CancellationToken);
+            _appearanceSettings = ThemePreference.Current;
 
             // ADR 0031: Grants is pull-only — no push call exists for this domain.
             await GrantsSync.PullAsync(AppContext.CancellationToken);

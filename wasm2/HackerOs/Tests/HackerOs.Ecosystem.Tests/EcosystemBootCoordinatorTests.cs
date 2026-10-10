@@ -1,9 +1,15 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
-using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Events;
+using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Time;
+using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.JSInterop;
 
@@ -12,7 +18,8 @@ namespace HackerOs.Ecosystem.Tests;
 public sealed class EcosystemBootCoordinatorTests
 {
     private readonly IndexedDbFileSystemBootstrapper _fsBootstrapper;
-    private readonly IndexedDbSettingsDocumentService _settings;
+    private readonly FileSystemService _fileSystem;
+    private readonly SettingsStoreToFilesMigration _settings;
     private readonly FakeCapabilityGrantRepository _grants = new();
     private readonly FakeAppCatalogRepository _catalog = new();
     private readonly AppCatalog _selectedCatalog = CreateEmptyCatalog();
@@ -24,7 +31,11 @@ public sealed class EcosystemBootCoordinatorTests
     {
         IJSRuntime jsRuntime = new TestJsRuntime();
         _fsBootstrapper = new IndexedDbFileSystemBootstrapper(jsRuntime);
-        _settings = new IndexedDbSettingsDocumentService(jsRuntime, []);
+        _fileSystem = CreateFileSystem();
+        _settings = new SettingsStoreToFilesMigration(
+            _fileSystem,
+            new ManualSimulationClock(DateTimeOffset.UnixEpoch, TimeSpan.FromSeconds(1)),
+            new EmptyLegacySettingsStore());
         _enablement = new AppEnablementRegistry(_selectedCatalog);
     }
 
@@ -69,6 +80,39 @@ public sealed class EcosystemBootCoordinatorTests
         Assert.Equal(1L, result.PolicyRevision);
         Assert.Equal(0, result.CatalogEntryCount);
         Assert.Empty(result.Users);
+    }
+
+    [Fact]
+    public async Task BootAsync_installs_the_default_settings_files_in_etc()
+    {
+        EcosystemBootCoordinator bootCoordinator = new(
+            _fsBootstrapper, _settings, _grants, _catalog, _selectedCatalog, _enablement, _groups, _users);
+
+        await bootCoordinator.BootAsync();
+
+        foreach (string path in new[]
+                 {
+                     "/etc/hackeros/appearance.config",
+                     "/etc/hackeros/ui-platform-preference.config",
+                     "/etc/hackeros/policy.config",
+                     "/etc/hackeros/file-associations.json"
+                 })
+        {
+            FileSystemResult<FileSystemEntrySnapshot> stat = await _fileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(path)),
+                new FileSystemAuthorizationContext(
+                    new AppOperationContext
+                    {
+                        AppId = "org.hackeros.shell",
+                        UserId = "system",
+                        UserAuthority = AppAuthority.System,
+                        GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+                        IsSystemOperation = true
+                    },
+                    groupIds: ["system"],
+                    DateTimeOffset.UnixEpoch));
+            Assert.True(stat.Succeeded, path);
+        }
     }
 
     [Fact]
@@ -167,6 +211,23 @@ public sealed class EcosystemBootCoordinatorTests
 
             return new ValueTask<TValue>(default(TValue)!);
         }
+    }
+
+    private static FileSystemService CreateFileSystem()
+    {
+        int entryId = 1;
+        int transactionId = 100;
+        InMemoryFileSystemRepository repository = new(
+            () => FileSystemEntryId.FromGuid(new Guid(entryId++, 0, 0, new byte[8])),
+            () => new Guid(transactionId++, 0, 0, new byte[8]),
+            TimeProvider.System);
+        FileSystemMountRouter router = new(repository);
+        return new FileSystemService(
+            router,
+            new FileSystemPathResolver(router),
+            new FileSystemAuthorizer(),
+            new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
+            () => new Guid(transactionId++, 0, 0, new byte[8]));
     }
 
     private static AppCatalog CreateEmptyCatalog() =>

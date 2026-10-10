@@ -25,7 +25,6 @@ public sealed class AppExecutionContextFactory
 {
     private readonly ICapabilityGrantRepository _grantRepository;
     private readonly IFileSystemService _fileSystem;
-    private readonly ISettingsDocumentService _settings;
     private readonly IEventBus _eventBus;
     private readonly ITopicMessageBus _topicBus;
     private readonly INotificationQueue _notifications;
@@ -51,7 +50,6 @@ public sealed class AppExecutionContextFactory
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
-        ISettingsDocumentService settings,
         IEventBus eventBus,
         ITopicMessageBus topicBus,
         INotificationQueue notifications,
@@ -63,7 +61,6 @@ public sealed class AppExecutionContextFactory
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _topicBus = topicBus ?? throw new ArgumentNullException(nameof(topicBus));
         _notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
@@ -151,7 +148,6 @@ public sealed class AppExecutionContextFactory
             cancellationToken,
             capabilities,
             new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
-            new AppSettingsGateway(_settings, operationContext),
             events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),

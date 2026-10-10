@@ -352,6 +352,12 @@ public static partial class AppManifestValidator
                 AddError(errors, "manifest.settings.field.sensitivity.invalid", "settings.fields.sensitivity", $"Setting '{field.Key}' has an unrecognized sensitivity.");
             }
 
+            // ADR 0044: [locked] is the system layer's reserved lock section, never a data group.
+            if (string.Equals(field.Group, "locked", StringComparison.Ordinal))
+            {
+                AddError(errors, "manifest.settings.field.group.reserved", "settings.fields.group", $"Setting '{field.Key}' uses the reserved group name 'locked'.");
+            }
+
             if (field.ValueType == AppSettingValueType.Enum && (field.AllowedValues is null || field.AllowedValues.Count == 0))
             {
                 AddError(errors, "manifest.settings.field.allowedValues.required", "settings.fields.allowedValues", $"Enum setting '{field.Key}' must declare at least one allowed value.");

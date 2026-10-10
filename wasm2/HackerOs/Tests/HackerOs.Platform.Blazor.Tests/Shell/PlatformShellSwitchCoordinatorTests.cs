@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk.Blazor;
@@ -209,9 +210,9 @@ public sealed class PlatformShellSwitchCoordinatorTests
             Manager = new InMemoryProcessManager(clock, Session, EventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([UiPlatformPreferenceSettingsDocuments.CreateDefinition()]);
+            Settings = new OsSettingsService(fileSystem, Session, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, EventBus, topicBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppManifest manifest = CreateWindowManifest();
             AppManifest sharedManifest = CreateSharedEntryPointManifest();
@@ -237,7 +238,7 @@ public sealed class PlatformShellSwitchCoordinatorTests
         internal InMemoryEventBus EventBus { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
+        internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal WindowRuntime WindowRuntime { get; }
         internal WindowCloseGuardRegistry CloseGuards { get; }
