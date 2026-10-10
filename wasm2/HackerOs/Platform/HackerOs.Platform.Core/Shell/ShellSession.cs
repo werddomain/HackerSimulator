@@ -124,12 +124,16 @@ public sealed class ShellSession
     /// <exception cref="ArgumentException">The name or value is invalid.</exception>
     public void SetVariable(string name, string? value) => _environment.SetVariable(name, value);
 
+    /// <summary>Removes a variable of the shell; nothing happens when it is not set.</summary>
+    public void UnsetVariable(string name) => _environment.SetVariable(name, null);
+
     /// <summary>
-    /// Changes the shell process's working directory, like the <c>cd</c> built-in: the target is
-    /// checked through the host's file gateway (capabilities and mode bits), then <c>PWD</c> and
-    /// <c>OLDPWD</c> are updated.
+    /// Changes the shell's working directory, like the <c>cd</c> built-in. The target is checked
+    /// (existence, type, permission to traverse) under the identity of the code calling: the
+    /// <c>cd</c> command's own context when it runs (ADR 0051, section 3), otherwise the host's.
+    /// Then the shell's directory, <c>PWD</c> and <c>OLDPWD</c> are updated at once.
     /// </summary>
-    /// <param name="path">Absolute, relative or <c>~</c>-prefixed directory.</param>
+    /// <param name="path">Absolute, relative (to the shell's directory) or <c>~</c>-prefixed directory.</param>
     /// <param name="cancellationToken">Cancels the existence check.</param>
     /// <exception cref="HackerOs.AppSdk.IO.HackDirectoryNotFoundException">The path does not exist.</exception>
     /// <exception cref="HackerOs.AppSdk.IO.HackIOException">The path is not a directory.</exception>
@@ -143,13 +147,55 @@ public sealed class ShellSession
         }
 
         string previous = CurrentDirectory;
-        using (HackExecutionContext.Enter(Host))
+        IAppExecutionContext identity = HackExecutionContext.CurrentOrNull ?? Host;
+        bool sameProcess = ReferenceEquals(identity.Environment, _environment);
+        string identityDirectory = identity.Environment.CurrentDirectory;
+        string target;
+
+        // The check is a real chdir of the checking process, resolved from the shell's directory
+        // (pinned for the scope): like the `cd` built-in, a relative path is the shell's, not the
+        // command's. The resulting canonical path is then adopted by the shell.
+        using (HackExecutionContext.Enter(identity, previous))
         {
             await HackEnvironment.SetCurrentDirectoryAsync(path, cancellationToken).ConfigureAwait(false);
+            target = identity.Environment.CurrentDirectory;
+        }
+
+        if (!sameProcess)
+        {
+            // Only the shell moves: the checking process (the `cd` command, or the host of a
+            // subshell copy) returns to where it was.
+            identity.Environment.SetCurrentDirectory(VirtualPath.Parse(identityDirectory));
+            _environment.SetCurrentDirectory(VirtualPath.Parse(target));
         }
 
         TrySetVariable("OLDPWD", previous);
-        TrySetVariable("PWD", CurrentDirectory);
+        TrySetVariable("PWD", target);
+    }
+
+    /// <summary>
+    /// Creates a copy of this shell, as bash forks a subshell to run a built-in inside a pipe
+    /// (ADR 0051, section 3): same user, host, process and history, but a private directory and
+    /// environment, so a <c>cd</c> or <c>export</c> in <c>cd /tmp | cat</c> is lost when the stage ends.
+    /// </summary>
+    public ShellSession Fork()
+    {
+        ShellSession copy = new(
+            Principal,
+            new DetachedShellEnvironment(
+                _environment.UserName,
+                _environment.MachineName,
+                CurrentDirectory,
+                new Dictionary<string, string>(GetVariables(), StringComparer.Ordinal)),
+            Host,
+            ProcessId,
+            IsInteractive)
+        {
+            LastExitCode = LastExitCode
+        };
+        copy._history.AddRange(_history);
+        copy._historyIndex = copy._history.Count;
+        return copy;
     }
 
     /// <summary>Appends a command line to the history (skipping blanks and immediate repeats) and resets navigation.</summary>
@@ -214,7 +260,10 @@ public sealed class ShellSession
         }
     }
 
-    /// <summary>The environment of a detached shell: a private copy, since there is no process entry.</summary>
+    /// <summary>
+    /// The environment of a detached shell or of a subshell copy: a private copy, since there is
+    /// no process entry of its own.
+    /// </summary>
     private sealed class DetachedShellEnvironment(
         string userName,
         string machineName,
@@ -237,6 +286,7 @@ public sealed class ShellSession
 
         public void SetVariable(string name, string? value)
         {
+            ArgumentException.ThrowIfNullOrEmpty(name);
             if (value is null)
             {
                 variables.Remove(name);

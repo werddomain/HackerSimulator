@@ -185,7 +185,7 @@ Couper, copier, coller et glisser-déposer vers la corbeille restent en phase 4
   `trash` (put, list, restore par chemin et par nom, rm, empty, aide).
 - `Tests/HackerOs.AppSdk.FileView.Tests/FileViewTests.cs` : `DeleteRequested`
   reçoit les éléments et le drapeau `Permanent`.
-- `Tests/HackerOs.Ecosystem.Tests` : 41 apps intégrées, 29 commandes.
+- `Tests/HackerOs.Ecosystem.Tests` : 41 apps intégrées, 29 commandes (45 et 33 depuis `3-shell-commands`).
 - Doubles de test : `FakeAppLoggingGateway` (nouveau) dans
   `HackerOs.Tests.Support` ; `MinimalAppExecutionContext` accepte
   `isRootElevated`.

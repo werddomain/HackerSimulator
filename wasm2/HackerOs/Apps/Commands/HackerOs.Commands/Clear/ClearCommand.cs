@@ -4,22 +4,27 @@ using HackerOs.AppSdk;
 namespace HackerOs.Commands.Clear;
 
 /// <summary>
-/// Implements the <c>clear</c> terminal command (`P4-W5-CMD-006`).
-/// Clears the active terminal buffer.
+/// Implements <c>clear</c> (ADR 0051, section 4). Like ncurses' <c>clear</c>, it only writes the
+/// terminal's "home, erase screen, erase scrollback" sequence to its output; the terminal
+/// interprets it. Redirected (<c>clear &gt; f</c>), the sequence lands in the file, as on Linux.
 /// </summary>
 public sealed class ClearCommand : TerminalAppBase
 {
+    /// <summary>Cursor home, erase display, erase scrollback (<c>ESC[H ESC[2J ESC[3J</c>).</summary>
+    public const string ClearSequence = "\x1b[H\x1b[2J\x1b[3J";
+
+    /// <summary>Initializes the command with its manifest.</summary>
     public ClearCommand(AppManifest manifest) : base(manifest) { }
 
-    public override ValueTask<int> ExecuteAsync(
+    /// <inheritdoc />
+    public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // ANSI escape code for clear screen and reset cursor
-        context.StandardOutput.Write("\x1b[2J\x1b[H");
-        return ValueTask.FromResult(0);
+        await context.StandardOutput.WriteAsync(ClearSequence);
+        return 0;
     }
 }

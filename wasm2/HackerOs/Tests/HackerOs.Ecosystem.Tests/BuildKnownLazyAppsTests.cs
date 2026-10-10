@@ -11,7 +11,7 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        Assert.Equal(41, catalog.Manifests.Count);
+        Assert.Equal(45, catalog.Manifests.Count);
         Assert.Contains("org.hackeros.browser", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.diagnostic", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.hack-paint", catalog.Manifests.Keys);
@@ -24,6 +24,11 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Contains("org.hackeros.cmd.pwd", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.clear", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.help", catalog.Manifests.Keys);
+        // ADR 0051 section 4: sudo and the environment commands are catalog commands too.
+        Assert.Contains("org.hackeros.commands.sudo", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.export", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.unset", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.commands.env", catalog.Manifests.Keys);
 
         // Window/service apps (the launcher-visible desktop suite) stay Visible; terminal
         // commands are deliberately Hidden — they're invoked by name from the terminal, not
@@ -92,7 +97,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(29, commands.Length);
+        Assert.Equal(33, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

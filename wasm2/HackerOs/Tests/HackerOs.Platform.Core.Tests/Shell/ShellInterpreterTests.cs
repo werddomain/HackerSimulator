@@ -4,6 +4,7 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
+using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
@@ -187,13 +188,174 @@ public sealed class ShellInterpreterTests
     }
 
     [Fact]
-    public async Task Builtins_run_first_and_may_rewrite_the_command()
+    public async Task Cd_changes_the_shell_directory_for_the_rest_of_the_list()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        await fixture.MakeDirectoryAsync("/home/alice/work");
+
+        Output moved = await fixture.RunAsync("cd work && where");
+        Output back = await fixture.RunAsync("cd -");
+        string? oldPwd = fixture.Session.GetVariable("OLDPWD");
+        Output home = await fixture.RunAsync("cd /tmp && cd && pwd");
+
+        Assert.Equal(0, moved.ExitCode);
+        Assert.Equal("/home/alice/work /home/alice/work /home/alice\n", moved.Stdout);
+        Assert.Equal("/home/alice\n", back.Stdout);
+        Assert.Equal("/home/alice/work", oldPwd);
+        Assert.Equal("/home/alice\n", home.Stdout);
+        Assert.Equal("/home/alice", fixture.Session.CurrentDirectory);
+        Assert.Equal("/home/alice", fixture.Host.Environment.CurrentDirectory);
+    }
+
+    [Fact]
+    public async Task Cd_reports_errors_like_linux()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        await fixture.WriteFileAsync("/home/alice/notes.txt", "x");
+
+        Output missing = await fixture.RunAsync("cd nope");
+        Output file = await fixture.RunAsync("cd notes.txt");
+
+        Assert.Equal(1, missing.ExitCode);
+        Assert.Equal("cd: nope: No such file or directory\n", missing.Stderr);
+        Assert.Equal("cd: notes.txt: Not a directory\n", file.Stderr);
+        Assert.Equal("/home/alice", fixture.Session.CurrentDirectory);
+    }
+
+    [Fact]
+    public async Task A_shell_command_inside_a_pipe_changes_only_a_copy()
     {
         Fixture fixture = await Fixture.CreateAsync();
 
-        Output output = await fixture.RunAsync("please echo hi | upper && greet", builtins: new TestBuiltins());
+        Output output = await fixture.RunAsync("cd /tmp | count && export LOST=1 | count");
 
-        Assert.Equal("HI\nhello from the shell\n", output.Stdout);
+        Assert.Equal(0, output.ExitCode);
+        Assert.Equal("0\n0\n", output.Stdout);
+        Assert.Equal("/home/alice", fixture.Session.CurrentDirectory);
+        Assert.Null(fixture.Session.GetVariable("LOST"));
+    }
+
+    [Fact]
+    public async Task Export_and_unset_change_what_later_commands_inherit()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+
+        Output exported = await fixture.RunAsync("export GREETING=\"hi there\" && env");
+        Output listed = await fixture.RunAsync("export");
+        Output invalid = await fixture.RunAsync("export 1BAD=x");
+        Output unset = await fixture.RunAsync("unset GREETING && env");
+
+        Assert.Contains("GREETING=hi there\n", exported.Stdout);
+        Assert.Contains("declare -x GREETING=\"hi there\"\n", listed.Stdout);
+        Assert.Equal(1, invalid.ExitCode);
+        Assert.Equal("export: `1BAD=x': not a valid identifier\n", invalid.Stderr);
+        Assert.Equal(0, unset.ExitCode);
+        Assert.DoesNotContain("GREETING=", unset.Stdout);
+        Assert.Contains("HOME=/home/alice\n", unset.Stdout);
+    }
+
+    [Fact]
+    public async Task Help_lists_the_installed_commands_from_the_catalog()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Enablement.MarkDisabled(["org.test.yes"]);
+
+        Output all = await fixture.RunAsync("help");
+        Output one = await fixture.RunAsync("help cd");
+        Output unknown = await fixture.RunAsync("help yes");
+
+        Assert.Contains("  cd ", all.Stdout);
+        Assert.Contains("  upper ", all.Stdout);
+        Assert.Contains("  sudo ", all.Stdout);
+        Assert.DoesNotContain("  yes ", all.Stdout);
+        Assert.Equal("cd - Change the working directory\nusage: cd [directory|-]\n", one.Stdout);
+        Assert.Equal(1, unknown.ExitCode);
+    }
+
+    [Fact]
+    public async Task Clear_writes_the_erase_sequence_for_the_terminal_to_interpret()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+
+        Output screen = await fixture.RunAsync("clear");
+        await fixture.RunAsync("clear > screen.txt");
+
+        Assert.Equal("\x1b[H\x1b[2J\x1b[3J", screen.Stdout);
+        Assert.Equal("\x1b[H\x1b[2J\x1b[3J", await fixture.ReadFileAsync("/home/alice/screen.txt"));
+    }
+
+    [Fact]
+    public async Task Sudo_runs_one_command_as_root_as_a_child_of_sudo()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        List<string> prompts = [];
+
+        Output output = await fixture.RunAsync("sudo amroot | upper && amroot", credentialPrompt: (description, _) =>
+        {
+            prompts.Add(description);
+            ElevationTicket ticket = fixture.Tickets.Issue(ElevationScope.SudoRoot, "admin-id", "admin");
+            return Task.FromResult<ShellElevation?>(new ShellElevation(ticket.Token, ticket.Scope));
+        });
+
+        Assert.Equal(0, output.ExitCode);
+        Assert.Equal("ROOT\nuser\n", output.Stdout);
+        Assert.Equal(["Run as root: amroot"], prompts);
+        ProcessRecord sudo = fixture.Manager.GetHistory().Single(p => p.AppId == "org.hackeros.commands.sudo");
+        ProcessRecord elevated = fixture.Manager.GetHistory().First(p => p.AppId == "org.test.amroot");
+        Assert.Equal(sudo.Pid, elevated.ParentPid);
+        Assert.Equal(fixture.Host.ProcessId, sudo.ParentPid);
+    }
+
+    [Fact]
+    public async Task Sudo_refuses_shell_builtins_and_failed_credentials()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        int prompts = 0;
+
+        Output builtin = await fixture.RunAsync("sudo cd /root", credentialPrompt: (_, _) => { prompts++; return Task.FromResult<ShellElevation?>(null); });
+        Output refused = await fixture.RunAsync("sudo amroot", credentialPrompt: (_, _) => { prompts++; return Task.FromResult<ShellElevation?>(null); });
+        Output missing = await fixture.RunAsync("sudo nothing");
+
+        Assert.Equal(1, builtin.ExitCode);
+        Assert.Equal("sudo: cd: shell builtin\n", builtin.Stderr);
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Equal("sudo: authentication failed\n", refused.Stderr);
+        Assert.Equal(1, prompts);
+        Assert.Equal("sudo: nothing: command not found\n", missing.Stderr);
+    }
+
+    [Fact]
+    public async Task Only_a_command_declaring_shell_control_run_interactively_reaches_the_shell()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.AppsLaunch);
+
+        Output plain = await fixture.RunAsync("hasshell");
+        AppIntentDispatchResult intent = await fixture.Dispatcher.DispatchAsync(
+            new AppIntentRequest(Guid.NewGuid(), Fixture.HostAppId, fixture.Principal.UserId.ToString(),
+                new ExecuteCommandIntent("cd /tmp")),
+            fixture.Principal,
+            callerContext: fixture.Host);
+
+        Assert.Equal("False\n", plain.Stdout);
+        Assert.Equal(1, intent.ExitCode);
+        Assert.Equal("cd: no shell session\n", intent.StandardError);
+        Assert.Equal("/home/alice", fixture.Session.CurrentDirectory);
+    }
+
+    [Fact]
+    public async Task Unalias_is_a_static_alias_of_alias_read_from_argv0()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        await fixture.RunAsync("alias hi=\"echo hello\"");
+
+        Output aliased = await fixture.RunAsync("hi");
+        Output removed = await fixture.RunAsync("unalias hi");
+        Output gone = await fixture.RunAsync("hi");
+
+        Assert.Equal("hello\n", aliased.Stdout);
+        Assert.Equal(0, removed.ExitCode);
+        Assert.Equal(127, gone.ExitCode);
     }
 
     [Fact]
@@ -251,23 +413,6 @@ public sealed class ShellInterpreterTests
     private sealed record Output(ShellExecutionResult Result, string Stdout, string Stderr)
     {
         public int ExitCode => Result.ExitCode;
-    }
-
-    private sealed class TestBuiltins : IShellBuiltins
-    {
-        public async ValueTask<ShellBuiltinResult> TryRunAsync(ShellBuiltinInvocation invocation, CancellationToken cancellationToken)
-        {
-            switch (invocation.Arguments[0])
-            {
-                case "greet":
-                    await invocation.StandardOutput.WriteLineAsync("hello from the shell");
-                    return ShellBuiltinResult.Completed(0);
-                case "please":
-                    return ShellBuiltinResult.Rewrite([.. invocation.Arguments.Skip(1)], elevation: null);
-                default:
-                    return ShellBuiltinResult.NotHandled;
-            }
-        }
     }
 
     // ---- Test commands -------------------------------------------------------------------
@@ -361,6 +506,26 @@ public sealed class ShellInterpreterTests
         }
     }
 
+    /// <summary>Prints ROOT when its process runs elevated, user otherwise.</summary>
+    private sealed class AmRootCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await context.StandardOutput.WriteLineAsync(context.App.IsRootElevated ? "root" : "user");
+            return 0;
+        }
+    }
+
+    /// <summary>Prints whether it received the shell; it does not declare shell.control.</summary>
+    private sealed class HasShellCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await context.StandardOutput.WriteLineAsync((context.Shell is not null).ToString());
+            return 0;
+        }
+    }
+
     private sealed class CatOneCommand(AppManifest manifest) : TerminalAppBase(manifest)
     {
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
@@ -425,7 +590,8 @@ public sealed class ShellInterpreterTests
                 Command<ArgsCommand>("args"), Command<EchoCommand>("echo"), Command<UpperCommand>("upper"),
                 Command<CountCommand>("count"), Command<ExitWithCommand>("exitwith"), Command<YesCommand>("yes"),
                 Command<HeadOneCommand>("head1"), Command<HangCommand>("hang"), Command<WhereCommand>("where"),
-                Command<CatOneCommand>("cat1")
+                Command<CatOneCommand>("cat1"), Command<AmRootCommand>("amroot"), Command<HasShellCommand>("hasshell"),
+                .. CatalogCommands
             ];
             AppManifest host = HostManifest();
             AppCatalog catalog = AppCatalog.Build([host, .. commands]).Catalog!;
@@ -433,15 +599,19 @@ public sealed class ShellInterpreterTests
                 AppCatalog.Build(commands).Catalog!,
                 new Dictionary<string, System.Reflection.Assembly>(StringComparer.Ordinal)
                 {
-                    ["HackerOs.Platform.Core.Tests"] = typeof(Fixture).Assembly
+                    ["HackerOs.Platform.Core.Tests"] = typeof(Fixture).Assembly,
+                    ["HackerOs.Commands.dll"] = typeof(HackerOs.Commands.Cd.CdCommand).Assembly
                 });
+            Assert.True(discovery.IsSuccess, string.Join("; ", discovery.Errors.Select(e => e.ToString())));
             Dictionary<string, AppDescriptor> descriptors = new(discovery.Descriptors!, StringComparer.Ordinal)
             {
                 [HostAppId] = new AppDescriptor(host, typeof(object), typeof(object).Assembly)
             };
 
             AppEnablementRegistry enablement = new(catalog);
-            _orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, _grants, contextFactory);
+            Enablement = enablement;
+            _orchestrator = new AppLifecycleOrchestrator(
+                catalog, descriptors, enablement, Manager, _grants, contextFactory, elevationTickets: Tickets);
             Interpreter = new ShellInterpreter(_orchestrator, catalog, enablement);
             Dispatcher = new AppIntentDispatcher(
                 _orchestrator, catalog, enablement,
@@ -450,6 +620,8 @@ public sealed class ShellInterpreterTests
         }
 
         public InMemoryProcessManager Manager { get; }
+        public AppEnablementRegistry Enablement { get; }
+        public InMemoryElevationTicketStore Tickets { get; } = new();
         public ShellInterpreter Interpreter { get; }
         public AppIntentDispatcher Dispatcher { get; }
         public AuthenticatedPrincipal Principal { get; private set; } = default!;
@@ -468,6 +640,15 @@ public sealed class ShellInterpreterTests
                 }
             }
 
+            // The catalog's own commands get what they declare, as the system-app seeder grants it.
+            foreach (AppManifest command in CatalogCommands)
+            {
+                foreach (string capability in command.Capabilities)
+                {
+                    fixture.Grant(capability, command.Id);
+                }
+            }
+
             AppLaunchResult launched = await fixture._orchestrator.LaunchAsync(new AppLaunchRequest(HostAppId, fixture.Principal, []));
             Assert.True(launched.IsSuccess, launched.ErrorMessage);
             fixture.Host = launched.Context!;
@@ -478,12 +659,18 @@ public sealed class ShellInterpreterTests
         public void Grant(string capability, string appId = HostAppId) =>
             _grants.Grant(appId, Principal.UserId.ToString(), capability, CapabilityGrantSource.UserApproval, AppAuthority.Administrator);
 
-        public async Task<Output> RunAsync(string line, CancellationToken cancellationToken = default, IShellBuiltins? builtins = null)
+        public async Task<Output> RunAsync(
+            string line,
+            CancellationToken cancellationToken = default,
+            Func<string, CancellationToken, Task<ShellElevation?>>? credentialPrompt = null)
         {
             StringWriter stdout = new() { NewLine = "\n" };
             StringWriter stderr = new() { NewLine = "\n" };
             ShellExecutionResult result = await Interpreter.ExecuteAsync(
-                Session, line, new ShellExecutionOptions { StandardOutput = stdout, StandardError = stderr, Builtins = builtins }, cancellationToken);
+                Session,
+                line,
+                new ShellExecutionOptions { StandardOutput = stdout, StandardError = stderr, CredentialPrompt = credentialPrompt },
+                cancellationToken);
             return new Output(result, stdout.ToString(), stderr.ToString());
         }
 
@@ -504,6 +691,17 @@ public sealed class ShellInterpreterTests
             using IDisposable scope = HackExecutionContext.Enter(Host);
             await HackDirectory.CreateDirectoryAsync(path);
         }
+
+        /// <summary>The real catalog commands the shell relies on (ADR 0051).</summary>
+        private static readonly AppManifest[] CatalogCommands =
+        [
+            .. new AppDefinition[]
+            {
+                new HackerOs.Commands.Cd.CdApp(), new HackerOs.Commands.Pwd.PwdApp(), new HackerOs.Commands.Export.ExportApp(),
+                new HackerOs.Commands.Unset.UnsetApp(), new HackerOs.Commands.Env.EnvApp(), new HackerOs.Commands.Help.HelpApp(),
+                new HackerOs.Commands.Sudo.SudoApp(), new HackerOs.Commands.Clear.ClearApp(), new HackerOs.Commands.Alias.AliasApp()
+            }.Select(AppDefinitionMapper.ToManifest)
+        ];
 
         private static AppManifest HostManifest() => new()
         {

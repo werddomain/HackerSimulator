@@ -106,6 +106,13 @@ public static class AppCapabilities
     public const string NetworkRealAccess = "network.real.access";
 
     /// <summary>
+    /// Act on the interactive shell that ran the command: change its directory, its environment,
+    /// list its commands or ask it to run a command as root (ADR 0051, section 3). Normal: it only
+    /// reaches the shell of the user who typed the command.
+    /// </summary>
+    public const string ShellControl = "shell.control";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -160,7 +167,8 @@ public static class AppCapabilities
             NetworkRealAccess,
             "Accéder au vrai réseau",
             "Joindre de vrais serveurs sur Internet par le serveur relais."),
-        Normal(GameplayDomainAccess, "Accéder au moteur de jeu")
+        Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
+        Normal(ShellControl, "Agir sur le shell qui a lancé la commande")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);

@@ -49,6 +49,15 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// when <see langword="null"/>, the output is buffered and returned in the result.
 /// </param>
 /// <param name="StandardError">Standard error of a Terminal app, with the same rule as <see cref="StandardOutput"/>.</param>
+/// <param name="Shell">
+/// The interactive shell starting a Terminal app (ADR 0051, section 3). It reaches the command as
+/// <see cref="TerminalExecutionContext.Shell"/> only when the command's granted capabilities
+/// include <see cref="AppCapabilities.ShellControl"/>.
+/// </param>
+/// <param name="CommandName">
+/// The name the command was invoked as (a manifest alias such as <c>unalias</c>), which becomes
+/// <c>argv[0]</c> like on Linux; the manifest's command name when omitted.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -62,7 +71,9 @@ public sealed record AppLaunchRequest(
     IReadOnlyDictionary<string, string>? Environment = null,
     TextReader? StandardInput = null,
     TextWriter? StandardOutput = null,
-    TextWriter? StandardError = null);
+    TextWriter? StandardError = null,
+    IShellSession? Shell = null,
+    string? CommandName = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

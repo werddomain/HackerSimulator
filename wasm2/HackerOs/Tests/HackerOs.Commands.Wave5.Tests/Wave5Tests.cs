@@ -17,6 +17,7 @@ using HackerOs.Commands.Wc;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Tests.Support;
 using Xunit;
 
 namespace HackerOs.Commands.Wave5.Tests;
@@ -226,22 +227,36 @@ public sealed class Wave5Tests
         int exitCode = await cmd.ExecuteAsync(ctx, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
-        Assert.Equal("\x1b[2J\x1b[H", stdout.ToString());
+        Assert.Equal("\x1b[H\x1b[2J\x1b[3J", stdout.ToString());
+        Assert.Equal(ClearCommand.ClearSequence, stdout.ToString());
     }
 
     [Fact]
-    public async Task HelpCommand_ListsCommands_Or_ManualPage()
+    public async Task HelpCommand_lists_the_shells_installed_commands_or_one_usage()
     {
         var cmd = new HelpCommand(AppDefinitionMapper.ToManifest(new HelpApp()));
+        FakeShellSession shell = new()
+        {
+            Commands =
+            [
+                new ShellCommandInfo("ping", [], "ping <hostname|ip>", "Send ICMP echo requests"),
+                new ShellCommandInfo("help", ["man"], "help [command]", "Display help")
+            ]
+        };
         using var stdin = new StringReader("");
-        using var stdout = new StringWriter();
+        using var listing = new StringWriter();
+        using var usage = new StringWriter();
         using var stderr = new StringWriter();
 
-        var ctx = CreateContext(["ping"], stdin, stdout, stderr);
-        int exitCode = await cmd.ExecuteAsync(ctx, CancellationToken.None);
+        int listed = await cmd.ExecuteAsync(CreateContext([], stdin, listing, stderr, shell), CancellationToken.None);
+        int described = await cmd.ExecuteAsync(CreateContext(["man"], stdin, usage, stderr, shell), CancellationToken.None);
+        int missing = await cmd.ExecuteAsync(CreateContext(["nope"], stdin, TextWriter.Null, stderr, shell), CancellationToken.None);
+        int noShell = await cmd.ExecuteAsync(CreateContext([], stdin, TextWriter.Null, TextWriter.Null), CancellationToken.None);
 
-        Assert.Equal(0, exitCode);
-        Assert.Contains("PING(1)", stdout.ToString());
+        Assert.Equal([0, 0, 1, 1], [listed, described, missing, noShell]);
+        Assert.Contains("ping  Send ICMP echo requests", listing.ToString());
+        Assert.Contains("usage: help [command]", usage.ToString());
+        Assert.Contains("aliases: man", usage.ToString());
     }
 
     // AliasCommand now persists through the real filesystem gateway (see AliasCommandTests.cs,
@@ -255,7 +270,8 @@ public sealed class Wave5Tests
         string[] args,
         TextReader stdin,
         TextWriter stdout,
-        TextWriter stderr)
+        TextWriter stderr,
+        IShellSession? shell = null)
     {
         var manifest = AppDefinitionMapper.ToManifest(new GrepApp());
         var app = new StubAppExecutionContext(manifest);
@@ -267,7 +283,8 @@ public sealed class Wave5Tests
             standardOutput: stdout,
             standardError: stderr,
             workingDirectory: "/home/user",
-            environment: ImmutableDictionary<string, string>.Empty);
+            environment: ImmutableDictionary<string, string>.Empty,
+            shell: shell);
     }
 
     private sealed class StubAppExecutionContext : IAppExecutionContext

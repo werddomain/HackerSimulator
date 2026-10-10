@@ -31,6 +31,9 @@ public sealed class HelpApp : AppDefinition
     public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
 
     /// <inheritdoc />
+    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ShellControl];
+
+    /// <inheritdoc />
     public override TerminalCommand? Terminal => new("help", "help [command]", ["man"]);
 
     /// <inheritdoc />

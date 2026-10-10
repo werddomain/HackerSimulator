@@ -16,6 +16,7 @@ using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Tests.Support;
 using Xunit;
 
 namespace HackerOs.Commands.Tests;
@@ -65,36 +66,36 @@ public sealed class CoreCommandsTests
     }
 
     [Fact]
-    public async Task CdCommand_returns_zero_for_valid_directory_and_error_for_missing()
+    public async Task CdCommand_changes_the_calling_shell_directory()
+    {
+        CdCommand command = new(CreateManifest("cd", "org.hackeros.cmd.cd"));
+        FakeShellSession shell = new(workingDirectory: "/");
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int moved = await command.ExecuteAsync(CreateContext(["/home/user"], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+        int back = await command.ExecuteAsync(CreateContext(["-"], stdout, stderr, stdin, "/home/user", shell), CancellationToken.None);
+        int home = await command.ExecuteAsync(CreateContext([], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal([0, 0, 0], [moved, back, home]);
+        // Only `cd -` prints its target, as in bash.
+        Assert.Equal("/" + Environment.NewLine, stdout.ToString());
+        Assert.Equal("/home/user", shell.WorkingDirectory);
+    }
+
+    [Fact]
+    public async Task CdCommand_without_a_shell_fails()
     {
         CdCommand command = new(CreateManifest("cd", "org.hackeros.cmd.cd"));
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
 
-        TerminalExecutionContext validContext = CreateContext(
-            arguments: ["/home/user"],
-            stdout: stdout,
-            stderr: stderr,
-            stdin: stdin,
-            cwd: "/");
+        int exitCode = await command.ExecuteAsync(CreateContext(["/tmp"], stdout, stderr, stdin, "/"), CancellationToken.None);
 
-        int validCode = await command.ExecuteAsync(validContext, CancellationToken.None);
-        Assert.Equal(0, validCode);
-        Assert.Equal("/home/user" + Environment.NewLine, stdout.ToString());
-
-        using StringWriter stdoutMissing = new();
-        using StringWriter stderrMissing = new();
-        TerminalExecutionContext missingContext = CreateContext(
-            arguments: ["/nonexistent"],
-            stdout: stdoutMissing,
-            stderr: stderrMissing,
-            stdin: stdin,
-            cwd: "/");
-
-        int missingCode = await command.ExecuteAsync(missingContext, CancellationToken.None);
-        Assert.Equal(1, missingCode);
-        Assert.Contains("No such file or directory", stderrMissing.ToString());
+        Assert.Equal(1, exitCode);
+        Assert.Equal("cd: no shell session" + Environment.NewLine, stderr.ToString());
     }
 
     [Fact]
@@ -161,7 +162,8 @@ public sealed class CoreCommandsTests
         TextWriter stdout,
         TextWriter stderr,
         TextReader stdin,
-        string cwd)
+        string cwd,
+        IShellSession? shell = null)
     {
         AppManifest manifest = CreateManifest("cmd", "org.hackeros.cmd.test");
         LocalUserId userId = LocalUserId.FromGuid(Guid.NewGuid());
@@ -179,7 +181,7 @@ public sealed class CoreCommandsTests
             ["HOME"] = "/home/user"
         };
 
-        return new TerminalExecutionContext(app, arguments, stdin, stdout, stderr, cwd, env);
+        return new TerminalExecutionContext(app, arguments, stdin, stdout, stderr, cwd, env, shell: shell);
     }
 
     private static AppManifest CreateManifest(string name, string id) =>

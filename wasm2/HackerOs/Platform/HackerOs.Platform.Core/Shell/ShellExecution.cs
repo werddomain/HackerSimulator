@@ -29,11 +29,12 @@ public sealed class ShellExecutionOptions
     public IDangerousCapabilityApprovalPrompt? ApprovalPrompt { get; init; }
 
     /// <summary>
-    /// Gets the host's built-in commands, consulted for every stage before the catalog. The
-    /// terminal still provides <c>cd</c>, <c>pwd</c>, <c>clear</c>, <c>help</c> and <c>sudo</c>
-    /// here until <c>rebuild/3-shell-commands</c> moves them to the catalog (ADR 0051).
+    /// Gets the administrator credential prompt <c>sudo</c> goes through
+    /// (<see cref="IShellSession.RunElevatedAsync"/>, ADR 0051 section 4): it receives a description
+    /// of the command and returns a <c>SudoRoot</c> ticket (ADR 0042), or <see langword="null"/>
+    /// when the prompt was cancelled or the credentials refused. Without it, <c>sudo</c> fails.
     /// </summary>
-    public IShellBuiltins? Builtins { get; init; }
+    public Func<string, CancellationToken, Task<ShellElevation?>>? CredentialPrompt { get; init; }
 
     /// <summary>
     /// Gets the callback offered a one-shot approval (ADR 0042) when a single-command pipeline
@@ -85,66 +86,3 @@ public sealed record ShellExecutionResult(
     ShellFailure Failure,
     ShellSyntaxError? SyntaxError,
     IReadOnlyList<FileSystemError> PermissionDenials);
-
-/// <summary>
-/// Commands a shell host implements itself, consulted for each stage after expansion and alias
-/// substitution, before the catalog (ADR 0050). Kept for the terminal's provisional built-ins.
-/// </summary>
-public interface IShellBuiltins
-{
-    /// <summary>Runs <paramref name="invocation"/> if it is a built-in.</summary>
-    /// <returns>
-    /// <see cref="ShellBuiltinResult.NotHandled"/> to let the catalog resolve the command,
-    /// <see cref="ShellBuiltinResult.Completed"/> with an exit code, or
-    /// <see cref="ShellBuiltinResult.Rewrite"/> to run another command line (e.g. <c>sudo</c>'s target) with a ticket.
-    /// </returns>
-    ValueTask<ShellBuiltinResult> TryRunAsync(ShellBuiltinInvocation invocation, CancellationToken cancellationToken);
-}
-
-/// <summary>One stage handed to <see cref="IShellBuiltins"/>.</summary>
-/// <param name="Session">The shell.</param>
-/// <param name="Arguments">Expanded <c>argv</c>, command name first.</param>
-/// <param name="StandardInput">The stage's input.</param>
-/// <param name="StandardOutput">The stage's output (the terminal, a pipe or a redirected file).</param>
-/// <param name="StandardError">The stage's error output.</param>
-public sealed record ShellBuiltinInvocation(
-    ShellSession Session,
-    IReadOnlyList<string> Arguments,
-    TextReader StandardInput,
-    TextWriter StandardOutput,
-    TextWriter StandardError);
-
-/// <summary>Answer of <see cref="IShellBuiltins.TryRunAsync"/>.</summary>
-public sealed record ShellBuiltinResult
-{
-    private ShellBuiltinResult()
-    {
-    }
-
-    /// <summary>Gets the result meaning "not a built-in".</summary>
-    public static ShellBuiltinResult NotHandled { get; } = new();
-
-    /// <summary>Gets the exit code of a completed built-in, or <see langword="null"/>.</summary>
-    public int? ExitCode { get; private init; }
-
-    /// <summary>Gets the replacement <c>argv</c> of a rewrite, or <see langword="null"/>.</summary>
-    public IReadOnlyList<string>? Arguments { get; private init; }
-
-    /// <summary>Gets the ticket the rewritten command runs with.</summary>
-    public ShellElevation? Elevation { get; private init; }
-
-    /// <summary>The built-in ran and exited with <paramref name="exitCode"/>.</summary>
-    public static ShellBuiltinResult Completed(int exitCode) => new() { ExitCode = exitCode };
-
-    /// <summary>Run <paramref name="arguments"/> from the catalog instead, with <paramref name="elevation"/>.</summary>
-    public static ShellBuiltinResult Rewrite(IReadOnlyList<string> arguments, ShellElevation? elevation)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-        if (arguments.Count == 0)
-        {
-            throw new ArgumentException("A rewrite needs a command name.", nameof(arguments));
-        }
-
-        return new() { Arguments = arguments, Elevation = elevation };
-    }
-}

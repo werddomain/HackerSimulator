@@ -12,8 +12,6 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
-@inject AppCatalog Catalog
-@inject HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry Enablement
 @inject ShellInterpreter Shell
 @inject ISessionService SessionService
 @inject IJSRuntime JavaScript
@@ -39,6 +37,8 @@
     else
     {
         <div class="terminal-output" @ref="_outputBufferRef" role="log" aria-live="polite">
+        @if (_showBanner)
+        {
         <div class="welcome-banner">
             <pre class="ascii-art">
   _  _         _         ___  ___
@@ -48,6 +48,7 @@
             </pre>
             <p>HackerOS Terminal v1.0.0 — Type 'help' for available commands.</p>
         </div>
+        }
 
         @foreach (TerminalOutputLine line in _lines)
         {
@@ -125,8 +126,9 @@
     private readonly object _linesSync = new();
     private string _inputBuffer = string.Empty;
     private CancellationTokenSource? _activeCts;
-    private ShellCommandResolver _resolver = default!;
-    private TerminalBuiltins _builtins = default!;
+    private bool _showBanner = true;
+    private TerminalControlSequenceDecoder _stdoutDecoder = new();
+    private TerminalControlSequenceDecoder _stderrDecoder = new();
     private TerminalFullScreenSession? _fullScreenSession;
     private TerminalScreenFrame? _fullScreenFrame;
     private bool _isFullScreen;
@@ -137,15 +139,6 @@
 
     protected override void OnInitialized()
     {
-        // help and completion list installed commands only (ADR 0048).
-        _resolver = new ShellCommandResolver(Catalog, Enablement);
-        _builtins = new TerminalBuiltins(
-            _resolver,
-            ClearBuffer,
-            description => RequestElevationAsync(
-                "Administrator Authorization Required",
-                description,
-                (loginName, password, ct) => Elevation.RequestSudoAsync(loginName, password, ct)));
         // ADR 0049 section 5: a third-party command's pending dangerous capabilities are asked
         // here, in text mode, rather than with the desktop overlay.
         _approvalPrompt = new TerminalDangerousCapabilityApprovalPrompt(Dialogs, AppContext, WriteApprovalLineAsync);
@@ -383,6 +376,8 @@
 
         _session.AddHistory(rawLine);
         _activeCts = new CancellationTokenSource();
+        _stdoutDecoder = new TerminalControlSequenceDecoder();
+        _stderrDecoder = new TerminalControlSequenceDecoder();
         _fullScreenSession = new TerminalFullScreenSession(ApplyFullScreenStateAsync);
         try
         {
@@ -396,7 +391,8 @@
                     StandardError = new TerminalOutputWriter(text => AppendOutput(text, OutputType.Stderr)),
                     FullScreen = _fullScreenSession,
                     ApprovalPrompt = _approvalPrompt,
-                    Builtins = _builtins,
+                    // ADR 0051 section 4: the catalog's sudo asks the shell, which asks here.
+                    CredentialPrompt = RequestSudoAsync,
                     PermissionApproval = RequestPermissionApprovalAsync
                 },
                 _activeCts.Token);
@@ -418,6 +414,22 @@
     }
 
     /// <summary>
+    /// The credential window behind <c>sudo</c> (ADR 0042, ADR 0051 section 4): an administrator's
+    /// login and password mint a single-use <c>SudoRoot</c> ticket.
+    /// </summary>
+    private async Task<ShellElevation?> RequestSudoAsync(string description, CancellationToken cancellationToken)
+    {
+        ElevationRequestResult? approval = await RequestElevationAsync(
+            "Administrator Authorization Required",
+            description,
+            (loginName, password, ct) => Elevation.RequestSudoAsync(loginName, password, ct));
+
+        return approval is { Success: true, Token: Guid token }
+            ? new ShellElevation(token, ElevationScope.SudoRoot)
+            : null;
+    }
+
+    /// <summary>
     /// ADR 0042: offers an administrator's one-shot approval when a lone command failed on a
     /// permission denial; the shell reruns it with the ticket.
     /// </summary>
@@ -436,10 +448,32 @@
     }
 
     /// <summary>
-    /// Appends a chunk of a command's output: it continues the current open line of the same
-    /// stream, and each <c>\n</c> closes a line, like characters reaching a real terminal.
+    /// Receives a chunk of a command's output, as a terminal emulator does: control sequences are
+    /// interpreted (<c>clear</c> writes <c>ESC[2J</c>, ADR 0051 section 4), the rest is printed.
     /// </summary>
     private void AppendOutput(string text, OutputType type)
+    {
+        TerminalControlSequenceDecoder decoder = type == OutputType.Stderr ? _stderrDecoder : _stdoutDecoder;
+        foreach (TerminalOutputAction action in decoder.Decode(text))
+        {
+            if (action.Kind == TerminalOutputActionKind.EraseScreen)
+            {
+                ClearBuffer();
+            }
+            else
+            {
+                AppendText(action.Text, type);
+            }
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Prints text: it continues the current open line of the same stream, and each <c>\n</c>
+    /// closes a line, like characters reaching a real terminal.
+    /// </summary>
+    private void AppendText(string text, OutputType type)
     {
         lock (_linesSync)
         {
@@ -461,8 +495,6 @@
                 }
             }
         }
-
-        _ = InvokeAsync(StateHasChanged);
     }
 
     private void AddLine(TerminalOutputLine line)
@@ -535,11 +567,13 @@
         }
     }
 
+    /// <summary>Erases the screen and its scrollback, banner included (Ctrl+L, or <c>ESC[2J</c> from <c>clear</c>).</summary>
     private void ClearBuffer()
     {
         lock (_linesSync)
         {
             _lines.Clear();
+            _showBanner = false;
         }
     }
 
@@ -550,8 +584,10 @@
             return;
         }
 
-        List<string> candidates = [.. TerminalBuiltins.Names];
-        candidates.AddRange(TerminalBuiltins.CatalogCommandNames(_resolver));
+        // ADR 0051 section 2: completion knows no command name of its own; it offers the
+        // installed commands and their aliases, exactly what the shell can run.
+        IEnumerable<string> candidates = Shell.GetInstalledCommands()
+            .SelectMany(command => command.Aliases.Prepend(command.Name));
 
         string matches = candidates.FirstOrDefault(c => c.StartsWith(_inputBuffer, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
         if (!string.IsNullOrEmpty(matches))

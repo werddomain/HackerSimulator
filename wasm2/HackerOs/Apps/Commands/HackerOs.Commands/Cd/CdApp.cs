@@ -32,10 +32,10 @@ public sealed class CdApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
+        [AppCapabilities.ShellControl, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("cd", "cd [directory]");
+    public override TerminalCommand? Terminal => new("cd", "cd [directory|-]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(
