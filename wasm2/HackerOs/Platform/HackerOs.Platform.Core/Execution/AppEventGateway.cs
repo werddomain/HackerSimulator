@@ -14,6 +14,7 @@ public sealed class AppEventGateway : IAppEventGateway
     private readonly IEventBus _eventBus;
     private readonly ITopicMessageBus _topicBus;
     private readonly PublisherIdentity _identity;
+    private readonly AppAmbientContextBinding _ambient = new();
 
     /// <summary>Initializes an event gateway bound to the shared event/topic buses and this app instance's identity.</summary>
     public AppEventGateway(IEventBus eventBus, ITopicMessageBus topicBus, string appId, string userId, string processId)
@@ -27,8 +28,9 @@ public sealed class AppEventGateway : IAppEventGateway
     }
 
     /// <inheritdoc />
+    /// <remarks>The handler runs inside this app's <see cref="HackerOs.AppSdk.HackExecutionContext"/> scope (ADR 0043).</remarks>
     public IDisposable Subscribe<TEvent>(Action<TEvent> handler) where TEvent : notnull =>
-        _eventBus.Subscribe(handler);
+        _eventBus.Subscribe(_ambient.Wrap(handler));
 
     /// <inheritdoc />
     public IReadOnlyList<EventDispatchFault> Publish<TEvent>(TEvent @event) where TEvent : notnull
@@ -40,8 +42,9 @@ public sealed class AppEventGateway : IAppEventGateway
     }
 
     /// <inheritdoc />
+    /// <remarks>The handler runs inside this app's <see cref="HackerOs.AppSdk.HackExecutionContext"/> scope (ADR 0043).</remarks>
     public IDisposable Subscribe<TPayload>(TopicName topic, Action<TopicMessage<TPayload>> handler) where TPayload : notnull =>
-        _topicBus.Subscribe(topic, _identity, handler);
+        _topicBus.Subscribe(topic, _identity, _ambient.Wrap(handler));
 
     /// <inheritdoc />
     public ITopicChannelSubscription<TPayload> SubscribeChannel<TPayload>(TopicName topic, int? boundedCapacity = null)
@@ -55,4 +58,7 @@ public sealed class AppEventGateway : IAppEventGateway
     /// <inheritdoc />
     public void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy) =>
         _topicBus.RegisterSharedChannel(root, policy, _identity);
+
+    /// <summary>Binds the app context subscription handlers run under; called once by the factory.</summary>
+    internal void BindAmbientContext(HackerOs.AppSdk.IAppExecutionContext context) => _ambient.Bind(context);
 }

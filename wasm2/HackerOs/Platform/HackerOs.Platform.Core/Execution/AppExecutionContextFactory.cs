@@ -127,8 +127,10 @@ public sealed class AppExecutionContextFactory
             : UnsupportedServiceControlGateway.Instance;
 
         AppPermissionErrorGateway permissionErrors = new();
+        AppEventGateway events = new(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString());
+        AppClockGateway clock = new(_clock);
 
-        return new AppExecutionContext(
+        AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
             userId,
@@ -140,17 +142,23 @@ public sealed class AppExecutionContextFactory
             capabilities,
             new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
             new AppSettingsGateway(_settings, operationContext),
-            new AppEventGateway(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString()),
+            events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id),
             new AppDiagnosticsGateway(_diagnostics, capabilities),
-            new AppClockGateway(_clock),
+            clock,
             new AppProcessGateway(_processManager, capabilities, process.Pid),
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,
             services,
-            operationContext.OneShotElevation);
+            operationContext.OneShotElevation,
+            principal.HomePath);
+
+        // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
+        events.BindAmbientContext(context);
+        clock.BindAmbientContext(context);
+        return context;
     }
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway

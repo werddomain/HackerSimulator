@@ -83,8 +83,10 @@ public sealed class FakeAppFileSystemGateway : IAppFileSystemGateway
     {
         if (!_entries.TryGetValue(request.Path.Value, out Entry? entry) || entry.Kind != FileSystemEntryKind.File)
         {
+            // Like the real engine, reading a directory is NotFile rather than NotFound.
+            FileSystemErrorCode code = entry is null ? FileSystemErrorCode.NotFound : FileSystemErrorCode.NotFile;
             return ValueTask.FromResult(FileSystemResult<FileSystemContentReadHandle>.Failure(
-                new FileSystemError(FileSystemOperation.Read, FileSystemErrorCode.NotFound, request.Path)));
+                new FileSystemError(FileSystemOperation.Read, code, request.Path)));
         }
 
         return ValueTask.FromResult(FileSystemResult<FileSystemContentReadHandle>.Success(
@@ -141,7 +143,8 @@ public sealed class FakeAppFileSystemGateway : IAppFileSystemGateway
             return ValueTask.FromResult(Rejected(FileSystemOperation.Create, FileSystemErrorCode.NotFound, request.Path));
         }
 
-        if (parent.Revision != request.ExpectedParentRevision)
+        // A null expected revision is an unconditional create, as in the real engine.
+        if (request.ExpectedParentRevision is { } expectedParent && parent.Revision != expectedParent)
         {
             return ValueTask.FromResult(Rejected(FileSystemOperation.Create, FileSystemErrorCode.RevisionConflict, request.Path));
         }
@@ -157,10 +160,14 @@ public sealed class FakeAppFileSystemGateway : IAppFileSystemGateway
     {
         if (!_entries.TryGetValue(request.Path.Value, out Entry? entry) || entry.Kind != FileSystemEntryKind.File)
         {
-            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.NotFound, request.Path);
+            return Rejected(
+                FileSystemOperation.Write,
+                entry is null ? FileSystemErrorCode.NotFound : FileSystemErrorCode.NotFile,
+                request.Path);
         }
 
-        if (entry.Revision != request.ExpectedRevision)
+        // A null expected revision is an unconditional overwrite, as in the real engine.
+        if (request.ExpectedRevision is { } expected && entry.Revision != expected)
         {
             return Rejected(FileSystemOperation.Write, FileSystemErrorCode.RevisionConflict, request.Path);
         }

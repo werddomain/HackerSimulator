@@ -582,6 +582,9 @@ public sealed class AppLifecycleOrchestrator
         int exitCode;
         try
         {
+            // ADR 0043: the command runs as this app, in the shell's working directory, so the
+            // Hack* file API resolves relative paths exactly like the shell does.
+            using IDisposable ambient = HackExecutionContext.Enter(context, terminalContext.WorkingDirectory);
             exitCode = await app.ExecuteAsync(terminalContext, executionCancellation.Token);
         }
         catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested)

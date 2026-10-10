@@ -7,6 +7,7 @@ namespace HackerOs.Platform.Core.Execution;
 public sealed class AppClockGateway : IAppClockGateway
 {
     private readonly ISimulationClock _clock;
+    private readonly AppAmbientContextBinding _ambient = new();
 
     /// <summary>Initializes a clock gateway bound to the shared simulation clock.</summary>
     public AppClockGateway(ISimulationClock clock)
@@ -21,7 +22,11 @@ public sealed class AppClockGateway : IAppClockGateway
     public long CurrentTick => _clock.CurrentTick;
 
     /// <inheritdoc />
-    public IDisposable Schedule(TimeSpan delay, Action callback) => _clock.Schedule(delay, callback);
+    /// <remarks>The callback runs inside this app's <see cref="HackerOs.AppSdk.HackExecutionContext"/> scope (ADR 0043).</remarks>
+    public IDisposable Schedule(TimeSpan delay, Action callback) => _clock.Schedule(delay, _ambient.Wrap(callback));
+
+    /// <summary>Binds the app context scheduled callbacks run under; called once by the factory.</summary>
+    internal void BindAmbientContext(HackerOs.AppSdk.IAppExecutionContext context) => _ambient.Bind(context);
 
     /// <inheritdoc />
     public Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken = default) =>
