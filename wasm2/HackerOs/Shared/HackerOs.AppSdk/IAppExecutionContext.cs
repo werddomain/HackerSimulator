@@ -70,11 +70,11 @@ public interface IAppExecutionContext
     /// <summary>Gets this instance's authorized notification-posting gateway.</summary>
     IAppNotificationGateway Notifications { get; }
 
-    /// <summary>Gets this instance's structured diagnostic logging gateway.</summary>
+    /// <summary>
+    /// Gets this instance's structured diagnostic logging gateway. Entries land in
+    /// <c>/var/log/apps/&lt;appId&gt;.log</c> (ADR 0045); reading logs back is plain file access.
+    /// </summary>
     IAppLoggingGateway Logging { get; }
-
-    /// <summary>Gets this instance's authorized diagnostic-log read gateway.</summary>
-    IAppDiagnosticsGateway Diagnostics { get; }
 
     /// <summary>Gets this instance's read-only deterministic simulation clock gateway.</summary>
     IAppClockGateway Clock { get; }

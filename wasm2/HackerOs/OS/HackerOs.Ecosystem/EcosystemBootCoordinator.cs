@@ -3,7 +3,11 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Time;
+using HackerOs.Simulation.Abstractions.Diagnostics;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Ecosystem;
@@ -19,8 +23,17 @@ public sealed class EcosystemBootCoordinator
     private readonly AppEnablementRegistry _enablement;
     private readonly ILocalGroupRepository _groups;
     private readonly ILocalUserRepository _users;
+    private readonly LogFileWriter? _logWriter;
+    private readonly IFileSystemService? _fileSystem;
+    private readonly SimulationClockDriver? _clockDriver;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
+    /// <param name="logWriter">
+    /// Platform log writer attached to <paramref name="fileSystem"/> once storage is ready, so lines
+    /// queued since startup reach <c>/var/log</c> (ADR 0045). Optional for headless tests.
+    /// </param>
+    /// <param name="fileSystem">Mounted filesystem the log writer is attached to.</param>
+    /// <param name="clockDriver">Driver started at boot so simulated time advances (ADR 0012).</param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         IndexedDbSettingsDocumentService settings,
@@ -29,7 +42,10 @@ public sealed class EcosystemBootCoordinator
         AppCatalog selectedCatalog,
         AppEnablementRegistry enablement,
         ILocalGroupRepository groups,
-        ILocalUserRepository users)
+        ILocalUserRepository users,
+        LogFileWriter? logWriter = null,
+        IFileSystemService? fileSystem = null,
+        SimulationClockDriver? clockDriver = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -40,6 +56,9 @@ public sealed class EcosystemBootCoordinator
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
         _groups = groups ?? throw new ArgumentNullException(nameof(groups));
         _users = users ?? throw new ArgumentNullException(nameof(users));
+        _logWriter = logWriter;
+        _fileSystem = fileSystem;
+        _clockDriver = clockDriver;
     }
 
     /// <summary>
@@ -53,6 +72,11 @@ public sealed class EcosystemBootCoordinator
 
         // Step 1: Storage Root Validation
         await _fileSystemBootstrapper.EnsureRootAsync(cancellationToken).ConfigureAwait(false);
+
+        // Simulated time starts flowing once storage exists; scheduled work (log flushes, the
+        // taskbar clock, process stop timeouts) depends on it.
+        _clockDriver?.Start();
+        await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
@@ -87,7 +111,34 @@ public sealed class EcosystemBootCoordinator
         // happened to toggle the app again, not from the first launch attempt after boot.
         _enablement.MarkDisabled(catalog.Where(entry => !entry.IsEnabled).Select(entry => entry.Manifest.Id));
 
+        _logWriter?.Write(
+            LogFileTarget.Syslog,
+            DiagnosticSeverity.Information,
+            "kernel",
+            $"boot: storage ready, policy revision {policyRevision}, {catalog.Count} apps in catalog, {users.Count} local users");
+
         return new EcosystemBootResult(users, policyRevision, catalog.Count);
+    }
+
+    /// <summary>
+    /// Attaches the log writer to the mounted filesystem. A logging failure never blocks boot: the
+    /// writer notes it in the in-memory buffer and lines stay queued.
+    /// </summary>
+    private async ValueTask AttachLogWriterAsync(CancellationToken cancellationToken)
+    {
+        if (_logWriter is null || _fileSystem is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _logWriter.AttachAsync(_fileSystem, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Deliberately swallowed: see the summary. The memory buffer already has the detail.
+        }
     }
 }
 

@@ -41,6 +41,7 @@ public sealed class FileSystemSeeder(
         await EnsureDirectoryAsync("/tmp", 0x01FF, system, cancellationToken);
         await EnsureDirectoryAsync("/var", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/var/log", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/var/log/apps", 0x01ED, system, cancellationToken);
         await EnsureMountPointAsync("/proc", 0x016D, system, cancellationToken);
         await EnsureMountPointAsync("/dev", 0x01ED, system, cancellationToken);
 
