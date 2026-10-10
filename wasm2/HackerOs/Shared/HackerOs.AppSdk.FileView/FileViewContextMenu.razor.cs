@@ -95,6 +95,18 @@ public partial class FileViewContextMenu
                             item.Select();
                             return Owner.DeleteSelectedAsync();
                         }));
+
+                    // Only meaningful when the host turns the plain "Delete" into a trash move (ADR 0052).
+                    if (Owner.DeleteRequested.HasDelegate)
+                    {
+                        items.Add(new FileViewMenuItem(
+                            "delete-permanently", "Delete permanently", ShellIconDescriptor.Vector(IconLibrary.Lucide, "octagon-x"),
+                            () =>
+                            {
+                                item.Select();
+                                return Owner.DeleteSelectedAsync(permanent: true);
+                            }));
+                    }
                 }
 
                 break;

@@ -21,6 +21,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`app-model.md`](app-model.md) | Modèle d'app (phase 2, ADR 0047) : classe `AppDefinition` et `[AppManifest]`, `manifest.json` généré au build, agrégation `BuiltInApplications.json` dans l'hôte. |
 | [`capabilities.md`](capabilities.md) | Capacités (phase 2, ADR 0049) : catalogue `AppCapabilities`, classement normal/dangereux, `Describe`, attribution à la connexion selon le statut système. |
 | [`dangerous-capability-approval.md`](dangerous-capability-approval.md) | Approbation des capacités dangereuses (phase 2, ADR 0049) : `security.config`, `app-permissions.config`, passerelle de lancement, fenêtre d'approbation, mode texte du terminal, vue Permissions, `auth.log`. |
+| [`trash.md`](trash.md) | Corbeille (phase 3, ADR 0052) : format freedesktop sous `~/.local/share/Trash`, API `HackTrash`, `rm` vers la corbeille et `rm --permanent`, commande `trash`, `FileView.DeleteRequested` et vue Corbeille de l'explorateur. |
 | [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
 
 ## Décisions d'architecture

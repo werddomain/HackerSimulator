@@ -25,7 +25,7 @@ public sealed class RmApp : AppDefinition
     public override string PublisherId => "pub.hackeros";
 
     /// <inheritdoc />
-    public override string Description => "Remove files or directories";
+    public override string Description => "Move files or directories to the trash, or remove them permanently";
 
     /// <inheritdoc />
     public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
@@ -35,7 +35,7 @@ public sealed class RmApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("rm", "rm [-r|-R] [-f] <file...>");
+    public override TerminalCommand? Terminal => new("rm", "rm [-r|-R] [-f] [--permanent] <file...>");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.FileView.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using Microsoft.AspNetCore.Components;
 using static HackerOs.AppSdk.FileView.Tests.TestComponentHelpers;
 
 namespace HackerOs.AppSdk.FileView.Tests;
@@ -426,6 +427,36 @@ public sealed class FileViewTests
         Assert.Single(view.Items);
         Assert.Equal("b.txt", view.Items[0].FileName);
         Assert.Equal([VirtualPath.Parse("/home/user/a.txt")], deletedPaths);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeleteSelectedAsync_hands_the_items_to_DeleteRequested_when_the_host_supplies_it(bool permanent)
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        await fixture.CreateFileAsync("/home/user/a.txt");
+        FileViewDeleteRequestedEventArgs? request = null;
+        TestComponentRenderer renderer = new(EmptyServices());
+        TestableFileView view = new()
+        {
+            FileSystem = fixture.FileSystem,
+            InitialDirectory = VirtualPath.Parse("/home/user"),
+            DeleteRequested = new EventCallback<FileViewDeleteRequestedEventArgs>(null, (Func<FileViewDeleteRequestedEventArgs, Task>)(e =>
+            {
+                request = e;
+                return Task.CompletedTask;
+            }))
+        };
+        await renderer.RenderAsync(view);
+        await OnDispatcherAsync(renderer, () => view.Items.Single(i => i.FileName == "a.txt").Select());
+
+        await renderer.RunAsync(() => view.DeleteSelectedAsync(permanent));
+
+        Assert.NotNull(request);
+        Assert.Equal(permanent, request.Permanent);
+        Assert.Equal("a.txt", Assert.Single(request.Items).FileName);
+        Assert.Single(view.Items);
     }
 
     [Fact]

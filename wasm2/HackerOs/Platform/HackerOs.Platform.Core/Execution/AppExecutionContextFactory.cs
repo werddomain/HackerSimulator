@@ -158,7 +158,8 @@ public sealed class AppExecutionContextFactory
             permissionErrors,
             services,
             operationContext.OneShotElevation,
-            principal.HomePath);
+            principal.HomePath,
+            isRootElevated);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);

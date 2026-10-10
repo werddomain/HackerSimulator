@@ -120,6 +120,16 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public Func<FileViewItem, bool>? Filter { get; set; }
 
+    /// <summary>
+    /// When supplied, the control's own delete actions (Delete key, Shift+Delete, the "Delete" and
+    /// "Delete permanently" menu entries) are handed to the host instead of deleting through
+    /// <see cref="FileSystem"/>; the host decides between the trash and a permanent deletion and
+    /// refreshes the view. Without it, "Delete" removes the items permanently and the
+    /// "Delete permanently" entry is not offered (there would be no difference).
+    /// </summary>
+    [Parameter]
+    public EventCallback<FileViewDeleteRequestedEventArgs> DeleteRequested { get; set; }
+
     /// <summary>Gets the directory currently displayed.</summary>
     public VirtualPath CurrentDirectory { get; private set; }
 
@@ -474,8 +484,12 @@ public partial class FileView : IAsyncDisposable
         Opened?.Invoke(this, new FileViewOpenedEventArgs(item));
     }
 
-    /// <summary>Deletes every currently selected item via the control's own context menu/keyboard shortcut.</summary>
-    internal async Task DeleteSelectedAsync()
+    /// <summary>
+    /// Deletes every currently selected item via the control's own context menu/keyboard shortcut,
+    /// or hands them to <see cref="DeleteRequested"/> when the host supplied it.
+    /// </summary>
+    /// <param name="permanent">Whether the user asked for a permanent deletion (Shift+Delete).</param>
+    internal async Task DeleteSelectedAsync(bool permanent = false)
     {
         if (_selection.Count == 0)
         {
@@ -483,10 +497,17 @@ public partial class FileView : IAsyncDisposable
         }
 
         FileViewItem[] targets = [.. _selection];
+
         FileViewDeletingEventArgs deletingArgs = new(targets);
         Deleting?.Invoke(this, deletingArgs);
         if (deletingArgs.Cancel)
         {
+            return;
+        }
+
+        if (DeleteRequested.HasDelegate)
+        {
+            await DeleteRequested.InvokeAsync(new FileViewDeleteRequestedEventArgs(targets, permanent));
             return;
         }
 

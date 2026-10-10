@@ -38,6 +38,15 @@ public interface IAppExecutionContext
     /// </summary>
     string HomeDirectory => $"/home/{UserId}";
 
+    /// <summary>
+    /// Gets whether this one launch runs as full root through <c>sudo</c> (ADR 0042). The effective
+    /// user is then <c>root</c>, whose home is <c>/root</c>: per-user data written on its behalf,
+    /// such as the trash (ADR 0052), goes there rather than under <see cref="HomeDirectory"/>.
+    /// Defaults to <see langword="false"/> so existing implementations keep compiling; the trusted
+    /// platform factory sets it from the launch.
+    /// </summary>
+    bool IsRootElevated => false;
+
     /// <summary>Gets the acting user's authority for this operation.</summary>
     AppAuthority UserAuthority { get; }
 

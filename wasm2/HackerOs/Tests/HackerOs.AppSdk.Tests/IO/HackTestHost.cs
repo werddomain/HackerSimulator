@@ -26,9 +26,24 @@ internal static class HackTestHost
         Resources = AppResourceProfileManifest.None
     };
 
+    /// <summary>Fixed simulated "now" of every test context (used by the trash's DeletionDate).</summary>
+    public static readonly DateTimeOffset Now = new(2026, 10, 10, 14, 3, 27, TimeSpan.Zero);
+
     public static MinimalAppExecutionContext CreateContext(
-        IAppFileSystemGateway fileSystem, IAppFileSystemWatchGateway? watch = null) =>
-        new(Manifest, fileSystem: fileSystem, userId: "0f00", watch: watch, homeDirectory: Home);
+        IAppFileSystemGateway fileSystem,
+        IAppFileSystemWatchGateway? watch = null,
+        IAppLoggingGateway? logging = null,
+        IAppClockGateway? clock = null,
+        bool isRootElevated = false) =>
+        new(
+            Manifest,
+            fileSystem: fileSystem,
+            userId: "0f00",
+            watch: watch,
+            homeDirectory: Home,
+            logging: logging ?? new FakeAppLoggingGateway(),
+            clock: clock ?? new FakeAppClockGateway(Now),
+            isRootElevated: isRootElevated);
 
     /// <summary>Seeds the home directory and enters an ambient scope working in it.</summary>
     public static IDisposable Enter(out FakeAppFileSystemGateway fileSystem, string workingDirectory = Home)
