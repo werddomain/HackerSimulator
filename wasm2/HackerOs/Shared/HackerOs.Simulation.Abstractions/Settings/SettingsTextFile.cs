@@ -158,6 +158,15 @@ public static class SettingsTextFile
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
+        return await EnsureDirectoryCoreAsync(fileSystem, path, isAncestor: false, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<FileSystemError?> EnsureDirectoryCoreAsync(
+        IAppFileSystemGateway fileSystem,
+        VirtualPath path,
+        bool isAncestor,
+        CancellationToken cancellationToken)
+    {
         FileSystemResult<FileSystemEntrySnapshot> stat = await fileSystem
             .StatAsync(new FileSystemStatRequest(path), cancellationToken)
             .ConfigureAwait(false);
@@ -170,13 +179,16 @@ public static class SettingsTextFile
 
         if (stat.Error?.Code != FileSystemErrorCode.NotFound)
         {
-            return stat.Error;
+            // An app may write ~/.config/<appId>/ (its private capability) without being allowed
+            // to even look at ~/.config itself: an ancestor it cannot stat is assumed to exist,
+            // and the create of the child below reports the real outcome.
+            return isAncestor ? null : stat.Error;
         }
 
         VirtualPath parent = GetParent(path);
         if (parent.Value != path.Value)
         {
-            FileSystemError? parentError = await EnsureDirectoryAsync(fileSystem, parent, cancellationToken).ConfigureAwait(false);
+            FileSystemError? parentError = await EnsureDirectoryCoreAsync(fileSystem, parent, isAncestor: true, cancellationToken).ConfigureAwait(false);
             if (parentError is not null)
             {
                 return parentError;

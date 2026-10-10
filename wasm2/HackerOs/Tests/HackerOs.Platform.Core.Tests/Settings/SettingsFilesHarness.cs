@@ -130,6 +130,16 @@ internal sealed class SettingsFilesHarness
         Assert.Null(error);
     }
 
+    /// <summary>Writes a text file as the session user (like <c>nano</c> run by that user).</summary>
+    internal async Task WriteAsUserAsync(string path, string content)
+    {
+        AuthenticatedPrincipal principal = Session.CurrentPrincipal ?? throw new InvalidOperationException("No session.");
+        IAppFileSystemGateway nano = CreateAppGateway(
+            principal, "org.hackeros.nano", AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite);
+        FileSystemError? error = await SettingsTextFile.EditAsync(nano, VirtualPath.Parse(path), _ => content, createIfMissing: true);
+        Assert.Null(error);
+    }
+
     /// <summary>Gets a file's metadata, or <see langword="null"/> when absent.</summary>
     internal async Task<FileSystemEntryMetadata?> StatAsync(string path)
     {
