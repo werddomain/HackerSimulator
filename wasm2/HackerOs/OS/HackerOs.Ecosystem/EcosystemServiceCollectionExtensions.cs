@@ -170,7 +170,8 @@ public static class EcosystemServiceCollectionExtensions
                     process => provider.GetRequiredService<ISessionService>().CurrentPrincipal is { } principal
                         && principal.UserId == process.UserId
                             ? principal.LoginName.Value
-                            : null)),
+                            : null,
+                    environments: () => provider.GetRequiredService<IProcessEnvironmentTable>())),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -318,11 +319,22 @@ public static class EcosystemServiceCollectionExtensions
                 catalog: provider.GetService<AppCatalog>(),
                 profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>());
         });
+        // Per-process arguments, working directory and environment (ADR 0050): filled and
+        // emptied by the process manager, read by /proc and each app's Environment gateway.
+        services.AddScoped<InMemoryProcessEnvironmentTable>();
+        services.AddScoped<IProcessEnvironmentTable>(provider =>
+            provider.GetRequiredService<InMemoryProcessEnvironmentTable>());
         services.AddScoped<IProcessManager>(provider =>
             new InMemoryProcessManager(
                 provider.GetRequiredService<ISimulationClock>(),
                 provider.GetRequiredService<ISessionService>(),
-                provider.GetRequiredService<IEventBus>()));
+                provider.GetRequiredService<IEventBus>(),
+                environments: provider.GetRequiredService<InMemoryProcessEnvironmentTable>()));
+        // Login environment (/etc/environment) and machine name (/etc/hostname), ADR 0050.
+        services.AddScoped<LoginEnvironmentProvider>(provider => new LoginEnvironmentProvider(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetService<ILogger<LoginEnvironmentProvider>>()));
         services.AddSingleton<IResourceSimulator>(provider => new DeterministicResourceSimulator(
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),
@@ -350,7 +362,9 @@ public static class EcosystemServiceCollectionExtensions
             // Resolved lazily: AppIntentDispatcher depends (transitively, via AppLifecycleOrchestrator)
             // on this very factory, so eagerly injecting it here would be circular.
             intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>(),
-            logWriter: provider.GetRequiredService<LogFileWriter>()));
+            logWriter: provider.GetRequiredService<LogFileWriter>(),
+            environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
+            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
@@ -385,7 +399,8 @@ public static class EcosystemServiceCollectionExtensions
             provider,
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<IElevationTicketStore>(),
-            provider.GetRequiredService<IDangerousCapabilityGate>()));
+            provider.GetRequiredService<IDangerousCapabilityGate>(),
+            provider.GetRequiredService<LoginEnvironmentProvider>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.

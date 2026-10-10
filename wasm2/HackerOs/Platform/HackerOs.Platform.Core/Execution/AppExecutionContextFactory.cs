@@ -33,6 +33,8 @@ public sealed class AppExecutionContextFactory
     private readonly IProcessManager _processManager;
     private readonly Func<AppIntentDispatcher>? _intentDispatcherProvider;
     private readonly LogFileWriter? _logWriter;
+    private readonly IProcessEnvironmentTable? _environments;
+    private readonly Func<string> _machineName;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -47,6 +49,12 @@ public sealed class AppExecutionContextFactory
     /// (<c>/var/log/apps/&lt;appId&gt;.log</c>, ADR 0045); <see langword="null"/> keeps app logs in
     /// the in-memory buffer only.
     /// </param>
+    /// <param name="environments">
+    /// Per-process environment table behind <see cref="IAppExecutionContext.Environment"/> (ADR 0050);
+    /// when omitted, the one of an <see cref="Processes.InMemoryProcessManager"/> is used, otherwise
+    /// contexts get a detached read-only view.
+    /// </param>
+    /// <param name="machineName">Reads the machine name (<c>/etc/hostname</c>); defaults to <c>hackeros</c>.</param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -57,7 +65,9 @@ public sealed class AppExecutionContextFactory
         ISimulationClock clock,
         IProcessManager processManager,
         Func<AppIntentDispatcher>? intentDispatcherProvider = null,
-        LogFileWriter? logWriter = null)
+        LogFileWriter? logWriter = null,
+        IProcessEnvironmentTable? environments = null,
+        Func<string>? machineName = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -69,6 +79,8 @@ public sealed class AppExecutionContextFactory
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _intentDispatcherProvider = intentDispatcherProvider;
         _logWriter = logWriter;
+        _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
+        _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
     }
 
     /// <summary>
@@ -158,7 +170,10 @@ public sealed class AppExecutionContextFactory
             permissionErrors,
             services,
             operationContext.OneShotElevation,
-            principal.HomePath);
+            principal.HomePath,
+            _environments is null
+                ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
+                : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath));
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);

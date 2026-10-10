@@ -25,7 +25,7 @@ de permission restent appliqués exactement comme avant.
 
 | Élément | Emplacement | Rôle |
 |---|---|---|
-| `HackExecutionContext` | `Shared/HackerOs.AppSdk/HackExecutionContext.cs` | Contexte ambiant (`AsyncLocal`) : `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)`. |
+| `HackExecutionContext` | `Shared/HackerOs.AppSdk/HackExecutionContext.cs` | Contexte ambiant (`AsyncLocal`) : `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)`. Depuis la phase 3, `WorkingDirectory` est le répertoire du processus (`HackEnvironment`, [`process-environment.md`](process-environment.md)), sauf répertoire fixé par `Enter`. |
 | `IAppExecutionContext.HomeDirectory` | `Shared/HackerOs.AppSdk/IAppExecutionContext.cs` | Dossier personnel `/home/<login>` (membre par défaut `/home/{UserId}`, remplacé par la plateforme). Sert à `~` et au répertoire courant par défaut. |
 | `HackFile`, `HackDirectory`, `HackPath` | `Shared/HackerOs.AppSdk/IO/` | Façades statiques. `HackPath` est pur, sauf `GetFullPath(path)`. |
 | `HackFileSystemInfo`, `HackFileInfo`, `HackDirectoryInfo` | `IO/HackFileSystemInfo.cs` | Instantanés de métadonnées (`GetAsync`, `RefreshAsync`). |
@@ -40,7 +40,7 @@ de permission restent appliqués exactement comme avant.
 
 | Type de code | Où | Répertoire courant |
 |---|---|---|
-| Commande terminal | `AppLifecycleOrchestrator`, autour de `ExecuteAsync` | celui du shell |
+| Commande terminal | `AppLifecycleOrchestrator`, autour de `ExecuteAsync` | celui du processus de la commande (copié du shell à la création) |
 | Service | `ServiceAppBase.RunAsync` et `StopAsync` | dossier personnel |
 | Fenêtre | `WindowAppBase` : `SetParametersAsync`, `IHandleEvent.HandleEventAsync`, `IHandleAfterRender.OnAfterRenderAsync` | dossier personnel |
 | Composant enfant | `HackComponentBase` (nouveau, `HackerOs.AppSdk.Blazor`) reçoit le contexte par `CascadingValue` posé par `WindowAppRenderer` | celui de la fenêtre |

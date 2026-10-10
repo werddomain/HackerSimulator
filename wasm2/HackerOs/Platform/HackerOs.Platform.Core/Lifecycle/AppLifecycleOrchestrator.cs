@@ -6,6 +6,7 @@ using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Processes;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -39,6 +40,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IFileSystemService? _fileSystem;
     private readonly IElevationTicketStore? _elevationTickets;
     private readonly IDangerousCapabilityGate? _dangerousCapabilityGate;
+    private readonly LoginEnvironmentProvider? _loginEnvironment;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -80,6 +82,10 @@ public sealed class AppLifecycleOrchestrator
     /// refuses the one-shot approval of ADR 0042 for those capabilities. When omitted, a non-system
     /// app simply never holds a dangerous capability (the login seeder withholds them).
     /// </param>
+    /// <param name="loginEnvironment">
+    /// Optional source of the login environment (<c>/etc/environment</c>, ADR 0050 section 5) given
+    /// to processes with no parent. When omitted, they get the fixed login variables only.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -92,7 +98,8 @@ public sealed class AppLifecycleOrchestrator
         IServiceProvider? services = null,
         IFileSystemService? fileSystem = null,
         IElevationTicketStore? elevationTickets = null,
-        IDangerousCapabilityGate? dangerousCapabilityGate = null)
+        IDangerousCapabilityGate? dangerousCapabilityGate = null,
+        LoginEnvironmentProvider? loginEnvironment = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -106,6 +113,7 @@ public sealed class AppLifecycleOrchestrator
         _fileSystem = fileSystem;
         _elevationTickets = elevationTickets;
         _dangerousCapabilityGate = dangerousCapabilityGate;
+        _loginEnvironment = loginEnvironment;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -297,6 +305,8 @@ public sealed class AppLifecycleOrchestrator
         }
 
         HashSet<string> grantedCapabilities = ComputeGrantedCapabilities(descriptor.Manifest, request.Principal);
+        (VirtualPath? workingDirectory, IReadOnlyDictionary<string, string>? environment) =
+            await ResolveStartEnvironmentAsync(request, cancellationToken).ConfigureAwait(false);
         ProcessRecord process = _processManager.Start(new ProcessStartRequest(
             request.ParentPid,
             request.AppId,
@@ -304,7 +314,11 @@ public sealed class AppLifecycleOrchestrator
             descriptor.Manifest.Kind,
             request.Principal.UserId,
             request.Principal.SessionId,
-            ResourceProfile.None));
+            ResourceProfile.None,
+            // argv: the command name the user typed resolves to this manifest name (ADR 0050).
+            [descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
+            workingDirectory,
+            environment));
 
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
@@ -315,8 +329,7 @@ public sealed class AppLifecycleOrchestrator
             return descriptor.Manifest.Kind switch
             {
                 AppKind.Terminal => await RunTerminalAsync(
-                    descriptor, process, context, request.Arguments, request.Principal, request.WorkingDirectory,
-                    fullScreen, cancellationToken),
+                    descriptor, process, context, request.Arguments, fullScreen, cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
@@ -574,12 +587,14 @@ public sealed class AppLifecycleOrchestrator
         ProcessRecord process,
         IAppExecutionContext context,
         IReadOnlyList<string> arguments,
-        AuthenticatedPrincipal principal,
-        VirtualPath? workingDirectory,
         IFullScreenTerminalSession? fullScreen,
         CancellationToken cancellationToken)
     {
         _processManager.MarkRunning(process.Pid);
+
+        // ADR 0050 section 6: the context keeps the process's state at command start, for
+        // compatibility; the live values are read through HackEnvironment.
+        IAppEnvironmentGateway processEnvironment = context.Environment;
 
         TerminalAppBase app = (TerminalAppBase)CreateAppInstance(descriptor);
         using StringWriter stdout = new();
@@ -593,8 +608,8 @@ public sealed class AppLifecycleOrchestrator
             stdin,
             stdout,
             stderr,
-            workingDirectory?.Value ?? principal.HomePath,
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = principal.HomePath },
+            processEnvironment.CurrentDirectory,
+            processEnvironment.GetVariables(),
             fullScreen);
 
         List<FileSystemError> permissionDenials = [];
@@ -604,9 +619,10 @@ public sealed class AppLifecycleOrchestrator
         int exitCode;
         try
         {
-            // ADR 0043: the command runs as this app, in the shell's working directory, so the
-            // Hack* file API resolves relative paths exactly like the shell does.
-            using IDisposable ambient = HackExecutionContext.Enter(context, terminalContext.WorkingDirectory);
+            // ADR 0043/0050: the command runs as this app, in its process's working directory (the
+            // shell's, copied at creation), so the Hack* file API resolves relative paths exactly
+            // like the shell does, and follows the command's own HackEnvironment changes.
+            using IDisposable ambient = HackExecutionContext.Enter(context);
             exitCode = await app.ExecuteAsync(terminalContext, executionCancellation.Token);
         }
         catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested)
@@ -622,6 +638,49 @@ public sealed class AppLifecycleOrchestrator
         return new AppLaunchResult(
             AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString(),
             PermissionDenials: permissionDenials);
+    }
+
+    /// <summary>
+    /// Computes what the new process starts with (ADR 0050, section 5). A process with no parent
+    /// (desktop launch, service) gets the session's login environment and the home directory; a
+    /// child inherits its parent's, which the process manager copies. In both cases an explicit
+    /// directory also updates <c>PWD</c>, as the shell does when it starts a command after <c>cd</c>,
+    /// then the request's own variables apply on top.
+    /// </summary>
+    private async ValueTask<(VirtualPath? WorkingDirectory, IReadOnlyDictionary<string, string>? Environment)> ResolveStartEnvironmentAsync(
+        AppLaunchRequest request,
+        CancellationToken cancellationToken)
+    {
+        VirtualPath? workingDirectory = request.WorkingDirectory;
+        Dictionary<string, string> environment = new(StringComparer.Ordinal);
+        if (request.ParentPid is null)
+        {
+            AuthenticatedPrincipal principal = request.Principal;
+            IReadOnlyDictionary<string, string> login = _loginEnvironment is null
+                ? LoginEnvironment.Build(principal.LoginName.Value, principal.HomePath, environmentFile: null)
+                : await _loginEnvironment.GetAsync(principal, cancellationToken).ConfigureAwait(false);
+            foreach ((string name, string value) in login)
+            {
+                environment[name] = value;
+            }
+
+            workingDirectory ??= VirtualPath.Parse(principal.HomePath);
+            environment["PWD"] = workingDirectory.Value.Value;
+        }
+        else if (workingDirectory is { } explicitDirectory)
+        {
+            environment["PWD"] = explicitDirectory.Value;
+        }
+
+        if (request.Environment is { } overrides)
+        {
+            foreach ((string name, string value) in overrides)
+            {
+                environment[name] = value;
+            }
+        }
+
+        return (workingDirectory, environment.Count == 0 ? null : environment);
     }
 
     private AppLaunchResult StartService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
