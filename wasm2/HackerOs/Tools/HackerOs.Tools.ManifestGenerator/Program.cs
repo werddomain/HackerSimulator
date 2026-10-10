@@ -45,8 +45,10 @@ public static class Program
     }
 
     /// <summary>
-    /// <c>generate --assembly &lt;dll&gt; --project &lt;csproj&gt; --dependencies &lt;list file&gt; --stamp &lt;file&gt;</c>.
-    /// The dependency list file holds one path per line, in resolution priority order.
+    /// <c>generate --assembly &lt;dll&gt; --project &lt;csproj&gt; --dependencies &lt;list file&gt; --stamp &lt;file&gt;
+    /// [--boundary-exempt true]</c>. The dependency list file holds one path per line, in resolution
+    /// priority order. <c>--boundary-exempt true</c> turns SDK boundary errors (<c>HOSAPP0031</c>) into
+    /// warnings for a project listed in <c>HackerOsSdkBoundaryExemption</c> (ADR 0055 §6).
     /// </summary>
     private static int Generate(IReadOnlyDictionary<string, string> options)
     {
@@ -79,6 +81,24 @@ public static class Program
             if (!result.IsSuccess)
             {
                 return Fail(project, [.. result.Diagnostics]);
+            }
+
+            // SDK boundary (ADR 0055 §3): checked before anything is written, so a failing build never
+            // leaves a fresh stamp that would make the next incremental build skip the check.
+            IReadOnlyList<GeneratorDiagnostic> boundary = SdkBoundaryInspector.Inspect(
+                assembly.GetTypes(),
+                result.Manifests.SelectMany(manifest => manifest.EntryPointTypes));
+            bool exempt = options.TryGetValue("boundary-exempt", out string? exemptValue)
+                && string.Equals(exemptValue, "true", StringComparison.OrdinalIgnoreCase);
+            if (boundary.Count > 0 && !exempt)
+            {
+                return Fail(project, [.. boundary]);
+            }
+
+            foreach (GeneratorDiagnostic diagnostic in boundary)
+            {
+                // Exempted project (HackerOsSdkBoundaryExemption): reported, but the build goes on.
+                Console.WriteLine(diagnostic.ToMsBuildLine(project, "warning"));
             }
 
             IReadOnlyList<string> files = ManifestWriter.Write(Path.GetDirectoryName(project)!, result.Manifests);
@@ -171,7 +191,7 @@ public static class Program
     private static void PrintUsage()
     {
         Console.WriteLine("HackerOS manifest generator (ADR 0047)");
-        Console.WriteLine("  generate --assembly <app.dll> --project <app.csproj> --stamp <file> [--dependencies <list file>]");
+        Console.WriteLine("  generate --assembly <app.dll> --project <app.csproj> --stamp <file> [--dependencies <list file>] [--boundary-exempt true]");
         Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json>");
         Console.WriteLine("  validate <manifest.json>");
     }

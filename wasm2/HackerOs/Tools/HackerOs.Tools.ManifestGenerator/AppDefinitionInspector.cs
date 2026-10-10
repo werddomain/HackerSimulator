@@ -9,7 +9,14 @@ namespace HackerOs.Tools.ManifestGenerator;
 /// <param name="DefinitionType">Full name of the definition class.</param>
 /// <param name="Manifest">The produced manifest.</param>
 /// <param name="CanonicalJson">The manifest's canonical JSON bytes (ADR 0010), as written to disk.</param>
-public sealed record GeneratedManifest(string DefinitionType, AppManifest Manifest, string CanonicalJson);
+public sealed record GeneratedManifest(string DefinitionType, AppManifest Manifest, string CanonicalJson)
+{
+    /// <summary>
+    /// Gets the entry-point types of the definition (<c>EntryPoint</c>, then <c>MobileEntryPoint</c>
+    /// when set). The SDK boundary check inspects their constructors (ADR 0055 §3).
+    /// </summary>
+    public IReadOnlyList<Type> EntryPointTypes { get; init; } = [];
+}
 
 /// <summary>Result of inspecting one app assembly: manifests when valid, diagnostics otherwise.</summary>
 /// <param name="Manifests">Produced manifests, ordered by app id. Empty when any diagnostic exists.</param>
@@ -184,7 +191,12 @@ public static class AppDefinitionInspector
         }
 
         CheckEntryPointKinds(manifest!, assembly, subject, diagnostics);
-        return diagnostics.Count > before ? null : new GeneratedManifest(subject, manifest!, json!);
+        return diagnostics.Count > before
+            ? null
+            : new GeneratedManifest(subject, manifest!, json!)
+            {
+                EntryPointTypes = first.MobileEntryPoint is Type mobileEntryPoint ? [first.EntryPoint, mobileEntryPoint] : [first.EntryPoint]
+            };
     }
 
     private static bool TryProduce(

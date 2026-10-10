@@ -1,0 +1,200 @@
+# SDK des apps et frontière du SDK
+
+## Objet
+
+Une app HackerOS, système ou tierce, n'obtient les services de l'OS que par le
+SDK public (principe 3 du plan, ADR 0055). Ce document décrit :
+
+- ce qui forme le SDK et ce qu'une app a le droit de référencer et d'injecter ;
+- comment le build vérifie ces règles (codes `HOSAPP0030`, `HOSAPP0031`,
+  `HOSSDK0001`, ADR 0059) ;
+- la liste d'exemptions temporaire de la phase 4 ;
+- les API du SDK, au fur et à mesure que les chantiers `rebuild/4-*` les
+  ajoutent (ADR 0056).
+
+Chaque chantier de la phase 4 qui ajoute une API la documente ici, dans la
+section [API du SDK](#api-du-sdk).
+
+## Ce qui forme le SDK
+
+| Projet | Contenu |
+|---|---|
+| `Shared/HackerOs.AppSdk` | `IAppExecutionContext` et ses passerelles, façades statiques `Hack*`, classes de base des points d'entrée (`TerminalAppBase`…). |
+| `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement…). |
+| `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
+| `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
+| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`). |
+| `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
+
+Toute bibliothèque `Shared/HackerOs.AppSdk` ou `Shared/HackerOs.AppSdk.*` est
+une **bibliothèque SDK** (propriété MSBuild `HackerOsSdkLibrary`, calculée par
+`build/HackerOs.Apps.targets`). Un projet de tests nommé de la même façon n'en
+est pas une : seul l'emplacement sous `Shared/` compte.
+
+## Règles
+
+### Références de projet (ADR 0055 §2)
+
+| Projet | Peut référencer | Sinon |
+|---|---|---|
+| Projet d'app (`HackerOsAppProject=true`, tout projet sous `Apps/`) | `Shared/HackerOs.{App,Simulation,Theming,Game}.Abstractions`, les bibliothèques SDK, `Platform/HackerOs.Theming.Blazor`, un autre projet sous `Apps/` | `HOSAPP0030` |
+| Bibliothèque SDK | les quatre `*.Abstractions` ci-dessus, une autre bibliothèque SDK | `HOSSDK0001` |
+
+Seules les références **directes** du projet comptent : une référence
+transitive est vérifiée dans le projet qui la déclare. Les `PackageReference`
+restent libres. La référence d'ordre de build vers le générateur de manifeste,
+ajoutée par `HackerOs.Apps.targets`, est ignorée.
+
+### Injection (ADR 0055 §3)
+
+Une app ne peut obtenir par injection qu'un service dont le type est :
+
+1. défini dans une bibliothèque SDK ;
+2. un type de MudBlazor (par exemple `MudBlazor.IDialogService`) ;
+3. `Microsoft.JSInterop.IJSRuntime`, seulement pour importer son propre module
+   JavaScript.
+
+Deux points d'injection sont contrôlés, ce sont les seuls que la plateforme
+honore pour une app :
+
+- chaque propriété `[Inject]` de chaque type de l'assembly (une directive
+  `@inject` compile en propriété `[Inject]`) ;
+- chaque paramètre des constructeurs publics des points d'entrée
+  (`EntryPoint`, `MobileEntryPoint`), que l'hôte construit avec
+  `ActivatorUtilities` (ADR 0034 §2).
+
+Pour un constructeur de point d'entrée, restent permis : le `AppManifest` que
+l'hôte passe explicitement, les types valeur et `string` (jamais enregistrés
+comme services : un tel constructeur ne sert qu'aux tests, par exemple un
+intervalle de minuterie).
+
+Les types de `Simulation.Abstractions` et `App.Abstractions` restent permis
+comme **données** (une propriété non `[Inject]`, un paramètre de méthode).
+
+### Appels JavaScript (ADR 0055 §3)
+
+Un appel `Invoke*Async` sur un `IJSRuntime` doit avoir la forme :
+
+```csharp
+_module = await JS.InvokeAsync<IJSObjectReference>(
+    "import", "./_content/<projet de l'app>/<fichier>.js");
+```
+
+Les appels sur le `IJSObjectReference` obtenu sont libres : c'est le code de
+l'app. Passer l'`IJSRuntime` à un composant ou à un service d'une bibliothèque
+SDK (par exemple `BrowserFileDownloader` de `HackerOs.AppSdk.Blazor`) est
+permis : c'est le code du SDK qui fait l'appel.
+
+## Vérification
+
+| Règle | Où | Quand | Code |
+|---|---|---|---|
+| Références d'une app | cible `ValidateHackerOsSdkBoundary` de `build/HackerOs.Apps.targets` | avant `ResolveProjectReferences`, donc avant la compilation | `HOSAPP0030` |
+| Références d'une bibliothèque SDK | même cible | idem | `HOSSDK0001` |
+| Injection | `SdkBoundaryInspector` du générateur de manifeste (`Tools/HackerOs.Tools.ManifestGenerator`) | après la compilation, avec la génération de `manifest.json` ; en cas d'erreur, rien n'est écrit | `HOSAPP0031` |
+| `IJSRuntime` | test de sources `SdkBoundarySourceTests` (`Tests/HackerOs.Ecosystem.Tests`) | `dotnet test` | échec du test |
+
+Les messages nomment le projet, la référence ou le type en cause, et la
+règle de l'ADR :
+
+```text
+App.csproj : error HOSAPP0030: [My.App] Forbidden project reference 'Platform/HackerOs.Platform.Core/HackerOs.Platform.Core.csproj'. …
+App.csproj : error HOSAPP0031: [My.App.MyWindow] [Inject] property 'Sessions' injects 'HackerOs.Simulation.Abstractions.Sessions.ISessionService' …
+```
+
+Le générateur relance l'inspection quand `HackerOs.Apps.targets` change : retirer
+une exemption suffit à faire réapparaître les erreurs au build suivant.
+
+## Exemptions temporaires (ADR 0055 §6)
+
+`build/HackerOs.Apps.targets` déclare un élément `HackerOsSdkBoundaryExemption`
+par projet encore hors de la frontière, avec l'ADR et le ou les chantiers qui
+le corrigeront. Pour un projet exempté, les trois vérifications donnent des
+avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
+
+| Projet | Violations au 2026-10-10 | Chantier qui retire l'exemption |
+|---|---|---|
+| `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog`, `IAppInstallationService`, `ISessionService`, `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet | `4-sdk-user-and-apps`, `4-sdk-system-admin` |
+| `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
+| `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
+| `HackerOs.Apps.FileExplorer` | `Platform.Core` ; `AppCatalog`, `IAppEnablementRegistry`, `ISessionService` | `4-sdk-user-and-apps` |
+| `HackerOs.Apps.TextEditor` | `ISessionService` | `4-sdk-user-and-apps` |
+| `HackerOs.Apps.CodeEditor` | `ISessionService` | `4-sdk-user-and-apps` |
+| `HackerOs.Apps.Browser` | `ISimulatedNetworkService` | `4-sdk-network` |
+| `HackerOs.Commands` | `Platform.Core`, `Server.Contracts` ; `ISimulatedNetworkService`, `IServerConnectionService`, `IProxyClient` (`ping`, `curl`, `cat`, `nmap`) | `4-sdk-network` |
+| `HackerOs.AppSdk.Terminal` | `Platform.Core` (`ShellInterpreter`, `IElevationService`) | `4-sdk-shell-host` |
+
+Règles de la liste :
+
+- un chantier qui corrige un projet retire son élément dans le même
+  changement ; un projet listé pour deux chantiers sort de la liste avec le
+  dernier ;
+- **aucun projet ne peut y être ajouté** : le test
+  `SdkBoundarySourceTests.Exemption_list_only_contains_projects_from_the_initial_list`
+  échoue sinon ;
+- `4-sdk-boundary-final` supprime le mécanisme (élément, propriété
+  `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
+
+Les références `Platform.Core` inutilisées de Calculator, HackPaint,
+IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
+Calculator, HackPaint et IconViewer passent sans exemption.
+
+## Comment une app obtient un service de l'OS (ADR 0055 §4)
+
+Uniquement par le SDK :
+
+- une **passerelle** sur `IAppExecutionContext`, propre à l'instance, qui
+  vérifie la capacité requise à chaque appel. Une nouvelle passerelle est un
+  membre de l'interface avec une implémentation par défaut « non prise en
+  charge », pour que les implémentations existantes compilent encore ; la
+  fabrique de confiance de Platform Core fournit la vraie ;
+- une **façade statique** `Hack*` qui lit le contexte ambiant (ADR 0043) et
+  appelle la passerelle. C'est la forme recommandée.
+
+Une capacité manquante lève `HackUnauthorizedAccessException` et passe par
+`IAppPermissionErrorGateway`.
+
+## API du SDK
+
+Façades statiques existantes au début de la phase 4 :
+
+| Façade | Rôle | Document |
+|---|---|---|
+| `HackFile`, `HackDirectory`, `HackPath` | fichiers | [`hack-file-api.md`](hack-file-api.md) |
+| `HackExecutionContext` | contexte ambiant | [`hack-file-api.md`](hack-file-api.md) |
+| `HackEnvironment` | arguments, répertoire courant, variables | [`process-environment.md`](process-environment.md) |
+| `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
+| `HackTrash` | corbeille | [`trash.md`](trash.md) |
+
+Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
+`Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
+`Services`, `PermissionErrors`, `Environment`.
+
+Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
+`HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,
+`HackHttpClient`, `HackTcpClient`, `HackShell`, `HackPermissionAdministration`,
+`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
+`HackClipboard`…) sont ajoutées ici par leurs chantiers.
+
+## Décisions
+
+- Codes `HOSAPP0030` et `HOSAPP0031` au lieu de `HOSAPP0002` et `HOSAPP0003`,
+  déjà pris par l'ADR 0047 (ADR 0059).
+- Exemption par projet, pas par référence : plus simple à retirer, et un
+  chantier corrige un projet entier.
+- Les avertissements d'un projet exempté ne sont pas transformés en erreurs :
+  `TreatWarningsAsErrors` ne s'applique qu'au compilateur C#, pas aux
+  avertissements MSBuild.
+- Le contrôle d'injection compare les types par nom (assembly, nom complet) :
+  l'assembly de l'app est chargée dans un contexte isolé.
+
+## Liste des tâches du chantier `rebuild/4-sdk-boundary`
+
+- [x] Cible MSBuild `ValidateHackerOsSdkBoundary` (`HOSAPP0030`, `HOSSDK0001`), références directes seulement.
+- [x] Propriété `HackerOsSdkLibrary` pour les bibliothèques SDK.
+- [x] `SdkBoundaryInspector` dans le générateur (`HOSAPP0031`), option `--boundary-exempt`.
+- [x] Liste `HackerOsSdkBoundaryExemption` (9 projets) et test qui l'empêche de grandir.
+- [x] Test de sources `IJSRuntime` dans `HackerOs.Ecosystem.Tests`.
+- [x] Retrait des références `Platform.Core` inutilisées (Calculator, HackPaint, IconViewer, TextEditor, Browser).
+- [x] Projets de test `ManifestGenerator.Fixtures.ForbiddenReference` et `ForbiddenInjection`, tests unitaires de l'inspecteur.
+- [x] ADR 0059 (numéros des codes), ce document, `app-model.md`, plan et index à jour.
