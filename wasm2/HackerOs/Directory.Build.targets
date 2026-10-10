@@ -1,4 +1,7 @@
 <Project>
+  <!-- App model: generated manifest.json and host aggregation (ADR 0047). -->
+  <Import Project="$(MSBuildThisFileDirectory)build/HackerOs.Apps.targets" />
+
   <!--
     The Razor SDK adds app.manifest.json as Content after Directory.Build.props is
     imported. Apply the package-qualified publish path here, after SDK item setup,
