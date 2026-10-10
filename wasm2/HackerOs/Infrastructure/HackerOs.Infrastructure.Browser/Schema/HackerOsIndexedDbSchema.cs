@@ -274,6 +274,12 @@ public static class HackerOsIndexedDbSchema
             "Write one settings document and bump its revision in a single atomic put."),
 
         new(
+            "LegacySettingsRead",
+            [SettingsStoreName],
+            "Read every record of the retired settings store, read-only, so the one-time " +
+                "settings-to-files migration can copy them into real files (ADR 0044)."),
+
+        new(
             "FileSystemMetadataMutation",
             [FileSystemEntryStoreName, FileSystemLinkStoreName],
             "Create/move/rename/delete an entry and its directory link(s) atomically together. " +

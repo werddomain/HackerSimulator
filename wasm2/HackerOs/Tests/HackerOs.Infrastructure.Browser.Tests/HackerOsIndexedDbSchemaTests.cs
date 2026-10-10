@@ -98,6 +98,31 @@ public sealed class HackerOsIndexedDbSchemaTests
         Assert.Equal(names.Distinct(StringComparer.Ordinal).Count(), names.Length);
     }
 
+    /// <summary>
+    /// Every repository names its boundary through a private <c>TransactionBoundary</c> constant;
+    /// an undeclared name only fails at runtime inside the browser (it once crashed the boot via
+    /// the settings-to-files migration), so this checks them all against the schema.
+    /// </summary>
+    [Fact]
+    public void RepositoryTransactionBoundaryConstants_AreAllDeclared()
+    {
+        HashSet<string> declared = [.. HackerOsIndexedDbSchema.TransactionBoundaries.Select(b => b.Name)];
+        var constants = typeof(HackerOsIndexedDbSchema).Assembly.GetTypes()
+            .SelectMany(type => type.GetFields(
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Static))
+            .Where(field => field.IsLiteral && field.Name == "TransactionBoundary" && field.FieldType == typeof(string))
+            .Select(field => (Type: field.DeclaringType!.Name, Name: (string)field.GetRawConstantValue()!))
+            .ToList();
+
+        Assert.NotEmpty(constants);
+        Assert.Contains(constants, constant => constant.Type == "IndexedDbLegacySettingsStore");
+        foreach (var constant in constants)
+        {
+            Assert.True(declared.Contains(constant.Name), $"{constant.Type} uses undeclared boundary '{constant.Name}'.");
+        }
+    }
+
     [Fact]
     public void PolicyGrantMutation_CoversGrantAuditAndRevisionStoresTogether()
     {
