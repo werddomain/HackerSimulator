@@ -4,11 +4,24 @@ using HackerOs.Simulation.Abstractions.FileSystem;
 namespace HackerOs.Platform.Core.FileSystem;
 
 /// <summary>Creates the required Linux-like clean-profile directory layout exactly once.</summary>
-public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider? timeProvider = null)
+/// <param name="fileSystem">Mounted filesystem used for the ordinary layout.</param>
+/// <param name="timeProvider">Optional time source for authorization contexts.</param>
+/// <param name="mountRouter">
+/// Optional mount router. When supplied, the empty mount-point directories <c>/proc</c> and
+/// <c>/dev</c> are created directly in the root provider (ADR 0046): the router does not merge
+/// mounts into their parent's listing, so without a real directory underneath, <c>ls /</c> would
+/// not show them. Going through <paramref name="fileSystem"/> would reach the virtual provider
+/// that shadows the path instead.
+/// </param>
+public sealed class FileSystemSeeder(
+    IFileSystemService fileSystem,
+    TimeProvider? timeProvider = null,
+    IFileSystemMountRouter? mountRouter = null)
 {
     private readonly IFileSystemService _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly IFileSystemMountRouter? _mountRouter = mountRouter;
 
     /// <summary>Ensures the system layout and one user's standard directories exist.</summary>
     public async ValueTask SeedAsync(
@@ -28,6 +41,8 @@ public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider
         await EnsureDirectoryAsync("/tmp", 0x01FF, system, cancellationToken);
         await EnsureDirectoryAsync("/var", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/var/log", 0x01ED, system, cancellationToken);
+        await EnsureMountPointAsync("/proc", 0x016D, system, cancellationToken);
+        await EnsureMountPointAsync("/dev", 0x01ED, system, cancellationToken);
 
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);
@@ -39,14 +54,30 @@ public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider
         await EnsureDirectoryAsync($"{home}/.config/apps", 0x01C0, userProvisioning, cancellationToken);
     }
 
-    private async ValueTask EnsureDirectoryAsync(
+    /// <summary>
+    /// Ensures an empty mount-point directory exists in the root provider, like the directories a
+    /// Linux distribution ships so <c>/proc</c> and <c>/dev</c> have somewhere to be mounted.
+    /// </summary>
+    private ValueTask EnsureMountPointAsync(
         string pathValue,
         ushort mode,
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken)
     {
+        IFileSystemProvider target = _mountRouter?.Resolve(VirtualPath.Parse("/")).Mount.Provider ?? _fileSystem;
+        return EnsureDirectoryAsync(pathValue, mode, context, cancellationToken, target);
+    }
+
+    private async ValueTask EnsureDirectoryAsync(
+        string pathValue,
+        ushort mode,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken,
+        IFileSystemProvider? provider = null)
+    {
+        IFileSystemProvider fileSystem = provider ?? _fileSystem;
         VirtualPath path = VirtualPath.Parse(pathValue);
-        FileSystemResult<FileSystemEntrySnapshot> existing = await _fileSystem.StatAsync(
+        FileSystemResult<FileSystemEntrySnapshot> existing = await fileSystem.StatAsync(
             new FileSystemStatRequest(path, FileSystemLinkBehavior.NoFollow),
             context,
             cancellationToken);
@@ -67,7 +98,7 @@ public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider
         }
 
         VirtualPath parent = GetParent(path);
-        FileSystemResult<FileSystemEntrySnapshot> parentResult = await _fileSystem.StatAsync(
+        FileSystemResult<FileSystemEntrySnapshot> parentResult = await fileSystem.StatAsync(
             new FileSystemStatRequest(parent),
             context,
             cancellationToken);
@@ -77,7 +108,7 @@ public sealed class FileSystemSeeder(IFileSystemService fileSystem, TimeProvider
                 $"Cannot inspect seed parent '{parent}': {parentResult.Error?.Code}.");
         }
 
-        FileSystemMutationResult created = await _fileSystem.CreateAsync(
+        FileSystemMutationResult created = await fileSystem.CreateAsync(
             new FileSystemCreateRequest(
                 path,
                 FileSystemEntryKind.Directory,

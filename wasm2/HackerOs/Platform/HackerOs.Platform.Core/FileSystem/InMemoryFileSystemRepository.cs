@@ -135,6 +135,16 @@ public sealed class InMemoryFileSystemRepository : IFileSystemProvider
                     request.Path));
             }
 
+            // Character devices exist only in virtual providers (/dev, ADR 0046); a persistent
+            // store never holds one, matching the IndexedDB provider.
+            if (request.Kind == FileSystemEntryKind.CharacterDevice)
+            {
+                return ValueTask.FromResult(MutationFailure(
+                    FileSystemOperation.Create,
+                    FileSystemErrorCode.UnsupportedOperation,
+                    request.Path));
+            }
+
             if (_paths.ContainsKey(request.Path.Value))
             {
                 return ValueTask.FromResult(MutationFailure(

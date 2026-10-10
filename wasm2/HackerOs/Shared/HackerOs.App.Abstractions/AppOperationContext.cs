@@ -18,6 +18,16 @@ public sealed record AppOperationContext
     /// <summary>Gets the authenticated acting username/login name.</summary>
     public string? UserName { get; init; }
 
+    /// <summary>
+    /// Gets the raw PID of the process performing the operation, when it runs inside one (ADR 0046).
+    /// </summary>
+    /// <remarks>
+    /// Kept as a plain <see cref="long"/> because App Abstractions does not reference the
+    /// simulation <c>ProcessId</c> type. <c>/proc/self</c> resolves through this value, and is
+    /// absent when it is <see langword="null"/> (platform-owned operations such as seeding).
+    /// </remarks>
+    public long? ProcessId { get; init; }
+
     /// <summary>Gets the acting user's authority.</summary>
     public required AppAuthority UserAuthority { get; init; }
 

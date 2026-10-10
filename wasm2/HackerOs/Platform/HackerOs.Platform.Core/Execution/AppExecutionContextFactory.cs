@@ -106,6 +106,7 @@ public sealed class AppExecutionContextFactory
             AppId = manifest.Id,
             UserId = userId,
             UserName = userName,
+            ProcessId = process.Pid.Value,
             UserAuthority = principal.Authority,
             GrantedCapabilities = grantedCapabilities,
             IsSystemOperation = false,
