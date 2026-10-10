@@ -30,7 +30,7 @@ public sealed class WindowSampleApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite];
+        [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;

@@ -437,6 +437,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
   - [x] Liste des apps système : `AppCatalog.IsSystemApp`, `IsSystemApp="true"` sur les `ProjectReference` de l'hôte (`rebuild/2-system-apps`, [`app-model.md`](app-model.md#apps-système-adr-0048-1)).
 - [ ] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.
+  - [x] Classement des capacités, retrait de `settings.*` et `diagnostics.*`, seeder selon le statut système (`rebuild/2-capability-classification`, [`capabilities.md`](capabilities.md)).
 
 ### Phase 3 — Shell, commandes et corbeille
 - [ ] Étendre le parseur : pipes, redirections, `&&`, variables.

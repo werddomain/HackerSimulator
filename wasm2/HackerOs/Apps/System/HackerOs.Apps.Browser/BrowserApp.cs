@@ -33,7 +33,7 @@ public sealed class BrowserApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite, AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite];
+        [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite];
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

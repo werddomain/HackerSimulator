@@ -97,4 +97,15 @@ public sealed class BuildKnownLazyAppsTests
         Assert.All(uninstallable, appId => Assert.False(catalog.IsSystemApp(appId)));
         Assert.Equal(catalog.Manifests.Count, catalog.SystemAppIds.Count + uninstallable.Length);
     }
+
+    [Fact]
+    public void No_non_system_app_of_the_host_declares_a_dangerous_capability()
+    {
+        // ADR 0049 "Conséquences": the base experience shows no approval window.
+        AppCatalog catalog = BuildKnownLazyApps.Catalog;
+
+        Assert.All(
+            catalog.Manifests.Values.Where(manifest => !catalog.IsSystemApp(manifest.Id)),
+            manifest => Assert.DoesNotContain(manifest.Capabilities, AppCapabilities.IsDangerous));
+    }
 }

@@ -13,7 +13,7 @@ public sealed class ErrorLogViewerWindowTests
         Assert.True(manifest.SingleInstancePerUser);
         Assert.Contains(AppCapabilities.FileSystemSystemRead, manifest.Capabilities);
         Assert.Contains(AppCapabilities.FileSystemSystemWrite, manifest.Capabilities);
-        Assert.DoesNotContain(AppCapabilities.DiagnosticsRead, manifest.Capabilities);
+        Assert.DoesNotContain("diagnostics.read", manifest.Capabilities);
     }
 
     [Fact]

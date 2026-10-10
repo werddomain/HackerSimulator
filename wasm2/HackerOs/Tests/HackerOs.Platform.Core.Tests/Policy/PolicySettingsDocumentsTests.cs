@@ -10,7 +10,7 @@ namespace HackerOs.Platform.Core.Tests.Policy;
 /// <summary>The administrator policy is the system-only file /etc/hackeros/policy.config (ADR 0044).</summary>
 public sealed class PolicySettingsDocumentsTests
 {
-    private const string GrantsLocked = "capabilityGrantsLocked";
+    private const string RuntimeInstall = "allowRuntimePackageInstall";
 
     [Fact]
     public async Task Ordinary_user_cannot_write_the_policy_even_with_the_system_write_capability()
@@ -22,11 +22,19 @@ public sealed class PolicySettingsDocumentsTests
             alice, "org.hackeros.settings", AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => harness.Settings
-            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "true", SettingLayer.System, settingsApp)
+            .SetAsync(PolicySettingsDocuments.Document, RuntimeInstall, "true", SettingLayer.System, settingsApp)
             .AsTask());
 
         LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
-        Assert.Equal("false", policy.Values[GrantsLocked]);
+        Assert.Equal("false", policy.Values[RuntimeInstall]);
+    }
+
+    [Fact]
+    public void Never_evaluated_capabilityGrantsLocked_key_is_gone_from_the_schema()
+    {
+        // ADR 0049 section 3: dangerous capabilities are governed by security.config instead.
+        Assert.DoesNotContain("capabilityGrantsLocked", PolicySettingsDocuments.Schema.Fields.Keys);
+        Assert.Contains(RuntimeInstall, PolicySettingsDocuments.Schema.Fields.Keys);
     }
 
     [Fact]
@@ -34,13 +42,13 @@ public sealed class PolicySettingsDocumentsTests
     {
         SettingsFilesHarness harness = new();
         await harness.LoginAsync(harness.Alice);
-        await harness.WriteAsRootAsync("/home/alice/.config/hackeros/policy.config", "capabilityGrantsLocked=true\n");
+        await harness.WriteAsRootAsync("/home/alice/.config/hackeros/policy.config", "allowRuntimePackageInstall=true\n");
 
         LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal("false", policy.Values[GrantsLocked]);
+        Assert.Equal("false", policy.Values[RuntimeInstall]);
         await Assert.ThrowsAsync<InvalidOperationException>(() => harness.Settings
-            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "true")
+            .SetAsync(PolicySettingsDocuments.Document, RuntimeInstall, "true")
             .AsTask());
     }
 
@@ -51,12 +59,12 @@ public sealed class PolicySettingsDocumentsTests
         await harness.BootAsync();
         await harness.WriteAsRootAsync(
             PolicySettingsDocuments.Document.SystemPath.Value,
-            "capabilityGrantsLocked=true\nallowRuntimePackageInstall=false\n");
+            "allowRuntimePackageInstall=true\n");
 
         LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal("true", policy.Values[GrantsLocked]);
-        Assert.Equal(SettingLayer.System, policy.Sources[GrantsLocked]);
+        Assert.Equal("true", policy.Values[RuntimeInstall]);
+        Assert.Equal(SettingLayer.System, policy.Sources[RuntimeInstall]);
         Assert.Empty(policy.Warnings);
     }
 
@@ -64,13 +72,13 @@ public sealed class PolicySettingsDocumentsTests
     public async Task Invalid_value_in_the_file_falls_back_to_the_default_with_a_warning()
     {
         SettingsFilesHarness harness = new();
-        await harness.WriteAsRootAsync(PolicySettingsDocuments.Document.SystemPath.Value, "capabilityGrantsLocked=not-a-bool\n");
+        await harness.WriteAsRootAsync(PolicySettingsDocuments.Document.SystemPath.Value, "allowRuntimePackageInstall=not-a-bool\n");
 
         LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal("false", policy.Values[GrantsLocked]);
+        Assert.Equal("false", policy.Values[RuntimeInstall]);
         LayeredConfigWarning warning = Assert.Single(policy.Warnings);
-        Assert.Equal("settings: /etc/hackeros/policy.config:1: invalid value for 'capabilityGrantsLocked' (expected boolean), using default", warning.ToLogLine());
+        Assert.Equal("settings: /etc/hackeros/policy.config:1: invalid value for 'allowRuntimePackageInstall' (expected boolean), using default", warning.ToLogLine());
     }
 
     [Fact]
@@ -81,7 +89,7 @@ public sealed class PolicySettingsDocumentsTests
         string? before = await harness.ReadAsync(PolicySettingsDocuments.Document.SystemPath.Value);
 
         await Assert.ThrowsAsync<ArgumentException>(() => harness.Settings
-            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "maybe", SettingLayer.System, harness.CreateRootGateway())
+            .SetAsync(PolicySettingsDocuments.Document, RuntimeInstall, "maybe", SettingLayer.System, harness.CreateRootGateway())
             .AsTask());
 
         Assert.Equal(before, await harness.ReadAsync(PolicySettingsDocuments.Document.SystemPath.Value));

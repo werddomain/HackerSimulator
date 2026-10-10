@@ -65,8 +65,8 @@ HostExceptionReporter ───────────────────�
 - `IPersistentDiagnosticRepository` et `IndexedDbDiagnosticRepository` ne sont
   plus enregistrés ; l'audit IndexedDB n'était déjà pas branché. Les classes et
   leurs magasins restent, et la version du schéma IndexedDB ne change pas.
-- `diagnostics.read` et `diagnostics.clear` restent dans le catalogue mais ne
-  sont plus évaluées (ADR de permissions de la phase 2).
+- `diagnostics.read` et `diagnostics.clear` sont retirées du catalogue par
+  l'ADR 0049 ([`capabilities.md`](capabilities.md)).
 - L'hôte `OS/HackerOs.Ecosystem` ne retire plus son `ILoggerProvider` : toutes ses
   dépendances sont des singletons. Le serveur garde sa composition (le pont
   `ILogger` y reste retiré, aucun système de fichiers n'y est attaché).

@@ -18,15 +18,14 @@ public static class PolicySettingsDocuments
     public const string DocumentId = "policy";
 
     /// <summary>Gets the declared schema for the policy document.</summary>
+    /// <remarks>
+    /// <c>capabilityGrantsLocked</c> was removed by ADR 0049: it was never evaluated. Dangerous
+    /// capabilities are governed by <c>/etc/hackeros/security.config</c> instead.
+    /// </remarks>
     public static SettingsSchema Schema { get; } = new(
         schemaVersion: 1,
         fields:
         [
-            new SettingFieldDeclaration(
-                "capabilityGrantsLocked",
-                SettingValueType.Boolean,
-                DefaultValue: "false",
-                SettingSensitivity.Public),
             new SettingFieldDeclaration(
                 "allowRuntimePackageInstall",
                 SettingValueType.Boolean,

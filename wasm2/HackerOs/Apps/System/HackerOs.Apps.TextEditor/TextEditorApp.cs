@@ -29,7 +29,7 @@ public sealed class TextEditorApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite, AppCapabilities.NotificationsPost];
+        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.NotificationsPost];
 
     /// <inheritdoc />
     public override IReadOnlyList<FileHandler> FileHandlers =>
