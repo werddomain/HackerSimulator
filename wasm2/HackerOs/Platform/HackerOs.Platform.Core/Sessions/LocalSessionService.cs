@@ -151,7 +151,8 @@ public sealed class LocalSessionService : ISessionService
                     string userId = user.Id.ToString();
                     foreach (AppManifest manifest in _catalog.Manifests.Values)
                     {
-                        CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(_grantRepository, manifest, userId);
+                        CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(
+                            _grantRepository, manifest, userId, _catalog.IsSystemApp(manifest.Id));
                     }
                 }
             }

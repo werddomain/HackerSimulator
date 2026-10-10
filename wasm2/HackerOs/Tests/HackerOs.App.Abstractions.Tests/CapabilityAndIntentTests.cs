@@ -7,11 +7,11 @@ public sealed class CapabilityAndIntentTests
     [Fact]
     public void Capability_grants_use_exact_case_sensitive_matching()
     {
-        string[] grants = [AppCapabilities.SettingsSystemWrite];
+        string[] grants = [AppCapabilities.FileSystemSystemWrite];
 
-        Assert.True(AppCapabilityPolicy.IsGranted(grants, AppCapabilities.SettingsSystemWrite));
-        Assert.False(AppCapabilityPolicy.IsGranted(grants, "SETTINGS.SYSTEM.WRITE"));
-        Assert.False(AppCapabilityPolicy.IsGranted(grants, "settings.system.*"));
+        Assert.True(AppCapabilityPolicy.IsGranted(grants, AppCapabilities.FileSystemSystemWrite));
+        Assert.False(AppCapabilityPolicy.IsGranted(grants, "FILESYSTEM.SYSTEM.WRITE"));
+        Assert.False(AppCapabilityPolicy.IsGranted(grants, "filesystem.system.*"));
     }
 
     [Fact]

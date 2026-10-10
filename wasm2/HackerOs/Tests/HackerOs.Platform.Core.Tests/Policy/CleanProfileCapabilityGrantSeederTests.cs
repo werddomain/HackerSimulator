@@ -16,7 +16,7 @@ public sealed class CleanProfileCapabilityGrantSeederTests
         ]);
 
         IReadOnlyList<CapabilityGrantMutationResult> results =
-            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
 
         Assert.All(results, result => Assert.Equal(CapabilityGrantMutationStatus.Granted, result.Status));
 
@@ -44,7 +44,7 @@ public sealed class CleanProfileCapabilityGrantSeederTests
         CapabilityGrantRepository repository = new();
         AppManifest manifest = CreateManifest([AppCapabilities.FileSystemPrivateRead]);
 
-        CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+        CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
 
         CapabilityPolicyEvaluation evaluation = repository.Evaluate(
             manifest.Id,
@@ -67,13 +67,67 @@ public sealed class CleanProfileCapabilityGrantSeederTests
         ]);
 
         IReadOnlyList<CapabilityGrantMutationResult> firstPass =
-            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
         IReadOnlyList<CapabilityGrantMutationResult> secondPass =
-            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1");
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
 
         Assert.Equal(2, firstPass.Count);
         Assert.Empty(secondPass);
     }
+
+    [Fact]
+    public void Normal_capabilities_are_granted_from_the_build_profile_to_any_app()
+    {
+        CapabilityGrantRepository repository = new();
+        AppManifest manifest = CreateManifest([AppCapabilities.ProcessList, AppCapabilities.NotificationsPost]);
+
+        IReadOnlyList<CapabilityGrantMutationResult> results =
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.Equal(CapabilityGrantSource.BuildProfile, result.Grant!.Source));
+    }
+
+    [Fact]
+    public void System_app_receives_its_dangerous_capabilities_from_system_policy_without_approval()
+    {
+        CapabilityGrantRepository repository = new();
+        AppManifest manifest = CreateManifest([AppCapabilities.ProcessList, AppCapabilities.ProcessManage]);
+
+        IReadOnlyList<CapabilityGrantMutationResult> results =
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: true);
+
+        Assert.Equal(
+            [CapabilityGrantSource.BuildProfile, CapabilityGrantSource.SystemPolicy],
+            results.Select(result => result.Grant!.Source));
+        Assert.True(Evaluate(repository, manifest, AppCapabilities.ProcessManage).Granted);
+    }
+
+    [Fact]
+    public void Non_system_app_without_a_decision_does_not_receive_its_dangerous_capabilities()
+    {
+        CapabilityGrantRepository repository = new();
+        AppManifest manifest = CreateManifest([
+            AppCapabilities.FileSystemUserHomeRead,
+            AppCapabilities.NetworkRealAccess,
+            AppCapabilities.FileSystemSystemWrite
+        ]);
+
+        IReadOnlyList<CapabilityGrantMutationResult> results =
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, "user-1", isSystemApp: false);
+
+        CapabilityGrantMutationResult granted = Assert.Single(results);
+        Assert.Equal(AppCapabilities.FileSystemUserHomeRead, granted.Grant!.Capability);
+        Assert.True(Evaluate(repository, manifest, AppCapabilities.FileSystemUserHomeRead).Granted);
+        CapabilityPolicyEvaluation network = Evaluate(repository, manifest, AppCapabilities.NetworkRealAccess);
+        Assert.False(network.Granted);
+        Assert.Equal(CapabilityPolicyEvaluationReason.Missing, network.Reason);
+        Assert.False(Evaluate(repository, manifest, AppCapabilities.FileSystemSystemWrite).Granted);
+    }
+
+    private static CapabilityPolicyEvaluation Evaluate(
+        CapabilityGrantRepository repository, AppManifest manifest, string capability) =>
+        repository.Evaluate(manifest.Id, "user-1", capability, AppAuthority.User, AppAuthority.User);
 
     private static AppManifest CreateManifest(IReadOnlyList<string> capabilities) => new()
     {

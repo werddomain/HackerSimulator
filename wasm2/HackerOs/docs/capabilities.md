@@ -1,0 +1,117 @@
+# Capacités : catalogue, classement et attribution
+
+## Objectif
+
+Une capacité est un droit exact qu'une app déclare dans sa définition
+(`AppDefinition.Capabilities`) et que l'OS lui accorde, ou non, à la connexion.
+Ce document décrit le catalogue `AppCapabilities`, son classement en capacités
+normales et dangereuses (ADR 0049, section 1) et la règle d'attribution du
+seeder (ADR 0049, section 2).
+
+La fenêtre d'approbation administrateur, `security.config`,
+`app-permissions.config` et `auth.log` (ADR 0049, sections 3 à 8) sont le
+chantier suivant, `rebuild/2-dangerous-approval`. Tant qu'il n'est pas fait,
+une capacité dangereuse d'une app non système n'est **jamais** accordée.
+
+## Catalogue et classement
+
+`Shared/HackerOs.App.Abstractions/AppCapabilities.cs` contient, pour chaque
+capacité, une `CapabilityDescription` : identifiant, titre affiché, classement
+`CapabilityRisk` et, pour une capacité dangereuse, la phrase de risque montrée à
+l'administrateur. Le catalogue (`AppCapabilities.All`) est exactement l'ensemble
+des clés de cette table : on ne peut pas ajouter une capacité sans choisir son
+classement.
+
+| Capacité | Classement |
+|---|---|
+| `filesystem.private.*`, `filesystem.user-selected.*`, `filesystem.user-home.*` | normale |
+| `filesystem.system.read`, `filesystem.system.write` | **dangereuse** |
+| `apps.launch` | normale |
+| `apps.manage` | **dangereuse** (réservée à l'API de gestion des apps de la phase 4) |
+| `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select` | normale |
+| `file-associations.read` | normale |
+| `file-associations.write` | **dangereuse** |
+| `process.list` | normale |
+| `process.manage`, `services.manage`, `windows.manage` | **dangereuse** |
+| `notifications.post`, `clipboard.read`, `clipboard.write` | normale |
+| `network.simulated.read`, `network.simulated.write` | normale |
+| `network.real.access` | **dangereuse** |
+| `gameplay.domain.access` | normale |
+
+Les phrases de risque sont celles de la table de l'ADR 0049.
+
+**Retirées du catalogue :** `settings.read`, `settings.write`,
+`settings.system.read`, `settings.system.write` (ADR 0044 : les paramètres sont
+des fichiers, protégés par `filesystem.*`) et `diagnostics.read`,
+`diagnostics.clear` (ADR 0045 : les journaux sont des fichiers). Une définition
+d'app qui les cite ne compile plus, et un `manifest.json` qui les nomme est
+rejeté par le validateur (`manifest.capability.unknown`). `SettingsScopePolicy`,
+qui ne servait qu'aux tests et lisait `settings.system.*`, est supprimé.
+
+## API
+
+```csharp
+CapabilityRisk risk = AppCapabilities.GetRisk(AppCapabilities.ProcessManage); // Dangerous
+bool dangerous = AppCapabilities.IsDangerous("network.real.access");          // true
+CapabilityDescription d = AppCapabilities.Describe(AppCapabilities.FileSystemSystemWrite);
+// d.Title          : "Modifier les fichiers du système"
+// d.RiskDescription: "Modifier des fichiers du système, dont /etc et les paramètres de toutes les apps."
+```
+
+- `GetRisk` et `Describe` lèvent `ArgumentException` pour un identifiant hors
+  catalogue.
+- `IsDangerous` renvoie `false` pour tout identifiant hors catalogue, en
+  particulier les permissions de sujet (`topic-publish:` / `topic-subscribe:`,
+  ADR 0040), qu'un manifeste peut aussi lister et qui ne sont pas classées.
+
+## Attribution à la connexion
+
+`LocalSessionService` appelle, pour chaque manifeste du catalogue,
+`CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(repository, manifest, userId, isSystemApp)`
+avec `isSystemApp = AppCatalog.IsSystemApp(manifest.Id)` (ADR 0048).
+
+| App | Capacité normale déclarée | Capacité dangereuse déclarée |
+|---|---|---|
+| Système | accordée, source `BuildProfile` | accordée, source `SystemPolicy` |
+| Non système | accordée, source `BuildProfile` | **non accordée** (en attente d'approbation) |
+
+Une capacité non déclarée n'est jamais accordée. `AppLifecycleOrchestrator`
+calcule les capacités d'une instance à partir du dépôt de grants : une app non
+système qui utilise une capacité dangereuse reçoit donc
+`HackUnauthorizedAccessException` comme pour toute capacité absente.
+
+Dans l'hôte Ecosystem, aucune app non système ne déclare de capacité
+dangereuse : l'expérience de base ne change pas.
+
+## Politique `policy.config`
+
+La clé `capabilityGrantsLocked`, jamais évaluée, est retirée du schéma de
+`/etc/hackeros/policy.config`. Il n'y reste que `allowRuntimePackageInstall`.
+Une ancienne ligne `capabilityGrantsLocked=…` dans le fichier est désormais une
+clé inconnue.
+
+## Tests
+
+- `AppCapabilitiesTests` (`HackerOs.App.Abstractions.Tests`) : classement exact
+  de chaque capacité selon l'ADR, catalogue égal à la table classée, chaque
+  capacité décrite (phrase de risque seulement pour les dangereuses),
+  `settings.*` et `diagnostics.*` absents, permissions de sujet jamais
+  dangereuses.
+- `CleanProfileCapabilityGrantSeederTests` (`HackerOs.Platform.Core.Tests`) :
+  source `BuildProfile` pour une capacité normale, `SystemPolicy` pour une
+  capacité dangereuse d'une app système, aucune grant dangereuse pour une app
+  non système.
+- `BuildKnownLazyAppsTests.No_non_system_app_of_the_host_declares_a_dangerous_capability`
+  (`HackerOs.Ecosystem.Tests`).
+- `PolicySettingsDocumentsTests` : `capabilityGrantsLocked` absent du schéma.
+
+## Tâches
+
+- [x] `rebuild/2-capability-classification` : `CapabilityRisk`, `GetRisk`,
+  `IsDangerous`, `Describe`, `apps.manage`, retrait de `settings.*` et
+  `diagnostics.*` (catalogue, définitions d'app, manifestes générés, tests,
+  `SettingsScopePolicy`), seeder selon le statut système, retrait de
+  `capabilityGrantsLocked`.
+- [ ] `rebuild/2-dangerous-approval` : `security.config`,
+  `app-permissions.config`, `IDangerousCapabilityGate` au lancement, fenêtre
+  spéciale, mode texte du terminal, `auth.log`, vue Permissions des Paramètres.

@@ -33,7 +33,7 @@ public sealed class SettingsApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite, AppCapabilities.SettingsSystemRead, AppCapabilities.SettingsSystemWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.FileAssociationsRead, AppCapabilities.FileAssociationsWrite, AppCapabilities.ProcessList];
+        [AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.FileAssociationsRead, AppCapabilities.FileAssociationsWrite, AppCapabilities.ProcessList];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;
