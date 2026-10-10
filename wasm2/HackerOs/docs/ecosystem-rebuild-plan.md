@@ -390,9 +390,9 @@ pas modifié.
 | [0047](adr/0047-app-definition-and-generated-manifests.md) Manifeste en classe C# et génération | 0010 (en partie) | D6, D7, D8, section 6.1-6.2 |
 | [0048](adr/0048-system-apps-and-uninstall.md) Apps système et désinstallation | complète 0032, remplace en partie 0033 | D9 à D11, section 6.3 |
 | [0049](adr/0049-dangerous-capabilities-and-admin-approval.md) Permissions dangereuses et approbation | complète 0002, 0003, 0042 | D23 à D25, section 6.4 |
-| Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
-| Commandes regroupées, sans exception codée en dur | 0034 | D14, section 7.3 |
-| Corbeille | — | D15, section 7.4 |
+| [0050](adr/0050-shell-grammar-and-process-environment.md) Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
+| [0051](adr/0051-unified-commands-project.md) Commandes regroupées, sans exception codée en dur | 0034 (section 1) | D14, section 7.3 |
+| [0052](adr/0052-trash.md) Corbeille | — | D15, section 7.4 |
 | Apps de base sur le SDK public uniquement | — | D21, section 8.1 |
 
 ## 11. Points de détail à fixer dans les ADR
@@ -417,6 +417,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
   - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
   - [x] Phase 2 : ADR 0047 à 0049 (2026-10-10), avec leurs chantiers `rebuild/2-*`.
+  - [x] Phase 3 : ADR 0050 à 0052 (2026-10-10), avec leurs chantiers `rebuild/3-*` (tableau dans l'ADR 0052).
 
 ### Phase 1 — Fichiers
 - [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
