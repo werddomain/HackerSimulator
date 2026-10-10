@@ -10,6 +10,12 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | --- | --- |
 | [`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md) | Plan de refonte de l'écosystème validé le 2026-10-10 : API fichier `Hack*`, manifeste en classe C#, paramètres et journaux en fichiers, `/proc` et `/dev`, shell complet, corbeille, permissions dangereuses, apps de base. **À lire en premier.** |
 
+## Sous-systèmes
+
+| Document | Rôle |
+| --- | --- |
+| [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
+
 ## Décisions d'architecture
 
 | Dossier | Rôle |
