@@ -19,9 +19,9 @@
     "iconAssetPaths": []
   },
   "terminal": {
-    "commandName": "sample-cmd",
+    "name": "sample-cmd",
     "aliases": ["sample"],
-    "helpSummary": "Executes sample SDK terminal command"
+    "usage": "Executes sample SDK terminal command"
   },
   "capabilities": [
     "filesystem.user-home.read",
