@@ -32,4 +32,27 @@ public sealed class BuildKnownLazyAppsTests
             manifest.Presentation.LaunchVisibility));
         Assert.Equal(36, BuildKnownLazyAssemblies.Names.Count);
     }
+
+    [Fact]
+    public void Migrated_apps_come_from_the_aggregated_BuiltInApplications_resource()
+    {
+        using Stream? resource = typeof(BuildKnownLazyApps).Assembly
+            .GetManifestResourceStream(BuiltInApplicationsJsonSerializer.ResourceName);
+        Assert.NotNull(resource);
+        using StreamReader reader = new(resource);
+        IReadOnlyList<BuiltInApplication> builtIn = BuiltInApplicationsJsonSerializer.DeserializeStrict(reader.ReadToEnd());
+
+        // Calculator is the example app migrated to [AppManifest] (ADR 0047): it reaches the host
+        // through its ProjectReference only, with no hand-written manifest resource.
+        BuiltInApplication calculator = Assert.Single(builtIn, item => item.Manifest.Id == "org.hackeros.calculator");
+        Assert.Equal("HackerOs.Apps.Calculator.dll", calculator.Manifest.EntryPoint!.Assembly);
+        Assert.DoesNotContain(
+            typeof(BuildKnownLazyApps).Assembly.GetManifestResourceNames(),
+            name => name.Contains("calculator", StringComparison.OrdinalIgnoreCase) && name.StartsWith("HackerOs.Ecosystem.Manifests.", StringComparison.Ordinal));
+        Assert.Contains("org.hackeros.calculator", BuildKnownLazyApps.Catalog.Manifests.Keys);
+        Assert.Contains("HackerOs.Apps.Calculator.dll", BuildKnownLazyAssemblies.Names);
+
+        // No ProjectReference carries IsSystemApp yet (ADR 0048 lands in rebuild/2-system-apps).
+        Assert.All(builtIn, item => Assert.False(BuildKnownLazyApps.IsSystemApp(item.Manifest.Id)));
+    }
 }

@@ -45,6 +45,32 @@ public sealed class MsBuildIntegrationTests
         Assert.False(File.Exists(Path.Combine(FixtureDirectory("NoDefinition"), "manifest.json")));
     }
 
+    [Fact]
+    public async Task Host_embeds_BuiltInApplications_with_system_flags_and_ignores_non_app_projects()
+    {
+        (int exitCode, string output) = await BuildFixtureAsync("Host");
+
+        Assert.True(exitCode == 0, output);
+        string assemblyPath = Path.Combine(FixtureDirectory("Host"), "bin", "Debug", "net10.0", "ManifestGenerator.Fixtures.Host.dll");
+        System.Runtime.Loader.AssemblyLoadContext context = new("host-fixture", isCollectible: true);
+        try
+        {
+            using Stream resource = context.LoadFromStream(new MemoryStream(await File.ReadAllBytesAsync(assemblyPath)))
+                .GetManifestResourceStream(BuiltInApplicationsJsonSerializer.ResourceName)
+                ?? throw new InvalidOperationException("BuiltInApplications.json is not embedded.");
+            using StreamReader reader = new(resource);
+            IReadOnlyList<BuiltInApplication> applications = BuiltInApplicationsJsonSerializer.DeserializeStrict(await reader.ReadToEndAsync());
+
+            Assert.Equal(
+                [("org.hackeros.fixtures.alpha", false), ("org.hackeros.fixtures.beta", false), ("org.hackeros.fixtures.hello", true)],
+                applications.Select(item => (item.Manifest.Id, item.IsSystemApp)));
+        }
+        finally
+        {
+            context.Unload();
+        }
+    }
+
     private static string FixtureDirectory(string name) =>
         Path.Combine(FindSolutionDirectory(), "Tests", $"ManifestGenerator.Fixtures.{name}");
 

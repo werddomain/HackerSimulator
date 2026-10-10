@@ -96,6 +96,7 @@ de point d'entrée de `AppEntryPointDiscovery` passent.
 | Commande | Rôle |
 | --- | --- |
 | `generate --assembly <dll> --project <csproj> --stamp <fichier> [--dependencies <liste>]` | Appelée par MSBuild après la compilation d'une app. |
+| `aggregate --project <hôte.csproj> --apps <liste> --output <BuiltInApplications.json>` | Appelée par l'hôte (voir plus bas). |
 | `validate <manifest.json>` | Lecture stricte (schéma v1) et `AppManifestValidator` sur un fichier ; remplace l'ancien validateur. |
 
 Fonctionnement de `generate` :
@@ -183,10 +184,92 @@ généré est sémantiquement identique à l'ancien. Les autres apps gardent leu
   `Tests/ManifestGenerator.Fixtures.SingleApp`, `.MultiApp` et `.NoDefinition`
   (`HOSAPP0001`).
 
+## Agrégation dans l'hôte : `BuiltInApplications.json`
+
+### Déclarer un hôte
+
+Un projet hôte déclare `<HackerOsAppHost>true</HackerOsAppHost>`. Seul
+`OS/HackerOs.Ecosystem` le fait. `test/test` réutilise le catalogue compilé de
+l'Ecosystem (`BuildKnownLazyApps.Catalog`) et ne s'agrège pas lui-même.
+
+### Cible `CollectHackerOsBuiltInApplications`
+
+Dans `build/HackerOs.Apps.targets`, après `ResolveProjectReferences` (donc avant
+la préparation des ressources et avant les cibles Blazor) :
+
+1. pour chaque `ProjectReference` directe (hors références à
+   `ReferenceOutputAssembly=false`), appelle `GetHackerOsAppManifests` avec les
+   mêmes propriétés globales que `ResolveProjectReferences` ; un projet qui
+   n'est pas une app ne renvoie rien et est ignoré ;
+2. associe à chaque manifeste la métadonnée `IsSystemApp` de sa `ProjectReference`
+   (vide = `false`, sens fixé par l'ADR 0048) ;
+3. appelle `ManifestGenerator aggregate`, qui relit chaque manifeste en mode strict,
+   le valide, construit le catalogue avec `AppCatalog.Build` (identifiant en
+   double, dépendance manquante ou cyclique = `HOSAPP0021`) et écrit
+   `obj/<config>/<tfm>/BuiltInApplications.json` seulement si ses octets changent
+   (pas de recompilation inutile) ;
+4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
+5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
+   retirant d'abord un éventuel doublon écrit à la main).
+
+L'ancrage après `ResolveProjectReferences` est vérifié par un
+`dotnet publish -c Release` de l'Ecosystem : `HackerOs.Apps.Calculator` figure
+dans la section `lazyAssembly` de la configuration de démarrage publiée, et le
+générateur n'apparaît pas dans `_framework`.
+
+### Format
+
+```json
+{"schemaVersion":1,"applications":[{"isSystemApp":false,"manifest":{"schemaVersion":1,"id":"org.hackeros.calculator", "...": "..."}}]}
+```
+
+`BuiltInApplicationsJsonSerializer` (`HackerOs.App.Abstractions`, à côté
+d'`AppManifestJsonSerializer`) écrit la forme canonique (applications triées par
+identifiant, manifestes canoniques) et relit en mode strict (propriété inconnue
+ou en double, `schemaVersion` autre que 1, `isSystemApp` non booléen = erreur ;
+chaque manifeste passe par `AppManifestJsonSerializer.DeserializeStrict`). Le
+type `BuiltInApplication(IsSystemApp, Manifest)` porte une entrée. Le fichier
+n'est jamais écrit à la main ni versionné.
+
+### Lecture au démarrage
+
+`BuildKnownLazyApps` lit la ressource `HackerOs.BuiltInApplications.json` et
+expose, en plus de `Catalog`, `SystemAppIds` et `IsSystemApp(appId)`. Seul le
+JSON est lu : les DLL d'apps restent chargées au premier lancement et les
+classes `AppDefinition` ne sont jamais instanciées au runtime.
+
+**Transition (jusqu'à `rebuild/2-app-migration`)** : les apps pas encore migrées
+gardent leur `app.manifest.json` embarqué à la main
+(`HackerOs.Ecosystem.Manifests.*`) et leur ligne `BlazorWebAssemblyLazyLoad` dans
+`HackerOs.Ecosystem.csproj` ; `BuildKnownLazyApps` fusionne les deux sources (une
+app héritée n'est jamais système). Une app migrée ne doit plus figurer dans ces
+listes : sa `ProjectReference` suffit, comme pour Calculator.
+
+### Installer une app
+
+Une fois l'app dotée de sa classe `[AppManifest]` : une `ProjectReference` dans
+`HackerOs.Ecosystem.csproj`, avec `IsSystemApp="true"` si l'hôte la déclare
+système. Rien d'autre.
+
+### Tests
+
+- `BuiltInApplicationsJsonSerializerTests` (`HackerOs.App.Abstractions.Tests`) :
+  tri et aller-retour canonique, document vide, normalisation, rejets stricts.
+- `BuiltInApplicationsAggregatorTests` : `IsSystemApp` reporté, identifiant en
+  double refusé (`HOSAPP0021`), manifeste absent ou invalide (`HOSAPP0020`),
+  analyse de la liste.
+- `MsBuildIntegrationTests.Host_embeds_BuiltInApplications_...` : build réel de
+  `Tests/ManifestGenerator.Fixtures.Host` (une app système, un projet à deux apps,
+  un projet qui n'est pas une app, ignoré).
+- `BuildKnownLazyAppsTests` (`HackerOs.Ecosystem.Tests`) : le catalogue contient
+  toujours les 36 apps ; Calculator vient de la ressource agrégée, sans ressource
+  écrite à la main, et son assembly est dans la liste de chargement différé.
+
 ## Tâches
 
 - [x] `rebuild/2-app-definition` : `AppDefinition`, `[AppManifest]`,
   `FileHandler`, `TerminalCommand`, `AppDefinitionMapper`, tests du mappeur
   (`Tests/HackerOs.App.Abstractions.Tests/Definition`).
 - [x] `rebuild/2-manifest-generator` : `Tools/HackerOs.Tools.ManifestGenerator` (`generate`, `validate`), `build/HackerOs.Apps.targets`, cibles `GenerateHackerOsAppManifests` et `GetHackerOsAppManifests`, erreurs `HOSAPP*`, projets de test, Calculator migrée en exemple.
-- [ ] `rebuild/2-builtin-applications` : `BuiltInApplications.json` et `.targets` partagé.
+- [x] `rebuild/2-builtin-applications` : cible `CollectHackerOsBuiltInApplications`, `BuiltInApplications.json` embarqué, lazy load automatique, `BuildKnownLazyApps` lit le nouveau fichier, `IsSystemApp` transporté.
+- [ ] `rebuild/2-app-migration` : classes `[AppManifest]` pour les autres apps, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

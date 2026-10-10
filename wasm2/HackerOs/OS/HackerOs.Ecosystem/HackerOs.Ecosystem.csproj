@@ -10,6 +10,12 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
     <PublishTrimmed>False</PublishTrimmed>
+    <!--
+      ADR 0047: aggregates the generated manifests of every referenced app into
+      BuiltInApplications.json and lazy-loads their assemblies (build/HackerOs.Apps.targets).
+      Installing a migrated app takes only its ProjectReference below.
+    -->
+    <HackerOsAppHost>true</HackerOsAppHost>
   </PropertyGroup>
 
   <ItemGroup>
@@ -63,9 +69,13 @@
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Wc\HackerOs.Commands.Wc.csproj" />
   </ItemGroup>
 
+  <!--
+    TRANSITION (until rebuild/2-app-migration): apps that still ship a hand-written
+    app.manifest.json are lazy-loaded and embedded by hand below. Migrated apps
+    ([AppManifest] class) must not appear in these two lists.
+  -->
   <ItemGroup>
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Browser.dll" />
-    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Calculator.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.CodeEditor.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Diagnostic.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.ErrorLogViewer.dll" />
@@ -108,7 +118,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Browser\app.manifest.json" Link="Manifests\org.hackeros.browser.json" />
-    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Calculator\manifest.json" Link="Manifests\org.hackeros.calculator.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\app.manifest.json" Link="Manifests\org.hackeros.code-editor.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\app.manifest.json" Link="Manifests\org.hackeros.diagnostic.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\app.manifest.json" Link="Manifests\org.hackeros.error-log-viewer.json" />

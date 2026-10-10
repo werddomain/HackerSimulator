@@ -55,6 +55,29 @@ public static class AppManifestJsonSerializer
             ?? throw new JsonException("The provided manifest payload deserialized to null.");
     }
 
+    /// <summary>
+    /// Replaces the optional collections that source-generated deserialization leaves
+    /// <see langword="null"/> when a property is omitted with empty lists, as the runtime model expects.
+    /// </summary>
+    /// <param name="manifest">A freshly deserialized manifest.</param>
+    /// <returns>The same manifest with every optional collection non-null.</returns>
+    public static AppManifest NormalizeOptionalCollections(AppManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return manifest with
+        {
+            Presentation = manifest.Presentation with { IconAssetPaths = manifest.Presentation.IconAssetPaths ?? [] },
+            Localizations = manifest.Localizations ?? [],
+            Capabilities = manifest.Capabilities ?? [],
+            DeclaredTopicPermissions = manifest.DeclaredTopicPermissions ?? [],
+            Intents = manifest.Intents ?? [],
+            Dependencies = manifest.Dependencies ?? [],
+            Assets = manifest.Assets ?? [],
+            FileHandlers = manifest.FileHandlers ?? [],
+            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] }
+        };
+    }
+
     private static AppManifest CreateCanonicalManifest(AppManifest manifest)
     {
         PresentationManifest presentation = manifest.Presentation with
