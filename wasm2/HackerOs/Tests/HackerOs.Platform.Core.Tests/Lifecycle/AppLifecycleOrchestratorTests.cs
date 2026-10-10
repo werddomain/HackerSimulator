@@ -65,6 +65,73 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task A_root_process_starts_with_the_login_environment_and_its_arguments()
+    {
+        // ADR 0050 section 5: no parent, so the login environment, /etc/environment on top.
+        Fixture fixture = new(EnvironmentProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await WriteSystemFileAsync(fixture.FileSystemService, "/etc/environment",
+            "# comment\nEDITOR=\"nano\"\nHOME=/evil\nnot a pair\n");
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest("org.hackeros.envprobe", principal, ["-i", "two words"]));
+        Assert.True(result.ExitCode == 0, $"{result.Status} {result.ErrorMessage} {result.StandardError}");
+
+        string[] lines = result.StandardOutput!.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(
+            $"envprobe|-i|two words;{principal.HomePath};nano;{principal.HomePath};{principal.HomePath};-;{principal.HomePath};alice;hackeros",
+            lines[0]);
+        Assert.Equal($"{principal.HomePath}/x", lines[1]);
+        // The ended process's entry is gone.
+        Assert.False(fixture.Manager.Environments.TryGet(result.Process!.Pid, out _));
+    }
+
+    [Fact]
+    public async Task A_child_copies_its_parents_environment_and_never_changes_it()
+    {
+        Fixture fixture = new(WaiterManifest(), EnvironmentProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        AppLaunchResult parent = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.waiter", principal, []));
+        ProcessId parentPid = parent.Process!.Pid;
+        fixture.Manager.Environments.SetVariable(parentPid, "FOO", "from-parent");
+        fixture.Manager.Environments.SetWorkingDirectory(parentPid, VirtualPath.Parse("/var"));
+
+        AppLaunchResult child = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest("org.hackeros.envprobe", principal, [], ParentPid: parentPid,
+                Environment: new Dictionary<string, string>(StringComparer.Ordinal) { ["EDITOR"] = "vi" }));
+
+        string firstLine = child.StandardOutput!.Split(Environment.NewLine)[0];
+        Assert.Equal($"envprobe;/var;vi;{principal.HomePath};{principal.HomePath};from-parent;/var;alice;hackeros", firstLine);
+
+        // The child's export and cd stayed in the child.
+        ProcessEnvironmentSnapshot after = fixture.Manager.Environments.Get(parentPid);
+        Assert.False(after.Variables.ContainsKey("LEAK"));
+        Assert.False(after.Variables.ContainsKey("EDITOR"));
+        Assert.Equal("/var", after.WorkingDirectory);
+
+        await fixture.Orchestrator.StopAllAsync(ProcessExitReason.Shutdown);
+    }
+
+    [Fact]
+    public async Task The_login_environment_and_host_name_are_read_once_per_session()
+    {
+        Fixture fixture = new(EnvironmentProbeManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await WriteSystemFileAsync(fixture.FileSystemService, "/etc/hostname", "black-ice\n");
+
+        await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.envprobe", principal, []));
+        await WriteSystemFileAsync(fixture.FileSystemService, "/etc/environment", "EDITOR=emacs\n");
+        await WriteSystemFileAsync(fixture.FileSystemService, "/etc/hostname", "other\n");
+        AppLaunchResult second = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.envprobe", principal, []));
+
+        // Like pam_env and the kernel host name: a change applies to the next session only.
+        Assert.Equal("black-ice", fixture.LoginEnvironment.HostName);
+        Assert.Equal(
+            $"envprobe;{principal.HomePath};-;{principal.HomePath};{principal.HomePath};-;{principal.HomePath};alice;black-ice",
+            second.StandardOutput!.Split(Environment.NewLine)[0]);
+    }
+
+    [Fact]
     public async Task Launching_a_service_app_runs_it_in_the_background_until_it_is_stopped()
     {
         Fixture fixture = new(WaiterManifest());
@@ -516,6 +583,31 @@ public sealed class AppLifecycleOrchestratorTests
         Terminal = new TerminalCommandManifest("faulty", [], "faulty")
     };
 
+    private static AppManifest EnvironmentProbeManifest() => EchoManifest() with
+    {
+        Id = "org.hackeros.envprobe",
+        Name = "Environment probe",
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(EnvironmentProbeTerminalApp).FullName!),
+        Terminal = new TerminalCommandManifest("envprobe", [], "envprobe")
+    };
+
+    /// <summary>Overwrites a seeded root-owned file as the kernel, like an administrator would.</summary>
+    private static async Task WriteSystemFileAsync(FileSystemService fileSystem, string path, string content)
+    {
+        AppOperationContext root = new()
+        {
+            AppId = "org.hackeros.kernel",
+            UserId = "system",
+            UserAuthority = AppAuthority.System,
+            GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+            IsSystemOperation = true
+        };
+        FileSystemMutationResult write = await fileSystem.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse(path)), new TextSource(content),
+            new FileSystemAuthorizationContext(root, ["system"], DateTimeOffset.UtcNow));
+        Assert.True(write.Succeeded, write.Transaction.Error?.Code.ToString());
+    }
+
     private static AppManifest WaiterManifest() => new()
     {
         Id = "org.hackeros.waiter",
@@ -553,6 +645,30 @@ public sealed class AppLifecycleOrchestratorTests
             string relative = HackerOs.AppSdk.IO.HackPath.GetFullPath("notes.txt");
             string home = HackerOs.AppSdk.IO.HackPath.GetFullPath("~/x");
             await context.StandardOutput.WriteLineAsync($"{sameApp} {relative} {home}".AsMemory(), cancellationToken);
+            return 0;
+        }
+    }
+
+    /// <summary>Reports its process environment, then changes its own (ADR 0050). The change of directory is covered by HackEnvironmentTests.</summary>
+    private sealed class EnvironmentProbeTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            string line = string.Join(';',
+                string.Join('|', HackEnvironment.GetCommandLineArgs()),
+                HackEnvironment.CurrentDirectory,
+                HackEnvironment.GetEnvironmentVariable("EDITOR") ?? "-",
+                HackEnvironment.GetEnvironmentVariable("HOME") ?? "-",
+                HackEnvironment.GetEnvironmentVariable("PWD") ?? "-",
+                HackEnvironment.GetEnvironmentVariable("FOO") ?? "-",
+                context.WorkingDirectory,
+                context.Environment.TryGetValue("USER", out string? user) ? user : "-",
+                HackEnvironment.MachineName);
+            await context.StandardOutput.WriteLineAsync(line.AsMemory(), cancellationToken);
+
+            // Relative paths resolve against the process's own directory.
+            await context.StandardOutput.WriteLineAsync(HackerOs.AppSdk.IO.HackPath.GetFullPath("x").AsMemory(), cancellationToken);
+            HackEnvironment.SetEnvironmentVariable("LEAK", "1");
             return 0;
         }
     }
@@ -693,8 +809,10 @@ public sealed class AppLifecycleOrchestratorTests
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
             Settings = new OsSettingsService(fileSystem, Session, clock);
+            LoginEnvironment = new LoginEnvironmentProvider(fileSystem, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager,
+                machineName: () => LoginEnvironment.HostName);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
@@ -722,7 +840,7 @@ public sealed class AppLifecycleOrchestratorTests
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, Grants, contextFactory, EventBus,
-                descriptorLoader: null, services, fileSystem, elevationTickets);
+                descriptorLoader: null, services, fileSystem, elevationTickets, loginEnvironment: LoginEnvironment);
             FileSystemService = fileSystem;
         }
 
@@ -733,6 +851,7 @@ public sealed class AppLifecycleOrchestratorTests
         internal CapabilityGrantRepository Grants { get; }
         internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
+        internal LoginEnvironmentProvider LoginEnvironment { get; }
 
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");
 

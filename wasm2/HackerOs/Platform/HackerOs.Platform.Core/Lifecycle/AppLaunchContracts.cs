@@ -17,9 +17,9 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// </param>
 /// <param name="ParentPid">Optional parent process, when launched as a child of another process.</param>
 /// <param name="WorkingDirectory">
-/// Initial virtual working directory for a <see cref="HackerOs.App.Abstractions.AppKind.Terminal"/>
-/// launch (e.g. the invoking shell's current directory); defaults to the principal's home when
-/// omitted, instead of always starting at the filesystem root.
+/// Initial working directory of the new process (e.g. the invoking shell's current directory,
+/// ADR 0050 section 5); when omitted, the parent's directory is inherited, or the principal's home
+/// for a process with no parent.
 /// </param>
 /// <param name="ElevationToken">
 /// Optional single-use elevation ticket token (`ADR 0042`), minted by <see cref="IElevationService"/>.
@@ -34,6 +34,10 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// <see langword="false"/> for a launch nobody is watching (a service auto-started with the
 /// session): pending dangerous capabilities are then deferred instead of prompted.
 /// </param>
+/// <param name="Environment">
+/// Environment variables applied over the inherited ones (ADR 0050, section 5): the parent's when
+/// <see cref="ParentPid"/> is set, otherwise the login environment.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -43,7 +47,8 @@ public sealed record AppLaunchRequest(
     Guid? ElevationToken = null,
     ElevationScope? ElevationScope = null,
     IDangerousCapabilityApprovalPrompt? ApprovalPrompt = null,
-    bool Interactive = true);
+    bool Interactive = true,
+    IReadOnlyDictionary<string, string>? Environment = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

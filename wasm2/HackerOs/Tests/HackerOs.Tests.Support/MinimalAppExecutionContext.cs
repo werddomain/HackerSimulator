@@ -26,7 +26,8 @@ public sealed class MinimalAppExecutionContext(
     AppAuthority userAuthority = AppAuthority.User,
     SessionId? sessionId = null,
     IAppFileSystemWatchGateway? watch = null,
-    string? homeDirectory = null) : IAppExecutionContext
+    string? homeDirectory = null,
+    IAppEnvironmentGateway? environment = null) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
     public Guid InstanceId { get; } = Guid.NewGuid();
@@ -49,6 +50,8 @@ public sealed class MinimalAppExecutionContext(
     public IAppIntentGateway Intents => intents ?? throw Unsupported(nameof(Intents));
     public IAppFileSystemWatchGateway Watch => watch ?? throw Unsupported(nameof(Watch));
     public string HomeDirectory { get; } = homeDirectory ?? $"/home/{userId}";
+    public IAppEnvironmentGateway Environment { get; } =
+        environment ?? new FakeAppEnvironmentGateway(homeDirectory ?? $"/home/{userId}", userId);
 
     private static NotSupportedException Unsupported(string gatewayName) =>
         new($"'{gatewayName}' was not provided to this test's MinimalAppExecutionContext.");

@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Platform.Core.Processes;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
 namespace HackerOs.Platform.Core.FileSystem;
@@ -49,6 +50,12 @@ public sealed class FileSystemSeeder(
         await EnsureDirectoryAsync("/etc/hackeros", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/var/lib", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/var/lib/hackeros", 0x01ED, system, cancellationToken);
+
+        // ADR 0050: kernel host name and pam_env-style system environment, root-owned 0644.
+        await EnsureFileAsync(
+            LoginEnvironment.HostNameFilePath.Value, LoginEnvironment.DefaultHostName + "\n", 0x01A4, system, cancellationToken);
+        await EnsureFileAsync(
+            LoginEnvironment.EnvironmentFilePath.Value, LoginEnvironment.DefaultEnvironmentFileContent, 0x01A4, system, cancellationToken);
 
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);
@@ -133,6 +140,57 @@ public sealed class FileSystemSeeder(
         }
     }
 
+    /// <summary>
+    /// Creates a file with <paramref name="content"/> when nothing exists at <paramref name="pathValue"/>.
+    /// An existing file is never touched: an administrator's edits survive every login.
+    /// </summary>
+    private async ValueTask EnsureFileAsync(
+        string pathValue,
+        string content,
+        ushort mode,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
+    {
+        VirtualPath path = VirtualPath.Parse(pathValue);
+        FileSystemResult<FileSystemEntrySnapshot> existing = await _fileSystem.StatAsync(
+            new FileSystemStatRequest(path, FileSystemLinkBehavior.NoFollow),
+            context,
+            cancellationToken);
+        if (existing.Succeeded)
+        {
+            return;
+        }
+
+        if (existing.Error?.Code != FileSystemErrorCode.NotFound)
+        {
+            throw new InvalidOperationException($"Cannot inspect seed file '{path}': {existing.Error?.Code}.");
+        }
+
+        FileSystemMutationResult created = await _fileSystem.CreateAsync(
+            new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(mode)),
+            context,
+            cancellationToken);
+        if (!created.Succeeded)
+        {
+            if (created.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException($"Cannot create seed file '{path}': {created.Transaction.Error?.Code}.");
+        }
+
+        FileSystemMutationResult written = await _fileSystem.WriteAsync(
+            new FileSystemWriteRequest(path),
+            new SeedTextSource(content),
+            context,
+            cancellationToken);
+        if (!written.Succeeded)
+        {
+            throw new InvalidOperationException($"Cannot write seed file '{path}': {written.Transaction.Error?.Code}.");
+        }
+    }
+
     private FileSystemAuthorizationContext CreateContext(string userId, string groupId)
     {
         AppOperationContext operation = new()
@@ -147,6 +205,22 @@ public sealed class FileSystemSeeder(
             operation,
             [groupId],
             _timeProvider.GetUtcNow().ToUniversalTime());
+    }
+
+    /// <summary>UTF-8 text content of one seeded file.</summary>
+    private sealed class SeedTextSource(string content) : IFileSystemContentSource
+    {
+        private readonly byte[] _bytes = System.Text.Encoding.UTF8.GetBytes(content);
+
+        public FileSystemContentDescriptor Descriptor { get; } = FileSystemContentDescriptor.Text();
+
+        public long? Length => _bytes.LongLength;
+
+        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<Stream>(new MemoryStream(_bytes, writable: false));
+        }
     }
 
     private static VirtualPath GetParent(VirtualPath path)

@@ -16,6 +16,7 @@ public sealed class InMemoryProcessManager : IProcessManager
     private readonly ISessionService _session;
     private readonly IEventBus _eventBus;
     private readonly int _maxHistory;
+    private readonly InMemoryProcessEnvironmentTable _environments;
 
     private readonly Lock _gate = new();
     private long _nextPid = 1;
@@ -27,8 +28,16 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// <param name="session">Active session whose root token every process token links to.</param>
     /// <param name="eventBus">Bus used to publish <see cref="ProcessStateChangedEvent"/> transitions.</param>
     /// <param name="maxHistory">Maximum retained terminal process records; oldest is evicted first.</param>
+    /// <param name="environments">
+    /// Table receiving each process's arguments, working directory and environment (ADR 0050,
+    /// section 5); a private one is created when omitted. Reachable through <see cref="Environments"/>.
+    /// </param>
     public InMemoryProcessManager(
-        ISimulationClock clock, ISessionService session, IEventBus eventBus, int maxHistory = 200)
+        ISimulationClock clock,
+        ISessionService session,
+        IEventBus eventBus,
+        int maxHistory = 200,
+        InMemoryProcessEnvironmentTable? environments = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maxHistory, 1);
 
@@ -36,7 +45,14 @@ public sealed class InMemoryProcessManager : IProcessManager
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _maxHistory = maxHistory;
+        _environments = environments ?? new InMemoryProcessEnvironmentTable();
     }
+
+    /// <summary>
+    /// Gets the per-process arguments, working directory and environment of the active processes
+    /// (ADR 0050, section 5): filled at <see cref="Start"/>, dropped when a process ends.
+    /// </summary>
+    public IProcessEnvironmentTable Environments => _environments;
 
     /// <inheritdoc />
     public ProcessRecord Start(ProcessStartRequest request)
@@ -51,6 +67,8 @@ public sealed class InMemoryProcessManager : IProcessManager
             }
 
             ProcessId pid = ProcessId.FromInt64(_nextPid++);
+            // Copy the parent's directory and environment now, while it is known to be active.
+            _environments.Create(request, pid);
             CancellationTokenSource tokenSource = _session.CreateLinkedCancellationSource();
             DateTimeOffset now = _clock.UtcNow;
 
@@ -273,6 +291,7 @@ public sealed class InMemoryProcessManager : IProcessManager
             stoppedAtUtc: now, exitCode, reason);
 
         _active.Remove(old.Pid);
+        _environments.Remove(old.Pid);
         entry.TokenSource.Cancel();
         entry.TokenSource.Dispose();
         AddHistory(updated);

@@ -49,9 +49,9 @@ Contrats touchés :
 | --- | --- | --- |
 | `/proc/<pid>/` | dossier `0555`, propriétaire = utilisateur du processus | — |
 | `/proc/<pid>/status` | fichier `0444` | voir ci-dessous |
-| `/proc/<pid>/cmdline` | fichier `0444` | `appId\0` (les arguments arrivent en phase 3) |
-| `/proc/<pid>/environ` | fichier `0400` | vide en phase 1 |
-| `/proc/<pid>/cwd` | lien `0777` | `/home/<login>` en phase 1 |
+| `/proc/<pid>/cmdline` | fichier `0444` | arguments séparés et terminés par NUL ([`process-environment.md`](process-environment.md)) ; `appId\0` sans entrée d'environnement |
+| `/proc/<pid>/environ` | fichier `0400` | paires `NOM=valeur` terminées par NUL (phase 3) ; vide sans entrée |
+| `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
 | `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |

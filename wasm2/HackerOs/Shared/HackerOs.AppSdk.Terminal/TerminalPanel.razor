@@ -130,7 +130,10 @@
 
     protected override void OnInitialized()
     {
-        _session = new TerminalSession(InitialUsername, InitialCwd ?? "/home/user");
+        _session = new TerminalSession(InitialUsername, InitialCwd ?? "/home/user")
+        {
+            HostName = AppContext.Environment.MachineName
+        };
         _resolver = new TerminalCommandResolver(Catalog, Enablement);
         // ADR 0049 section 5: a third-party command's pending dangerous capabilities are asked
         // here, in text mode, rather than with the desktop overlay.

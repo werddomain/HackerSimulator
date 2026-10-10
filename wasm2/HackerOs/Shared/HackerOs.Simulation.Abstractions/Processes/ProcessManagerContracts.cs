@@ -11,6 +11,17 @@ namespace HackerOs.Simulation.Abstractions.Processes;
 /// <param name="UserId">User the process will run as.</param>
 /// <param name="SessionId">Session the process will belong to.</param>
 /// <param name="ResourceProfile">Resource profile snapshot used to derive simulated resource ticks.</param>
+/// <param name="Arguments">
+/// The new process's <c>argv</c>, command name included (ADR 0050, section 5);
+/// <see langword="null"/> or empty records the app ID alone.
+/// </param>
+/// <param name="WorkingDirectory">
+/// Initial working directory; <see langword="null"/> inherits the parent's, or <c>/</c> for a root process.
+/// </param>
+/// <param name="Environment">
+/// Variables applied over the inherited environment (the parent's, copied at creation; empty for a
+/// root process). The platform passes the login environment for a root process.
+/// </param>
 public sealed record ProcessStartRequest(
     ProcessId? ParentPid,
     string AppId,
@@ -18,7 +29,10 @@ public sealed record ProcessStartRequest(
     AppKind Kind,
     LocalUserId UserId,
     SessionId SessionId,
-    ResourceProfile ResourceProfile);
+    ResourceProfile ResourceProfile,
+    IReadOnlyList<string>? Arguments = null,
+    VirtualPath? WorkingDirectory = null,
+    IReadOnlyDictionary<string, string>? Environment = null);
 
 /// <summary>
 /// Creates, tracks, and terminates processes in memory, per ADR 0012. All state transitions are
