@@ -381,10 +381,10 @@ pas modifié.
 
 | Nouvel ADR | Remplace | Contenu |
 |---|---|---|
-| API fichier `Hack*` et contexte ambiant | — | D3, D4, D5, section 5.1 |
-| Paramètres en fichiers | 0004, 0011 (partiellement), 0029 si impacté | D16 à D18, section 5.2, syntaxe du verrou |
-| Journaux en fichiers | — | D19, section 5.3, tailles de rotation |
-| Systèmes de fichiers virtuels `/proc` et `/dev` | — | D20, section 5.4 |
+| [0043](adr/0043-hack-file-api-and-ambient-context.md) API fichier `Hack*` et contexte ambiant | — | D3, D4, D5, section 5.1 |
+| [0044](adr/0044-settings-as-files.md) Paramètres en fichiers | 0004, 0011 (partiellement), 0029 | D16 à D18, section 5.2, syntaxe du verrou |
+| [0045](adr/0045-logs-as-files.md) Journaux en fichiers | — | D19, section 5.3, tailles de rotation |
+| [0046](adr/0046-virtual-proc-and-dev-filesystems.md) Systèmes de fichiers virtuels `/proc` et `/dev` | complète 0008 | D20, section 5.4 |
 | Manifeste en classe C# et génération | 0010 | D6, D7, D8, section 6.1-6.2 |
 | Apps système et désinstallation | complète 0032 | D9 à D11, section 6.3 |
 | Permissions dangereuses et approbation | complète 0002, 0003 | D23 à D25, section 6.4 |
@@ -413,6 +413,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Déplacer les anciens documents dans `docs/old/`, sauf `docs/adr/`, et corriger les liens.
 - [x] Rédiger ce plan et le nouvel index `docs/README.md`.
 - [ ] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
+  - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
 
 ### Phase 1 — Fichiers
 - [ ] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
