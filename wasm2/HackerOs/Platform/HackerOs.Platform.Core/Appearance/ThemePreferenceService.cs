@@ -12,6 +12,7 @@ namespace HackerOs.Platform.Core.Appearance;
 /// </summary>
 public sealed class ThemePreferenceService : IDisposable
 {
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly IOsSettingsService _settings;
 
     /// <summary>Creates the service over the OS settings files.</summary>
@@ -81,7 +82,11 @@ public sealed class ThemePreferenceService : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose() => _settings.DocumentChanged -= OnDocumentChanged;
+    public void Dispose()
+    {
+        _settings.DocumentChanged -= OnDocumentChanged;
+        _refreshGate.Dispose();
+    }
 
     private void OnDocumentChanged(object? sender, OsSettingsChangedEventArgs args)
     {
@@ -105,13 +110,25 @@ public sealed class ThemePreferenceService : IDisposable
 
     private async Task RefreshCoreAsync(bool raiseEvent, CancellationToken cancellationToken)
     {
-        LayeredConfigSnapshot snapshot = await _settings
-            .ReadAsync(AppearanceSettingsDocuments.Document, cancellationToken)
-            .ConfigureAwait(false);
-        ThemePreferences preferences = AppearanceSettingsDocuments.ToPreferences(snapshot);
-        bool changed = preferences != Current;
-        Snapshot = snapshot;
-        Current = preferences;
+        // Reloads are serialized: a change notification arriving mid-write would otherwise let a
+        // stale read finish last and overwrite the fresh state.
+        await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool changed;
+        try
+        {
+            LayeredConfigSnapshot snapshot = await _settings
+                .ReadAsync(AppearanceSettingsDocuments.Document, cancellationToken)
+                .ConfigureAwait(false);
+            ThemePreferences preferences = AppearanceSettingsDocuments.ToPreferences(snapshot);
+            changed = preferences != Current;
+            Snapshot = snapshot;
+            Current = preferences;
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+
         if (raiseEvent && changed)
         {
             Changed?.Invoke();

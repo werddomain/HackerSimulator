@@ -1,87 +1,89 @@
 using HackerOs.App.Abstractions;
-using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Policy;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Tests.Settings;
+using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Simulation.Abstractions.Settings;
 
 namespace HackerOs.Platform.Core.Tests.Policy;
 
-
+/// <summary>The administrator policy is the system-only file /etc/hackeros/policy.config (ADR 0044).</summary>
 public sealed class PolicySettingsDocumentsTests
 {
+    private const string GrantsLocked = "capabilityGrantsLocked";
+
     [Fact]
-    public async Task Normal_user_cannot_write_protected_policy_document()
+    public async Task Ordinary_user_cannot_write_the_policy_even_with_the_system_write_capability()
     {
-        InMemorySettingsDocumentService service = CreateService();
-        AppOperationContext user = CreateContext(AppAuthority.User, AppCapabilities.SettingsSystemWrite);
+        SettingsFilesHarness harness = new();
+        await harness.BootAsync();
+        AuthenticatedPrincipal alice = await harness.LoginAsync(harness.Alice);
+        IAppFileSystemGateway settingsApp = harness.CreateAppGateway(
+            alice, "org.hackeros.settings", AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite);
 
-        SettingsWriteResult result = await service.WriteAsync(
-            new SettingsWriteRequest(PolicySettingsDocuments.Path, "capabilityGrantsLocked=true\n", 1),
-            user);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => harness.Settings
+            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "true", SettingLayer.System, settingsApp)
+            .AsTask());
 
-        Assert.Equal(SettingsWriteStatus.Denied, result.Status);
+        LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
+        Assert.Equal("false", policy.Values[GrantsLocked]);
     }
 
     [Fact]
-    public async Task System_kind_app_launched_by_user_without_audited_system_context_is_still_denied()
+    public async Task Policy_has_no_user_layer()
     {
-        // Even a manifest-declared system app cannot write protected policy while operated by a
-        // normal user unless the platform explicitly marks the operation as an audited system context.
-        InMemorySettingsDocumentService service = CreateService();
-        AppOperationContext userLaunchedSystemApp = CreateContext(AppAuthority.User, AppCapabilities.SettingsSystemWrite) with
-        {
-            IsSystemOperation = false
-        };
+        SettingsFilesHarness harness = new();
+        await harness.LoginAsync(harness.Alice);
+        await harness.WriteAsRootAsync("/home/alice/.config/hackeros/policy.config", "capabilityGrantsLocked=true\n");
 
-        SettingsWriteResult result = await service.WriteAsync(
-            new SettingsWriteRequest(PolicySettingsDocuments.Path, "capabilityGrantsLocked=true\n", 1),
-            userLaunchedSystemApp);
+        LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal(SettingsWriteStatus.Denied, result.Status);
+        Assert.Equal("false", policy.Values[GrantsLocked]);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => harness.Settings
+            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "true")
+            .AsTask());
     }
 
     [Fact]
-    public async Task Administrator_with_capability_commits_and_shares_revision_with_direct_read()
+    public async Task Root_edit_of_etc_is_what_every_reader_sees()
     {
-        InMemorySettingsDocumentService service = CreateService();
-        AppOperationContext admin = CreateContext(
-            AppAuthority.Administrator,
-            AppCapabilities.SettingsSystemRead,
-            AppCapabilities.SettingsSystemWrite);
+        SettingsFilesHarness harness = new();
+        await harness.BootAsync();
+        await harness.WriteAsRootAsync(
+            PolicySettingsDocuments.Document.SystemPath.Value,
+            "capabilityGrantsLocked=true\nallowRuntimePackageInstall=false\n");
 
-        SettingsWriteResult write = await service.WriteAsync(
-            new SettingsWriteRequest(
-                PolicySettingsDocuments.Path,
-                "schemaVersion=1\ncapabilityGrantsLocked=true\nallowRuntimePackageInstall=false\n",
-                1),
-            admin);
-        SettingsReadResult read = await service.ReadAsync(PolicySettingsDocuments.Path, admin);
+        LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal(SettingsWriteStatus.Success, write.Status);
-        Assert.Equal(2, read.Document?.Revision);
+        Assert.Equal("true", policy.Values[GrantsLocked]);
+        Assert.Equal(SettingLayer.System, policy.Sources[GrantsLocked]);
+        Assert.Empty(policy.Warnings);
     }
 
     [Fact]
-    public async Task Invalid_policy_document_content_is_rejected()
+    public async Task Invalid_value_in_the_file_falls_back_to_the_default_with_a_warning()
     {
-        InMemorySettingsDocumentService service = CreateService();
-        AppOperationContext admin = CreateContext(
-            AppAuthority.Administrator,
-            AppCapabilities.SettingsSystemWrite);
+        SettingsFilesHarness harness = new();
+        await harness.WriteAsRootAsync(PolicySettingsDocuments.Document.SystemPath.Value, "capabilityGrantsLocked=not-a-bool\n");
 
-        SettingsWriteResult result = await service.WriteAsync(
-            new SettingsWriteRequest(PolicySettingsDocuments.Path, "capabilityGrantsLocked=not-a-bool\n", 1),
-            admin);
+        LayeredConfigSnapshot policy = await harness.Settings.ReadAsync(PolicySettingsDocuments.Document);
 
-        Assert.Equal(SettingsWriteStatus.Invalid, result.Status);
+        Assert.Equal("false", policy.Values[GrantsLocked]);
+        LayeredConfigWarning warning = Assert.Single(policy.Warnings);
+        Assert.Equal("settings: /etc/hackeros/policy.config:1: invalid value for 'capabilityGrantsLocked' (expected boolean), using default", warning.ToLogLine());
     }
 
-    private static InMemorySettingsDocumentService CreateService() => new([PolicySettingsDocuments.CreateDefinition()]);
-
-    private static AppOperationContext CreateContext(AppAuthority authority, params string[] capabilities) => new()
+    [Fact]
+    public async Task Writing_an_invalid_value_is_rejected_before_touching_the_file()
     {
-        AppId = "org.hackeros.settings",
-        UserId = "user",
-        UserAuthority = authority,
-        GrantedCapabilities = new HashSet<string>(capabilities, StringComparer.Ordinal)
-    };
+        SettingsFilesHarness harness = new();
+        await harness.BootAsync();
+        string? before = await harness.ReadAsync(PolicySettingsDocuments.Document.SystemPath.Value);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => harness.Settings
+            .SetAsync(PolicySettingsDocuments.Document, GrantsLocked, "maybe", SettingLayer.System, harness.CreateRootGateway())
+            .AsTask());
+
+        Assert.Equal(before, await harness.ReadAsync(PolicySettingsDocuments.Document.SystemPath.Value));
+    }
 }

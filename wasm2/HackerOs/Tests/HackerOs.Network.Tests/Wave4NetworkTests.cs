@@ -517,7 +517,6 @@ public sealed class Wave4NetworkTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities => throw new NotImplementedException();
         public IAppFileSystemGateway FileSystem => throw new NotImplementedException();
-        public IAppSettingsGateway Settings => throw new NotImplementedException();
         public IAppEventGateway Events => throw new NotImplementedException();
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging => throw new NotImplementedException();

@@ -46,6 +46,7 @@ public sealed record UiPlatformPreferenceState(
 /// </remarks>
 public sealed class UiPlatformPreferenceService : IDisposable
 {
+    private readonly SemaphoreSlim _reloadGate = new(1, 1);
     private readonly IOsSettingsService _settings;
     private readonly IPlatformEnvironmentProbe _probe;
 
@@ -72,8 +73,7 @@ public sealed class UiPlatformPreferenceService : IDisposable
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await _probe.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        await LoadAsync(cancellationToken).ConfigureAwait(false);
-        RecomputeAndNotify(raiseEvent: false);
+        await ReloadAsync(raiseEvent: false, cancellationToken).ConfigureAwait(false);
         await _settings.WatchAsync(UiPlatformPreferenceSettingsDocuments.Document, cancellationToken).ConfigureAwait(false);
     }
 
@@ -115,8 +115,31 @@ public sealed class UiPlatformPreferenceService : IDisposable
             // The user may not write the file: keep what the files say.
         }
 
-        await LoadAsync(cancellationToken).ConfigureAwait(false);
-        RecomputeAndNotify(raiseEvent: true);
+        await ReloadAsync(raiseEvent: true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Loads and applies the files under a gate: a change notification arriving mid-write would
+    /// otherwise let a stale load interleave with the fresh one and drop the new choice.
+    /// </summary>
+    private async Task ReloadAsync(bool raiseEvent, CancellationToken cancellationToken)
+    {
+        await _reloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool changed;
+        try
+        {
+            await LoadAsync(cancellationToken).ConfigureAwait(false);
+            changed = Recompute();
+        }
+        finally
+        {
+            _reloadGate.Release();
+        }
+
+        if (raiseEvent && changed)
+        {
+            Changed?.Invoke();
+        }
     }
 
     private async Task LoadAsync(CancellationToken cancellationToken)
@@ -145,8 +168,7 @@ public sealed class UiPlatformPreferenceService : IDisposable
     {
         try
         {
-            await LoadAsync(CancellationToken.None).ConfigureAwait(false);
-            RecomputeAndNotify(raiseEvent: true);
+            await ReloadAsync(raiseEvent: true, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -154,9 +176,16 @@ public sealed class UiPlatformPreferenceService : IDisposable
         }
     }
 
-    private void OnProbeChanged() => RecomputeAndNotify(raiseEvent: true);
+    private void OnProbeChanged()
+    {
+        if (Recompute())
+        {
+            Changed?.Invoke();
+        }
+    }
 
-    private void RecomputeAndNotify(bool raiseEvent)
+    /// <summary>Recomputes <see cref="Current"/>; returns whether it changed.</summary>
+    private bool Recompute()
     {
         AppPlatformId active = _selectionSource == UiPlatformSelectionSource.Explicit && _explicitPlatformId is { } explicitId
             ? explicitId
@@ -165,11 +194,7 @@ public sealed class UiPlatformPreferenceService : IDisposable
         UiPlatformPreferenceState next = new(_selectionSource, _explicitPlatformId, active);
         bool changed = next != Current;
         Current = next;
-
-        if (raiseEvent && changed)
-        {
-            Changed?.Invoke();
-        }
+        return changed;
     }
 
     /// <inheritdoc />
@@ -177,5 +202,6 @@ public sealed class UiPlatformPreferenceService : IDisposable
     {
         _probe.Changed -= OnProbeChanged;
         _settings.DocumentChanged -= OnDocumentChanged;
+        _reloadGate.Dispose();
     }
 }

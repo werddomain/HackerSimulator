@@ -131,7 +131,6 @@ public sealed class AppSdkLifecycleTests
 
         public IAppFileSystemGateway FileSystem => throw new NotSupportedException();
 
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
 
         public IAppEventGateway Events => throw new NotSupportedException();
 

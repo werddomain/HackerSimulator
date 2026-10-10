@@ -135,7 +135,6 @@ public sealed class NanoCommandTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities => throw new NotSupportedException();
         public IAppFileSystemGateway FileSystem { get; } = fileSystem ?? new TestFileSystemGateway(string.Empty, "/unused");
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
         public IAppLoggingGateway Logging => throw new NotSupportedException();

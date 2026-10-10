@@ -1,68 +1,66 @@
 using HackerOs.Platform.Core.Shell;
+using HackerOs.Platform.Core.Tests.Settings;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Platform.Core.Tests.Shell;
 
 public sealed class StartMenuPreferencesServiceTests
 {
-    private static readonly LocalUserId FirstUser =
-        LocalUserId.FromGuid(Guid.Parse("11111111-2222-3333-4444-555555555555"));
-
-    private static readonly LocalUserId SecondUser =
-        LocalUserId.FromGuid(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
-
     [Fact]
     public async Task InitializeAsync_starts_each_user_with_an_empty_pin_list()
     {
-        using StartMenuPreferencesService service = CreateService(out _);
+        SettingsFilesHarness harness = new();
+        AuthenticatedPrincipal alice = await harness.LoginAsync(harness.Alice);
+        using StartMenuPreferencesService service = new(harness.Settings, harness.Session);
 
         await service.InitializeAsync();
 
-        Assert.Empty(service.GetPinnedAppIds(FirstUser));
-        Assert.Empty(service.GetPinnedAppIds(SecondUser));
+        Assert.Empty(service.GetPinnedAppIds(alice.UserId));
+        Assert.Empty(service.GetPinnedAppIds(harness.Bob.Id));
     }
 
     [Fact]
     public async Task PinAsync_persists_deduplicates_and_reloads_unknown_ids()
     {
-        using StartMenuPreferencesService service = CreateService(out InMemorySettingsDocumentService settings);
+        SettingsFilesHarness harness = new();
+        AuthenticatedPrincipal alice = await harness.LoginAsync(harness.Alice);
+        using StartMenuPreferencesService service = new(harness.Settings, harness.Session);
         await service.InitializeAsync();
 
-        Assert.True(await service.PinAsync(FirstUser, "org.example.unmounted"));
-        Assert.False(await service.PinAsync(FirstUser, "org.example.unmounted"));
-        Assert.Equal(["org.example.unmounted"], service.GetPinnedAppIds(FirstUser));
+        Assert.True(await service.PinAsync(alice.UserId, "org.example.unmounted"));
+        Assert.False(await service.PinAsync(alice.UserId, "org.example.unmounted"));
+        Assert.Equal(["org.example.unmounted"], service.GetPinnedAppIds(alice.UserId));
 
-        using StartMenuPreferencesService reloaded = new(settings);
+        // Pins are the user's own file (ADR 0044 section 8), not a shared machine document.
+        Assert.Contains("org.example.unmounted", await harness.ReadAsync("/home/alice/.config/hackeros/start-menu.json"));
+
+        using StartMenuPreferencesService reloaded = new(harness.Settings, harness.Session);
         await reloaded.InitializeAsync();
-        Assert.Equal(["org.example.unmounted"], reloaded.GetPinnedAppIds(FirstUser));
+        Assert.Equal(["org.example.unmounted"], reloaded.GetPinnedAppIds(alice.UserId));
     }
 
     [Fact]
-    public async Task MoveAsync_reorders_one_profile_without_crossing_user_boundaries()
+    public async Task MoveAsync_reorders_the_session_profile_and_never_touches_another_user()
     {
-        using StartMenuPreferencesService service = CreateService(out InMemorySettingsDocumentService settings);
+        SettingsFilesHarness harness = new();
+        AuthenticatedPrincipal alice = await harness.LoginAsync(harness.Alice);
+        using StartMenuPreferencesService service = new(harness.Settings, harness.Session);
         await service.InitializeAsync();
-        await service.PinAsync(FirstUser, "org.hackeros.browser");
-        await service.PinAsync(FirstUser, "org.hackeros.files");
-        await service.PinAsync(FirstUser, "org.hackeros.settings");
-        await service.PinAsync(SecondUser, "org.example.private");
+        await service.PinAsync(alice.UserId, "org.hackeros.browser");
+        await service.PinAsync(alice.UserId, "org.hackeros.files");
+        await service.PinAsync(alice.UserId, "org.hackeros.settings");
 
-        Assert.True(await service.MoveAsync(FirstUser, "org.hackeros.settings", targetIndex: 0));
+        Assert.False(await service.PinAsync(harness.Bob.Id, "org.example.private"));
+        Assert.True(await service.MoveAsync(alice.UserId, "org.hackeros.settings", targetIndex: 0));
 
         Assert.Equal(
             ["org.hackeros.settings", "org.hackeros.browser", "org.hackeros.files"],
-            service.GetPinnedAppIds(FirstUser));
-        Assert.Equal(["org.example.private"], service.GetPinnedAppIds(SecondUser));
+            service.GetPinnedAppIds(alice.UserId));
+        Assert.Empty(service.GetPinnedAppIds(harness.Bob.Id));
+        Assert.Null(await harness.ReadAsync("/home/bob/.config/hackeros/start-menu.json"));
 
-        using StartMenuPreferencesService reloaded = new(settings);
+        using StartMenuPreferencesService reloaded = new(harness.Settings, harness.Session);
         await reloaded.InitializeAsync();
-        Assert.Equal(service.GetPinnedAppIds(FirstUser), reloaded.GetPinnedAppIds(FirstUser));
-        Assert.Equal(service.GetPinnedAppIds(SecondUser), reloaded.GetPinnedAppIds(SecondUser));
-    }
-
-    private static StartMenuPreferencesService CreateService(out InMemorySettingsDocumentService settings)
-    {
-        settings = new InMemorySettingsDocumentService([StartMenuSettingsDocuments.CreateDefinition()]);
-        return new StartMenuPreferencesService(settings);
+        Assert.Equal(service.GetPinnedAppIds(alice.UserId), reloaded.GetPinnedAppIds(alice.UserId));
     }
 }

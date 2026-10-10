@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
@@ -541,9 +542,9 @@ public sealed class AppIntentDispatcherTests
             Manager = new InMemoryProcessManager(clock, Session, eventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
+            Settings = new OsSettingsService(fileSystem, Session, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, eventBus, topicBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, eventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
@@ -579,7 +580,7 @@ public sealed class AppIntentDispatcherTests
         internal LocalSessionService Session { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
+        internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal AppIntentDispatcher Dispatcher { get; }
 

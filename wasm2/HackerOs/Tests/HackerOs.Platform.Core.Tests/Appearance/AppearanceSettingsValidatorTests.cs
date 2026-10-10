@@ -7,9 +7,10 @@ public sealed class AppearanceSettingsValidatorTests
     private readonly AppearanceSettingsValidator _validator = new();
 
     [Fact]
-    public void Validate_DefaultDocumentContent_IsValid()
+    public void Validate_LegacyStoreEncodingOfTheDefaults_IsValid()
     {
-        Assert.Empty(_validator.Validate(AppearanceSettingsDocuments.EmptyDocumentContent));
+        // The JSON format survives only to migrate the retired settings store (ADR 0044).
+        Assert.Empty(_validator.Validate(AppearanceSettingsCodec.Encode(HackerOs.Theming.Abstractions.ThemePreferences.Default)));
     }
 
     [Fact]

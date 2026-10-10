@@ -20,7 +20,8 @@ public sealed class FileSystemSeederTests
             "/", "/bin", "/etc", "/home", "/tmp", "/var", "/var/log",
             "/home/alice", "/home/alice/Desktop", "/home/alice/Documents",
             "/home/alice/Downloads", "/home/alice/.config",
-            "/home/alice/.config/hackeros", "/home/alice/.config/apps"
+            "/home/alice/.config/hackeros", "/etc/hackeros", "/var/lib/hackeros",
+            "/home/alice/.local/state/hackeros"
         ];
         foreach (string path in paths)
         {
