@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Launch;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -14,7 +15,7 @@ public sealed class LaunchCommandTests
         FakeAppIntentGateway intents = new();
         TerminalExecutionContext context = CreateContext(intents, "org.hackeros.calculator", "--fresh");
 
-        int exitCode = await new LaunchCommand(LaunchCommand.StaticManifest)
+        int exitCode = await new LaunchCommand(AppDefinitionMapper.ToManifest(new LaunchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -30,7 +31,7 @@ public sealed class LaunchCommandTests
             .WithResult("org.hackeros.missing", new AppIntentLaunchResult(AppIntentLaunchOutcome.NotFound, "intent.not-found"));
         TerminalExecutionContext context = CreateContext(intents, "org.hackeros.missing");
 
-        int exitCode = await new LaunchCommand(LaunchCommand.StaticManifest)
+        int exitCode = await new LaunchCommand(AppDefinitionMapper.ToManifest(new LaunchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -43,7 +44,7 @@ public sealed class LaunchCommandTests
         FakeAppIntentGateway intents = new FakeAppIntentGateway().WithCapabilityDenied("org.hackeros.settings");
         TerminalExecutionContext context = CreateContext(intents, "org.hackeros.settings");
 
-        int exitCode = await new LaunchCommand(LaunchCommand.StaticManifest)
+        int exitCode = await new LaunchCommand(AppDefinitionMapper.ToManifest(new LaunchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -56,7 +57,7 @@ public sealed class LaunchCommandTests
         FakeAppIntentGateway intents = new();
         TerminalExecutionContext context = CreateContext(intents);
 
-        int exitCode = await new LaunchCommand(LaunchCommand.StaticManifest)
+        int exitCode = await new LaunchCommand(AppDefinitionMapper.ToManifest(new LaunchApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -65,7 +66,7 @@ public sealed class LaunchCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppIntentGateway intents, params string[] arguments) => new(
-        new MinimalAppExecutionContext(LaunchCommand.StaticManifest, intents: intents),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new LaunchApp()), intents: intents),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

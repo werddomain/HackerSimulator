@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Rm;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class RmCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/doomed.txt");
         TerminalExecutionContext context = CreateContext(fs, "doomed.txt");
 
-        int exitCode = await new RmCommand(RmCommand.StaticManifest)
+        int exitCode = await new RmCommand(AppDefinitionMapper.ToManifest(new RmApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -26,7 +27,7 @@ public sealed class RmCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "missing.txt");
 
-        int exitCode = await new RmCommand(RmCommand.StaticManifest)
+        int exitCode = await new RmCommand(AppDefinitionMapper.ToManifest(new RmApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -38,7 +39,7 @@ public sealed class RmCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithFile("/home/user/doomed.txt");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user/doomed.txt");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(RmCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new RmApp()), fileSystem: racing),
             ["doomed.txt"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -46,7 +47,7 @@ public sealed class RmCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new RmCommand(RmCommand.StaticManifest)
+        int exitCode = await new RmCommand(AppDefinitionMapper.ToManifest(new RmApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -56,7 +57,7 @@ public sealed class RmCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(RmCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new RmApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

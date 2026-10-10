@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Sort;
 /// </summary>
 public sealed class SortCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.sort",
-        Name = "sort",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Sort lines of text",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Sort.dll", "HackerOs.Commands.Sort.SortCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("sort", [], "sort [-r] [-n] [-u] [file...]"),
-        SingleInstancePerUser = false
-    };
-
     public SortCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

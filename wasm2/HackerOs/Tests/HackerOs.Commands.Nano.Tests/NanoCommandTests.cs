@@ -14,13 +14,13 @@ public sealed class NanoCommandTests
     [Fact]
     public async Task ExecuteAsync_WithoutFullScreen_ReturnsUnsupportedError()
     {
-        NanoCommand command = new(NanoCommand.StaticManifest);
+        NanoCommand command = new(AppDefinitionMapper.ToManifest(new NanoApp()));
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new("");
 
         TerminalExecutionContext context = new(
-            app: new StubAppExecutionContext(NanoCommand.StaticManifest),
+            app: new StubAppExecutionContext(AppDefinitionMapper.ToManifest(new NanoApp())),
             arguments: ["sample.txt"],
             standardInput: stdin,
             standardOutput: stdout,
@@ -46,7 +46,7 @@ public sealed class NanoCommandTests
             new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
         TerminalExecutionContext context = CreateContext(fileSystem, terminal, "sample.txt");
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest)
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -63,7 +63,7 @@ public sealed class NanoCommandTests
         TestFullScreenTerminal terminal = new() { ThrowCancellationOnRead = true };
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await new NanoCommand(NanoCommand.StaticManifest).ExecuteAsync(
+            await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
                 CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None));
 
         Assert.True(terminal.Entered);
@@ -82,7 +82,7 @@ public sealed class NanoCommandTests
             new TerminalKeyEvent(TerminalKey.Enter),
             new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest).ExecuteAsync(
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
             CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -99,7 +99,7 @@ public sealed class NanoCommandTests
         TestFullScreenTerminal terminal = new();
         TerminalExecutionContext context = CreateContext(fileSystem, terminal, "denied.txt");
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest)
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -111,7 +111,7 @@ public sealed class NanoCommandTests
         IAppFileSystemGateway fileSystem,
         IFullScreenTerminalSession? terminal,
         params string[] arguments) => new(
-            new StubAppExecutionContext(NanoCommand.StaticManifest, fileSystem),
+            new StubAppExecutionContext(AppDefinitionMapper.ToManifest(new NanoApp()), fileSystem),
             arguments,
             new StringReader(string.Empty),
             new StringWriter(),

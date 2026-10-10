@@ -134,7 +134,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task GrepCommand_FiltersMatchingLines()
     {
-        var cmd = new GrepCommand(GrepCommand.StaticManifest);
+        var cmd = new GrepCommand(AppDefinitionMapper.ToManifest(new GrepApp()));
         using var stdin = new StringReader("apple\nbanana\ncherry\nAPRICOT\n");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -152,7 +152,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task HeadCommand_OutputsFirstNLines()
     {
-        var cmd = new HeadCommand(HeadCommand.StaticManifest);
+        var cmd = new HeadCommand(AppDefinitionMapper.ToManifest(new HeadApp()));
         using var stdin = new StringReader("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -168,7 +168,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task TailCommand_OutputsLastNLines()
     {
-        var cmd = new TailCommand(TailCommand.StaticManifest);
+        var cmd = new TailCommand(AppDefinitionMapper.ToManifest(new TailApp()));
         using var stdin = new StringReader("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -184,7 +184,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task SortCommand_SortsLinesNumericallyAndReverses()
     {
-        var cmd = new SortCommand(SortCommand.StaticManifest);
+        var cmd = new SortCommand(AppDefinitionMapper.ToManifest(new SortApp()));
         using var stdin = new StringReader("10\n2\n1\n");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -200,7 +200,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task WcCommand_CountsLinesWordsBytes()
     {
-        var cmd = new WcCommand(WcCommand.StaticManifest);
+        var cmd = new WcCommand(AppDefinitionMapper.ToManifest(new WcApp()));
         using var stdin = new StringReader("hello world\nfoo bar\n");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -217,7 +217,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task ClearCommand_EmitsAnsiClearSequence()
     {
-        var cmd = new ClearCommand(ClearCommand.StaticManifest);
+        var cmd = new ClearCommand(AppDefinitionMapper.ToManifest(new ClearApp()));
         using var stdin = new StringReader("");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -232,7 +232,7 @@ public sealed class Wave5Tests
     [Fact]
     public async Task HelpCommand_ListsCommands_Or_ManualPage()
     {
-        var cmd = new HelpCommand(HelpCommand.StaticManifest);
+        var cmd = new HelpCommand(AppDefinitionMapper.ToManifest(new HelpApp()));
         using var stdin = new StringReader("");
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -257,7 +257,7 @@ public sealed class Wave5Tests
         TextWriter stdout,
         TextWriter stderr)
     {
-        var manifest = GrepCommand.StaticManifest;
+        var manifest = AppDefinitionMapper.ToManifest(new GrepApp());
         var app = new StubAppExecutionContext(manifest);
 
         return new TerminalExecutionContext(

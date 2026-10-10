@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Mkdir;
 /// </summary>
 public sealed class MkdirCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.mkdir",
-        Name = "mkdir",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Create directories",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Mkdir.dll", "HackerOs.Commands.Mkdir.MkdirCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("mkdir", [], "mkdir [-p] <directory...>"),
-        SingleInstancePerUser = false
-    };
-
     public MkdirCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

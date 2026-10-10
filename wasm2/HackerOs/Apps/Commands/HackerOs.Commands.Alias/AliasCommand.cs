@@ -17,24 +17,6 @@ namespace HackerOs.Commands.Alias;
 /// </remarks>
 public sealed class AliasCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.alias",
-        Name = "alias",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Manage command aliases",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Alias.dll", "HackerOs.Commands.Alias.AliasCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("alias", ["addalias", "rmalias", "unalias"], "alias [-r] [name[=value]...]"),
-        SingleInstancePerUser = false
-    };
-
     public AliasCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

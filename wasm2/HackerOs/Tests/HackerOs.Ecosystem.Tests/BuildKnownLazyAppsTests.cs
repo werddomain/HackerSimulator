@@ -34,7 +34,7 @@ public sealed class BuildKnownLazyAppsTests
     }
 
     [Fact]
-    public void Migrated_apps_come_from_the_aggregated_BuiltInApplications_resource()
+    public void Every_app_comes_from_the_aggregated_BuiltInApplications_resource()
     {
         using Stream? resource = typeof(BuildKnownLazyApps).Assembly
             .GetManifestResourceStream(BuiltInApplicationsJsonSerializer.ResourceName);
@@ -42,15 +42,20 @@ public sealed class BuildKnownLazyAppsTests
         using StreamReader reader = new(resource);
         IReadOnlyList<BuiltInApplication> builtIn = BuiltInApplicationsJsonSerializer.DeserializeStrict(reader.ReadToEnd());
 
-        // Calculator is the example app migrated to [AppManifest] (ADR 0047): it reaches the host
-        // through its ProjectReference only, with no hand-written manifest resource.
-        BuiltInApplication calculator = Assert.Single(builtIn, item => item.Manifest.Id == "org.hackeros.calculator");
-        Assert.Equal("HackerOs.Apps.Calculator.dll", calculator.Manifest.EntryPoint!.Assembly);
+        // Every app is migrated to [AppManifest] (ADR 0047 §6): it reaches the host through its
+        // ProjectReference only. No hand-written manifest resource and no manual lazy-load entry remain.
         Assert.DoesNotContain(
             typeof(BuildKnownLazyApps).Assembly.GetManifestResourceNames(),
-            name => name.Contains("calculator", StringComparison.OrdinalIgnoreCase) && name.StartsWith("HackerOs.Ecosystem.Manifests.", StringComparison.Ordinal));
-        Assert.Contains("org.hackeros.calculator", BuildKnownLazyApps.Catalog.Manifests.Keys);
-        Assert.Contains("HackerOs.Apps.Calculator.dll", BuildKnownLazyAssemblies.Names);
+            name => name.StartsWith("HackerOs.Ecosystem.Manifests.", StringComparison.Ordinal));
+        Assert.Equal(
+            builtIn.Select(item => item.Manifest.Id).Order(StringComparer.Ordinal),
+            BuildKnownLazyApps.Catalog.Manifests.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(
+            builtIn.Select(item => item.Manifest.EntryPoint!.Assembly).Order(StringComparer.Ordinal),
+            BuildKnownLazyAssemblies.Names.Order(StringComparer.Ordinal));
+
+        BuiltInApplication calculator = Assert.Single(builtIn, item => item.Manifest.Id == "org.hackeros.calculator");
+        Assert.Equal("HackerOs.Apps.Calculator.dll", calculator.Manifest.EntryPoint!.Assembly);
 
         // Calculator's ProjectReference has no IsSystemApp metadata (ADR 0048 §1).
         Assert.False(calculator.IsSystemApp);

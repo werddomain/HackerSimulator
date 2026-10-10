@@ -8,7 +8,7 @@ public sealed class SampleWindowAppTests
     [Fact]
     public void Manifest_HasWindowKindAndSingleInstance()
     {
-        AppManifest manifest = SampleWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new WindowSampleApp());
         Assert.Equal(AppKind.Window, manifest.Kind);
         Assert.True(manifest.SingleInstancePerUser);
         Assert.Contains(AppCapabilities.DialogFileOpen, manifest.Capabilities);

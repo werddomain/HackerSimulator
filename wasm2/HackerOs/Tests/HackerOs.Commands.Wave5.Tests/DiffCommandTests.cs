@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Diff;
 using HackerOs.Tests.Support;
@@ -83,19 +84,19 @@ public sealed class DiffCommandTests
     private static async Task<int> Run(FakeAppFileSystemGateway fs, params string[] arguments)
     {
         TerminalExecutionContext context = CreateContext(fs, arguments);
-        return await new DiffCommand(DiffCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        return await new DiffCommand(AppDefinitionMapper.ToManifest(new DiffApp())).ExecuteAsync(context, CancellationToken.None);
     }
 
     private static async Task<string> RunCapturingOutput(FakeAppFileSystemGateway fs, params string[] arguments)
     {
         TerminalExecutionContext context = CreateContext(fs, arguments);
-        await new DiffCommand(DiffCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        await new DiffCommand(AppDefinitionMapper.ToManifest(new DiffApp())).ExecuteAsync(context, CancellationToken.None);
         return context.StandardOutput.ToString()!;
     }
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(DiffCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new DiffApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

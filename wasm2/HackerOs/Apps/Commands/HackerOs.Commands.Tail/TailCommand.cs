@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Tail;
 /// </summary>
 public sealed class TailCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.tail",
-        Name = "tail",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Output the last part of files",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Tail.dll", "HackerOs.Commands.Tail.TailCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("tail", [], "tail [-n count] [file...]"),
-        SingleInstancePerUser = false
-    };
-
     public TailCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

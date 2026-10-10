@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Touch;
 /// </summary>
 public sealed class TouchCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.touch",
-        Name = "touch",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Create empty file",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Touch.dll", "HackerOs.Commands.Touch.TouchCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("touch", [], "touch <file...>"),
-        SingleInstancePerUser = false
-    };
-
     public TouchCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

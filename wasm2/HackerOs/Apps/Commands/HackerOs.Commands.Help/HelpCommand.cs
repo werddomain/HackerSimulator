@@ -9,24 +9,6 @@ namespace HackerOs.Commands.Help;
 /// </summary>
 public sealed class HelpCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.help",
-        Name = "help",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Display help manual pages",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Help.dll", "HackerOs.Commands.Help.HelpCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("help", ["man"], "help [command]"),
-        SingleInstancePerUser = false
-    };
-
     public HelpCommand(AppManifest manifest) : base(manifest) { }
 
     public override ValueTask<int> ExecuteAsync(

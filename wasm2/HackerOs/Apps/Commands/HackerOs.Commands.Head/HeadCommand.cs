@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Head;
 /// </summary>
 public sealed class HeadCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.head",
-        Name = "head",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Output the first part of files",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Head.dll", "HackerOs.Commands.Head.HeadCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("head", [], "head [-n count] [file...]"),
-        SingleInstancePerUser = false
-    };
-
     public HeadCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

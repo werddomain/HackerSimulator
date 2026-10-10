@@ -12,25 +12,6 @@ public sealed class NanoCommand : TerminalAppBase
 {
     private const int MaxDocumentBytes = 1024 * 1024;
 
-    /// <summary>Static manifest used for test validation without a DI container.</summary>
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.nano",
-        Name = "nano",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Terminal interactive text editor command",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Nano.dll", "HackerOs.Commands.Nano.NanoCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("system", AppLaunchVisibility.Hidden, []),
-        Terminal = new TerminalCommandManifest("nano", [], "nano [file]"),
-        Capabilities = ["filesystem.user-home.read", "filesystem.user-home.write", "filesystem.system.read", "filesystem.system.write"],
-        Resources = AppResourceProfileManifest.None,
-        SingleInstancePerUser = false
-    };
-
     /// <summary>Initializes the nano command with its validated manifest.</summary>
     public NanoCommand(AppManifest manifest) : base(manifest) { }
 

@@ -8,7 +8,7 @@ public sealed class ErrorLogViewerWindowTests
     [Fact]
     public void Manifest_HasWindowKind_AndReadsLogsThroughFileRights()
     {
-        AppManifest manifest = ErrorLogViewerWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new ErrorLogViewerApp());
         Assert.Equal(AppKind.Window, manifest.Kind);
         Assert.True(manifest.SingleInstancePerUser);
         Assert.Contains(AppCapabilities.FileSystemSystemRead, manifest.Capabilities);
@@ -17,25 +17,25 @@ public sealed class ErrorLogViewerWindowTests
     }
 
     [Fact]
-    public void StaticManifest_MatchesAppManifestJson()
+    public void Generated_manifest_json_matches_the_definition()
     {
-        string json = File.ReadAllText(FindManifestPath());
-        AppManifest fromJson = AppManifestJsonSerializer.DeserializeStrict(json);
-        Assert.Equal(ErrorLogViewerWindow.StaticManifest.Capabilities, fromJson.Capabilities);
-        Assert.Equal(ErrorLogViewerWindow.StaticManifest.Id, fromJson.Id);
+        AppManifest fromJson = AppManifestJsonSerializer.DeserializeStrict(File.ReadAllText(FindManifestPath()));
+        AppManifest fromDefinition = AppDefinitionMapper.ToManifest(new ErrorLogViewerApp());
+        Assert.Equal(fromDefinition.Capabilities, fromJson.Capabilities);
+        Assert.Equal(fromDefinition.Id, fromJson.Id);
     }
 
     private static string FindManifestPath()
     {
         for (DirectoryInfo? directory = new(System.AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            string candidate = Path.Combine(directory.FullName, "Apps", "System", "HackerOs.Apps.ErrorLogViewer", "app.manifest.json");
+            string candidate = Path.Combine(directory.FullName, "Apps", "System", "HackerOs.Apps.ErrorLogViewer", "manifest.json");
             if (File.Exists(candidate))
             {
                 return candidate;
             }
         }
 
-        throw new FileNotFoundException("app.manifest.json of Error Log Viewer not found above the test output.");
+        throw new FileNotFoundException("manifest.json of Error Log Viewer not found above the test output.");
     }
 }

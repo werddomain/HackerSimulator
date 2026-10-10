@@ -88,23 +88,6 @@
 </div>
 
 @code {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.icon-viewer",
-        Name = "Icon Viewer",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Browse, search, and copy usage snippets for every icon bundled with HackerOS: Bootstrap Icons, Font Awesome, Lucide, and Simple Icons",
-        Kind = AppKind.Window,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Apps.IconViewer.dll", "HackerOs.Apps.IconViewer.IconViewerWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
-        Capabilities = [],
-        Resources = AppResourceProfileManifest.None,
-        SingleInstancePerUser = false
-    };
-
     private const int PageSize = 200;
 
     private string _query = string.Empty;

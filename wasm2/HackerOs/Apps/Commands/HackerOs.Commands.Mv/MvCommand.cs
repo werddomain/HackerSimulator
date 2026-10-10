@@ -10,24 +10,6 @@ namespace HackerOs.Commands.Mv;
 /// </summary>
 public sealed class MvCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.mv",
-        Name = "mv",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Move or rename files and directories",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Mv.dll", "HackerOs.Commands.Mv.MvCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("mv", [], "mv <source...> <destination>"),
-        SingleInstancePerUser = false
-    };
-
     public MvCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

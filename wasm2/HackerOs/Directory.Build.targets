@@ -2,17 +2,6 @@
   <!-- App model: generated manifest.json and host aggregation (ADR 0047). -->
   <Import Project="$(MSBuildThisFileDirectory)build/HackerOs.Apps.targets" />
 
-  <!--
-    The Razor SDK adds app.manifest.json as Content after Directory.Build.props is
-    imported. Apply the package-qualified publish path here, after SDK item setup,
-    so hosts can reference multiple app projects without filename collisions.
-  -->
-  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\app.manifest.json')">
-    <Content Update="app.manifest.json"
-             Link="app-manifests\$(MSBuildProjectName).json"
-             TargetPath="app-manifests\$(MSBuildProjectName).json" />
-  </ItemGroup>
-
   <Target Name="ValidateHackerOsRazorAssets"
           BeforeTargets="CoreCompile"
           Condition="'$(UsingMicrosoftNETSdkRazor)' == 'true'">

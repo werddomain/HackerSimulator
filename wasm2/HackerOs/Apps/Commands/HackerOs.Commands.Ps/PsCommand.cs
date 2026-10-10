@@ -16,24 +16,6 @@ namespace HackerOs.Commands.Ps;
 /// </summary>
 public sealed class PsCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.ps",
-        Name = "ps",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Report current processes",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Ps.dll", "HackerOs.Commands.Ps.PsCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.ProcessList, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("ps", [], "ps [-a] [-u]"),
-        SingleInstancePerUser = false
-    };
-
     private static readonly VirtualPath ProcRoot = VirtualPath.Parse("/proc");
 
     public PsCommand(AppManifest manifest) : base(manifest) { }

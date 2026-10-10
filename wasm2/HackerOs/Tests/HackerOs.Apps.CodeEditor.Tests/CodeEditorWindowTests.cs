@@ -8,7 +8,7 @@ public sealed class CodeEditorWindowTests
     [Fact]
     public void Manifest_HasWindowKind_AndRequiredCapabilities()
     {
-        AppManifest manifest = CodeEditorWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new CodeEditorApp());
         Assert.Equal(AppKind.Window, manifest.Kind);
         Assert.False(manifest.SingleInstancePerUser);
         Assert.Contains(AppCapabilities.FileSystemUserHomeRead, manifest.Capabilities);

@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Kill;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -19,7 +20,7 @@ public sealed class KillCommandTests
             .WithProcess(ProcessRecordFactory.Running(7, "some-app", Session, Now, Now));
         TerminalExecutionContext context = CreateContext(processes, "7");
 
-        int exitCode = await new KillCommand(KillCommand.StaticManifest)
+        int exitCode = await new KillCommand(AppDefinitionMapper.ToManifest(new KillApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -35,7 +36,7 @@ public sealed class KillCommandTests
             .WithProcess(ProcessRecordFactory.Running(7, "some-app", Session, Now, Now));
         TerminalExecutionContext context = CreateContext(processes, "-9", "7");
 
-        int exitCode = await new KillCommand(KillCommand.StaticManifest)
+        int exitCode = await new KillCommand(AppDefinitionMapper.ToManifest(new KillApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -50,7 +51,7 @@ public sealed class KillCommandTests
         FakeAppProcessGateway processes = new();
         TerminalExecutionContext context = CreateContext(processes, "99");
 
-        int exitCode = await new KillCommand(KillCommand.StaticManifest)
+        int exitCode = await new KillCommand(AppDefinitionMapper.ToManifest(new KillApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -65,7 +66,7 @@ public sealed class KillCommandTests
         processes.DeniedPids.Add(7);
         TerminalExecutionContext context = CreateContext(processes, "7");
 
-        int exitCode = await new KillCommand(KillCommand.StaticManifest)
+        int exitCode = await new KillCommand(AppDefinitionMapper.ToManifest(new KillApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -74,7 +75,7 @@ public sealed class KillCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppProcessGateway processes, params string[] arguments) => new(
-        new MinimalAppExecutionContext(KillCommand.StaticManifest, processes: processes),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new KillApp()), processes: processes),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

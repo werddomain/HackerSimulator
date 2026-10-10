@@ -33,7 +33,7 @@ public sealed class PsCommandTests
             7, "org.hackeros.text-editor", CurrentSession, Now.AddMinutes(-5), Now.AddMinutes(-5)));
         TerminalExecutionContext context = CreateContext(processes);
 
-        int exitCode = await new PsCommand(PsCommand.StaticManifest)
+        int exitCode = await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         string output = context.StandardOutput.ToString()!;
@@ -53,7 +53,7 @@ public sealed class PsCommandTests
             ProcessRecordFactory.Running(2, "other-session-app", OtherSession, Now, Now));
 
         TerminalExecutionContext defaultContext = CreateContext(processes);
-        int defaultExitCode = await new PsCommand(PsCommand.StaticManifest)
+        int defaultExitCode = await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp()))
             .ExecuteAsync(defaultContext, CancellationToken.None);
         string defaultOutput = defaultContext.StandardOutput.ToString()!;
         Assert.Equal(0, defaultExitCode);
@@ -61,7 +61,7 @@ public sealed class PsCommandTests
         Assert.DoesNotContain("other-session-app", defaultOutput);
 
         TerminalExecutionContext allContext = CreateContext(processes, "-a");
-        await new PsCommand(PsCommand.StaticManifest).ExecuteAsync(allContext, CancellationToken.None);
+        await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(allContext, CancellationToken.None);
         string allOutput = allContext.StandardOutput.ToString()!;
         Assert.Contains("own-session-app", allOutput);
         Assert.Contains("other-session-app", allOutput);
@@ -76,7 +76,7 @@ public sealed class PsCommandTests
         TerminalExecutionContext context = CreateContext(
             processes, [AppCapabilities.FileSystemSystemRead], "-a");
 
-        await new PsCommand(PsCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(context, CancellationToken.None);
 
         string output = context.StandardOutput.ToString()!;
         Assert.Contains("org.hackeros.commands.ps", output);
@@ -91,7 +91,7 @@ public sealed class PsCommandTests
             ProcessRecordFactory.Running(3, "org.hackeros.calculator", CurrentSession, Now, Now, owner));
         TerminalExecutionContext context = CreateContext(processes, "-u");
 
-        await new PsCommand(PsCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(context, CancellationToken.None);
 
         string output = context.StandardOutput.ToString()!;
         Assert.StartsWith("USER", output);
@@ -99,7 +99,7 @@ public sealed class PsCommandTests
     }
 
     private static TerminalExecutionContext CreateContext(ProcessTable processes, params string[] arguments) =>
-        CreateContext(processes, PsCommand.StaticManifest.Capabilities, arguments);
+        CreateContext(processes, AppDefinitionMapper.ToManifest(new PsApp()).Capabilities, arguments);
 
     /// <summary>
     /// Mounts the real <c>/proc</c> provider over an in-memory root and hands <c>ps</c> the same
@@ -124,7 +124,7 @@ public sealed class PsCommandTests
             new InMemoryTopicMessageBus(new CapabilityGrantRepository()));
         AppOperationContext operation = new()
         {
-            AppId = PsCommand.StaticManifest.Id,
+            AppId = AppDefinitionMapper.ToManifest(new PsApp()).Id,
             UserId = "user",
             UserAuthority = AppAuthority.User,
             GrantedCapabilities = new HashSet<string>(capabilities, StringComparer.Ordinal),
@@ -133,7 +133,7 @@ public sealed class PsCommandTests
 
         return new TerminalExecutionContext(
             new MinimalAppExecutionContext(
-                PsCommand.StaticManifest,
+                AppDefinitionMapper.ToManifest(new PsApp()),
                 fileSystem: new AppFileSystemGateway(service, clock, operation, ["users"]),
                 clock: new FakeAppClockGateway(Now),
                 sessionId: CurrentSession),

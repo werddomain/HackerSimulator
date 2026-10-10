@@ -12,24 +12,6 @@ namespace HackerOs.Commands.Grep;
 /// </summary>
 public sealed class GrepCommand : TerminalAppBase
 {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.commands.grep",
-        Name = "grep",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Print lines matching a pattern",
-        Kind = AppKind.Terminal,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Commands.Grep.dll", "HackerOs.Commands.Grep.GrepCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
-        Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead],
-        Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest("grep", [], "grep [-i] [-n] [-v] <pattern> [file...]"),
-        SingleInstancePerUser = false
-    };
-
     public GrepCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(

@@ -8,7 +8,7 @@ public sealed class SystemMonitorWindowTests
     [Fact]
     public void Manifest_HasWindowKind_AndProcessCapabilities()
     {
-        AppManifest manifest = SystemMonitorWindow.StaticManifest;
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new SystemMonitorApp());
         Assert.Equal(AppKind.Window, manifest.Kind);
         Assert.True(manifest.SingleInstancePerUser);
         Assert.Contains(AppCapabilities.ProcessList, manifest.Capabilities);
