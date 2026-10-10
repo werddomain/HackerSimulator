@@ -4,6 +4,7 @@ using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Shell;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -106,6 +107,7 @@ public sealed class AppIntentDispatcher
     private readonly FileAssociationResolver _associations;
     private readonly ICapabilityGrantRepository _grants;
     private readonly IFileSystemService _fileSystem;
+    private readonly ShellInterpreter _shell;
 
     /// <summary>Initializes the dispatcher over the orchestrator, catalog, resolver, grant repository, and filesystem.</summary>
     public AppIntentDispatcher(
@@ -122,6 +124,7 @@ public sealed class AppIntentDispatcher
         _associations = associations ?? throw new ArgumentNullException(nameof(associations));
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _shell = new ShellInterpreter(orchestrator, catalog, enablement);
     }
 
     /// <summary>Dispatches one intent request on behalf of an authenticated principal.</summary>
@@ -133,12 +136,19 @@ public sealed class AppIntentDispatcher
     /// Optional prompt for an executed command's pending dangerous capabilities (ADR 0049 section 5):
     /// the terminal's text mode. Other intents use the host's overlay.
     /// </param>
+    /// <param name="callerContext">
+    /// The calling app's own context, for <see cref="ExecuteCommandIntent"/> (ADR 0050, section 7):
+    /// its process becomes the shell's process (parent of the commands, starting directory) and its
+    /// file gateway opens redirection targets. Without it the line runs in a detached shell: no
+    /// parent, the login environment, and no redirections.
+    /// </param>
     public async ValueTask<AppIntentDispatchResult> DispatchAsync(
         AppIntentRequest request,
         AuthenticatedPrincipal principal,
         IFullScreenTerminalSession? fullScreen = null,
         CancellationToken cancellationToken = default,
-        IDangerousCapabilityApprovalPrompt? approvalPrompt = null)
+        IDangerousCapabilityApprovalPrompt? approvalPrompt = null,
+        IAppExecutionContext? callerContext = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(principal);
@@ -152,7 +162,7 @@ public sealed class AppIntentDispatcher
             LaunchAppIntent launch => await DispatchLaunchAsync(request, launch, principal),
             OpenFileIntent openFile => await DispatchOpenFileAsync(request, openFile, principal),
             ExecuteCommandIntent execute => await DispatchExecuteCommandAsync(
-                request, execute, principal, fullScreen, approvalPrompt, cancellationToken),
+                request, execute, principal, fullScreen, approvalPrompt, callerContext, cancellationToken),
             RevealFileIntent => new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched),
             ShowAppSettingsIntent showSettings => DispatchShowSettings(showSettings),
             _ => new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.unknown")
@@ -199,12 +209,18 @@ public sealed class AppIntentDispatcher
         return ToDispatchResult(launch);
     }
 
+    /// <summary>
+    /// Runs <see cref="ExecuteCommandIntent.CommandLine"/> in a non-interactive shell (ADR 0050,
+    /// section 7): same grammar as the terminal, no history, output buffered in the result. The
+    /// caller's <c>apps.launch</c> is checked once for the whole line.
+    /// </summary>
     private async ValueTask<AppIntentDispatchResult> DispatchExecuteCommandAsync(
         AppIntentRequest request,
         ExecuteCommandIntent intent,
         AuthenticatedPrincipal principal,
         IFullScreenTerminalSession? fullScreen,
         IDangerousCapabilityApprovalPrompt? approvalPrompt,
+        IAppExecutionContext? callerContext,
         CancellationToken cancellationToken)
     {
         if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
@@ -212,38 +228,70 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
         }
 
-        string[] tokens = intent.CommandLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (tokens.Length == 0)
+        if (string.IsNullOrWhiteSpace(intent.CommandLine))
         {
             return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.execute-command.empty");
         }
 
-        string commandName = tokens[0];
-        string[] arguments = tokens[1..];
-
-        AppManifest? target = _catalog.Manifests.Values.FirstOrDefault(manifest =>
-            manifest.Kind == AppKind.Terminal
-            && manifest.Terminal is not null
-            && (string.Equals(manifest.Terminal.Name, commandName, StringComparison.Ordinal)
-                || manifest.Terminal.Aliases.Contains(commandName, StringComparer.Ordinal)));
-
-        if (target is null)
+        ShellSession session;
+        if (callerContext is not null)
         {
-            return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.execute-command.not-found");
+            session = new ShellSession(callerContext, principal, isInteractive: false);
+            if (intent.WorkingDirectory is { } directory)
+            {
+                // The shell is the caller's own process: starting elsewhere changes its directory,
+                // as `cd dir && …` would.
+                callerContext.Environment.SetCurrentDirectory(directory);
+            }
+        }
+        else
+        {
+            session = ShellSession.CreateDetached(principal, intent.WorkingDirectory, Processes.LoginEnvironment.DefaultHostName);
         }
 
-        if (!_enablement.IsEnabled(target.Id))
-        {
-            return new AppIntentDispatchResult(AppIntentDispatchStatus.Disabled, ErrorCode: "intent.execute-command.disabled");
-        }
+        using StringWriter standardOutput = new();
+        using StringWriter standardError = new();
+        ShellExecutionResult result = await _shell.ExecuteAsync(
+            session,
+            intent.CommandLine,
+            new ShellExecutionOptions
+            {
+                StandardOutput = standardOutput,
+                StandardError = standardError,
+                FullScreen = fullScreen,
+                ApprovalPrompt = approvalPrompt,
+                Elevation = intent.ElevationToken is Guid token && intent.ElevationScope is ElevationScope scope
+                    ? new ShellElevation(token, scope)
+                    : null
+            },
+            cancellationToken);
 
-        AppLaunchResult launch = await _orchestrator.LaunchAsync(
-            new AppLaunchRequest(
-                target.Id, principal, arguments, WorkingDirectory: intent.WorkingDirectory,
-                ElevationToken: intent.ElevationToken, ElevationScope: intent.ElevationScope,
-                ApprovalPrompt: approvalPrompt),
-            fullScreen, cancellationToken);
-        return ToDispatchResult(launch);
+        AppIntentDispatchStatus status = result.Failure switch
+        {
+            ShellFailure.CommandNotFound => AppIntentDispatchStatus.NotFound,
+            ShellFailure.Disabled => AppIntentDispatchStatus.Disabled,
+            ShellFailure.ElevationDenied => AppIntentDispatchStatus.ElevationDenied,
+            ShellFailure.Fault => AppIntentDispatchStatus.EntryPointFault,
+            _ => AppIntentDispatchStatus.Dispatched
+        };
+        string? errorCode = result.Failure switch
+        {
+            ShellFailure.CommandNotFound => "intent.execute-command.not-found",
+            ShellFailure.Disabled => "intent.execute-command.disabled",
+            ShellFailure.ElevationDenied => "lifecycle.elevation.denied",
+            ShellFailure.Fault => "lifecycle.entry-point.fault",
+            ShellFailure.Redirection => "shell.redirection.failed",
+            ShellFailure.Syntax => result.SyntaxError!.Code,
+            _ => null
+        };
+
+        return new AppIntentDispatchResult(
+            status,
+            ExitCode: result.ExitCode,
+            StandardOutput: standardOutput.ToString(),
+            StandardError: standardError.ToString(),
+            ErrorCode: errorCode,
+            PermissionDenials: result.PermissionDenials);
     }
 
     private AppIntentDispatchResult DispatchShowSettings(ShowAppSettingsIntent intent)

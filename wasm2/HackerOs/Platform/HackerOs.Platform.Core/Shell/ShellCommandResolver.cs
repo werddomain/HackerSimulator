@@ -1,20 +1,21 @@
 using HackerOs.App.Abstractions;
-using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Lifecycle;
 
-namespace HackerOs.AppSdk.Terminal;
+namespace HackerOs.Platform.Core.Shell;
 
-/// <summary>Represents a resolved terminal command target from the AppCatalog.</summary>
-public sealed record TerminalCommandResolution(
+/// <summary>Represents a resolved command target from the AppCatalog.</summary>
+public sealed record ShellCommandResolution(
     string AppId,
     AppManifest Manifest,
     string CommandName,
     IReadOnlyList<string> Arguments);
 
 /// <summary>
-/// Resolves executable commands and static catalog aliases against registered catalog manifests (`P2-TERM-004`, `P2-TERM-004A`).
+/// Resolves executable commands and static catalog aliases against registered catalog manifests
+/// (`P2-TERM-004`, `P2-TERM-004A`): the shell's equivalent of a <c>PATH</c> lookup. Used by
+/// <see cref="ShellInterpreter"/> to run a command and by the terminal for <c>help</c> and completion.
 /// </summary>
-public sealed class TerminalCommandResolver
+public sealed class ShellCommandResolver
 {
     private readonly AppCatalog _catalog;
     private readonly IAppEnablementRegistry? _enablement;
@@ -25,14 +26,14 @@ public sealed class TerminalCommandResolver
     /// Optional launch checkpoint: an uninstalled command (ADR 0048) is then not resolved, so the
     /// shell answers <c>command not found</c> like a real shell whose binary was removed.
     /// </param>
-    public TerminalCommandResolver(AppCatalog catalog, IAppEnablementRegistry? enablement = null)
+    public ShellCommandResolver(AppCatalog catalog, IAppEnablementRegistry? enablement = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement;
     }
 
     /// <summary>Attempts to resolve a command line or command name to an installed terminal app manifest.</summary>
-    public TerminalCommandResolution? Resolve(string commandName, IReadOnlyList<string> arguments)
+    public ShellCommandResolution? Resolve(string commandName, IReadOnlyList<string> arguments)
     {
         if (string.IsNullOrWhiteSpace(commandName))
         {
@@ -52,7 +53,7 @@ public sealed class TerminalCommandResolver
 
             if (matchesName || matchesAlias || matchesAppId)
             {
-                return new TerminalCommandResolution(manifest.Id, manifest, commandName, arguments);
+                return new ShellCommandResolution(manifest.Id, manifest, commandName, arguments);
             }
         }
 
