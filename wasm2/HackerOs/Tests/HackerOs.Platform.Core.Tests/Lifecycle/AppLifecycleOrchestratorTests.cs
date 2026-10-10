@@ -46,6 +46,24 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task A_terminal_app_runs_inside_its_ambient_context_in_the_shells_working_directory()
+    {
+        // ADR 0043: the orchestrator opens the HackExecutionContext scope around ExecuteAsync.
+        Fixture fixture = new(EchoManifest() with
+        {
+            EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(AmbientProbeTerminalApp).FullName!)
+        });
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(
+            new AppLaunchRequest("org.hackeros.echo", principal, [], WorkingDirectory: VirtualPath.Parse("/tmp")));
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"True /tmp/notes.txt {principal.HomePath}/x{Environment.NewLine}", result.StandardOutput);
+        Assert.Null(HackerOs.AppSdk.HackExecutionContext.CurrentOrNull);
+    }
+
+    [Fact]
     public async Task Launching_a_service_app_runs_it_in_the_background_until_it_is_stopped()
     {
         Fixture fixture = new(WaiterManifest());
@@ -551,6 +569,18 @@ public sealed class AppLifecycleOrchestratorTests
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = true
     };
+
+    private sealed class AmbientProbeTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            bool sameApp = ReferenceEquals(HackerOs.AppSdk.HackExecutionContext.CurrentOrNull, context.App);
+            string relative = HackerOs.AppSdk.IO.HackPath.GetFullPath("notes.txt");
+            string home = HackerOs.AppSdk.IO.HackPath.GetFullPath("~/x");
+            await context.StandardOutput.WriteLineAsync($"{sameApp} {relative} {home}".AsMemory(), cancellationToken);
+            return 0;
+        }
+    }
 
     private sealed class EchoTerminalApp(AppManifest manifest) : TerminalAppBase(manifest)
     {
