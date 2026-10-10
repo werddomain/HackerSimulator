@@ -14,6 +14,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- ADR 0048: AppLifecycleOrchestrator.DisableAsync/EnableAsync are internal to the installation
+         service; the lifecycle tests still exercise their cascade rules directly. -->
+    <InternalsVisibleTo Include="HackerOs.Platform.Core.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

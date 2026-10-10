@@ -9,6 +9,7 @@ using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Infrastructure.Browser.Sync;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
@@ -248,18 +249,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>()));
 
-        // FileAssociations + AppCatalog domain sync (ADR 0033) — completes the original five-domain
-        // sync roadmap. FileAssociations syncs /etc/hackeros/file-associations.json under its own domain
-        // string; AppCatalog syncs only the ADR 0032 enablement flag, never the manifest.
+        // FileAssociations domain sync (ADR 0033): /etc/hackeros/file-associations.json under its own
+        // domain string. The AppCatalog domain is retired by ADR 0048: uninstalls are apps.config
+        // files, and the user layer travels with /home through the FileSystem domain.
         services.AddScoped<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
             provider.GetRequiredService<IOsSettingsService>(),
-            provider.GetRequiredService<IServerConnectionService>(),
-            provider.GetRequiredService<ISyncClient>(),
-            provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
-        services.AddScoped<IAppCatalogSyncService>(provider => new AppCatalogSyncService(
-            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
-            provider.GetRequiredService<AppEnablementRegistry>(),
             provider.GetRequiredService<IServerConnectionService>(),
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
@@ -361,13 +355,30 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessManager>(),
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<AppExecutionContextFactory>(),
-            provider.GetRequiredService<IOsSettingsService>(),
             provider.GetRequiredService<IEventBus>(),
             descriptorLoaderProvider?.Invoke(provider),
-            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
             provider,
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<IElevationTicketStore>()));
+        // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
+        // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
+        // AppEnablementRegistry every launch path consults.
+        services.AddScoped<AppEnablementToFilesMigration>(provider => new AppEnablementToFilesMigration(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetService<ILogger<AppEnablementToFilesMigration>>()));
+        services.AddScoped<AppInstallationService>(provider => new AppInstallationService(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<AppEnablementRegistry>(),
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<ITopicMessageBus>(),
+            provider.GetRequiredService<IEventBus>(),
+            provider.GetService<ILogger<AppInstallationService>>()));
+        services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

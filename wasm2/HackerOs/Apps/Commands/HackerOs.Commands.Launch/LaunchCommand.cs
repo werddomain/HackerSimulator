@@ -48,7 +48,8 @@ public sealed class LaunchCommand : TerminalAppBase
                 context.StandardError.WriteLine($"launch: no such application '{appId}'");
                 return 1;
             case AppIntentLaunchOutcome.Disabled:
-                context.StandardError.WriteLine($"launch: '{appId}' is disabled");
+                // ADR 0048: a disabled app is an uninstalled one.
+                context.StandardError.WriteLine($"launch: '{appId}' is not installed");
                 return 1;
             default:
                 context.StandardError.WriteLine($"launch: '{appId}' failed to start ({result.ErrorCode})");

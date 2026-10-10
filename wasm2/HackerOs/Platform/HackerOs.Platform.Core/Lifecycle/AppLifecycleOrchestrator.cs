@@ -32,10 +32,8 @@ public sealed class AppLifecycleOrchestrator
     private readonly IProcessManager _processManager;
     private readonly ICapabilityGrantRepository _grants;
     private readonly AppExecutionContextFactory _contextFactory;
-    private readonly IOsSettingsService _settings;
     private readonly IEventBus? _eventBus;
     private readonly IAppDescriptorLoader? _descriptorLoader;
-    private readonly IPersistentAppCatalogRepository? _catalogRepository;
     private readonly IServiceProvider? _services;
     private readonly IFileSystemService? _fileSystem;
     private readonly IElevationTicketStore? _elevationTickets;
@@ -49,15 +47,8 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="processManager">Process lifecycle manager backing every launch.</param>
     /// <param name="grants">Capability grant repository used to compute each launch's granted set.</param>
     /// <param name="contextFactory">Trusted execution-context factory.</param>
-    /// <param name="settings">OS settings files, used to invalidate stale file-association defaults on disable.</param>
     /// <param name="eventBus">Optional typed event bus for cross-subsystem lifecycle cleanup.</param>
     /// <param name="descriptorLoader">Optional lazy descriptor loader for assemblies not eagerly discovered.</param>
-    /// <param name="catalogRepository">
-    /// Optional durable catalog store (ADR 0032). When supplied, <see cref="DisableAsync"/> and
-    /// <see cref="EnableAsync"/> persist enablement changes here in addition to updating the
-    /// in-memory <see cref="AppEnablementRegistry"/>, so a disable/enable survives past this
-    /// process. Omitted in contexts (mostly tests) that don't need durability.
-    /// </param>
     /// <param name="services">
     /// Optional DI container used to construct terminal/service app instances (ADR 0034). When
     /// supplied, <see cref="RunTerminalAsync"/>/<see cref="StartService"/> use
@@ -87,10 +78,8 @@ public sealed class AppLifecycleOrchestrator
         IProcessManager processManager,
         ICapabilityGrantRepository grants,
         AppExecutionContextFactory contextFactory,
-        IOsSettingsService settings,
         IEventBus? eventBus = null,
         IAppDescriptorLoader? descriptorLoader = null,
-        IPersistentAppCatalogRepository? catalogRepository = null,
         IServiceProvider? services = null,
         IFileSystemService? fileSystem = null,
         IElevationTicketStore? elevationTickets = null)
@@ -101,10 +90,8 @@ public sealed class AppLifecycleOrchestrator
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus;
         _descriptorLoader = descriptorLoader;
-        _catalogRepository = catalogRepository;
         _services = services;
         _fileSystem = fileSystem;
         _elevationTickets = elevationTickets;
@@ -448,12 +435,14 @@ public sealed class AppLifecycleOrchestrator
 
     /// <summary>
     /// Disables one app and every enabled app that transitively depends on it, stopping their
-    /// active processes in dependents-first order and invalidating any stale file-association
-    /// default that named the disabled app (`P1-APP-010`, `P1-APP-011`).
+    /// active processes in dependents-first order (`P1-APP-011`). Internal since ADR 0048: only
+    /// <c>AppInstallationService</c> calls it, to enforce an uninstall written in <c>apps.config</c>.
+    /// File-association preferences are deliberately left untouched, so a reinstall finds them again;
+    /// <see cref="FileAssociationResolver"/> already ignores a disabled app.
     /// </summary>
     /// <param name="appId">App to disable.</param>
     /// <param name="reason">Reason recorded against stopped processes.</param>
-    public async Task<AppDisableResult> DisableAsync(string appId, ProcessExitReason reason = ProcessExitReason.Disabled)
+    internal async Task<AppDisableResult> DisableAsync(string appId, ProcessExitReason reason = ProcessExitReason.Disabled)
     {
         if (!_catalog.Manifests.ContainsKey(appId))
         {
@@ -481,55 +470,41 @@ public sealed class AppLifecycleOrchestrator
         }
 
         _enablement.MarkDisabled(closure);
-        if (_catalogRepository is not null)
-        {
-            foreach (string disabledAppId in closure)
-            {
-                await _catalogRepository.SetEnabledAsync(disabledAppId, false).ConfigureAwait(false);
-            }
-        }
-
         foreach (string disabledAppId in closure)
         {
             _eventBus?.Publish(new AppDisabledEvent(disabledAppId));
         }
 
-        await InvalidateAssociationDefaultsAsync(appId);
         return new AppDisableResult(true, closure, []);
     }
 
     /// <summary>
     /// Re-enables one app, failing with an explanatory error when a non-optional dependency is
-    /// missing or still disabled (`P1-APP-011`).
+    /// missing or still disabled (`P1-APP-011`). Internal since ADR 0048, like <see cref="DisableAsync"/>.
     /// </summary>
     /// <param name="appId">App to enable.</param>
-    public async Task<AppEnableResult> EnableAsync(string appId)
+    internal Task<AppEnableResult> EnableAsync(string appId)
     {
         if (!_catalog.Manifests.ContainsKey(appId))
         {
-            return new AppEnableResult(false, [$"lifecycle.app.not-found:{appId}"]);
+            return Task.FromResult(new AppEnableResult(false, [$"lifecycle.app.not-found:{appId}"]));
         }
 
         if (_enablement.IsEnabled(appId))
         {
-            return new AppEnableResult(true, []);
+            return Task.FromResult(new AppEnableResult(true, []));
         }
 
         IReadOnlyList<string> blocking = _enablement.ComputeBlockingDependencies(appId);
         if (blocking.Count > 0)
         {
-            return new AppEnableResult(
+            return Task.FromResult(new AppEnableResult(
                 false,
-                [.. blocking.Select(dependency => $"lifecycle.enable.dependency-disabled:{dependency}")]);
+                [.. blocking.Select(dependency => $"lifecycle.enable.dependency-disabled:{dependency}")]));
         }
 
         _enablement.MarkEnabled(appId);
-        if (_catalogRepository is not null)
-        {
-            await _catalogRepository.SetEnabledAsync(appId, true).ConfigureAwait(false);
-        }
-
-        return new AppEnableResult(true, []);
+        return Task.FromResult(new AppEnableResult(true, []));
     }
 
     private HashSet<string> ComputeGrantedCapabilities(AppManifest manifest, AuthenticatedPrincipal principal)
@@ -704,26 +679,6 @@ public sealed class AppLifecycleOrchestrator
         ProcessExitReason.Fault => ServiceStopReason.Faulted,
         _ => ServiceStopReason.Shutdown
     };
-
-    private async Task InvalidateAssociationDefaultsAsync(string disabledAppId)
-    {
-        // Audited system operation: /etc/hackeros/file-associations.json belongs to system.
-        string? content = await _settings.ReadFileAsync(FileAssociationSettingsDocuments.File);
-        if (content is null)
-        {
-            return;
-        }
-
-        FileAssociationIndex index = FileAssociationIndex.Build(content);
-        if (!index.Entries.Any(entry => entry.AppId == disabledAppId))
-        {
-            return;
-        }
-
-        string updated = FileAssociationIndex.Serialize(
-            index.Entries.Where(entry => entry.AppId != disabledAppId).ToArray());
-        await _settings.WriteFileAsync(FileAssociationSettingsDocuments.File, updated);
-    }
 
     /// <summary>Tracks one currently running app instance so it can be stopped later.</summary>
     private sealed record RunningInstance(

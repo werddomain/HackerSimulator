@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Lifecycle;
 
 namespace HackerOs.AppSdk.Terminal;
 
@@ -16,11 +17,18 @@ public sealed record TerminalCommandResolution(
 public sealed class TerminalCommandResolver
 {
     private readonly AppCatalog _catalog;
+    private readonly IAppEnablementRegistry? _enablement;
 
     /// <summary>Initializes a command resolver over the application catalog.</summary>
-    public TerminalCommandResolver(AppCatalog catalog)
+    /// <param name="catalog">Application catalog.</param>
+    /// <param name="enablement">
+    /// Optional launch checkpoint: an uninstalled command (ADR 0048) is then not resolved, so the
+    /// shell answers <c>command not found</c> like a real shell whose binary was removed.
+    /// </param>
+    public TerminalCommandResolver(AppCatalog catalog, IAppEnablementRegistry? enablement = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _enablement = enablement;
     }
 
     /// <summary>Attempts to resolve a command line or command name to an installed terminal app manifest.</summary>
@@ -33,7 +41,7 @@ public sealed class TerminalCommandResolver
 
         foreach (AppManifest manifest in _catalog.Manifests.Values)
         {
-            if (manifest.Kind != AppKind.Terminal || manifest.Terminal is null)
+            if (!IsInstalledCommand(manifest) || manifest.Terminal is null)
             {
                 continue;
             }
@@ -54,7 +62,12 @@ public sealed class TerminalCommandResolver
     /// <summary>Gets every registered terminal command manifest, ordered by command name.</summary>
     public IReadOnlyList<AppManifest> GetTerminalCommands() =>
         _catalog.Manifests.Values
-            .Where(m => m.Kind == AppKind.Terminal && m.Terminal is not null)
+            .Where(IsInstalledCommand)
             .OrderBy(m => m.Terminal!.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    private bool IsInstalledCommand(AppManifest manifest) =>
+        manifest.Kind == AppKind.Terminal
+        && manifest.Terminal is not null
+        && (_enablement is null || _enablement.IsEnabled(manifest.Id));
 }

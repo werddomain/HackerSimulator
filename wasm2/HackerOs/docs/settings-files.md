@@ -21,6 +21,7 @@ migration, en lecture seule.
 | Politique (`policy.config`) | `/etc/hackeros/policy.config` | aucune (document `SystemOnly`) |
 | Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` |
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
+| Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).
@@ -130,7 +131,8 @@ les utilisateurs (défaut système) ». Chaque réglage affiche son origine ; un
 réglage verrouillé est désactivé pour la cible utilisateur. Écrire la couche
 système demande l'approbation administrateur ; un refus affiche un message au
 lieu d'une erreur. « Synchroniser » pousse et tire le système de fichiers puis
-relit l'apparence.
+relit l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
+(voir [`app-installation.md`](app-installation.md)).
 
 ## Migration
 

@@ -296,7 +296,7 @@ public sealed class HeadlessKernelIntegrationTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, Discovery.Descriptors!, enablement, Manager, Grants, contextFactory, Settings);
+                catalog, Discovery.Descriptors!, enablement, Manager, Grants, contextFactory);
         }
 
         internal LocalSessionService Session { get; }

@@ -579,7 +579,7 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
     private IAppFileSystemWatchGateway CreateWatchGateway(AppOperationContext operation, IReadOnlyList<string> groups) =>
         new AppFileSystemWatchGateway(_fileSystem, _topicBus!, _clock, operation, groups, "os-settings");
 
-    private static AppOperationContext CreateSystemOperation() => new()
+    internal static AppOperationContext CreateSystemOperation() => new()
     {
         AppId = ShellAppId,
         UserId = "system",
@@ -589,7 +589,7 @@ public sealed class OsSettingsService : IOsSettingsService, IAsyncDisposable
         IsSystemOperation = true
     };
 
-    private static AppOperationContext CreateUserOperation(AuthenticatedPrincipal principal) => new()
+    internal static AppOperationContext CreateUserOperation(AuthenticatedPrincipal principal) => new()
     {
         AppId = ShellAppId,
         UserId = principal.UserId.ToString(),

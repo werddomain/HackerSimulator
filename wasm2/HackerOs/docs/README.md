@@ -17,6 +17,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 
 | Document | Rôle |
 | --- | --- |
+| [`app-installation.md`](app-installation.md) | Désinstallation et réinstallation des apps (phase 2, ADR 0048) : fichiers `/etc/hackeros/apps.config` et `~/.config/hackeros/apps.config`, `IAppInstallationService`, filtrage du lancement, migration depuis `IsEnabled`, onglet « Installed Apps ». |
 | [`app-model.md`](app-model.md) | Modèle d'app (phase 2, ADR 0047) : classe `AppDefinition` et `[AppManifest]`, `manifest.json` généré au build, agrégation `BuiltInApplications.json` dans l'hôte. |
 | [`capabilities.md`](capabilities.md) | Capacités (phase 2, ADR 0049) : catalogue `AppCapabilities`, classement normal/dangereux, `Describe`, attribution à la connexion selon le statut système. |
 | [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |

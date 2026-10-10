@@ -227,7 +227,7 @@ public sealed class PlatformShellSwitchCoordinatorTests
             };
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings, EventBus);
+                catalog, descriptors, enablement, Manager, Grants, contextFactory, EventBus);
 
             WindowRuntime = new WindowRuntime(new WindowBounds(0, 0, 1280, 720));
             CloseGuards = new WindowCloseGuardRegistry();

@@ -18,6 +18,7 @@
 @inherits WindowAppBase
 @implements IAsyncDisposable
 @inject AppCatalog Catalog
+@inject HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry Enablement
 @inject ISessionService SessionService
 @inject MudBlazor.IDialogService MudDialogService
 @inject IJSRuntime JSRuntime
@@ -635,7 +636,10 @@
         FileViewItem? item = _fileView?.SelectedItem;
         if (item is null) return;
 
-        IReadOnlyList<AppManifest> windowApps = Catalog.Manifests.Values.Where(m => m.Kind == AppKind.Window).ToList();
+        // An uninstalled app (ADR 0048) is never offered in "Open with".
+        IReadOnlyList<AppManifest> windowApps = Catalog.Manifests.Values
+            .Where(m => m.Kind == AppKind.Window && Enablement.IsEnabled(m.Id))
+            .ToList();
 
         DialogParameters parameters = new()
         {
