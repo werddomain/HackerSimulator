@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -24,7 +25,9 @@ public sealed class MinimalAppExecutionContext(
     ICapabilityChecker? capabilities = null,
     string userId = "user",
     AppAuthority userAuthority = AppAuthority.User,
-    SessionId? sessionId = null) : IAppExecutionContext
+    SessionId? sessionId = null,
+    IAppFileSystemWatchGateway? watch = null,
+    string? homeDirectory = null) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
     public Guid InstanceId { get; } = Guid.NewGuid();
@@ -46,6 +49,8 @@ public sealed class MinimalAppExecutionContext(
     public IAppClockGateway Clock => clock ?? throw Unsupported(nameof(Clock));
     public IAppProcessGateway Processes => processes ?? throw Unsupported(nameof(Processes));
     public IAppIntentGateway Intents => intents ?? throw Unsupported(nameof(Intents));
+    public IAppFileSystemWatchGateway Watch => watch ?? throw Unsupported(nameof(Watch));
+    public string HomeDirectory { get; } = homeDirectory ?? $"/home/{userId}";
 
     private static NotSupportedException Unsupported(string gatewayName) =>
         new($"'{gatewayName}' was not provided to this test's MinimalAppExecutionContext.");

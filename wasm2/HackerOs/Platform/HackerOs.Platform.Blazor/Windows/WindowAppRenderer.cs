@@ -39,7 +39,21 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
         WindowAppRenderValidator.Validate(Window, Descriptor, AppContext);
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The app is wrapped in a fixed <see cref="CascadingValue{TValue}"/> carrying its context, so
+    /// <see cref="HackComponentBase"/> children run inside the same ambient app scope as the window
+    /// (ADR 0043). The context never changes for a rendered window (rebinding is rejected).
+    /// </remarks>
     protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<CascadingValue<IAppExecutionContext>>(0);
+        builder.AddComponentParameter(1, nameof(CascadingValue<IAppExecutionContext>.Value), AppContext);
+        builder.AddComponentParameter(2, nameof(CascadingValue<IAppExecutionContext>.IsFixed), true);
+        builder.AddComponentParameter(3, nameof(CascadingValue<IAppExecutionContext>.ChildContent), (RenderFragment)RenderApp);
+        builder.CloseComponent();
+    }
+
+    private void RenderApp(RenderTreeBuilder builder)
     {
         builder.OpenComponent(0, Descriptor.EntryPointType);
         builder.AddComponentParameter(1, nameof(WindowAppBase.AppContext), AppContext);

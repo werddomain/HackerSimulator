@@ -35,7 +35,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppFileSystemWatchGateway watch,
         IAppPermissionErrorGateway permissionErrors,
         IAppServiceControlGateway services,
-        OneShotElevationGrantSet oneShotElevation)
+        OneShotElevationGrantSet oneShotElevation,
+        string? homeDirectory = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -59,7 +60,11 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         PermissionErrors = permissionErrors ?? throw new ArgumentNullException(nameof(permissionErrors));
         Services = services ?? throw new ArgumentNullException(nameof(services));
         OneShotElevation = oneShotElevation ?? throw new ArgumentNullException(nameof(oneShotElevation));
+        HomeDirectory = homeDirectory ?? $"/home/{userId}";
     }
+
+    /// <inheritdoc />
+    public string HomeDirectory { get; }
 
     /// <inheritdoc />
     public AppManifest Manifest { get; }

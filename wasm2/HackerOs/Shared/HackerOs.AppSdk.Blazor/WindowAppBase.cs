@@ -14,10 +14,11 @@ namespace HackerOs.AppSdk.Blazor;
 /// Component lifecycle overrides are sealed so framework setup cannot be skipped.
 /// Apps use the corresponding <c>OnApp*</c> hooks instead.
 /// </remarks>
-public abstract class WindowAppBase : ComponentBase
+public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender
 {
     private Guid? _boundInstanceId;
     private bool _permissionErrorHandlerAttached;
+    private bool _hasCalledOnAfterRender;
 
     [Inject]
     private IWindowAppFrameworkLifecycle? FrameworkLifecycle { get; set; }
@@ -49,9 +50,34 @@ public abstract class WindowAppBase : ComponentBase
     /// <summary>Gets the validated window app manifest.</summary>
     protected AppManifest Manifest => AppContext.Manifest;
 
-    /// <summary>Prevents apps from replacing parameter assignment and bypassing lifecycle validation.</summary>
-    public sealed override Task SetParametersAsync(ParameterView parameters) =>
-        base.SetParametersAsync(parameters);
+    /// <summary>
+    /// Prevents apps from replacing parameter assignment and bypassing lifecycle validation. The
+    /// synchronous lifecycle (and the continuations of the asynchronous one) runs inside the app's
+    /// <see cref="HackExecutionContext"/> scope (ADR 0043).
+    /// </summary>
+    public sealed override Task SetParametersAsync(ParameterView parameters)
+    {
+        IAppExecutionContext? context = parameters.TryGetValue(nameof(AppContext), out IAppExecutionContext? supplied)
+            ? supplied
+            : AppContext;
+        using IDisposable? scope = AmbientComponentDispatch.Enter(context);
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <summary>Runs every UI event handler of the app inside its ambient scope (ADR 0043).</summary>
+    Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg) =>
+        AmbientComponentDispatch.HandleEventAsync(AppContext, callback, arg, StateHasChanged);
+
+    /// <summary>Runs the after-render lifecycle inside the app's ambient scope (ADR 0043).</summary>
+    Task IHandleAfterRender.OnAfterRenderAsync()
+    {
+        bool firstRender = !_hasCalledOnAfterRender;
+        _hasCalledOnAfterRender = true;
+
+        using IDisposable? scope = AmbientComponentDispatch.Enter(AppContext);
+        OnAfterRender(firstRender);
+        return OnAfterRenderAsync(firstRender);
+    }
 
     /// <inheritdoc />
     protected sealed override void OnInitialized()

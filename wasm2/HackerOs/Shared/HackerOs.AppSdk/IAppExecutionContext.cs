@@ -28,6 +28,15 @@ public interface IAppExecutionContext
     /// <summary>Gets the authenticated user identifier that initiated the operation.</summary>
     string UserId { get; }
 
+    /// <summary>
+    /// Gets the acting user's canonical home directory (<c>/home/{login}</c>), used by
+    /// <see cref="HackExecutionContext"/> as the default working directory and by
+    /// <see cref="IO.HackPath.GetFullPath(string)"/> to expand <c>~</c>. Defaults to
+    /// <c>/home/{UserId}</c> so existing implementations keep compiling; the trusted platform
+    /// factory overrides it with the principal's real home path (ADR 0043).
+    /// </summary>
+    string HomeDirectory => $"/home/{UserId}";
+
     /// <summary>Gets the acting user's authority for this operation.</summary>
     AppAuthority UserAuthority { get; }
 
