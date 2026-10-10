@@ -1,11 +1,12 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Shell;
 using Xunit;
 
-namespace HackerOs.AppSdk.Terminal.Tests;
+namespace HackerOs.Platform.Core.Tests.Shell;
 
-public sealed class TerminalCommandResolverTests
+public sealed class ShellCommandResolverTests
 {
     [Fact]
     public void GetTerminalCommands_ReturnsRegisteredManifests_OrderedByName_NotHardcoded()
@@ -13,7 +14,7 @@ public sealed class TerminalCommandResolverTests
         AppCatalog catalog = BuildCatalog(
             Manifest("org.example.zeta", "zeta", "does zeta things", "zeta [--flag]"),
             Manifest("org.example.alpha", "alpha", "does alpha things", "alpha <arg>"));
-        TerminalCommandResolver resolver = new(catalog);
+        ShellCommandResolver resolver = new(catalog);
 
         IReadOnlyList<AppManifest> commands = resolver.GetTerminalCommands();
 
@@ -30,7 +31,7 @@ public sealed class TerminalCommandResolverTests
         AppCatalog catalog = BuildCatalog(
             Manifest("org.example.cmd", "cmd", "a real command", "cmd"),
             windowApp);
-        TerminalCommandResolver resolver = new(catalog);
+        ShellCommandResolver resolver = new(catalog);
 
         IReadOnlyList<AppManifest> commands = resolver.GetTerminalCommands();
 
@@ -47,7 +48,7 @@ public sealed class TerminalCommandResolverTests
             Manifest("org.example.gone", "gone", "an uninstalled command", "gone"));
         AppEnablementRegistry enablement = new(catalog);
         enablement.MarkDisabled(["org.example.gone"]);
-        TerminalCommandResolver resolver = new(catalog, enablement);
+        ShellCommandResolver resolver = new(catalog, enablement);
 
         Assert.Null(resolver.Resolve("gone", []));
         Assert.NotNull(resolver.Resolve("cmd", []));
@@ -61,7 +62,18 @@ public sealed class TerminalCommandResolverTests
         return result.Catalog!;
     }
 
-    private static AppManifest Manifest(string id, string name, string description, string usage) => new()
+    [Fact]
+    public void Resolve_finds_terminal_apps_by_name_or_alias()
+    {
+        AppCatalog catalog = BuildCatalog(Manifest("org.hackeros.echo", "echo", "Echoes", "echo [text]", aliases: ["print"]));
+        ShellCommandResolver resolver = new(catalog);
+
+        Assert.Equal("org.hackeros.echo", resolver.Resolve("echo", ["hello"])?.AppId);
+        Assert.Equal("org.hackeros.echo", resolver.Resolve("print", ["hello"])?.AppId);
+        Assert.Null(resolver.Resolve("nonexistent", []));
+    }
+
+    private static AppManifest Manifest(string id, string name, string description, string usage, IReadOnlyList<string>? aliases = null) => new()
     {
         SchemaVersion = 1,
         Id = id,
@@ -75,7 +87,7 @@ public sealed class TerminalCommandResolverTests
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
         Capabilities = [],
         Resources = AppResourceProfileManifest.None,
-        Terminal = new TerminalCommandManifest(name, [], usage),
+        Terminal = new TerminalCommandManifest(name, aliases ?? [], usage),
         SingleInstancePerUser = false
     };
 }

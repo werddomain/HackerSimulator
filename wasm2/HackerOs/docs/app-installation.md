@@ -98,7 +98,7 @@ Toutes les voies consultent `IAppEnablementRegistry` :
 | `FileAssociationResolver` | ni défaut ni candidate ; les préférences de `/etc/hackeros/file-associations.json` ne sont **pas** réécrites |
 | Lanceur et recherche (`LauncherAppProjection`) | absente ; le menu ouvert se met à jour sur `Changed` |
 | Explorateur, « Open With... » | absente de la liste |
-| Terminal (`TerminalCommandResolver`) | `command not found`, absente de `help` et de la complétion |
+| Terminal (`ShellCommandResolver`, `ShellInterpreter`) | `command not found`, absente de `help` et de la complétion |
 
 ## Utilisation
 
@@ -203,7 +203,7 @@ arrive en phase 4.
 - migration : `IsEnabled = false` devient une ligne `[uninstalled]`, une seule
   fois, jamais pour une app système, fichier possédé par `system`.
 
-Ailleurs : `TerminalCommandResolverTests.Uninstalled_commands_are_neither_resolved_nor_listed`,
+Ailleurs : `ShellCommandResolverTests.Uninstalled_commands_are_neither_resolved_nor_listed`,
 `EcosystemBootCoordinatorTests.BootAsync_moves_persisted_disabled_entries_into_the_machine_apps_config`,
 et les tests existants du lanceur, du résolveur d'associations et du
 répartiteur d'intentions, qui s'appuient déjà sur le registre.

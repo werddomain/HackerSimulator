@@ -420,6 +420,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IEventBus>(),
             provider.GetService<ILogger<AppInstallationService>>()));
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
+        // The headless shell hsh (ADR 0050): the terminal runs every line through it.
+        services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppEnablementRegistry>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

@@ -38,6 +38,17 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// Environment variables applied over the inherited ones (ADR 0050, section 5): the parent's when
 /// <see cref="ParentPid"/> is set, otherwise the login environment.
 /// </param>
+/// <param name="StandardInput">
+/// Standard input of a <see cref="HackerOs.App.Abstractions.AppKind.Terminal"/> app (ADR 0050,
+/// section 4): a pipe from the previous pipeline stage. <see langword="null"/> gives an empty
+/// input (end of stream at once, like <c>/dev/null</c>).
+/// </param>
+/// <param name="StandardOutput">
+/// Standard output of a Terminal app: the terminal, a pipe or a redirected file. When supplied, the
+/// command writes there as it runs and <see cref="AppLaunchResult.StandardOutput"/> stays empty;
+/// when <see langword="null"/>, the output is buffered and returned in the result.
+/// </param>
+/// <param name="StandardError">Standard error of a Terminal app, with the same rule as <see cref="StandardOutput"/>.</param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -48,7 +59,10 @@ public sealed record AppLaunchRequest(
     ElevationScope? ElevationScope = null,
     IDangerousCapabilityApprovalPrompt? ApprovalPrompt = null,
     bool Interactive = true,
-    IReadOnlyDictionary<string, string>? Environment = null);
+    IReadOnlyDictionary<string, string>? Environment = null,
+    TextReader? StandardInput = null,
+    TextWriter? StandardOutput = null,
+    TextWriter? StandardError = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

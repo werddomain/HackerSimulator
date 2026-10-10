@@ -37,8 +37,8 @@ modifient avec `HackEnvironment`, calqué sur `System.Environment`.
 
 ### État de départ d'un processus
 
-1. **Sans parent** (bureau, service, commande lancée par `ExecuteCommandIntent`
-   tant que le shell ne passe pas de parent) : environnement de connexion,
+1. **Sans parent** (bureau, service, commande d'un `ExecuteCommandIntent` sans
+   contexte appelant) : environnement de connexion,
    répertoire `WorkingDirectory` de la requête ou dossier personnel, `PWD` égal
    à ce répertoire.
 2. **Avec parent** : copie du répertoire et de l'environnement du parent au
@@ -97,9 +97,10 @@ L'invite du terminal affiche le nom de la machine (`alice@hackeros:~$`) lu par
 - **Lecture des fichiers système une fois par session**, en root (ADR 0053).
 - **Valeur vide conservée** : contrairement à `System.Environment` sous
   Windows, `""` n'efface pas une variable, comme sous Linux.
-- **Hors périmètre** (chantier `3-shell-interpreter`) : le terminal ne passe
-  pas encore son PID comme parent ni son répertoire au fil des `cd` ; la
-  session `TerminalSession` garde son propre environnement d'affichage.
+- **Shell** : depuis le chantier `3-shell-interpreter`, le shell est le
+  processus de l'app qui l'héberge ; chaque commande est son enfant et hérite
+  de son répertoire (mis à jour par `cd`) et de son environnement. Voir
+  [`shell-interpreter.md`](shell-interpreter.md).
 
 ## Tests
 

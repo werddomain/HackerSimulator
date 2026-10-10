@@ -16,6 +16,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 
 using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Shell;
 
 namespace HackerOs.Platform.Core.Lifecycle;
 
@@ -329,7 +330,7 @@ public sealed class AppLifecycleOrchestrator
             return descriptor.Manifest.Kind switch
             {
                 AppKind.Terminal => await RunTerminalAsync(
-                    descriptor, process, context, request.Arguments, fullScreen, cancellationToken),
+                    descriptor, process, context, request, fullScreen, cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
@@ -586,7 +587,7 @@ public sealed class AppLifecycleOrchestrator
         AppDescriptor descriptor,
         ProcessRecord process,
         IAppExecutionContext context,
-        IReadOnlyList<string> arguments,
+        AppLaunchRequest request,
         IFullScreenTerminalSession? fullScreen,
         CancellationToken cancellationToken)
     {
@@ -597,17 +598,19 @@ public sealed class AppLifecycleOrchestrator
         IAppEnvironmentGateway processEnvironment = context.Environment;
 
         TerminalAppBase app = (TerminalAppBase)CreateAppInstance(descriptor);
-        using StringWriter stdout = new();
-        using StringWriter stderr = new();
-        using StringReader stdin = new(string.Empty);
+        // ADR 0050 section 4: streams supplied by the shell (terminal, pipe, redirected file) are
+        // written as the command runs; without them the output is buffered for the caller.
+        using StringWriter? bufferedOutput = request.StandardOutput is null ? new StringWriter() : null;
+        using StringWriter? bufferedError = request.StandardError is null ? new StringWriter() : null;
+        using StringReader emptyInput = new(string.Empty);
         using CancellationTokenSource executionCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, cancellationToken);
         TerminalExecutionContext terminalContext = new(
             context,
-            arguments,
-            stdin,
-            stdout,
-            stderr,
+            request.Arguments,
+            request.StandardInput ?? emptyInput,
+            request.StandardOutput ?? bufferedOutput!,
+            request.StandardError ?? bufferedError!,
             processEnvironment.CurrentDirectory,
             processEnvironment.GetVariables(),
             fullScreen);
@@ -629,6 +632,12 @@ public sealed class AppLifecycleOrchestrator
         {
             exitCode = 130;
         }
+        catch (ShellBrokenPipeException)
+        {
+            // ADR 0050 section 4: the reader of its output exited and the command let the "Broken
+            // pipe" error escape, as a Linux process killed by SIGPIPE (128 + 13).
+            exitCode = 141;
+        }
         finally
         {
             context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
@@ -636,7 +645,8 @@ public sealed class AppLifecycleOrchestrator
 
         ProcessRecord stopped = _processManager.Complete(process.Pid, exitCode);
         return new AppLaunchResult(
-            AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString(),
+            AppLaunchStatus.Launched, stopped, context, exitCode,
+            bufferedOutput?.ToString() ?? string.Empty, bufferedError?.ToString() ?? string.Empty,
             PermissionDenials: permissionDenials);
     }
 
