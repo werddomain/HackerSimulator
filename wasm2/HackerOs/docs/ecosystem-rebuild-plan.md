@@ -393,7 +393,10 @@ pas modifié.
 | [0050](adr/0050-shell-grammar-and-process-environment.md) Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
 | [0051](adr/0051-unified-commands-project.md) Commandes regroupées, sans exception codée en dur | 0034 (section 1) | D14, section 7.3 |
 | [0052](adr/0052-trash.md) Corbeille | — | D15, section 7.4 |
-| Apps de base sur le SDK public uniquement | — | D21, section 8.1 |
+| [0055](adr/0055-base-apps-on-public-sdk-only.md) Apps de base sur le SDK public uniquement | complète 0019 | D21, section 8.1 : références et injections permises, vérification au build, agent d'authentification |
+| [0056](adr/0056-sdk-apis-for-system-apps.md) API du SDK qui remplacent les services internes | complète 0044, 0048, 0049 | section 8.1 : une API et une capacité par besoin des apps système |
+| [0057](adr/0057-proc-metrics-for-task-manager.md) Mesures système dans `/proc` et `HackDriveInfo` | complète 0046 | section 8.2, gestionnaire de tâches |
+| [0058](adr/0058-base-app-features.md) Fonctionnalités des apps de base | — | D22, section 8.2, chantiers `rebuild/4-*` |
 
 ## 11. Points de détail à fixer dans les ADR
 
@@ -414,10 +417,11 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Discuter le constat et lever les ambiguïtés avec Benoit (25 questions).
 - [x] Déplacer les anciens documents dans `docs/old/`, sauf `docs/adr/`, et corriger les liens.
 - [x] Rédiger ce plan et le nouvel index `docs/README.md`.
-- [ ] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
+- [x] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
   - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
   - [x] Phase 2 : ADR 0047 à 0049 (2026-10-10), avec leurs chantiers `rebuild/2-*`.
   - [x] Phase 3 : ADR 0050 à 0052 (2026-10-10), avec leurs chantiers `rebuild/3-*` (tableau dans l'ADR 0052).
+  - [x] Phase 4 : ADR 0055 à 0058 (2026-10-10), avec leurs chantiers `rebuild/4-*` (tableau dans l'ADR 0058).
 
 ### Phase 1 — Fichiers
 - [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
