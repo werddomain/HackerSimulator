@@ -422,7 +422,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes.
 - [ ] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides.
 - [ ] Créer l'API typée de paramètres et adapter l'app Paramètres.
-- [ ] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer.
+- [x] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer ([`logging.md`](logging.md)).
 - [ ] Monter `/proc` et `/dev` en virtuel.
 - [ ] Tests de contrat pour chaque point.
 
