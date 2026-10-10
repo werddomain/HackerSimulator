@@ -33,11 +33,9 @@ var builder = WebApplication.CreateBuilder(args);
 // (including an unattached one from the host page's own static-SSR pass), so JS interop
 // failed for every later circuit too. ValidateScopes is explicitly kept on so a future
 // singleton-consuming-a-scoped-service regression fails loudly instead of quietly
-// reintroducing that bug. ValidateOnBuild stays off only because IndexedDbDiagnosticRepository
-// remains a deliberately-accepted, dormant exception (constructor-injects IJSRuntime as a
-// Singleton, but this host removes its only consumer — see the ILoggerProvider strip-out
-// below — so it's registered but never resolved; eager build-time validation would still
-// flag it even though nothing ever touches it at runtime).
+// reintroducing that bug. ValidateOnBuild stays off as it was before ADR 0045 removed the
+// IndexedDbDiagnosticRepository registration that originally required it; turning it on is a
+// separate server-composition change (ADR 0045 leaves this host's composition untouched).
 builder.Host.UseDefaultServiceProvider(options =>
 {
     options.ValidateScopes = true;
@@ -163,17 +161,13 @@ builder.Services.AddHackerOsEcosystem(
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
 
-// AddHackerOsEcosystem registers HackerOsDiagnosticLoggerProvider as ILoggerProvider. That
-// provider construct-injects the browser-storage diagnostic repository, which construct-injects
-// IJSRuntime — safe in WASM hosts (IJSRuntime is available immediately, no circuit concept) but
-// not here: ASP.NET Core eagerly constructs every registered ILoggerProvider while building the
-// host's ILoggerFactory, before any Blazor Server circuit exists, and IJSRuntime has no live
-// circuit to attach to that early. This is the single-tenant captive-dependency limitation ADR
-// 0027 documents, surfacing at its worst — a startup hang rather than a leaked-instance quirk.
-// Removing only the descriptor AddHackerOsEcosystem just added (not any framework-registered
-// ILoggerProvider) keeps the diagnostic sink itself intact; only its ILoggerFactory bridge is
-// skipped for this host. IndexedDb*-backed singletons are unaffected — they stay lazy and
-// resolve correctly on first real circuit use, exactly as intended for single-tenant hosting.
+// AddHackerOsEcosystem registers HackerOsDiagnosticLoggerProvider as ILoggerProvider. It was
+// originally stripped here because it construct-injected the IJSRuntime-backed IndexedDB
+// diagnostic repository, which ASP.NET Core cannot build before any circuit exists. Since ADR
+// 0045 it only writes to /var/log through LogFileWriter (all singletons), but this API host never
+// attaches a filesystem to that writer, so the bridge stays removed: ADR 0045 leaves the server
+// composition as it was. Removing only the descriptor AddHackerOsEcosystem just added (not any
+// framework-registered ILoggerProvider) keeps the diagnostic sink itself intact.
 for (int i = builder.Services.Count - 1; i >= serviceCountBeforeEcosystem; i--)
 {
     if (builder.Services[i].ServiceType == typeof(ILoggerProvider))

@@ -1,27 +1,35 @@
+using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 
 namespace HackerOs.Ecosystem;
 
-/// <summary>Records host failures with a user-safe correlation ID and redacted structured metadata.</summary>
+/// <summary>
+/// Records host failures with a user-safe correlation ID and redacted structured metadata, in the
+/// in-memory buffer of recent entries and as a <c>CRIT</c> line in <c>/var/log/syslog</c> (ADR 0045).
+/// </summary>
 public sealed class HostExceptionReporter
 {
+    private const string Category = "ecosystem-host";
+
     private readonly IDiagnosticSink _sink;
-    private readonly IPersistentDiagnosticRepository _persistentRepository;
+    private readonly LogFileWriter _writer;
     private readonly TimeProvider _timeProvider;
 
-    /// <summary>Initializes the reporter over volatile and durable diagnostic boundaries.</summary>
+    /// <summary>Initializes the reporter over the memory buffer and the platform log writer.</summary>
     public HostExceptionReporter(
         IDiagnosticSink sink,
-        IPersistentDiagnosticRepository persistentRepository,
+        LogFileWriter writer,
         TimeProvider timeProvider)
     {
         _sink = sink ?? throw new ArgumentNullException(nameof(sink));
-        _persistentRepository = persistentRepository
-            ?? throw new ArgumentNullException(nameof(persistentRepository));
+        _writer = writer ?? throw new ArgumentNullException(nameof(writer));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
-    /// <summary>Records one failure without persisting its potentially sensitive message or stack trace.</summary>
+    /// <summary>
+    /// Records one failure without writing its potentially sensitive message or stack trace, then
+    /// asks the writer to flush so the line survives a tab that is about to crash.
+    /// </summary>
     public async ValueTask<Guid> ReportAsync(
         Exception exception,
         string phase,
@@ -34,32 +42,34 @@ public sealed class HostExceptionReporter
         DiagnosticEntry entry = new(
             _timeProvider.GetUtcNow(),
             DiagnosticSeverity.Critical,
-            "ecosystem-host",
+            Category,
             "An unexpected host failure interrupted the current surface.",
             correlationId,
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["correlationId"] = correlationId.ToString("D"),
                 ["exceptionType"] = exception.GetType().FullName ?? exception.GetType().Name,
                 ["phase"] = phase
             });
 
         _sink.Record(entry);
+        _writer.Enqueue(LogFileTarget.Syslog, LogLineFormat.Format(entry));
         try
         {
-            await _persistentRepository.AppendAsync(entry, cancellationToken).ConfigureAwait(false);
+            await _writer.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception persistenceException) when (persistenceException is not OperationCanceledException)
+        catch (Exception flushException) when (flushException is not OperationCanceledException)
         {
+            // The writer already notes per-file failures in memory; this only guards the caller.
             _sink.Record(new DiagnosticEntry(
                 _timeProvider.GetUtcNow(),
                 DiagnosticSeverity.Warning,
-                "ecosystem-host",
-                "The host failure could not be persisted.",
+                Category,
+                "The host failure could not be written to the system log.",
                 correlationId,
                 new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    ["exceptionType"] = persistenceException.GetType().FullName
-                        ?? persistenceException.GetType().Name,
+                    ["exceptionType"] = flushException.GetType().FullName ?? flushException.GetType().Name,
                     ["phase"] = "diagnostic-persistence"
                 }));
         }

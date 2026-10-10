@@ -18,7 +18,6 @@ public sealed class MinimalAppExecutionContext(
     IAppEventGateway? events = null,
     IAppNotificationGateway? notifications = null,
     IAppLoggingGateway? logging = null,
-    IAppDiagnosticsGateway? diagnostics = null,
     IAppClockGateway? clock = null,
     IAppProcessGateway? processes = null,
     IAppIntentGateway? intents = null,
@@ -44,7 +43,6 @@ public sealed class MinimalAppExecutionContext(
     public IAppEventGateway Events => events ?? throw Unsupported(nameof(Events));
     public IAppNotificationGateway Notifications => notifications ?? throw Unsupported(nameof(Notifications));
     public IAppLoggingGateway Logging => logging ?? throw Unsupported(nameof(Logging));
-    public IAppDiagnosticsGateway Diagnostics => diagnostics ?? throw Unsupported(nameof(Diagnostics));
     public IAppClockGateway Clock => clock ?? throw Unsupported(nameof(Clock));
     public IAppProcessGateway Processes => processes ?? throw Unsupported(nameof(Processes));
     public IAppIntentGateway Intents => intents ?? throw Unsupported(nameof(Intents));
