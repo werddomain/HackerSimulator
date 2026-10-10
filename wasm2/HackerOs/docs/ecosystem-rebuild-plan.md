@@ -387,9 +387,9 @@ pas modifié.
 | [0044](adr/0044-settings-as-files.md) Paramètres en fichiers | 0004, 0011 (partiellement), 0029 | D16 à D18, section 5.2, syntaxe du verrou |
 | [0045](adr/0045-logs-as-files.md) Journaux en fichiers | — | D19, section 5.3, tailles de rotation |
 | [0046](adr/0046-virtual-proc-and-dev-filesystems.md) Systèmes de fichiers virtuels `/proc` et `/dev` | complète 0008 | D20, section 5.4 |
-| Manifeste en classe C# et génération | 0010 | D6, D7, D8, section 6.1-6.2 |
-| Apps système et désinstallation | complète 0032 | D9 à D11, section 6.3 |
-| Permissions dangereuses et approbation | complète 0002, 0003 | D23 à D25, section 6.4 |
+| [0047](adr/0047-app-definition-and-generated-manifests.md) Manifeste en classe C# et génération | 0010 (en partie) | D6, D7, D8, section 6.1-6.2 |
+| [0048](adr/0048-system-apps-and-uninstall.md) Apps système et désinstallation | complète 0032, remplace en partie 0033 | D9 à D11, section 6.3 |
+| [0049](adr/0049-dangerous-capabilities-and-admin-approval.md) Permissions dangereuses et approbation | complète 0002, 0003, 0042 | D23 à D25, section 6.4 |
 | Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
 | Commandes regroupées, sans exception codée en dur | 0034 | D14, section 7.3 |
 | Corbeille | — | D15, section 7.4 |
@@ -416,6 +416,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Rédiger ce plan et le nouvel index `docs/README.md`.
 - [ ] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
   - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
+  - [x] Phase 2 : ADR 0047 à 0049 (2026-10-10), avec leurs chantiers `rebuild/2-*`.
 
 ### Phase 1 — Fichiers
 - [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.

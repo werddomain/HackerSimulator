@@ -23,7 +23,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 
 | Dossier | Rôle |
 | --- | --- |
-| [`adr/`](adr/) | ADR acceptés. Un ADR n'est jamais modifié : un nouvel ADR le remplace. La section 10 du plan liste les ADR à écrire. Phase 1 (fichiers) : [0043](adr/0043-hack-file-api-and-ambient-context.md) API `Hack*` et contexte ambiant, [0044](adr/0044-settings-as-files.md) paramètres en fichiers, [0045](adr/0045-logs-as-files.md) journaux en fichiers, [0046](adr/0046-virtual-proc-and-dev-filesystems.md) `/proc` et `/dev` virtuels. |
+| [`adr/`](adr/) | ADR acceptés. Un ADR n'est jamais modifié : un nouvel ADR le remplace. La section 10 du plan liste les ADR à écrire. Phase 1 (fichiers) : [0043](adr/0043-hack-file-api-and-ambient-context.md) API `Hack*` et contexte ambiant, [0044](adr/0044-settings-as-files.md) paramètres en fichiers, [0045](adr/0045-logs-as-files.md) journaux en fichiers, [0046](adr/0046-virtual-proc-and-dev-filesystems.md) `/proc` et `/dev` virtuels. Phase 2 (modèle d'app) : [0047](adr/0047-app-definition-and-generated-manifests.md) manifeste en classe C# et `BuiltInApplications.json`, [0048](adr/0048-system-apps-and-uninstall.md) apps système et désinstallation, [0049](adr/0049-dangerous-capabilities-and-admin-approval.md) capacités dangereuses et approbation administrateur. |
 
 ## Archives
 
