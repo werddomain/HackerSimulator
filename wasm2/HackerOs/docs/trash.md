@@ -163,6 +163,12 @@ Sans argument, `trash` affiche l'aide sur la sortie d'erreur et renvoie 1.
   « Empty trash », ces deux dernières après confirmation. Ctrl+clic pour une
   sélection multiple. Après une restauration, l'explorateur rafraîchit FileView.
 
+Correctif au passage : `Shared/HackerOs.AppSdk.FileView/_Imports.razor` importe
+désormais `Microsoft.AspNetCore.Components.Web`. Sans lui, `FileView.razor`
+émettait `@oncontextmenu` comme un attribut HTML littéral et l'ouverture de
+l'explorateur affichait « An unhandled error has occurred » (vu au test dans le
+navigateur).
+
 Couper, copier, coller et glisser-déposer vers la corbeille restent en phase 4
 (section 8.2 du plan).
 
