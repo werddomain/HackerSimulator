@@ -1,0 +1,125 @@
+<Project>
+  <!--
+    HackerOS app model build integration (ADR 0047).
+
+    App projects ($(HackerOsAppProject) == true):
+      GenerateHackerOsAppManifests  runs ManifestGenerator after the build output is copied and
+                                    writes manifest.json (or manifests/<appId>.json) from the
+                                    project's [AppManifest] classes. Errors are HOSAPPnnnn.
+      GetHackerOsAppManifests       query target used by hosts: the manifest files of this project
+                                    and the name of its assembly.
+  -->
+
+  <PropertyGroup>
+    <_HackerOsRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..'))</_HackerOsRepoRoot>
+    <_HackerOsAppsRoot>$([MSBuild]::NormalizeDirectory('$(_HackerOsRepoRoot)Apps'))</_HackerOsAppsRoot>
+
+    <!--
+      Every project under Apps/ is an app project by default; a project elsewhere opts in itself.
+      TRANSITION (until rebuild/2-app-migration): a project that still ships a hand-written
+      app.manifest.json is not migrated yet and keeps the legacy path, so it is not an app project
+      for the generator. Remove this exception once every app has an [AppManifest] class.
+    -->
+    <HackerOsAppProject Condition="'$(HackerOsAppProject)' == '' and $([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)').ToLowerInvariant().StartsWith('$(_HackerOsAppsRoot.ToLowerInvariant())')) and !Exists('$(MSBuildProjectDirectory)/app.manifest.json')">true</HackerOsAppProject>
+    <HackerOsAppProject Condition="'$(HackerOsAppProject)' == ''">false</HackerOsAppProject>
+
+    <HackerOsManifestGeneratorProject Condition="'$(HackerOsManifestGeneratorProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.ManifestGenerator/HackerOs.Tools.ManifestGenerator.csproj</HackerOsManifestGeneratorProject>
+    <_HackerOsDotnetHost>$(DOTNET_HOST_PATH)</_HackerOsDotnetHost>
+    <_HackerOsDotnetHost Condition="'$(_HackerOsDotnetHost)' == ''">dotnet</_HackerOsDotnetHost>
+  </PropertyGroup>
+
+  <!--
+    Build order only: the generator must be built before an app runs it. PrivateAssets keeps the
+    tool (which needs the server-side ASP.NET Core framework) out of every host's dependency graph.
+  -->
+  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
+    <ProjectReference Include="$(HackerOsManifestGeneratorProject)"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework;RuntimeIdentifier;SelfContained" />
+  </ItemGroup>
+
+  <!--
+    Generated manifests sit in the project directory (tracked by git for review) but are not
+    content: they must never be copied or published under the same name by several apps.
+  -->
+  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
+    <Content Remove="manifest.json;manifests/**" />
+    <None Remove="manifest.json;manifests/**" />
+  </ItemGroup>
+
+  <!-- Paths are computed inside targets so that IntermediateOutputPath is final. -->
+  <Target Name="_HackerOsAppManifestPaths">
+    <PropertyGroup>
+      <_HackerOsManifestStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-app-manifests.txt'))</_HackerOsManifestStamp>
+      <_HackerOsManifestDependencies>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-app-dependencies.txt'))</_HackerOsManifestDependencies>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_HackerOsResolveManifestGenerator"
+          DependsOnTargets="_HackerOsAppManifestPaths"
+          Condition="'$(HackerOsAppProject)' == 'true'">
+    <MSBuild Projects="$(HackerOsManifestGeneratorProject)"
+             Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
+      <Output TaskParameter="TargetOutputs" PropertyName="_HackerOsManifestGeneratorPath" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_HackerOsManifestDependency Include="@(ReferenceCopyLocalPaths->'%(FullPath)')" Condition="'%(Extension)' == '.dll'" />
+      <_HackerOsManifestDependency Include="@(ReferencePath->'%(FullPath)')" />
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifest.json" Condition="Exists('$(MSBuildProjectDirectory)/manifest.json')" />
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifests/*.json" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_HackerOsManifestDependencies)"
+                      Lines="@(_HackerOsManifestDependency)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(_HackerOsManifestDependencies)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Incremental: reruns when the compiled assembly, the generator, or a manifest file (edited by
+    hand) is newer than the stamp. The tool only rewrites a manifest when its bytes change.
+  -->
+  <Target Name="GenerateHackerOsAppManifests"
+          AfterTargets="CopyFilesToOutputDirectory"
+          DependsOnTargets="_HackerOsResolveManifestGenerator"
+          Condition="'$(HackerOsAppProject)' == 'true'"
+          Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest)"
+          Outputs="$(_HackerOsManifestStamp)">
+    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; generate --assembly &quot;$(TargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --dependencies &quot;$(_HackerOsManifestDependencies)&quot; --stamp &quot;$(_HackerOsManifestStamp)&quot;"
+          StandardOutputImportance="low"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_HackerOsManifestGeneratorExitCode" />
+    </Exec>
+    <!-- Exit code 1 = HOSAPP diagnostics already printed in canonical format (and logged as errors). -->
+    <Error Condition="'$(_HackerOsManifestGeneratorExitCode)' != '0' and '$(_HackerOsManifestGeneratorExitCode)' != '1'"
+           Code="HOSAPP0099"
+           Text="The HackerOS manifest generator failed with exit code $(_HackerOsManifestGeneratorExitCode) without reporting a diagnostic." />
+    <!-- The tool keeps the stamp's bytes stable; touch it so the next build sees it as up to date. -->
+    <Touch Files="$(_HackerOsManifestStamp)" Condition="'$(_HackerOsManifestGeneratorExitCode)' == '0'" />
+    <ItemGroup>
+      <FileWrites Include="$(_HackerOsManifestStamp)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Query target for hosts (ADR 0047 §2): manifest files produced by this app project. -->
+  <Target Name="GetHackerOsAppManifests" DependsOnTargets="_HackerOsAppManifestPaths" Returns="@(_HackerOsAppManifestOutput)">
+    <ReadLinesFromFile File="$(_HackerOsManifestStamp)"
+                       Condition="'$(HackerOsAppProject)' == 'true' and Exists('$(_HackerOsManifestStamp)')">
+      <Output TaskParameter="Lines" ItemName="_HackerOsAppManifestLine" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <_HackerOsAppManifestOutput Include="@(_HackerOsAppManifestLine)"
+                                  AssemblyName="$(AssemblyName)"
+                                  AssemblyFileName="$(TargetFileName)"
+                                  AppProject="$(MSBuildProjectFullPath)" />
+    </ItemGroup>
+  </Target>
+</Project>

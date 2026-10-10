@@ -108,7 +108,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Browser\app.manifest.json" Link="Manifests\org.hackeros.browser.json" />
-    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Calculator\app.manifest.json" Link="Manifests\org.hackeros.calculator.json" />
+    <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Calculator\manifest.json" Link="Manifests\org.hackeros.calculator.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\app.manifest.json" Link="Manifests\org.hackeros.code-editor.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\app.manifest.json" Link="Manifests\org.hackeros.diagnostic.json" />
     <EmbeddedResource Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\app.manifest.json" Link="Manifests\org.hackeros.error-log-viewer.json" />
