@@ -1,7 +1,9 @@
 # Plan de refonte de l'écosystème HackerOS
 
-**Statut :** plan validé avec Benoit le 2026-10-10. Aucune ligne de code n'a
-encore été écrite pour ce plan. Ce document remplace
+**Statut :** plan validé avec Benoit le 2026-10-10. Les quatre phases sont
+réalisées et fusionnées dans `rebuild/base` (phase 4 terminée le 2026-10-11 par
+`rebuild/4-sdk-boundary-final`) ; la section 12 renvoie au document de chaque
+chantier. Ce document remplace
 `old/implementation-status.md` et `old/integration-task-list.md` comme
 référence de direction pour l'écosystème. Ces deux documents restent dans
 [`old/`](old/) comme historique.
@@ -429,22 +431,24 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
 - [x] Créer les exceptions `Hack*` et la traduction depuis `FileSystemErrorCode`.
 - [x] Mettre en place le contexte d'exécution ambiant positionné par l'OS. Voir [`hack-file-api.md`](hack-file-api.md).
-- [ ] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes.
-- [ ] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides.
-- [ ] Créer l'API typée de paramètres et adapter l'app Paramètres.
+- [x] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes ([`settings-files.md`](settings-files.md)).
+- [x] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides ([`settings-files.md`](settings-files.md)).
+- [x] Créer l'API typée de paramètres et adapter l'app Paramètres ([`settings-files.md`](settings-files.md)).
 - [x] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer ([`logging.md`](logging.md)).
-- [ ] Monter `/proc` et `/dev` en virtuel.
-- [ ] Tests de contrat pour chaque point.
+- [x] Monter `/proc` et `/dev` en virtuel ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)).
+- [x] Tests de contrat pour chaque point (section « Tests » de chaque document).
 
 ### Phase 2 — Modèle d'app
 - [x] Créer `AppDefinition` et l'attribut `[AppManifest]` ([`app-model.md`](app-model.md)).
 - [x] Créer la tâche MSBuild de génération de `manifest.json` par app, avec validation.
 - [x] Créer la tâche d'agrégation `BuiltInApplications.json` et le `.targets` « une référence suffit ».
 - [x] Migrer les apps existantes, puis supprimer `app.manifest.json` écrits à la main et `StaticManifest` ([`app-model.md`](app-model.md#migration-des-apps)).
-- [ ] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
+- [x] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
   - [x] Liste des apps système : `AppCatalog.IsSystemApp`, `IsSystemApp="true"` sur les `ProjectReference` de l'hôte (`rebuild/2-system-apps`, [`app-model.md`](app-model.md#apps-système-adr-0048-1)).
-- [ ] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.
+  - [x] Désinstallation machine et utilisateur, réinstallation (`rebuild/2-app-uninstall`, ADR 0048, [`app-installation.md`](app-installation.md)).
+- [x] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.
   - [x] Classement des capacités, retrait de `settings.*` et `diagnostics.*`, seeder selon le statut système (`rebuild/2-capability-classification`, [`capabilities.md`](capabilities.md)).
+  - [x] Fenêtre d'approbation et politique de sécurité (`rebuild/2-dangerous-approval`, ADR 0049, [`dangerous-capability-approval.md`](dangerous-capability-approval.md)).
 
 ### Phase 3 — Shell, commandes et corbeille
 - [x] Étendre le parseur : pipes, redirections, `&&`, variables (`rebuild/3-shell-interpreter`, ADR 0050 et 0054, [`shell-interpreter.md`](shell-interpreter.md)).
@@ -455,14 +459,15 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Implémenter la corbeille et l'API `HackTrash` (`rebuild/3-trash`, ADR 0052, [`trash.md`](trash.md)).
 
 ### Phase 4 — SDK complet et apps de base
-- [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
+- [x] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
   - [x] `HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement` et l'agent d'authentification de l'OS ; FileExplorer, TextEditor et CodeEditor sortent de la liste d'exemptions (`rebuild/4-sdk-user-and-apps`, ADR 0055 §5 et 0056 §1-3, [`app-sdk.md`](app-sdk.md), [`admin-authentication-agent.md`](admin-authentication-agent.md)).
   - [x] `HackSettings.OpenSystemAsync`, `HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` ; Paramètres et Diagnostic sortent de la liste d'exemptions, qui est vide (`rebuild/4-sdk-system-admin`, ADR 0056 §8-11 et 0060, [`system-administration.md`](system-administration.md)).
-- [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
-  - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
+- [x] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
+  - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)).
   - [x] Hôte de shell : `HackShell`, capacité `shell.host`, `TerminalPanel` sans `Platform.Core`, CodeEditor système (`rebuild/4-sdk-shell-host`, ADR 0056 §7, [`shell-host.md`](shell-host.md)).
+  - [x] Mécanisme d'exemption supprimé : toute violation de la frontière est une erreur, aucun projet ne peut s'y soustraire, toute la solution compile sans diagnostic de frontière (`rebuild/4-sdk-boundary-final`, ADR 0055 §6, [`app-sdk.md`](app-sdk.md#fin-des-exemptions-temporaires-adr-0055-6)).
 - [x] Explorateur : couper, copier, coller, corbeille, glisser-déposer (`rebuild/4-file-explorer`, ADR 0056 §12 et 0058 §1, [`file-explorer.md`](file-explorer.md)).
-- [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
+- [x] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc` (`rebuild/4-proc-metrics` et `rebuild/4-task-manager`, ADR 0057 et 0058 §2, [`system-metrics.md`](system-metrics.md), [`task-manager.md`](task-manager.md)).
 - [x] Éditeur : remplacer et tout remplacer (`rebuild/4-text-editor`, ADR 0058 §3, [`text-editor.md`](text-editor.md)).
 - [x] Console : complétion par Tab et onglets (`rebuild/4-terminal`, ADR 0058 §4, [`terminal-console.md`](terminal-console.md)).
 

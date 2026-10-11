@@ -8,7 +8,8 @@ namespace HackerOs.Ecosystem.Tests;
 /// <list type="bullet">
 /// <item>an app only calls <c>IJSRuntime</c> to <c>import</c> its own module
 /// (<c>./_content/&lt;app project&gt;/…</c>); calls on the imported <c>IJSObjectReference</c> are free;</item>
-/// <item>the temporary exemption list of <c>build/HackerOs.Apps.targets</c> never grows.</item>
+/// <item>the boundary has no way out: the temporary exemption list of ADR 0055 §6 is gone and no
+/// project opts out of being an app or an SDK library.</item>
 /// </list>
 /// The check is textual on purpose: it needs no compilation and runs on every <c>.razor</c> and
 /// <c>.cs</c> file under <c>Apps/</c>.
@@ -16,57 +17,57 @@ namespace HackerOs.Ecosystem.Tests;
 public sealed partial class SdkBoundarySourceTests
 {
     /// <summary>
-    /// Projects exempted when <c>4-sdk-boundary</c> introduced the check (ADR 0055 §6). The list may
-    /// only shrink: each phase-4 chantier removes its projects, <c>4-sdk-boundary-final</c> the rest.
+    /// Build properties that would take a project out of the boundary. The targets file derives them
+    /// from the project's location; a project setting one itself is a hidden exemption.
     /// </summary>
-    private static readonly HashSet<string> InitialExemptions = new(StringComparer.Ordinal)
-    {
-        "HackerOs.Apps.Settings",
-        "HackerOs.Apps.Diagnostic",
-        "HackerOs.Apps.SystemMonitor",
-        "HackerOs.Apps.FileExplorer",
-        "HackerOs.Apps.TextEditor",
-        "HackerOs.Apps.CodeEditor",
-        "HackerOs.Apps.Browser",
-        "HackerOs.Commands",
-        "HackerOs.AppSdk.Terminal",
-    };
+    private static readonly string[] BoundaryRoleProperties = ["HackerOsAppProject", "HackerOsSdkLibrary"];
 
     [Fact]
-    public void Exemption_list_only_contains_projects_from_the_initial_list()
+    public void Build_targets_have_no_exemption_mechanism()
     {
-        IReadOnlyList<XElement> exemptions = ReadExemptions();
+        string targets = File.ReadAllText(Path.Combine(FindSolutionDirectory(), "build", "HackerOs.Apps.targets"));
 
-        string[] added = [.. exemptions.Select(item => (string)item.Attribute("Include")!).Where(name => !InitialExemptions.Contains(name))];
-        Assert.True(added.Length == 0,
-            $"No project may be added to HackerOsSdkBoundaryExemption (ADR 0055 §6). Fix it instead: {string.Join(", ", added)}");
+        // ADR 0055 §6: the list and its plumbing were removed by 4-sdk-boundary-final; any of these
+        // names coming back means a violation can be downgraded to a warning again.
+        Assert.DoesNotContain("HackerOsSdkBoundaryExemption", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("_HackerOsSdkBoundaryExempt", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("boundary-exempt", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Warning", targets, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Every_exemption_names_its_adr_and_chantier()
+    public void No_app_or_sdk_project_overrides_its_boundary_role()
     {
-        foreach (XElement item in ReadExemptions())
+        string root = FindSolutionDirectory();
+        List<string> overrides = [];
+
+        foreach (string projectFile in Directory.EnumerateFiles(Path.Combine(root, "Apps"), "*.csproj", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "Shared"), "HackerOs.AppSdk*.csproj", SearchOption.AllDirectories)))
         {
-            Assert.False(string.IsNullOrWhiteSpace((string?)item.Attribute("Adr")), $"{item.Attribute("Include")} has no Adr.");
-            Assert.False(string.IsNullOrWhiteSpace((string?)item.Attribute("Chantier")), $"{item.Attribute("Include")} has no Chantier.");
+            XDocument project = XDocument.Load(projectFile);
+            foreach (string property in BoundaryRoleProperties)
+            {
+                if (project.Descendants().Any(element => element.Name.LocalName == property))
+                {
+                    overrides.Add($"{Path.GetRelativePath(root, projectFile)} sets {property}");
+                }
+            }
         }
+
+        Assert.True(overrides.Count == 0,
+            "The SDK boundary role comes from the project's location (ADR 0055 §2), not from the project:"
+            + Environment.NewLine + string.Join(Environment.NewLine, overrides));
     }
 
     [Fact]
     public void Apps_only_use_IJSRuntime_to_import_their_own_module()
     {
         string root = FindSolutionDirectory();
-        HashSet<string> exempt = [.. ReadExemptions().Select(item => (string)item.Attribute("Include")!)];
         List<string> violations = [];
 
         foreach (string projectFile in Directory.EnumerateFiles(Path.Combine(root, "Apps"), "*.csproj", SearchOption.AllDirectories))
         {
             string projectName = Path.GetFileNameWithoutExtension(projectFile);
-            if (exempt.Contains(projectName))
-            {
-                continue;
-            }
-
             violations.AddRange(FindJsRuntimeViolations(Path.GetDirectoryName(projectFile)!, projectName));
         }
 
@@ -160,12 +161,6 @@ public sealed partial class SdkBoundarySourceTests
     {
         string relative = Path.GetRelativePath(projectDirectory, path).Replace('\\', '/');
         return relative.StartsWith("bin/", StringComparison.Ordinal) || relative.StartsWith("obj/", StringComparison.Ordinal);
-    }
-
-    private static IReadOnlyList<XElement> ReadExemptions()
-    {
-        XDocument targets = XDocument.Load(Path.Combine(FindSolutionDirectory(), "build", "HackerOs.Apps.targets"));
-        return [.. targets.Descendants().Where(element => element.Name.LocalName == "HackerOsSdkBoundaryExemption")];
     }
 
     private static string FindSolutionDirectory()

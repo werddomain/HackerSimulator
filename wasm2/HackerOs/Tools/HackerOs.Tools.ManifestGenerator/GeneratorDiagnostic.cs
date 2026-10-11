@@ -14,12 +14,8 @@ public sealed record GeneratorDiagnostic(string Code, string Subject, string Mes
     /// reports it as a real build error attributed to <paramref name="origin"/>.
     /// </summary>
     /// <param name="origin">Project or file path shown as the error origin.</param>
-    /// <param name="severity">
-    /// <c>error</c> (default) or <c>warning</c>; a warning is used for an SDK boundary violation of a
-    /// project still listed in <c>HackerOsSdkBoundaryExemption</c> (ADR 0055 §6).
-    /// </param>
     /// <returns>One line, e.g. <c>/x/App.csproj : error HOSAPP0005: [Ns.MyApp] ...</c>.</returns>
-    public string ToMsBuildLine(string origin, string severity = "error") => $"{origin} : {severity} {Code}: [{Subject}] {Message}";
+    public string ToMsBuildLine(string origin) => $"{origin} : error {Code}: [{Subject}] {Message}";
 }
 
 /// <summary>Catalog of the stable diagnostic codes emitted by the generator.</summary>
