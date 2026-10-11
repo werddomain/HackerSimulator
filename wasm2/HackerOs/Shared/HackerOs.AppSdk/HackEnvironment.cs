@@ -93,5 +93,55 @@ public static class HackEnvironment
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
     public static string[] GetCommandLineArgs() => [.. Gateway.GetCommandLineArgs()];
 
+    /// <summary>
+    /// Gets the path of a well-known folder of the effective user (ADR 0056, section 1), like
+    /// <see cref="System.Environment.GetFolderPath(System.Environment.SpecialFolder)"/> and the
+    /// XDG base directories on Linux. The folder may not exist yet: the path is computed, not checked.
+    /// </summary>
+    /// <param name="folder">The folder to locate.</param>
+    /// <returns>A canonical absolute path, under <c>/root</c> for a process started through <c>sudo</c>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="folder"/> is not a defined value.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static string GetFolderPath(HackSpecialFolder folder) =>
+        GetFolderPath(HackUser.Current.HomeDirectory, folder);
+
+    /// <summary>Combines a home directory with the relative location of <paramref name="folder"/>.</summary>
+    internal static string GetFolderPath(string home, HackSpecialFolder folder)
+    {
+        string relative = folder switch
+        {
+            HackSpecialFolder.UserProfile => string.Empty,
+            HackSpecialFolder.Desktop => "Desktop",
+            HackSpecialFolder.MyDocuments => "Documents",
+            HackSpecialFolder.ApplicationData => ".config",
+            HackSpecialFolder.LocalApplicationData => ".local/share",
+            _ => throw new ArgumentOutOfRangeException(nameof(folder), folder, "Unknown special folder.")
+        };
+
+        return relative.Length == 0 ? home : $"{home.TrimEnd('/')}/{relative}";
+    }
+
     private static Simulation.Abstractions.Gateways.IAppEnvironmentGateway Gateway => HackExecutionContext.Current.Environment;
+}
+
+/// <summary>
+/// Well-known folders of a HackerOS user, modeled on <see cref="System.Environment.SpecialFolder"/>
+/// and mapped to the Linux/XDG layout (ADR 0056, section 1).
+/// </summary>
+public enum HackSpecialFolder
+{
+    /// <summary>The home directory, <c>~</c>.</summary>
+    UserProfile = 0,
+
+    /// <summary><c>~/Desktop</c>.</summary>
+    Desktop = 1,
+
+    /// <summary><c>~/Documents</c>.</summary>
+    MyDocuments = 2,
+
+    /// <summary><c>~/.config</c> (<c>XDG_CONFIG_HOME</c>), where app settings live (ADR 0044).</summary>
+    ApplicationData = 3,
+
+    /// <summary><c>~/.local/share</c> (<c>XDG_DATA_HOME</c>).</summary>
+    LocalApplicationData = 4
 }
