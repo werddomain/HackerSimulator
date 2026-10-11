@@ -200,6 +200,41 @@ public sealed class AppManifestValidatorTests
         Assert.Contains(result.Errors, error => error.Code == "manifest.topicPermission.malformed");
     }
 
+    [Fact]
+    public void Validate_accepts_components_in_the_entry_point_assembly()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Components = [new AppComponentManifest("hackeros.terminal", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed")]
+        };
+
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    [Theory]
+    [InlineData(AppKind.Service, "hackeros.terminal", "HackerOs.Apps.TextEditor", "manifest.components.forbidden")]
+    [InlineData(AppKind.Window, "Terminal", "HackerOs.Apps.TextEditor", "manifest.component.contract.invalid")]
+    [InlineData(AppKind.Window, "hackeros.terminal", "Other.Assembly", "manifest.component.assembly.invalid")]
+    public void Validate_rejects_invalid_components(AppKind kind, string contract, string assembly, string code)
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Kind = kind,
+            Components = [new AppComponentManifest(contract, assembly, "HackerOs.Apps.TextEditor.Embed")]
+        };
+
+        Assert.Contains(AppManifestValidator.Validate(manifest).Errors, error => error.Code == code);
+    }
+
+    [Fact]
+    public void Validate_rejects_a_contract_registered_twice()
+    {
+        var component = new AppComponentManifest("hackeros.terminal", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed");
+        AppManifest manifest = CreateValidManifest() with { Components = [component, component with { Type = "Other" }] };
+
+        Assert.False(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
     private static AppManifest CreateValidManifest() => new()
     {
         Id = "org.hackeros.text-editor",

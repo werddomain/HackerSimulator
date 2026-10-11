@@ -41,11 +41,12 @@ Conventions de l'API :
 | Type | Rôle |
 |---|---|
 | `[AppManifest]` | Marque la classe qui décrit l'app ; le build en génère `manifest.json`. |
-| `AppDefinition` | Classe de base. Obligatoires : `Id`, `Name`, `Kind`, `EntryPoint`. Facultatifs : `Version`, `Description`, `PublisherId`, `Category`, `LaunchVisibility`, `Icons`, `Capabilities`, `FileHandlers`, `Terminal`, `MobileEntryPoint`, `SingleInstancePerUser`, `AutoStart`, `SupportsBack`, `Resources`, `Settings`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets`. |
+| `AppDefinition` | Classe de base. Obligatoires : `Id`, `Name`, `Kind`, `EntryPoint`. Facultatifs : `Version`, `Description`, `PublisherId`, `Category`, `LaunchVisibility`, `Icons`, `Capabilities`, `FileHandlers`, `Terminal`, `Components`, `MobileEntryPoint`, `SingleInstancePerUser`, `AutoStart`, `SupportsBack`, `Resources`, `Settings`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets`. |
 | `AppKind` | `Window`, `Terminal`, `Service`. |
 | `AppLaunchVisibility` | `Visible`, `Hidden` (absente du lanceur). |
 | `FileHandler(MediaType, Extensions, Actions, Priority)` | Type de fichier que l'app ouvre. |
 | `TerminalCommand(Name, Usage, Aliases)` | Nom de commande du shell. |
+| `AppComponent(Contract, Type)` | Composant que d'autres apps peuvent embarquer (ADR 0063) ; voir [`embedded-components.md`](embedded-components.md). |
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
@@ -182,6 +183,13 @@ l'OS et exige `network.real.access`.
 fichiers), `ContainsFileDropListAsync`, `ClearAsync`, `Changed`. Capacités
 `clipboard.read` et `clipboard.write`. Voir [`file-explorer.md`](file-explorer.md).
 
+### Composants intégrables (`HackerOs.AppSdk.Components`)
+
+| Type | Rôle | Document |
+|---|---|---|
+| `HackComponentContracts` | Noms des contrats : `Terminal` (`hackeros.terminal`). | [`embedded-components.md`](embedded-components.md) |
+| `IHackTerminal`, `HackTerminalOptions`, `HackTerminalCommandResult`, `HackTerminalOutputEventArgs` | Piloter un terminal embarqué : `RunCommandAsync`, `SetWorkingDirectoryAsync`, `SendInputAsync`, `ReadOutput`, `ClearAsync`, `FocusAsync`, `WorkingDirectory`, `Title`, `IsRunning`, `IsBusy`, `OutputReceived`, `CommandCompleted`, `StateChanged`, `Exited`. | [`embedded-components.md`](embedded-components.md) |
+
 ### Shell (`HackerOs.AppSdk.Shell` et `HackerOs.AppSdk`)
 
 | API | Rôle | Capacité | Document |
@@ -244,6 +252,7 @@ annulation.
 | `SettingOriginBadge` (`.Settings`) | Badge d'origine d'un paramètre (défaut, système, utilisateur, verrouillé) | [`settings-files.md`](settings-files.md) |
 | `BrowserFileDownloader` (`.Interop`) | `DownloadFileFromStreamAsync(fileName, stream)` : télécharger vers le vrai disque | [`file-explorer.md`](file-explorer.md) |
 | `BrowserClipboard` (`.Interop`) | `WriteTextAsync` : presse-papiers du vrai navigateur | [`system-administration.md`](system-administration.md) |
+| `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
 
 ### Vue de fichiers (`HackerOs.AppSdk.FileView`)
 
@@ -260,7 +269,7 @@ Détails : [`file-explorer.md`](file-explorer.md).
 
 | Composant | Paramètres | Document |
 |---|---|---|
-| `TerminalPanel` | `CallerAppId`, `InitialUsername`, `InitialCwd`, `UseVirtualKeyboard`, `OnExitRequested`, `OnTitleChanged` ; héberge un `hsh` (capacité `shell.host`) | [`terminal-emulator.md`](terminal-emulator.md), [`shell-host.md`](shell-host.md) |
+| `TerminalPanel` | `CallerAppId`, `InitialUsername`, `InitialCwd`, `UseVirtualKeyboard`, `ShowBanner`, `FocusOnStart`, `OnExitRequested`, `OnTitleChanged` ; héberge un `hsh` (capacité `shell.host`) ; implémente `IHackTerminal` (`RunCommandAsync`, `SetWorkingDirectoryAsync`, `SendInputAsync`, `ReadOutput`, `ClearAsync`, événements) | [`terminal-emulator.md`](terminal-emulator.md), [`shell-host.md`](shell-host.md) |
 | `TerminalTabs` | `CallerAppId`, `InitialCwd`, `OnLastTabClosed` ; un `hsh` par onglet | [`terminal-console.md`](terminal-console.md) |
 
 ### Icônes et clavier virtuel

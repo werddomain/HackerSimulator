@@ -95,6 +95,14 @@ public sealed record AppManifest
     public TerminalCommandManifest? Terminal { get; init; }
 
     /// <summary>
+    /// Gets the embeddable components this app registers with the OS (ADR 0063): another app can
+    /// render one inside its own window by contract name, without referencing this app's assembly.
+    /// <see langword="null"/> (omitted from <c>manifest.json</c>) when the app registers none, so
+    /// existing manifests keep their exact bytes.
+    /// </summary>
+    public IReadOnlyList<AppComponentManifest>? Components { get; init; }
+
+    /// <summary>
     /// Gets whether the ecosystem focuses the existing running instance instead of starting a
     /// new one when this app is launched again for the same user. Only consulted for
     /// <see cref="AppKind.Window"/> apps; Terminal and Service launches always start independently.
@@ -175,6 +183,14 @@ public sealed record FileHandlerManifest(
 /// <param name="Id">Well-formed topic-permission capability identifier.</param>
 /// <param name="Description">Human-readable description, shown when a requesting app's grant is approved.</param>
 public sealed record TopicPermissionDeclarationManifest(string Id, string Description);
+
+/// <summary>
+/// Registers one embeddable component of an app for a contract (ADR 0063).
+/// </summary>
+/// <param name="Contract">Contract name, lower-case dotted (e.g. <c>hackeros.terminal</c>).</param>
+/// <param name="Assembly">Assembly file name; the app's entry-point assembly, which lazy loading fetches.</param>
+/// <param name="Type">Full .NET type name of the component.</param>
+public sealed record AppComponentManifest(string Contract, string Assembly, string Type);
 
 /// <summary>
 /// Describes a command provided by a terminal application.

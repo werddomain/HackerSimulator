@@ -227,6 +227,8 @@ public static partial class AppManifestValidator
             AddError(errors, "manifest.supportsBack.forbidden", "supportsBack", "Only window apps can declare Back navigation support.");
         }
 
+        ValidateComponents(manifest, errors);
+
         foreach (FileHandlerManifest handler in manifest.FileHandlers)
         {
             if (string.IsNullOrWhiteSpace(handler.MediaType) && handler.Extensions.Count == 0)
@@ -241,6 +243,50 @@ public static partial class AppManifestValidator
 
             ValidateUniqueValues(handler.Extensions, "fileHandlers.extensions", errors);
             ValidateUniqueValues(handler.Actions, "fileHandlers.actions", errors);
+        }
+    }
+
+    /// <summary>
+    /// Checks the embeddable components of ADR 0063: only window apps render inside other windows,
+    /// a contract is registered once per app, and the component lives in the app's entry-point
+    /// assembly, because lazy loading fetches exactly that one DLL.
+    /// </summary>
+    private static void ValidateComponents(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Components is not { Count: > 0 } components)
+        {
+            return;
+        }
+
+        if (manifest.Kind != AppKind.Window)
+        {
+            AddError(errors, "manifest.components.forbidden", "components", "Only window apps can register embeddable components.");
+        }
+
+        ValidateUniqueValues(components.Select(component => component.Contract ?? string.Empty), "components.contract", errors);
+        HashSet<string> entryAssemblies = new(StringComparer.Ordinal);
+        if (manifest.EntryPoint is not null)
+        {
+            entryAssemblies.Add(manifest.EntryPoint.Assembly);
+        }
+
+        foreach (AppPlatformEntryPointManifest entryPoint in manifest.Platform?.EntryPoints ?? [])
+        {
+            entryAssemblies.Add(entryPoint.Assembly);
+        }
+
+        foreach (AppComponentManifest component in components)
+        {
+            if (!ComponentContractPattern().IsMatch(component.Contract ?? string.Empty))
+            {
+                AddError(errors, "manifest.component.contract.invalid", "components.contract", $"Component contract '{component.Contract}' must be lower-case dotted words, e.g. 'hackeros.terminal'.");
+            }
+
+            RequireText(component.Type, "components.type", errors);
+            if (!entryAssemblies.Contains(component.Assembly ?? string.Empty))
+            {
+                AddError(errors, "manifest.component.assembly.invalid", "components.assembly", $"Component '{component.Contract}' must live in the app's entry-point assembly.");
+            }
         }
     }
 
@@ -610,6 +656,9 @@ public static partial class AppManifestValidator
 
     [GeneratedRegex("^[a-z0-9]+(?:-[a-z0-9]+)*$", RegexOptions.CultureInvariant)]
     private static partial Regex CommandNamePattern();
+
+    [GeneratedRegex("^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)+$", RegexOptions.CultureInvariant)]
+    private static partial Regex ComponentContractPattern();
 
     [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.CultureInvariant)]
     private static partial Regex Sha256Pattern();

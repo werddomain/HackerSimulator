@@ -44,6 +44,10 @@ public partial class CodeEditorSearchView
     [Parameter]
     public Func<VirtualPath, string?>? OpenContent { get; set; }
 
+    /// <summary>Gets or sets a step run before each search (the window brings the tabs' latest text from the editor).</summary>
+    [Parameter]
+    public Func<Task>? BeforeSearch { get; set; }
+
     /// <summary>Gets or sets the callback that opens a file at a match.</summary>
     [Parameter]
     public EventCallback<CodeEditorNavigation> OnOpenMatch { get; set; }
@@ -223,6 +227,11 @@ public partial class CodeEditorSearchView
 
             _searching = true;
             await InvokeAsync(StateHasChanged);
+            if (BeforeSearch is not null)
+            {
+                await BeforeSearch();
+            }
+
             CodeEditorSearchResult result = await new CodeEditorWorkspaceSearch(workspace)
                 .SearchAsync(query, OpenContent, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

@@ -62,6 +62,10 @@ public partial class CodeEditorExplorer
     [Parameter]
     public EventCallback<VirtualPath> OnFindInFolder { get; set; }
 
+    /// <summary>Gets or sets the callback that opens the integrated terminal in a folder.</summary>
+    [Parameter]
+    public EventCallback<VirtualPath> OnOpenInTerminal { get; set; }
+
     /// <summary>Gets or sets the callback told that an entry was renamed (old path, new path), so open tabs follow it.</summary>
     [Parameter]
     public EventCallback<(VirtualPath OldPath, VirtualPath NewPath)> OnRenamed { get; set; }
@@ -105,6 +109,7 @@ public partial class CodeEditorExplorer
                 items.Add(Item("explorer-new-file", "New File...", "file-plus", () => BeginCreateAsync(CreationKind.File, folder.FullPath), separator: true));
                 items.Add(Item("explorer-new-folder", "New Folder...", "folder-plus", () => BeginCreateAsync(CreationKind.Folder, folder.FullPath)));
                 items.Add(Item("explorer-find-in-folder", "Find in Folder...", "search", () => OnFindInFolder.InvokeAsync(folder.FullPath)));
+                items.Add(Item("explorer-open-in-terminal", "Open in Integrated Terminal", "terminal", () => OnOpenInTerminal.InvokeAsync(folder.FullPath)));
             })
         ];
     }

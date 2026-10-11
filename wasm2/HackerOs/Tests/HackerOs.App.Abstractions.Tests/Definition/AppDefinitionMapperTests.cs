@@ -23,6 +23,7 @@ public sealed class AppDefinitionMapperTests
         Assert.Empty(manifest.Capabilities);
         Assert.Empty(manifest.FileHandlers);
         Assert.Null(manifest.Terminal);
+        Assert.Null(manifest.Components);
         Assert.Null(manifest.Platform);
         Assert.False(manifest.SingleInstancePerUser);
         Assert.False(manifest.AutoStart);
@@ -37,6 +38,16 @@ public sealed class AppDefinitionMapperTests
         Assert.Null(manifest.OsCompatibility);
         Assert.Null(manifest.Update);
         Assert.Equal(new AppSdkCompatibilityManifest("1.0.0"), manifest.SdkCompatibility);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    [Fact]
+    public void ToManifest_Components_MapToTheirAssemblyAndType()
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new ComponentApp(), "1.0.0");
+
+        AppComponentManifest component = Assert.Single(manifest.Components!);
+        Assert.Equal(new AppComponentManifest("hackeros.tests-view", "HackerOs.App.Abstractions.Tests.dll", typeof(FakeEmbed).FullName!), component);
         Assert.True(AppManifestValidator.Validate(manifest).IsValid);
     }
 
@@ -148,6 +159,17 @@ public sealed class AppDefinitionMapperTests
     private sealed class FakeMobileWindow;
 
     private sealed class FakeCommand;
+
+    private sealed class FakeEmbed;
+
+    private sealed class ComponentApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.component";
+        public override string Name => "Component";
+        public override AppKind Kind => AppKind.Window;
+        public override Type EntryPoint => typeof(FakeWindow);
+        public override IReadOnlyList<AppComponent> Components => [new("hackeros.tests-view", typeof(FakeEmbed))];
+    }
 
     [AppManifest]
     private sealed class MinimalWindowApp : AppDefinition

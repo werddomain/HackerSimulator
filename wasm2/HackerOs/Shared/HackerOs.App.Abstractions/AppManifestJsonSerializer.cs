@@ -46,6 +46,7 @@ public static class AppManifestJsonSerializer
             "update",
             "fileHandlers",
             "terminal",
+            "components",
             "singleInstancePerUser",
             "autoStart",
             "supportsBack"
@@ -130,7 +131,11 @@ public static class AppManifestJsonSerializer
             Settings = settings,
             FileHandlers = [.. manifest.FileHandlers.OrderBy(item => item.MediaType ?? string.Empty, StringComparer.Ordinal)
                 .ThenBy(item => item.Extensions.Count)
-                .ThenBy(item => string.Join("|", item.Extensions), StringComparer.Ordinal)]
+                .ThenBy(item => string.Join("|", item.Extensions), StringComparer.Ordinal)],
+            Components = manifest.Components is null
+                ? null
+                : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
+                    .ThenBy(item => item.Type, StringComparer.Ordinal)]
         };
     }
 
@@ -202,6 +207,9 @@ public static class AppManifestJsonSerializer
                 case "terminal":
                     ValidateObject(property.Value, $"{path}.terminal", ["name", "aliases", "usage"]);
                     break;
+                case "components":
+                    ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
+                    break;
                 default:
                     break;
             }
@@ -246,6 +254,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(UpdateManifest))]
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
+[JsonSerializable(typeof(AppComponentManifest))]
 [JsonSerializable(typeof(AppKind))]
 [JsonSerializable(typeof(AppLaunchVisibility))]
 [JsonSerializable(typeof(AppSettingValueType))]

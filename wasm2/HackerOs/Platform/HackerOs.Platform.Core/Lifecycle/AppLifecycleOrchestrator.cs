@@ -156,6 +156,34 @@ public sealed class AppLifecycleOrchestrator
     public bool TryGetDescriptor(string appId, [NotNullWhen(true)] out AppDescriptor? descriptor) =>
         _descriptors.TryGetValue(appId, out descriptor);
 
+    /// <summary>
+    /// Gets a catalog app's descriptor, loading its assembly first when the host lazy-loads it
+    /// (ADR 0063: an app's embeddable component lives in that assembly).
+    /// </summary>
+    /// <param name="appId">Catalog app id.</param>
+    /// <param name="cancellationToken">Cancels the wait for the app's asset (the shared download continues).</param>
+    /// <returns>The descriptor, or <see langword="null"/> with the reason when the app is unknown or its asset did not load.</returns>
+    public async Task<(AppDescriptor? Descriptor, string? Error)> EnsureDescriptorAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        if (_descriptors.TryGetValue(appId, out AppDescriptor? descriptor))
+        {
+            return (descriptor, null);
+        }
+
+        if (_descriptorLoader is null)
+        {
+            return (null, $"The app '{appId}' is not available in this host.");
+        }
+
+        AppDescriptorLoadResult loaded = await _descriptorLoader
+            .EnsureAvailableAsync(appId, cancellationToken)
+            .ConfigureAwait(false);
+        return loaded.Status == AppDescriptorLoadStatus.Available && _descriptors.TryGetValue(appId, out descriptor)
+            ? (descriptor, null)
+            : (null, loaded.Detail ?? $"The app '{appId}' is not available in this host.");
+    }
+
     /// <summary>Attempts to resolve the active descriptor and context for a running process.</summary>
     public bool TryGetRunningInstance(ProcessId pid, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
     {

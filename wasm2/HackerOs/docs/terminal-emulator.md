@@ -7,8 +7,14 @@ vrai terminal à grille de caractères, xterm.js, la librairie de la version
 legacy (ADR 0061). Les commandes peuvent écrire des couleurs ANSI, `nano`
 utilise l'écran alternatif, et le rendu ressemble à un terminal Linux.
 
-Rien ne change pour les apps : la console (`Apps/System/HackerOs.Apps.Terminal`)
-et l'éditeur de code utilisent `TerminalTabs` / `TerminalPanel` comme avant.
+La console (`Apps/System/HackerOs.Apps.Terminal`) utilise `TerminalTabs`.
+L'éditeur de code n'utilise plus `TerminalPanel` directement : il embarque le
+terminal que l'app Terminal enregistre pour le contrat `hackeros.terminal`
+(`TerminalEmbed`, ADR 0063, [`embedded-components.md`](embedded-components.md)).
+`TerminalPanel` implémente `IHackTerminal` : un hôte peut y lancer des
+commandes (affichées à l'invite, après les touches déjà tapées), changer de
+dossier par un `cd` visible et lire le texte affiché sans séquences de
+contrôle (`TerminalAnsi.StripControlSequences`).
 
 ## Architecture
 

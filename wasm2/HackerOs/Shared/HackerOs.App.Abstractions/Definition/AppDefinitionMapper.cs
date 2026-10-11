@@ -33,6 +33,7 @@ public static class AppDefinitionMapper
             ?? throw new InvalidOperationException($"'{definition.GetType().FullName}' returned a null EntryPoint.");
         Type? mobileEntryPoint = definition.MobileEntryPoint;
         TerminalCommand? terminal = definition.Terminal;
+        IReadOnlyList<AppComponent> components = definition.Components;
 
         return new AppManifest
         {
@@ -60,6 +61,11 @@ public static class AppDefinitionMapper
             Terminal = terminal is null
                 ? null
                 : new TerminalCommandManifest(terminal.Name, [.. terminal.Aliases ?? []], terminal.Usage),
+            // Omitted when empty, so manifests of apps without components keep their bytes.
+            Components = components.Count == 0
+                ? null
+                : [.. components.Select(component => new AppComponentManifest(
+                    component.Contract, AssemblyFileName(component.Type), TypeName(component.Type)))],
             SingleInstancePerUser = definition.SingleInstancePerUser,
             AutoStart = definition.AutoStart,
             SupportsBack = definition.SupportsBack

@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Components;
 
 namespace HackerOs.Apps.Terminal;
 
@@ -33,6 +34,13 @@ public sealed class TerminalApp : AppDefinition
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;
+
+    /// <summary>
+    /// The terminal other apps embed (ADR 0063), e.g. the Code Editor's panel: the same panel as
+    /// this window, controlled through <c>IHackTerminal</c>.
+    /// </summary>
+    public override IReadOnlyList<AppComponent> Components =>
+        [new(HackComponentContracts.Terminal, typeof(TerminalEmbed))];
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(
