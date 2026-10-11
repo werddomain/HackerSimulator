@@ -47,6 +47,22 @@ public sealed class AppLifecycleOrchestratorTests
     }
 
     [Fact]
+    public async Task A_process_starts_with_the_resource_weights_its_manifest_declares()
+    {
+        // ADR 0012 / 0057: the simulator behind /proc/<pid>/status, /proc/stat and /proc/meminfo
+        // reads the process profile; launching with ResourceProfile.None kept every reading at zero.
+        Fixture fixture = new(EchoManifest() with
+        {
+            Resources = new AppResourceProfileManifest(0.02, 0.1, 0.05, 0.1, 0, 0.2, 0, 0)
+        });
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppLaunchResult result = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.echo", principal, []));
+
+        Assert.Equal(new ResourceProfile(0.02, 0.1, 0.05, 0.1, 0, 0.2, 0, 0), result.Process!.ResourceProfile);
+    }
+
+    [Fact]
     public async Task A_terminal_app_runs_inside_its_ambient_context_in_the_shells_working_directory()
     {
         // ADR 0043: the orchestrator opens the HackExecutionContext scope around ExecuteAsync.

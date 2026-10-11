@@ -116,7 +116,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 |---|---|---|
 | `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
 | `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
-| `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
 
 Règles de la liste :
 
@@ -267,6 +266,25 @@ capacité, comme `df`. Passerelle `IAppDriveGateway Drives`, implémentée par
 Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
 [`system-metrics.md`](system-metrics.md).
 
+### Processus et services (ADR 0056 §4 et §5)
+
+| API | Passerelle | Capacité | Remplace | Document |
+|---|---|---|---|---|
+| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `CloseMainWindowAsync`), `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
+| `HackServiceController` (`GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`), `HackServiceControllerStatus` | `Catalog` (liste), `/proc` (état), `Services` (`IAppServiceControlGateway`) | aucune pour lister ; `services.manage` (dangereuse) pour agir sur le service d'une autre app ou lire son type de démarrage | `AppCatalog` filtré sur `AppKind.Service`, orchestrateur | [`task-manager.md`](task-manager.md) |
+
+Les données d'un processus viennent de `/proc`, exactement ce que `ps` lit ; il
+n'y a pas d'abonnement aux événements de processus : un gestionnaire de tâches
+relit `/proc` chaque seconde.
+
+### Graphiques (ADR 0058 §2)
+
+`HackLineChart` (`HackerOs.AppSdk.Blazor.Charts`) trace en SVG natif une ou
+plusieurs `HackChartSeries`, la valeur la plus récente à droite, avec une
+légende et une échelle automatique ; ni bibliothèque ni JavaScript. Les
+couleurs viennent du thème (`--hos-chart-series-0` à `7`). Voir
+[`task-manager.md`](task-manager.md).
+
 ### Presse-papiers (ADR 0056 §12)
 
 ```csharp
@@ -288,7 +306,7 @@ string? text = await HackClipboard.GetTextAsync();
   (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
   [`file-explorer.md`](file-explorer.md).
 
-Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
+Les autres API de l'ADR 0056 (`HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`…) sont ajoutées ici par leurs chantiers.
 
 ### Hôte de shell (ADR 0056 §7)
