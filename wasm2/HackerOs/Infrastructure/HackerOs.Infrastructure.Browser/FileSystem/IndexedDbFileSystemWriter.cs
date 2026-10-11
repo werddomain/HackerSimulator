@@ -1,6 +1,7 @@
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Schema;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.FileSystem;
@@ -12,10 +13,12 @@ internal sealed class IndexedDbFileSystemWriter : IAsyncDisposable
     private readonly IndexedDbInteropAdapter _adapter;
 
     /// <summary>Initializes the browser filesystem metadata writer.</summary>
-    internal IndexedDbFileSystemWriter(IJSRuntime runtime)
+    /// <param name="runtime">JavaScript runtime.</param>
+    /// <param name="disk">Optional statistics of <c>hda</c>; each metadata transaction counts as one 4 KiB write.</param>
+    internal IndexedDbFileSystemWriter(IJSRuntime runtime, IBlockDeviceStatistics? disk = null)
     {
         ArgumentNullException.ThrowIfNull(runtime);
-        _adapter = new IndexedDbInteropAdapter(runtime);
+        _adapter = new IndexedDbInteropAdapter(runtime, disk);
     }
 
     /// <summary>Atomically creates an entry and its parent link.</summary>

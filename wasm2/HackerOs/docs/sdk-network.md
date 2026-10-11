@@ -141,8 +141,10 @@ d'exemptions de la frontière du SDK.
 - **Pas d'option pour ne pas suivre les redirections** : aucune app n'en a
   besoin et le réseau simulé n'expose pas de requête à un seul saut pour `GET`.
 - **Comptage des octets** pour `/proc/net/dev` : `AppNetworkGateway` est le
-  point de passage unique ; le chantier `4-proc-metrics` (ADR 0057) y ajoute le
-  comptage.
+  point de passage unique. Depuis le chantier `4-proc-metrics` (ADR 0057),
+  chaque méthode publique compte son échange sur `eth0` et dans `rchar`/`wchar`
+  du processus de l'app (`NetworkTrafficMeter`) ; un appel refusé faute de
+  capacité ne compte rien. Détails : [`system-metrics.md`](system-metrics.md).
 
 ## Liste des tâches du chantier `rebuild/4-sdk-network`
 

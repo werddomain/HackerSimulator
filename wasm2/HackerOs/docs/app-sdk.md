@@ -167,11 +167,13 @@ Façades statiques existantes au début de la phase 4 :
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
+| `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
-(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`).
+(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `Drives`
+(ADR 0057, `4-proc-metrics`).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
@@ -249,6 +251,17 @@ await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallSco
 `HackDns`, `HackPing`, `HackHttpClient` et `HackTcpClient`, passerelle
 `IAppNetworkGateway Network`, repli réel décidé par l'OS : voir
 [`sdk-network.md`](sdk-network.md).
+
+### Disques (ADR 0057 §7)
+
+`HackDriveInfo.GetDrivesAsync()` rend les montages qui ont une taille
+(aujourd'hui `/`), sur le modèle de `System.IO.DriveInfo` : `Name`,
+`DriveFormat` (`idbfs`), `DriveType` (`Fixed`), `VolumeLabel` (`hda`),
+`TotalSize`, `AvailableFreeSpace`, `TotalFreeSpace`, `RootDirectory`. Aucune
+capacité, comme `df`. Passerelle `IAppDriveGateway Drives`, implémentée par
+`AppDriveGateway` dans Platform Core. Les valeurs sont lues une fois, à l'appel.
+Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
+[`system-metrics.md`](system-metrics.md).
 
 Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,

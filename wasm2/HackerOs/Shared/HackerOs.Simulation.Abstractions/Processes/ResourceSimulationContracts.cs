@@ -13,6 +13,10 @@ public sealed record VirtualHardwareProfile
     /// <param name="memoryCapacityBytes">Total simulated memory capacity in bytes; must be positive.</param>
     /// <param name="storageIoCapacityBytesPerTick">Total simulated storage I/O capacity per tick, in bytes; must be positive.</param>
     /// <param name="networkIoCapacityBytesPerTick">Total simulated network I/O capacity per tick, in bytes; must be positive.</param>
+    /// <param name="storageCapacityBytes">
+    /// Size of the virtual disk behind <c>/</c>, in bytes; must be positive. Defaults to
+    /// <see cref="DefaultStorageCapacityBytes"/> (ADR 0057 section 7).
+    /// </param>
     /// <exception cref="ArgumentException"><paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A capacity is not positive.</exception>
     public VirtualHardwareProfile(
@@ -20,7 +24,8 @@ public sealed record VirtualHardwareProfile
         double cpuCapacity,
         double memoryCapacityBytes,
         double storageIoCapacityBytesPerTick,
-        double networkIoCapacityBytesPerTick)
+        double networkIoCapacityBytesPerTick,
+        long storageCapacityBytes = DefaultStorageCapacityBytes)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -31,13 +36,18 @@ public sealed record VirtualHardwareProfile
         ValidatePositive(memoryCapacityBytes, nameof(memoryCapacityBytes));
         ValidatePositive(storageIoCapacityBytesPerTick, nameof(storageIoCapacityBytesPerTick));
         ValidatePositive(networkIoCapacityBytesPerTick, nameof(networkIoCapacityBytesPerTick));
+        ValidatePositive(storageCapacityBytes, nameof(storageCapacityBytes));
 
         Name = name;
         CpuCapacity = cpuCapacity;
         MemoryCapacityBytes = memoryCapacityBytes;
         StorageIoCapacityBytesPerTick = storageIoCapacityBytesPerTick;
         NetworkIoCapacityBytesPerTick = networkIoCapacityBytesPerTick;
+        StorageCapacityBytes = storageCapacityBytes;
     }
+
+    /// <summary>Default size of the virtual disk: 8 GiB (ADR 0057 section 7).</summary>
+    public const long DefaultStorageCapacityBytes = 8L * 1024 * 1024 * 1024;
 
     /// <summary>Gets the default single-core, 2 GiB baseline virtual hardware profile.</summary>
     public static VirtualHardwareProfile Default { get; } =
@@ -58,6 +68,12 @@ public sealed record VirtualHardwareProfile
 
     /// <summary>Gets the total simulated network I/O capacity per tick, in bytes.</summary>
     public double NetworkIoCapacityBytesPerTick { get; }
+
+    /// <summary>
+    /// Gets the size of the virtual disk behind <c>/</c>, in bytes. <c>HackDriveInfo.TotalSize</c>
+    /// reports it, lowered to the browser quota when the browser grants less (ADR 0057 section 7).
+    /// </summary>
+    public long StorageCapacityBytes { get; }
 
     private static void ValidatePositive(double value, string name)
     {
