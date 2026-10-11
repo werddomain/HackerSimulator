@@ -113,6 +113,43 @@ public sealed class HackDirectoryTests
     }
 
     [Fact]
+    public async Task Copy_duplicates_a_subtree_and_refuses_an_existing_destination_or_itself()
+    {
+        using IDisposable scope = HackTestHost.Enter(out FakeAppFileSystemGateway fs);
+        fs.WithFile("/home/alice/src/a.txt", "A").WithFile("/home/alice/src/sub/b.txt", "B").WithDirectory("/home/alice/taken");
+
+        await Assert.ThrowsAsync<HackIOException>(() => HackDirectory.CopyAsync("src", "taken"));
+        await Assert.ThrowsAsync<HackIOException>(() => HackDirectory.CopyAsync("src", "src/inner"));
+        await Assert.ThrowsAsync<HackDirectoryNotFoundException>(() => HackDirectory.CopyAsync("missing", "x"));
+        await HackDirectory.CopyAsync("src", "dst");
+
+        Assert.Equal("A", fs.ContentOf("/home/alice/dst/a.txt"));
+        Assert.Equal("B", fs.ContentOf("/home/alice/dst/sub/b.txt"));
+        Assert.Equal("A", fs.ContentOf("/home/alice/src/a.txt"));
+        Assert.False(fs.Exists("/home/alice/src/inner"));
+    }
+
+    [Fact]
+    public async Task Copy_across_mounts_recreates_the_tree_entry_by_entry()
+    {
+        FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway()
+            .WithFile("/home/alice/src/a.txt", "A").WithFile("/home/alice/src/sub/b.txt", "B").WithDirectory("/mnt/usb");
+        ScriptedFileSystemGateway gateway = new(fs)
+        {
+            OnCopy = r => r.SourcePath.Value == "/home/alice/src"
+                ? ScriptedFileSystemGateway.Error(FileSystemOperation.Copy, FileSystemErrorCode.CrossMountOperation, r.SourcePath.Value)
+                : null
+        };
+        using IDisposable scope = HackExecutionContext.Enter(HackTestHost.CreateContext(gateway));
+
+        await HackDirectory.CopyAsync("src", "/mnt/usb/src");
+
+        Assert.Equal("A", fs.ContentOf("/mnt/usb/src/a.txt"));
+        Assert.Equal("B", fs.ContentOf("/mnt/usb/src/sub/b.txt"));
+        Assert.True(fs.Exists("/home/alice/src/a.txt"));
+    }
+
+    [Fact]
     public async Task Delete_requires_recursive_for_a_non_empty_directory()
     {
         using IDisposable scope = HackTestHost.Enter(out FakeAppFileSystemGateway fs);

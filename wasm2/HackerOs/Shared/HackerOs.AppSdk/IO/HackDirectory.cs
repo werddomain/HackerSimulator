@@ -112,6 +112,63 @@ public static class HackDirectory
         await HackFileSystemCore.MoveEntryAsync(gateway, source, destination, HackEntryTarget.Directory, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Copies a directory and everything under it (like <c>cp -r</c>) to a destination that must not
+    /// exist; permission bits are kept, symbolic links are copied as links. The engine copies the whole
+    /// subtree in one transaction when it can; across two mounts the facade recreates it entry by entry.
+    /// .NET has no <c>Directory.Copy</c>: this member is a HackerOS addition (ADR 0058, section 1).
+    /// </summary>
+    /// <exception cref="HackDirectoryNotFoundException">The source does not exist.</exception>
+    /// <exception cref="HackIOException">The destination exists, or is the source or inside it.</exception>
+    public static async Task CopyAsync(string sourceDirName, string destDirName, CancellationToken cancellationToken = default)
+    {
+        VirtualPath source = HackPath.Resolve(sourceDirName, nameof(sourceDirName));
+        VirtualPath destination = HackPath.Resolve(destDirName, nameof(destDirName));
+        IAppFileSystemGateway gateway = HackFileSystemCore.Gateway;
+
+        if (source == destination || destination.Value.StartsWith(source.Value + "/", StringComparison.Ordinal))
+        {
+            throw new HackIOException(
+                $"Cannot copy '{source.Value}' to '{destination.Value}': the destination is the source or inside it.",
+                FileSystemErrorCode.InvalidPath,
+                source.Value);
+        }
+
+        for (int attempt = 1; ; attempt++)
+        {
+            FileSystemEntrySnapshot sourceEntry = await HackFileSystemCore.StatAsync(
+                gateway, source, FileSystemLinkBehavior.NoFollow, HackEntryTarget.Directory, cancellationToken).ConfigureAwait(false);
+            if (await HackFileSystemCore.TryStatAsync(gateway, destination, FileSystemLinkBehavior.NoFollow, HackEntryTarget.Directory, cancellationToken)
+                    .ConfigureAwait(false) is not null)
+            {
+                throw new HackIOException($"The destination '{destination.Value}' already exists.", FileSystemErrorCode.AlreadyExists, destination.Value);
+            }
+
+            FileSystemEntrySnapshot destinationParent = await HackFileSystemCore.RequireParentAsync(gateway, destination, cancellationToken).ConfigureAwait(false);
+            FileSystemMutationResult copied = await gateway.CopyAsync(
+                new FileSystemCopyRequest(source, destination, sourceEntry.Metadata.Revision, destinationParent.Metadata.Revision),
+                cancellationToken).ConfigureAwait(false);
+            if (copied.Succeeded)
+            {
+                return;
+            }
+
+            FileSystemError error = copied.Transaction.Error!;
+            if (error.Code == FileSystemErrorCode.CrossMountOperation)
+            {
+                await HackFileSystemCore.CopyTreeAsync(gateway, source, destination, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            if (error.Code == FileSystemErrorCode.RevisionConflict && attempt < 2)
+            {
+                continue;
+            }
+
+            throw HackFileSystemErrorTranslator.Translate(error, HackEntryTarget.Directory, source.Value);
+        }
+    }
+
     /// <summary>Deletes a directory permanently; a non-empty one requires <paramref name="recursive"/>.</summary>
     /// <exception cref="HackDirectoryNotFoundException">The directory does not exist.</exception>
     /// <exception cref="HackIOException">The path is a file, or the directory is not empty and <paramref name="recursive"/> is false.</exception>

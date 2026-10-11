@@ -165,6 +165,11 @@ Les exceptions dérivent de `IOException` et `UnauthorizedAccessException` : un
   autres propriétés décrivent sa cible, comme `stat`.
 - **`File.Move` d'un dossier** lève `HackFileNotFoundException`, comme .NET ;
   `HackDirectory.MoveAsync` déplace un dossier ou un fichier.
+- **`HackDirectory.CopyAsync`** (phase 4, `rebuild/4-file-explorer`) : copie
+  récursive d'un dossier vers une destination absente, ajout de HackerOS (.NET n'a
+  pas de `Directory.Copy`) ; le moteur copie l'arbre en une transaction, la façade
+  le recrée entrée par entrée entre deux montages. Voir
+  [`file-explorer.md`](file-explorer.md).
 - **Double faux de tests.** `FakeAppFileSystemGateway` (`HackerOs.Tests.Support`)
   traite maintenant une révision attendue nulle comme une opération
   inconditionnelle et renvoie `NotFile` pour la lecture ou l'écriture d'un dossier,

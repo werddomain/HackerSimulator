@@ -289,3 +289,20 @@
 .explorer-files.hidden {
     display: none;
 }
+
+/* Breadcrumb row (ADR 0058: each segment is also a drop target). */
+.explorer-locationbar {
+    display: flex;
+    align-items: center;
+    padding: 0.3rem 0.75rem;
+    background: var(--hos-bg-base, #0d1114);
+    border-bottom: 1px solid var(--hos-border-subtle, #21262d);
+    min-width: 0;
+}
+
+::deep .explorer-trash-drop {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}

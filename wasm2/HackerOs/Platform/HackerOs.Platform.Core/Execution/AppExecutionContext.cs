@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -42,7 +43,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         string? userLoginName = null,
         string? userDisplayName = null,
         IAppCatalogGateway? catalog = null,
-        IAppManagementGateway? appManagement = null)
+        IAppManagementGateway? appManagement = null,
+        IAppClipboardGateway? clipboard = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -73,6 +75,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         UserDisplayName = userDisplayName ?? UserLoginName;
         Catalog = catalog ?? UnsupportedAppGateways.Catalog;
         AppManagement = appManagement ?? UnsupportedAppGateways.Management;
+        Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
     }
 
     /// <inheritdoc />
@@ -86,6 +89,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppManagementGateway AppManagement { get; }
+
+    /// <inheritdoc />
+    public IAppClipboardGateway Clipboard { get; }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }

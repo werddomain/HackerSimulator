@@ -169,7 +169,7 @@ Façades statiques existantes au début de la phase 4 :
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
-(ADR 0056, `4-sdk-user-and-apps`).
+(ADR 0056, `4-sdk-user-and-apps`), `Clipboard` (ADR 0056 §12, `4-file-explorer`).
 
 ### Utilisateur courant (ADR 0056 §1)
 
@@ -239,10 +239,31 @@ await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallSco
 - Passerelle : `IAppManagementGateway AppManagement` (`AppManagementGateway`,
   sur `IAppInstallationService`).
 
+### Presse-papiers (ADR 0056 §12)
+
+```csharp
+await HackClipboard.SetFileDropListAsync(["~/rapport.txt"], HackClipboardFileOperation.Cut);
+HackClipboardFileList? files = await HackClipboard.GetFileDropListAsync();   // Operation + Paths
+string? text = await HackClipboard.GetTextAsync();
+```
+
+- Un presse-papiers par **session**, partagé par toutes ses apps (`SystemClipboard`,
+  Platform Core), vidé à la déconnexion ; liste de fichiers au format GNOME
+  `x-special/gnome-copied-files`, lisible aussi en texte (les chemins).
+- **Capacités** `clipboard.read` (lecture) et `clipboard.write` (écriture,
+  vidage), normales. `Changed` ne demande aucune capacité.
+- `GetFileReferencesAsync` / `SetFileReferencesAsync` : `[Obsolete]`, formes de
+  « copier ». L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
+  supprimée (la vraie est dans Platform Core).
+- Passerelle : `IAppClipboardGateway Clipboard` (`AppClipboardGateway`, Platform Core).
+- `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
+  (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
+  [`file-explorer.md`](file-explorer.md).
+
 Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,
 `HackHttpClient`, `HackTcpClient`, `HackShell`, `HackPermissionAdministration`,
-`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
-`HackClipboard`…) sont ajoutées ici par leurs chantiers.
+`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`…) sont ajoutées ici
+par leurs chantiers.
 
 ## Décisions
 
@@ -288,3 +309,9 @@ Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackDns`,
 - [x] Onglet « Installed Apps » de Paramètres sur le SDK ; `apps.manage` déclarée par Paramètres.
 - [x] Exemptions retirées : FileExplorer, TextEditor, CodeEditor ; Paramètres reste pour `4-sdk-system-admin`.
 - [x] Tests : agent, passerelles, `HackUser`, fenêtre.
+
+## Liste des tâches du chantier `rebuild/4-file-explorer`
+
+- [x] `HackClipboard`, `HackClipboardFileList`, passerelle `IAppExecutionContext.Clipboard` ; `SystemClipboard` et `AppClipboardGateway` dans Platform Core.
+- [x] `HackDirectory.CopyAsync`, `FileTransfer` et les ajouts de `FileView` ([`file-explorer.md`](file-explorer.md)).
+- [x] Explorateur sur ces API ; capacités `clipboard.read`, `clipboard.write`, `notifications.post` déclarées. Aucune exemption à retirer (FileExplorer était déjà sorti de la liste).

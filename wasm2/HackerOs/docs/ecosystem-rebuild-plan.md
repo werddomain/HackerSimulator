@@ -458,7 +458,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
   - [x] `HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement` et l'agent d'authentification de l'OS ; FileExplorer, TextEditor et CodeEditor sortent de la liste d'exemptions (`rebuild/4-sdk-user-and-apps`, ADR 0055 §5 et 0056 §1-3, [`app-sdk.md`](app-sdk.md), [`admin-authentication-agent.md`](admin-authentication-agent.md)).
 - [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
   - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
-- [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
+- [x] Explorateur : couper, copier, coller, corbeille, glisser-déposer (`rebuild/4-file-explorer`, ADR 0056 §12 et 0058 §1, [`file-explorer.md`](file-explorer.md)).
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
 - [ ] Éditeur : remplacer et tout remplacer.
 - [ ] Console : complétion par Tab et onglets.

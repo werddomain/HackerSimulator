@@ -36,6 +36,7 @@ public sealed class AppExecutionContextFactory
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
     private readonly AppCatalogGatewayServices? _appCatalog;
+    private readonly Clipboard.SystemClipboard _clipboard;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -61,6 +62,10 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.AppManagement"/> gateways (ADR 0056, sections 2 and 3);
     /// <see langword="null"/> leaves both unsupported.
     /// </param>
+    /// <param name="clipboard">
+    /// The OS clipboard behind <see cref="IAppExecutionContext.Clipboard"/> (ADR 0056, section 12), shared
+    /// by every context this factory creates; when omitted the factory keeps its own.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -74,7 +79,8 @@ public sealed class AppExecutionContextFactory
         LogFileWriter? logWriter = null,
         IProcessEnvironmentTable? environments = null,
         Func<string>? machineName = null,
-        AppCatalogGatewayServices? appCatalog = null)
+        AppCatalogGatewayServices? appCatalog = null,
+        Clipboard.SystemClipboard? clipboard = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -89,6 +95,7 @@ public sealed class AppExecutionContextFactory
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
         _appCatalog = appCatalog;
+        _clipboard = clipboard ?? new Clipboard.SystemClipboard();
     }
 
     /// <summary>
@@ -171,6 +178,7 @@ public sealed class AppExecutionContextFactory
                 isRootElevated,
                 _fileSystem,
                 _clock);
+        AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId);
 
         AppExecutionContext context = new(
             manifest,
@@ -201,12 +209,14 @@ public sealed class AppExecutionContextFactory
             userName,
             principal.DisplayName,
             catalogGateway,
-            managementGateway);
+            managementGateway,
+            clipboardGateway);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+        clipboardGateway.BindAmbientContext(context);
         return context;
     }
 
