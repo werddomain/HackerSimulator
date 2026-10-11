@@ -51,6 +51,45 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
     protected AppManifest Manifest => AppContext.Manifest;
 
     /// <summary>
+    /// Gets the arguments this window was launched with, without <c>argv[0]</c> (the app id), like
+    /// <c>Main(string[] args)</c>. Opening a file from the File Explorer or with <c>open</c> starts
+    /// the handler app with the file's absolute path as its first argument
+    /// (<c>OpenFileIntent</c>, ADR 0050), so a document app reads its initial file here.
+    /// </summary>
+    protected IReadOnlyList<string> LaunchArguments
+    {
+        get
+        {
+            IReadOnlyList<string> argv = AppContext.Environment.GetCommandLineArgs();
+            return argv.Count > 1 ? [.. argv.Skip(1)] : [];
+        }
+    }
+
+    /// <summary>
+    /// Gets the file this window was asked to open: the first launch argument when it is an
+    /// absolute virtual path, otherwise <see langword="null"/> (a plain launch from the menu).
+    /// </summary>
+    protected VirtualPath? LaunchFile
+    {
+        get
+        {
+            if (LaunchArguments is not [{ } first, ..] || !first.StartsWith('/'))
+            {
+                return null;
+            }
+
+            try
+            {
+                return VirtualPath.Parse(first);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
     /// Prevents apps from replacing parameter assignment and bypassing lifecycle validation. The
     /// synchronous lifecycle (and the continuations of the asynchronous one) runs inside the app's
     /// <see cref="HackExecutionContext"/> scope (ADR 0043).

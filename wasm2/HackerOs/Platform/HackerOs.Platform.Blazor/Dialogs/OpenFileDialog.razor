@@ -31,7 +31,8 @@
                           AllowDirectorySelection="false"
                           AllowMultipleSelection="@Presentation.Request.AllowMultiple"
                           FileFilter="MatchesFilter"
-                          SelectionChanged="UpdateSelection" />
+                          SelectionChanged="UpdateSelection"
+                          FileActivated="OpenActivated" />
 
     <footer>
         <span class="selection-summary" aria-live="polite">@SelectionSummary</span>
@@ -101,6 +102,10 @@
             Coordinator.SelectOpen(Presentation.Id, _selection);
         }
     }
+
+    // Double-click/Enter on a file opens it (the selection already holds it; with multiple
+    // selection the whole selection opens, like Ctrl-clicking then double-clicking in GTK).
+    private void OpenActivated(FileSystemDirectoryItem entry) => Open();
 
     private void Cancel() => Coordinator.Cancel(Presentation.Id);
 

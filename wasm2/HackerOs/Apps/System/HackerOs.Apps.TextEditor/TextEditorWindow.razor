@@ -184,10 +184,13 @@
     {
         _fileSystem = AppContext.FileSystem;
 
-        // Accept open/edit intent file paths passed by the window host (P2-TEXT-002)
-        if (!string.IsNullOrWhiteSpace(LaunchFilePath))
+        // Accept the file to open (P2-TEXT-002): an explicit host parameter, otherwise the first
+        // launch argument, which is how an open-file intent (File Explorer double-click, `open`)
+        // hands the path over. Loading it sets the document path, so Save writes back in place.
+        VirtualPath? launchFile = !string.IsNullOrWhiteSpace(LaunchFilePath) ? VirtualPath.Parse(LaunchFilePath) : LaunchFile;
+        if (launchFile is { } path)
         {
-            await LoadFileAsync(VirtualPath.Parse(LaunchFilePath));
+            await LoadFileAsync(path);
         }
     }
 
@@ -342,14 +345,6 @@
 
             await using FileSystemContentReadHandle handle = result.Value;
 
-            // Reject binary content (P2-TEXT-002)
-            if (handle.Descriptor.Kind == FileSystemContentKind.Binary)
-            {
-                _doc.FailLoading("Binary files are not supported by Text Editor.");
-                StateHasChanged();
-                return;
-            }
-
             // Guard against oversized files (P2-TEXT-002)
             if (handle.Entry.Metadata is FileMetadata fm && fm.Length > MaxTextFileSizeBytes)
             {
@@ -358,10 +353,19 @@
                 return;
             }
 
-            using StreamReader reader = new(handle.Content, leaveOpen: true);
-            string content = await reader.ReadToEndAsync(AppContext.CancellationToken);
+            // A file is just bytes, as on Linux: the stored descriptor only records how it was
+            // last written (an empty file made by "New File", or one copied with WriteAllBytes, is
+            // tagged binary). Like gedit, decide from the content itself (HackTextContent, P2-TEXT-002).
+            string? content = await HackerOs.AppSdk.IO.HackTextContent.TryReadAsync(handle.Content, AppContext.CancellationToken);
+            if (content is null)
+            {
+                _doc.FailLoading("Binary files are not supported by Text Editor.");
+                StateHasChanged();
+                return;
+            }
 
-            _doc.CompleteLoading(content, handle.Descriptor.MediaType, handle.Entry.Metadata.Revision);
+            string mediaType = handle.Descriptor.Kind == FileSystemContentKind.Text ? handle.Descriptor.MediaType : "text/plain";
+            _doc.CompleteLoading(content, mediaType, handle.Entry.Metadata.Revision);
             _conflictDetected = false;
         }
         catch (OperationCanceledException)
@@ -429,7 +433,10 @@
         _suppressGenericPermissionNotice = true;
         try
         {
-            long? expectedRevision = _doc.LoadedRevision;
+            // The loaded revision guards a save back to the same file (P2-TEXT-004). Save As to
+            // another path has no revision to require: the target is created, or the user already
+            // confirmed replacing it in the Save dialog.
+            long? expectedRevision = path == _doc.Path ? _doc.LoadedRevision : null;
 
             if (expectedRevision is null)
             {

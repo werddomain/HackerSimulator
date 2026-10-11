@@ -170,6 +170,7 @@ Façades statiques existantes au début de la phase 4 :
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
 | `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
+| `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
@@ -299,6 +300,14 @@ Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell
 Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
 enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 (`HackCredentialPrompt`), l'OS les vérifie.
+
+### Arguments de lancement d'une fenêtre
+
+`WindowAppBase.LaunchArguments` rend les arguments du processus sans `argv[0]`
+(comme `Main(string[] args)`), et `WindowAppBase.LaunchFile` le premier s'il est
+un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
+l'app associée avec ce chemin : une app de document lit son fichier initial là
+(voir [`text-editor.md`](text-editor.md)).
 
 ## Décisions
 

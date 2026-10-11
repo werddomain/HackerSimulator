@@ -77,6 +77,27 @@ string summary = TextEditorFindEngine.DescribeReplacementCount(all.Count); // "1
 `FindMatches(content, query)` sans options garde l'ancien comportement :
 sous-chaîne, sans tenir compte de la casse.
 
+## Ouvrir et enregistrer un fichier
+
+- **Depuis l'explorateur** (double-clic, `OpenFileIntent`) : l'OS lance l'éditeur
+  avec `argv = [id de l'app, chemin]`. `WindowAppBase.LaunchFile` lit ce chemin
+  (premier argument absolu) ; l'éditeur charge le fichier et garde son chemin, donc
+  **Enregistrer** (Ctrl+S) écrit sur place, sans dialogue. Avant, le chemin
+  n'arrivait jamais (`LaunchFilePath` n'était posé par personne) : l'éditeur
+  s'ouvrait vide et Enregistrer se comportait comme Enregistrer sous. Le
+  CodeEditor suit la même règle.
+- **Texte ou binaire** se décide sur le contenu (`HackTextContent.TryDecode`,
+  SDK) : UTF-8 strict sans octet de contrôle autre que tabulation, fins de ligne,
+  saut de page, retour arrière et échappement. Un fichier vide créé par
+  « New File » (étiqueté binaire par le système de fichiers) s'ouvre donc.
+- **Enregistrer sous** vers un autre chemin n'exige plus la révision du fichier
+  ouvert : la cible est créée, ou remplacée après confirmation dans le dialogue
+  (avant : « Destination directory not found »).
+- **Dialogues Ouvrir/Enregistrer** (Platform Blazor) : un double-clic ou Entrée
+  sur un fichier l'ouvre (Ouvrir) ou reprend son nom (Enregistrer, qui demande
+  ensuite avant de remplacer) ; le dialogue remplit sa fenêtre et la liste
+  défile, les boutons du bas ne sont plus coupés.
+
 ## Décisions
 
 - Le remplacement ne gère pas les expressions régulières (choix par défaut de
@@ -95,3 +116,10 @@ sous-chaîne, sans tenir compte de la casse.
 - [x] Ligne de remplacement dans la barre de recherche, Ctrl+H, menu « Edit → Replace ».
 - [x] Lecture de la sélection de la zone de texte et blocage des raccourcis du navigateur.
 - [x] Documentation, plan de refonte et index mis à jour.
+
+## Liste des tâches (retours après `rebuild/4-text-editor`, livrés avec `rebuild/4-file-explorer`)
+
+- [x] Lire le fichier de lancement depuis les arguments du processus (TextEditor, CodeEditor).
+- [x] Décider texte/binaire sur le contenu (`HackTextContent`).
+- [x] Enregistrer sous vers un nouveau fichier.
+- [x] Dialogues Ouvrir/Enregistrer : double-clic, mise en page dans la fenêtre.

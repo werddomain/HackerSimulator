@@ -77,20 +77,21 @@ public sealed class CodeEditorFileService
         }
 
         await using FileSystemContentReadHandle handle = result.Value;
-        if (handle.Descriptor.Kind == FileSystemContentKind.Binary)
-        {
-            return new CodeEditorLoadResult(
-                CodeEditorFileStatus.UnsupportedContent, path, Error: "Binary files cannot be edited as source text.");
-        }
-
         if (handle.Entry.Metadata is FileMetadata metadata
             && metadata.Length > CodeEditorDocument.MaxDocumentBytes)
         {
             return TooLargeLoad(path);
         }
 
-        using StreamReader reader = new(handle.Content, Encoding.UTF8, true, leaveOpen: true);
-        string content = await reader.ReadToEndAsync(cancellationToken);
+        // Text or binary is decided from the bytes, not from the descriptor of the last write: an
+        // empty file made by "New File" is tagged binary but is an empty source file.
+        string? content = await HackerOs.AppSdk.IO.HackTextContent.TryReadAsync(handle.Content, cancellationToken);
+        if (content is null)
+        {
+            return new CodeEditorLoadResult(
+                CodeEditorFileStatus.UnsupportedContent, path, Error: "Binary files cannot be edited as source text.");
+        }
+
         if (Encoding.UTF8.GetByteCount(content) > CodeEditorDocument.MaxDocumentBytes)
         {
             return TooLargeLoad(path);
