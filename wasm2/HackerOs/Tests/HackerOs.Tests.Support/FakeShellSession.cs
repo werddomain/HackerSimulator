@@ -64,6 +64,19 @@ public sealed class FakeShellSession : IShellSession
     /// <inheritdoc />
     public IReadOnlyList<ShellCommandInfo> GetCommands() => Commands;
 
+    /// <summary>Gets the shell's <c>$?</c> before the command ran, kept by a bare <c>exit</c>.</summary>
+    public int LastExitStatus { get; init; }
+
+    /// <summary>Gets the status <c>exit</c> asked for, or <see langword="null"/> when it was not called.</summary>
+    public int? ExitRequested { get; private set; }
+
+    public int Exit(int? exitStatus)
+    {
+        int status = (((exitStatus ?? LastExitStatus) % 256) + 256) % 256;
+        ExitRequested = status;
+        return status;
+    }
+
     /// <inheritdoc />
     public ValueTask<int> RunElevatedAsync(
         IReadOnlyList<string> arguments, TextWriter standardOutput, TextWriter standardError, CancellationToken cancellationToken)

@@ -126,7 +126,8 @@
                     <div class="terminal-instance @(tabId == _activeTerminalTabId ? "is-active" : null)" @key="tabId">
                         <TerminalPanel AppContext="AppContext"
                                        CallerAppId="org.hackeros.code-editor"
-                                       InitialCwd="@TerminalInitialCwd()" />
+                                       InitialCwd="@TerminalInitialCwd()"
+                                       OnExitRequested="() => OnTerminalExited(tabId)" />
                     </div>
                 }
             </div>
@@ -379,6 +380,21 @@
             int nextIndex = Math.Min(closedIndex, _terminalTabIds.Count - 1);
             _activeTerminalTabId = _terminalTabIds[nextIndex];
         }
+    }
+
+    /// <summary>
+    /// A tab's shell exited (<c>exit</c>, Ctrl+D): its tab closes; the last one hides the panel,
+    /// and reopening it starts a fresh shell.
+    /// </summary>
+    private void OnTerminalExited(string tabId)
+    {
+        if (_terminalTabIds.Count <= 1)
+        {
+            _showTerminalPanel = false;
+            return;
+        }
+
+        CloseTerminalTab(tabId);
     }
 
     private string TerminalInitialCwd() =>

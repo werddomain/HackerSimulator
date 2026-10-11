@@ -702,7 +702,8 @@ public sealed partial class ShellInterpreterTests
             {
                 new HackerOs.Commands.Cd.CdApp(), new HackerOs.Commands.Pwd.PwdApp(), new HackerOs.Commands.Export.ExportApp(),
                 new HackerOs.Commands.Unset.UnsetApp(), new HackerOs.Commands.Env.EnvApp(), new HackerOs.Commands.Help.HelpApp(),
-                new HackerOs.Commands.Sudo.SudoApp(), new HackerOs.Commands.Clear.ClearApp(), new HackerOs.Commands.Alias.AliasApp()
+                new HackerOs.Commands.Sudo.SudoApp(), new HackerOs.Commands.Clear.ClearApp(), new HackerOs.Commands.Alias.AliasApp(),
+                new HackerOs.Commands.Exit.ExitApp()
             }.Select(AppDefinitionMapper.ToManifest)
         ];
 

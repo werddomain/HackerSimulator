@@ -205,6 +205,13 @@ public sealed class ShellHostService
                             PermissionApproval = _prompts is null ? null : _prompts.RequestPermissionApprovalAsync
                         },
                         line.Token).ConfigureAwait(false);
+                    if (_session.ExitRequestedStatus is { } exitStatus)
+                    {
+                        // `exit [n]`: the shell's process ends with n and its terminal closes the tab.
+                        await DisposeAsync().ConfigureAwait(false);
+                        return exitStatus;
+                    }
+
                     return result.ExitCode;
                 }
             }
@@ -219,7 +226,22 @@ public sealed class ShellHostService
             ArgumentNullException.ThrowIfNull(commandLine);
             ArgumentOutOfRangeException.ThrowIfNegative(cursor);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(cursor, commandLine.Length);
-            return Task.FromResult(ShellCompletion.Complete(commandLine, cursor, _interpreter.GetInstalledCommands()));
+            if (HasExited)
+            {
+                return Task.FromResult(HackShellCompletion.None(cursor));
+            }
+
+            return CompleteCoreAsync(commandLine, cursor, cancellationToken);
+        }
+
+        /// <summary>Looks paths up with the shell's own rights and directory, as bash's readline does.</summary>
+        private async Task<HackShellCompletion> CompleteCoreAsync(string commandLine, int cursor, CancellationToken cancellationToken)
+        {
+            using (HackExecutionContext.Enter(_context))
+            {
+                return await ShellCompletion.CompleteAsync(
+                    commandLine, cursor, _interpreter.GetInstalledCommands(), _session.HomeDirectory, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public ValueTask DisposeAsync()
@@ -236,7 +258,8 @@ public sealed class ShellHostService
                 TryEnd(() => _processes.Kill(child.Pid, ProcessExitReason.DependencyStop));
             }
 
-            TryEnd(() => _processes.Complete(_context.ProcessId, _session.LastExitCode));
+            int exitCode = _session.ExitRequestedStatus ?? _session.LastExitCode;
+            TryEnd(() => _processes.Complete(_context.ProcessId, exitCode));
             return ValueTask.CompletedTask;
         }
 
