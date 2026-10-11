@@ -31,12 +31,14 @@ public enum FileViewContextMenuScope
 /// <param name="Icon">Optional icon.</param>
 /// <param name="OnActivate">Invoked when the item is chosen.</param>
 /// <param name="IsSeparatorBefore">Whether a visual separator precedes this item.</param>
+/// <param name="IsDisabled">Whether the item is shown greyed out and cannot be chosen (e.g. "Paste" with nothing to paste).</param>
 public sealed record FileViewMenuItem(
     string Id,
     string Label,
     ShellIconDescriptor? Icon,
     Func<Task> OnActivate,
-    bool IsSeparatorBefore = false);
+    bool IsSeparatorBefore = false,
+    bool IsDisabled = false);
 
 /// <summary>
 /// An ordered, mutable collection of <see cref="FileViewMenuItem"/>s under construction for one context

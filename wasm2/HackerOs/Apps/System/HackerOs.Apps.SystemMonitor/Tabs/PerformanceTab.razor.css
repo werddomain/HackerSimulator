@@ -1,0 +1,42 @@
+.perf {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.perf-section h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hos-accent, #42d392);
+}
+
+.perf-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.perf-section-header h3 {
+    margin: 0;
+}
+
+.perf-toggle {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.perf-cores {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.perf-hardware {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px;
+}

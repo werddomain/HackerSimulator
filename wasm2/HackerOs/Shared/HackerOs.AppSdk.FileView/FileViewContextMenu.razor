@@ -25,7 +25,7 @@
                 {
                     <MudDivider />
                 }
-                <MudMenuItem OnClick="menuItem.OnActivate">
+                <MudMenuItem OnClick="menuItem.OnActivate" Disabled="menuItem.IsDisabled">
                     <span class="file-view-context-menu-item">
                         @if (menuItem.Icon is not null)
                         {

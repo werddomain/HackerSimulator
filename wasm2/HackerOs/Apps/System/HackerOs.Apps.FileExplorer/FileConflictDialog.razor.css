@@ -1,0 +1,32 @@
+.conflict-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.5rem;
+    max-width: 30rem;
+}
+
+.conflict-title {
+    color: var(--hos-text-primary, #f0f6fc);
+    font-size: 0.95rem;
+}
+
+.conflict-title strong {
+    color: var(--hos-accent, #42d392);
+}
+
+.conflict-detail {
+    color: var(--hos-text-secondary, #a8bac4);
+    font-size: 0.82rem;
+}
+
+.conflict-path {
+    font-family: var(--hos-font-mono, monospace);
+    color: var(--hos-text-muted, #8b949e);
+    word-break: break-all;
+}
+
+.conflict-warning {
+    color: var(--hos-danger, #f85149);
+    font-size: 0.8rem;
+}

@@ -162,6 +162,10 @@ Sans argument, `trash` affiche l'aide sur la sortie d'erreur et renvoie 1.
   « Restore » (ou double-clic, Entrée), « Delete permanently » (ou Suppr) et
   « Empty trash », ces deux dernières après confirmation. Ctrl+clic pour une
   sélection multiple. Après une restauration, l'explorateur rafraîchit FileView.
+- **Dépôt sur la corbeille** (phase 4, `rebuild/4-file-explorer`) : glisser des
+  éléments sur l'entrée « Trash » du panneau Places ou sur la vue Corbeille les
+  envoie à la corbeille (`FileTransfer.MoveToTrashAsync`). Voir
+  [`file-explorer.md`](file-explorer.md).
 
 Correctif au passage : `Shared/HackerOs.AppSdk.FileView/_Imports.razor` importe
 désormais `Microsoft.AspNetCore.Components.Web`. Sans lui, `FileView.razor`

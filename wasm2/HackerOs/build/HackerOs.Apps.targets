@@ -154,7 +154,6 @@
     No project may be added to this list (enforced by SdkBoundaryExemptionTests).
   -->
   <ItemGroup>
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.SystemMonitor" Adr="0056" Chantier="4-task-manager" />
   </ItemGroup>
 
   <PropertyGroup>

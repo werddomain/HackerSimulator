@@ -1,0 +1,51 @@
+@using HackerOs.AppSdk.FileView.Transfers
+@using MudBlazor
+
+@*
+    "Replace / Keep both / Skip" window of a move whose name is taken (ADR 0058, section 1), with
+    "Apply to all" for the rest of the operation. Closing it without a choice skips the item.
+*@
+<MudDialog Class="gothic-dialog">
+    <DialogContent>
+        <div class="conflict-container">
+            <p class="conflict-title">
+                @(Conflict.DestinationIsDirectory ? "A folder" : "A file") named
+                <strong>@Conflict.Name</strong> already exists here.
+            </p>
+            <p class="conflict-detail">
+                Moving <span class="conflict-path">@Conflict.SourcePath</span>
+            </p>
+            @if (Conflict.DestinationIsDirectory)
+            {
+                <p class="conflict-warning">Replacing deletes the existing folder and everything in it.</p>
+            }
+            @if (ShowApplyToAll)
+            {
+                <MudCheckBox T="bool" @bind-Value="_applyToAll" Label="Apply to all" Dense="true" />
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.Skip)">Skip</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.KeepBoth)">Keep both</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => Close(FileConflictChoice.Replace)">Replace</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>The conflict to settle.</summary>
+    [Parameter]
+    public FileTransferConflict Conflict { get; set; } = default!;
+
+    /// <summary>Whether more items follow, so "Apply to all" makes sense.</summary>
+    [Parameter]
+    public bool ShowApplyToAll { get; set; } = true;
+
+    private bool _applyToAll;
+
+    private void Close(FileConflictChoice choice) =>
+        MudDialog.Close(DialogResult.Ok(new FileConflictResolution(choice, _applyToAll)));
+}

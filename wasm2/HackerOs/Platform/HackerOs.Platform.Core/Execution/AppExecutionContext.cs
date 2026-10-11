@@ -6,6 +6,7 @@ using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Shell;
 using HackerOs.AppSdk.Net;
 using HackerOs.AppSdk.Settings;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -50,6 +51,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppManagementGateway? appManagement = null,
         IAppNetworkGateway? network = null,
         IAppDriveGateway? drives = null,
+        IAppClipboardGateway? clipboard = null,
         IAppSystemSettingsGateway? systemSettings = null,
         IAppPermissionAdministrationGateway? permissionAdministration = null,
         IAppServerConnectionGateway? serverConnection = null,
@@ -92,6 +94,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         ServerConnection = serverConnection ?? UnsupportedAdministrationGateways.ServerConnection;
         SystemPower = systemPower ?? UnsupportedAdministrationGateways.SystemPower;
         StorageDiagnostics = storageDiagnostics ?? UnsupportedAdministrationGateways.StorageDiagnostics;
+        Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
     }
 
     /// <inheritdoc />
@@ -126,6 +129,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppDriveGateway Drives { get; }
+
+    /// <inheritdoc />
+    public IAppClipboardGateway Clipboard { get; }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }

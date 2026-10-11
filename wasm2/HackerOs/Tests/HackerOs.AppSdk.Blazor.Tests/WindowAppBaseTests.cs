@@ -199,13 +199,25 @@ public sealed class WindowAppBaseTests
         Resources = AppResourceProfileManifest.None
     };
 
-    private static TestWindowApp CreateWindowApp(
-        AppKind kind = AppKind.Window,
-        IDialogService? dialogs = null,
-        IAdminElevationVerifier? elevationVerifier = null,
-        TestExecutionContext? context = null)
+    [Theory]
+    [InlineData(new[] { "org.hackeros.test-window", "/home/user/notes.txt" }, "/home/user/notes.txt")]
+    [InlineData(new[] { "org.hackeros.test-window" }, null)]
+    [InlineData(new[] { "org.hackeros.test-window", "--new-window" }, null)]
+    public void LaunchFile_is_the_first_absolute_argument_after_argv0(string[] argv, string? expected)
     {
-        AppManifest manifest = new()
+        // An open-file intent (File Explorer double-click) launches the handler with argv
+        // [appId, path]; the document app reads its file from there (ADR 0050).
+        TestWindowApp app = CreateWindowApp(context: new TestExecutionContext(CreateManifest())
+        {
+            Environment = new HackerOs.Tests.Support.FakeAppEnvironmentGateway("/home/user", arguments: argv)
+        });
+
+        Assert.Equal(argv.Skip(1), app.ExposedLaunchArguments);
+        Assert.Equal(expected, app.ExposedLaunchFile?.Value);
+    }
+
+    private static AppManifest CreateManifest(AppKind kind = AppKind.Window) =>
+        new()
         {
             Id = "org.hackeros.test-window",
             Name = "Test Window",
@@ -218,6 +230,14 @@ public sealed class WindowAppBaseTests
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         };
+
+    private static TestWindowApp CreateWindowApp(
+        AppKind kind = AppKind.Window,
+        IDialogService? dialogs = null,
+        IAdminElevationVerifier? elevationVerifier = null,
+        TestExecutionContext? context = null)
+    {
+        AppManifest manifest = CreateManifest(kind);
 
         FakeDialogService fakeService = dialogs as FakeDialogService ?? new FakeDialogService();
         TestWindowApp app = new(fakeService, elevationVerifier);
@@ -239,6 +259,10 @@ public sealed class WindowAppBaseTests
         public Action? AfterRenderCallback { get; set; }
 
         public void BindContext(IAppExecutionContext context) => AppContext = context;
+
+        public IReadOnlyList<string> ExposedLaunchArguments => LaunchArguments;
+
+        public VirtualPath? ExposedLaunchFile => LaunchFile;
 
         public void InvokeInitialized() => base.OnInitialized();
 
@@ -388,6 +412,9 @@ public sealed class WindowAppBaseTests
         public IAppPermissionErrorGateway PermissionErrors => PermissionErrorsGateway;
 
         public OneShotElevationGrantSet OneShotElevation { get; } = new();
+
+        public IAppEnvironmentGateway Environment { get; init; } =
+            new HackerOs.Tests.Support.FakeAppEnvironmentGateway("/home/user", arguments: [manifest.Id]);
     }
 
     private sealed class FakeAdminElevationVerifier : IAdminElevationVerifier

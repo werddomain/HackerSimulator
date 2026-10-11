@@ -47,6 +47,7 @@ public sealed class AppExecutionContextFactory
     private readonly IProxyClient? _proxy;
     private readonly SystemMetricsServices? _metrics;
     private readonly SystemAdministrationGatewayServices? _administration;
+    private readonly Clipboard.SystemClipboard _clipboard;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -90,6 +91,10 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.Drives"/> answers <c>HackDriveInfo</c>. <see langword="null"/>
     /// counts nothing and leaves drives unsupported.
     /// </param>
+    /// <param name="clipboard">
+    /// The OS clipboard behind <see cref="IAppExecutionContext.Clipboard"/> (ADR 0056, section 12), shared
+    /// by every context this factory creates; when omitted the factory keeps its own.
+    /// </param>
     /// <param name="administration">
     /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
     /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
@@ -115,6 +120,7 @@ public sealed class AppExecutionContextFactory
         IProxyClient? proxy = null,
         Func<Shell.ShellHostService>? shellHostProvider = null,
         SystemMetricsServices? metrics = null,
+        Clipboard.SystemClipboard? clipboard = null,
         SystemAdministrationGatewayServices? administration = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
@@ -136,6 +142,7 @@ public sealed class AppExecutionContextFactory
         _shellHostProvider = shellHostProvider;
         _metrics = metrics;
         _administration = administration;
+        _clipboard = clipboard ?? new Clipboard.SystemClipboard();
     }
 
     /// <summary>
@@ -218,6 +225,7 @@ public sealed class AppExecutionContextFactory
                 isRootElevated,
                 _fileSystem,
                 _clock);
+        AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId);
 
         AppFileSystemGateway fileSystem = new(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise);
         AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
@@ -264,6 +272,7 @@ public sealed class AppExecutionContextFactory
                     _metrics?.ProcessIo,
                     process.Pid),
             _metrics?.Drives,
+            clipboardGateway,
             administration.SystemSettings,
             administration.Permissions,
             administration.ServerConnection,
@@ -289,6 +298,7 @@ public sealed class AppExecutionContextFactory
                     Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
                     shellProcess.AppInstanceId.Value, isRootElevated));
         }
+        clipboardGateway.BindAmbientContext(context);
         return context;
     }
 

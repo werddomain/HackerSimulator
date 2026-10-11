@@ -448,6 +448,8 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IFileSystemMountRouter>(),
                     VirtualHardwareProfile.Default,
                     provider.GetRequiredService<IStorageUsageProvider>())),
+            // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
+            clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
             // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
             administration: new SystemAdministrationGatewayServices(
@@ -461,6 +463,8 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
+        services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
+            new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),

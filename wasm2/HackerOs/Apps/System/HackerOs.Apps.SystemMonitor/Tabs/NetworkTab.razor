@@ -1,0 +1,44 @@
+@namespace HackerOs.Apps.SystemMonitor.Tabs
+
+<div class="net">
+    @foreach (NetworkActivity nic in Metrics.Network)
+    {
+        <section class="net-interface">
+            <h3>@nic.Name <span class="sysmon-source">/proc/net/dev</span>@if (nic.Name == "lo") {<span class="net-note"> loopback</span>}</h3>
+            <HackLineChart Title="@($"{nic.Name} throughput")"
+                           Series="@([new HackChartSeries("Received", nic.ReceivePerSecond.Values), new HackChartSeries("Sent", nic.TransmitPerSecond.Values)])"
+                           MinimumScale="1024"
+                           Size="@(nic.Name == "lo" ? HackChartSize.Small : HackChartSize.Large)"
+                           ValueFormatter="Units.Rate" />
+            @if (nic.Counters is { } counters)
+            {
+                <table class="sysmon-table net-counters">
+                    <thead>
+                        <tr><th></th><th class="num">Bytes</th><th class="num">Packets</th><th class="num">Errors</th><th class="num">Dropped</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Received</td>
+                            <td class="num">@Units.Bytes(counters.ReceiveBytes)</td>
+                            <td class="num">@Units.Count(counters.ReceivePackets)</td>
+                            <td class="num @(counters.ReceiveErrors > 0 ? "net-bad" : null)">@Units.Count(counters.ReceiveErrors)</td>
+                            <td class="num">@Units.Count(counters.ReceiveDropped)</td>
+                        </tr>
+                        <tr>
+                            <td>Sent</td>
+                            <td class="num">@Units.Bytes(counters.TransmitBytes)</td>
+                            <td class="num">@Units.Count(counters.TransmitPackets)</td>
+                            <td class="num @(counters.TransmitErrors > 0 ? "net-bad" : null)">@Units.Count(counters.TransmitErrors)</td>
+                            <td class="num">@Units.Count(counters.TransmitDropped)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+
+    @if (Metrics.Network.Count == 0)
+    {
+        <p class="sysmon-muted">/proc/net/dev lists no interface.</p>
+    }
+</div>

@@ -14,7 +14,8 @@
     <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
                           InitialDirectory="@EffectiveInitialDirectory"
                           AllowFileSelection="false"
-                          DirectoryChanged="DirectoryChanged" />
+                          DirectoryChanged="DirectoryChanged"
+                          FileActivated="UseExistingName" />
 
     <label class="name-control">
         <span>File name</span>
@@ -143,6 +144,14 @@
     }
 
     private void RejectOverwrite() => _confirmPath = null;
+
+    // Double-click/Enter on an existing file takes its name; Save then asks before replacing it.
+    private void UseExistingName(FileSystemDirectoryItem entry)
+    {
+        _fileName = entry.Name.Value;
+        _error = null;
+        _confirmPath = null;
+    }
     private void Cancel() => Coordinator.Cancel(Presentation.Id);
     private void HandleKeyDown(KeyboardEventArgs args)
     {
