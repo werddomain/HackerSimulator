@@ -26,14 +26,23 @@ public sealed class SystemMonitorApp : AppDefinition
 
     /// <inheritdoc />
     public override string Description =>
-        "System resource performance monitoring, process manager, memory usage, and background service diagnostics";
+        "Task manager: processes, CPU, memory, disk and network activity, and background services, read from /proc";
 
     /// <inheritdoc />
     public override string Category => "system";
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reading <c>/proc</c> needs <c>filesystem.system.read</c>; seeing and ending other processes,
+    /// <c>process.list</c> and <c>process.manage</c>; acting on services, <c>services.manage</c>
+    /// (ADR 0056, sections 4 and 5).
+    /// </summary>
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.ProcessList, AppCapabilities.ProcessManage, AppCapabilities.ServicesManage];
+    [
+        AppCapabilities.FileSystemSystemRead,
+        AppCapabilities.ProcessList,
+        AppCapabilities.ProcessManage,
+        AppCapabilities.ServicesManage
+    ];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;

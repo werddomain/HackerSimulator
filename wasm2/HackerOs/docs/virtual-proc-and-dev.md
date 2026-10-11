@@ -178,7 +178,8 @@ pour agir.
 - **Migration de `ps` avancée.** L'ADR 0046 (section 5) plaçait cette migration
   en phase 3. Elle est faite dès la phase 1, comme le demande la section 5.4 du
   plan, parce qu'elle ne dépend que de `/proc`. La refonte des commandes de la
-  phase 3 la conserve. Le gestionnaire de tâches reste en phase 4.
+  phase 3 la conserve. Le gestionnaire de tâches est passé à `/proc` en
+  phase 4 ([`task-manager.md`](task-manager.md), `HackProcess`).
 - **Pas d'événements de changement** : le marqueur `IVirtualFileSystemProvider`
   est vérifié au seul endroit qui publie, `FileSystemService`.
 - **Mutations refusées par le fournisseur lui-même**, en plus des bits de mode :

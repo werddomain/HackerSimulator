@@ -1,0 +1,77 @@
+@namespace HackerOs.Apps.SystemMonitor.Tabs
+@inherits HackComponentBase
+
+<div class="svc">
+    <div class="svc-toolbar">
+        <span class="sysmon-muted">@_services.Count service(s) installed</span>
+        <button class="sysmon-btn" @onclick="LoadAsync" disabled="@_busy">Reload</button>
+    </div>
+
+    @if (_message is not null)
+    {
+        <div class="svc-message" role="alert">
+            <span>@_message</span>
+            <button class="sysmon-btn sysmon-btn-ghost" @onclick="() => _message = null" aria-label="Dismiss">&#x2715;</button>
+        </div>
+    }
+
+    <div class="svc-table-wrapper">
+        <table class="sysmon-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th class="num">PID</th>
+                    <th>Status</th>
+                    <th>Start type</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (HackServiceController service in _services)
+                {
+                    HackServiceController current = service;
+                    HackServiceControllerStatus status = LiveStatus(current);
+                    <tr>
+                        <td>
+                            <span class="svc-name">@current.DisplayName</span>
+                            <span class="svc-id">@current.ServiceName</span>
+                        </td>
+                        <td class="num mono">@(LivePid(current)?.ToString() ?? "—")</td>
+                        <td><span class="svc-status svc-@status">@StatusText(status)</span></td>
+                        <td>
+                            @if (current.StartType is { } startType)
+                            {
+                                <select class="svc-select" value="@startType" disabled="@_busy" aria-label="@($"Start type of {current.DisplayName}")"
+                                        @onchange="e => SetStartTypeAsync(current, e.Value)">
+                                    @foreach (ServiceStartMode mode in Enum.GetValues<ServiceStartMode>())
+                                    {
+                                        <option value="@mode">@mode</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <span class="sysmon-muted" title="Reading another app's start type needs services.manage">unknown</span>
+                            }
+                        </td>
+                        <td class="svc-actions">
+                            @if (status is HackServiceControllerStatus.Running or HackServiceControllerStatus.StartPending)
+                            {
+                                <button class="sysmon-btn btn-danger" disabled="@_busy" @onclick='() => RunAsync(current, current.StopAsync, "stop")'>Stop</button>
+                            }
+                            else
+                            {
+                                <button class="sysmon-btn" disabled="@(_busy || current.StartType == ServiceStartMode.Disabled)"
+                                        @onclick='() => RunAsync(current, current.StartAsync, "start")'>Start</button>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (_services.Count == 0 && !_busy)
+                {
+                    <tr class="svc-empty"><td colspan="5">No service installed.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
