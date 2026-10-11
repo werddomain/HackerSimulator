@@ -649,11 +649,28 @@ public sealed class AppLifecycleOrchestrator
             context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
         }
 
-        ProcessRecord stopped = _processManager.Complete(process.Pid, exitCode);
+        ProcessRecord stopped = CompleteUnlessEnded(process, exitCode);
         return new AppLaunchResult(
             AppLaunchStatus.Launched, stopped, context, exitCode,
             bufferedOutput?.ToString() ?? string.Empty, bufferedError?.ToString() ?? string.Empty,
             PermissionDenials: permissionDenials);
+    }
+
+    /// <summary>
+    /// Records a command's exit, unless its process already ended: killed with <c>kill</c>, or with
+    /// the shell that ran it when its terminal closed (ADR 0056, section 7). The record of that
+    /// earlier end is kept, as the exit of a process killed by a signal is the signal's.
+    /// </summary>
+    private ProcessRecord CompleteUnlessEnded(ProcessRecord process, int exitCode)
+    {
+        try
+        {
+            return _processManager.Complete(process.Pid, exitCode);
+        }
+        catch (KeyNotFoundException)
+        {
+            return _processManager.GetHistory().LastOrDefault(record => record.Pid == process.Pid) ?? process;
+        }
     }
 
     /// <summary>

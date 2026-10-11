@@ -30,7 +30,7 @@ namespace HackerOs.Platform.Core.Tests.Shell;
 /// The headless shell end to end (ADR 0050, sections 1 to 4 and 7): real orchestrator, process
 /// manager and filesystem, a Terminal window as the shell's process, test commands.
 /// </summary>
-public sealed class ShellInterpreterTests
+public sealed partial class ShellInterpreterTests
 {
     [Fact]
     public async Task Quoted_arguments_reach_the_command_intact()
@@ -583,7 +583,8 @@ public sealed class ShellInterpreterTests
             Manager = new InMemoryProcessManager(clock, _sessions, eventBus);
             AppExecutionContextFactory contextFactory = new(
                 _grants, fileSystem, eventBus, topicBus, new InMemoryNotificationQueue(maxEntriesPerUser: 20),
-                new BoundedDiagnosticSink(maxEntries: 100), clock, Manager);
+                new BoundedDiagnosticSink(maxEntries: 100), clock, Manager,
+                shellHostProvider: () => ShellHost!);
 
             AppManifest[] commands =
             [
@@ -613,6 +614,7 @@ public sealed class ShellInterpreterTests
             _orchestrator = new AppLifecycleOrchestrator(
                 catalog, descriptors, enablement, Manager, _grants, contextFactory, elevationTickets: Tickets);
             Interpreter = new ShellInterpreter(_orchestrator, catalog, enablement);
+            ShellHost = new ShellHostService(Interpreter, Manager, new FakeElevationService(Tickets));
             Dispatcher = new AppIntentDispatcher(
                 _orchestrator, catalog, enablement,
                 new FileAssociationResolver(catalog, enablement, new OsSettingsService(fileSystem, _sessions, clock)),
@@ -623,6 +625,7 @@ public sealed class ShellInterpreterTests
         public AppEnablementRegistry Enablement { get; }
         public InMemoryElevationTicketStore Tickets { get; } = new();
         public ShellInterpreter Interpreter { get; }
+        public ShellHostService ShellHost { get; }
         public AppIntentDispatcher Dispatcher { get; }
         public AuthenticatedPrincipal Principal { get; private set; } = default!;
         public IAppExecutionContext Host { get; private set; } = default!;

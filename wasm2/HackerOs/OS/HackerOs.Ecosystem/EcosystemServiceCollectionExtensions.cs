@@ -423,6 +423,8 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<FileAssociationResolver>(),
                 () => provider.GetRequiredService<IAppInstallationService>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+            // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
+            shellHostProvider: () => provider.GetRequiredService<ShellHostService>(),
             // ADR 0057: traffic counters for /proc/net/dev and /proc/<pid>/io, and HackDriveInfo.
             metrics: new SystemMetricsServices(
                 provider.GetRequiredService<INetworkInterfaceStatistics>(),
@@ -491,6 +493,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>()));
+        // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
+        services.AddScoped<ShellHostService>(provider => new ShellHostService(
+            provider.GetRequiredService<ShellInterpreter>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IElevationService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

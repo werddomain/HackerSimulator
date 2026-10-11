@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.IO;
+using HackerOs.AppSdk.Shell;
 using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -168,6 +169,22 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public OneShotElevationGrantSet OneShotElevation { get; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Bound by <see cref="AppExecutionContextFactory"/> right after construction, because the
+    /// gateway needs this context (the shell's parent process); unsupported until then.
+    /// </remarks>
+    public IAppShellHostGateway ShellHost { get; internal set; } = UnsupportedShellHostGateway.Instance;
+
+    /// <summary>Shell host of a context whose factory has no shell service (tests, legacy hosts).</summary>
+    internal sealed class UnsupportedShellHostGateway : IAppShellHostGateway
+    {
+        public static readonly UnsupportedShellHostGateway Instance = new();
+
+        public Task<IHackShell> StartAsync(HackShellOptions options, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("This execution context factory was not configured with a shell host service.");
+    }
 
     /// <summary>Drive gateway of a context built without a mount table (tests).</summary>
     private sealed class UnsupportedDriveGateway : IAppDriveGateway

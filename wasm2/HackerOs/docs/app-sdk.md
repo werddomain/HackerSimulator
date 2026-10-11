@@ -23,7 +23,7 @@ section [API du SDK](#api-du-sdk).
 | `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement…). |
 | `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
 | `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
-| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`). |
+| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`), qui héberge un shell par `HackShell`. |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
 Toute bibliothèque `Shared/HackerOs.AppSdk` ou `Shared/HackerOs.AppSdk.*` est
@@ -117,7 +117,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 | `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
 | `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
 | `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
-| `HackerOs.AppSdk.Terminal` | `Platform.Core` (`ShellInterpreter`, `IElevationService`) | `4-sdk-shell-host` |
 
 Règles de la liste :
 
@@ -139,6 +138,8 @@ Calculator, HackPaint et IconViewer passent sans exemption.
 
 Exemptions déjà retirées : `HackerOs.Apps.Browser` et `HackerOs.Commands`
 (`4-sdk-network`, voir [`sdk-network.md`](sdk-network.md)).
+`HackerOs.AppSdk.Terminal` (`4-sdk-shell-host`, voir
+[`shell-host.md`](shell-host.md)).
 
 ## Comment une app obtient un service de l'OS (ADR 0055 §4)
 
@@ -172,8 +173,8 @@ Façades statiques existantes au début de la phase 4 :
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
-(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `Drives`
-(ADR 0057, `4-proc-metrics`).
+(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `ShellHost`
+(`4-sdk-shell-host`), `Drives` (ADR 0057, `4-proc-metrics`).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
@@ -266,6 +267,16 @@ Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
 Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
 `HackClipboard`…) sont ajoutées ici par leurs chantiers.
+
+### Hôte de shell (ADR 0056 §7)
+
+| API | Passerelle | Capacité | Remplace | Document |
+|---|---|---|---|---|
+| `HackShell.StartAsync`, `IHackShell` (`ExecuteAsync`, `CompleteAsync`, `GetInstalledCommands`, `WorkingDirectory`, `ExitStatus`, `Prompt`, historique), `HackShellOptions`, `HackShellCompletion`, `HackCredentialPrompt` | `IAppExecutionContext.ShellHost` (`IAppShellHostGateway`) | `shell.host` (dangereuse) | `ShellInterpreter`, `ISessionService`, `IElevationService` dans `TerminalPanel` | [`shell-host.md`](shell-host.md) |
+
+Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
+enfants et gardent leurs propres capacités. Le terminal lit les identifiants
+(`HackCredentialPrompt`), l'OS les vérifie.
 
 ## Décisions
 

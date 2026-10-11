@@ -64,6 +64,7 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.NetworkRealAccess, CapabilityRisk.Dangerous },
         { AppCapabilities.GameplayDomainAccess, CapabilityRisk.Normal },
         { AppCapabilities.ShellControl, CapabilityRisk.Normal },
+        { AppCapabilities.ShellHost, CapabilityRisk.Dangerous },
     };
 
     [Theory]
