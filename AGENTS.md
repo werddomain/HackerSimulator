@@ -18,7 +18,7 @@
     * **Three host projects currently serve `wasm2/HackerOs/`** (see [`wasm2/HackerOs/docs/old/hosting-model.md`](wasm2/HackerOs/docs/old/hosting-model.md) for the full picture):
         * `OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj` — the standalone, self-contained Blazor WebAssembly PWA (own `wwwroot/index.html`). This is the production/offline-first host and must always work with no server present.
         * `test/test/test.csproj` — a Blazor Web App used only to debug the same WASM components interactively (`Components/App.razor`, `AddInteractiveWebAssemblyRenderMode`). Not a distribution target.
-        * `Server/HackerOs.Server/HackerOs.Server.csproj` — the **optional** ASP.NET Core backend (sync, identity, HTTP/TCP/UDP proxy). Today it is a separate API process, not a UI host. It is a documented future goal for this project to also become a third UI host (serving the same Razor components with backend contracts/services injected), but that capability does not exist yet — do not assume it when implementing.
+        * `Server/HackerOs.Server/HackerOs.Server.csproj` — the **optional** ASP.NET Core backend (sync, identity, HTTP/TCP/UDP proxy). It also serves the same Razor component tree in Interactive Server render mode (ADR 0027, `Server/HackerOs.Server/Components/App.razor`), single-tenant / single-active-circuit for now. It remains optional: nothing may require it.
     * Any component or service you add must keep working when only the Ecosystem host is present; never take a hard dependency on the server being reachable.
 
 2.  **Technology Preference: C# over JavaScript:**

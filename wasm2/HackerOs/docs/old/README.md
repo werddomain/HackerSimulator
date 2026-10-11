@@ -1,5 +1,11 @@
 # HackerOS v3 Documentation Index
 
+> **Archived.** These documents predate the rebuild plan. The current index is
+> [`../README.md`](../README.md); start with
+> [`../project-overview.md`](../project-overview.md), and for app development
+> with [`../sdk-developer-guide.md`](../sdk-developer-guide.md) and
+> [`../sdk-reference.md`](../sdk-reference.md).
+
 This is the entry point into `wasm2/HackerOs/docs/`, organized by who is
 reading it rather than by when it was written. If you add, rename, or remove a
 doc, update this index in the same change — see the documentation-maintenance
@@ -29,7 +35,7 @@ against the public SDK, without needing to touch platform internals.
 
 | Doc | What it's for |
 | --- | --- |
-| [`sdk/developer-guide.md`](sdk/developer-guide.md) | Start here: app kinds, entry points, manifests, SDK package map. |
+| [`sdk/developer-guide.md`](sdk/developer-guide.md) | Superseded by [`../sdk-developer-guide.md`](../sdk-developer-guide.md) (it still describes hand-written `app.manifest.json`, replaced by `[AppManifest]` classes in ADR 0047). |
 | [`app-contracts.md`](app-contracts.md) | The stable, browser-independent contracts every app is built against. |
 | [`blazor-app-sdk.md`](blazor-app-sdk.md) | `WindowAppBase`, file dialogs, and scoped Blazor asset rules for window apps. |
 | [`app-execution-context.md`](app-execution-context.md) | The scoped gateways (filesystem, settings, events, notifications, logging, clock, process) an app instance receives. |
@@ -99,7 +105,7 @@ worked examples of the two sections above.
 ## Optional server
 
 For work on the backend process described in
-[`hosting-model.md`](hosting-model.md#3-serverhackerosserver--the-optional-backend-today).
+[`hosting-model.md`](hosting-model.md#3-serverhackerosserver--the-optional-backend-and-a-third-ui-host).
 
 | Doc | What it's for |
 | --- | --- |
