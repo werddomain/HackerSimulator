@@ -36,9 +36,9 @@ Côté terminal (`Shared/HackerOs.AppSdk.Terminal/`) :
 
 | Type | Rôle |
 |---|---|
-| `TerminalPanel` | Édition de ligne, affichage, historique au clavier, complétion, fenêtre d'identifiants. Démarre son shell par `HackShell.StartAsync` ; chaque ligne passe par `IHackShell.ExecuteAsync` ([`shell-host.md`](shell-host.md)). |
-| `TerminalOutputWriter` | `TextWriter` qui pousse chaque morceau écrit vers l'affichage : la sortie apparaît pendant que la commande tourne. Une ligne reste « ouverte » jusqu'à son `\n`. |
-| `TerminalControlSequenceDecoder` | Interprète les séquences d'effacement (`ESC[2J`) écrites par `clear` et consomme les autres séquences CSI. |
+| `TerminalPanel` | Discipline de ligne et affichage dans un terminal xterm.js ([`terminal-emulator.md`](terminal-emulator.md), ADR 0061) : édition de ligne, historique au clavier, complétion, fenêtre d'identifiants. Démarre son shell par `HackShell.StartAsync` ; chaque ligne passe par `IHackShell.ExecuteAsync` ([`shell-host.md`](shell-host.md)). |
+| `TerminalOutputWriter` | `TextWriter` qui pousse chaque morceau écrit vers le terminal : la sortie apparaît pendant que la commande tourne. |
+| `TerminalControlSequenceDecoder` | Décodeur des séquences d'effacement (`ESC[2J`), gardé dans l'API publique ; `TerminalPanel` ne s'en sert plus depuis l'ADR 0061 (xterm.js interprète toutes les séquences). |
 
 `ShellParser` et `TerminalSession` de `HackerOs.AppSdk.Terminal` ont disparu.
 

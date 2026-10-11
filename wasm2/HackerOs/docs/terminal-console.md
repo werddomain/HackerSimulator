@@ -17,6 +17,10 @@ Terminal (fenêtre, PID 12)
  └─ hsh (PID 14)        ← onglet « ~ »
 ```
 
+Le rendu (grille de caractères, couleurs, édition de la ligne, écran
+alternatif) est décrit dans [`terminal-emulator.md`](terminal-emulator.md)
+(ADR 0061).
+
 ## Complétion par Tab
 
 Calculée par `ShellCompletion` (Platform Core) dans le contexte d'exécution du
@@ -97,8 +101,9 @@ l'action du navigateur. Un navigateur peut garder certains raccourcis pour ses
 propres onglets (Chrome garde Ctrl+Maj+T et Ctrl+Maj+W hors application
 installée) ; les boutons `+` et `×` marchent toujours.
 
-`TerminalPanel.razor.js` empêche aussi Tab de déplacer le focus du
-navigateur : avant ce chantier, Tab quittait la ligne de saisie.
+Tab ne déplace pas le focus du navigateur : xterm.js le reçoit et l'envoie au
+terminal (ADR 0061). Le gestionnaire de touches de xterm.js laisse remonter
+les raccourcis d'onglets ci-dessus jusqu'à `TerminalTabs`.
 
 ### API
 
