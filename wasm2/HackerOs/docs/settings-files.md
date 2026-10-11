@@ -111,6 +111,28 @@ int same = await HackSettings.GetAsync<int>("Editor.tab-size");             // c
 - `SetAsync(key, value, SettingLayer.System)` écrit `/etc/<appId>/` si l'app a
   la capacité et l'utilisateur les droits du fichier.
 
+Plusieurs clés d'une même couche s'écrivent en une seule édition du fichier
+avec `SetManyAsync(values, layer)` (une seule approbation pour `/etc`).
+
+#### Documents de l'OS (`HackSettings.OpenSystemAsync`, ADR 0056 §8)
+
+```csharp
+await using HackSettingsDocument appearance = await HackSettings.OpenSystemAsync(AppContext, "appearance");
+string accent = appearance.Get<string>("accent");
+await appearance.SetAsync("accent", "cyan");                       // ~/.config/hackeros/appearance.config
+await appearance.SetManyAsync(values, SettingLayer.System);        // /etc/hackeros : sudo ou approbation
+```
+
+- Documents ouverts : `appearance`, `ui-platform-preference`, `security`,
+  `policy` (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
+  `ArgumentException`.
+- Aucune capacité : les droits des fichiers décident (D16). La couche
+  utilisateur est écrite par l'OS au nom de l'utilisateur de la session ; la
+  couche système avec les droits de fichiers de l'app appelante, donc `sudo`
+  ou l'approbation de l'ADR 0042.
+- `Changed` suit `DocumentChanged` de `IOsSettingsService`, dans le contexte
+  ambiant de l'app.
+
 `IAppExecutionContext.Settings` (l'ancienne passerelle `IAppSettingsGateway`)
 est retiré ; `IAppExecutionContext.HomeDirectory` donne le dossier personnel.
 
@@ -132,8 +154,10 @@ L'app propose deux cibles : « Moi seulement » (couche utilisateur) et « Tous
 les utilisateurs (défaut système) ». Chaque réglage affiche son origine ; un
 réglage verrouillé est désactivé pour la cible utilisateur. Écrire la couche
 système demande l'approbation administrateur ; un refus affiche un message au
-lieu d'une erreur. « Synchroniser » pousse et tire le système de fichiers puis
-relit l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
+lieu d'une erreur. L'apparence passe par `HackSettings.OpenSystemAsync`
+(chantier `4-sdk-system-admin`). « Synchroniser » pousse et tire le système de
+fichiers, tire les permissions, pousse et tire les associations, puis relit
+l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
 (voir [`app-installation.md`](app-installation.md)).
 
 ## Migration

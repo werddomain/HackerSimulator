@@ -33,7 +33,7 @@ public sealed class DiagnosticApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.ClipboardWrite];
+        [AppCapabilities.SystemStorageInspect, AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;

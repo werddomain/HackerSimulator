@@ -5,6 +5,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Network;
@@ -45,6 +46,7 @@ public sealed class AppExecutionContextFactory
     private readonly IServerConnectionService? _serverConnection;
     private readonly IProxyClient? _proxy;
     private readonly SystemMetricsServices? _metrics;
+    private readonly SystemAdministrationGatewayServices? _administration;
     private readonly Clipboard.SystemClipboard _clipboard;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
@@ -82,6 +84,7 @@ public sealed class AppExecutionContextFactory
     /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
     /// interpreter depends on the orchestrator, which depends on this factory. Pass
     /// <see langword="null"/> to leave shell hosting unsupported.
+    /// </param>
     /// <param name="metrics">
     /// Counters and drive information of ADR 0057: each app's network traffic is counted for
     /// <c>/proc/net/dev</c> and its <c>/proc/&lt;pid&gt;/io</c>, and
@@ -91,6 +94,12 @@ public sealed class AppExecutionContextFactory
     /// <param name="clipboard">
     /// The OS clipboard behind <see cref="IAppExecutionContext.Clipboard"/> (ADR 0056, section 12), shared
     /// by every context this factory creates; when omitted the factory keeps its own.
+    /// </param>
+    /// <param name="administration">
+    /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
+    /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
+    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/> and
+    /// <see cref="IAppExecutionContext.StorageDiagnostics"/>; <see langword="null"/> leaves them unsupported.
     /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
@@ -111,7 +120,8 @@ public sealed class AppExecutionContextFactory
         IProxyClient? proxy = null,
         Func<Shell.ShellHostService>? shellHostProvider = null,
         SystemMetricsServices? metrics = null,
-        Clipboard.SystemClipboard? clipboard = null)
+        Clipboard.SystemClipboard? clipboard = null,
+        SystemAdministrationGatewayServices? administration = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -131,6 +141,7 @@ public sealed class AppExecutionContextFactory
         _proxy = proxy;
         _shellHostProvider = shellHostProvider;
         _metrics = metrics;
+        _administration = administration;
         _clipboard = clipboard ?? new Clipboard.SystemClipboard();
     }
 
@@ -216,6 +227,9 @@ public sealed class AppExecutionContextFactory
                 _clock);
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId);
 
+        AppFileSystemGateway fileSystem = new(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise);
+        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
+
         AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -226,7 +240,7 @@ public sealed class AppExecutionContextFactory
             process.Pid,
             cancellationToken,
             capabilities,
-            new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
+            fileSystem,
             events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),
@@ -258,12 +272,18 @@ public sealed class AppExecutionContextFactory
                     _metrics?.ProcessIo,
                     process.Pid),
             _metrics?.Drives,
-            clipboardGateway);
+            clipboardGateway,
+            administration.SystemSettings,
+            administration.Permissions,
+            administration.ServerConnection,
+            administration.SystemPower,
+            administration.StorageDiagnostics);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+        administration.SystemSettings?.BindAmbientContext(context);
 
         if (_shellHostProvider is not null)
         {
@@ -281,6 +301,35 @@ public sealed class AppExecutionContextFactory
         clipboardGateway.BindAmbientContext(context);
         return context;
     }
+
+    /// <summary>Builds the administration gateways of ADR 0056 (sections 8 to 11) for one app instance.</summary>
+    private AdministrationGateways CreateAdministrationGateways(
+        AppManifest manifest,
+        AuthenticatedPrincipal principal,
+        bool isRootElevated,
+        ICapabilityChecker capabilities,
+        AppFileSystemGateway fileSystem)
+    {
+        if (_administration is null)
+        {
+            return new AdministrationGateways(null, null, null, null, null);
+        }
+
+        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated);
+        return new AdministrationGateways(
+            _administration.Settings is { } settings ? new AppSystemSettingsGateway(settings, fileSystem) : null,
+            _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
+            new AppServerConnectionGateway(_administration.Server, capabilities),
+            new AppSystemPowerGateway(_administration.Power, capabilities, gate),
+            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities));
+    }
+
+    private sealed record AdministrationGateways(
+        AppSystemSettingsGateway? SystemSettings,
+        AppPermissionAdministrationGateway? Permissions,
+        AppServerConnectionGateway? ServerConnection,
+        AppSystemPowerGateway? SystemPower,
+        AppStorageDiagnosticsGateway? StorageDiagnostics);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {

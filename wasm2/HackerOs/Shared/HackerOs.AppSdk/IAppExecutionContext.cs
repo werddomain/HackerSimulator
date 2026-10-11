@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Settings;
 using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -178,6 +180,47 @@ public interface IAppExecutionContext
     IAppManagementGateway AppManagement => new UnsupportedAppManagementGateway();
 
     /// <summary>
+    /// Gets this instance's access to the OS's own settings documents, behind
+    /// <see cref="HackSettings.OpenSystemAsync(string, CancellationToken)"/> (ADR 0056, section 8; no
+    /// capability, file permissions decide). Defaults to an unsupported gateway so existing
+    /// implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IAppSystemSettingsGateway SystemSettings => UnsupportedAdministrationGateways.SystemSettings;
+
+    /// <summary>
+    /// Gets this instance's dangerous-capability administration gateway, behind
+    /// <see cref="HackPermissionAdministration"/> (ADR 0056, section 9; capability
+    /// <c>permissions.manage</c>). Defaults to an unsupported gateway; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppPermissionAdministrationGateway PermissionAdministration => UnsupportedAdministrationGateways.Permissions;
+
+    /// <summary>
+    /// Gets this instance's optional-server connection gateway, behind
+    /// <see cref="HackServerConnection"/> (ADR 0056, section 10; capability
+    /// <c>server.connection.manage</c>). Defaults to an unsupported gateway; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    IAppServerConnectionGateway ServerConnection => UnsupportedAdministrationGateways.ServerConnection;
+
+    /// <summary>
+    /// Gets this instance's reboot and factory-reset gateway, behind <see cref="HackSystem"/>
+    /// (ADR 0056, section 11; capability <c>system.power</c> plus an administrator). Named
+    /// <c>SystemPower</c> rather than <c>System</c> so it never hides the <c>System</c> namespace in
+    /// implementing classes. Defaults to an unsupported gateway; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppSystemPowerGateway SystemPower => UnsupportedAdministrationGateways.SystemPower;
+
+    /// <summary>
+    /// Gets this instance's raw storage inspection gateway, behind
+    /// <see cref="HackStorageDiagnostics"/> (ADR 0056, section 11; capability
+    /// <c>system.storage.inspect</c>). Defaults to an unsupported gateway; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    IAppStorageDiagnosticsGateway StorageDiagnostics => UnsupportedAdministrationGateways.StorageDiagnostics;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -199,6 +242,108 @@ public interface IAppExecutionContext
     /// overrides it.
     /// </summary>
     IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
+}
+
+/// <summary>
+/// Defaults of the administration gateways (ADR 0056, sections 8 to 11) for contexts that don't wire
+/// them up: every call throws <see cref="NotSupportedException"/>.
+/// </summary>
+public static class UnsupportedAdministrationGateways
+{
+    private const string Message = "This IAppExecutionContext implementation does not provide this administration gateway.";
+
+    /// <summary>Unsupported <see cref="IAppSystemSettingsGateway"/>.</summary>
+    public static IAppSystemSettingsGateway SystemSettings { get; } = new UnsupportedSystemSettings();
+
+    /// <summary>Unsupported <see cref="IAppPermissionAdministrationGateway"/>.</summary>
+    public static IAppPermissionAdministrationGateway Permissions { get; } = new UnsupportedPermissions();
+
+    /// <summary>Unsupported <see cref="IAppServerConnectionGateway"/>.</summary>
+    public static IAppServerConnectionGateway ServerConnection { get; } = new UnsupportedServerConnection();
+
+    /// <summary>Unsupported <see cref="IAppSystemPowerGateway"/>.</summary>
+    public static IAppSystemPowerGateway SystemPower { get; } = new UnsupportedSystemPower();
+
+    /// <summary>Unsupported <see cref="IAppStorageDiagnosticsGateway"/>.</summary>
+    public static IAppStorageDiagnosticsGateway StorageDiagnostics { get; } = new UnsupportedStorageDiagnostics();
+
+    private sealed class UnsupportedSystemSettings : IAppSystemSettingsGateway
+    {
+        public AppSystemSettingsDocumentInfo Describe(string documentId) => throw new NotSupportedException(Message);
+
+        public ValueTask<HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot> ReadAsync(
+            string documentId, CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask SetAsync(
+            string documentId,
+            IReadOnlyList<KeyValuePair<string, string>> values,
+            HackerOs.Simulation.Abstractions.Settings.SettingLayer target,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask ResetAsync(
+            string documentId,
+            string qualifiedKey,
+            HackerOs.Simulation.Abstractions.Settings.SettingLayer target,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask<IAsyncDisposable> WatchAsync(
+            string documentId, Func<ValueTask> onChanged, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedPermissions : IAppPermissionAdministrationGateway
+    {
+        public ValueTask<HackDangerousCapabilityPolicy> GetPolicyAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<HackAppPermissionInfo>> GetOverviewAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetPolicyAsync(HackDangerousCapabilityPolicy policy, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetMachineDecisionAsync(
+            string appId, string capability, HackPermissionDecision decision, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask RemoveOwnDenialAsync(string appId, string capability, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedServerConnection : IAppServerConnectionGateway
+    {
+        public ValueTask<HackServerConnectionState> GetStateAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackServerConnectionState> ConnectAsync(
+            Uri serverUrl, string login, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackServerConnectionState> CreateAccountAsync(
+            Uri serverUrl, string login, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask SyncAsync(HackSyncDomain domain, HackSyncDirection direction, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedSystemPower : IAppSystemPowerGateway
+    {
+        public ValueTask RebootAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask FactoryResetAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedStorageDiagnostics : IAppStorageDiagnosticsGateway
+    {
+        public ValueTask<HackStorageSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Clipboard"/> for contexts that don't wire one up.</summary>
@@ -223,8 +368,6 @@ file sealed class UnsupportedAppClipboardGateway : IAppClipboardGateway
     private static NotSupportedException Unsupported() =>
         new("This IAppExecutionContext implementation does not provide a Clipboard gateway.");
 }
-
-
 /// <summary>Default <see cref="IAppExecutionContext.Drives"/> for contexts that don't wire one up.</summary>
 file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
 {

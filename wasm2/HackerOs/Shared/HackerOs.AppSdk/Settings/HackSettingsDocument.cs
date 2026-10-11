@@ -1,62 +1,56 @@
-using HackerOs.App.Abstractions;
-using HackerOs.Simulation.Abstractions.Diagnostics;
-using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Settings;
 
 namespace HackerOs.AppSdk.Settings;
 
 /// <summary>
-/// One open, layered settings document of an app: typed reads over the merged view of
-/// <c>/etc/&lt;appId&gt;/&lt;document&gt;.config</c> and <c>~/.config/&lt;appId&gt;/&lt;document&gt;.config</c>,
-/// typed writes to either layer, and change notifications (ADR 0044 section 7).
+/// One open, layered settings document: typed reads over the merged view of
+/// <c>/etc/&lt;appId&gt;/&lt;document&gt;.config</c> and <c>~/.config/&lt;appId&gt;/&lt;document&gt;.config</c>
+/// (an app's own document, ADR 0044 section 7) or of <c>/etc/hackeros/&lt;document&gt;.config</c> and
+/// <c>~/.config/hackeros/&lt;document&gt;.config</c> (an OS document, ADR 0056 section 8), typed writes
+/// to either layer, and change notifications.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every read and write goes through the app's own <see cref="IAppFileSystemGateway"/>: the file's
-/// permissions decide access. Writing the user layer needs <c>filesystem.private.write</c>; writing
+/// For an app's own document, every read and write goes through the app's own
+/// <see cref="IAppFileSystemGateway"/>: the file's permissions decide access. Writing the user layer needs <c>filesystem.private.write</c>; writing
 /// the system layer needs the right to write <c>/etc/&lt;appId&gt;/</c> (administrator plus <c>sudo</c>
 /// or an approval ticket of ADR 0042), otherwise <see cref="UnauthorizedAccessException"/> is thrown.
 /// </para>
 /// <para>
+/// For an OS document (<see cref="HackSettings.OpenSystemAsync(string, CancellationToken)"/>), the OS
+/// reads both layers and writes the user layer as the session user; the system layer is written
+/// with the app's own filesystem rights, so it needs <c>sudo</c> or the approval of ADR 0042.
+/// </para>
+/// <para>
 /// Reads never fail on a bad file: malformed lines, undeclared keys and ill-typed values are
 /// ignored, and each problem is written once per file revision to the app's log through
-/// <see cref="IAppExecutionContext.Logging"/>.
+/// <see cref="IAppExecutionContext.Logging"/> (to the OS log for an OS document).
 /// </para>
 /// </remarks>
 public sealed class HackSettingsDocument : IAsyncDisposable
 {
-    private readonly IAppFileSystemGateway _fileSystem;
-    private readonly IAppLoggingGateway? _logging;
+    private readonly ISettingsDocumentStore _store;
     private readonly SettingsSchema _schema;
-    private readonly VirtualPath _systemPath;
-    private readonly VirtualPath _userPath;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly HashSet<string> _loggedRevisions = new(StringComparer.Ordinal);
-    private SettingsFilesWatcher? _watcher;
     private LayeredConfigSnapshot _snapshot;
     private bool _disposed;
 
-    private HackSettingsDocument(
-        IAppFileSystemGateway fileSystem,
-        IAppLoggingGateway? logging,
-        SettingsSchema schema,
-        VirtualPath systemPath,
-        VirtualPath userPath)
+    private HackSettingsDocument(ISettingsDocumentStore store, SettingsSchema schema)
     {
-        _fileSystem = fileSystem;
-        _logging = logging;
+        _store = store;
         _schema = schema;
-        _systemPath = systemPath;
-        _userPath = userPath;
-        _snapshot = LayeredConfigResolver.Resolve(schema, null, null, systemPath.Value, userPath.Value);
+        _snapshot = LayeredConfigResolver.Resolve(schema, null, null, store.SystemPath, store.UserPath);
     }
 
-    /// <summary>Gets the system layer path, <c>/etc/&lt;appId&gt;/&lt;document&gt;.config</c>.</summary>
-    public string SystemPath => _systemPath.Value;
+    /// <summary>Gets the system layer path, <c>/etc/&lt;appId&gt;/&lt;document&gt;.config</c> (<c>/etc/hackeros/…</c> for an OS document).</summary>
+    public string SystemPath => _store.SystemPath;
 
-    /// <summary>Gets the user layer path, <c>/home/&lt;user&gt;/.config/&lt;appId&gt;/&lt;document&gt;.config</c>.</summary>
-    public string UserPath => _userPath.Value;
+    /// <summary>
+    /// Gets the user layer path, <c>/home/&lt;user&gt;/.config/&lt;appId&gt;/&lt;document&gt;.config</c>
+    /// (<c>~/.config/hackeros/…</c> for an OS document; empty for a system-only OS document).
+    /// </summary>
+    public string UserPath => _store.UserPath;
 
     /// <summary>Gets the declared schema of this document.</summary>
     public SettingsSchema Schema => _schema;
@@ -70,32 +64,39 @@ public sealed class HackSettingsDocument : IAsyncDisposable
     /// </summary>
     public event EventHandler<HackSettingsChangedEventArgs>? Changed;
 
-    /// <summary>Opens a document, reads both layers and starts watching them.</summary>
-    internal static async ValueTask<HackSettingsDocument> OpenAsync(
+    /// <summary>Opens one of the calling app's documents, reads both layers and starts watching them.</summary>
+    internal static ValueTask<HackSettingsDocument> OpenAsync(
         IAppExecutionContext context,
         SettingsSchema schema,
         string documentId,
+        CancellationToken cancellationToken) =>
+        OpenAsync(new AppSettingsDocumentStore(context, schema, documentId), schema, cancellationToken);
+
+    /// <summary>Opens one OS document through the system settings gateway (ADR 0056, section 8).</summary>
+    internal static ValueTask<HackSettingsDocument> OpenSystemAsync(
+        IAppSystemSettingsGateway gateway,
+        string documentId,
         CancellationToken cancellationToken)
     {
-        string appId = context.Manifest.Id;
-        string home = context.HomeDirectory.TrimEnd('/');
-        HackSettingsDocument document = new(
-            context.FileSystem,
-            TryGetLogging(context),
-            schema,
-            VirtualPath.Parse($"/etc/{appId}/{documentId}.config"),
-            VirtualPath.Parse($"{home}/.config/{appId}/{documentId}.config"));
+        AppSystemSettingsDocumentInfo info = gateway.Describe(documentId);
+        return OpenAsync(new SystemSettingsDocumentStore(gateway, info), info.Schema, cancellationToken);
+    }
 
-        await document.ReloadAsync(raiseChanged: false, cancellationToken).ConfigureAwait(false);
-
-        IAppFileSystemWatchGateway? watch = TryGetWatch(context);
-        if (watch is not null)
+    private static async ValueTask<HackSettingsDocument> OpenAsync(
+        ISettingsDocumentStore store, SettingsSchema schema, CancellationToken cancellationToken)
+    {
+        HackSettingsDocument document = new(store, schema);
+        try
         {
-            document._watcher = new SettingsFilesWatcher(
-                watch,
-                [document._systemPath, document._userPath],
-                () => new ValueTask(document.ReloadAsync(raiseChanged: true, CancellationToken.None)));
-            await document._watcher.StartAsync(cancellationToken).ConfigureAwait(false);
+            await document.ReloadAsync(raiseChanged: false, cancellationToken).ConfigureAwait(false);
+            await store
+                .StartWatchingAsync(() => new ValueTask(document.ReloadAsync(raiseChanged: true, CancellationToken.None)), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            await store.DisposeAsync().ConfigureAwait(false);
+            throw;
         }
 
         return document;
@@ -142,20 +143,37 @@ public sealed class HackSettingsDocument : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         SettingFieldDeclaration field = RequireField(qualifiedKey);
-        string serialized = SettingValueConverter.ToSetting(field, value);
-        if (!SettingValueCodec.TryNormalize(field, serialized, out string normalized))
+        await EditLayerAsync([new SettingEdit(field, Normalize(field, value))], target, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Writes several typed values to one layer in a single file edit, so a system-layer change asks
+    /// for one administrator approval rather than one per key. Nothing is written when any key is
+    /// undeclared, any value invalid or, for the user layer, any key locked.
+    /// </summary>
+    /// <param name="values">Declared keys and their new values; see <see cref="Get{T}"/> for the accepted types.</param>
+    /// <param name="target"><see cref="SettingLayer.User"/> (default) or <see cref="SettingLayer.System"/>.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="ArgumentException">A key is undeclared or a value is invalid for its type.</exception>
+    /// <exception cref="HackSettingLockedException">The user layer is targeted and a key is locked.</exception>
+    /// <exception cref="UnauthorizedAccessException">The file's permissions deny the write.</exception>
+    public async ValueTask SetManyAsync(
+        IReadOnlyDictionary<string, object> values,
+        SettingLayer target = SettingLayer.User,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        List<SettingEdit> edits = [];
+        foreach ((string qualifiedKey, object value) in values)
         {
-            throw new ArgumentException(
-                $"Value '{serialized}' is invalid for setting '{field.QualifiedKey}' (expected {SettingValueCodec.DescribeExpected(field)}).",
-                nameof(value));
+            SettingFieldDeclaration field = RequireField(qualifiedKey);
+            edits.Add(new SettingEdit(field, Normalize(field, value)));
         }
 
-        await EditLayerAsync(
-            field,
-            target,
-            content => ConfigDocumentEditor.SetValue(content, field.Group, field.Key, normalized),
-            createIfMissing: true,
-            cancellationToken).ConfigureAwait(false);
+        if (edits.Count > 0)
+        {
+            await EditLayerAsync(edits, target, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>Removes a key from one layer, so the next layer (or the default) applies again.</summary>
@@ -170,12 +188,7 @@ public sealed class HackSettingsDocument : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         SettingFieldDeclaration field = RequireField(qualifiedKey);
-        await EditLayerAsync(
-            field,
-            target,
-            content => ConfigDocumentEditor.RemoveValue(content, field.Group, field.Key),
-            createIfMissing: false,
-            cancellationToken).ConfigureAwait(false);
+        await EditLayerAsync([new SettingEdit(field, null)], target, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Re-reads both files now, raising <see cref="Changed"/> when something changed.</summary>
@@ -192,42 +205,35 @@ public sealed class HackSettingsDocument : IAsyncDisposable
         }
 
         _disposed = true;
-        if (_watcher is not null)
-        {
-            await _watcher.DisposeAsync().ConfigureAwait(false);
-        }
+        await _store.DisposeAsync().ConfigureAwait(false);
     }
 
-    private async ValueTask EditLayerAsync(
-        SettingFieldDeclaration field,
-        SettingLayer target,
-        Func<string?, string> edit,
-        bool createIfMissing,
-        CancellationToken cancellationToken)
+    private static string Normalize<T>(SettingFieldDeclaration field, T value)
     {
-        VirtualPath path = target switch
+        string serialized = SettingValueConverter.ToSetting(field, value);
+        return SettingValueCodec.TryNormalize(field, serialized, out string normalized)
+            ? normalized
+            : throw new ArgumentException(
+                $"Value '{serialized}' is invalid for setting '{field.QualifiedKey}' (expected {SettingValueCodec.DescribeExpected(field)}).",
+                nameof(value));
+    }
+
+    private async ValueTask EditLayerAsync(IReadOnlyList<SettingEdit> edits, SettingLayer target, CancellationToken cancellationToken)
+    {
+        if (target is not (SettingLayer.User or SettingLayer.System))
         {
-            SettingLayer.User => _userPath,
-            SettingLayer.System => _systemPath,
-            _ => throw new ArgumentOutOfRangeException(nameof(target), target, "Only the User and System layers can be written.")
-        };
+            throw new ArgumentOutOfRangeException(nameof(target), target, "Only the User and System layers can be written.");
+        }
 
         await ReloadAsync(raiseChanged: true, cancellationToken).ConfigureAwait(false);
         // Only a write that sets a value is pointless on a locked key; removing a stale user value is not.
-        bool setsValue = createIfMissing;
-        if (target == SettingLayer.User && setsValue && _snapshot.LockedKeys.Contains(field.QualifiedKey))
+        if (target == SettingLayer.User
+            && edits.FirstOrDefault(edit => edit.Value is not null && _snapshot.LockedKeys.Contains(edit.Field.QualifiedKey)) is { } locked)
         {
-            throw new HackSettingLockedException(field.QualifiedKey, SystemPath);
+            throw new HackSettingLockedException(locked.Field.QualifiedKey, SystemPath);
         }
 
-        FileSystemError? error = await SettingsTextFile
-            .EditAsync(_fileSystem, path, edit, createIfMissing, cancellationToken)
-            .ConfigureAwait(false);
-        if (error is not null && !(error.Code == FileSystemErrorCode.NotFound && !createIfMissing))
-        {
-            throw SettingsErrorTranslator.ToException(error);
-        }
-
+        await _store.WriteAsync(edits, target, cancellationToken).ConfigureAwait(false);
         await ReloadAsync(raiseChanged: true, cancellationToken).ConfigureAwait(false);
     }
 
@@ -243,22 +249,9 @@ public sealed class HackSettingsDocument : IAsyncDisposable
         LayeredConfigSnapshot next;
         try
         {
-            SettingsFileReadResult system = await SettingsTextFile.ReadAsync(_fileSystem, _systemPath, cancellationToken).ConfigureAwait(false);
-            SettingsFileReadResult user = await SettingsTextFile.ReadAsync(_fileSystem, _userPath, cancellationToken).ConfigureAwait(false);
-            if (system.Error is not null)
-            {
-                throw SettingsErrorTranslator.ToException(system.Error);
-            }
-
-            if (user.Error is not null)
-            {
-                throw SettingsErrorTranslator.ToException(user.Error);
-            }
-
-            next = LayeredConfigResolver.Resolve(_schema, system.Content, user.Content, SystemPath, UserPath);
+            next = await _store.ReadAsync(cancellationToken).ConfigureAwait(false);
             previous = _snapshot;
             _snapshot = next;
-            LogNewWarnings(next, system.Revision, user.Revision);
         }
         finally
         {
@@ -271,25 +264,6 @@ public sealed class HackSettingsDocument : IAsyncDisposable
             if (changed.Count > 0)
             {
                 Changed?.Invoke(this, new HackSettingsChangedEventArgs(changed));
-            }
-        }
-    }
-
-    private void LogNewWarnings(LayeredConfigSnapshot snapshot, long? systemRevision, long? userRevision)
-    {
-        if (_logging is null || snapshot.Warnings.Count == 0)
-        {
-            return;
-        }
-
-        // One warning per problem, per file and per revision: re-reading an unchanged bad file
-        // (every watch event, every write to the other layer) must not flood the log.
-        foreach (LayeredConfigWarning warning in snapshot.Warnings)
-        {
-            long? revision = warning.Path == SystemPath ? systemRevision : userRevision;
-            if (_loggedRevisions.Add($"{warning.Path}@{revision}:{warning.LineNumber}:{warning.Message}"))
-            {
-                _logging.Log(DiagnosticSeverity.Warning, warning.ToLogLine());
             }
         }
     }
@@ -316,30 +290,6 @@ public sealed class HackSettingsDocument : IAsyncDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(qualifiedKey);
         return _schema.Fields.TryGetValue(qualifiedKey, out SettingFieldDeclaration? field)
             ? field
-            : throw new ArgumentException($"Setting '{qualifiedKey}' is not declared in this app's settings schema.", nameof(qualifiedKey));
-    }
-
-    private static IAppLoggingGateway? TryGetLogging(IAppExecutionContext context)
-    {
-        try
-        {
-            return context.Logging;
-        }
-        catch (NotSupportedException)
-        {
-            return null;
-        }
-    }
-
-    private static IAppFileSystemWatchGateway? TryGetWatch(IAppExecutionContext context)
-    {
-        try
-        {
-            return context.Watch;
-        }
-        catch (NotSupportedException)
-        {
-            return null;
-        }
+            : throw new ArgumentException($"Setting '{qualifiedKey}' is not declared in this settings schema.", nameof(qualifiedKey));
     }
 }
