@@ -25,18 +25,18 @@ Tout est dans `Platform/HackerOs.Platform.Core/Shell/` :
 | `ShellParser` | Découpe la ligne (lexer) puis vérifie la grammaire ; renvoie un `ShellCommandList` ou un `ShellSyntaxError` (code, message, position, longueur). Ne lève jamais d'exception pour une saisie. |
 | `ShellSyntax.cs` | L'arbre : `ShellCommandList` → `ShellPipeline` → `ShellCommand` (mots + redirections) ; un `ShellWord` garde ses morceaux (`ShellLiteralPart`, `ShellVariablePart`, `ShellExitStatusPart`, `ShellTildePart`) pour développer sans jamais relire le résultat comme de la syntaxe. Codes d'erreur dans `ShellSyntaxErrorCodes`. |
 | `ShellInterpreter` | Exécute l'arbre : expansion, alias, redirections, tubes, lancement par `AppLifecycleOrchestrator`, codes de sortie. Fournit aussi `GetInstalledCommands()` et l'exécution élevée de `sudo` ([`shell-commands.md`](shell-commands.md)). |
-| `ShellSession` | État d'un shell : son processus (celui de l'app hôte), l'historique, `LastExitCode`. Le répertoire et l'environnement sont **ceux du processus**, lus par `IAppEnvironmentGateway`. `ChangeDirectoryAsync` fait le `cd` (vérification, `PWD`, `OLDPWD`) ; `Fork()` donne la copie d'un sous-shell. |
+| `ShellSession` | État d'un shell : son processus (le processus `hsh` d'un shell hébergé, voir [`shell-host.md`](shell-host.md) ; celui de l'appelant pour `ExecuteCommandIntent`), l'historique, `LastExitCode`. Le répertoire et l'environnement sont **ceux du processus**, lus par `IAppEnvironmentGateway`. `ChangeDirectoryAsync` fait le `cd` (vérification, `PWD`, `OLDPWD`) ; `Fork()` donne la copie d'un sous-shell. |
 | `ShellPipe` | Tube en mémoire de 64 Ki caractères entre deux étapes. |
 | `ShellCommandResolver` | Recherche d'une commande (nom, alias de manifeste ou identifiant d'app) dans le catalogue ; déplacé depuis `TerminalCommandResolver`. |
-| `ShellExecution.cs` | `ShellExecutionOptions` (dont `CredentialPrompt` pour `sudo`), `ShellExecutionResult`, `ShellFailure`, `ShellElevation`. |
+| `ShellExecution.cs` | `ShellExecutionOptions` (dont `CredentialPrompt` pour `sudo` et `StandardInput` pour l'entrée du terminal), `ShellExecutionResult`, `ShellFailure`, `ShellElevation`. |
 | `ShellSessionAccess` | `IShellSession` remis aux commandes qui déclarent `shell.control` (ADR 0051, [`shell-commands.md`](shell-commands.md)). |
-| `ShellErrorText` | Texte court d'une erreur de fichier (`No such file or directory`, `Permission denied`…). |
+| `ShellErrorText` | Texte court d'une erreur de fichier (`No such file or directory`, `Permission denied`…). Dans le SDK (`HackerOs.AppSdk`) depuis `4-sdk-network`, pour que `cd` l'utilise sans Platform Core. |
 
 Côté terminal (`Shared/HackerOs.AppSdk.Terminal/`) :
 
 | Type | Rôle |
 |---|---|
-| `TerminalPanel` | Édition de ligne, affichage, historique au clavier, complétion, fenêtre d'identifiants. Chaque ligne passe par `ShellInterpreter.ExecuteAsync`. |
+| `TerminalPanel` | Édition de ligne, affichage, historique au clavier, complétion, fenêtre d'identifiants. Démarre son shell par `HackShell.StartAsync` ; chaque ligne passe par `IHackShell.ExecuteAsync` ([`shell-host.md`](shell-host.md)). |
 | `TerminalOutputWriter` | `TextWriter` qui pousse chaque morceau écrit vers l'affichage : la sortie apparaît pendant que la commande tourne. Une ligne reste « ouverte » jusqu'à son `\n`. |
 | `TerminalControlSequenceDecoder` | Interprète les séquences d'effacement (`ESC[2J`) écrites par `clear` et consomme les autres séquences CSI. |
 
@@ -126,9 +126,11 @@ Juste avant de lancer un pipeline, pour toutes ses étapes à la fois :
 
 ## Terminal
 
-Le processus du shell est celui de la fenêtre Terminal (ou de l'app qui
-embarque `TerminalPanel`, comme l'éditeur de code). `InitialCwd` change le
-répertoire de ce processus au démarrage. L'invite vient du processus :
+Depuis le chantier `4-sdk-shell-host` (ADR 0056 §7), le shell est son propre
+processus `hsh`, enfant de la fenêtre Terminal (ou de l'app qui embarque
+`TerminalPanel`, comme l'éditeur de code) : chaque panneau a le sien. Avant,
+le shell partageait le processus de l'app hôte. `InitialCwd` est le répertoire
+de départ du shell ([`shell-host.md`](shell-host.md)). L'invite vient du processus :
 `utilisateur@machine:répertoire$` (machine lue dans `/etc/hostname`), `~` pour le dossier personnel,
 `#` pour root.
 
@@ -179,7 +181,7 @@ le code de sortie (une erreur de syntaxe donne `Dispatched`, code `2` et
 - [x] `&&`, codes de sortie, interruption.
 - [x] `ShellInterpreter` et `ShellSession` dans Platform Core.
 - [x] Flux sur `AppLaunchRequest`, sortie au fil de l'eau dans le terminal.
-- [x] Commandes enfants du processus du terminal, dans son répertoire.
+- [x] Commandes enfants du processus du terminal, dans son répertoire (depuis `4-sdk-shell-host` : enfants du processus `hsh`).
 - [x] `ExecuteCommandIntent` par l'interpréteur.
 - [x] Suppression de `ShellParser` et `TerminalSession` du terminal.
 - [x] `cd`, `export`, `sudo`… du catalogue et `IShellSession` (chantier `3-shell-commands`, [`shell-commands.md`](shell-commands.md)).

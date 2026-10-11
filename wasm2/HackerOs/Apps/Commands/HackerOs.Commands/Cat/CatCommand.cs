@@ -1,42 +1,26 @@
-using System.Net.Http;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Platform.Core.ServerConnection;
-using HackerOs.Server.Contracts.Proxy;
+using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.FileSystem;
-using HackerOs.Simulation.Abstractions.Network;
-using HackerOs.Simulation.Abstractions.ServerConnection;
 
 namespace HackerOs.Commands.Cat;
 
 /// <summary>
 /// Implements the <c>cat</c> terminal command (`P2-CMD-004`). An argument starting with
-/// <c>http://</c> or <c>https://</c> is read as a URL instead of a virtual-filesystem path —
-/// ADR 0023 named `cat` as a network command alongside <c>ping</c>/<c>curl</c>, but this was never
-/// actually built until now; every other argument keeps its original VFS-only behavior unchanged.
-/// A URL known to the simulated network is fetched and rendered the same way <c>curl</c> renders a
-/// page (<see cref="SimulatedPageTextFormatter"/>); an unrecognized host falls back to a real HTTP
-/// GET through the optional server, when connected, printing the fetched body — mirroring
-/// <c>CurlCommand</c>'s own real-network fallback exactly.
+/// <c>http://</c> or <c>https://</c> is read as a URL instead of a virtual-filesystem path
+/// (ADR 0023 named `cat` as a network command alongside <c>ping</c>/<c>curl</c>): it is fetched with
+/// <see cref="HackHttpClient"/> (ADR 0056, section 6) and its body printed, exactly as <c>curl</c>
+/// prints it. Whether the URL is served by the simulated network or, through the optional server,
+/// by the real one is the OS's decision. Every other argument keeps its VFS-only behavior.
 /// </summary>
 public sealed class CatCommand : TerminalAppBase
 {
-    private readonly ISimulatedNetworkService _network;
-    private readonly IServerConnectionService _connection;
-    private readonly IProxyClient _proxy;
-    private readonly Dictionary<string, Dictionary<string, string>> _sessionCookies = [];
+    private readonly HackCookieContainer _cookies = new();
 
-    /// <summary>Initializes the command with its manifest, the simulated network, and the optional real-network bridge.</summary>
-    public CatCommand(
-        AppManifest manifest,
-        ISimulatedNetworkService network,
-        IServerConnectionService connection,
-        IProxyClient proxy) : base(manifest)
+    /// <summary>Initializes the command with its manifest.</summary>
+    public CatCommand(AppManifest manifest) : base(manifest)
     {
-        _network = network;
-        _connection = connection;
-        _proxy = proxy;
     }
 
     /// <inheritdoc />
@@ -102,87 +86,42 @@ public sealed class CatCommand : TerminalAppBase
         arg.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
         || arg.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Reads <paramref name="url"/> as content: the simulated network if it recognizes the host,
-    /// otherwise a real-network fallback (see <see cref="CatRealUrlAsync"/>).
-    /// </summary>
+    /// <summary>Reads <paramref name="url"/> as content and prints its body.</summary>
     private async ValueTask<int> CatUrlAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
     {
-        Uri uri = new(url);
-        if (_network.GetHost(uri.Host) is null)
-        {
-            return await CatRealUrlAsync(context, url, cancellationToken).ConfigureAwait(false);
-        }
-
-        SimulatedNavigationResult result = _network.Navigate(url, _sessionCookies);
-
-        if (result.NetworkError is not null)
-        {
-            context.StandardError.WriteLine($"cat: {url}: {result.NetworkError}");
-            return 1;
-        }
-
-        if (result.Page is not null)
-        {
-            SimulatedPageTextFormatter.WriteTo(context.StandardOutput, result.Page);
-        }
-
-        return result.StatusCode < 400 ? 0 : 1;
-    }
-
-    /// <summary>
-    /// Real-network fallback for a URL unknown to the simulated network: a real HTTP GET proxy
-    /// round-trip through the optional server, when connected, with the response body fetched and
-    /// printed — the same <see cref="IProxyClient"/> <c>IncludeBody</c> path <c>CurlCommand</c> uses.
-    /// </summary>
-    private async ValueTask<int> CatRealUrlAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
-    {
-        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        if (state is null)
-        {
-            context.StandardError.WriteLine($"cat: {url}: Could not resolve host");
-            return 1;
-        }
-
-        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (accessToken is null)
-        {
-            context.StandardError.WriteLine($"cat: {url}: Could not resolve host");
-            return 1;
-        }
-
+        HackHttpResponse response;
         try
         {
-            ProxyHttpResponse response = await _proxy.ExecuteHttpRequestAsync(
-                new Uri(state.ServerBaseUrl),
-                accessToken,
-                new ProxyHttpRequest(Guid.NewGuid(), ProxyProtocol.Http, url, "GET", [], null, 0, 10, Manifest.Id, IncludeBody: true),
-                cancellationToken).ConfigureAwait(false);
-
-            if (response.StatusCode >= 400)
-            {
-                context.StandardError.WriteLine($"cat: {url}: {response.StatusCode} {response.ReasonPhrase}");
-                return 1;
-            }
-
-            if (response.BodyBase64 is not null)
-            {
-                byte[] bodyBytes = Convert.FromBase64String(response.BodyBase64);
-                string text = Encoding.UTF8.GetString(bodyBytes);
-                context.StandardOutput.Write(text);
-                if (!text.EndsWith('\n'))
-                {
-                    context.StandardOutput.WriteLine();
-                }
-            }
-
-            return 0;
+            using HackHttpClient client = new(_cookies);
+            response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        catch (HackHttpRequestException exception)
         {
-            context.StandardError.WriteLine($"cat: {url}: {exception.Message}");
+            context.StandardError.WriteLine(exception.NetworkError == HackNetworkError.HostNotFound
+                ? $"cat: {url}: Could not resolve host"
+                : $"cat: {url}: {exception.Message}");
             return 1;
         }
+        catch (ArgumentException)
+        {
+            context.StandardError.WriteLine($"cat: {url}: Invalid URL");
+            return 1;
+        }
+
+        if (response.StatusCode >= 400)
+        {
+            context.StandardError.WriteLine($"cat: {url}: {response.StatusCode} {response.ReasonPhrase}".TrimEnd());
+            return 1;
+        }
+
+        string text = response.ReadAsString();
+        context.StandardOutput.Write(text);
+        if (text.Length > 0 && !text.EndsWith('\n'))
+        {
+            context.StandardOutput.WriteLine();
+        }
+
+        return 0;
     }
 
     private static string ResolvePath(string cwd, string target)

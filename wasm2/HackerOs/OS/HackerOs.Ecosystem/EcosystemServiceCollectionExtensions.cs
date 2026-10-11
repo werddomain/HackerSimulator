@@ -374,6 +374,10 @@ public static class EcosystemServiceCollectionExtensions
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
             machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // ADR 0056 section 6: each app's Network gateway, with the OS-owned real-network fallback.
+            network: provider.GetRequiredService<ISimulatedNetworkService>(),
+            serverConnection: provider.GetRequiredService<IServerConnectionService>(),
+            proxy: provider.GetRequiredService<IProxyClient>(),
             // HackApps / HackAppManagement (ADR 0056 sections 2 and 3). Lazy for the same reason:
             // the installation service depends on the orchestrator, which depends on this factory.
             appCatalog: new AppCatalogGatewayServices(
@@ -381,7 +385,9 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IAppEnablementRegistry>(),
                 () => provider.GetRequiredService<FileAssociationResolver>(),
                 () => provider.GetRequiredService<IAppInstallationService>(),
-                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+            // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
+            shellHostProvider: () => provider.GetRequiredService<ShellHostService>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
@@ -442,6 +448,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>()));
+        // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
+        services.AddScoped<ShellHostService>(provider => new ShellHostService(
+            provider.GetRequiredService<ShellInterpreter>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IElevationService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

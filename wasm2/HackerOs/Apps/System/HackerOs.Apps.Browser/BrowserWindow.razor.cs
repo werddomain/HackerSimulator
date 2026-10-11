@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.Network;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -9,9 +10,9 @@ namespace HackerOs.Apps.Browser;
 
 /// <summary>
 /// Code-behind for the Browser window application.
-/// Manages URL navigation history, session cookie jar, and dispatches
-/// simulated HTTP requests through <see cref="ISimulatedNetworkService"/>.
-/// All browsing state is window-scoped and discarded on close.
+/// Manages URL navigation history and the window's cookie container, and sends every request
+/// through the SDK's <see cref="HackHttpClient"/> (ADR 0056, section 6): the OS, not the browser,
+/// decides which network serves a URL. All browsing state is window-scoped and discarded on close.
 /// </summary>
 public sealed partial class BrowserWindow : WindowAppBase, IDisposable
 {
@@ -27,9 +28,6 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         ("Hacker Forum",   "https://hackerz.forum"),
     ];
 
-    // ── Injected services ─────────────────────────────────────────────────
-    [Inject] private ISimulatedNetworkService NetworkService { get; set; } = default!;
-
     // ── Navigation state ─────────────────────────────────────────────────
     private readonly List<string> _history = [];
     private int _historyPos = -1;
@@ -41,8 +39,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
     private string? _networkError;
     private SimulatedPage? _currentPage;
 
-    // ── Per-window session cookie jar (host → name → value) ───────────────
-    private readonly Dictionary<string, Dictionary<string, string>> _cookieJar = [];
+    // ── Per-window session cookies, sent and filled by the OS on each request ──
+    private readonly HackCookieContainer _cookies = new();
 
     // ── Computed helpers ──────────────────────────────────────────────────
     private bool CanGoBack    => _historyPos > 0;
@@ -77,28 +75,43 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         _currentPage   = null;
         StateHasChanged();
 
-        // Simulate network delay on a background thread
-        await Task.Run(() =>
+        try
         {
-            var result = NetworkService.Navigate(_currentUrl, _cookieJar);
-            InvokeAsync(() =>
-            {
-                _isLoading = false;
-                if (result.IsSuccess)
-                {
-                    _finalUrl    = result.FinalUrl;
-                    _currentPage = result.Page;
-                    _urlInputValue = _finalUrl;
-                    PushHistory(_finalUrl);
-                }
-                else
-                {
-                    _networkError = result.NetworkError;
-                    _finalUrl     = _currentUrl;
-                }
-                StateHasChanged();
-            });
-        });
+            using HackHttpClient client = new(_cookies);
+            HackHttpResponse response = await client.GetAsync(_currentUrl);
+            ShowResponse(response);
+        }
+        catch (HackHttpRequestException exception)
+        {
+            _networkError = exception.ErrorCode;
+            _finalUrl     = _currentUrl;
+        }
+        catch (ArgumentException)
+        {
+            _networkError = "ERR_INVALID_URL";
+            _finalUrl     = _currentUrl;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Shows a response: its page when it has one, otherwise an error with its status.</summary>
+    private void ShowResponse(HackHttpResponse response)
+    {
+        if (response.Page is null)
+        {
+            _networkError = $"Request failed with status {response.StatusCode}.";
+            _finalUrl     = response.RequestUri.AbsoluteUri;
+            return;
+        }
+
+        _finalUrl      = response.RequestUri.AbsoluteUri;
+        _currentPage   = response.Page;
+        _urlInputValue = _finalUrl;
+        PushHistory(_finalUrl);
     }
 
     private async Task NavigateToCurrentInputAsync() =>
@@ -156,33 +169,21 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         _networkError = null;
         StateHasChanged();
 
-        await Task.Run(() =>
+        try
         {
-            SimulatedHttpResponse response = NetworkService.Post(url, submission.FormBody, _cookieJar);
-            InvokeAsync(async () =>
-            {
-                _isLoading = false;
-
-                if (response.IsRedirect && response.RedirectUrl is not null)
-                {
-                    await NavigateToAsync(response.RedirectUrl);
-                    return;
-                }
-
-                if (response.Page is not null)
-                {
-                    _finalUrl = url;
-                    _currentPage = response.Page;
-                    _urlInputValue = _finalUrl;
-                    PushHistory(_finalUrl);
-                }
-                else
-                {
-                    _networkError = $"Request failed with status {response.StatusCode}.";
-                }
-                StateHasChanged();
-            });
-        });
+            // Redirects are followed by the OS: a login answered by 302 lands on the target page.
+            using HackHttpClient client = new(_cookies);
+            ShowResponse(await client.PostAsync(url, submission.FormBody));
+        }
+        catch (HackHttpRequestException exception)
+        {
+            _networkError = exception.ErrorCode;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private string ResolveSubmitUrl(string postPath) => ResolveSubmitUrl(_finalUrl, postPath);
@@ -257,9 +258,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
 
     public void Dispose()
     {
-        // Session cookies are cleared with the window; nothing to explicitly
-        // dispose since all state is window-scoped in-memory dictionaries.
-        _cookieJar.Clear();
+        // Session cookies are cleared with the window; nothing else holds them.
+        _cookies.Clear();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

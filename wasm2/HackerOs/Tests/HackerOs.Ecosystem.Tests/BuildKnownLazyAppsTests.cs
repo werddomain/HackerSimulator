@@ -76,6 +76,8 @@ public sealed class BuildKnownLazyAppsTests
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
         string[] systemWindows =
         [
+            // ADR 0056 §7: its terminal panel hosts a shell (shell.host) without an approval prompt.
+            "org.hackeros.code-editor",
             "org.hackeros.error-log-viewer",
             "org.hackeros.file-explorer",
             "org.hackeros.settings",
@@ -87,7 +89,6 @@ public sealed class BuildKnownLazyAppsTests
         [
             "org.hackeros.browser",
             "org.hackeros.calculator",
-            "org.hackeros.code-editor",
             "org.hackeros.diagnostic",
             "org.hackeros.hack-paint",
             "org.hackeros.icon-viewer",

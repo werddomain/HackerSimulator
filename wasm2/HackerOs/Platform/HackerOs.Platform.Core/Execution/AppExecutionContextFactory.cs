@@ -7,6 +7,9 @@ using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Intents;
+using HackerOs.Platform.Core.Network;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -35,7 +38,11 @@ public sealed class AppExecutionContextFactory
     private readonly LogFileWriter? _logWriter;
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
+    private readonly Func<Shell.ShellHostService>? _shellHostProvider;
     private readonly AppCatalogGatewayServices? _appCatalog;
+    private readonly ISimulatedNetworkService? _network;
+    private readonly IServerConnectionService? _serverConnection;
+    private readonly IProxyClient? _proxy;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -61,6 +68,18 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.AppManagement"/> gateways (ADR 0056, sections 2 and 3);
     /// <see langword="null"/> leaves both unsupported.
     /// </param>
+    /// <param name="network">
+    /// Simulated network behind <see cref="IAppExecutionContext.Network"/> (ADR 0056, section 6);
+    /// <see langword="null"/> leaves contexts without a network.
+    /// </param>
+    /// <param name="serverConnection">Optional server connection used by the real-network fallback.</param>
+    /// <param name="proxy">Optional server proxy client used by the real-network fallback.</param>
+    /// <param name="shellHostProvider">
+    /// Lazily resolves the service behind <see cref="IAppExecutionContext.ShellHost"/> (ADR 0056,
+    /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
+    /// interpreter depends on the orchestrator, which depends on this factory. Pass
+    /// <see langword="null"/> to leave shell hosting unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -74,7 +93,11 @@ public sealed class AppExecutionContextFactory
         LogFileWriter? logWriter = null,
         IProcessEnvironmentTable? environments = null,
         Func<string>? machineName = null,
-        AppCatalogGatewayServices? appCatalog = null)
+        AppCatalogGatewayServices? appCatalog = null,
+        ISimulatedNetworkService? network = null,
+        IServerConnectionService? serverConnection = null,
+        IProxyClient? proxy = null,
+        Func<Shell.ShellHostService>? shellHostProvider = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -89,6 +112,10 @@ public sealed class AppExecutionContextFactory
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
         _appCatalog = appCatalog;
+        _network = network;
+        _serverConnection = serverConnection;
+        _proxy = proxy;
+        _shellHostProvider = shellHostProvider;
     }
 
     /// <summary>
@@ -201,12 +228,27 @@ public sealed class AppExecutionContextFactory
             userName,
             principal.DisplayName,
             catalogGateway,
-            managementGateway);
+            managementGateway,
+            _network is null ? null : new AppNetworkGateway(_network, capabilities, manifest.Id, _serverConnection, _proxy));
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+
+        if (_shellHostProvider is not null)
+        {
+            // ADR 0056 section 7: the shell is a child process of this one, with this instance's
+            // capabilities for its own redirections and the same root elevation, if any.
+            context.ShellHost = new AppShellHostGateway(
+                _shellHostProvider,
+                capabilities,
+                principal,
+                () => context,
+                shellProcess => Create(
+                    Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
+                    shellProcess.AppInstanceId.Value, isRootElevated));
+        }
         return context;
     }
 

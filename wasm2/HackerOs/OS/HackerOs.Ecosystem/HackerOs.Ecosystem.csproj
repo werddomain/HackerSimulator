@@ -35,7 +35,7 @@
     <ProjectReference Include="..\..\Shared\HackerOs.Theming.Abstractions\HackerOs.Theming.Abstractions.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\HackerOs.Apps.Diagnostic.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" IsSystemApp="true" />

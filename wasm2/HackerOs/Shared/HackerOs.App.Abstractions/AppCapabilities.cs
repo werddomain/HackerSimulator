@@ -113,6 +113,14 @@ public static class AppCapabilities
     public const string ShellControl = "shell.control";
 
     /// <summary>
+    /// Host interactive shells, as a terminal emulator does (ADR 0056, section 7): start an
+    /// <c>hsh</c> process and run any line the user types in it. Dangerous: each command runs with
+    /// <b>its own</b> capabilities and no window, so an app holding only harmless capabilities
+    /// could otherwise read all of <c>~</c> through <c>cat</c>.
+    /// </summary>
+    public const string ShellHost = "shell.host";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -168,7 +176,11 @@ public static class AppCapabilities
             "Accéder au vrai réseau",
             "Joindre de vrais serveurs sur Internet par le serveur relais."),
         Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
-        Normal(ShellControl, "Agir sur le shell qui a lancé la commande")
+        Normal(ShellControl, "Agir sur le shell qui a lancé la commande"),
+        Dangerous(
+            ShellHost,
+            "Héberger un shell",
+            "Exécuter des commandes en votre nom, avec les droits de ces commandes.")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);
