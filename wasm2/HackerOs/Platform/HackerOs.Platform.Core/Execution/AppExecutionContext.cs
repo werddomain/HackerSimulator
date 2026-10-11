@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -42,7 +43,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         string? userLoginName = null,
         string? userDisplayName = null,
         IAppCatalogGateway? catalog = null,
-        IAppManagementGateway? appManagement = null)
+        IAppManagementGateway? appManagement = null,
+        IAppNetworkGateway? network = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -73,6 +75,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         UserDisplayName = userDisplayName ?? UserLoginName;
         Catalog = catalog ?? UnsupportedAppGateways.Catalog;
         AppManagement = appManagement ?? UnsupportedAppGateways.Management;
+        Network = network ?? UnsupportedNetworkGateway.Instance;
     }
 
     /// <inheritdoc />
@@ -86,6 +89,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppManagementGateway AppManagement { get; }
+
+    /// <inheritdoc />
+    public IAppNetworkGateway Network { get; }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }
@@ -156,6 +162,37 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public OneShotElevationGrantSet OneShotElevation { get; }
+
+    /// <summary>Network gateway of a context built without a simulated network (tests).</summary>
+    private sealed class UnsupportedNetworkGateway : IAppNetworkGateway
+    {
+        public static readonly UnsupportedNetworkGateway Instance = new();
+
+        private const string Reason = "This execution context factory was not configured with a network.";
+
+        public ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(
+            System.Net.IPAddress address, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
+            string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
+            HackHttpRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
+            string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
+            string hostNameOrAddress, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+    }
 }
 
 /// <summary>Gateways used when the factory was built without the app catalog services (tests, minimal hosts).</summary>

@@ -374,6 +374,10 @@ public static class EcosystemServiceCollectionExtensions
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
             machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // ADR 0056 section 6: each app's Network gateway, with the OS-owned real-network fallback.
+            network: provider.GetRequiredService<ISimulatedNetworkService>(),
+            serverConnection: provider.GetRequiredService<IServerConnectionService>(),
+            proxy: provider.GetRequiredService<IProxyClient>(),
             // HackApps / HackAppManagement (ADR 0056 sections 2 and 3). Lazy for the same reason:
             // the installation service depends on the orchestrator, which depends on this factory.
             appCatalog: new AppCatalogGatewayServices(
