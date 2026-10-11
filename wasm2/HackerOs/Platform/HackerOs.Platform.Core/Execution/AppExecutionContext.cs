@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Apps;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -37,7 +38,11 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         OneShotElevationGrantSet oneShotElevation,
         string? homeDirectory = null,
         IAppEnvironmentGateway? environment = null,
-        bool isRootElevated = false)
+        bool isRootElevated = false,
+        string? userLoginName = null,
+        string? userDisplayName = null,
+        IAppCatalogGateway? catalog = null,
+        IAppManagementGateway? appManagement = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -64,7 +69,23 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Environment = environment
             ?? new DetachedAppEnvironmentGateway(manifest.Id, HomeDirectory, userId, static () => "hackeros");
         IsRootElevated = isRootElevated;
+        UserLoginName = userLoginName ?? Environment.UserName;
+        UserDisplayName = userDisplayName ?? UserLoginName;
+        Catalog = catalog ?? UnsupportedAppGateways.Catalog;
+        AppManagement = appManagement ?? UnsupportedAppGateways.Management;
     }
+
+    /// <inheritdoc />
+    public string UserLoginName { get; }
+
+    /// <inheritdoc />
+    public string UserDisplayName { get; }
+
+    /// <inheritdoc />
+    public IAppCatalogGateway Catalog { get; }
+
+    /// <inheritdoc />
+    public IAppManagementGateway AppManagement { get; }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }
@@ -135,4 +156,46 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public OneShotElevationGrantSet OneShotElevation { get; }
+}
+
+/// <summary>Gateways used when the factory was built without the app catalog services (tests, minimal hosts).</summary>
+internal static class UnsupportedAppGateways
+{
+    private const string Message = "This execution context factory was not configured with the app catalog services.";
+
+    /// <summary>Catalog gateway whose reads throw <see cref="NotSupportedException"/>.</summary>
+    public static readonly IAppCatalogGateway Catalog = new UnsupportedCatalog();
+
+    /// <summary>Management gateway whose calls throw <see cref="NotSupportedException"/>.</summary>
+    public static readonly IAppManagementGateway Management = new UnsupportedManagement();
+
+    private sealed class UnsupportedCatalog : IAppCatalogGateway
+    {
+        public event EventHandler? Changed
+        {
+            add { }
+            remove { }
+        }
+
+        public ValueTask<IReadOnlyList<HackAppInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<HackAppInfo>> GetHandlersAsync(
+            VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedManagement : IAppManagementGateway
+    {
+        public ValueTask<IReadOnlyList<HackAppInstallInfo>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<string>> UninstallAsync(
+            string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<string>> ReinstallAsync(
+            string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 }

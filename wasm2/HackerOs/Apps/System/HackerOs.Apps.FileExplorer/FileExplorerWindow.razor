@@ -3,11 +3,11 @@
 @using HackerOs.AppSdk.FileView
 @using HackerOs.AppSdk.FileView.ContextMenu
 @using HackerOs.AppSdk.FileView.Events
-@using HackerOs.Platform.Core
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Apps
 @using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.Simulation.Abstractions.Events
 @using HackerOs.Simulation.Abstractions.FileSystem
-@using HackerOs.Simulation.Abstractions.Sessions
 @using HackerOs.AppSdk.Blazor.Interop
 @using HackerOs.AppSdk.Icons
 @using HackerOs.AppSdk.IO
@@ -18,9 +18,6 @@
 @using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
-@inject AppCatalog Catalog
-@inject HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry Enablement
-@inject ISessionService SessionService
 @inject MudBlazor.IDialogService MudDialogService
 @inject IJSRuntime JSRuntime
 
@@ -194,7 +191,7 @@
         && _fileView.SelectedItems.Count == 1
         && item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
 
-    private string GetHomePath() => SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
+    private string GetHomePath() => HackUser.Describe(AppContext).HomeDirectory;
 
     protected override void OnAppInitialized()
     {
@@ -352,10 +349,9 @@
 
     private async Task ShowOpenWithChooserAsync(string fullPath, IReadOnlyList<string> candidateAppIds)
     {
-        IReadOnlyList<AppManifest> candidates = candidateAppIds
-            .Select(id => Catalog.Manifests.GetValueOrDefault(id))
-            .Where(manifest => manifest is not null)
-            .Select(manifest => manifest!)
+        IReadOnlyList<HackAppInfo> installed = await AppContext.Catalog.GetInstalledAsync(AppContext.CancellationToken);
+        IReadOnlyList<HackAppInfo> candidates = installed
+            .Where(app => candidateAppIds.Contains(app.Id, StringComparer.Ordinal))
             .ToList();
 
         DialogParameters parameters = new()
@@ -367,7 +363,7 @@
         IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
         DialogResult? dialogResult = await dialog.Result;
 
-        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is AppManifest selectedApp)
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is HackAppInfo selectedApp)
         {
             await LaunchWithAsync(selectedApp.Id, fullPath);
         }
@@ -721,9 +717,9 @@
         FileViewItem? item = _fileView?.SelectedItem;
         if (item is null) return;
 
-        // An uninstalled app (ADR 0048) is never offered in "Open with".
-        IReadOnlyList<AppManifest> windowApps = Catalog.Manifests.Values
-            .Where(m => m.Kind == AppKind.Window && Enablement.IsEnabled(m.Id))
+        // Only installed apps are listed (ADR 0048): the catalog gateway hides uninstalled ones.
+        IReadOnlyList<HackAppInfo> windowApps = (await AppContext.Catalog.GetInstalledAsync(AppContext.CancellationToken))
+            .Where(app => app.Kind == AppKind.Window)
             .ToList();
 
         DialogParameters parameters = new()
@@ -735,7 +731,7 @@
         IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
         DialogResult? result = await dialog.Result;
 
-        if (result is not null && !result.Canceled && result.Data is AppManifest selectedApp)
+        if (result is not null && !result.Canceled && result.Data is HackAppInfo selectedApp)
         {
             await LaunchWithAsync(selectedApp.Id, item.FullPath.Value);
         }
