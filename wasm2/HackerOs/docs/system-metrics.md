@@ -8,8 +8,9 @@ les compteurs qui les alimentent.
 
 ## Rôle
 
-Le gestionnaire de tâches (chantier `4-task-manager`), `ps` et toute app tierce
-lisent les mesures du système dans `/proc`, comme sous Linux :
+Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
+`4-task-manager`), `ps` et toute app tierce lisent les mesures du système dans
+`/proc`, comme sous Linux :
 
 | Fichier ou API | Mesure | Source |
 | --- | --- | --- |
@@ -83,6 +84,13 @@ quand il est plein, comme un ordonnanceur avec affinité : deux processus
 occupés tombent sur des cœurs différents. Le temps va dans `system` pour les
 processus de l'OS (services déclarés système par l'hôte et processus inconnus
 du catalogue), dans `user` sinon ; le reste du cœur va dans `idle`.
+
+Le simulateur tire l'usage de chaque processus de son `ResourceProfile`, c'est-à-dire
+des poids `Resources` déclarés par le manifeste (ADR 0012). Jusqu'au chantier
+`4-task-manager`, `AppLifecycleOrchestrator` lançait chaque processus avec
+`ResourceProfile.None` : le CPU et la mémoire restaient à zéro malgré
+l'échantillonnage. L'orchestrateur passe maintenant le profil du manifeste
+(voir [`task-manager.md`](task-manager.md)).
 
 Une seconde d'échantillonnage garde l'historique borné du simulateur
 (120 échantillons) sur deux minutes, assez pour les graphiques.

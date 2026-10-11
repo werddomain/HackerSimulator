@@ -1,0 +1,112 @@
+@namespace HackerOs.Apps.SystemMonitor.Tabs
+
+<div class="perf">
+    <div class="sysmon-cards">
+        <div class="sysmon-card">
+            <span class="sysmon-card-label">CPU</span>
+            <span class="sysmon-card-value">@Units.Percent(Metrics.CpuTotal.Latest)</span>
+            <span class="sysmon-card-detail">@CoreCount core(s)</span>
+        </div>
+        <div class="sysmon-card">
+            <span class="sysmon-card-label">Memory</span>
+            <span class="sysmon-card-value">@Units.Percent(Memory?.UsedPercent ?? 0)</span>
+            <span class="sysmon-card-detail">@Units.Bytes(Memory?.UsedBytes ?? 0) / @Units.Bytes(Memory?.TotalBytes ?? 0)</span>
+        </div>
+        <div class="sysmon-card">
+            <span class="sysmon-card-label">Processes</span>
+            <span class="sysmon-card-value">@ProcessCount</span>
+            <span class="sysmon-card-detail">@(Metrics.Latest?.Stat?.ProcessesRunning ?? 0) running · @(Metrics.Latest?.Stat?.Processes ?? 0) since boot</span>
+        </div>
+        <div class="sysmon-card">
+            <span class="sysmon-card-label">Uptime</span>
+            <span class="sysmon-card-value">@Units.Duration(TimeSpan.FromSeconds(Metrics.Latest?.UptimeSeconds ?? 0))</span>
+            <span class="sysmon-card-detail">load @LoadText</span>
+        </div>
+    </div>
+
+    <section class="perf-section">
+        <div class="perf-section-header">
+            <h3>CPU</h3>
+            <div class="perf-toggle" role="group" aria-label="CPU view">
+                <button class="sysmon-btn @(_perCore ? null : "active")" aria-pressed="@(!_perCore)" @onclick="() => _perCore = false">Total</button>
+                <button class="sysmon-btn @(_perCore ? "active" : null)" aria-pressed="@_perCore" @onclick="() => _perCore = true">Per core</button>
+            </div>
+        </div>
+        @if (!_perCore)
+        {
+            <HackLineChart Title="Total CPU usage"
+                           Series="@([new HackChartSeries("Total", Metrics.CpuTotal.Values)])"
+                           Maximum="100"
+                           Filled="true"
+                           Size="HackChartSize.Large"
+                           ValueFormatter="Units.Percent" />
+        }
+        else
+        {
+            <div class="perf-cores">
+                @for (int core = 0; core < Metrics.CpuCores.Count; core++)
+                {
+                    <HackLineChart Title="@($"cpu{core}")"
+                                   Series="@([new HackChartSeries("Usage", Metrics.CpuCores[core].Values)])"
+                                   Maximum="100"
+                                   Filled="true"
+                                   ShowLegend="false"
+                                   Size="HackChartSize.Small"
+                                   ValueFormatter="Units.Percent" />
+                }
+                @if (Metrics.CpuCores.Count == 0)
+                {
+                    <p class="sysmon-muted">Waiting for a second reading of /proc/stat…</p>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="perf-section">
+        <h3>Memory</h3>
+        <HackLineChart Title="Memory in use"
+                       Series="@([new HackChartSeries("Used", Metrics.MemoryUsedPercent.Values)])"
+                       Maximum="100"
+                       Filled="true"
+                       ValueFormatter="Units.Percent" />
+    </section>
+
+    <section class="perf-section">
+        <h3>Hardware &amp; system</h3>
+        <div class="perf-hardware">
+            <div class="sysmon-card perf-info">
+                <span class="sysmon-card-label">Processor <span class="sysmon-source">/proc/cpuinfo</span></span>
+                @if (CpuInfo.Count > 0)
+                {
+                    <dl class="sysmon-kv">
+                        @foreach (KeyValuePair<string, string> field in CpuInfo[0].Fields.Where(field => field.Key != "processor"))
+                        {
+                            <dt>@field.Key</dt><dd>@field.Value</dd>
+                        }
+                        <dt>logical processors</dt><dd>@CpuInfo.Count</dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="sysmon-muted">/proc/cpuinfo is not readable.</p>
+                }
+            </div>
+            <div class="sysmon-card perf-info">
+                <span class="sysmon-card-label">Memory <span class="sysmon-source">/proc/meminfo</span></span>
+                @if (Memory is { } memory)
+                {
+                    <dl class="sysmon-kv">
+                        @foreach (KeyValuePair<string, string> field in memory.Fields)
+                        {
+                            <dt>@field.Key</dt><dd>@field.Value</dd>
+                        }
+                    </dl>
+                }
+                else
+                {
+                    <p class="sysmon-muted">/proc/meminfo is not readable.</p>
+                }
+            </div>
+        </div>
+    </section>
+</div>
