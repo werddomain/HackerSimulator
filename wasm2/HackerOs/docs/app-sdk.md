@@ -15,6 +15,10 @@ SDK public (principe 3 du plan, ADR 0055). Ce document décrit :
 Chaque chantier de la phase 4 qui ajoute une API la documente ici, dans la
 section [API du SDK](#api-du-sdk).
 
+Pour écrire une app pas à pas, voir le
+[guide du développeur](sdk-developer-guide.md) ; pour la liste complète des
+API publiques, la [référence du SDK](sdk-reference.md).
+
 ## Ce qui forme le SDK
 
 | Projet | Contenu |
