@@ -117,8 +117,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 | `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
 | `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
 | `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
-| `HackerOs.Apps.Browser` | `ISimulatedNetworkService` | `4-sdk-network` |
-| `HackerOs.Commands` | `Platform.Core`, `Server.Contracts` ; `ISimulatedNetworkService`, `IServerConnectionService`, `IProxyClient` (`ping`, `curl`, `cat`, `nmap`) | `4-sdk-network` |
 
 Règles de la liste :
 
@@ -132,12 +130,16 @@ Règles de la liste :
   `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
 
 Sorties de la liste : FileExplorer, TextEditor et CodeEditor
-(`4-sdk-user-and-apps`, 2026-10-11), `HackerOs.AppSdk.Terminal`
-(`4-sdk-shell-host`, 2026-10-11, [`shell-host.md`](shell-host.md)).
+(`4-sdk-user-and-apps`, 2026-10-11).
 
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
 Calculator, HackPaint et IconViewer passent sans exemption.
+
+Exemptions déjà retirées : `HackerOs.Apps.Browser` et `HackerOs.Commands`
+(`4-sdk-network`, voir [`sdk-network.md`](sdk-network.md)).
+`HackerOs.AppSdk.Terminal` (`4-sdk-shell-host`, voir
+[`shell-host.md`](shell-host.md)).
 
 ## Comment une app obtient un service de l'OS (ADR 0055 §4)
 
@@ -165,11 +167,16 @@ Façades statiques existantes au début de la phase 4 :
 | `HackEnvironment` | arguments, répertoire courant, variables | [`process-environment.md`](process-environment.md) |
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
+| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
-(ADR 0056, `4-sdk-user-and-apps`), `ShellHost` (ADR 0056, `4-sdk-shell-host`).
+(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `ShellHost`
+(`4-sdk-shell-host`).
+
+`ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
+`cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
 
 ### Utilisateur courant (ADR 0056 §1)
 
@@ -239,8 +246,13 @@ await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallSco
 - Passerelle : `IAppManagementGateway AppManagement` (`AppManagementGateway`,
   sur `IAppInstallationService`).
 
-Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,
-`HackHttpClient`, `HackTcpClient`, `HackShell`, `HackPermissionAdministration`,
+### Réseau (ADR 0056 §6)
+
+`HackDns`, `HackPing`, `HackHttpClient` et `HackTcpClient`, passerelle
+`IAppNetworkGateway Network`, repli réel décidé par l'OS : voir
+[`sdk-network.md`](sdk-network.md).
+
+Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
 `HackClipboard`…) sont ajoutées ici par leurs chantiers.
 

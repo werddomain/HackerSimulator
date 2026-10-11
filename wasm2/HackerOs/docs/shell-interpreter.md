@@ -30,7 +30,7 @@ Tout est dans `Platform/HackerOs.Platform.Core/Shell/` :
 | `ShellCommandResolver` | Recherche d'une commande (nom, alias de manifeste ou identifiant d'app) dans le catalogue ; déplacé depuis `TerminalCommandResolver`. |
 | `ShellExecution.cs` | `ShellExecutionOptions` (dont `CredentialPrompt` pour `sudo` et `StandardInput` pour l'entrée du terminal), `ShellExecutionResult`, `ShellFailure`, `ShellElevation`. |
 | `ShellSessionAccess` | `IShellSession` remis aux commandes qui déclarent `shell.control` (ADR 0051, [`shell-commands.md`](shell-commands.md)). |
-| `ShellErrorText` | Texte court d'une erreur de fichier (`No such file or directory`, `Permission denied`…). |
+| `ShellErrorText` | Texte court d'une erreur de fichier (`No such file or directory`, `Permission denied`…). Dans le SDK (`HackerOs.AppSdk`) depuis `4-sdk-network`, pour que `cd` l'utilise sans Platform Core. |
 
 Côté terminal (`Shared/HackerOs.AppSdk.Terminal/`) :
 
