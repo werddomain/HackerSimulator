@@ -137,6 +137,15 @@ public interface IAppExecutionContext
     /// the trusted platform factory overrides it with the live process entry.
     /// </summary>
     IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
+
+    /// <summary>
+    /// Gets this instance's network stack: resolution, ping, HTTP and TCP probes, with the OS's
+    /// real-network fallback (ADR 0056, section 6), read by <c>HackDns</c>, <c>HackPing</c>,
+    /// <c>HackHttpClient</c> and <c>HackTcpClient</c>. Defaults to an unsupported gateway so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    Net.IAppNetworkGateway Network => new Net.UnsupportedAppNetworkGateway();
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Environment"/> for contexts with no live process environment.</summary>

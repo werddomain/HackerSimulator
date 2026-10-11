@@ -364,7 +364,11 @@ public static class EcosystemServiceCollectionExtensions
             intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>(),
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
-            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName));
+            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // ADR 0056 section 6: each app's Network gateway, with the OS-owned real-network fallback.
+            network: provider.GetRequiredService<ISimulatedNetworkService>(),
+            serverConnection: provider.GetRequiredService<IServerConnectionService>(),
+            proxy: provider.GetRequiredService<IProxyClient>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),

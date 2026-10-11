@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -37,7 +38,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         OneShotElevationGrantSet oneShotElevation,
         string? homeDirectory = null,
         IAppEnvironmentGateway? environment = null,
-        bool isRootElevated = false)
+        bool isRootElevated = false,
+        IAppNetworkGateway? network = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -64,7 +66,11 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Environment = environment
             ?? new DetachedAppEnvironmentGateway(manifest.Id, HomeDirectory, userId, static () => "hackeros");
         IsRootElevated = isRootElevated;
+        Network = network ?? UnsupportedNetworkGateway.Instance;
     }
+
+    /// <inheritdoc />
+    public IAppNetworkGateway Network { get; }
 
     /// <inheritdoc />
     public IAppEnvironmentGateway Environment { get; }
@@ -135,4 +141,35 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public OneShotElevationGrantSet OneShotElevation { get; }
+
+    /// <summary>Network gateway of a context built without a simulated network (tests).</summary>
+    private sealed class UnsupportedNetworkGateway : IAppNetworkGateway
+    {
+        public static readonly UnsupportedNetworkGateway Instance = new();
+
+        private const string Reason = "This execution context factory was not configured with a network.";
+
+        public ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(
+            System.Net.IPAddress address, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
+            string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
+            HackHttpRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
+            string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+
+        public ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
+            string hostNameOrAddress, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Reason);
+    }
 }

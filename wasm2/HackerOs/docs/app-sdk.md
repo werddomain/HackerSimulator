@@ -120,8 +120,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 | `HackerOs.Apps.FileExplorer` | `Platform.Core` ; `AppCatalog`, `IAppEnablementRegistry`, `ISessionService` | `4-sdk-user-and-apps` |
 | `HackerOs.Apps.TextEditor` | `ISessionService` | `4-sdk-user-and-apps` |
 | `HackerOs.Apps.CodeEditor` | `ISessionService` | `4-sdk-user-and-apps` |
-| `HackerOs.Apps.Browser` | `ISimulatedNetworkService` | `4-sdk-network` |
-| `HackerOs.Commands` | `Platform.Core`, `Server.Contracts` ; `ISimulatedNetworkService`, `IServerConnectionService`, `IProxyClient` (`ping`, `curl`, `cat`, `nmap`) | `4-sdk-network` |
 | `HackerOs.AppSdk.Terminal` | `Platform.Core` (`ShellInterpreter`, `IElevationService`) | `4-sdk-shell-host` |
 
 Règles de la liste :
@@ -138,6 +136,9 @@ Règles de la liste :
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
 Calculator, HackPaint et IconViewer passent sans exemption.
+
+Exemptions déjà retirées : `HackerOs.Apps.Browser` et `HackerOs.Commands`
+(`4-sdk-network`, voir [`sdk-network.md`](sdk-network.md)).
 
 ## Comment une app obtient un service de l'OS (ADR 0055 §4)
 
@@ -165,10 +166,14 @@ Façades statiques existantes au début de la phase 4 :
 | `HackEnvironment` | arguments, répertoire courant, variables | [`process-environment.md`](process-environment.md) |
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
+| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
-`Services`, `PermissionErrors`, `Environment`.
+`Services`, `PermissionErrors`, `Environment`, `Network` (`4-sdk-network`).
+
+`ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
+`cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
 
 Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
 `HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,

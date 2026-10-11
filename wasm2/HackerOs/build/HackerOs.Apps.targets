@@ -160,8 +160,6 @@
     <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.FileExplorer" Adr="0056" Chantier="4-sdk-user-and-apps" />
     <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.TextEditor" Adr="0056" Chantier="4-sdk-user-and-apps" />
     <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.CodeEditor" Adr="0056" Chantier="4-sdk-user-and-apps" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.Browser" Adr="0056" Chantier="4-sdk-network" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Commands" Adr="0056" Chantier="4-sdk-network" />
     <HackerOsSdkBoundaryExemption Include="HackerOs.AppSdk.Terminal" Adr="0056" Chantier="4-sdk-shell-host" />
   </ItemGroup>
 
