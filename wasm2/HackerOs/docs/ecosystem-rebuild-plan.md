@@ -460,7 +460,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
   - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
 - [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
-- [ ] Éditeur : remplacer et tout remplacer.
+- [x] Éditeur : remplacer et tout remplacer (`rebuild/4-text-editor`, ADR 0058 §3, [`text-editor.md`](text-editor.md)).
 - [ ] Console : complétion par Tab et onglets.
 
 ## 13. Références

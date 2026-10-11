@@ -27,6 +27,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`shell-interpreter.md`](shell-interpreter.md) | Interpréteur du shell `hsh` (phase 3, ADR 0050) : grammaire (`\|`, `>`, `>>`, `&&`, `$VAR`, `$?`, `~`), tubes concurrents, redirections, `ShellSession`, sortie au fil de l'eau dans le terminal, `ExecuteCommandIntent` par l'interpréteur. |
 | [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
 | [`shell-commands.md`](shell-commands.md) | Commandes du shell (phase 3, ADR 0051) : `IShellSession` et capacité `shell.control`, `cd`, `pwd`, `clear`, `help`, `export`, `unset`, `env`, `sudo` du catalogue, terminal sans noms codés en dur, séquences d'effacement, `argv[0]` et alias statiques. |
+| [`text-editor.md`](text-editor.md) | Éditeur de texte (phase 4, ADR 0058 §3) : ouvrir et enregistrer avec détection des conflits, rechercher et remplacer (Ctrl+F, Ctrl+H), options « Match case » et « Whole word », `TextEditorFindEngine`. |
 | [`trash.md`](trash.md) | Corbeille (phase 3, ADR 0052) : format freedesktop sous `~/.local/share/Trash`, API `HackTrash`, `rm` vers la corbeille et `rm --permanent`, commande `trash`, `FileView.DeleteRequested` et vue Corbeille de l'explorateur. |
 
 ## Décisions d'architecture
