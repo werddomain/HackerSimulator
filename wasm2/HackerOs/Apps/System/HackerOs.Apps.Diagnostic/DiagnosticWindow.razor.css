@@ -295,3 +295,8 @@
     box-shadow: var(--hos-shadow-md, 0 4px 12px rgba(0,0,0,0.5));
     z-index: 100;
 }
+
+.diag-error {
+    color: #ff5577;
+    font-family: 'Fira Code', 'Consolas', monospace;
+}

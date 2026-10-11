@@ -9,6 +9,9 @@ using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Infrastructure.Browser.Sync;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Ecosystem.Administration;
+using HackerOs.Platform.Core.Administration;
+using HackerOs.Platform.Core.Power;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
@@ -310,6 +313,18 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IOsSettingsService>(),
             provider.GetRequiredService<IAdminElevationVerifier>(),
             provider.GetRequiredService<IAuditLog>()));
+        // Reboot and factory reset (ADR 0056 section 11): the browser reloads the page and deletes
+        // the OS database; HackSystem reaches them only after the authentication agent agreed.
+        services.AddScoped<ISystemPowerDevice>(provider =>
+            new BrowserSystemPowerDevice(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddScoped<SystemPowerService>(provider => new SystemPowerService(
+            provider.GetRequiredService<ISystemPowerDevice>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<IAuditLog>()));
+        // Raw storage snapshot behind HackStorageDiagnostics (ADR 0056 section 11).
+        services.AddScoped<IStorageInspector>(provider =>
+            new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
 
         services.AddScoped<ISessionService>(provider =>
         {
@@ -381,6 +396,19 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IAppEnablementRegistry>(),
                 () => provider.GetRequiredService<FileAssociationResolver>(),
                 () => provider.GetRequiredService<IAppInstallationService>(),
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+            // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
+            // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
+            administration: new SystemAdministrationGatewayServices(
+                () => provider.GetRequiredService<IOsSettingsService>(),
+                () => provider.GetRequiredService<AppPermissionAdministration>(),
+                new ServerConnectionGatewayServices(
+                    () => provider.GetRequiredService<IServerConnectionService>(),
+                    () => provider.GetRequiredService<IFileSystemSyncService>(),
+                    () => provider.GetRequiredService<IGrantsSyncService>(),
+                    () => provider.GetRequiredService<IFileAssociationsSyncService>()),
+                () => provider.GetRequiredService<SystemPowerService>(),
+                () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),

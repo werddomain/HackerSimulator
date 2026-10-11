@@ -5,6 +5,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -36,6 +37,7 @@ public sealed class AppExecutionContextFactory
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
     private readonly AppCatalogGatewayServices? _appCatalog;
+    private readonly SystemAdministrationGatewayServices? _administration;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -61,6 +63,12 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.AppManagement"/> gateways (ADR 0056, sections 2 and 3);
     /// <see langword="null"/> leaves both unsupported.
     /// </param>
+    /// <param name="administration">
+    /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
+    /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
+    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/> and
+    /// <see cref="IAppExecutionContext.StorageDiagnostics"/>; <see langword="null"/> leaves them unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -74,7 +82,8 @@ public sealed class AppExecutionContextFactory
         LogFileWriter? logWriter = null,
         IProcessEnvironmentTable? environments = null,
         Func<string>? machineName = null,
-        AppCatalogGatewayServices? appCatalog = null)
+        AppCatalogGatewayServices? appCatalog = null,
+        SystemAdministrationGatewayServices? administration = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -89,6 +98,7 @@ public sealed class AppExecutionContextFactory
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
         _appCatalog = appCatalog;
+        _administration = administration;
     }
 
     /// <summary>
@@ -172,6 +182,9 @@ public sealed class AppExecutionContextFactory
                 _fileSystem,
                 _clock);
 
+        AppFileSystemGateway fileSystem = new(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise);
+        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
+
         AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -182,7 +195,7 @@ public sealed class AppExecutionContextFactory
             process.Pid,
             cancellationToken,
             capabilities,
-            new AppFileSystemGateway(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise),
+            fileSystem,
             events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),
@@ -201,14 +214,49 @@ public sealed class AppExecutionContextFactory
             userName,
             principal.DisplayName,
             catalogGateway,
-            managementGateway);
+            managementGateway,
+            administration.SystemSettings,
+            administration.Permissions,
+            administration.ServerConnection,
+            administration.SystemPower,
+            administration.StorageDiagnostics);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+        administration.SystemSettings?.BindAmbientContext(context);
         return context;
     }
+
+    /// <summary>Builds the administration gateways of ADR 0056 (sections 8 to 11) for one app instance.</summary>
+    private AdministrationGateways CreateAdministrationGateways(
+        AppManifest manifest,
+        AuthenticatedPrincipal principal,
+        bool isRootElevated,
+        ICapabilityChecker capabilities,
+        AppFileSystemGateway fileSystem)
+    {
+        if (_administration is null)
+        {
+            return new AdministrationGateways(null, null, null, null, null);
+        }
+
+        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated);
+        return new AdministrationGateways(
+            _administration.Settings is { } settings ? new AppSystemSettingsGateway(settings, fileSystem) : null,
+            _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
+            new AppServerConnectionGateway(_administration.Server, capabilities),
+            new AppSystemPowerGateway(_administration.Power, capabilities, gate),
+            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities));
+    }
+
+    private sealed record AdministrationGateways(
+        AppSystemSettingsGateway? SystemSettings,
+        AppPermissionAdministrationGateway? Permissions,
+        AppServerConnectionGateway? ServerConnection,
+        AppSystemPowerGateway? SystemPower,
+        AppStorageDiagnosticsGateway? StorageDiagnostics);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {

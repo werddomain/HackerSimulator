@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Settings;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -42,7 +44,12 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         string? userLoginName = null,
         string? userDisplayName = null,
         IAppCatalogGateway? catalog = null,
-        IAppManagementGateway? appManagement = null)
+        IAppManagementGateway? appManagement = null,
+        IAppSystemSettingsGateway? systemSettings = null,
+        IAppPermissionAdministrationGateway? permissionAdministration = null,
+        IAppServerConnectionGateway? serverConnection = null,
+        IAppSystemPowerGateway? systemPower = null,
+        IAppStorageDiagnosticsGateway? storageDiagnostics = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -73,7 +80,27 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         UserDisplayName = userDisplayName ?? UserLoginName;
         Catalog = catalog ?? UnsupportedAppGateways.Catalog;
         AppManagement = appManagement ?? UnsupportedAppGateways.Management;
+        SystemSettings = systemSettings ?? UnsupportedAdministrationGateways.SystemSettings;
+        PermissionAdministration = permissionAdministration ?? UnsupportedAdministrationGateways.Permissions;
+        ServerConnection = serverConnection ?? UnsupportedAdministrationGateways.ServerConnection;
+        SystemPower = systemPower ?? UnsupportedAdministrationGateways.SystemPower;
+        StorageDiagnostics = storageDiagnostics ?? UnsupportedAdministrationGateways.StorageDiagnostics;
     }
+
+    /// <inheritdoc />
+    public IAppSystemSettingsGateway SystemSettings { get; }
+
+    /// <inheritdoc />
+    public IAppPermissionAdministrationGateway PermissionAdministration { get; }
+
+    /// <inheritdoc />
+    public IAppServerConnectionGateway ServerConnection { get; }
+
+    /// <inheritdoc />
+    public IAppSystemPowerGateway SystemPower { get; }
+
+    /// <inheritdoc />
+    public IAppStorageDiagnosticsGateway StorageDiagnostics { get; }
 
     /// <inheritdoc />
     public string UserLoginName { get; }

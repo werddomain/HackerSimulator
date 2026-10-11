@@ -1,0 +1,39 @@
+using HackerOs.Platform.Core.Appearance;
+using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Shell;
+
+namespace HackerOs.Platform.Core.Settings;
+
+/// <summary>
+/// The OS settings documents an app may open with <c>HackSettings.OpenSystemAsync</c> (ADR 0056,
+/// section 8). Only layered <c>.config</c> documents with a declared schema are listed; whole-file
+/// JSON documents (<c>file-associations.json</c>) and per-app state files are not.
+/// </summary>
+public static class OsSettingsDocumentRegistry
+{
+    private static readonly Dictionary<string, OsSettingsDocument> Documents = new(StringComparer.Ordinal)
+    {
+        [AppearanceSettingsDocuments.Document.DocumentId] = AppearanceSettingsDocuments.Document,
+        [UiPlatformPreferenceSettingsDocuments.Document.DocumentId] = UiPlatformPreferenceSettingsDocuments.Document,
+        [SecuritySettingsDocuments.Document.DocumentId] = SecuritySettingsDocuments.Document,
+        [PolicySettingsDocuments.Document.DocumentId] = PolicySettingsDocuments.Document
+    };
+
+    /// <summary>Gets every listed document id.</summary>
+    public static IReadOnlyCollection<string> DocumentIds => Documents.Keys;
+
+    /// <summary>Finds a document by id.</summary>
+    /// <param name="documentId">File name without <c>.config</c>.</param>
+    /// <param name="document">The document when listed.</param>
+    public static bool TryGet(string documentId, out OsSettingsDocument document)
+    {
+        if (documentId is not null && Documents.TryGetValue(documentId, out OsSettingsDocument? found))
+        {
+            document = found;
+            return true;
+        }
+
+        document = null!;
+        return false;
+    }
+}

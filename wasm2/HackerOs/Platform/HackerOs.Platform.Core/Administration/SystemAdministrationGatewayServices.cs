@@ -1,0 +1,28 @@
+using HackerOs.Platform.Core.Elevation;
+using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Power;
+using HackerOs.Platform.Core.Settings;
+
+namespace HackerOs.Platform.Core.Administration;
+
+/// <summary>
+/// Platform services behind the administration gateways of ADR 0056, sections 8 to 11
+/// (<c>HackSettings.OpenSystemAsync</c>, <c>HackPermissionAdministration</c>,
+/// <c>HackServerConnection</c>, <c>HackSystem</c>, <c>HackStorageDiagnostics</c>). Every service is
+/// resolved lazily, on the app's first call: several depend, through the lifecycle orchestrator or
+/// the session, on the very factory that receives this bundle. A <see langword="null"/> member
+/// leaves its gateway unsupported (or, for the server, "not connected").
+/// </summary>
+/// <param name="Settings">OS settings files behind <c>OpenSystemAsync</c>.</param>
+/// <param name="Permissions">Dangerous-capability administration.</param>
+/// <param name="Server">Optional server connection and sync services.</param>
+/// <param name="Power">Reboot and factory reset.</param>
+/// <param name="Storage">Raw storage snapshot.</param>
+/// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every administrator operation.</param>
+public sealed record SystemAdministrationGatewayServices(
+    Func<IOsSettingsService>? Settings = null,
+    Func<AppPermissionAdministration>? Permissions = null,
+    ServerConnectionGatewayServices? Server = null,
+    Func<SystemPowerService>? Power = null,
+    Func<IStorageInspector>? Storage = null,
+    Func<IAdministratorAuthenticationAgent>? AuthenticationAgent = null);

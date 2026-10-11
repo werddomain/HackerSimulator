@@ -127,30 +127,43 @@ public sealed class AppPermissionAdministration
                 .ConfigureAwait(false);
         }
 
-        if (decision == AppPermissionDecision.Allow)
-        {
-            Record(requestedBy, "capability.approve", appId, outcome, new()
-            {
-                ["app"] = appId,
-                ["capabilities"] = capability,
-                ["requestedBy"] = requestedBy.LoginName.Value,
-                ["admin"] = admin,
-                ["outcome"] = verification.Success ? "success" : $"failure:{verification.FailureReason ?? "unknown"}"
-            });
-        }
-        else
-        {
-            Record(requestedBy, "capability.revoke", appId, outcome, new()
-            {
-                ["app"] = appId,
-                ["capability"] = capability,
-                ["admin"] = admin,
-                ["decision"] = decision is null ? "reset" : AppPermissionsDocument.DenyValue
-            });
-        }
-
+        RecordMachineDecision(appId, capability, decision, admin, requestedBy, outcome, verification.FailureReason);
         return new AppPermissionAdministrationResult(verification.Success, verification.FailureReason);
     }
+
+    /// <summary>
+    /// Records a machine decision once an administrator already authenticated through the OS
+    /// authentication agent (ADR 0055 section 5, <c>HackPermissionAdministration</c>): writes
+    /// <c>/etc/hackeros/app-permissions.config</c> as an audited system operation and logs the
+    /// change to <c>/var/log/auth.log</c>. The caller is responsible for the authentication.
+    /// </summary>
+    /// <param name="appId">Non-system app identifier.</param>
+    /// <param name="capability">Dangerous capability it declares.</param>
+    /// <param name="decision">Decision, or <see langword="null"/> to reset.</param>
+    /// <param name="administratorLogin">Administrator the agent authenticated (<c>root</c> under <c>sudo</c>).</param>
+    /// <param name="requestedBy">Session user acting in the calling app.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="ArgumentException">The app is unknown or a system app, or the capability is not a declared dangerous one.</exception>
+    public async Task ApplyMachineDecisionAsync(
+        string appId,
+        string capability,
+        AppPermissionDecision? decision,
+        string administratorLogin,
+        AuthenticatedPrincipal requestedBy,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requestedBy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(administratorLogin);
+        RequireDeclaredDangerous(appId, capability);
+        await _permissions.WriteMachineDecisionsAsync(appId, [capability], decision, cancellationToken).ConfigureAwait(false);
+        RecordMachineDecision(appId, capability, decision, administratorLogin, requestedBy, AuditOutcome.Success, failureReason: null);
+    }
+
+    /// <summary>Validates a machine decision without writing anything, so a caller can refuse before asking for a password.</summary>
+    /// <param name="appId">Non-system app identifier.</param>
+    /// <param name="capability">Dangerous capability it declares.</param>
+    /// <exception cref="ArgumentException">The app is unknown or a system app, or the capability is not a declared dangerous one.</exception>
+    public void ValidateMachineDecision(string appId, string capability) => RequireDeclaredDangerous(appId, capability);
 
     /// <summary>Withdraws the session user's own refusal of one capability (no administrator needed).</summary>
     /// <param name="appId">App identifier.</param>
@@ -182,25 +195,86 @@ public sealed class AppPermissionAdministration
             .ConfigureAwait(false);
         if (verification.Success)
         {
-            OsSettingsFile file = new(OsSettingsLocation.System, $"{SecuritySettingsDocuments.DocumentId}.config");
-            string? content = await _settings.ReadFileAsync(file, cancellationToken).ConfigureAwait(false);
-            string edited = ConfigDocumentEditor.SetValue(
-                content ?? SecuritySettingsDocuments.DefaultContent,
-                group: null,
-                SecuritySettingsDocuments.DangerousCapabilitiesKey,
-                SecuritySettingsDocuments.ToValue(policy));
-
-            // writer: null on a System file = audited system operation, the administrator being verified.
-            await _settings.WriteFileAsync(file, edited, writer: null, cancellationToken).ConfigureAwait(false);
+            await WritePolicyAsync(policy, cancellationToken).ConfigureAwait(false);
         }
 
-        Record(requestedBy, "capability.policy", SecuritySettingsDocuments.Document.SystemPath.Value,
-            verification.Success ? AuditOutcome.Success : AuditOutcome.Denied, new()
-            {
-                ["dangerousCapabilities"] = SecuritySettingsDocuments.ToValue(policy),
-                ["admin"] = verification.LoginName ?? (string.IsNullOrWhiteSpace(adminLogin) ? "-" : adminLogin)
-            });
+        RecordPolicy(policy, verification.LoginName ?? (string.IsNullOrWhiteSpace(adminLogin) ? "-" : adminLogin), requestedBy,
+            verification.Success ? AuditOutcome.Success : AuditOutcome.Denied);
         return new AppPermissionAdministrationResult(verification.Success, verification.FailureReason);
+    }
+
+    /// <summary>
+    /// Changes the policy once an administrator already authenticated through the OS authentication
+    /// agent (ADR 0055 section 5): writes <c>/etc/hackeros/security.config</c> as an audited system
+    /// operation and logs the change. The caller is responsible for the authentication.
+    /// </summary>
+    /// <param name="policy">New policy.</param>
+    /// <param name="administratorLogin">Administrator the agent authenticated.</param>
+    /// <param name="requestedBy">Session user acting in the calling app.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    public async Task ApplyPolicyAsync(
+        DangerousCapabilityPolicy policy,
+        string administratorLogin,
+        AuthenticatedPrincipal requestedBy,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requestedBy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(administratorLogin);
+        await WritePolicyAsync(policy, cancellationToken).ConfigureAwait(false);
+        RecordPolicy(policy, administratorLogin, requestedBy, AuditOutcome.Success);
+    }
+
+    private async Task WritePolicyAsync(DangerousCapabilityPolicy policy, CancellationToken cancellationToken)
+    {
+        OsSettingsFile file = new(OsSettingsLocation.System, $"{SecuritySettingsDocuments.DocumentId}.config");
+        string? content = await _settings.ReadFileAsync(file, cancellationToken).ConfigureAwait(false);
+        string edited = ConfigDocumentEditor.SetValue(
+            content ?? SecuritySettingsDocuments.DefaultContent,
+            group: null,
+            SecuritySettingsDocuments.DangerousCapabilitiesKey,
+            SecuritySettingsDocuments.ToValue(policy));
+
+        // writer: null on a System file = audited system operation, the administrator being verified.
+        await _settings.WriteFileAsync(file, edited, writer: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void RecordPolicy(DangerousCapabilityPolicy policy, string admin, AuthenticatedPrincipal requestedBy, AuditOutcome outcome) =>
+        Record(requestedBy, "capability.policy", SecuritySettingsDocuments.Document.SystemPath.Value, outcome, new()
+        {
+            ["dangerousCapabilities"] = SecuritySettingsDocuments.ToValue(policy),
+            ["admin"] = admin
+        });
+
+    private void RecordMachineDecision(
+        string appId,
+        string capability,
+        AppPermissionDecision? decision,
+        string admin,
+        AuthenticatedPrincipal requestedBy,
+        AuditOutcome outcome,
+        string? failureReason)
+    {
+        if (decision == AppPermissionDecision.Allow)
+        {
+            Record(requestedBy, "capability.approve", appId, outcome, new()
+            {
+                ["app"] = appId,
+                ["capabilities"] = capability,
+                ["requestedBy"] = requestedBy.LoginName.Value,
+                ["admin"] = admin,
+                ["outcome"] = outcome == AuditOutcome.Success ? "success" : $"failure:{failureReason ?? "unknown"}"
+            });
+        }
+        else
+        {
+            Record(requestedBy, "capability.revoke", appId, outcome, new()
+            {
+                ["app"] = appId,
+                ["capability"] = capability,
+                ["admin"] = admin,
+                ["decision"] = decision is null ? "reset" : AppPermissionsDocument.DenyValue
+            });
+        }
     }
 
     private void RequireDeclaredDangerous(string appId, string capability)

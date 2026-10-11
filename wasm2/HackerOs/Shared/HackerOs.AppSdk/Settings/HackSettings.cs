@@ -107,6 +107,47 @@ public static partial class HackSettings
     public static ValueTask SetAsync<T>(string qualifiedKey, T value, CancellationToken cancellationToken = default) =>
         SetAsync(HackExecutionContext.Current, qualifiedKey, value, cancellationToken);
 
+    /// <summary>
+    /// Opens one of the OS's own settings documents (ADR 0056, section 8):
+    /// <c>/etc/hackeros/&lt;document&gt;.config</c> (system layer) and
+    /// <c>~/.config/hackeros/&lt;document&gt;.config</c> (user layer), with the schema the OS declares.
+    /// </summary>
+    /// <remarks>
+    /// No capability is required: the files' permissions decide (decision D16). Everybody reads;
+    /// the session user writes their own layer; writing <see cref="SettingLayer.System"/> needs
+    /// root (<c>sudo</c>) or the administrator approval of ADR 0042, otherwise
+    /// <see cref="UnauthorizedAccessException"/> is thrown. Locks, layering and tolerance to invalid
+    /// lines are the same as for an app document (ADR 0044). The OS applies its own changes itself
+    /// (for <c>appearance</c>, the shell retheme as soon as the file changes).
+    /// <code>
+    /// await using HackSettingsDocument appearance = await HackSettings.OpenSystemAsync(context, "appearance");
+    /// await appearance.SetAsync("desktopThemeId", "gothic");
+    /// </code>
+    /// </remarks>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="documentId">OS document id: <c>appearance</c>, <c>ui-platform-preference</c> or <c>security</c> (system only).</param>
+    /// <param name="cancellationToken">Cancels the initial reads.</param>
+    /// <returns>An open document; dispose it to stop watching.</returns>
+    /// <exception cref="ArgumentException">The OS declares no such document.</exception>
+    /// <exception cref="NotSupportedException">The host provides no OS settings access.</exception>
+    public static ValueTask<HackSettingsDocument> OpenSystemAsync(
+        IAppExecutionContext context,
+        string documentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ValidateDocumentId(documentId);
+        return HackSettingsDocument.OpenSystemAsync(context.SystemSettings, documentId, cancellationToken);
+    }
+
+    /// <summary>Opens one OS settings document for the ambient app (<see cref="HackExecutionContext.Current"/>).</summary>
+    /// <param name="documentId">OS document id, such as <c>appearance</c>.</param>
+    /// <param name="cancellationToken">Cancels the initial reads.</param>
+    /// <exception cref="HackExecutionContextMissingException">No ambient app context is active.</exception>
+    /// <exception cref="ArgumentException">The OS declares no such document.</exception>
+    public static ValueTask<HackSettingsDocument> OpenSystemAsync(string documentId, CancellationToken cancellationToken = default) =>
+        OpenSystemAsync(HackExecutionContext.Current, documentId, cancellationToken);
+
     private static void ValidateDocumentId(string documentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(documentId);

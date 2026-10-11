@@ -113,6 +113,31 @@ public static class AppCapabilities
     public const string ShellControl = "shell.control";
 
     /// <summary>
+    /// Change the dangerous-capability policy and the machine decisions of other apps through
+    /// <c>HackPermissionAdministration</c> (ADR 0056, section 9). Dangerous; machine changes also
+    /// need an administrator through the OS authentication agent.
+    /// </summary>
+    public const string PermissionsManage = "permissions.manage";
+
+    /// <summary>
+    /// Connect this device to the optional server and synchronize it through
+    /// <c>HackServerConnection</c> (ADR 0056, section 10). Dangerous.
+    /// </summary>
+    public const string ServerConnectionManage = "server.connection.manage";
+
+    /// <summary>
+    /// Reboot or factory-reset the machine through <c>HackSystem</c> (ADR 0056, section 11).
+    /// Dangerous; every call also needs an administrator.
+    /// </summary>
+    public const string SystemPower = "system.power";
+
+    /// <summary>
+    /// Read the raw storage snapshot through <c>HackStorageDiagnostics</c> (ADR 0056, section 11),
+    /// bypassing file permissions. Dangerous.
+    /// </summary>
+    public const string SystemStorageInspect = "system.storage.inspect";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -168,7 +193,23 @@ public static class AppCapabilities
             "Accéder au vrai réseau",
             "Joindre de vrais serveurs sur Internet par le serveur relais."),
         Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
-        Normal(ShellControl, "Agir sur le shell qui a lancé la commande")
+        Normal(ShellControl, "Agir sur le shell qui a lancé la commande"),
+        Dangerous(
+            PermissionsManage,
+            "Administrer les permissions",
+            "Accorder ou retirer à d'autres apps des permissions dangereuses."),
+        Dangerous(
+            ServerConnectionManage,
+            "Gérer la connexion au serveur",
+            "Connecter cette machine à un serveur et y envoyer vos fichiers et permissions."),
+        Dangerous(
+            SystemPower,
+            "Redémarrer ou réinitialiser la machine",
+            "Redémarrer ou effacer entièrement cette machine."),
+        Dangerous(
+            SystemStorageInspect,
+            "Inspecter le stockage brut",
+            "Lire le stockage brut de la machine, y compris les fichiers de tous les utilisateurs.")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);
