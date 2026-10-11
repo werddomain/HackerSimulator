@@ -87,9 +87,10 @@ ouverte par le shell non élevé : `sudo echo x > /etc/f` échoue, comme sous Li
 ### `clear` et les séquences d'effacement
 
 `clear` écrit `ESC[H ESC[2J ESC[3J` sur sa sortie. C'est le terminal qui les
-interprète (`TerminalControlSequenceDecoder`, un décodeur par flux et par
-ligne) : `ESC[2J` ou `ESC[3J` efface l'écran, la bannière comprise ; les autres
-séquences CSI (curseur, couleurs) sont consommées sans s'afficher. Une séquence
+interprète : depuis l'ADR 0061, l'émulateur xterm.js reçoit les octets tels
+quels ([`terminal-emulator.md`](terminal-emulator.md)), donc `ESC[2J` et
+`ESC[3J` effacent l'écran et le défilement, la bannière comprise, et les autres
+séquences (curseur, couleurs) s'appliquent comme sous Linux. Une séquence
 coupée entre deux écritures est complétée par la suivante. `clear > f` écrit la
 séquence dans `f`. Ctrl+L reste un raccourci clavier du terminal.
 
