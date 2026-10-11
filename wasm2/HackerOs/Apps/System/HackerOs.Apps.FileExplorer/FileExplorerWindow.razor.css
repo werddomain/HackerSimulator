@@ -138,6 +138,7 @@
 
 .actions-toolbar {
     display: flex;
+    flex-wrap: wrap; /* narrow windows: Cut/Copy/Paste wrap to a second row instead of being clipped */
     align-items: center;
     gap: 0.35rem;
     padding: 0.4rem 0.75rem;
