@@ -65,7 +65,7 @@ public sealed class CodeEditorRecoveryStore
     /// <c>AppContext.UserId</c>, an internal id, not the login name used in VFS paths.
     /// </param>
     /// <param name="homePath">
-    /// The user's actual home directory (e.g. <c>SessionService.CurrentPrincipal.HomePath</c>),
+    /// The user's actual home directory (<c>HackUser.Current.HomeDirectory</c>),
     /// used to build <see cref="RecoveryPath"/>. <c>AppContext.UserId</c> is not a path segment —
     /// using it directly here previously pointed every recovery read/write at a nonexistent
     /// <c>/home/{userId}</c> directory, so saves always failed with a raw "NotFound" status.

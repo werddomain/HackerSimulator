@@ -295,6 +295,15 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IAdminElevationVerifier>(),
             provider.GetRequiredService<IAuditLog>(),
             provider.GetRequiredService<IDangerousCapabilityApprovalPrompt>()));
+        // OS authentication agent (ADR 0055 section 5, polkit-like): gateways that need an
+        // administrator ask it; its secure-desktop overlay is rendered by the shell.
+        services.AddScoped<AdministratorAuthenticationBroker>();
+        services.AddScoped<IAdministratorAuthenticationPrompt>(provider =>
+            provider.GetRequiredService<AdministratorAuthenticationBroker>());
+        services.AddScoped<IAdministratorAuthenticationAgent>(provider => new AdministratorAuthenticationAgent(
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetRequiredService<IAdministratorAuthenticationPrompt>()));
         services.AddScoped<AppPermissionAdministration>(provider => new AppPermissionAdministration(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppPermissionStore>(),
@@ -365,6 +374,14 @@ public static class EcosystemServiceCollectionExtensions
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
             machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // HackApps / HackAppManagement (ADR 0056 sections 2 and 3). Lazy for the same reason:
+            // the installation service depends on the orchestrator, which depends on this factory.
+            appCatalog: new AppCatalogGatewayServices(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                () => provider.GetRequiredService<FileAssociationResolver>(),
+                () => provider.GetRequiredService<IAppInstallationService>(),
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
             // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
             shellHostProvider: () => provider.GetRequiredService<ShellHostService>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(

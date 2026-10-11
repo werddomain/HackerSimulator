@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Apps;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -46,6 +47,20 @@ public interface IAppExecutionContext
     /// platform factory sets it from the launch.
     /// </summary>
     bool IsRootElevated => false;
+
+    /// <summary>
+    /// Gets the session user's login name, read by <see cref="HackUser"/> (ADR 0056, section 1).
+    /// Defaults to the process environment's user name so existing implementations keep compiling;
+    /// the trusted platform factory sets it from the authenticated principal.
+    /// </summary>
+    string UserLoginName => Environment.UserName;
+
+    /// <summary>
+    /// Gets the session user's display name, read by <see cref="HackUser"/> (ADR 0056, section 1).
+    /// Defaults to <see cref="UserLoginName"/>; the trusted platform factory sets it from the
+    /// authenticated principal.
+    /// </summary>
+    string UserDisplayName => UserLoginName;
 
     /// <summary>Gets the acting user's authority for this operation.</summary>
     AppAuthority UserAuthority { get; }
@@ -139,12 +154,58 @@ public interface IAppExecutionContext
     IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
 
     /// <summary>
+    /// Gets this instance's read access to the app catalog, behind <see cref="HackApps"/> (ADR 0056,
+    /// section 2). Defaults to an unsupported gateway so existing implementations keep compiling; the
+    /// trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    IAppCatalogGateway Catalog => new UnsupportedAppCatalogGateway();
+
+    /// <summary>
+    /// Gets this instance's uninstall/reinstall gateway, behind <see cref="HackAppManagement"/>
+    /// (ADR 0056, section 3; capability <c>apps.manage</c>). Defaults to an unsupported gateway so
+    /// existing implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IAppManagementGateway AppManagement => new UnsupportedAppManagementGateway();
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
     /// compiling; the trusted platform factory overrides it with a real implementation.
     /// </summary>
     Shell.IAppShellHostGateway ShellHost => new UnsupportedAppShellHostGateway();
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppCatalogGateway : IAppCatalogGateway
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public ValueTask<IReadOnlyList<HackAppInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
+
+    public ValueTask<IReadOnlyList<HackAppInfo>> GetHandlersAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.AppManagement"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppManagementGateway : IAppManagementGateway
+{
+    public ValueTask<IReadOnlyList<HackAppInstallInfo>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+
+    public ValueTask<IReadOnlyList<string>> UninstallAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+
+    public ValueTask<IReadOnlyList<string>> ReinstallAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.ShellHost"/> for contexts that don't wire one up.</summary>

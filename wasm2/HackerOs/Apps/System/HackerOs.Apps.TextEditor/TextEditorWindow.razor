@@ -2,14 +2,13 @@
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Gateways
-@using HackerOs.Simulation.Abstractions.Sessions
+@using HackerOs.AppSdk
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
 @inject MudBlazor.IDialogService MudDialogService
-@inject ISessionService SessionService
 @inject IJSRuntime JavaScript
 
 <div class="editor-container" @ref="_editorContainerRef" @onkeydown="HandleGlobalKeyDownAsync" tabindex="0">
@@ -196,7 +195,7 @@
             }
         }
 
-        return SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}";
+        return HackUser.Describe(AppContext).HomeDirectory;
     }
 
     /// <summary>
