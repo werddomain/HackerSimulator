@@ -35,6 +35,7 @@ public sealed class AppExecutionContextFactory
     private readonly LogFileWriter? _logWriter;
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
+    private readonly AppCatalogGatewayServices? _appCatalog;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -55,6 +56,11 @@ public sealed class AppExecutionContextFactory
     /// contexts get a detached read-only view.
     /// </param>
     /// <param name="machineName">Reads the machine name (<c>/etc/hostname</c>); defaults to <c>hackeros</c>.</param>
+    /// <param name="appCatalog">
+    /// Services behind the <see cref="IAppExecutionContext.Catalog"/> and
+    /// <see cref="IAppExecutionContext.AppManagement"/> gateways (ADR 0056, sections 2 and 3);
+    /// <see langword="null"/> leaves both unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -67,7 +73,8 @@ public sealed class AppExecutionContextFactory
         Func<AppIntentDispatcher>? intentDispatcherProvider = null,
         LogFileWriter? logWriter = null,
         IProcessEnvironmentTable? environments = null,
-        Func<string>? machineName = null)
+        Func<string>? machineName = null,
+        AppCatalogGatewayServices? appCatalog = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -81,6 +88,7 @@ public sealed class AppExecutionContextFactory
         _logWriter = logWriter;
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
+        _appCatalog = appCatalog;
     }
 
     /// <summary>
@@ -148,6 +156,21 @@ public sealed class AppExecutionContextFactory
         AppPermissionErrorGateway permissionErrors = new();
         AppEventGateway events = new(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString());
         AppClockGateway clock = new(_clock);
+        AppCatalogGateway? catalogGateway = _appCatalog is null
+            ? null
+            : new AppCatalogGateway(_appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation);
+        AppManagementGateway? managementGateway = _appCatalog?.Installation is null
+            ? null
+            : new AppManagementGateway(
+                _appCatalog.Catalog,
+                _appCatalog.Installation,
+                _appCatalog.AuthenticationAgent,
+                capabilities,
+                manifest,
+                principal,
+                isRootElevated,
+                _fileSystem,
+                _clock);
 
         AppExecutionContext context = new(
             manifest,
@@ -174,11 +197,16 @@ public sealed class AppExecutionContextFactory
             _environments is null
                 ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
                 : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath),
-            isRootElevated);
+            isRootElevated,
+            userName,
+            principal.DisplayName,
+            catalogGateway,
+            managementGateway);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
+        catalogGateway?.BindAmbientContext(context);
         return context;
     }
 
@@ -219,3 +247,21 @@ public sealed class AppExecutionContextFactory
                 "This execution context factory was not configured with an app-intent dispatcher.");
     }
 }
+
+/// <summary>
+/// Platform services behind the app catalog gateways (ADR 0056, sections 2 and 3). The
+/// installation service, the file association resolver and the authentication agent are resolved
+/// lazily: the installation service depends, through the lifecycle orchestrator, on the very
+/// factory that receives this bundle.
+/// </summary>
+/// <param name="Catalog">Catalog of this build, with its system app list.</param>
+/// <param name="Enablement">Launch checkpoint deciding which apps are installed (ADR 0048).</param>
+/// <param name="FileAssociations">Resolves "Open with" candidates; <see langword="null"/> leaves <c>GetHandlersAsync</c> unsupported.</param>
+/// <param name="Installation">Uninstall/reinstall service; <see langword="null"/> leaves <c>AppManagement</c> unsupported and <c>Changed</c> silent.</param>
+/// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every machine-scope change.</param>
+public sealed record AppCatalogGatewayServices(
+    AppCatalog Catalog,
+    Lifecycle.IAppEnablementRegistry Enablement,
+    Func<Intents.FileAssociationResolver>? FileAssociations = null,
+    Func<Apps.IAppInstallationService>? Installation = null,
+    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);

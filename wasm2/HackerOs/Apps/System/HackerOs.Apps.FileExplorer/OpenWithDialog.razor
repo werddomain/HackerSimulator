@@ -1,13 +1,12 @@
-@using HackerOs.App.Abstractions
-@using HackerOs.Platform.Core
+@using HackerOs.AppSdk.Apps
 @using MudBlazor
 
 <MudDialog Class="gothic-dialog">
     <DialogContent>
         <div class="openwith-container">
             <p class="openwith-subtitle">Select an installed app to open <strong>@FilePath</strong>:</p>
-            <MudList T="AppManifest" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_selectedApp" SelectedValueChanged="HandleSelectedAppChanged">
-                @foreach (AppManifest manifest in AvailableApps)
+            <MudList T="HackAppInfo" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_selectedApp" SelectedValueChanged="HandleSelectedAppChanged">
+                @foreach (HackAppInfo manifest in AvailableApps)
                 {
                     <MudListItem Value="@manifest">
                         <div class="app-item">
@@ -33,11 +32,11 @@
     public string FilePath { get; set; } = string.Empty;
 
     [Parameter]
-    public IReadOnlyList<AppManifest> AvailableApps { get; set; } = [];
+    public IReadOnlyList<HackAppInfo> AvailableApps { get; set; } = [];
 
-    private AppManifest? _selectedApp;
+    private HackAppInfo? _selectedApp;
 
-    private void HandleSelectedAppChanged(AppManifest manifest)
+    private void HandleSelectedAppChanged(HackAppInfo manifest)
     {
         _selectedApp = manifest;
     }

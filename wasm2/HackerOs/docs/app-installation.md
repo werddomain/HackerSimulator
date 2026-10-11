@@ -20,7 +20,7 @@ IndexedDB `IsEnabled` de l'ADR 0032.
 
 | Portée | Fichier | Propriétaire et mode | Qui écrit |
 | --- | --- | --- | --- |
-| Machine | `/etc/hackeros/apps.config` | `system:system 0644` | un administrateur, par `sudo` ou l'invite d'approbation (ADR 0042) |
+| Machine | `/etc/hackeros/apps.config` | `system:system 0644` | un administrateur, par `sudo` ou l'agent d'authentification de l'OS (ADR 0055 §5) |
 | Utilisateur | `~/.config/hackeros/apps.config` | l'utilisateur, `0644` | l'utilisateur lui-même |
 
 ```text
@@ -132,9 +132,16 @@ public interface IAppInstallationService
 - Chaque changement est journalisé dans `/var/log/syslog`, par exemple
   `apps: org.hackeros.calculator uninstalled (scope=machine, by=alice)`.
 
-Dans cette phase, seule l'app Paramètres utilise le service. Son exposition
-dans le SDK public, derrière la capacité dangereuse `apps.manage` (ADR 0049),
-arrive en phase 4.
+Depuis la phase 4 (`rebuild/4-sdk-user-and-apps`), les apps n'utilisent plus ce
+service directement : elles passent par `HackAppManagement` du SDK, derrière la
+capacité dangereuse `apps.manage` (ADR 0056 §3, [`app-sdk.md`](app-sdk.md)).
+Pour la portée machine, la passerelle demande d'abord à l'agent
+d'authentification de l'OS de confirmer un administrateur
+([`admin-authentication-agent.md`](admin-authentication-agent.md)), puis l'OS
+écrit `/etc/hackeros/apps.config` lui-même comme `system` : le paramètre
+`writer` reçoit cette passerelle système, et l'invite de l'ADR 0042 n'est plus
+utilisée pour ce fichier. La liste des apps installées, elle, est lue par
+`HackApps` sans capacité.
 
 ### App Paramètres, onglet « Installed Apps »
 
@@ -144,10 +151,16 @@ arrive en phase 4.
 - badge « System » sans bouton pour une app système ;
 - **Uninstall** pour une app installée, avec confirmation : liste des
   dépendants emportés, choix « Only for me » / « For all users » pour un
-  administrateur (un utilisateur standard n'a que sa propre portée) ;
+  administrateur (un utilisateur standard n'a que sa propre portée) ; « For all
+  users » ouvre la fenêtre de l'agent d'authentification, où l'administrateur
+  retape son mot de passe ;
 - **Reinstall** pour une app désinstallée dans une portée que l'utilisateur
   peut modifier ; sinon la mention « Uninstalled by the administrator » ;
-- l'ancien interrupteur activer/désactiver a disparu.
+- l'ancien interrupteur activer/désactiver a disparu ;
+- depuis la phase 4, le panneau n'utilise que le SDK : `AppContext.AppManagement`
+  pour la liste et les changements, `AppContext.Catalog.Changed` pour se
+  rafraîchir, `HackUser.Describe(AppContext)` pour savoir si l'utilisateur est
+  administrateur.
 
 ## Décisions de mise en œuvre
 

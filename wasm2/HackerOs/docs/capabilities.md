@@ -29,7 +29,7 @@ classement.
 | `filesystem.private.*`, `filesystem.user-selected.*`, `filesystem.user-home.*` | normale |
 | `filesystem.system.read`, `filesystem.system.write` | **dangereuse** |
 | `apps.launch` | normale |
-| `apps.manage` | **dangereuse** (réservée à l'API de gestion des apps de la phase 4) |
+| `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3 ; déclarée par Paramètres) |
 | `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select` | normale |
 | `file-associations.read` | normale |
 | `file-associations.write` | **dangereuse** |

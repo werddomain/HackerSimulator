@@ -1,8 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Platform.Core;
-using HackerOs.Platform.Core.Apps;
-using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.AppSdk.Apps;
+using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.Apps.Settings;
@@ -13,73 +12,88 @@ namespace HackerOs.Apps.Settings;
 /// change the scope that uninstalled it. System apps get a badge and no button.
 /// </summary>
 /// <remarks>
-/// Writes go through <see cref="IAppInstallationService"/>; a machine-scope write uses this app's
-/// own filesystem gateway, so a denied write raises the administrator approval prompt of ADR 0042
-/// and the user simply tries again once approved, as in the Appearance tab.
+/// Uses only the public SDK (ADR 0055, ADR 0056 section 3): <see cref="IAppManagementGateway"/>
+/// (capability <c>apps.manage</c>) for the list and the changes, <see cref="IAppCatalogGateway.Changed"/>
+/// to refresh after any <c>apps.config</c> change, and <see cref="HackUser"/> to know whether the
+/// "for all users" scope is offered. A machine-scope change makes the OS ask an administrator to
+/// authenticate in its own window; this panel never sees a password.
 /// </remarks>
 public partial class InstalledAppsPanel : ComponentBase, IDisposable
 {
-    private AppManifest? _pending;
-    private IReadOnlyList<string> _pendingClosure = [];
-    private AppInstallationScope _scope = AppInstallationScope.User;
+    private IReadOnlyList<HackAppInstallInfo>? _apps;
+    private HackAppInstallInfo? _pending;
+    private HackInstallScope _scope = HackInstallScope.User;
+    private IAppCatalogGateway? _catalog;
     private bool _isBusy;
     private string? _message;
 
-    /// <summary>Gets or sets the Settings app's execution context (filesystem gateway and cancellation).</summary>
+    /// <summary>Gets or sets the Settings app's execution context (gateways and cancellation).</summary>
     [Parameter, EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = null!;
 
-    [Inject]
-    private AppCatalog Catalog { get; set; } = null!;
-
-    [Inject]
-    private IAppInstallationService Installation { get; set; } = null!;
-
-    [Inject]
-    private ISessionService Session { get; set; } = null!;
-
     /// <summary>Window apps, sorted by name. Services are managed from System Monitor's Services tab.</summary>
-    private IReadOnlyList<AppManifest> Applications => [.. Catalog.Manifests.Values
-        .Where(static manifest => manifest.Kind == AppKind.Window)
-        .OrderBy(static manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)];
+    private IReadOnlyList<HackAppInstallInfo> Applications => [.. (_apps ?? [])
+        .Where(static entry => entry.App.Kind == AppKind.Window)];
 
     /// <summary>Terminal commands, sorted by name; all are system apps on the Ecosystem host.</summary>
-    private IReadOnlyList<AppManifest> Commands => [.. Catalog.Manifests.Values
-        .Where(static manifest => manifest.Kind == AppKind.Terminal)
-        .OrderBy(static manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)];
+    private IReadOnlyList<HackAppInstallInfo> Commands => [.. (_apps ?? [])
+        .Where(static entry => entry.App.Kind == AppKind.Terminal)];
 
-    /// <summary>Only an administrator may choose "for all users" (ADR 0048 section 3).</summary>
-    private bool IsAdministrator => Session.CurrentPrincipal?.HasAuthority(AppAuthority.Administrator) == true;
-
-    /// <inheritdoc />
-    protected override void OnInitialized() => Installation.Changed += OnInstallationChanged;
+    /// <summary>Only an administrator is offered "for all users" (ADR 0048 section 3); the OS still asks for their password.</summary>
+    private bool IsAdministrator => HackUser.Describe(AppContext).IsAdministrator;
 
     /// <inheritdoc />
-    public void Dispose() => Installation.Changed -= OnInstallationChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        _catalog = AppContext.Catalog;
+        _catalog.Changed += OnCatalogChanged;
+        await ReloadAsync();
+    }
 
-    private void OnInstallationChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (_catalog is not null)
+        {
+            _catalog.Changed -= OnCatalogChanged;
+        }
+    }
 
-    private AppInstallationState StateOf(string appId) => Installation.GetState(appId);
+    private void OnCatalogChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _apps = await AppContext.AppManagement.GetAllAsync(AppContext.CancellationToken);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or AppGatewayAccessDeniedException)
+        {
+            _apps = [];
+            _message = "Settings is not allowed to manage apps (capability apps.manage).";
+        }
+    }
 
     private string NameOf(string appId) =>
-        Catalog.Manifests.TryGetValue(appId, out AppManifest? manifest) ? manifest.Name : appId;
+        _apps?.FirstOrDefault(entry => entry.App.Id == appId)?.App.Name ?? appId;
 
-    private static string RowClass(AppInstallationState state) => state switch
-    {
-        AppInstallationState.System => "is-system",
-        AppInstallationState.Installed => "is-installed",
-        _ => "is-uninstalled"
-    };
+    private static string RowClass(HackAppInstallInfo entry) =>
+        entry.App.IsSystemApp ? "is-system"
+        : entry.State == HackAppInstallState.Installed ? "is-installed"
+        : "is-uninstalled";
 
-    private string ScopeClass(AppInstallationScope scope) =>
+    private string ScopeClass(HackInstallScope scope) =>
         scope == _scope ? "scope-option is-selected" : "scope-option";
 
-    private void AskUninstall(AppManifest app)
+    private void AskUninstall(HackAppInstallInfo entry)
     {
         _message = null;
-        _pending = app;
-        _pendingClosure = Installation.GetUninstallClosure(app.Id);
-        _scope = AppInstallationScope.User;
+        _pending = entry;
+        _scope = HackInstallScope.User;
     }
 
     private void CancelUninstall()
@@ -92,32 +106,30 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
 
     private async Task ConfirmUninstallAsync()
     {
-        if (_pending is not AppManifest app)
+        if (_pending is not { } entry)
         {
             return;
         }
 
-        AppInstallationScope scope = IsAdministrator ? _scope : AppInstallationScope.User;
-        bool done = await RunAsync(() => Installation.UninstallAsync(
-            app.Id, scope, scope == AppInstallationScope.Machine ? AppContext.FileSystem : null, AppContext.CancellationToken));
+        HackInstallScope scope = IsAdministrator ? _scope : HackInstallScope.User;
+        bool done = await RunAsync(() => AppContext.AppManagement.UninstallAsync(entry.App.Id, scope, AppContext.CancellationToken));
         if (done)
         {
             _pending = null;
         }
     }
 
-    private Task ReinstallAsync(AppManifest app, AppInstallationState state)
+    private Task ReinstallAsync(HackAppInstallInfo entry)
     {
         _message = null;
-        AppInstallationScope scope = state == AppInstallationState.UninstalledForMachine
-            ? AppInstallationScope.Machine
-            : AppInstallationScope.User;
-        return RunAsync(() => Installation.ReinstallAsync(
-            app.Id, scope, scope == AppInstallationScope.Machine ? AppContext.FileSystem : null, AppContext.CancellationToken));
+        HackInstallScope scope = entry.State == HackAppInstallState.UninstalledForMachine
+            ? HackInstallScope.Machine
+            : HackInstallScope.User;
+        return RunAsync(() => AppContext.AppManagement.ReinstallAsync(entry.App.Id, scope, AppContext.CancellationToken));
     }
 
     /// <summary>Runs one install change and turns its outcome into a message; returns whether it succeeded.</summary>
-    private async Task<bool> RunAsync(Func<ValueTask<AppInstallationResult>> change)
+    private async Task<bool> RunAsync(Func<ValueTask<IReadOnlyList<string>>> change)
     {
         if (_isBusy)
         {
@@ -129,17 +141,23 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
         StateHasChanged();
         try
         {
-            AppInstallationResult result = await change();
-            if (!result.Success)
-            {
-                _message = string.Join(" ", result.Errors.Select(Describe));
-            }
-
-            return result.Success;
+            await change();
+            await ReloadAsync();
+            return true;
+        }
+        catch (AppGatewayAccessDeniedException)
+        {
+            _message = "Settings is not allowed to manage apps (capability apps.manage).";
+            return false;
         }
         catch (UnauthorizedAccessException)
         {
-            _message = "Administrator approval is required to change /etc/hackeros/apps.config. Approve the prompt, then try again.";
+            _message = "No administrator authenticated: /etc/hackeros/apps.config was not changed.";
+            return false;
+        }
+        catch (InvalidOperationException exception)
+        {
+            _message = exception.Message;
             return false;
         }
         catch (IOException exception)
@@ -152,20 +170,5 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
             _isBusy = false;
             StateHasChanged();
         }
-    }
-
-    private string Describe(string error)
-    {
-        int separator = error.IndexOf(':');
-        string code = separator < 0 ? error : error[..separator];
-        string appName = separator < 0 ? string.Empty : NameOf(error[(separator + 1)..]);
-        return code switch
-        {
-            "apps.app.system" => $"{appName} is a system app and cannot be uninstalled.",
-            "apps.closure.system-app" => $"The system app {appName} needs it, so it cannot be uninstalled.",
-            "apps.uninstalled-by-administrator" => $"{appName} was uninstalled by the administrator for every user.",
-            "apps.session.required" => "Sign in to change installed apps.",
-            _ => error
-        };
     }
 }
