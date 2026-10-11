@@ -461,7 +461,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
   - [x] Hôte de shell : `HackShell`, capacité `shell.host`, `TerminalPanel` sans `Platform.Core`, CodeEditor système (`rebuild/4-sdk-shell-host`, ADR 0056 §7, [`shell-host.md`](shell-host.md)).
 - [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
-- [ ] Éditeur : remplacer et tout remplacer.
+- [x] Éditeur : remplacer et tout remplacer (`rebuild/4-text-editor`, ADR 0058 §3, [`text-editor.md`](text-editor.md)).
 - [ ] Console : complétion par Tab et onglets.
 
 ## 13. Références
