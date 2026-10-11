@@ -168,12 +168,15 @@ Façades statiques existantes au début de la phase 4 :
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
+| `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
+| `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
 (ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `ShellHost`
-(`4-sdk-shell-host`), `Drives` (ADR 0057, `4-proc-metrics`).
+(`4-sdk-shell-host`), `Drives` (ADR 0057, `4-proc-metrics`),
+`Clipboard` (ADR 0056 §12, `4-file-explorer`).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
@@ -282,9 +285,29 @@ légende et une échelle automatique ; ni bibliothèque ni JavaScript. Les
 couleurs viennent du thème (`--hos-chart-series-0` à `7`). Voir
 [`task-manager.md`](task-manager.md).
 
+### Presse-papiers (ADR 0056 §12)
+
+```csharp
+await HackClipboard.SetFileDropListAsync(["~/rapport.txt"], HackClipboardFileOperation.Cut);
+HackClipboardFileList? files = await HackClipboard.GetFileDropListAsync();   // Operation + Paths
+string? text = await HackClipboard.GetTextAsync();
+```
+
+- Un presse-papiers par **session**, partagé par toutes ses apps (`SystemClipboard`,
+  Platform Core), vidé à la déconnexion ; liste de fichiers au format GNOME
+  `x-special/gnome-copied-files`, lisible aussi en texte (les chemins).
+- **Capacités** `clipboard.read` (lecture) et `clipboard.write` (écriture,
+  vidage), normales. `Changed` ne demande aucune capacité.
+- `GetFileReferencesAsync` / `SetFileReferencesAsync` : `[Obsolete]`, formes de
+  « copier ». L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
+  supprimée (la vraie est dans Platform Core).
+- Passerelle : `IAppClipboardGateway Clipboard` (`AppClipboardGateway`, Platform Core).
+- `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
+  (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
+  [`file-explorer.md`](file-explorer.md).
+
 Les autres API de l'ADR 0056 (`HackPermissionAdministration`,
-`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
-`HackClipboard`…) sont ajoutées ici par leurs chantiers.
+`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`…) sont ajoutées ici par leurs chantiers.
 
 ### Hôte de shell (ADR 0056 §7)
 
@@ -295,6 +318,14 @@ Les autres API de l'ADR 0056 (`HackPermissionAdministration`,
 Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
 enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 (`HackCredentialPrompt`), l'OS les vérifie.
+
+### Arguments de lancement d'une fenêtre
+
+`WindowAppBase.LaunchArguments` rend les arguments du processus sans `argv[0]`
+(comme `Main(string[] args)`), et `WindowAppBase.LaunchFile` le premier s'il est
+un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
+l'app associée avec ce chemin : une app de document lit son fichier initial là
+(voir [`text-editor.md`](text-editor.md)).
 
 ## Décisions
 
@@ -340,3 +371,9 @@ enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 - [x] Onglet « Installed Apps » de Paramètres sur le SDK ; `apps.manage` déclarée par Paramètres.
 - [x] Exemptions retirées : FileExplorer, TextEditor, CodeEditor ; Paramètres reste pour `4-sdk-system-admin`.
 - [x] Tests : agent, passerelles, `HackUser`, fenêtre.
+
+## Liste des tâches du chantier `rebuild/4-file-explorer`
+
+- [x] `HackClipboard`, `HackClipboardFileList`, passerelle `IAppExecutionContext.Clipboard` ; `SystemClipboard` et `AppClipboardGateway` dans Platform Core.
+- [x] `HackDirectory.CopyAsync`, `FileTransfer` et les ajouts de `FileView` ([`file-explorer.md`](file-explorer.md)).
+- [x] Explorateur sur ces API ; capacités `clipboard.read`, `clipboard.write`, `notifications.post` déclarées. Aucune exemption à retirer (FileExplorer était déjà sorti de la liste).

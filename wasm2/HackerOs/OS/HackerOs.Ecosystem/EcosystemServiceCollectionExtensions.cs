@@ -432,7 +432,11 @@ public static class EcosystemServiceCollectionExtensions
                 new AppDriveGateway(
                     () => provider.GetRequiredService<IFileSystemMountRouter>(),
                     VirtualHardwareProfile.Default,
-                    provider.GetRequiredService<IStorageUsageProvider>()))));
+                    provider.GetRequiredService<IStorageUsageProvider>())),
+            // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
+            clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>()));
+        services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
+            new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),

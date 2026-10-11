@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -190,7 +191,39 @@ public interface IAppExecutionContext
     /// implementations keep compiling; the trusted platform factory overrides it.
     /// </summary>
     IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
+
+    /// <summary>
+    /// Gets this instance's view of the session clipboard, behind <see cref="HackClipboard"/> (ADR 0056,
+    /// section 12; capabilities <c>clipboard.read</c> and <c>clipboard.write</c>). Defaults to an
+    /// unsupported gateway so existing implementations keep compiling; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
 }
+
+/// <summary>Default <see cref="IAppExecutionContext.Clipboard"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppClipboardGateway : IAppClipboardGateway
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public ValueTask<string?> GetTextAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask SetTextAsync(string text, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask<HackClipboardFileList?> GetFileDropListAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask SetFileDropListAsync(HackClipboardFileList files, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask ClearAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    private static NotSupportedException Unsupported() =>
+        new("This IAppExecutionContext implementation does not provide a Clipboard gateway.");
+}
+
 
 /// <summary>Default <see cref="IAppExecutionContext.Drives"/> for contexts that don't wire one up.</summary>
 file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway

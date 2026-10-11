@@ -24,6 +24,10 @@ public sealed class FileSystemSeeder(
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly IFileSystemMountRouter? _mountRouter = mountRouter;
 
+    // A seed directory whose parent keeps changing under it (concurrent boot writers) is retried
+    // this many times before the boot fails.
+    private const int MaxSeedAttempts = 3;
+
     /// <summary>Ensures the system layout and one user's standard directories exist.</summary>
     public async ValueTask SeedAsync(
         string userId,
@@ -90,7 +94,8 @@ public sealed class FileSystemSeeder(
         ushort mode,
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken,
-        IFileSystemProvider? provider = null)
+        IFileSystemProvider? provider = null,
+        int attempt = 0)
     {
         IFileSystemProvider fileSystem = provider ?? _fileSystem;
         VirtualPath path = VirtualPath.Parse(pathValue);
@@ -133,6 +138,17 @@ public sealed class FileSystemSeeder(
                 parentResult.Value!.Metadata.Revision),
             context,
             cancellationToken);
+        if (!created.Succeeded
+            && created.Transaction.Error?.Code == FileSystemErrorCode.RevisionConflict
+            && attempt < MaxSeedAttempts)
+        {
+            // The parent changed between the stat and the create: boot services (syslog, app
+            // logs) write into /var/log while the seeder runs. Re-read the parent and retry, like
+            // `mkdir -p` racing another process.
+            await EnsureDirectoryAsync(pathValue, mode, context, cancellationToken, provider, attempt + 1);
+            return;
+        }
+
         if (!created.Succeeded && created.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
         {
             throw new InvalidOperationException(

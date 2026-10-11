@@ -45,6 +45,7 @@ public sealed class AppExecutionContextFactory
     private readonly IServerConnectionService? _serverConnection;
     private readonly IProxyClient? _proxy;
     private readonly SystemMetricsServices? _metrics;
+    private readonly Clipboard.SystemClipboard _clipboard;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -87,6 +88,10 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.Drives"/> answers <c>HackDriveInfo</c>. <see langword="null"/>
     /// counts nothing and leaves drives unsupported.
     /// </param>
+    /// <param name="clipboard">
+    /// The OS clipboard behind <see cref="IAppExecutionContext.Clipboard"/> (ADR 0056, section 12), shared
+    /// by every context this factory creates; when omitted the factory keeps its own.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -105,7 +110,8 @@ public sealed class AppExecutionContextFactory
         IServerConnectionService? serverConnection = null,
         IProxyClient? proxy = null,
         Func<Shell.ShellHostService>? shellHostProvider = null,
-        SystemMetricsServices? metrics = null)
+        SystemMetricsServices? metrics = null,
+        Clipboard.SystemClipboard? clipboard = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -125,6 +131,7 @@ public sealed class AppExecutionContextFactory
         _proxy = proxy;
         _shellHostProvider = shellHostProvider;
         _metrics = metrics;
+        _clipboard = clipboard ?? new Clipboard.SystemClipboard();
     }
 
     /// <summary>
@@ -207,6 +214,7 @@ public sealed class AppExecutionContextFactory
                 isRootElevated,
                 _fileSystem,
                 _clock);
+        AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId);
 
         AppExecutionContext context = new(
             manifest,
@@ -249,7 +257,8 @@ public sealed class AppExecutionContextFactory
                     _metrics?.Network,
                     _metrics?.ProcessIo,
                     process.Pid),
-            _metrics?.Drives);
+            _metrics?.Drives,
+            clipboardGateway);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
@@ -269,6 +278,7 @@ public sealed class AppExecutionContextFactory
                     Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
                     shellProcess.AppInstanceId.Value, isRootElevated));
         }
+        clipboardGateway.BindAmbientContext(context);
         return context;
     }
 
