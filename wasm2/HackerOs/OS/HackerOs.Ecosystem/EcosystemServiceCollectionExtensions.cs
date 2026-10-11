@@ -32,6 +32,7 @@ using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
+using HackerOs.Platform.Blazor.Components;
 using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Security;
 using HackerOs.Platform.Blazor.Shell;
@@ -54,6 +55,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Sync;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
@@ -556,6 +558,16 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<DialogCoordinator>(provider => new DialogCoordinator(
             provider.GetRequiredService<IFileDialogService>()));
         services.AddScoped<IDialogService>(provider => provider.GetRequiredService<DialogCoordinator>());
+        // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
+        // component by contract; the provider's assembly is loaded as a launch would load it.
+        services.AddScoped<IHackComponentHost>(provider =>
+        {
+            AppLifecycleOrchestrator orchestrator = provider.GetRequiredService<AppLifecycleOrchestrator>();
+            return new HackComponentHost(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                orchestrator.EnsureDescriptorAsync);
+        });
         services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
         // Scoped, not Singleton: on the server host these back live desktop/window state for one
         // circuit. A Singleton here outlives circuit reconnects (e.g. a hard browser reload, which

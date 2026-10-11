@@ -75,8 +75,9 @@ le terminal affiche `exit` et termine le shell avec `$?`.
 
 `TerminalPanel.OnExitRequested` est appelé quand le shell est sorti. Sans
 abonné, le panneau reste ouvert et affiche `[hsh exited with status n]`.
-L'éditeur de code ferme l'onglet du terminal intégré, et masque le panneau
-pour le dernier.
+Un hôte qui embarque le terminal par contrat (ADR 0063) reçoit aussi
+l'événement `IHackTerminal.Exited` : l'éditeur de code ferme l'onglet du
+terminal intégré, et masque le dock pour le dernier.
 
 ## Onglets
 
@@ -129,8 +130,9 @@ les raccourcis d'onglets ci-dessus jusqu'à `TerminalTabs`.
 - **La fenêtre se ferme en arrêtant son processus** : le SDK n'a pas d'API
   « fermer ma fenêtre », et le bureau ferme déjà la fenêtre d'un processus
   arrêté.
-- **CodeEditor garde ses propres onglets** (ADR 0058 : son panneau reste
-  simple) ; il réagit seulement à `exit`.
+- **CodeEditor garde ses propres onglets** (ADR 0058) ; depuis l'ADR 0063,
+  chacun embarque le terminal de l'app Terminal par contrat, et l'éditeur
+  réagit à `exit` par `IHackTerminal.Exited`.
 - **`;` n'est pas reconnu par le parseur** : la complétion le traite comme un
   séparateur pour être prête, mais les exemples utilisent `&&`.
 

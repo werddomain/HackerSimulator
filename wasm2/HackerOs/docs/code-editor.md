@@ -2,8 +2,9 @@
 
 `Apps/System/HackerOs.Apps.CodeEditor` (`org.hackeros.code-editor`) : éditeur
 de code façon VS Code, sur Monaco 0.55 (ADR 0020) et disposé en atelier
-(ADR 0062). Il ouvre des fichiers et des dossiers du système de fichiers
-virtuel, cherche dans tout un dossier, et embarque des terminaux `hsh`.
+(ADR 0062), avec un dock en bas (ADR 0063). Il ouvre des fichiers et des
+dossiers du système de fichiers virtuel, cherche dans tout un dossier, et
+embarque les terminaux de l'app Terminal.
 
 L'ancienne documentation (passage de CodeMirror à Monaco, preuves d'août 2026)
 est archivée dans [`old/code-editor.md`](old/code-editor.md).
@@ -13,14 +14,15 @@ est archivée dans [`old/code-editor.md`](old/code-editor.md).
 | Domaine | Ce que l'utilisateur fait |
 | --- | --- |
 | Dossier | File › Open Folder… (ou le bouton de l'explorateur vide) ; l'arbre du dossier s'affiche dans la barre latérale ; File › Close Folder. |
-| Explorateur | Un clic montre un fichier sans quitter l'arbre (flèches, Suppr, F2 restent à l'arbre) ; double-clic ou Entrée l'ouvre et donne le focus à l'éditeur. Boutons « New File… », « New Folder… », « Refresh » ; le nom se tape en place dans le dossier sélectionné. Menu contextuel : Open, Rename, Delete (corbeille), Delete permanently (avec confirmation), New File…, New Folder…, Find in Folder…. Glisser-déposer, couper/copier sont ceux de `FileView`. |
+| Explorateur | Un clic montre un fichier sans quitter l'arbre (flèches, Suppr, F2 restent à l'arbre) ; double-clic ou Entrée l'ouvre et donne le focus à l'éditeur. Boutons « New File… », « New Folder… », « Refresh » ; le nom se tape en place dans le dossier sélectionné. Menu contextuel : Open, Rename, Delete (corbeille), Delete permanently (avec confirmation), New File…, New Folder…, Find in Folder…, Open in Integrated Terminal. Glisser-déposer, couper/copier sont ceux de `FileView`. |
 | Onglets | Plusieurs fichiers ouverts, chacun avec son historique d'annulation, sa sélection et son défilement. Point « ● » sur un onglet modifié, croix au survol ; clic du milieu pour fermer ; nom du dossier ajouté quand deux onglets ont le même nom. Ctrl+Tab et Ctrl+Maj+Tab changent d'onglet. |
 | Recherche | Ctrl+Maj+F ou l'icône loupe : recherche dans tous les fichiers du dossier, pendant la frappe. Options casse (Aa), mot entier (ab), expression régulière (.*), « files to include » et « files to exclude » (`*.cs`, `src/**`). Résultats groupés par fichier, repliables ; un clic ouvre le fichier et sélectionne l'occurrence. Le texte sélectionné dans l'éditeur sert de recherche initiale. |
 | Ouverture rapide | Ctrl+P : liste les fichiers du dossier, filtrés en sous-suite floue (`edwin` trouve `EditorWindow.razor`), flèches et Entrée. Sans dossier ouvert, Ctrl+P ouvre la boîte « Open File ». |
 | Édition | Tout Monaco : rechercher/remplacer dans le fichier (Ctrl+F, Ctrl+H), aller à la ligne (Ctrl+G), commenter (Ctrl+/), formater, palette de commandes de Monaco (F1), multicurseur, mini-carte. View › Word Wrap (Alt+Z), Show/Hide Minimap. |
 | Enregistrement | Ctrl+S, Ctrl+Maj+S (Save As), File › Save All. Les fichiers du dossier ouvert passent par l'accès accordé au dossier. Le contenu non enregistré est sauvegardé pour récupération et restauré au prochain lancement. |
-| Terminal | Ctrl+` ou l'icône du bas de la barre d'activité : panneau redimensionnable, onglets « + », un `hsh` par onglet, démarré dans le dossier ouvert. |
-| Disposition | Barre latérale (Ctrl+B) et panneau terminal redimensionnables par glissement ; la zone Monaco prend toujours tout l'espace restant ; barre d'état avec Ln/Col, sélection, encodage, fin de ligne et langage (modifiable). |
+| Dock du bas | Ctrl+J l'affiche ou le cache (il est caché, pas détruit : les shells continuent). Onglets **Status** (dossier, fichier, langage, onglets ouverts et non enregistrés, terminaux, puis journal horodaté des messages, effaçable), **Terminal** et **Problems** (vide pour l'instant). |
+| Terminal | Ctrl+` ou l'icône du bas de la barre d'activité : onglet Terminal du dock. C'est le terminal de l'app Terminal, embarqué par le contrat `hackeros.terminal` (ADR 0063) : un `hsh` par onglet (« + »), démarré dans le dossier ouvert, titre = commande en cours ou dossier, effacer, tuer. « Open in Integrated Terminal » fait un `cd` visible dans le terminal actif s'il est libre, sinon ouvre un nouveau terminal. `exit` ferme l'onglet ; le dernier cache le dock. Sans app Terminal installée, l'onglet dit pourquoi. |
+| Disposition | Barre latérale (Ctrl+B) et dock redimensionnables par glissement ; la zone Monaco prend toujours tout l'espace restant ; barre d'état avec le dernier message (un clic ouvre Status), Ln/Col, sélection, encodage, fin de ligne et langage (modifiable). Les erreurs restent aussi au-dessus de l'éditeur jusqu'à ce qu'on les ferme. |
 
 Hors périmètre (ADR 0062) : compilation, exécution, « aller à la définition »,
 IntelliSense entre fichiers, contrôle de source, débogueur, extensions.
@@ -29,9 +31,9 @@ IntelliSense entre fichiers, contrôle de source, débogueur, extensions.
 
 | Élément | Rôle |
 | --- | --- |
-| `CodeEditorWindow.razor` / `.razor.cs` / `.razor.css` | Atelier : menus, barre d'activité, barre latérale, onglets, fil d'Ariane, zone Monaco, filigrane, panneau terminal, barre d'état. Possède la session, l'espace de travail, la récupération et le garde de fermeture. |
+| `CodeEditorWindow.razor` / `.razor.cs` / `.razor.css` | Atelier : menus, barre d'activité, barre latérale, onglets, fil d'Ariane, zone Monaco, filigrane, dock du bas (Status, Terminal par `HackEmbeddedComponent<IHackTerminal>`, Problems), barre d'état. Possède la session, l'espace de travail, la récupération et le garde de fermeture. |
 | `CodeEditorWindow.razor.js` | Module collocé : `createEditor` (Monaco + nom accessible), `attachWorkbench` (raccourcis capturés avant le navigateur et Monaco, puis `OnShortcut(nom)` ; poignées de redimensionnement qui posent `--sidebar-width` et `--panel-height` sur la racine). |
-| `CodeEditor.monaco.entry.js` → `wwwroot/monaco/monaco.bundle.js` | Thème `hackeros-dark` et `createCodeEditor` : un modèle par onglet (`showDocument`, `closeDocument`), `setLanguage`, `reveal`, `runAction`, `getSelectedText`, `setOptions`, `layout`, `focus`, `destroy` ; renvoie `OnEditorChanged(id, contenu)` et `OnCursorChanged(ligne, colonne, sélection)`. |
+| `CodeEditor.monaco.entry.js` → `wwwroot/monaco/monaco.bundle.js` | Thème `hackeros-dark` et `createCodeEditor` : un modèle par onglet (`showDocument`, `closeDocument`), `setLanguage`, `reveal`, `runAction`, `getSelectedText`, `setOptions`, `flush`, `markSaved`, `layout`, `focus`, `destroy` ; renvoie `OnDirtyChanged(id, modifié)` à chaque bascule, `OnEditorChanged(id, contenu)` après 400 ms sans frappe, et `OnCursorChanged(ligne, colonne, sélection)` après 60 ms. |
 | `CodeEditorSession`, `CodeEditorDocument` | Onglets et contenu en C# ; `RelocatePaths` suit un renommage de fichier ou de dossier. |
 | `CodeEditorWorkspace` | Dossier ouvert : liste des fichiers (exclusions `.git`, `.svn`, `.hg`, `node_modules`, `bin`, `obj` ; au plus 5 000), création de fichiers et de dossiers, chemins relatifs. |
 | `CodeEditorSearch.cs` | `CodeEditorTextSearch` (ligne par ligne, 1 000 occurrences par fichier, aperçu coupé autour de l'occurrence), `CodeEditorGlob`, `CodeEditorWorkspaceSearch` (5 000 occurrences au total, fichiers de plus de 1 Mio ignorés), `CodeEditorQuickOpen` (classement flou). |
@@ -42,9 +44,19 @@ garde un modèle par onglet pour l'historique et la position ; quand un onglet
 devient actif, `showDocument` ne remplace le texte du modèle que s'il diffère
 de celui du document (rechargement, récupération).
 
-Pour éviter de redessiner tout l'atelier à chaque touche, `OnEditorChanged`
-ne redessine la fenêtre que si l'état « modifié » de l'onglet change, et la
-position du curseur est affichée par `CodeEditorCursorStatus`, qui se
+Une touche ne coûte rien côté .NET. Monaco garde le texte et compare la
+version de son modèle à celle du dernier enregistrement
+(`getAlternativeVersionId`) : l'état « modifié » n'est envoyé que quand il
+bascule (`OnDirtyChanged`), et le texte entier n'est envoyé qu'après 400 ms
+sans frappe (`OnEditorChanged`). Avant d'enregistrer, de fermer un onglet ou
+de chercher dans le dossier, la fenêtre appelle `flush` pour recevoir le texte
+en attente ; après un enregistrement, `markSaved` déplace la référence de
+Monaco. La copie de récupération est écrite 1,5 s après la dernière
+modification. Avant, chaque touche envoyait tout le fichier à .NET puis
+relançait l'écriture de récupération : coller 1 000 lignes figeait la page
+133 s dans Chromium sans tête, contre 40 s maintenant (le reste est Monaco
+lui-même), et la frappe dans ce fichier coûte environ 23 % de script en moins.
+La position du curseur est affichée par `CodeEditorCursorStatus`, qui se
 redessine seul.
 
 Entrée dans la boîte Ctrl+P et dans la zone de création de l'explorateur
@@ -63,12 +75,13 @@ un saut de ligne dans le fichier.
 | Ctrl+Maj+F / Ctrl+Maj+E | Vue Recherche / vue Explorateur |
 | Ctrl+B | Afficher ou masquer la barre latérale |
 | Ctrl+` | Afficher ou masquer le terminal |
+| Ctrl+J | Afficher ou masquer le dock du bas |
 | Ctrl+Tab / Ctrl+Maj+Tab | Onglet suivant / précédent |
 | Alt+Z | Retour à la ligne automatique |
 | F1, Ctrl+F, Ctrl+H, Ctrl+G, Ctrl+/ | Monaco (palette, rechercher, remplacer, aller à la ligne, commenter) |
 
-Dans le panneau terminal, seul Ctrl+` (masquer) est intercepté ; les autres
-touches vont au shell. Chrome garde Ctrl+N, Ctrl+W et Ctrl+T pour lui tant que
+Dans le terminal, seuls Ctrl+` et Ctrl+J sont interceptés ; les autres touches
+vont au shell. Chrome garde Ctrl+N, Ctrl+W et Ctrl+T pour lui tant que
 HackerOS n'est pas installé en PWA ; chaque commande a aussi son entrée de
 menu.
 
@@ -98,3 +111,15 @@ versionner `wwwroot/monaco/`. Le build .NET n'exécute pas npm.
   déplacement des onglets.
 - [x] Essai dans Chromium : dossier, création, recherche, Ctrl+P, Ctrl+S,
   suppression, menu contextuel, redimensionnement.
+
+Lenteur et dock (ADR 0063) :
+
+- [x] Mesurer la frappe et le collage dans un fichier de 1 000 lignes, avant
+  et après.
+- [x] Ne plus envoyer le texte à .NET à chaque touche (`OnDirtyChanged`,
+  envoi après une pause, `flush`, `markSaved`).
+- [x] Dock du bas : Status (faits et journal), Terminal, Problems ; Ctrl+J.
+- [x] Terminal de l'app Terminal embarqué par contrat, « Open in Integrated
+  Terminal ».
+- [x] Essai dans Chromium : terminal embarqué, `cd`, titre, onglets, `exit`,
+  Ctrl+J, Status, Problems.

@@ -109,7 +109,8 @@ monaco.editor.defineTheme("hackeros-dark", {
 /**
  * Creates the editor in `host`. Each open document (tab) gets its own Monaco model, so undo
  * history, cursor and scroll position stay with the tab, as in VS Code. C# drives it with
- * showDocument / closeDocument and receives OnEditorChanged(documentId, content) and
+ * showDocument / closeDocument / flush / markSaved and receives OnDirtyChanged(documentId,
+ * dirty), OnEditorChanged(documentId, content) after a typing pause, and
  * OnCursorChanged(line, column, selectionLength).
  */
 export function createCodeEditor(host, dotNet, options) {
@@ -139,21 +140,56 @@ export function createCodeEditor(host, dotNet, options) {
     fixedOverflowWidgets: true
   });
 
+  // Typing must stay inside the browser: a keystroke only updates Monaco. C# is told at once
+  // when a tab's "modified" state flips (OnDirtyChanged, compared against the model's version at
+  // the last load or save), and receives the text itself once typing pauses (OnEditorChanged,
+  // debounced) or when it asks for it before saving or searching (flush).
+  const CONTENT_DELAY_MS = 400;
+  const CURSOR_DELAY_MS = 60;
+  let contentTimer = 0;
+  let cursorTimer = 0;
+  const pendingContent = new Set();
+
+  function sendContent(id) {
+    const entry = models.get(id);
+    pendingContent.delete(id);
+    if (!entry || disposed) return Promise.resolve();
+    return dotNet.invokeMethodAsync("OnEditorChanged", id, entry.model.getValue()).catch(() => {});
+  }
+
+  function flushContent() {
+    window.clearTimeout(contentTimer);
+    contentTimer = 0;
+    return Promise.all([...pendingContent].map(sendContent));
+  }
+
   const changeSubscription = editor.onDidChangeModelContent(() => {
     const model = editor.getModel();
-    if (!suppressChange && !disposed && model && activeId) {
-      void dotNet.invokeMethodAsync("OnEditorChanged", activeId, model.getValue());
+    if (suppressChange || disposed || !model || !activeId) return;
+    const id = activeId;
+    const entry = models.get(id);
+    const dirty = model.getAlternativeVersionId() !== entry.savedVersion;
+    if (dirty !== entry.dirty) {
+      entry.dirty = dirty;
+      void dotNet.invokeMethodAsync("OnDirtyChanged", id, dirty).catch(() => {});
     }
+
+    pendingContent.add(id);
+    window.clearTimeout(contentTimer);
+    contentTimer = window.setTimeout(() => void flushContent(), CONTENT_DELAY_MS);
   });
 
   const cursorSubscription = editor.onDidChangeCursorSelection((event) => {
     if (disposed) return;
-    const model = editor.getModel();
-    const selection = event.selection;
-    const selected = model ? model.getValueLengthInRange(selection) : 0;
-    void dotNet
-      .invokeMethodAsync("OnCursorChanged", selection.positionLineNumber, selection.positionColumn, selected)
-      .catch(() => {});
+    window.clearTimeout(cursorTimer);
+    cursorTimer = window.setTimeout(() => {
+      const model = editor.getModel();
+      const selection = editor.getSelection() ?? event.selection;
+      const selected = model ? model.getValueLengthInRange(selection) : 0;
+      void dotNet
+        .invokeMethodAsync("OnCursorChanged", selection.positionLineNumber, selection.positionColumn, selected)
+        .catch(() => {});
+    }, CURSOR_DELAY_MS);
   });
 
   function replaceContent(model, value) {
@@ -167,15 +203,18 @@ export function createCodeEditor(host, dotNet, options) {
 
   return {
     /** Shows a tab's document, creating its model the first time. */
-    showDocument(id, content, mode) {
+    showDocument(id, content, mode, dirty) {
       if (disposed) return;
       const value = content ?? "";
       let entry = models.get(id);
       if (!entry) {
-        entry = { model: monaco.editor.createModel(value, languageFor(mode)), viewState: null };
+        const model = monaco.editor.createModel(value, languageFor(mode));
+        // A tab restored with unsaved changes has no clean version in this model.
+        entry = { model, viewState: null, dirty: !!dirty, savedVersion: dirty ? -1 : model.getAlternativeVersionId() };
         models.set(id, entry);
       } else {
-        if (entry.model.getValue() !== value) replaceContent(entry.model, value);
+        // Only text C# changed itself (reload, rejected edit); never text still waiting in pendingContent.
+        if (!pendingContent.has(id) && entry.model.getValue() !== value) replaceContent(entry.model, value);
         monaco.editor.setModelLanguage(entry.model, languageFor(mode));
       }
 
@@ -186,9 +225,27 @@ export function createCodeEditor(host, dotNet, options) {
       editor.setModel(entry.model);
       if (entry.viewState) editor.restoreViewState(entry.viewState);
     },
+    /** Sends every tab's text still waiting for the typing pause; awaited before save, search, close. */
+    flush() {
+      return disposed ? Promise.resolve() : flushContent();
+    },
+    /** Records the current text of a tab as saved: its "modified" state is measured from here. */
+    markSaved(id, savedContent) {
+      const entry = models.get(id);
+      if (!entry || disposed) return;
+      // Typed while the save ran: those characters are not on disk, the tab stays modified.
+      if (entry.model.getValue() !== savedContent) {
+        entry.savedVersion = -1;
+        return;
+      }
+
+      entry.savedVersion = entry.model.getAlternativeVersionId();
+      entry.dirty = false;
+    },
     /** Forgets a closed tab's model. */
     closeDocument(id) {
       const entry = models.get(id);
+      pendingContent.delete(id);
       if (!entry) return;
       if (activeId === id) {
         activeId = null;
@@ -239,6 +296,8 @@ export function createCodeEditor(host, dotNet, options) {
     destroy() {
       if (disposed) return;
       disposed = true;
+      window.clearTimeout(contentTimer);
+      window.clearTimeout(cursorTimer);
       changeSubscription.dispose();
       cursorSubscription.dispose();
       editor.dispose();

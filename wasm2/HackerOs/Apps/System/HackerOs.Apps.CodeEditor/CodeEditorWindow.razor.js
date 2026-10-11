@@ -41,6 +41,7 @@ const SHORTCUTS = [
   { ctrl: true, shift: true, key: "e", name: "explorer" },
   { ctrl: true, shift: false, key: "b", name: "toggleSidebar" },
   { ctrl: true, shift: false, key: "`", name: "toggleTerminal" },
+  { ctrl: true, shift: false, key: "j", name: "togglePanel" },
   { ctrl: true, shift: false, key: "tab", name: "nextTab" },
   { ctrl: true, shift: true, key: "tab", name: "previousTab" },
   { alt: true, shift: false, key: "z", name: "wordWrap" }
@@ -54,11 +55,11 @@ export function attachWorkbench(root, dotNet) {
 
     const key = event.key.toLowerCase();
     // The integrated terminal owns its keys (Ctrl+W deletes a word, Ctrl+P is history), except
-    // the panel toggle.
-    const inTerminal = event.target instanceof Element && event.target.closest(".terminal-panel");
+    // the panel toggles.
+    const inTerminal = event.target instanceof Element && event.target.closest(".dock-terminal");
     const shortcut = SHORTCUTS.find((item) =>
       item.key === key && item.shift === event.shiftKey && !!item.ctrl === event.ctrlKey && !!item.alt === event.altKey);
-    if (!shortcut || (inTerminal && shortcut.name !== "toggleTerminal")) {
+    if (!shortcut || (inTerminal && shortcut.name !== "toggleTerminal" && shortcut.name !== "togglePanel")) {
       return;
     }
 

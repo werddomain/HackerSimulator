@@ -18,6 +18,27 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Components_round_trip_and_are_omitted_when_none()
+    {
+        AppManifest manifest = CreateManifest();
+
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(AppManifestJsonSerializer.SerializeCanonical(manifest));
+        string withoutComponents = AppManifestJsonSerializer.SerializeCanonical(manifest with { Components = null });
+
+        Assert.Equal(manifest.Components, roundTripped.Components);
+        Assert.DoesNotContain("components", withoutComponents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeserializeStrict_rejects_unknown_component_properties()
+    {
+        string json = AppManifestJsonSerializer.SerializeCanonical(CreateManifest())
+            .Replace("\"contract\":", "\"extra\":1,\"contract\":", StringComparison.Ordinal);
+
+        Assert.Throws<JsonException>(() => AppManifestJsonSerializer.DeserializeStrict(json));
+    }
+
+    [Fact]
     public void DeserializeStrict_rejects_unknown_properties()
     {
         const string payload = """
@@ -78,7 +99,8 @@ public sealed class AppManifestJsonSerializerTests
         Localizations = [new LocalizationManifest("fr-FR", "locales/fr-FR.json")],
         Intents = [new AppIntentDeclarationManifest("hackeros.open", "schemas/open.json")],
         Settings = new AppSettingsSchemaManifest(1, [new AppSettingFieldManifest("theme", AppSettingValueType.Enum, "dark", AppSettingScope.AppUser, AppSettingSensitivity.Public, ["dark", "light"])]),
-        FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"], 3)]
+        FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"], 3)],
+        Components = [new AppComponentManifest("hackeros.text-view", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextViewEmbed")]
     };
 
     private static readonly Lazy<string> FixturesDirectory = new(() =>

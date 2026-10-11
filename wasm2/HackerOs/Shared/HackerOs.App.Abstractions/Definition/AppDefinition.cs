@@ -63,6 +63,13 @@ public abstract class AppDefinition
     public virtual TerminalCommand? Terminal => null;
 
     /// <summary>
+    /// Gets the components this window app registers with the OS for other apps to embed (ADR 0063),
+    /// e.g. the Terminal app's terminal for <c>hackeros.terminal</c>. Each type must live in the
+    /// definition's assembly and derive from <c>HackEmbeddableComponent</c>.
+    /// </summary>
+    public virtual IReadOnlyList<AppComponent> Components => [];
+
+    /// <summary>
     /// Gets the mobile entry-point type, or <see langword="null"/> for a desktop-only app. A non-null
     /// value produces the multi-platform <c>platform</c> manifest form instead of <c>entryPoint</c>.
     /// </summary>
@@ -114,6 +121,13 @@ public sealed record FileHandler(
     IReadOnlyList<string> Extensions,
     IReadOnlyList<string> Actions,
     int Priority = 0);
+
+/// <summary>
+/// Short form of <see cref="AppComponentManifest"/> used by <see cref="AppDefinition.Components"/>.
+/// </summary>
+/// <param name="Contract">Contract name, e.g. <c>hackeros.terminal</c>.</param>
+/// <param name="Type">The component type, in the definition's assembly.</param>
+public sealed record AppComponent(string Contract, Type Type);
 
 /// <summary>
 /// Short form of <see cref="TerminalCommandManifest"/> used by <see cref="AppDefinition.Terminal"/>.

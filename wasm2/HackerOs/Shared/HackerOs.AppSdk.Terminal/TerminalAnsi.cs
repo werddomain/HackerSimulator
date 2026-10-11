@@ -98,6 +98,17 @@ internal static partial class TerminalAnsi
     private static partial Regex TrailingSequences();
 
     /// <summary>
+    /// Removes what a person would not read: CSI sequences (colours, cursor moves), OSC sequences
+    /// (titles), other escapes, carriage returns and the remaining C0 controls but tab and newline.
+    /// Used for the text an embedded terminal reports to its host (<c>IHackTerminal</c>, ADR 0063).
+    /// </summary>
+    public static string StripControlSequences(string text) =>
+        string.IsNullOrEmpty(text) ? string.Empty : ControlSequences().Replace(text, string.Empty);
+
+    [GeneratedRegex(@"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[@-Z\\-_]|[\x00-\x08\x0b-\x1f\x7f]")]
+    private static partial Regex ControlSequences();
+
+    /// <summary>
     /// Draws a full-screen command's frame on the alternate screen: each row is written in
     /// place and cleared to its end, rows the frame does not cover are erased, then the cursor
     /// is placed (or hidden). Rows longer than the viewport are cut, so nothing wraps.

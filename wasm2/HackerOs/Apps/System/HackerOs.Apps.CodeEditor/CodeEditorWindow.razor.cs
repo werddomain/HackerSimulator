@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Components;
 using HackerOs.AppSdk.FileView;
 using HackerOs.AppSdk.FileView.Events;
 using HackerOs.AppSdk.IO;
@@ -46,6 +47,7 @@ public partial class CodeEditorWindow
     private bool _editorSyncRequired;
     private bool _focusAfterSync;
     private CodeEditorNavigation? _pendingReveal;
+    private readonly Dictionary<Guid, bool> _dirtyReports = [];
     private string? _statusMessage;
     private bool _statusIsError;
     private bool _recoveryClearedOnClose;
@@ -61,10 +63,15 @@ public partial class CodeEditorWindow
     private bool _minimap = true;
     private bool _wordWrap;
 
-    private bool _showTerminalPanel;
-    private readonly List<string> _terminalTabIds = ["terminal-1"];
-    private string _activeTerminalTabId = "terminal-1";
-    private int _terminalTabCounter = 1;
+    private bool _showPanel;
+    private DockView _dockView = DockView.Terminal;
+    private readonly List<TerminalTab> _terminalTabs = [];
+    private string? _activeTerminalTabId;
+    private int _terminalTabCounter;
+    private readonly List<StatusEntry> _statusLog = [];
+
+    /// <summary>Most lines kept by the Status tab.</summary>
+    private const int MaxStatusLog = 200;
 
     /// <summary>Gets or sets an optional VFS path supplied by an open-file intent.</summary>
     [Parameter]
@@ -153,7 +160,7 @@ public partial class CodeEditorWindow
         string? activeId = document?.Id.ToString();
         if (document is not null && (_editorSyncRequired || activeId != _shownDocumentId))
         {
-            await _editor.InvokeVoidAsync("showDocument", activeId, document.Content, ModeKey(document.SyntaxMode));
+            await _editor.InvokeVoidAsync("showDocument", activeId, document.Content, ModeKey(document.SyntaxMode), document.IsDirty);
             _shownDocumentId = activeId;
         }
 
@@ -174,7 +181,10 @@ public partial class CodeEditorWindow
 
     // ---- Calls from the collocated module -------------------------------------------------------
 
-    /// <summary>Receives content changes from the isolated Monaco instance, for the tab they belong to.</summary>
+    /// <summary>
+    /// Receives a tab's text from Monaco once typing pauses (or on <see cref="FlushEditorAsync"/>),
+    /// never per keystroke: copying the whole file to .NET on each key is what made typing lag.
+    /// </summary>
     [JSInvokable]
     public async Task OnEditorChanged(string documentId, string content)
     {
@@ -184,23 +194,32 @@ public partial class CodeEditorWindow
             return;
         }
 
-        bool wasDirty = document.IsDirty;
         CodeEditorEditResult result = document.TryEdit(content);
         if (!result.Succeeded)
         {
             SetStatus(result.Error ?? "Edit rejected.", isError: true);
             _editorSyncRequired = true;
+            await InvokeAsync(StateHasChanged);
         }
 
         ScheduleRecovery();
+    }
 
-        // Every keystroke lands here: re-render the workbench only when something it shows
-        // changed (the tab's dirty marker, an error), not for each character.
-        if (!result.Succeeded || wasDirty != document.IsDirty)
+    /// <summary>
+    /// Receives, at once, that a tab became modified or went back to its saved text (undo), so the
+    /// tab's dot follows the typing while the text itself waits for the pause.
+    /// </summary>
+    [JSInvokable]
+    public Task OnDirtyChanged(string documentId, bool dirty)
+    {
+        if (FindDocument(documentId) is { } document)
         {
+            _dirtyReports[document.Id] = dirty;
             UpdateDirtyCount();
-            await InvokeAsync(StateHasChanged);
+            StateHasChanged();
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>Receives cursor moves, shown as "Ln, Col" in the status bar.</summary>
@@ -227,6 +246,7 @@ public partial class CodeEditorWindow
             case "explorer": ShowExplorer(); break;
             case "toggleSidebar": ToggleSidebar(); break;
             case "toggleTerminal": ToggleTerminalPanel(); break;
+            case "togglePanel": TogglePanel(); break;
             case "nextTab": await CycleTabAsync(1); break;
             case "previousTab": await CycleTabAsync(-1); break;
             case "wordWrap": await ToggleWordWrap(); break;
@@ -349,6 +369,7 @@ public partial class CodeEditorWindow
     /// <summary>Saves a document to its file, or asks where (Save As) for a new buffer.</summary>
     private async Task SaveAsync(CodeEditorDocument document)
     {
+        await FlushEditorAsync();
         if (document.Path is not VirtualPath path)
         {
             await SaveAsAsync(document);
@@ -392,7 +413,8 @@ public partial class CodeEditorWindow
 
     private async Task SaveAllAsync()
     {
-        foreach (CodeEditorDocument document in _session.Documents.Where(document => document.IsDirty).ToArray())
+        await FlushEditorAsync();
+        foreach (CodeEditorDocument document in _session.Documents.Where(IsDirty).ToArray())
         {
             await SaveAsync(document);
         }
@@ -403,11 +425,19 @@ public partial class CodeEditorWindow
         VirtualPath path,
         CodeEditorFileService service)
     {
+        await FlushEditorAsync();
         bool isNewFile = document.Path != path;
+        string savedContent = document.Content;
         CodeEditorSaveResult result = await service.SaveAsync(
             document, path, AppContext.CancellationToken);
         if (result.Succeeded)
         {
+            _dirtyReports.Remove(document.Id);
+            if (_editor is not null)
+            {
+                await _editor.InvokeVoidAsync("markSaved", document.Id.ToString(), savedContent);
+            }
+
             SetStatus($"Saved {path.Value}.", isError: false);
             if (isNewFile && _explorer is not null && _workspace?.Contains(path) == true)
             {
@@ -468,6 +498,7 @@ public partial class CodeEditorWindow
     /// <summary>Closes a tab, asking first when it has unsaved changes. Returns false when the user kept it.</summary>
     private async Task<bool> CloseDocumentAsync(Guid documentId)
     {
+        await FlushEditorAsync();
         CodeEditorCloseResult result = _session.Close(documentId);
         if (result == CodeEditorCloseResult.ConfirmationRequired)
         {
@@ -487,6 +518,7 @@ public partial class CodeEditorWindow
 
         if (result == CodeEditorCloseResult.Closed)
         {
+            _dirtyReports.Remove(documentId);
             _closedDocumentIds.Add(documentId.ToString());
             UpdateDirtyCount();
             RequestEditorSync(focus: true);
@@ -733,55 +765,216 @@ public partial class CodeEditorWindow
         }
     }
 
-    // ---- Terminal panel -----------------------------------------------------------------------------
+    // ---- Bottom dock: Status, Terminal, Problems ------------------------------------------------------
 
-    private void ToggleTerminalPanel() => _showTerminalPanel = !_showTerminalPanel;
+    /// <summary>Shows or hides the dock, as Ctrl+J does in VS Code.</summary>
+    private void TogglePanel()
+    {
+        _showPanel = !_showPanel;
+        if (_showPanel && _dockView == DockView.Terminal)
+        {
+            EnsureTerminal();
+        }
+    }
 
-    private void AddTerminalTab()
+    /// <summary>Shows or hides the dock on its Terminal tab (Ctrl+`).</summary>
+    private void ToggleTerminalPanel()
+    {
+        if (_showPanel && _dockView == DockView.Terminal)
+        {
+            _showPanel = false;
+            return;
+        }
+
+        ShowDockView(DockView.Terminal);
+    }
+
+    private void ShowDockView(DockView view)
+    {
+        _showPanel = true;
+        _dockView = view;
+        if (view == DockView.Terminal)
+        {
+            EnsureTerminal();
+        }
+    }
+
+    /// <summary>The Terminal tab always holds a shell: the first one starts when it is first shown.</summary>
+    private void EnsureTerminal()
+    {
+        if (_terminalTabs.Count == 0)
+        {
+            AddTerminalTab();
+        }
+    }
+
+    /// <summary>Opens a new terminal, in <paramref name="directory"/> or the open folder.</summary>
+    private TerminalTab AddTerminalTab(string? directory = null)
     {
         _terminalTabCounter++;
-        string tabId = $"terminal-{_terminalTabCounter}";
-        _terminalTabIds.Add(tabId);
-        _activeTerminalTabId = tabId;
+        var tab = new TerminalTab($"terminal-{_terminalTabCounter}", _terminalTabCounter, new HackTerminalOptions
+        {
+            WorkingDirectory = directory ?? TerminalInitialCwd(),
+            ShowBanner = false
+        });
+        _terminalTabs.Add(tab);
+        _activeTerminalTabId = tab.Id;
+        _showPanel = true;
+        _dockView = DockView.Terminal;
+        return tab;
     }
 
     private void ActivateTerminalTab(string tabId) => _activeTerminalTabId = tabId;
 
     private void CloseTerminalTab(string tabId)
     {
-        if (_terminalTabIds.Count <= 1)
+        int closedIndex = _terminalTabs.FindIndex(tab => tab.Id == tabId);
+        if (closedIndex < 0)
         {
             return;
         }
 
-        int closedIndex = _terminalTabIds.IndexOf(tabId);
-        _terminalTabIds.Remove(tabId);
+        TerminalTab closed = _terminalTabs[closedIndex];
+        closed.Detach();
+        _terminalTabs.RemoveAt(closedIndex);
+        if (_terminalTabs.Count == 0)
+        {
+            // Closing the last terminal hides the dock, as VS Code does; reopening starts a fresh shell.
+            _activeTerminalTabId = null;
+            _showPanel = false;
+            return;
+        }
 
         if (_activeTerminalTabId == tabId)
         {
-            int nextIndex = Math.Min(closedIndex, _terminalTabIds.Count - 1);
-            _activeTerminalTabId = _terminalTabIds[nextIndex];
+            _activeTerminalTabId = _terminalTabs[Math.Min(closedIndex, _terminalTabs.Count - 1)].Id;
         }
     }
 
     /// <summary>
-    /// A tab's shell exited (<c>exit</c>, Ctrl+D): its tab closes; the last one hides the panel,
-    /// and reopening it starts a fresh shell.
+    /// The Terminal app's component handed its controller: follow its title, close the tab when
+    /// its shell exits (<c>exit</c>, Ctrl+D).
     /// </summary>
-    private void OnTerminalExited(string tabId)
+    private void OnTerminalReady(TerminalTab tab, IHackTerminal? terminal)
     {
-        if (_terminalTabIds.Count <= 1)
+        tab.Attach(terminal,
+            onChanged: () => InvokeAsync(StateHasChanged),
+            onExited: () => InvokeAsync(() =>
+            {
+                CloseTerminalTab(tab.Id);
+                StateHasChanged();
+            }));
+    }
+
+    /// <summary>
+    /// Explorer › Open in Integrated Terminal: the active terminal moves there with a visible
+    /// <c>cd</c> when it is idle, otherwise a new terminal opens in the folder (as VS Code).
+    /// </summary>
+    private async Task OpenInTerminalAsync(VirtualPath folder)
+    {
+        TerminalTab? active = ActiveTerminalTab;
+        if (_showPanel && _dockView == DockView.Terminal && active?.Terminal is { IsRunning: true, IsBusy: false } terminal)
         {
-            _showTerminalPanel = false;
+            await ChangeTerminalDirectoryAsync(terminal, folder.Value);
+            await terminal.FocusAsync();
             return;
         }
 
-        CloseTerminalTab(tabId);
+        AddTerminalTab(folder.Value);
+    }
+
+    private async Task ChangeTerminalDirectoryAsync(IHackTerminal terminal, string directory)
+    {
+        try
+        {
+            HackTerminalCommandResult result = await terminal.SetWorkingDirectoryAsync(directory);
+            if (result.ExitStatus != 0)
+            {
+                SetStatus($"Terminal: cannot change to {directory}.", isError: true);
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or OperationCanceledException)
+        {
+            SetStatus($"Terminal: {exception.Message}", isError: true);
+        }
+    }
+
+    private TerminalTab? ActiveTerminalTab => _terminalTabs.Find(tab => tab.Id == _activeTerminalTabId);
+
+    private async Task ClearActiveTerminalAsync()
+    {
+        if (ActiveTerminalTab?.Terminal is { } terminal)
+        {
+            await terminal.ClearAsync();
+            await terminal.FocusAsync();
+        }
     }
 
     /// <summary>New terminals start in the open folder, as VS Code's integrated terminal does.</summary>
     private string TerminalInitialCwd() =>
         _workspace?.Root.Value ?? HackUser.Describe(AppContext).HomeDirectory;
+
+    private void ClearStatusLog() => _statusLog.Clear();
+
+    /// <summary>A terminal tab of the dock and the controller its embedded component handed over.</summary>
+    private sealed class TerminalTab(string id, int number, HackTerminalOptions options)
+    {
+        private Action? _onChanged;
+        private Action? _onExited;
+
+        public string Id { get; } = id;
+
+        public int Number { get; } = number;
+
+        /// <summary>Gets the options, created once so the embedded terminal is not re-created.</summary>
+        public HackTerminalOptions Options { get; } = options;
+
+        public IHackTerminal? Terminal { get; private set; }
+
+        /// <summary>Gets the tab label: the running command or the directory's name, as VS Code's.</summary>
+        public string Label => Terminal is { } terminal ? terminal.Title : "hsh";
+
+        public void Attach(IHackTerminal? terminal, Action onChanged, Action onExited)
+        {
+            Detach();
+            Terminal = terminal;
+            _onChanged = onChanged;
+            _onExited = onExited;
+            if (terminal is not null)
+            {
+                terminal.StateChanged += OnStateChanged;
+                terminal.Exited += OnExited;
+            }
+
+            onChanged();
+        }
+
+        public void Detach()
+        {
+            if (Terminal is not null)
+            {
+                Terminal.StateChanged -= OnStateChanged;
+                Terminal.Exited -= OnExited;
+            }
+
+            Terminal = null;
+        }
+
+        private void OnStateChanged(object? sender, EventArgs e) => _onChanged?.Invoke();
+
+        private void OnExited(object? sender, EventArgs e) => _onExited?.Invoke();
+    }
+
+    /// <summary>One line of the Status tab: what the editor reported, and when.</summary>
+    private sealed record StatusEntry(DateTimeOffset Time, string Message, bool IsError);
+
+    /// <summary>Tabs of the bottom dock.</summary>
+    private enum DockView
+    {
+        Status,
+        Terminal,
+        Problems
+    }
 
     // ---- Close guard and recovery -------------------------------------------------------------------
 
@@ -789,6 +982,7 @@ public partial class CodeEditorWindow
     public async ValueTask<bool> ConfirmCloseAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        await FlushEditorAsync();
         CodeEditorDocument[] dirtyDocuments = _session.Documents
             .Where(document => document.IsDirty)
             .ToArray();
@@ -819,7 +1013,8 @@ public partial class CodeEditorWindow
     {
         try
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
+            // The recovery file is rewritten whole: once typing has really paused, not between words.
+            await Task.Delay(TimeSpan.FromMilliseconds(1500), cancellationToken);
             await PersistRecoveryAsync(cancellationToken);
         }
         catch (OperationCanceledException)
@@ -881,10 +1076,44 @@ public partial class CodeEditorWindow
         StateHasChanged();
     }
 
-    private void UpdateDirtyCount() => _dirtyCount = _session.Documents.Count(document => document.IsDirty);
+    private void UpdateDirtyCount() => _dirtyCount = _session.Documents.Count(IsDirty);
 
+    /// <summary>
+    /// Whether a tab shows as modified: Monaco's report when it sent one (it knows at the keystroke),
+    /// else the document's own comparison (restored or just loaded tabs).
+    /// </summary>
+    private bool IsDirty(CodeEditorDocument document) =>
+        _dirtyReports.TryGetValue(document.Id, out bool dirty) ? dirty : document.IsDirty;
+
+    /// <summary>Brings every tab's pending text from Monaco before an operation reads it.</summary>
+    private async Task FlushEditorAsync()
+    {
+        if (_editor is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _editor.InvokeVoidAsync("flush");
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Reports a message: it is kept in the dock's Status tab, shown in the status bar, and an
+    /// error is also shown above the editor until dismissed.
+    /// </summary>
     private void SetStatus(string message, bool isError)
     {
+        _statusLog.Add(new StatusEntry(AppContext.Clock.UtcNow, message, isError));
+        if (_statusLog.Count > MaxStatusLog)
+        {
+            _statusLog.RemoveRange(0, _statusLog.Count - MaxStatusLog);
+        }
+
         _statusMessage = message;
         _statusIsError = isError;
         StateHasChanged();

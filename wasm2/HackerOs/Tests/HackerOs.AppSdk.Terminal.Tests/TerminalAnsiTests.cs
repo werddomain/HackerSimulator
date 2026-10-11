@@ -22,6 +22,16 @@ public sealed class TerminalAnsiTests
         Assert.Equal(("> ", 2), TerminalAnsi.FormatPrompt(">"));
     }
 
+    [Theory]
+    [InlineData("\x1b[1;32muser\x1b[0m:~$ ls\r\n", "user:~$ ls\n")]
+    [InlineData("\x1b]0;title\x07plain\ttext", "plain\ttext")]
+    [InlineData("\x1b[H\x1b[2J\x1b[3Jdone\x1b[?25h", "done")]
+    [InlineData("bell\x07 and back\x08space", "bell and backspace")]
+    public void Control_sequences_are_stripped_for_hosts(string text, string expected)
+    {
+        Assert.Equal(expected, TerminalAnsi.StripControlSequences(text));
+    }
+
     [Fact]
     public void Newlines_become_carriage_return_line_feed_once()
     {

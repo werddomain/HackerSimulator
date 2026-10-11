@@ -27,7 +27,7 @@
 }
 
 .code-editor.is-resizing .editor-host,
-.code-editor.is-resizing .terminal-instances {
+.code-editor.is-resizing .dock-terminal {
     pointer-events: none;
 }
 
@@ -475,9 +475,9 @@
     }
 }
 
-/* ---- Terminal panel ---------------------------------------------------------------------- */
+/* ---- Bottom dock: Status, Terminal, Problems ------------------------------------------- */
 
-.terminal-panel {
+.bottom-dock {
     display: flex;
     flex: 0 0 var(--panel-height);
     flex-direction: column;
@@ -485,6 +485,12 @@
     max-height: calc(100% - 6rem);
     border-top: 1px solid var(--workbench-border);
     background: var(--workbench-bg);
+    container-type: inline-size;
+}
+
+/* Hidden, not removed: the terminals keep their shells and screens. */
+.bottom-dock.is-hidden {
+    display: none;
 }
 
 .panel-header {
@@ -493,25 +499,63 @@
     flex: 0 0 auto;
     gap: 0.6rem;
     min-width: 0;
-    padding: 0 0.4rem 0 0.9rem;
+    padding: 0 0.4rem 0 0.6rem;
     border-bottom: 1px solid var(--workbench-border);
 }
 
-.panel-title {
+.dock-tabs {
+    display: flex;
     flex: 0 0 auto;
-    padding: 0.4rem 0;
-    color: var(--hos-text-primary, #ffffff);
-    border-bottom: 1px solid var(--workbench-accent);
+    gap: 0.2rem;
+}
+
+.dock-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.5rem 0.35rem;
+    color: var(--hos-text-secondary, #8b949e);
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
     font-size: 0.68rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
+.dock-tab:hover {
+    color: var(--hos-text-primary, #ffffff);
+}
+
+.dock-tab.is-active {
+    color: var(--hos-text-primary, #ffffff);
+    border-bottom-color: var(--workbench-accent);
+}
+
+.dock-badge {
+    min-width: 1.1rem;
+    padding: 0 0.3rem;
+    color: var(--hos-text-primary, #ffffff);
+    border-radius: 0.6rem;
+    background: var(--hos-bg-elevated, #20292e);
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    text-align: center;
+}
+
+.dock-badge.is-error {
+    color: #1a0705;
+    background: var(--hos-error, #ff8f87);
+}
+
 .terminal-tabs {
     display: flex;
     align-items: center;
     flex: 1 1 auto;
+    justify-content: flex-end;
     min-width: 0;
     overflow-x: auto;
 }
@@ -540,9 +584,12 @@
     display: flex;
     align-items: center;
     gap: 0.3rem;
+    max-width: 14rem;
     padding: 0.25rem 0.5rem;
+    overflow: hidden;
     font-size: 0.75rem;
     white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .terminal-tab-shell.is-active .terminal-tab-select {
@@ -551,6 +598,12 @@
 
 .terminal-tab-close {
     padding: 0 0.4rem 0 0;
+    visibility: hidden;
+}
+
+.terminal-tab-shell:hover .terminal-tab-close,
+.terminal-tab-shell.is-active .terminal-tab-close {
+    visibility: visible;
 }
 
 .terminal-tab-close:hover {
@@ -559,10 +612,15 @@
 
 .panel-actions {
     display: flex;
+    align-items: center;
     flex: 0 0 auto;
+    margin-left: auto;
 }
 
 .panel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 1.6rem;
     height: 1.6rem;
     border-radius: 3px;
@@ -574,19 +632,113 @@
     background: var(--hos-bg-elevated, #20292e);
 }
 
-.terminal-instances {
-    position: relative;
+.dock-view {
+    display: none;
     flex: 1 1 auto;
     min-height: 0;
 }
 
+.dock-view.is-active {
+    display: flex;
+}
+
+.dock-terminal {
+    position: relative;
+    flex-direction: column;
+}
+
 .terminal-instance {
     display: none;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .terminal-instance.is-active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Status: facts about the editor on the left, the message log on the right. */
+.dock-status {
+    gap: 1rem;
+    padding: 0.5rem 0.9rem;
+    overflow: hidden;
+    font: 0.75rem var(--hos-font-mono, "JetBrains Mono", ui-monospace, monospace);
+}
+
+.status-facts {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: auto minmax(0, 18rem);
+    align-content: start;
+    gap: 0.2rem 0.8rem;
+    margin: 0;
+    padding-right: 1rem;
+    border-right: 1px solid var(--workbench-border);
+}
+
+.status-facts dt {
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.status-facts dd {
+    margin: 0;
+    overflow: hidden;
+    color: var(--hos-text-primary, #c9d1d9);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.status-log {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.status-entry,
+.status-empty {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.1rem 0;
+    color: var(--hos-text-primary, #c9d1d9);
+}
+
+.status-empty {
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.status-entry time {
+    flex: 0 0 auto;
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.status-level {
+    flex: 0 0 3.2rem;
+    color: var(--workbench-accent);
+}
+
+.status-entry.is-error .status-level,
+.status-entry.is-error span:last-child {
+    color: var(--hos-error, #ff8f87);
+}
+
+.dock-problems {
+    padding: 0.6rem 0.9rem;
+}
+
+.problems-empty {
+    margin: 0;
+    color: var(--hos-text-secondary, #8b949e);
+    font-size: 0.78rem;
+}
+
+@container (max-width: 520px) {
+    .status-facts {
+        display: none;
+    }
 }
 
 /* ---- Status bar -------------------------------------------------------------------------- */
@@ -619,6 +771,18 @@
     align-items: center;
     gap: 0.3rem;
     padding: 0 0.45rem;
+}
+
+.status-message {
+    max-width: 28rem;
+    overflow: hidden;
+    color: inherit;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    text-overflow: ellipsis;
 }
 
 .language-select {

@@ -33,6 +33,7 @@ Valeurs par défaut des membres facultatifs :
 | `LaunchVisibility` | `Visible` |
 | `Icons`, `Capabilities`, `FileHandlers`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets` | liste vide |
 | `Terminal`, `MobileEntryPoint`, `Settings` | `null` |
+| `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) |
 | `SingleInstancePerUser`, `AutoStart`, `SupportsBack` | `false` |
 | `Resources` | `AppResourceProfileManifest.None` |
 
