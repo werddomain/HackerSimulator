@@ -1,21 +1,19 @@
-using System.Net.Http;
-using System.Text;
+using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Platform.Core.ServerConnection;
-using HackerOs.Server.Contracts.Proxy;
-using HackerOs.Simulation.Abstractions.Network;
-using HackerOs.Simulation.Abstractions.ServerConnection;
+using HackerOs.AppSdk.Net;
 
 namespace HackerOs.Commands.Nmap;
 
 /// <summary>
-/// Simulated <c>nmap</c> port-scanner terminal command (P4-W4-006), with a narrow real-network
-/// fallback (ADR 0035): when the target is unknown to the simulated network AND the user asked
-/// about exactly one port with <c>-p &lt;port&gt;</c>, this issues a single real TCP-connect probe
-/// through the optional server instead of only reporting "Host seems down." This is deliberately
-/// not a real port-range scanner — no range or multi-port <c>-p</c> ever triggers a real probe,
-/// and the simulated network stays authoritative for any host it recognizes.
+/// Simulated <c>nmap</c> port-scanner terminal command (P4-W4-006) on the SDK network API
+/// (ADR 0056, section 6): <see cref="HackDns"/> for the address, <see cref="HackPing"/> for host
+/// discovery, <see cref="HackTcpClient"/> for the scan and <c>-O</c>. For a host outside the
+/// simulated network the OS relays a single-port probe (<c>-p &lt;port&gt;</c>) through the
+/// optional server when it can (ADR 0035); a range against such a host is never relayed and the
+/// host "seems down".
 /// </summary>
 public sealed class NmapCommand : TerminalAppBase
 {
@@ -23,20 +21,9 @@ public sealed class NmapCommand : TerminalAppBase
     private const int DefaultFirstPort = 1;
     private const int DefaultLastPort  = 1000;
 
-    private readonly ISimulatedNetworkService _network;
-    private readonly IServerConnectionService _connection;
-    private readonly IProxyClient _proxy;
-
-    /// <summary>Initializes the command with its manifest, the simulated network, and the optional real-network bridge.</summary>
-    public NmapCommand(
-        AppManifest manifest,
-        ISimulatedNetworkService network,
-        IServerConnectionService connection,
-        IProxyClient proxy) : base(manifest)
+    /// <summary>Initializes the command with its manifest.</summary>
+    public NmapCommand(AppManifest manifest) : base(manifest)
     {
-        _network = network;
-        _connection = connection;
-        _proxy = proxy;
     }
 
     /// <inheritdoc/>
@@ -48,22 +35,19 @@ public sealed class NmapCommand : TerminalAppBase
         cancellationToken.ThrowIfCancellationRequested();
 
         // Parse arguments: nmap [-p <range>] [-sV] [-O] <target>
-        string? targetArg = null;
+        string? target = null;
         int firstPort = DefaultFirstPort;
         int lastPort  = DefaultLastPort;
-        bool explicitSinglePort = false;
         bool showVersion = false;
         bool showOs      = false;
 
-        var args = context.Arguments;
+        IReadOnlyList<string> args = context.Arguments;
         for (int i = 0; i < args.Count; i++)
         {
-            var a = args[i];
+            string a = args[i];
             if (a is "-p" or "--port" && i + 1 < args.Count)
             {
-                string portArg = args[++i];
-                (firstPort, lastPort) = ParsePortRange(portArg);
-                explicitSinglePort = firstPort == lastPort && !portArg.Contains('-');
+                (firstPort, lastPort) = ParsePortRange(args[++i]);
             }
             else if (a is "-sV")
             {
@@ -75,131 +59,121 @@ public sealed class NmapCommand : TerminalAppBase
             }
             else if (!a.StartsWith('-'))
             {
-                targetArg = a;
+                target = a;
             }
         }
 
-        if (targetArg is null)
+        if (target is null)
         {
             context.StandardError.WriteLine("nmap: usage: nmap [-p <port-range>] [-sV] [-O] <target>");
             return 1;
         }
 
-        var host = _network.GetHost(targetArg);
-        var ip   = _network.Dns.Resolve(targetArg) ?? targetArg;
-
         context.StandardOutput.WriteLine($"\nStarting Nmap 7.94 ( https://nmap.org ) at {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
 
-        if (host is null)
+        IPAddress? address = await TryResolveAsync(target, cancellationToken).ConfigureAwait(false);
+        string reportName = address is null || address.ToString() == target ? target : $"{target} ({address})";
+
+        // Host discovery: a known host is pinged first, as nmap does without -Pn.
+        HackPingReply? discovery = null;
+        if (address is not null)
         {
-            if (explicitSinglePort)
+            discovery = await HackPing.SendAsync(target, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (discovery.Status != HackIPStatus.Success)
             {
-                return await NmapRealHostPortAsync(context, targetArg, firstPort, cancellationToken).ConfigureAwait(false);
+                context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
+                context.StandardOutput.WriteLine("Host is unreachable.");
+                context.StandardOutput.WriteLine("Nmap done: 1 IP address (0 hosts up) scanned");
+                return 1;
             }
-
-            context.StandardOutput.WriteLine($"Nmap scan report for {targetArg}");
-            context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
-            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return 1;
         }
 
-        context.StandardOutput.WriteLine($"Nmap scan report for {targetArg} ({ip})");
-        context.StandardOutput.WriteLine($"Host is {'u' + (host.IsUp ? "p" : "nreachable")}.");
-
-        if (!host.IsUp)
+        IReadOnlyList<HackPortProbeResult> ports;
+        try
         {
-            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
+            ports = await HackTcpClient.ProbeAsync(target, firstPort, lastPort, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SocketException exception)
+        {
+            context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
+            context.StandardOutput.WriteLine(exception.SocketErrorCode == SocketError.HostNotFound
+                ? "Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn"
+                : $"Note: probe failed ({exception.SocketErrorCode}).");
+            context.StandardOutput.WriteLine("Nmap done: 1 IP address (0 hosts up) scanned");
             return 1;
         }
 
-        context.StandardOutput.WriteLine($"Not shown: {lastPort - firstPort + 1} closed tcp ports (conn-refused)");
+        context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
+        context.StandardOutput.WriteLine(discovery is null
+            ? "Host is up."
+            : string.Create(CultureInfo.InvariantCulture, $"Host is up ({discovery.RoundtripTime.TotalSeconds:0.0000}s latency)."));
 
-        var ports = _network.ScanPorts(targetArg, firstPort, lastPort);
+        int hidden = (lastPort - firstPort + 1) - ports.Count;
+        if (hidden > 0)
+        {
+            context.StandardOutput.WriteLine($"Not shown: {hidden} closed tcp ports (conn-refused)");
+        }
+
         if (ports.Count > 0)
         {
-            // Print column headers
             context.StandardOutput.WriteLine(showVersion
                 ? "PORT      STATE     SERVICE          VERSION"
                 : "PORT      STATE     SERVICE");
 
-            foreach (var port in ports)
+            foreach (HackPortProbeResult port in ports)
             {
                 if (cancellationToken.IsCancellationRequested) break;
 
-                string portCol    = $"{port.PortNumber}/tcp".PadRight(9);
+                string portCol    = $"{port.Port}/tcp".PadRight(9);
                 string stateCol   = port.State.ToString().ToLowerInvariant().PadRight(9);
-                string serviceCol = (port.Service?.Name ?? "unknown").PadRight(16);
+                string serviceCol = (port.ServiceName ?? "unknown").PadRight(16);
 
-                if (showVersion && port.Service?.Version is not null)
-                    context.StandardOutput.WriteLine($"{portCol} {stateCol} {serviceCol} {port.Service.Version}");
-                else
-                    context.StandardOutput.WriteLine($"{portCol} {stateCol} {serviceCol}");
+                context.StandardOutput.WriteLine(showVersion && port.ServiceVersion is not null
+                    ? $"{portCol} {stateCol} {serviceCol} {port.ServiceVersion}"
+                    : $"{portCol} {stateCol} {serviceCol}".TrimEnd());
             }
         }
 
-        if (showOs && host.OsFingerprint is not null)
+        if (showOs && address is not null
+            && await HackTcpClient.DetectOperatingSystemAsync(target, cancellationToken).ConfigureAwait(false) is { } os)
         {
             context.StandardOutput.WriteLine();
             context.StandardOutput.WriteLine("OS detection performed. Please report any incorrect results at https://nmap.org/submit/");
-            context.StandardOutput.WriteLine($"OS details: {host.OsFingerprint.Name} {host.OsFingerprint.Version}  (Accuracy: {host.OsFingerprint.Accuracy}%)");
+            context.StandardOutput.WriteLine($"OS details: {os.Name} {os.Version}  (Accuracy: {os.Accuracy}%)");
         }
 
+        double elapsedSeconds = discovery is null ? 0.5 : discovery.RoundtripTime.TotalMilliseconds * 0.1;
         context.StandardOutput.WriteLine();
-        context.StandardOutput.WriteLine($"Nmap done: 1 IP address (1 host up) scanned in {host.LatencyMs * 0.1:F2} seconds");
-
+        context.StandardOutput.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"Nmap done: 1 IP address (1 host up) scanned in {elapsedSeconds:F2} seconds"));
         return 0;
     }
 
-    /// <summary>
-    /// Real-network fallback (ADR 0035) for a target unknown to the simulated network, when the
-    /// user asked about exactly one port: a single TCP-connect probe through the optional server,
-    /// when connected. Never scans a range — that stays simulation-only.
-    /// </summary>
-    private async ValueTask<int> NmapRealHostPortAsync(
-        TerminalExecutionContext context, string target, int port, CancellationToken cancellationToken)
+    /// <summary>Resolves <paramref name="target"/>, or returns <see langword="null"/> when no resolver knows it.</summary>
+    private static async Task<IPAddress?> TryResolveAsync(string target, CancellationToken cancellationToken)
     {
-        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        if (state is null)
+        if (IPAddress.TryParse(target, out IPAddress? literal))
         {
-            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
-            context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
-            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return 1;
-        }
-
-        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (accessToken is null)
-        {
-            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
-            context.StandardOutput.WriteLine("Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn");
-            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return 1;
+            // An address literal is only "known" when the simulated network has a host there.
+            try
+            {
+                await HackDns.GetHostEntryAsync(literal, cancellationToken).ConfigureAwait(false);
+                return literal;
+            }
+            catch (SocketException)
+            {
+                return null;
+            }
         }
 
         try
         {
-            ProxyTcpProbeResponse response = await _proxy.ExecuteTcpProbeAsync(
-                new Uri(state.ServerBaseUrl),
-                accessToken,
-                new ProxyTcpProbeRequest(Guid.NewGuid(), target, port, 5, Manifest.Id),
-                cancellationToken).ConfigureAwait(false);
-
-            context.StandardOutput.WriteLine($"Nmap scan report for {target} (via optional server proxy)");
-            context.StandardOutput.WriteLine("Host is up.");
-            context.StandardOutput.WriteLine("PORT      STATE     SERVICE");
-            string stateLabel = response.State.ToString().ToLowerInvariant();
-            context.StandardOutput.WriteLine($"{$"{port}/tcp".PadRight(9)} {stateLabel.PadRight(9)} unknown");
-            context.StandardOutput.WriteLine();
-            context.StandardOutput.WriteLine(
-                $"Nmap done: 1 IP address (1 host up) scanned in {response.DurationMs / 1000.0:F2} seconds");
-            return 0;
+            IPAddress[] addresses = await HackDns.GetHostAddressesAsync(target, cancellationToken).ConfigureAwait(false);
+            return addresses.Length > 0 ? addresses[0] : null;
         }
-        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        catch (SocketException)
         {
-            context.StandardOutput.WriteLine($"Nmap scan report for {target}");
-            context.StandardOutput.WriteLine($"Note: real-network probe failed ({exception.Message}).");
-            context.StandardOutput.WriteLine($"Nmap done: 1 IP address (0 hosts up) scanned");
-            return 1;
+            return null;
         }
     }
 

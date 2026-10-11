@@ -5,6 +5,8 @@
     (Cat/CatApp.cs + Cat/CatCommand.cs, namespace HackerOs.Commands.Cat). Each [AppManifest] class
     produces manifests/<appId>.json (ADR 0047); the host references this project once, with
     IsSystemApp="true", and lazy-loads the whole assembly on first use.
+    ADR 0055/0056: only abstractions and the SDK; the network commands go through HackDns,
+    HackPing, HackHttpClient and HackTcpClient, never Platform Core or the server contracts.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -16,10 +18,6 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
-    <!-- ADR 0028 (ping): the optional server's shared contracts are designed for use by any
-         browser-independent client adapter/consumer, not just the ASP.NET Core server. -->
-    <ProjectReference Include="..\..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -155,8 +155,10 @@ public sealed class ShellInterpreter
         StageOutcome last = outcomes[^1];
 
         // ADR 0042: a lone command that failed on a permission denial may be retried once with an
-        // administrator's one-shot approval. Its input was empty, so rerunning it is safe.
+        // administrator's one-shot approval. Its input was empty, so rerunning it is safe; a
+        // command that read the terminal's input is not rerun, the input is gone.
         if (stages.Count == 1
+            && options.StandardInput is null
             && last is { Failure: ShellFailure.None, ExitCode: not 0, Elevated: false, Denials.Count: > 0 }
             && last.Denials[0].RequiredCapability is not null
             && options.PermissionApproval is { } approve
@@ -185,7 +187,7 @@ public sealed class ShellInterpreter
         bool piped,
         CancellationToken cancellationToken)
     {
-        TextReader input = inputPipe?.Reader ?? TextReader.Null;
+        TextReader input = inputPipe?.Reader ?? options.StandardInput ?? TextReader.Null;
         TextWriter output = outputPipe?.Writer ?? options.StandardOutput;
         TextWriter error = options.StandardError;
         RedirectionTarget? redirection = null;

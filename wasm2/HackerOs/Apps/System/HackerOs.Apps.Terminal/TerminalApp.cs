@@ -29,7 +29,7 @@ public sealed class TerminalApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.ProcessList, AppCapabilities.ProcessManage, AppCapabilities.NotificationsPost];
+        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.ProcessList, AppCapabilities.ProcessManage, AppCapabilities.NotificationsPost, AppCapabilities.ShellHost];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;
