@@ -154,8 +154,6 @@
     No project may be added to this list (enforced by SdkBoundaryExemptionTests).
   -->
   <ItemGroup>
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.Settings" Adr="0056" Chantier="4-sdk-system-admin" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.Diagnostic" Adr="0056" Chantier="4-sdk-system-admin" />
   </ItemGroup>
 
   <PropertyGroup>

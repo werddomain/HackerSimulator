@@ -1,25 +1,11 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
-@using HackerOs.Platform.Core.ServerConnection
-@using HackerOs.Infrastructure.Browser.Schema
-@using HackerOs.Platform.Core
-@using HackerOs.Platform.Core.Appearance
 @using HackerOs.Theming.Abstractions
 @using HackerOs.Theming.Blazor
-@using HackerOs.Simulation.Abstractions.ServerConnection
 @using HackerOs.Simulation.Abstractions.Settings
-@using System.Net.Http
-@using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
-@inject AppCatalog Catalog
-@inject IJSRuntime JS
-@inject ThemePreferenceService ThemePreference
-@inject IServerConnectionService ServerConnection
-@inject IFileSystemSyncService FileSystemSync
-@inject IGrantsSyncService GrantsSync
-@inject IFileAssociationsSyncService FileAssociationsSync
 
 <div class="settings-window-container">
     <header class="settings-header">
@@ -55,7 +41,7 @@
                     }
                 </div>
                 <div class="setting-group">
-                    <h4>Desktop theme <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.DesktopThemeKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.DesktopThemeKey)" /></h4>
+                    <h4>Desktop theme <SettingOriginBadge Source="@SourceOf(DesktopThemeKey)" IsLocked="@IsLocked(DesktopThemeKey)" /></h4>
                     <p class="setting-desc">Applied to the desktop, windows, taskbar, and Start menu.</p>
                     <div class="theme-options" aria-label="Desktop themes">
                         @foreach (ThemeDefinition theme in ThemeCatalog.DesktopThemes)
@@ -63,7 +49,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId)"
-                                    disabled="@IsBlocked(AppearanceSettingsDocuments.DesktopThemeKey)"
+                                    disabled="@IsBlocked(DesktopThemeKey)"
                                     @onclick="() => ChangeDesktopTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -74,7 +60,7 @@
                     </div>
                 </div>
                 <div class="setting-group">
-                    <h4>Mobile theme <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.MobileThemeKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.MobileThemeKey)" /></h4>
+                    <h4>Mobile theme <SettingOriginBadge Source="@SourceOf(MobileThemeKey)" IsLocked="@IsLocked(MobileThemeKey)" /></h4>
                     <p class="setting-desc">Saved independently and applied when the mobile shell is active.</p>
                     <div class="theme-options mobile-theme-options" aria-label="Mobile themes">
                         @foreach (ThemeDefinition theme in ThemeCatalog.MobileThemes)
@@ -82,7 +68,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId)"
-                                    disabled="@IsBlocked(AppearanceSettingsDocuments.MobileThemeKey)"
+                                    disabled="@IsBlocked(MobileThemeKey)"
                                     @onclick="() => ChangeMobileTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -95,7 +81,7 @@
                 @if (CurrentDesktopThemeSupportsAccent)
                 {
                     <div class="setting-group">
-                        <h4>HackerOS accent <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.AccentKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.AccentKey)" /></h4>
+                        <h4>HackerOS accent <SettingOriginBadge Source="@SourceOf(AccentKey)" IsLocked="@IsLocked(AccentKey)" /></h4>
                         <p class="setting-desc">Accent colors are intentionally available only for the HackerOS theme.</p>
                         <div class="accent-options" aria-label="HackerOS accent colors">
                             @foreach (string accentId in ThemeCatalog.AccentIds)
@@ -103,7 +89,7 @@
                                 <button type="button"
                                         class="@AccentOptionClass(accentId)"
                                         aria-pressed="@(accentId == _appearanceSettings.AccentId)"
-                                        disabled="@IsBlocked(AppearanceSettingsDocuments.AccentKey)"
+                                        disabled="@IsBlocked(AccentKey)"
                                         @onclick="() => ChangeAccent(accentId)">
                                     <span class="accent-swatch" aria-hidden="true"></span>
                                     @accentId
@@ -113,9 +99,9 @@
                     </div>
                 }
                 <div class="setting-group">
-                    <h4>Animations <SettingOriginBadge Source="@SourceOf(AppearanceSettingsDocuments.AnimationsKey)" IsLocked="@IsLocked(AppearanceSettingsDocuments.AnimationsKey)" /></h4>
+                    <h4>Animations <SettingOriginBadge Source="@SourceOf(AnimationsKey)" IsLocked="@IsLocked(AnimationsKey)" /></h4>
                     <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary"
-                               Disabled="@IsBlocked(AppearanceSettingsDocuments.AnimationsKey)"
+                               Disabled="@IsBlocked(AnimationsKey)"
                                Label="Enable desktop transitions and micro-animations" />
                 </div>
             </MudTabPanel>
@@ -154,7 +140,7 @@
             </MudTabPanel>
 
             <MudTabPanel Text="Permissions" Icon="@Icons.Material.Filled.AdminPanelSettings">
-                <AppPermissionsPanel AppContext="AppContext" Dialogs="Dialogs" />
+                <AppPermissionsPanel AppContext="AppContext" />
             </MudTabPanel>
 
             <MudTabPanel Text="Installed Apps" Icon="@Icons.Material.Filled.Apps">
@@ -171,21 +157,21 @@
                         required for normal use.
                     </p>
 
-                    @if (_connectionState is not null)
+                    @if (_connectionState.IsConnected)
                     {
                         <div class="server-connection-status connected">
                             <div class="info-line"><span>Status:</span> <strong>Connected</strong></div>
-                            <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerBaseUrl</strong></div>
+                            <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerUrl</strong></div>
                             <div class="info-line"><span>Account:</span> <strong>@_connectionState.AccountId</strong></div>
                             @if (!string.IsNullOrEmpty(_syncStatusMessage))
                             {
                                 <div class="info-line"><span>Sync:</span> <strong>@_syncStatusMessage</strong></div>
                             }
-                            @if (FileSystemSync.UnresolvedConflicts.Count > 0)
+                            @if (_conflictCount > 0)
                             {
                                 <div class="info-line sync-conflict-warning">
                                     <span>Files:</span>
-                                    <strong>@FileSystemSync.UnresolvedConflicts.Count file(s) have unresolved sync conflicts</strong>
+                                    <strong>@_conflictCount file(s) have unresolved sync conflicts</strong>
                                 </div>
                             }
                         </div>
@@ -244,12 +230,28 @@
                     <div class="info-line"><span>Authority:</span> <strong>@(AppContext?.UserAuthority.ToString() ?? "User")</strong></div>
                 </div>
 
+                <div class="setting-group">
+                    <h4>Restart</h4>
+                    <p class="setting-desc">
+                        Flush the logs, end every process and restart HackerOS, like <code>reboot</code>.
+                        An administrator must confirm with their password.
+                    </p>
+                    <button class="btn-secondary" disabled="@_isRebooting" @onclick="RebootAsync">
+                        @(_isRebooting ? "Restarting..." : "Restart HackerOS")
+                    </button>
+                    @if (!string.IsNullOrEmpty(_systemMessage))
+                    {
+                        <p class="dialog-error" role="alert">@_systemMessage</p>
+                    }
+                </div>
+
                 <div class="setting-group danger-zone">
                     <h4>Danger Zone</h4>
                     <p class="setting-desc">
-                        Reset HackerOS to its factory state. This permanently clears the local IndexedDB
-                        database — all accounts, files, sessions, and settings — and restores your account
-                        to its default configuration. This action cannot be undone.
+                        Reset HackerOS to its factory state. This permanently clears the local database
+                        — all accounts, files, sessions, and settings — and restores your account
+                        to its default configuration. This action cannot be undone. An administrator
+                        must confirm with their password.
                     </p>
                     <button class="btn-danger" @onclick="OpenResetDialog">
                         Reset to Factory Settings
@@ -274,8 +276,7 @@
 
                 <div class="dialog-body">
                     <p>
-                        This will permanently delete the entire local <code>@HackerOsIndexedDbSchema.DatabaseName</code>
-                        IndexedDB database, including:
+                        This will permanently delete the entire local HackerOS database, including:
                     </p>
                     <ul class="reset-affected-list">
                         <li>All local user accounts and sessions</li>
@@ -283,7 +284,7 @@
                         <li>All application and account settings (restored to defaults)</li>
                         <li>All capability grants and audit history</li>
                     </ul>
-                    <p>HackerOS will reload afterward as if freshly installed.</p>
+                    <p>HackerOS will restart afterward as if freshly installed.</p>
 
                     <label class="confirm-label" for="reset-confirm-input">
                         Type <strong>RESET</strong> to confirm:
@@ -320,282 +321,3 @@
         </div>
     }
 </div>
-
-@code {
-    private const string ResetConfirmPhrase = "RESET";
-
-    private ThemePreferences _appearanceSettings = ThemePreferences.Default;
-    private SettingLayer _targetLayer = SettingLayer.User;
-    private bool _isSavingAppearance;
-    private string? _appearanceMessage;
-    private List<(string Extension, string AppName)> _fileHandlers = [];
-
-    private bool _isResetDialogOpen;
-    private bool _isResetting;
-    private string _confirmText = string.Empty;
-    private string? _resetErrorMessage;
-
-    private ServerConnectionState? _connectionState;
-    private string _serverUrl = string.Empty;
-    private string _username = string.Empty;
-    private string _password = string.Empty;
-    private bool _isConnecting;
-    private string? _connectionErrorMessage;
-    private bool _isSyncing;
-    private string? _syncStatusMessage;
-
-    private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
-
-    private bool CurrentDesktopThemeSupportsAccent =>
-        ThemeCatalog.TryGet(_appearanceSettings.DesktopThemeId, out ThemeDefinition? theme)
-        && theme is { SupportsAccentColor: true };
-
-    private bool CanSubmitConnection =>
-        Uri.TryCreate(_serverUrl, UriKind.Absolute, out _) &&
-        !string.IsNullOrWhiteSpace(_username) &&
-        !string.IsNullOrWhiteSpace(_password);
-
-    protected override async Task OnAppInitializedAsync()
-    {
-        await ThemePreference.RefreshAsync(AppContext.CancellationToken);
-        _appearanceSettings = ThemePreference.Current;
-
-        _fileHandlers = [.. Catalog.Manifests.Values
-            .SelectMany(manifest => manifest.FileHandlers.SelectMany(handler =>
-                handler.Extensions.Select(extension => (Extension: extension, AppName: manifest.Name))))
-            .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
-
-        _connectionState = await ServerConnection.GetStateAsync(AppContext.CancellationToken);
-    }
-
-    private Task ChangeDesktopTheme(string themeId) => PersistAppearanceAsync(
-        _appearanceSettings with { DesktopThemeId = themeId });
-
-    private Task ChangeMobileTheme(string themeId) => PersistAppearanceAsync(
-        _appearanceSettings with { MobileThemeId = themeId });
-
-    private Task ChangeAccent(string accentId) => PersistAppearanceAsync(
-        _appearanceSettings with { AccentId = accentId });
-
-    private Task ToggleAnimations(bool value) => PersistAppearanceAsync(
-        _appearanceSettings with { AnimationsEnabled = value });
-
-    private static string ThemeOptionClass(string themeId, string selectedThemeId) =>
-        string.Equals(themeId, selectedThemeId, StringComparison.Ordinal)
-            ? "theme-option is-selected"
-            : "theme-option";
-
-    private string AccentOptionClass(string accentId) =>
-        string.Equals(accentId, _appearanceSettings.AccentId, StringComparison.Ordinal)
-            ? $"accent-btn accent-{accentId} is-selected"
-            : $"accent-btn accent-{accentId}";
-
-    private string LayerOptionClass(SettingLayer layer) =>
-        layer == _targetLayer ? "layer-option is-selected" : "layer-option";
-
-    private void SelectLayer(SettingLayer layer)
-    {
-        _targetLayer = layer;
-        _appearanceMessage = null;
-    }
-
-    /// <summary>Gets which layer currently provides <paramref name="key"/> (ADR 0044 section 3).</summary>
-    private SettingLayer SourceOf(string key) =>
-        ThemePreference.Snapshot?.Sources.TryGetValue(key, out SettingLayer source) == true ? source : SettingLayer.Default;
-
-    private bool IsLocked(string key) => ThemePreference.Snapshot?.LockedKeys.Contains(key) == true;
-
-    /// <summary>A locked key cannot be changed for oneself; the system default stays editable.</summary>
-    private bool IsBlocked(string key) => _targetLayer == SettingLayer.User && IsLocked(key);
-
-    private Task ApplyCurrentAsSystemDefaultAsync() => PersistAppearanceAsync(_appearanceSettings);
-
-    private async Task PersistAppearanceAsync(ThemePreferences next)
-    {
-        if (_isSavingAppearance)
-        {
-            return;
-        }
-
-        ThemePreferences previous = _appearanceSettings;
-        _appearanceSettings = next;
-        _appearanceMessage = null;
-        _isSavingAppearance = true;
-        StateHasChanged();
-
-        try
-        {
-            // The system layer is written with this app's own filesystem gateway, so a denied write
-            // raises the administrator approval prompt of ADR 0042; the user layer is the session
-            // user's own home file. ThemeScope applies the new effective value everywhere.
-            await ThemePreference.SetAsync(
-                next,
-                _targetLayer,
-                _targetLayer == SettingLayer.System ? AppContext.FileSystem : null,
-                AppContext.CancellationToken);
-            _appearanceMessage = _targetLayer == SettingLayer.System
-                ? "Saved as the default for every user."
-                : null;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _appearanceMessage = ex.Message;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            _appearanceMessage = "Administrator approval is required to change the system default. Approve the prompt, then apply again.";
-        }
-        catch (IOException ex)
-        {
-            _appearanceMessage = $"Could not save the settings file: {ex.Message}";
-        }
-        finally
-        {
-            _isSavingAppearance = false;
-        }
-
-        _appearanceSettings = ThemePreference.Snapshot is null ? previous : ThemePreference.Current;
-        StateHasChanged();
-    }
-
-    private async Task ConnectAsync(bool createNewAccount)
-    {
-        if (!CanSubmitConnection || _isConnecting)
-        {
-            return;
-        }
-
-        _isConnecting = true;
-        _connectionErrorMessage = null;
-        StateHasChanged();
-
-        try
-        {
-            Uri serverBaseUrl = new(_serverUrl, UriKind.Absolute);
-            _connectionState = createNewAccount
-                ? await ServerConnection.ConnectWithNewAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken)
-                : await ServerConnection.ConnectWithExistingAccountAsync(serverBaseUrl, _username, _password, AppContext.CancellationToken);
-            _password = string.Empty;
-        }
-        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
-        {
-            _connectionErrorMessage = $"Could not connect: {ex.Message}";
-        }
-        finally
-        {
-            _isConnecting = false;
-        }
-
-        if (_connectionState is not null)
-        {
-            // ADR 0029 Decision 7: sync once immediately after a successful connect.
-            await SyncNowAsync();
-        }
-    }
-
-    private async Task DisconnectAsync()
-    {
-        if (_isConnecting)
-        {
-            return;
-        }
-
-        await ServerConnection.DisconnectAsync(AppContext.CancellationToken);
-        _connectionState = null;
-        _serverUrl = string.Empty;
-        _username = string.Empty;
-        _password = string.Empty;
-        _connectionErrorMessage = null;
-        _syncStatusMessage = null;
-    }
-
-    private async Task SyncNowAsync()
-    {
-        if (_isSyncing || _connectionState is null)
-        {
-            return;
-        }
-
-        _isSyncing = true;
-        _syncStatusMessage = null;
-        StateHasChanged();
-
-        try
-        {
-            // ADR 0030: push before pull — pushing first lets a concurrent-edit conflict get
-            // detected and flagged before the pull step runs, so the pull's conflict guard (skip
-            // any record this push just flagged) has something to check. User settings are home
-            // files (ADR 0044), so they travel with this domain.
-            await FileSystemSync.PushAsync(AppContext.CancellationToken);
-            await FileSystemSync.PullAsync(AppContext.CancellationToken);
-
-            await ThemePreference.RefreshAsync(AppContext.CancellationToken);
-            _appearanceSettings = ThemePreference.Current;
-
-            // ADR 0031: Grants is pull-only — no push call exists for this domain.
-            await GrantsSync.PullAsync(AppContext.CancellationToken);
-
-            // ADR 0033: FileAssociations domain. The AppCatalog domain is retired by ADR 0048: the
-            // user's apps.config is a home file, synchronized above with the FileSystem domain.
-            await FileAssociationsSync.PushAsync(AppContext.CancellationToken);
-            await FileAssociationsSync.PullAsync(AppContext.CancellationToken);
-
-            _syncStatusMessage = FileSystemSync.UnresolvedConflicts.Count > 0
-                ? $"Last synced {DateTimeOffset.Now:t} ({FileSystemSync.UnresolvedConflicts.Count} file conflict(s))"
-                : $"Last synced {DateTimeOffset.Now:t}";
-        }
-        catch (Exception ex) when (ex is ServerConnectionException or HttpRequestException)
-        {
-            _syncStatusMessage = $"Sync failed: {ex.Message}";
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
-    }
-
-    private void OpenResetDialog()
-    {
-        _isResetDialogOpen = true;
-        _confirmText = string.Empty;
-        _resetErrorMessage = null;
-    }
-
-    private void CancelReset()
-    {
-        if (_isResetting)
-        {
-            return;
-        }
-
-        _isResetDialogOpen = false;
-        _confirmText = string.Empty;
-        _resetErrorMessage = null;
-    }
-
-    private async Task ConfirmResetAsync()
-    {
-        if (!IsConfirmed || _isResetting)
-        {
-            return;
-        }
-
-        _isResetting = true;
-        _resetErrorMessage = null;
-
-        try
-        {
-            await using IJSObjectReference module = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/HackerOs.Infrastructure.Browser/indexedDb.js");
-            await module.InvokeVoidAsync("deleteDatabase", HackerOsIndexedDbSchema.DatabaseName);
-
-            await JS.InvokeVoidAsync("location.reload");
-        }
-        catch (Exception ex)
-        {
-            _resetErrorMessage = $"Reset failed: {ex.Message}";
-            _isResetting = false;
-        }
-    }
-}

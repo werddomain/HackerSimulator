@@ -112,11 +112,18 @@ public sealed class BuildKnownLazyAppsTests
     [Fact]
     public void No_non_system_app_of_the_host_declares_a_dangerous_capability()
     {
-        // ADR 0049 "Conséquences": the base experience shows no approval window.
+        // ADR 0049 "Conséquences": the base experience shows no approval window. Single, deliberate
+        // exception (ADR 0056 section 11): Diagnostic stays uninstallable and its first launch asks an
+        // administrator for system.storage.inspect, because the raw snapshot bypasses file rights.
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
+        const string diagnostic = "org.hackeros.diagnostic";
 
         Assert.All(
-            catalog.Manifests.Values.Where(manifest => !catalog.IsSystemApp(manifest.Id)),
+            catalog.Manifests.Values.Where(manifest => !catalog.IsSystemApp(manifest.Id) && manifest.Id != diagnostic),
             manifest => Assert.DoesNotContain(manifest.Capabilities, AppCapabilities.IsDangerous));
+        Assert.False(catalog.IsSystemApp(diagnostic));
+        Assert.Equal(
+            [AppCapabilities.SystemStorageInspect],
+            catalog.Manifests[diagnostic].Capabilities.Where(AppCapabilities.IsDangerous));
     }
 }

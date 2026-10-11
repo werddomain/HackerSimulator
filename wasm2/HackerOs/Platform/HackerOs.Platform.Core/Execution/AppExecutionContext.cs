@@ -1,9 +1,11 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Shell;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Settings;
 using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -49,7 +51,12 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppManagementGateway? appManagement = null,
         IAppNetworkGateway? network = null,
         IAppDriveGateway? drives = null,
-        IAppClipboardGateway? clipboard = null)
+        IAppClipboardGateway? clipboard = null,
+        IAppSystemSettingsGateway? systemSettings = null,
+        IAppPermissionAdministrationGateway? permissionAdministration = null,
+        IAppServerConnectionGateway? serverConnection = null,
+        IAppSystemPowerGateway? systemPower = null,
+        IAppStorageDiagnosticsGateway? storageDiagnostics = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
@@ -82,8 +89,28 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         AppManagement = appManagement ?? UnsupportedAppGateways.Management;
         Network = network ?? UnsupportedNetworkGateway.Instance;
         Drives = drives ?? UnsupportedDriveGateway.Instance;
+        SystemSettings = systemSettings ?? UnsupportedAdministrationGateways.SystemSettings;
+        PermissionAdministration = permissionAdministration ?? UnsupportedAdministrationGateways.Permissions;
+        ServerConnection = serverConnection ?? UnsupportedAdministrationGateways.ServerConnection;
+        SystemPower = systemPower ?? UnsupportedAdministrationGateways.SystemPower;
+        StorageDiagnostics = storageDiagnostics ?? UnsupportedAdministrationGateways.StorageDiagnostics;
         Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
     }
+
+    /// <inheritdoc />
+    public IAppSystemSettingsGateway SystemSettings { get; }
+
+    /// <inheritdoc />
+    public IAppPermissionAdministrationGateway PermissionAdministration { get; }
+
+    /// <inheritdoc />
+    public IAppServerConnectionGateway ServerConnection { get; }
+
+    /// <inheritdoc />
+    public IAppSystemPowerGateway SystemPower { get; }
+
+    /// <inheritdoc />
+    public IAppStorageDiagnosticsGateway StorageDiagnostics { get; }
 
     /// <inheritdoc />
     public string UserLoginName { get; }

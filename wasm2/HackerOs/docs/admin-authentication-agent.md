@@ -62,7 +62,7 @@ Action `admin.authenticate`, une entrée par essai et une pour l'échec final :
 | Propriété | Contenu |
 |---|---|
 | `app` | id de l'app qui demande |
-| `operation` | id stable de l'opération, par exemple `apps.uninstall.machine`, `apps.reinstall.machine` |
+| `operation` | id stable de l'opération : `apps.uninstall.machine`, `apps.reinstall.machine`, `permissions.policy`, `permissions.machine-decision`, `system.reboot`, `system.factory-reset` |
 | `requestedBy` | login de l'utilisateur de la session |
 | `admin` | login saisi (ou `root`, ou `-`) |
 | `outcome` | `success` ou `failure:<raison>` |
@@ -89,8 +89,11 @@ if (!auth.Succeeded)
 ```
 
 `AppManagementGateway` (`Platform/HackerOs.Platform.Core/Execution`) est le
-premier utilisateur. Les chantiers `4-sdk-system-admin`
-(`HackPermissionAdministration`, `HackSystem`) réutiliseront l'agent tel quel.
+premier utilisateur. Le chantier `4-sdk-system-admin` le réutilise tel quel
+par `AdministratorGate` (`Platform/HackerOs.Platform.Core/Administration`) :
+`AppPermissionAdministrationGateway` (politique et décisions machine) et
+`AppSystemPowerGateway` (redémarrage, réinitialisation). Voir
+[`system-administration.md`](system-administration.md).
 
 ## Décisions
 
