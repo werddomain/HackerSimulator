@@ -40,6 +40,7 @@ classement.
 | `network.real.access` | **dangereuse** |
 | `gameplay.domain.access` | normale |
 | `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |
+| `shell.host` | **dangereuse** (ADR 0056 §7 : héberger un shell dont les commandes agissent avec leurs propres droits, voir [`shell-host.md`](shell-host.md)) |
 
 Les phrases de risque sont celles de la table de l'ADR 0049.
 

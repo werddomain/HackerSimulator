@@ -364,7 +364,9 @@ public static class EcosystemServiceCollectionExtensions
             intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>(),
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
-            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName));
+            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
+            shellHostProvider: () => provider.GetRequiredService<ShellHostService>()));
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
@@ -425,6 +427,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>()));
+        // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
+        services.AddScoped<ShellHostService>(provider => new ShellHostService(
+            provider.GetRequiredService<ShellInterpreter>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IElevationService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

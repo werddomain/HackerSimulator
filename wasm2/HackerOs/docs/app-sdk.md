@@ -23,7 +23,7 @@ section [API du SDK](#api-du-sdk).
 | `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement…). |
 | `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
 | `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
-| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`). |
+| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`), qui héberge un shell par `HackShell`. |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
 Toute bibliothèque `Shared/HackerOs.AppSdk` ou `Shared/HackerOs.AppSdk.*` est
@@ -122,7 +122,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 | `HackerOs.Apps.CodeEditor` | `ISessionService` | `4-sdk-user-and-apps` |
 | `HackerOs.Apps.Browser` | `ISimulatedNetworkService` | `4-sdk-network` |
 | `HackerOs.Commands` | `Platform.Core`, `Server.Contracts` ; `ISimulatedNetworkService`, `IServerConnectionService`, `IProxyClient` (`ping`, `curl`, `cat`, `nmap`) | `4-sdk-network` |
-| `HackerOs.AppSdk.Terminal` | `Platform.Core` (`ShellInterpreter`, `IElevationService`) | `4-sdk-shell-host` |
 
 Règles de la liste :
 
@@ -134,6 +133,9 @@ Règles de la liste :
   échoue sinon ;
 - `4-sdk-boundary-final` supprime le mécanisme (élément, propriété
   `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
+
+Exemptions déjà retirées : `HackerOs.AppSdk.Terminal` (`4-sdk-shell-host`,
+[`shell-host.md`](shell-host.md)).
 
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
@@ -168,13 +170,24 @@ Façades statiques existantes au début de la phase 4 :
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
-`Services`, `PermissionErrors`, `Environment`.
+`Services`, `PermissionErrors`, `Environment`, `ShellHost` (ajoutée par
+`4-sdk-shell-host`).
 
 Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
 `HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,
 `HackHttpClient`, `HackTcpClient`, `HackShell`, `HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
 `HackClipboard`…) sont ajoutées ici par leurs chantiers.
+
+### Hôte de shell (ADR 0056 §7)
+
+| API | Passerelle | Capacité | Remplace | Document |
+|---|---|---|---|---|
+| `HackShell.StartAsync`, `IHackShell` (`ExecuteAsync`, `CompleteAsync`, `GetInstalledCommands`, `WorkingDirectory`, `ExitStatus`, `Prompt`, historique), `HackShellOptions`, `HackShellCompletion`, `HackCredentialPrompt` | `IAppExecutionContext.ShellHost` (`IAppShellHostGateway`) | `shell.host` (dangereuse) | `ShellInterpreter`, `ISessionService`, `IElevationService` dans `TerminalPanel` | [`shell-host.md`](shell-host.md) |
+
+Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
+enfants et gardent leurs propres capacités. Le terminal lit les identifiants
+(`HackCredentialPrompt`), l'OS les vérifie.
 
 ## Décisions
 

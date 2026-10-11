@@ -35,6 +35,7 @@ public sealed class AppExecutionContextFactory
     private readonly LogFileWriter? _logWriter;
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
+    private readonly Func<Shell.ShellHostService>? _shellHostProvider;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -55,6 +56,12 @@ public sealed class AppExecutionContextFactory
     /// contexts get a detached read-only view.
     /// </param>
     /// <param name="machineName">Reads the machine name (<c>/etc/hostname</c>); defaults to <c>hackeros</c>.</param>
+    /// <param name="shellHostProvider">
+    /// Lazily resolves the service behind <see cref="IAppExecutionContext.ShellHost"/> (ADR 0056,
+    /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
+    /// interpreter depends on the orchestrator, which depends on this factory. Pass
+    /// <see langword="null"/> to leave shell hosting unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -67,7 +74,8 @@ public sealed class AppExecutionContextFactory
         Func<AppIntentDispatcher>? intentDispatcherProvider = null,
         LogFileWriter? logWriter = null,
         IProcessEnvironmentTable? environments = null,
-        Func<string>? machineName = null)
+        Func<string>? machineName = null,
+        Func<Shell.ShellHostService>? shellHostProvider = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -81,6 +89,7 @@ public sealed class AppExecutionContextFactory
         _logWriter = logWriter;
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
+        _shellHostProvider = shellHostProvider;
     }
 
     /// <summary>
@@ -179,6 +188,20 @@ public sealed class AppExecutionContextFactory
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
+
+        if (_shellHostProvider is not null)
+        {
+            // ADR 0056 section 7: the shell is a child process of this one, with this instance's
+            // capabilities for its own redirections and the same root elevation, if any.
+            context.ShellHost = new AppShellHostGateway(
+                _shellHostProvider,
+                capabilities,
+                principal,
+                () => context,
+                shellProcess => Create(
+                    Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
+                    shellProcess.AppInstanceId.Value, isRootElevated));
+        }
         return context;
     }
 

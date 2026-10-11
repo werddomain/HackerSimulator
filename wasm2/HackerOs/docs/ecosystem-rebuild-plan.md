@@ -457,6 +457,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
 - [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
   - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
+  - [x] Hôte de shell : `HackShell`, capacité `shell.host`, `TerminalPanel` sans `Platform.Core`, CodeEditor système (`rebuild/4-sdk-shell-host`, ADR 0056 §7, [`shell-host.md`](shell-host.md)).
 - [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
 - [ ] Éditeur : remplacer et tout remplacer.
