@@ -8,7 +8,7 @@ SDK public (principe 3 du plan, ADR 0055). Ce document décrit :
 - ce qui forme le SDK et ce qu'une app a le droit de référencer et d'injecter ;
 - comment le build vérifie ces règles (codes `HOSAPP0030`, `HOSAPP0031`,
   `HOSSDK0001`, ADR 0059) ;
-- la liste d'exemptions temporaire de la phase 4 ;
+- la fin de la liste d'exemptions temporaire de la phase 4 ;
 - les API du SDK, au fur et à mesure que les chantiers `rebuild/4-*` les
   ajoutent (ADR 0056).
 
@@ -102,44 +102,43 @@ App.csproj : error HOSAPP0030: [My.App] Forbidden project reference 'Platform/Ha
 App.csproj : error HOSAPP0031: [My.App.MyWindow] [Inject] property 'Sessions' injects 'HackerOs.Simulation.Abstractions.Sessions.ISessionService' …
 ```
 
-Le générateur relance l'inspection quand `HackerOs.Apps.targets` change : retirer
-une exemption suffit à faire réapparaître les erreurs au build suivant.
+Le générateur relance l'inspection quand `HackerOs.Apps.targets` change.
 
-## Exemptions temporaires (ADR 0055 §6)
+Ces trois vérifications sont toujours des **erreurs** : aucun projet ne peut les
+ramener à des avertissements. Le rôle d'un projet vient de son emplacement
+(`Apps/` pour une app, `Shared/HackerOs.AppSdk*` pour une bibliothèque SDK) ; un
+`.csproj` sous ces dossiers qui fixe lui-même `HackerOsAppProject` ou
+`HackerOsSdkLibrary` fait échouer
+`SdkBoundarySourceTests.No_app_or_sdk_project_overrides_its_boundary_role`, et
+`Build_targets_have_no_exemption_mechanism` échoue si une exemption ou un
+`<Warning>` réapparaît dans `HackerOs.Apps.targets`.
 
-`build/HackerOs.Apps.targets` déclare un élément `HackerOsSdkBoundaryExemption`
-par projet encore hors de la frontière, avec l'ADR et le ou les chantiers qui
-le corrigeront. Pour un projet exempté, les trois vérifications donnent des
-avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
+## Fin des exemptions temporaires (ADR 0055 §6)
 
-La liste est **vide** depuis `4-sdk-system-admin` (2026-10-11) : toutes les
-apps et bibliothèques du SDK respectent la frontière. Le mécanisme reste en
-place jusqu'à `4-sdk-boundary-final`, qui le supprime.
+`4-sdk-boundary` avait introduit une liste `HackerOsSdkBoundaryExemption` dans
+`build/HackerOs.Apps.targets` : un projet listé recevait des avertissements au
+lieu d'erreurs, et le test `IJSRuntime` l'ignorait. Neuf projets y figuraient ;
+chaque chantier de la phase 4 a retiré les siens :
 
-Règles de la liste :
+| Projet | Sorti par |
+|---|---|
+| `HackerOs.Apps.Browser`, `HackerOs.Commands` | `4-sdk-network` ([`sdk-network.md`](sdk-network.md)) |
+| `HackerOs.AppSdk.Terminal` | `4-sdk-shell-host` ([`shell-host.md`](shell-host.md)) |
+| `HackerOs.Apps.FileExplorer`, `HackerOs.Apps.TextEditor`, `HackerOs.Apps.CodeEditor` | `4-sdk-user-and-apps` |
+| `HackerOs.Apps.SystemMonitor` | `4-task-manager` ([`task-manager.md`](task-manager.md)) |
+| `HackerOs.Apps.Settings`, `HackerOs.Apps.Diagnostic` | `4-sdk-system-admin` ([`system-administration.md`](system-administration.md)) |
 
-- un chantier qui corrige un projet retire son élément dans le même
-  changement ; un projet listé pour deux chantiers sort de la liste avec le
-  dernier ;
-- **aucun projet ne peut y être ajouté** : le test
-  `SdkBoundarySourceTests.Exemption_list_only_contains_projects_from_the_initial_list`
-  échoue sinon ;
-- `4-sdk-boundary-final` supprime le mécanisme (élément, propriété
-  `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
-
-Sorties de la liste : FileExplorer, TextEditor et CodeEditor
-(`4-sdk-user-and-apps`, 2026-10-11) ; SystemMonitor (`4-task-manager`) ;
-Settings et Diagnostic (`4-sdk-system-admin`, voir
-[`system-administration.md`](system-administration.md)).
+`4-sdk-boundary-final` (2026-10-11) a supprimé le mécanisme : l'élément
+`HackerOsSdkBoundaryExemption`, la cible `_HackerOsResolveSdkBoundaryExemption`
+et sa propriété `_HackerOsSdkBoundaryExempt`, l'avertissement `HOSAPP0030` /
+`HOSSDK0001` de la cible `ValidateHackerOsSdkBoundary`, l'option
+`--boundary-exempt` du générateur et le paramètre `severity` de
+`GeneratorDiagnostic.ToMsBuildLine`. Toutes les apps de `Apps/` et toutes les
+bibliothèques `HackerOs.AppSdk*` compilent sans aucun diagnostic de frontière.
 
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
-Calculator, HackPaint et IconViewer passent sans exemption.
-
-Exemptions déjà retirées : `HackerOs.Apps.Browser` et `HackerOs.Commands`
-(`4-sdk-network`, voir [`sdk-network.md`](sdk-network.md)).
-`HackerOs.AppSdk.Terminal` (`4-sdk-shell-host`, voir
-[`shell-host.md`](shell-host.md)).
+Calculator, HackPaint et IconViewer passaient déjà sans exemption.
 
 ## Comment une app obtient un service de l'OS (ADR 0055 §4)
 
@@ -358,7 +357,8 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
 - Codes `HOSAPP0030` et `HOSAPP0031` au lieu de `HOSAPP0002` et `HOSAPP0003`,
   déjà pris par l'ADR 0047 (ADR 0059).
 - Exemption par projet, pas par référence : plus simple à retirer, et un
-  chantier corrige un projet entier.
+  chantier corrige un projet entier (historique : le mécanisme a été supprimé
+  par `4-sdk-boundary-final`).
 - Les avertissements d'un projet exempté ne sont pas transformés en erreurs :
   `TreatWarningsAsErrors` ne s'applique qu'au compilateur C#, pas aux
   avertissements MSBuild.
@@ -412,3 +412,11 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
 - [x] `SystemPowerService` (Platform Core) et appareil navigateur (`BrowserSystemPowerDevice`, `IndexedDbStorageInspector` dans l'hôte Ecosystem).
 - [x] Paramètres et Diagnostic sur le SDK public ; exemptions retirées (liste vide).
 - [x] Tests `SystemAdministrationGatewayTests` ; ADR 0060 ; doc [`system-administration.md`](system-administration.md).
+
+## Liste des tâches du chantier `rebuild/4-sdk-boundary-final`
+
+- [x] Vérifier que la liste d'exemptions est vide et que la solution compile sans diagnostic `HOSAPP0030`, `HOSAPP0031` ni `HOSSDK0001`.
+- [x] Supprimer le mécanisme de `build/HackerOs.Apps.targets` (élément, cible `_HackerOsResolveSdkBoundaryExemption`, propriété, avertissement).
+- [x] Supprimer l'option `--boundary-exempt` du générateur et la sévérité `warning` de `GeneratorDiagnostic`.
+- [x] Remplacer les tests de la liste par `Build_targets_have_no_exemption_mechanism` et `No_app_or_sdk_project_overrides_its_boundary_role` ; le test `IJSRuntime` couvre toutes les apps.
+- [x] Ce document, le plan (phase 4 cochée) et l'index à jour.

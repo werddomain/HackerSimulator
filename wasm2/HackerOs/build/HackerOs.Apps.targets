@@ -11,8 +11,9 @@
     App projects and SDK libraries ($(HackerOsSdkLibrary) == true):
       ValidateHackerOsSdkBoundary   before project references are resolved, fails the build when a
                                     ProjectReference leaves the SDK boundary (ADR 0055 §2):
-                                    HOSAPP0030 for an app, HOSSDK0001 for an SDK library. Projects
-                                    listed in @(HackerOsSdkBoundaryExemption) get warnings instead.
+                                    HOSAPP0030 for an app, HOSSDK0001 for an SDK library. There is
+                                    no exemption: the temporary list of ADR 0055 §6 was removed by
+                                    the 4-sdk-boundary-final chantier.
       GetHackerOsAppManifests       query target used by hosts: the manifest files of this project
                                     and the name of its assembly.
 
@@ -108,11 +109,11 @@
   -->
   <Target Name="GenerateHackerOsAppManifests"
           AfterTargets="CopyFilesToOutputDirectory"
-          DependsOnTargets="_HackerOsResolveManifestGenerator;_HackerOsResolveSdkBoundaryExemption"
+          DependsOnTargets="_HackerOsResolveManifestGenerator"
           Condition="'$(HackerOsAppProject)' == 'true'"
           Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(MSBuildThisFileFullPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest)"
           Outputs="$(_HackerOsManifestStamp)">
-    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; generate --assembly &quot;$(TargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --dependencies &quot;$(_HackerOsManifestDependencies)&quot; --stamp &quot;$(_HackerOsManifestStamp)&quot; --boundary-exempt $(_HackerOsSdkBoundaryExempt)"
+    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; generate --assembly &quot;$(TargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --dependencies &quot;$(_HackerOsManifestDependencies)&quot; --stamp &quot;$(_HackerOsManifestStamp)&quot;"
           StandardOutputImportance="low"
           IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="_HackerOsManifestGeneratorExitCode" />
@@ -146,16 +147,6 @@
   <!-- SDK boundary (ADR 0055, codes per ADR 0059)                                            -->
   <!-- ===================================================================================== -->
 
-  <!--
-    Temporary exemption list (ADR 0055 §6). One item per project (MSBuildProjectName) still outside
-    the SDK boundary, with the ADR and the phase-4 chantier(s) that fix it (ADR 0058). An exempted
-    project gets warnings instead of errors, for both the reference check and the injection check.
-    Each chantier removes its item in the same change; 4-sdk-boundary-final removes the mechanism.
-    No project may be added to this list (enforced by SdkBoundaryExemptionTests).
-  -->
-  <ItemGroup>
-  </ItemGroup>
-
   <PropertyGroup>
     <!-- Paths relative to the HackerOs root, forward slashes, compared case-insensitively. -->
     <_HackerOsAppAllowedReferencePattern>(?i)^(Shared/HackerOs\.(App|Simulation|Theming|Game)\.Abstractions|Shared/HackerOs\.AppSdk(\.[^/]+)?|Platform/HackerOs\.Theming\.Blazor)/[^/]+\.csproj$|^Apps/.+\.csproj$</_HackerOsAppAllowedReferencePattern>
@@ -167,20 +158,8 @@
     <_HackerOsDirectProjectReference Include="@(ProjectReference)" />
   </ItemGroup>
 
-  <!-- Computes $(_HackerOsSdkBoundaryExempt) for this project; also used by the generator call. -->
-  <Target Name="_HackerOsResolveSdkBoundaryExemption">
-    <ItemGroup>
-      <_HackerOsOwnExemption Include="@(HackerOsSdkBoundaryExemption)" Condition="'%(Identity)' == '$(MSBuildProjectName)'" />
-    </ItemGroup>
-    <PropertyGroup>
-      <_HackerOsSdkBoundaryExempt>false</_HackerOsSdkBoundaryExempt>
-      <_HackerOsSdkBoundaryExempt Condition="'@(_HackerOsOwnExemption)' != ''">true</_HackerOsSdkBoundaryExempt>
-    </PropertyGroup>
-  </Target>
-
   <Target Name="ValidateHackerOsSdkBoundary"
           BeforeTargets="ResolveProjectReferences"
-          DependsOnTargets="_HackerOsResolveSdkBoundaryExemption"
           Condition="'$(HackerOsAppProject)' == 'true' or '$(HackerOsSdkLibrary)' == 'true'">
     <PropertyGroup>
       <_HackerOsBoundaryPattern Condition="'$(HackerOsAppProject)' == 'true'">$(_HackerOsAppAllowedReferencePattern)</_HackerOsBoundaryPattern>
@@ -206,14 +185,10 @@
                                   Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(RelativePath)', '$(_HackerOsBoundaryPattern)'))" />
     </ItemGroup>
 
-    <Error Condition="'$(_HackerOsSdkBoundaryExempt)' != 'true' and '@(_HackerOsBoundaryViolation)' != ''"
+    <Error Condition="'@(_HackerOsBoundaryViolation)' != ''"
            Code="$(_HackerOsBoundaryCode)"
            File="$(MSBuildProjectFullPath)"
            Text="[$(MSBuildProjectName)] Forbidden project reference '%(_HackerOsBoundaryViolation.RelativePath)'. $(_HackerOsBoundaryRule) (ADR 0055 §2)." />
-    <Warning Condition="'$(_HackerOsSdkBoundaryExempt)' == 'true' and '@(_HackerOsBoundaryViolation)' != ''"
-             Code="$(_HackerOsBoundaryCode)"
-             File="$(MSBuildProjectFullPath)"
-             Text="[$(MSBuildProjectName)] Forbidden project reference '%(_HackerOsBoundaryViolation.RelativePath)' (temporarily exempted, ADR 0055 §6). $(_HackerOsBoundaryRule) (ADR 0055 §2)." />
   </Target>
 
   <!-- ===================================================================================== -->
