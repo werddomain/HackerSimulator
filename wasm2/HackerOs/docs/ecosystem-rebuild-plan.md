@@ -462,7 +462,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
 - [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
 - [ ] Éditeur : remplacer et tout remplacer.
-- [ ] Console : complétion par Tab et onglets.
+- [x] Console : complétion par Tab et onglets (`rebuild/4-terminal`, ADR 0058 §4, [`terminal-console.md`](terminal-console.md)).
 
 ## 13. Références
 
