@@ -11,6 +11,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -43,6 +44,7 @@ public sealed class AppExecutionContextFactory
     private readonly ISimulatedNetworkService? _network;
     private readonly IServerConnectionService? _serverConnection;
     private readonly IProxyClient? _proxy;
+    private readonly SystemMetricsServices? _metrics;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -79,6 +81,11 @@ public sealed class AppExecutionContextFactory
     /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
     /// interpreter depends on the orchestrator, which depends on this factory. Pass
     /// <see langword="null"/> to leave shell hosting unsupported.
+    /// <param name="metrics">
+    /// Counters and drive information of ADR 0057: each app's network traffic is counted for
+    /// <c>/proc/net/dev</c> and its <c>/proc/&lt;pid&gt;/io</c>, and
+    /// <see cref="IAppExecutionContext.Drives"/> answers <c>HackDriveInfo</c>. <see langword="null"/>
+    /// counts nothing and leaves drives unsupported.
     /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
@@ -97,7 +104,8 @@ public sealed class AppExecutionContextFactory
         ISimulatedNetworkService? network = null,
         IServerConnectionService? serverConnection = null,
         IProxyClient? proxy = null,
-        Func<Shell.ShellHostService>? shellHostProvider = null)
+        Func<Shell.ShellHostService>? shellHostProvider = null,
+        SystemMetricsServices? metrics = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -116,6 +124,7 @@ public sealed class AppExecutionContextFactory
         _serverConnection = serverConnection;
         _proxy = proxy;
         _shellHostProvider = shellHostProvider;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -229,7 +238,18 @@ public sealed class AppExecutionContextFactory
             principal.DisplayName,
             catalogGateway,
             managementGateway,
-            _network is null ? null : new AppNetworkGateway(_network, capabilities, manifest.Id, _serverConnection, _proxy));
+            _network is null
+                ? null
+                : new AppNetworkGateway(
+                    _network,
+                    capabilities,
+                    manifest.Id,
+                    _serverConnection,
+                    _proxy,
+                    _metrics?.Network,
+                    _metrics?.ProcessIo,
+                    process.Pid),
+            _metrics?.Drives);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
@@ -307,3 +327,14 @@ public sealed record AppCatalogGatewayServices(
     Func<Intents.FileAssociationResolver>? FileAssociations = null,
     Func<Apps.IAppInstallationService>? Installation = null,
     Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+
+/// <summary>
+/// Services behind the measurements of ADR 0057 that the factory hands to each context.
+/// </summary>
+/// <param name="Network">Interface counters charged with each app's traffic (<c>/proc/net/dev</c>).</param>
+/// <param name="ProcessIo">Per-process I/O accounting charged with each app's traffic (<c>/proc/&lt;pid&gt;/io</c>).</param>
+/// <param name="Drives">Drive information behind <see cref="IAppExecutionContext.Drives"/>; shared by every context.</param>
+public sealed record SystemMetricsServices(
+    INetworkInterfaceStatistics? Network = null,
+    IProcessIoAccounting? ProcessIo = null,
+    HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null);

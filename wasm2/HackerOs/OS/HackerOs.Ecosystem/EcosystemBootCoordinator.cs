@@ -5,6 +5,7 @@ using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.Diagnostics;
@@ -28,6 +29,7 @@ public sealed class EcosystemBootCoordinator
     private readonly IFileSystemService? _fileSystem;
     private readonly SimulationClockDriver? _clockDriver;
     private readonly AppInstallationService? _installation;
+    private readonly ResourceSamplingService? _resourceSampling;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="logWriter">
@@ -41,6 +43,10 @@ public sealed class EcosystemBootCoordinator
     /// Installation service started once the machine file exists, so an app uninstalled in
     /// <c>apps.config</c> is blocked from the first launch attempt. Optional for headless tests.
     /// </param>
+    /// <param name="resourceSampling">
+    /// Scheduler tick started with the clock, so <c>/proc/stat</c>, <c>status</c> and
+    /// <c>loadavg</c> move (ADR 0057). Optional for headless tests.
+    /// </param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -53,7 +59,8 @@ public sealed class EcosystemBootCoordinator
         LogFileWriter? logWriter = null,
         IFileSystemService? fileSystem = null,
         SimulationClockDriver? clockDriver = null,
-        AppInstallationService? installation = null)
+        AppInstallationService? installation = null,
+        ResourceSamplingService? resourceSampling = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -68,6 +75,7 @@ public sealed class EcosystemBootCoordinator
         _fileSystem = fileSystem;
         _clockDriver = clockDriver;
         _installation = installation;
+        _resourceSampling = resourceSampling;
     }
 
     /// <summary>
@@ -85,6 +93,7 @@ public sealed class EcosystemBootCoordinator
         // Simulated time starts flowing once storage exists; scheduled work (log flushes, the
         // taskbar clock, process stop timeouts) depends on it.
         _clockDriver?.Start();
+        _resourceSampling?.Start();
         await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
 
         // After the canonical database/root is ready, these subsystem checks use

@@ -183,6 +183,20 @@ public interface IAppExecutionContext
     /// compiling; the trusted platform factory overrides it with a real implementation.
     /// </summary>
     Shell.IAppShellHostGateway ShellHost => new UnsupportedAppShellHostGateway();
+
+    /// <summary>
+    /// Gets this instance's view of the mounted disks' space, behind <see cref="IO.HackDriveInfo"/>
+    /// (ADR 0057, section 7; no capability). Defaults to an unsupported gateway so existing
+    /// implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Drives"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
+{
+    public ValueTask<IReadOnlyList<IO.HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Drives gateway.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>

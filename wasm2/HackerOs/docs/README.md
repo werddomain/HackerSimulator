@@ -11,7 +11,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md) | Plan de refonte de l'écosystème validé le 2026-10-10 : API fichier `Hack*`, manifeste en classe C#, paramètres et journaux en fichiers, `/proc` et `/dev`, shell complet, corbeille, permissions dangereuses, apps de base. **À lire en premier.** |
 | [`hack-file-api.md`](hack-file-api.md) | API fichier `Hack*` (`HackFile`, `HackDirectory`, `HackPath`, infos, flux, surveillance), exceptions et contexte d'exécution ambiant positionné par l'OS (phase 1, ADR 0043). |
 | [`logging.md`](logging.md) | Journaux en fichiers sous `/var/log` (ADR 0045) : format de ligne, `LogFileWriter`, rotation, Error Log Viewer, moteur d'horloge. |
-| [`virtual-proc-and-dev.md`](virtual-proc-and-dev.md) | Phase 1, section 5.4 : fournisseurs virtuels `/proc` et `/dev` (contenu, visibilité, montage, `ps` sur `/proc`). |
+| [`virtual-proc-and-dev.md`](virtual-proc-and-dev.md) | Phase 1, section 5.4 : fournisseurs virtuels `/proc` et `/dev` (contenu, visibilité, montage, `ps` sur `/proc`) ; fichiers de mesure de la phase 4 (`stat`, `io`, `diskstats`, `net/dev`, `mounts`). |
 
 ## Sous-systèmes
 
@@ -19,7 +19,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | --- | --- |
 | [`admin-authentication-agent.md`](admin-authentication-agent.md) | Agent d'authentification de l'OS (phase 4, ADR 0055 §5), façon `polkit` : une API qui exige un administrateur le fait confirmer dans une fenêtre de la plateforme, l'app ne voit jamais le mot de passe, issue dans `auth.log`. |
 | [`app-installation.md`](app-installation.md) | Désinstallation et réinstallation des apps (phase 2, ADR 0048) : fichiers `/etc/hackeros/apps.config` et `~/.config/hackeros/apps.config`, `IAppInstallationService`, filtrage du lancement, migration depuis `IsEnabled`, onglet « Installed Apps ». |
-| [`app-sdk.md`](app-sdk.md) | SDK des apps (phase 4, ADR 0055 et 0059) : ce qui forme le SDK, références et injections permises, vérification au build (`HOSAPP0030`, `HOSAPP0031`, `HOSSDK0001`), test `IJSRuntime`, exemptions temporaires, API ajoutées par les chantiers `rebuild/4-*` (`HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement`…). |
+| [`app-sdk.md`](app-sdk.md) | SDK des apps (phase 4, ADR 0055 et 0059) : ce qui forme le SDK, références et injections permises, vérification au build (`HOSAPP0030`, `HOSAPP0031`, `HOSSDK0001`), test `IJSRuntime`, exemptions temporaires, API ajoutées par les chantiers `rebuild/4-*` (`HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement`, `HackDriveInfo`…). |
 | [`sdk-network.md`](sdk-network.md) | Phase 4, ADR 0056 section 6 : `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, passerelle `IAppNetworkGateway`, repli sur le réseau réel décidé par l'OS, migration du navigateur et de `ping`, `curl`, `cat`, `nmap`. |
 | [`app-model.md`](app-model.md) | Modèle d'app (phase 2, ADR 0047) : classe `AppDefinition` et `[AppManifest]`, `manifest.json` généré au build, agrégation `BuiltInApplications.json` dans l'hôte. |
 | [`capabilities.md`](capabilities.md) | Capacités (phase 2, ADR 0049) : catalogue `AppCapabilities`, classement normal/dangereux, `Describe`, attribution à la connexion selon le statut système. |
@@ -29,6 +29,7 @@ document dans ce dossier met à jour cet index dans le même changement (voir
 | [`settings-files.md`](settings-files.md) | Paramètres en fichiers (plan 5.2, ADR 0044) : emplacements, couches et `[locked]`, API `HackSettings`, `IOsSettingsService`, migration depuis IndexedDB, app Paramètres, tests de contrat. |
 | [`shell-host.md`](shell-host.md) | Hôte de shell (phase 4, ADR 0056 §7) : `HackShell`, `IHackShell`, `HackCredentialPrompt`, capacité dangereuse `shell.host`, shell `hsh` en processus enfant du terminal, complétion des commandes, `TerminalPanel` sur le SDK seul. |
 | [`shell-commands.md`](shell-commands.md) | Commandes du shell (phase 3, ADR 0051) : `IShellSession` et capacité `shell.control`, `cd`, `pwd`, `clear`, `help`, `export`, `unset`, `env`, `sudo` du catalogue, terminal sans noms codés en dur, séquences d'effacement, `argv[0]` et alias statiques. |
+| [`system-metrics.md`](system-metrics.md) | Mesures système (phase 4, ADR 0057) : compteurs CPU simulés, entrées-sorties par processus, disque `hda` et réseau `eth0` réellement comptés, `ResourceSamplingService`, `/proc/stat`, `/proc/<pid>/io`, `/proc/diskstats`, `/proc/net/dev`, `/proc/mounts`, `HackDriveInfo`. |
 | [`text-editor.md`](text-editor.md) | Éditeur de texte (phase 4, ADR 0058 §3) : ouvrir et enregistrer avec détection des conflits, rechercher et remplacer (Ctrl+F, Ctrl+H), options « Match case » et « Whole word », `TextEditorFindEngine`. |
 | [`trash.md`](trash.md) | Corbeille (phase 3, ADR 0052) : format freedesktop sous `~/.local/share/Trash`, API `HackTrash`, `rm` vers la corbeille et `rm --permanent`, commande `trash`, `FileView.DeleteRequested` et vue Corbeille de l'explorateur. |
 

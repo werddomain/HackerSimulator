@@ -7,7 +7,9 @@ using HackerOs.AppSdk.Net;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
 
 namespace HackerOs.Platform.Core.Network;
@@ -35,7 +37,9 @@ namespace HackerOs.Platform.Core.Network;
 /// </para>
 /// <para>
 /// This is also the one place network traffic of an app passes through, where ADR 0057 counts the
-/// bytes shown in <c>/proc/net/dev</c>.
+/// bytes shown in <c>/proc/net/dev</c> and charges them to the app's process
+/// (<c>/proc/&lt;pid&gt;/io</c>); see <see cref="NetworkTrafficMeter"/> for how a packet is sized.
+/// A call refused for a missing capability never reaches the wire and counts nothing.
 /// </para>
 /// </remarks>
 public sealed class AppNetworkGateway : IAppNetworkGateway
@@ -48,6 +52,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     private readonly string _appId;
     private readonly IServerConnectionService? _serverConnection;
     private readonly IProxyClient? _proxy;
+    private readonly NetworkTrafficMeter _meter;
     private int _echoSequence;
 
     /// <summary>Initializes the gateway of one app instance.</summary>
@@ -56,12 +61,18 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <param name="appId">Id of the app, reported to the server proxy for its audit log.</param>
     /// <param name="serverConnection">Optional server connection; <see langword="null"/> disables the real-network fallback.</param>
     /// <param name="proxy">Optional server proxy client; <see langword="null"/> disables the real-network fallback.</param>
+    /// <param name="statistics">Optional interface counters behind <c>/proc/net/dev</c> (ADR 0057).</param>
+    /// <param name="processIo">Optional per-process I/O accounting, charged with this app's traffic.</param>
+    /// <param name="pid">Process of this app instance, the one <paramref name="processIo"/> charges.</param>
     public AppNetworkGateway(
         ISimulatedNetworkService network,
         ICapabilityChecker capabilities,
         string appId,
         IServerConnectionService? serverConnection = null,
-        IProxyClient? proxy = null)
+        IProxyClient? proxy = null,
+        INetworkInterfaceStatistics? statistics = null,
+        IProcessIoAccounting? processIo = null,
+        ProcessId? pid = null)
     {
         _network = network ?? throw new ArgumentNullException(nameof(network));
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
@@ -69,10 +80,67 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         _appId = appId;
         _serverConnection = serverConnection;
         _proxy = proxy;
+        _meter = new NetworkTrafficMeter(statistics, processIo, pid);
     }
 
     /// <inheritdoc />
-    public ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default)
+    public async ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<HackHostEntry> result = await ResolveCoreAsync(hostName, cancellationToken).ConfigureAwait(false);
+        _meter.Dns(hostName, result.Value?.AddressList.Count ?? 0, result.Succeeded);
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(IPAddress address, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<HackHostEntry> result = await ReverseLookupCoreAsync(address, cancellationToken).ConfigureAwait(false);
+        // A PTR query asks for "<octets>.in-addr.arpa".
+        _meter.Dns($"{address}.in-addr.arpa", result.Succeeded ? 1 : 0, result.Succeeded);
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
+        string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<HackPingReply> result = await PingCoreAsync(hostNameOrAddress, timeout, cancellationToken).ConfigureAwait(false);
+        _meter.Echo(result.Succeeded && result.Value!.Status == HackIPStatus.Success);
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
+        HackHttpRequest request, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<HackHttpResponse> result = await SendCoreAsync(request, cancellationToken).ConfigureAwait(false);
+        _meter.Http(request, result);
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
+        string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<IReadOnlyList<HackPortProbeResult>> result =
+            await ProbeTcpCoreAsync(hostNameOrAddress, firstPort, lastPort, cancellationToken).ConfigureAwait(false);
+        _meter.Probe(result, Math.Max(1, lastPort - firstPort + 1));
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
+        string hostNameOrAddress, CancellationToken cancellationToken = default)
+    {
+        HackNetworkResult<HackOsFingerprint?> result =
+            await DetectOperatingSystemCoreAsync(hostNameOrAddress, cancellationToken).ConfigureAwait(false);
+        _meter.Fingerprint(result.Succeeded);
+        return result;
+    }
+
+    // ── Simulated network ─────────────────────────────────────────────────
+
+    private ValueTask<HackNetworkResult<HackHostEntry>> ResolveCoreAsync(string hostName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostName);
         cancellationToken.ThrowIfCancellationRequested();
@@ -84,8 +152,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
             : HackNetworkResult<HackHostEntry>.Success(BuildEntry(_network.Dns.ReverseLookup(ip) ?? hostName, ip)));
     }
 
-    /// <inheritdoc />
-    public ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(IPAddress address, CancellationToken cancellationToken = default)
+    private ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupCoreAsync(IPAddress address, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(address);
         cancellationToken.ThrowIfCancellationRequested();
@@ -98,9 +165,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
             : HackNetworkResult<HackHostEntry>.Success(BuildEntry(hostName, ip)));
     }
 
-    /// <inheritdoc />
-    public async ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
-        string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default)
+    private async ValueTask<HackNetworkResult<HackPingReply>> PingCoreAsync(
+        string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostNameOrAddress);
         cancellationToken.ThrowIfCancellationRequested();
@@ -129,9 +195,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
             : new HackPingReply(address, HackIPStatus.Success, roundTrip));
     }
 
-    /// <inheritdoc />
-    public async ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
-        HackHttpRequest request, CancellationToken cancellationToken = default)
+    private async ValueTask<HackNetworkResult<HackHttpResponse>> SendCoreAsync(
+        HackHttpRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
@@ -198,9 +263,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
             before));
     }
 
-    /// <inheritdoc />
-    public async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
-        string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default)
+    private async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpCoreAsync(
+        string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostNameOrAddress);
         cancellationToken.ThrowIfCancellationRequested();
@@ -228,9 +292,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         return HackNetworkResult<IReadOnlyList<HackPortProbeResult>>.Success(ports);
     }
 
-    /// <inheritdoc />
-    public ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
-        string hostNameOrAddress, CancellationToken cancellationToken = default)
+    private ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemCoreAsync(
+        string hostNameOrAddress, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostNameOrAddress);
         cancellationToken.ThrowIfCancellationRequested();
