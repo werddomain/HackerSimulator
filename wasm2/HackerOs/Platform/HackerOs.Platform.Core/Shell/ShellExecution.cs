@@ -22,6 +22,13 @@ public sealed class ShellExecutionOptions
     /// <summary>Gets where every stage writes its errors, and the shell its own messages. Never closed by the shell.</summary>
     public required TextWriter StandardError { get; init; }
 
+    /// <summary>
+    /// Gets what the first stage of each pipeline reads when it is not redirected (a hosted
+    /// shell's terminal input, ADR 0056 section 7); <see langword="null"/> for an empty input.
+    /// Never closed by the shell.
+    /// </summary>
+    public TextReader? StandardInput { get; init; }
+
     /// <summary>Gets the optional alternate screen offered to commands such as <c>nano</c>.</summary>
     public IFullScreenTerminalSession? FullScreen { get; init; }
 

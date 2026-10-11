@@ -1,43 +1,26 @@
-using System.Collections.Immutable;
 using System.Net.Http;
-using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Platform.Core.ServerConnection;
-using HackerOs.Server.Contracts.Proxy;
-using HackerOs.Simulation.Abstractions.Network;
-using HackerOs.Simulation.Abstractions.ServerConnection;
+using HackerOs.AppSdk.Net;
 
 namespace HackerOs.Commands.Curl;
 
 /// <summary>
-/// Simulated <c>curl</c> terminal command (P4-W4-006), with a real-network fallback (ADR 0028/
-/// ADR 0034 Pass N+1a) for a host unknown to the simulated network: <c>-I</c> gets a real HTTP
-/// HEAD proxy round-trip, and a plain GET gets a real HTTP GET with the body fetched and printed
-/// (<see cref="IProxyClient"/>'s <c>IncludeBody</c> body-transfer extension), both through the
-/// optional server when connected, instead of only "Could not resolve host." A real-network POST
-/// (<c>-d</c>) against an unrecognized host stays out of scope and still reports "Could not
-/// resolve host." The simulated network stays authoritative for any host it recognizes, real or
-/// not. Supports -I (headers only), -v (verbose), -X (method), -d (POST data),
-/// -L (follow redirects — always followed for navigation, this flag is a no-op).
+/// Simulated <c>curl</c> terminal command (P4-W4-006) on <see cref="HackHttpClient"/>
+/// (ADR 0056, section 6). Supports <c>-I</c> (HEAD, headers only), <c>-v</c> (verbose),
+/// <c>-X</c> (method), <c>-d</c> (URL-encoded POST data) and <c>-L</c> (accepted; redirects are
+/// always followed). A host outside the simulated network is reached by the OS through the
+/// optional server when it can (GET and HEAD, ADR 0028/0034); otherwise curl reports
+/// "Could not resolve host", exit code 6. A response status of 400 or more prints no body and
+/// exits with 22, as <c>curl --fail</c> does.
 /// </summary>
 public sealed class CurlCommand : TerminalAppBase
 {
-    private readonly ISimulatedNetworkService _network;
-    private readonly IServerConnectionService _connection;
-    private readonly IProxyClient _proxy;
-    private readonly Dictionary<string, Dictionary<string, string>> _sessionCookies = [];
+    private readonly HackCookieContainer _cookies = new();
 
-    /// <summary>Initializes the command with its manifest, the simulated network, and the optional real-network bridge.</summary>
-    public CurlCommand(
-        AppManifest manifest,
-        ISimulatedNetworkService network,
-        IServerConnectionService connection,
-        IProxyClient proxy) : base(manifest)
+    /// <summary>Initializes the command with its manifest.</summary>
+    public CurlCommand(AppManifest manifest) : base(manifest)
     {
-        _network = network;
-        _connection = connection;
-        _proxy = proxy;
     }
 
     /// <inheritdoc/>
@@ -49,26 +32,26 @@ public sealed class CurlCommand : TerminalAppBase
         cancellationToken.ThrowIfCancellationRequested();
 
         // Parse arguments: curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>
-        string? url      = null;
+        string? url = null;
         bool headersOnly = false;
-        bool verbose     = false;
-        string method    = SimulatedHttpMethods.Get;
+        bool verbose = false;
+        string? method = null;
         string? postData = null;
 
-        var args = context.Arguments;
+        IReadOnlyList<string> args = context.Arguments;
         for (int i = 0; i < args.Count; i++)
         {
-            var a = args[i];
+            string a = args[i];
             switch (a)
             {
-                case "-I": headersOnly = true;  break;
-                case "-v": verbose     = true;  break;
-                case "-L": /* follow redirects — always done */  break;
+                case "-I" or "--head": headersOnly = true; break;
+                case "-v" or "--verbose": verbose = true; break;
+                case "-L" or "--location": /* redirects are always followed */ break;
                 case "-X" or "--request":
                     if (i + 1 < args.Count) method = args[++i].ToUpperInvariant();
                     break;
                 case "-d" or "--data":
-                    if (i + 1 < args.Count) { postData = args[++i]; method = SimulatedHttpMethods.Post; }
+                    if (i + 1 < args.Count) postData = args[++i];
                     break;
                 default:
                     if (!a.StartsWith('-')) url = a;
@@ -82,195 +65,95 @@ public sealed class CurlCommand : TerminalAppBase
             return 1;
         }
 
-        // Normalize URL
-        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            && !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
             url = "https://" + url;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+        {
+            context.StandardError.WriteLine($"curl: (3) URL using bad/illegal format or missing URL");
+            return 3;
+        }
+
+        method ??= postData is not null ? "POST" : headersOnly ? "HEAD" : "GET";
+        if (verbose)
+        {
+            context.StandardOutput.WriteLine($"*   Trying {uri.Host}:{uri.Port}...");
+            context.StandardOutput.WriteLine($"> {method} {uri.PathAndQuery} HTTP/1.1");
+            context.StandardOutput.WriteLine($"> Host: {uri.Host}");
+            context.StandardOutput.WriteLine("> User-Agent: curl/7.88.1");
+        }
+
+        HackHttpResponse response;
+        try
+        {
+            using HackHttpClient client = new(_cookies);
+            client.DefaultRequestHeaders["User-Agent"] = "curl/7.88.1";
+            response = await client.SendAsync(
+                new HttpMethod(method), uri.AbsoluteUri, postData is null ? null : ParseForm(postData), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (HackHttpRequestException exception)
+        {
+            (int code, string text) = exception.NetworkError switch
+            {
+                HackNetworkError.HostNotFound => (6, $"Could not resolve host: {uri.Host}"),
+                HackNetworkError.TooManyRedirects => (47, "Maximum (10) redirects followed"),
+                _ => (7, $"Failed to connect to {uri.Host} port {uri.Port}: {exception.Message}")
+            };
+            context.StandardError.WriteLine($"curl: ({code}) {text}");
+            return code;
+        }
 
         if (verbose)
         {
-            context.StandardOutput.WriteLine($"* Trying simulated network...");
-            context.StandardOutput.WriteLine($"> {method} {new Uri(url).PathAndQuery} HTTP/1.1");
-            context.StandardOutput.WriteLine($"> Host: {new Uri(url).Host}");
-            context.StandardOutput.WriteLine($"> User-Agent: curl/7.88.1");
-        }
-
-        bool unknownToSimulatedNetwork = _network.GetHost(new Uri(url).Host) is null;
-
-        if (unknownToSimulatedNetwork && headersOnly)
-        {
-            return await CurlRealHostHeadAsync(context, url, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (unknownToSimulatedNetwork && method == SimulatedHttpMethods.Get)
-        {
-            return await CurlRealHostGetAsync(context, url, cancellationToken).ConfigureAwait(false);
-        }
-
-        SimulatedNavigationResult result;
-
-        if (method == SimulatedHttpMethods.Post && postData is not null)
-        {
-            // Parse form data (key=value&key2=value2)
-            var formBuilder = ImmutableDictionary.CreateBuilder<string, string>();
-            foreach (var pair in postData.Split('&', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var eqIdx = pair.IndexOf('=');
-                if (eqIdx > 0)
-                    formBuilder[Uri.UnescapeDataString(pair[..eqIdx])] =
-                        Uri.UnescapeDataString(pair[(eqIdx + 1)..]);
-            }
-
-            var resp = _network.Post(url, formBuilder.ToImmutable(), _sessionCookies);
-
-            if (verbose)
-            {
-                context.StandardOutput.WriteLine($"< HTTP/1.1 {resp.StatusCode}");
-            }
-
-            if (headersOnly)
-            {
-                context.StandardOutput.WriteLine($"HTTP/1.1 {resp.StatusCode}");
-                context.StandardOutput.WriteLine($"Content-Type: text/simulated");
-                return resp.StatusCode < 400 ? 0 : 1;
-            }
-
-            if (resp.Page is not null)
-                SimulatedPageTextFormatter.WriteTo(context.StandardOutput, resp.Page);
-            else if (resp.RedirectUrl is not null)
-                context.StandardOutput.WriteLine($"<Redirect: {resp.RedirectUrl}>");
-
-            return resp.StatusCode < 400 ? 0 : 1;
-        }
-
-        result = _network.Navigate(url, _sessionCookies);
-
-        if (verbose)
-        {
-            if (result.RedirectCount > 0)
-                context.StandardOutput.WriteLine($"* Followed {result.RedirectCount} redirect(s)");
-            context.StandardOutput.WriteLine($"< HTTP/1.1 {result.StatusCode}");
-        }
-
-        if (result.NetworkError is not null)
-        {
-            context.StandardError.WriteLine($"curl: ({result.NetworkError}) Could not resolve host: {url}");
-            return 6;
+            if (response.RedirectCount > 0)
+                context.StandardOutput.WriteLine($"* Followed {response.RedirectCount} redirect(s) to {response.RequestUri}");
+            context.StandardOutput.WriteLine($"< HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
         }
 
         if (headersOnly)
         {
-            context.StandardOutput.WriteLine($"HTTP/1.1 {result.StatusCode}");
-            context.StandardOutput.WriteLine($"Content-Type: text/simulated");
-            context.StandardOutput.WriteLine($"X-Final-Url: {result.FinalUrl}");
+            context.StandardOutput.WriteLine($"HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}".TrimEnd());
+            foreach (KeyValuePair<string, string> header in response.Headers)
+            {
+                context.StandardOutput.WriteLine($"{header.Key}: {header.Value}");
+            }
+
             return 0;
         }
 
-        if (result.Page is not null)
-            SimulatedPageTextFormatter.WriteTo(context.StandardOutput, result.Page);
+        if (!response.IsSuccessStatusCode && response.StatusCode >= 400)
+        {
+            context.StandardError.WriteLine($"curl: (22) The requested URL returned error: {response.StatusCode}");
+            return 22;
+        }
 
-        return result.StatusCode < 400 ? 0 : 1;
+        string body = response.ReadAsString();
+        context.StandardOutput.Write(body);
+        if (body.Length > 0 && !body.EndsWith('\n'))
+        {
+            context.StandardOutput.WriteLine();
+        }
+
+        return 0;
     }
 
-    /// <summary>
-    /// Real-network fallback (ADR 0028/ADR 0034 Pass N+1a) for <c>curl -I</c> against a host the
-    /// simulated network doesn't recognize: a single HTTP HEAD proxy round-trip through the
-    /// optional server, when connected. <see cref="IProxyClient"/> is metadata-only, so this path
-    /// only ever serves <c>-I</c> — a normal body-fetching <c>curl</c> against an unknown host
-    /// still reports "Could not resolve host" via the caller's existing <c>NetworkError</c> path.
-    /// </summary>
-    private async ValueTask<int> CurlRealHostHeadAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
+    /// <summary>Parses <c>key=value&amp;key2=value2</c> into form fields, unescaping both sides.</summary>
+    private static List<KeyValuePair<string, string>> ParseForm(string data)
     {
-        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        if (state is null)
+        List<KeyValuePair<string, string>> fields = [];
+        foreach (string pair in data.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
-            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
-            return 6;
-        }
-
-        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (accessToken is null)
-        {
-            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
-            return 6;
-        }
-
-        try
-        {
-            ProxyHttpResponse response = await _proxy.ExecuteHttpRequestAsync(
-                new Uri(state.ServerBaseUrl),
-                accessToken,
-                new ProxyHttpRequest(Guid.NewGuid(), ProxyProtocol.Http, url, "HEAD", [], null, 0, 10, Manifest.Id),
-                cancellationToken).ConfigureAwait(false);
-
-            context.StandardOutput.WriteLine($"HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
-            foreach (ProxyHeader header in response.Headers)
+            int separator = pair.IndexOf('=');
+            if (separator > 0)
             {
-                context.StandardOutput.WriteLine($"{header.Name}: {header.Value}");
+                fields.Add(new(Uri.UnescapeDataString(pair[..separator]), Uri.UnescapeDataString(pair[(separator + 1)..])));
             }
-
-            return 0;
-        }
-        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
-        {
-            context.StandardError.WriteLine($"curl: (7) Failed to connect to {url}: {exception.Message}");
-            return 7;
-        }
-    }
-
-    /// <summary>
-    /// Real-network fallback for a plain GET against a host the simulated network doesn't
-    /// recognize: a real HTTP GET proxy round-trip through the optional server, when connected,
-    /// with the response body fetched and printed. Uses <see cref="IProxyClient"/>'s
-    /// <c>IncludeBody</c> extension — the server base64-encodes the already-fetched, already
-    /// size-capped body directly into the same response as the status/headers.
-    /// </summary>
-    private async ValueTask<int> CurlRealHostGetAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
-    {
-        ServerConnectionState? state = await _connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        if (state is null)
-        {
-            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
-            return 6;
         }
 
-        string? accessToken = await _connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (accessToken is null)
-        {
-            context.StandardError.WriteLine($"curl: (6) Could not resolve host: {url}");
-            return 6;
-        }
-
-        try
-        {
-            ProxyHttpResponse response = await _proxy.ExecuteHttpRequestAsync(
-                new Uri(state.ServerBaseUrl),
-                accessToken,
-                new ProxyHttpRequest(Guid.NewGuid(), ProxyProtocol.Http, url, "GET", [], null, 0, 10, Manifest.Id, IncludeBody: true),
-                cancellationToken).ConfigureAwait(false);
-
-            if (response.StatusCode >= 400)
-            {
-                context.StandardError.WriteLine($"curl: ({response.StatusCode}) {url}");
-                return 22;
-            }
-
-            if (response.BodyBase64 is not null)
-            {
-                byte[] bodyBytes = Convert.FromBase64String(response.BodyBase64);
-                string text = Encoding.UTF8.GetString(bodyBytes);
-                context.StandardOutput.Write(text);
-                if (!text.EndsWith('\n'))
-                {
-                    context.StandardOutput.WriteLine();
-                }
-            }
-
-            return 0;
-        }
-        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
-        {
-            context.StandardError.WriteLine($"curl: (7) Failed to connect to {url}: {exception.Message}");
-            return 7;
-        }
+        return fields;
     }
 }

@@ -1,6 +1,5 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Platform.Core.Shell;
 
 namespace HackerOs.Commands.Cd;
 

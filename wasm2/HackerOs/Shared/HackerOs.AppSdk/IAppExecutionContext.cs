@@ -156,6 +156,15 @@ public interface IAppExecutionContext
     IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
 
     /// <summary>
+    /// Gets this instance's network stack: resolution, ping, HTTP and TCP probes, with the OS's
+    /// real-network fallback (ADR 0056, section 6), read by <c>HackDns</c>, <c>HackPing</c>,
+    /// <c>HackHttpClient</c> and <c>HackTcpClient</c>. Defaults to an unsupported gateway so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    Net.IAppNetworkGateway Network => new Net.UnsupportedAppNetworkGateway();
+
+    /// <summary>
     /// Gets this instance's read access to the app catalog, behind <see cref="HackApps"/> (ADR 0056,
     /// section 2). Defaults to an unsupported gateway so existing implementations keep compiling; the
     /// trusted platform factory overrides it with a real implementation.
@@ -209,6 +218,21 @@ public interface IAppExecutionContext
     /// factory overrides it.
     /// </summary>
     IAppStorageDiagnosticsGateway StorageDiagnostics => UnsupportedAdministrationGateways.StorageDiagnostics;
+
+    /// <summary>
+    /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
+    /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
+    /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
+    /// compiling; the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    Shell.IAppShellHostGateway ShellHost => new UnsupportedAppShellHostGateway();
+
+    /// <summary>
+    /// Gets this instance's view of the mounted disks' space, behind <see cref="IO.HackDriveInfo"/>
+    /// (ADR 0057, section 7; no capability). Defaults to an unsupported gateway so existing
+    /// implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
 }
 
 /// <summary>
@@ -313,6 +337,13 @@ public static class UnsupportedAdministrationGateways
     }
 }
 
+/// <summary>Default <see cref="IAppExecutionContext.Drives"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
+{
+    public ValueTask<IReadOnlyList<IO.HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Drives gateway.");
+}
+
 /// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>
 file sealed class UnsupportedAppCatalogGateway : IAppCatalogGateway
 {
@@ -343,6 +374,13 @@ file sealed class UnsupportedAppManagementGateway : IAppManagementGateway
     public ValueTask<IReadOnlyList<string>> ReinstallAsync(
         string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.ShellHost"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppShellHostGateway : Shell.IAppShellHostGateway
+{
+    public Task<Shell.IHackShell> StartAsync(Shell.HackShellOptions options, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a ShellHost gateway.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Environment"/> for contexts with no live process environment.</summary>

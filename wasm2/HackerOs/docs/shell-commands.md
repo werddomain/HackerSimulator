@@ -124,8 +124,8 @@ sinon.
 
 `TerminalPanel` ne garde que l'édition de ligne, l'affichage, la complétion et
 les fenêtres d'identifiants. La complétion par Tab propose les noms et alias
-des commandes **installées** (`ShellInterpreter.GetInstalledCommands()`), comme
-`help`. `TerminalBuiltins` et le crochet `IShellBuiltins` de l'interpréteur ont
+des commandes **installées**, comme `help` ; depuis `4-sdk-shell-host`, c'est le
+shell qui la calcule (`IHackShell.CompleteAsync`, [`shell-host.md`](shell-host.md)). `TerminalBuiltins` et le crochet `IShellBuiltins` de l'interpréteur ont
 disparu.
 
 ## Décisions clés

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Schema;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.FileSystem;
@@ -16,13 +17,21 @@ internal sealed class IndexedDbFileContentRepository : IAsyncDisposable
     private readonly TimeProvider _timeProvider;
 
     /// <summary>Initializes the content repository with the accepted browser storage policy.</summary>
+    /// <param name="runtime">JavaScript runtime.</param>
+    /// <param name="policy">Chunk and file size limits.</param>
+    /// <param name="timeProvider">Clock stamping chunk creation times.</param>
+    /// <param name="disk">
+    /// Optional statistics of <c>hda</c>: a content write counts the bytes of its chunks, a content
+    /// read the bytes of the file (ADR 0057 section 4).
+    /// </param>
     internal IndexedDbFileContentRepository(
         IJSRuntime runtime,
         FileContentStoragePolicy? policy = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IBlockDeviceStatistics? disk = null)
     {
         ArgumentNullException.ThrowIfNull(runtime);
-        _adapter = new IndexedDbInteropAdapter(runtime);
+        _adapter = new IndexedDbInteropAdapter(runtime, disk);
         _policy = policy ?? FileContentStoragePolicy.Default;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -91,7 +100,8 @@ internal sealed class IndexedDbFileContentRepository : IAsyncDisposable
             Boundary,
             IndexedDbTransactionMode.ReadWrite,
             operations,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            ioBytes: length).ConfigureAwait(false);
         return new IndexedDbFileContentWrite(contentHash, length);
     }
 
@@ -112,7 +122,8 @@ internal sealed class IndexedDbFileContentRepository : IAsyncDisposable
                 HackerOsIndexedDbSchema.FileContentStoreName,
                 IndexName: "contentHash",
                 Query: contentHash)],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            ioBytes: expectedLength).ConfigureAwait(false);
         JsonElement records = results.Single();
         if (records.ValueKind != JsonValueKind.Array || records.GetArrayLength() == 0)
         {

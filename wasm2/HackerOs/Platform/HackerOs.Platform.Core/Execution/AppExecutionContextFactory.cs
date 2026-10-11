@@ -8,7 +8,11 @@ using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Intents;
+using HackerOs.Platform.Core.Network;
+using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -36,7 +40,12 @@ public sealed class AppExecutionContextFactory
     private readonly LogFileWriter? _logWriter;
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
+    private readonly Func<Shell.ShellHostService>? _shellHostProvider;
     private readonly AppCatalogGatewayServices? _appCatalog;
+    private readonly ISimulatedNetworkService? _network;
+    private readonly IServerConnectionService? _serverConnection;
+    private readonly IProxyClient? _proxy;
+    private readonly SystemMetricsServices? _metrics;
     private readonly SystemAdministrationGatewayServices? _administration;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
@@ -63,6 +72,24 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.AppManagement"/> gateways (ADR 0056, sections 2 and 3);
     /// <see langword="null"/> leaves both unsupported.
     /// </param>
+    /// <param name="network">
+    /// Simulated network behind <see cref="IAppExecutionContext.Network"/> (ADR 0056, section 6);
+    /// <see langword="null"/> leaves contexts without a network.
+    /// </param>
+    /// <param name="serverConnection">Optional server connection used by the real-network fallback.</param>
+    /// <param name="proxy">Optional server proxy client used by the real-network fallback.</param>
+    /// <param name="shellHostProvider">
+    /// Lazily resolves the service behind <see cref="IAppExecutionContext.ShellHost"/> (ADR 0056,
+    /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
+    /// interpreter depends on the orchestrator, which depends on this factory. Pass
+    /// <see langword="null"/> to leave shell hosting unsupported.
+    /// </param>
+    /// <param name="metrics">
+    /// Counters and drive information of ADR 0057: each app's network traffic is counted for
+    /// <c>/proc/net/dev</c> and its <c>/proc/&lt;pid&gt;/io</c>, and
+    /// <see cref="IAppExecutionContext.Drives"/> answers <c>HackDriveInfo</c>. <see langword="null"/>
+    /// counts nothing and leaves drives unsupported.
+    /// </param>
     /// <param name="administration">
     /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
     /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
@@ -83,6 +110,11 @@ public sealed class AppExecutionContextFactory
         IProcessEnvironmentTable? environments = null,
         Func<string>? machineName = null,
         AppCatalogGatewayServices? appCatalog = null,
+        ISimulatedNetworkService? network = null,
+        IServerConnectionService? serverConnection = null,
+        IProxyClient? proxy = null,
+        Func<Shell.ShellHostService>? shellHostProvider = null,
+        SystemMetricsServices? metrics = null,
         SystemAdministrationGatewayServices? administration = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
@@ -98,6 +130,11 @@ public sealed class AppExecutionContextFactory
         _environments = environments ?? (processManager as Processes.InMemoryProcessManager)?.Environments;
         _machineName = machineName ?? (static () => Processes.LoginEnvironment.DefaultHostName);
         _appCatalog = appCatalog;
+        _network = network;
+        _serverConnection = serverConnection;
+        _proxy = proxy;
+        _shellHostProvider = shellHostProvider;
+        _metrics = metrics;
         _administration = administration;
     }
 
@@ -215,6 +252,18 @@ public sealed class AppExecutionContextFactory
             principal.DisplayName,
             catalogGateway,
             managementGateway,
+            _network is null
+                ? null
+                : new AppNetworkGateway(
+                    _network,
+                    capabilities,
+                    manifest.Id,
+                    _serverConnection,
+                    _proxy,
+                    _metrics?.Network,
+                    _metrics?.ProcessIo,
+                    process.Pid),
+            _metrics?.Drives,
             administration.SystemSettings,
             administration.Permissions,
             administration.ServerConnection,
@@ -226,6 +275,20 @@ public sealed class AppExecutionContextFactory
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
         administration.SystemSettings?.BindAmbientContext(context);
+
+        if (_shellHostProvider is not null)
+        {
+            // ADR 0056 section 7: the shell is a child process of this one, with this instance's
+            // capabilities for its own redirections and the same root elevation, if any.
+            context.ShellHost = new AppShellHostGateway(
+                _shellHostProvider,
+                capabilities,
+                principal,
+                () => context,
+                shellProcess => Create(
+                    Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
+                    shellProcess.AppInstanceId.Value, isRootElevated));
+        }
         return context;
     }
 
@@ -313,3 +376,14 @@ public sealed record AppCatalogGatewayServices(
     Func<Intents.FileAssociationResolver>? FileAssociations = null,
     Func<Apps.IAppInstallationService>? Installation = null,
     Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+
+/// <summary>
+/// Services behind the measurements of ADR 0057 that the factory hands to each context.
+/// </summary>
+/// <param name="Network">Interface counters charged with each app's traffic (<c>/proc/net/dev</c>).</param>
+/// <param name="ProcessIo">Per-process I/O accounting charged with each app's traffic (<c>/proc/&lt;pid&gt;/io</c>).</param>
+/// <param name="Drives">Drive information behind <see cref="IAppExecutionContext.Drives"/>; shared by every context.</param>
+public sealed record SystemMetricsServices(
+    INetworkInterfaceStatistics? Network = null,
+    IProcessIoAccounting? ProcessIo = null,
+    HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null);

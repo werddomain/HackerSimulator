@@ -1,29 +1,22 @@
 @namespace HackerOs.AppSdk.Terminal
-@using HackerOs.App.Abstractions
-@using HackerOs.App.Abstractions.Policy
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.IO
+@using HackerOs.AppSdk.Shell
 @using HackerOs.AppSdk.VirtualKeyboard
-@using HackerOs.Platform.Core
-@using HackerOs.Platform.Core.Shell
 @using HackerOs.Simulation.Abstractions.Diagnostics
-@using HackerOs.Simulation.Abstractions.FileSystem
-@using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
-@inject ShellInterpreter Shell
-@inject ISessionService SessionService
 @inject IJSRuntime JavaScript
 @inject IDialogService Dialogs
-@inject IElevationService Elevation
 
 @*
-    Reusable terminal control (session/shell/rendering) extracted from the standalone Terminal app so
-    any WindowAppBase-hosted app can embed a shell. The host supplies its own AppContext (filesystem,
-    cancellation, logging scoped to that app instance): its process is the shell's process (ADR 0050),
-    parent of every command, and its working directory is the shell's. Line editing and display stay
-    here; parsing, expansion, pipes and redirections are the headless ShellInterpreter's. See
+    Reusable terminal emulator (line editing, display, alternate screen) any WindowAppBase-hosted app
+    can embed. It hosts an hsh shell through the public SDK only (HackShell, capability shell.host,
+    ADR 0056 section 7): the shell is a child process of the host app (ADR 0050), each panel has its
+    own, and every command is a child of that shell. Parsing, expansion, pipes, redirections and
+    completion are the shell's; credentials typed here are verified by the OS. See
     Apps/System/HackerOs.Apps.Terminal for the thin standalone host, and HackerOs.Apps.CodeEditor for
     an embedded usage.
 *@
@@ -81,21 +74,21 @@
     public IAppExecutionContext AppContext { get; set; } = default!;
 
     /// <summary>
-    /// Gets or sets the app id of the hosting app. Kept for compatibility: the shell now runs in
+    /// Gets or sets the app id of the hosting app. Kept for compatibility: the shell's parent is
     /// <see cref="AppContext"/>'s own process, which already identifies the host.
     /// </summary>
     [Parameter]
     public string CallerAppId { get; set; } = "org.hackeros.terminal";
 
-    /// <summary>Gets or sets the username used until the authenticated principal initializes the session.</summary>
+    /// <summary>Gets or sets the username shown in the prompt until the shell has started.</summary>
     [Parameter]
     public string InitialUsername { get; set; } = "user";
 
     /// <summary>
-    /// Gets or sets the starting working directory. When null, the shell starts in its process's
-    /// directory (the home directory for an app launched from the desktop). When set, the shell's
-    /// process changes to it at start — e.g. CodeEditor opens new terminal tabs in whatever folder it
-    /// has open; tabs of one host share that process's directory, as threads of a process do.
+    /// Gets or sets the shell's starting directory. When null (or missing), the shell starts in the
+    /// host app's directory (the home directory for an app launched from the desktop). E.g.
+    /// CodeEditor opens new terminal tabs in whatever folder it has open. Each panel's shell is its
+    /// own process: a <c>cd</c> in one tab never moves another.
     /// </summary>
     [Parameter]
     public string? InitialCwd { get; set; }
@@ -121,7 +114,9 @@
     private ElementReference _inputRef;
     private ElementReference _terminalContainerRef;
     private TerminalScreen? _screenComponent;
-    private ShellSession? _session;
+    private IHackShell? _shell;
+    private TerminalCredentialPrompt? _credentialPrompt;
+    private string? _lastCompletionLine;
     private readonly List<TerminalOutputLine> _lines = [];
     private readonly object _linesSync = new();
     private string _inputBuffer = string.Empty;
@@ -135,33 +130,33 @@
     private IJSObjectReference? _module;
     private IJSObjectReference? _resizeObserver;
     private DotNetObjectReference<TerminalPanel>? _dotNetReference;
-    private TerminalDangerousCapabilityApprovalPrompt? _approvalPrompt;
+    private string? _startError;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // ADR 0049 section 5: a third-party command's pending dangerous capabilities are asked
-        // here, in text mode, rather than with the desktop overlay.
-        _approvalPrompt = new TerminalDangerousCapabilityApprovalPrompt(Dialogs, AppContext, WriteApprovalLineAsync);
-        if (SessionService.CurrentPrincipal is { } principal)
+        // sudo, the one-shot approval (ADR 0042) and a third-party command's dangerous
+        // capabilities (ADR 0049 section 5) are asked here, in text mode; the OS verifies.
+        _credentialPrompt = new TerminalCredentialPrompt(Dialogs, AppContext, WriteApprovalLineAsync);
+        try
         {
-            // ADR 0050: the shell's process is the hosting app's; its directory is the shell's.
-            _session = new ShellSession(AppContext, principal);
-            if (InitialCwd is not null)
+            _shell = await HackShell.StartAsync(AppContext, new HackShellOptions
             {
-                try
-                {
-                    AppContext.Environment.SetCurrentDirectory(VirtualPath.Parse(InitialCwd));
-                }
-                catch (Exception exception) when (exception is NotSupportedException or FormatException or ArgumentException)
-                {
-                    // A host with no live process environment keeps its directory.
-                }
-            }
+                WorkingDirectory = InitialCwd,
+                CredentialPrompt = _credentialPrompt
+            }, AppContext.CancellationToken);
+        }
+        catch (Exception exception) when (exception is HackUnauthorizedAccessException or NotSupportedException or InvalidOperationException)
+        {
+            // The host lacks shell.host, or runs without a platform: show why, as a terminal whose
+            // shell failed to exec prints the error and stays open.
+            _startError = $"hsh: cannot start the shell: {exception.Message}";
+            AppContext.Logging.Log(DiagnosticSeverity.Error, _startError);
+            AddLine(new TerminalOutputLine(string.Empty, _startError, OutputType.Error));
         }
     }
 
     /// <summary>Gets the prompt, from the shell's process (user, /etc/hostname, directory).</summary>
-    private string Prompt => _session?.GetPrompt() ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
+    private string Prompt => _shell?.Prompt ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -215,7 +210,7 @@
         }
         else if (args.Key == "ArrowUp")
         {
-            string? previous = _session?.NavigateHistory(-1);
+            string? previous = _shell?.NavigateHistory(-1);
             if (previous is not null)
             {
                 _inputBuffer = previous;
@@ -223,7 +218,7 @@
         }
         else if (args.Key == "ArrowDown")
         {
-            string? next = _session?.NavigateHistory(1);
+            string? next = _shell?.NavigateHistory(1);
             if (next is not null)
             {
                 _inputBuffer = next;
@@ -247,7 +242,7 @@
         }
         else if (args.Key == "Tab")
         {
-            AutoCompleteInput();
+            await AutoCompleteInputAsync();
         }
     }
 
@@ -298,19 +293,19 @@
                 await ExecuteInputAsync();
                 break;
             case VirtualKey.ArrowUp:
-                if (_session?.NavigateHistory(-1) is { } previous)
+                if (_shell?.NavigateHistory(-1) is { } previous)
                 {
                     _inputBuffer = previous;
                 }
                 break;
             case VirtualKey.ArrowDown:
-                if (_session?.NavigateHistory(1) is { } next)
+                if (_shell?.NavigateHistory(1) is { } next)
                 {
                     _inputBuffer = next;
                 }
                 break;
             case VirtualKey.Tab:
-                AutoCompleteInput();
+                await AutoCompleteInputAsync();
                 break;
             case VirtualKey.Escape:
                 _inputBuffer = string.Empty;
@@ -368,13 +363,13 @@
         }
 
         AddLine(new TerminalOutputLine(Prompt, rawLine, OutputType.Input));
-        if (_session is null)
+        if (_shell is null || _shell.HasExited)
         {
-            AddLine(new TerminalOutputLine(string.Empty, "hsh: no user session", OutputType.Error));
+            AddLine(new TerminalOutputLine(string.Empty, _startError ?? "hsh: the shell has exited", OutputType.Error));
             return;
         }
 
-        _session.AddHistory(rawLine);
+        _shell.AddHistory(rawLine);
         _activeCts = new CancellationTokenSource();
         _stdoutDecoder = new TerminalControlSequenceDecoder();
         _stderrDecoder = new TerminalControlSequenceDecoder();
@@ -382,26 +377,25 @@
         try
         {
             // ADR 0050 section 4: output is shown as commands produce it, not when they exit.
-            await Shell.ExecuteAsync(
-                _session,
+            // sudo and approvals come back through the credential prompt given at start.
+            await _shell.ExecuteAsync(
                 rawLine,
-                new ShellExecutionOptions
+                new HackShellExecution
                 {
                     StandardOutput = new TerminalOutputWriter(text => AppendOutput(text, OutputType.Stdout)),
                     StandardError = new TerminalOutputWriter(text => AppendOutput(text, OutputType.Stderr)),
-                    FullScreen = _fullScreenSession,
-                    ApprovalPrompt = _approvalPrompt,
-                    // ADR 0051 section 4: the catalog's sudo asks the shell, which asks here.
-                    CredentialPrompt = RequestSudoAsync,
-                    PermissionApproval = RequestPermissionApprovalAsync
+                    FullScreen = _fullScreenSession
                 },
                 _activeCts.Token);
+        }
+        catch (ObjectDisposedException)
+        {
+            AddLine(new TerminalOutputLine(string.Empty, "hsh: the shell has exited", OutputType.Error));
         }
         catch (Exception ex)
         {
             AppContext.Logging.Log(DiagnosticSeverity.Error, $"Shell fault: {ex.Message}");
             AddLine(new TerminalOutputLine(string.Empty, $"Fault: {ex.Message}", OutputType.Error));
-            _session.LastExitCode = 1;
         }
         finally
         {
@@ -411,40 +405,6 @@
             _activeCts.Dispose();
             _activeCts = null;
         }
-    }
-
-    /// <summary>
-    /// The credential window behind <c>sudo</c> (ADR 0042, ADR 0051 section 4): an administrator's
-    /// login and password mint a single-use <c>SudoRoot</c> ticket.
-    /// </summary>
-    private async Task<ShellElevation?> RequestSudoAsync(string description, CancellationToken cancellationToken)
-    {
-        ElevationRequestResult? approval = await RequestElevationAsync(
-            "Administrator Authorization Required",
-            description,
-            (loginName, password, ct) => Elevation.RequestSudoAsync(loginName, password, ct));
-
-        return approval is { Success: true, Token: Guid token }
-            ? new ShellElevation(token, ElevationScope.SudoRoot)
-            : null;
-    }
-
-    /// <summary>
-    /// ADR 0042: offers an administrator's one-shot approval when a lone command failed on a
-    /// permission denial; the shell reruns it with the ticket.
-    /// </summary>
-    private async Task<ShellElevation?> RequestPermissionApprovalAsync(ShellPermissionDenial denial, CancellationToken cancellationToken)
-    {
-        FileSystemError denied = denial.Error;
-        ElevationRequestResult? approval = await RequestElevationAsync(
-            "Permission Denied — Request Approval?",
-            $"'{denial.CommandName}' was denied {denied.Code} on '{denied.Path}'. Approve this one operation?",
-            (loginName, password, ct) => Elevation.RequestCapabilityApprovalAsync(
-                loginName, password, denied.RequiredCapability!, denied.Path, ct));
-
-        return approval is { Success: true, Token: Guid token }
-            ? new ShellElevation(token, ElevationScope.CapabilityApproval)
-            : null;
     }
 
     /// <summary>
@@ -522,37 +482,13 @@
         }
     }
 
-    /// <summary>
-    /// Prompts for an enabled Administrator's credentials and, if submitted, verifies them and mints
-    /// the requested elevation ticket via <paramref name="requestTicket"/> (`ADR 0042`). Returns null
-    /// if the prompt was cancelled; otherwise the (possibly unsuccessful) verification result.
-    /// </summary>
-    private async Task<ElevationRequestResult?> RequestElevationAsync(
-        string title,
-        string description,
-        Func<string, string, CancellationToken, Task<ElevationRequestResult>> requestTicket)
-    {
-        CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest
-        {
-            Title = title,
-            Description = description
-        });
-
-        if (prompt.Status != CredentialPromptStatus.Submitted)
-        {
-            return null;
-        }
-
-        return await requestTicket(prompt.LoginName!, prompt.Password!, AppContext.CancellationToken);
-    }
-
-    /// <summary>Appends one line of the text-mode dangerous-capability approval (ADR 0049) and re-renders.</summary>
-    private Task WriteApprovalLineAsync(string text, TerminalApprovalLineKind kind)
+    /// <summary>Appends one line the OS writes through the credential prompt (approval banner, "Sorry, try again.") and re-renders.</summary>
+    private Task WriteApprovalLineAsync(string text, HackPromptLineKind kind)
     {
         AddLine(new TerminalOutputLine(string.Empty, text, kind switch
         {
-            TerminalApprovalLineKind.Warning => OutputType.Stderr,
-            TerminalApprovalLineKind.Error => OutputType.Error,
+            HackPromptLineKind.Warning => OutputType.Stderr,
+            HackPromptLineKind.Error => OutputType.Error,
             _ => OutputType.System
         }));
         return InvokeAsync(StateHasChanged);
@@ -577,23 +513,45 @@
         }
     }
 
-    private void AutoCompleteInput()
+    /// <summary>
+    /// Tab: the shell completes the word before the cursor (ADR 0058, section 4), as <c>bash</c>
+    /// does. One candidate is inserted; several insert their common prefix, and a second Tab on the
+    /// same line lists them under the prompt.
+    /// </summary>
+    private async Task AutoCompleteInputAsync()
     {
-        if (string.IsNullOrWhiteSpace(_inputBuffer))
+        if (_shell is null || _shell.HasExited)
         {
             return;
         }
 
-        // ADR 0051 section 2: completion knows no command name of its own; it offers the
-        // installed commands and their aliases, exactly what the shell can run.
-        IEnumerable<string> candidates = Shell.GetInstalledCommands()
-            .SelectMany(command => command.Aliases.Prepend(command.Name));
-
-        string matches = candidates.FirstOrDefault(c => c.StartsWith(_inputBuffer, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
-        if (!string.IsNullOrEmpty(matches))
+        string line = _inputBuffer;
+        HackShellCompletion completion;
+        try
         {
-            _inputBuffer = matches;
+            completion = await _shell.CompleteAsync(line, line.Length);
         }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        _inputBuffer = completion.ApplyTo(line, out _);
+        if (completion.Candidates.Count > 1 && _inputBuffer == line)
+        {
+            if (_lastCompletionLine == line)
+            {
+                AddLine(new TerminalOutputLine(Prompt, line, OutputType.Input));
+                AddLine(new TerminalOutputLine(string.Empty, string.Join("  ", completion.Candidates), OutputType.System));
+                _lastCompletionLine = null;
+                return;
+            }
+
+            _lastCompletionLine = line;
+            return;
+        }
+
+        _lastCompletionLine = null;
     }
 
     /// <summary>Receives character-cell dimensions from the collocated resize observer.</summary>
@@ -609,6 +567,9 @@
     public async ValueTask DisposeAsync()
     {
         _activeCts?.Cancel();
+        // Closing the panel ends its shell's process and every command still running in it.
+        if (_shell is not null)
+            await _shell.DisposeAsync();
         if (_fullScreenSession is not null)
             await _fullScreenSession.DisposeAsync();
         if (_resizeObserver is not null)

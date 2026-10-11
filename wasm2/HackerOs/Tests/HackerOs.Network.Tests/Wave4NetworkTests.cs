@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using HackerOs.App.Abstractions;
+using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Net;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Curl;
 using HackerOs.Commands.Nmap;
@@ -23,7 +25,7 @@ namespace HackerOs.Network.Tests;
 /// Validates DNS resolution, website controllers, cookie sessions, redirects,
 /// ping/nmap/curl commands, and proves zero real external network calls.
 /// </summary>
-public sealed class Wave4NetworkTests
+public sealed partial class Wave4NetworkTests
 {
     private readonly InMemorySimulatedNetworkService _network;
 
@@ -145,7 +147,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task PingCommand_ExecutesSuccessfully_ForUpHost()
     {
-        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -163,7 +166,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task PingCommand_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new PingCommand(AppDefinitionMapper.ToManifest(new PingApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -178,7 +182,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task NmapCommand_ScansPorts_And_FormatsOutput()
     {
-        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -200,7 +205,8 @@ public sealed class Wave4NetworkTests
     {
         // A port range (the default, or an explicit "-p 1-100") must never trigger a real probe --
         // only an explicit single port does. UnusedProxyClient throws if called, proving this.
-        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -215,7 +221,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task NmapCommand_SinglePortAgainstUnknownHost_WithoutServerConnection_ReportsHostDown()
     {
-        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -234,11 +241,8 @@ public sealed class Wave4NetworkTests
     public async Task NmapCommand_SinglePortAgainstUnknownHost_WithServerConnection_UsesRealTcpProbe(
         ProxyTcpProbeState probeState, string expectedLabel)
     {
-        var cmd = new NmapCommand(
-            AppDefinitionMapper.ToManifest(new NmapApp()),
-            _network,
-            new ConnectedServerConnectionService(),
-            new SuccessTcpProbeProxyClient(probeState));
+        UseServer(new ConnectedServerConnectionService(), new SuccessTcpProbeProxyClient(probeState));
+        var cmd = new NmapCommand(AppDefinitionMapper.ToManifest(new NmapApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -255,7 +259,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FetchesPage_And_PrintsSections()
     {
-        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -273,7 +278,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_WithHeadersOnly_PrintsHttpStatus()
     {
-        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -291,7 +297,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_HeadersOnly_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -306,11 +313,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_HeadersOnly_UnknownHost_WithServerConnection_UsesRealProxyHead()
     {
-        var cmd = new CurlCommand(
-            AppDefinitionMapper.ToManifest(new CurlApp()),
-            _network,
-            new ConnectedServerConnectionService(),
-            new SuccessProxyClient());
+        UseServer(new ConnectedServerConnectionService(), new SuccessProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -329,7 +333,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FullBody_UnknownHost_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()), _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -344,11 +349,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FullBody_UnknownHost_WithServerConnection_FetchesRealBody()
     {
-        var cmd = new CurlCommand(
-            AppDefinitionMapper.ToManifest(new CurlApp()),
-            _network,
-            new ConnectedServerConnectionService(),
-            new SuccessBodyProxyClient(200, "hello from the real internet"));
+        UseServer(new ConnectedServerConnectionService(), new SuccessBodyProxyClient(200, "hello from the real internet"));
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -363,11 +365,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CurlCommand_FullBody_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
     {
-        var cmd = new CurlCommand(
-            AppDefinitionMapper.ToManifest(new CurlApp()),
-            _network,
-            new ConnectedServerConnectionService(),
-            new SuccessBodyProxyClient(404, "Not Found"));
+        UseServer(new ConnectedServerConnectionService(), new SuccessBodyProxyClient(404, "Not Found"));
+        var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -400,7 +399,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CatCommand_KnownSimulatedHostUrl_RendersPageLikeCurl()
     {
-        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CatCommand(CatManifest);
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -415,7 +415,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CatCommand_UnknownHostUrl_WithoutServerConnection_ReportsCannotResolve()
     {
-        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CatCommand(CatManifest);
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -430,11 +431,8 @@ public sealed class Wave4NetworkTests
     [Fact]
     public async Task CatCommand_UnknownHostUrl_WithServerConnection_FetchesRealBody()
     {
-        var cmd = new CatCommand(
-            CatManifest,
-            _network,
-            new ConnectedServerConnectionService(),
-            new SuccessBodyProxyClient(200, "hello from the real internet"));
+        UseServer(new ConnectedServerConnectionService(), new SuccessBodyProxyClient(200, "hello from the real internet"));
+        var cmd = new CatCommand(CatManifest);
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -454,7 +452,8 @@ public sealed class Wave4NetworkTests
         // this test uses as a routing probe -- reaching it (rather than NotSupportedException from
         // UnusedProxyClient/NeverConnectedServerConnectionService) proves the argument was never
         // treated as a URL.
-        var cmd = new CatCommand(CatManifest, _network, new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        UseServer(new NeverConnectedServerConnectionService(), new UnusedProxyClient());
+        var cmd = new CatCommand(CatManifest);
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
@@ -486,13 +485,32 @@ public sealed class Wave4NetworkTests
 
     // ── Helper ─────────────────────────────────────────────────────────────
 
-    private static TerminalExecutionContext CreateContext(
+    private IServerConnectionService _serverConnection = new NeverConnectedServerConnectionService();
+    private IProxyClient _proxy = new UnusedProxyClient();
+
+    /// <summary>Sets the optional-server state the OS network gateway of the next context sees.</summary>
+    private void UseServer(IServerConnectionService serverConnection, IProxyClient proxy)
+    {
+        _serverConnection = serverConnection;
+        _proxy = proxy;
+    }
+
+    /// <summary>
+    /// Builds a terminal context whose app has the ping/curl/nmap/cat capabilities and a real
+    /// <see cref="AppNetworkGateway"/>, and makes it ambient for the rest of the calling test, as the
+    /// OS does before running a command (ADR 0043). Called synchronously, so the scope set here stays
+    /// on the test's own flow.
+    /// </summary>
+    private TerminalExecutionContext CreateContext(
         string[] args,
         TextWriter stdout,
         TextWriter stderr)
     {
         var manifest = AppDefinitionMapper.ToManifest(new PingApp());
-        var app = new StubAppExecutionContext(manifest);
+        var app = new StubAppExecutionContext(
+            manifest,
+            new AppNetworkGateway(_network, new GrantAllCapabilityChecker(), manifest.Id, _serverConnection, _proxy));
+        HackExecutionContext.Enter(app);
 
         return new TerminalExecutionContext(
             app: app,
@@ -506,8 +524,14 @@ public sealed class Wave4NetworkTests
 
     private sealed class StubAppExecutionContext : IAppExecutionContext
     {
-        public StubAppExecutionContext(AppManifest manifest) => Manifest = manifest;
+        public StubAppExecutionContext(AppManifest manifest, IAppNetworkGateway network)
+        {
+            Manifest = manifest;
+            Network = network;
+        }
+
         public AppManifest Manifest { get; }
+        public IAppNetworkGateway Network { get; }
         public Guid InstanceId { get; } = Guid.NewGuid();
         public string UserId => "user";
         public AppAuthority UserAuthority => AppAuthority.User;
@@ -522,6 +546,30 @@ public sealed class Wave4NetworkTests
         public IAppLoggingGateway Logging => throw new NotImplementedException();
         public IAppClockGateway Clock => throw new NotImplementedException();
         public IAppProcessGateway Processes => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Grants every capability except <paramref name="denied"/>, as the OS does for the system app
+    /// <c>HackerOs.Commands</c> when nothing is denied.
+    /// </summary>
+    private sealed class GrantAllCapabilityChecker(params string[] denied) : ICapabilityChecker
+    {
+        public CapabilityPolicyEvaluation Evaluate(
+            string capability, AppAuthority requiredAuthority = AppAuthority.User, CapabilityResourceCandidate? resourceCandidate = null) =>
+            denied.Contains(capability)
+                ? CapabilityPolicyEvaluation.DenyMissing(1)
+                : CapabilityPolicyEvaluation.Permit(new CapabilityGrant(
+                    CapabilityGrantId.FromGuid(Guid.NewGuid()), "org.hackeros.test", "user", capability, 1, CapabilityGrantSource.UserApproval));
+
+        public void Require(
+            string capability, AppAuthority requiredAuthority = AppAuthority.User, CapabilityResourceCandidate? resourceCandidate = null)
+        {
+            CapabilityPolicyEvaluation evaluation = Evaluate(capability, requiredAuthority, resourceCandidate);
+            if (!evaluation.Granted)
+            {
+                throw new AppGatewayAccessDeniedException(capability, evaluation);
+            }
+        }
     }
 
     /// <summary>Fake used only to prove the pure-simulation path is unaffected: this device is never connected.</summary>

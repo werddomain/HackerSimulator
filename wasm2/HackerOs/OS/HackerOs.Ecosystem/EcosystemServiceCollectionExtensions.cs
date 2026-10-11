@@ -23,6 +23,7 @@ using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
@@ -43,6 +44,7 @@ using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Notifications;
@@ -155,7 +157,28 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<ITopicMessageBus>(provider =>
             new InMemoryTopicMessageBus(provider.GetRequiredService<ICapabilityGrantRepository>()));
 
-        services.AddScoped<IndexedDbFileSystemProvider>();
+        // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
+        // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
+        // the persistence, the filesystem service and each app's network gateway.
+        services.AddScoped<IProcessIoAccounting, ProcessIoAccounting>();
+        services.AddScoped<IBlockDeviceStatistics>(_ => new BlockDeviceStatistics());
+        services.AddScoped<INetworkInterfaceStatistics, NetworkInterfaceStatistics>();
+        services.AddScoped<ICpuTimeAccounting>(provider =>
+        {
+            AppCatalog catalog = provider.GetRequiredService<AppCatalog>();
+            // System time: system services, and processes the catalog does not know (OS-owned).
+            return new CpuTimeAccounting(
+                VirtualHardwareProfile.Default,
+                process => !catalog.Manifests.ContainsKey(process.AppId)
+                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)));
+        });
+
+        services.AddScoped<IndexedDbFileSystemProvider>(provider => new IndexedDbFileSystemProvider(
+            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
+            provider.GetRequiredService<IBlockDeviceStatistics>()));
+        services.AddScoped<IStorageUsageProvider>(provider => new IndexedDbStorageUsageProvider(
+            provider.GetRequiredService<IndexedDbFileSystemProvider>(),
+            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<IndexedDbFileSystemBootstrapper>();
         services.AddScoped<IFileSystemProvider>(provider =>
             provider.GetRequiredService<IndexedDbFileSystemProvider>());
@@ -174,7 +197,13 @@ public static class EcosystemServiceCollectionExtensions
                         && principal.UserId == process.UserId
                             ? principal.LoginName.Value
                             : null,
-                    environments: () => provider.GetRequiredService<IProcessEnvironmentTable>())),
+                    environments: () => provider.GetRequiredService<IProcessEnvironmentTable>(),
+                    metrics: new ProcMetricsSources(
+                        provider.GetRequiredService<ICpuTimeAccounting>(),
+                        provider.GetRequiredService<IProcessIoAccounting>(),
+                        provider.GetRequiredService<IBlockDeviceStatistics>(),
+                        provider.GetRequiredService<INetworkInterfaceStatistics>(),
+                        () => provider.GetRequiredService<IFileSystemMountRouter>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -363,6 +392,14 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),
             VirtualHardwareProfile.Default));
+        // The scheduler tick: samples every process once per simulated second (ADR 0057), started
+        // by the boot sequence next to the clock driver.
+        services.AddScoped<ResourceSamplingService>(provider => new ResourceSamplingService(
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IResourceSimulator>(),
+            () => provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<ICpuTimeAccounting>(),
+            provider.GetRequiredService<IProcessIoAccounting>()));
 
         services.AddScoped<IndexedDbAppCatalogRepository>();
         services.AddScoped<IPersistentAppCatalogRepository>(provider =>
@@ -389,6 +426,10 @@ public static class EcosystemServiceCollectionExtensions
             logWriter: provider.GetRequiredService<LogFileWriter>(),
             environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
             machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // ADR 0056 section 6: each app's Network gateway, with the OS-owned real-network fallback.
+            network: provider.GetRequiredService<ISimulatedNetworkService>(),
+            serverConnection: provider.GetRequiredService<IServerConnectionService>(),
+            proxy: provider.GetRequiredService<IProxyClient>(),
             // HackApps / HackAppManagement (ADR 0056 sections 2 and 3). Lazy for the same reason:
             // the installation service depends on the orchestrator, which depends on this factory.
             appCatalog: new AppCatalogGatewayServices(
@@ -397,6 +438,16 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<FileAssociationResolver>(),
                 () => provider.GetRequiredService<IAppInstallationService>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+            // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
+            shellHostProvider: () => provider.GetRequiredService<ShellHostService>(),
+            // ADR 0057: traffic counters for /proc/net/dev and /proc/<pid>/io, and HackDriveInfo.
+            metrics: new SystemMetricsServices(
+                provider.GetRequiredService<INetworkInterfaceStatistics>(),
+                provider.GetRequiredService<IProcessIoAccounting>(),
+                new AppDriveGateway(
+                    () => provider.GetRequiredService<IFileSystemMountRouter>(),
+                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<IStorageUsageProvider>())),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
             // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
             administration: new SystemAdministrationGatewayServices(
@@ -470,6 +521,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>()));
+        // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
+        services.AddScoped<ShellHostService>(provider => new ShellHostService(
+            provider.GetRequiredService<ShellInterpreter>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IElevationService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),

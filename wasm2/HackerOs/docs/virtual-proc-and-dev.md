@@ -18,7 +18,7 @@ Code : `Platform/HackerOs.Platform.Core/FileSystem/Virtual/`.
 | --- | --- |
 | `IVirtualFileSystemProvider` | Marqueur d'un fournisseur calculé, jamais persisté. `FileSystemService` n'émet aucun `FileSystemChangeEvent` pour ses chemins. |
 | `VirtualFileSystemProvider` | Base commune : identité stable (SHA-256 de `"<providerId>:<chemin>"`), révision = `CurrentTick + 1`, refus `PermissionDenied` de toute création, suppression, déplacement, copie et `chmod`. |
-| `ProcFileSystemProvider` (`procfs`) | Monté sur `/proc`. Lit `IProcessManager`, `IResourceSimulator`, `VirtualHardwareProfile` et `ISimulationClock`. |
+| `ProcFileSystemProvider` (`procfs`) | Monté sur `/proc`. Lit `IProcessManager`, `IResourceSimulator`, `VirtualHardwareProfile` et `ISimulationClock`, et les compteurs de `ProcMetricsSources` (ADR 0057, [`system-metrics.md`](system-metrics.md)). |
 | `DevFileSystemProvider` (`devfs`) | Monté sur `/dev`. Quatre entrées `CharacterDevice` en `0666`. |
 
 Branchement : `EcosystemServiceCollectionExtensions` passe les deux montages au
@@ -52,11 +52,17 @@ Contrats touchés :
 | `/proc/<pid>/cmdline` | fichier `0444` | arguments séparés et terminés par NUL ([`process-environment.md`](process-environment.md)) ; `appId\0` sans entrée d'environnement |
 | `/proc/<pid>/environ` | fichier `0400` | paires `NOM=valeur` terminées par NUL (phase 3) ; vide sans entrée |
 | `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
+| `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
 | `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
 | `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
+| `/proc/stat` | fichier `0444` | lignes `cpu` et `cpuN` en `USER_HZ`, `btime`, `processes`, `procs_running`, `procs_blocked` (phase 4) |
+| `/proc/diskstats` | fichier `0444` | une ligne pour `hda` (majeur 8, mineur 0), 14 champs (phase 4) |
+| `/proc/net/` | dossier `0555` | contient `dev` |
+| `/proc/net/dev` | fichier `0444` | en-tête du noyau, une ligne pour `lo` et une pour `eth0` (phase 4) |
+| `/proc/mounts` | fichier `0444` | une ligne par montage, format `fstab` (phase 4) |
 
 Exemple de `/proc/42/status` :
 
@@ -89,6 +95,53 @@ Choix de calcul :
 - Horodatages : démarrage du processus pour `/proc/<pid>`, démarrage de l'OS
   (`maintenant − tick × durée du tick`) sinon ; le contenu des fichiers est daté
   de maintenant. La taille des fichiers est toujours `0`.
+
+Fichiers de mesure (phase 4, [ADR 0057](adr/0057-proc-metrics-for-task-manager.md)).
+Leurs compteurs et la façon dont ils sont pris sont décrits dans
+[`system-metrics.md`](system-metrics.md). Exemples :
+
+```text
+$ cat /proc/stat
+cpu  4705 0 1210 93620 0 0 0 0 0 0
+cpu0 2402 0 611 46790 0 0 0 0 0 0
+cpu1 2303 0 599 46830 0 0 0 0 0 0
+btime 1791640800
+processes 312
+procs_running 3
+procs_blocked 0
+
+$ cat /proc/42/io
+rchar: 18342
+wchar: 2210
+syscr: 12
+syscw: 3
+read_bytes: 16384
+write_bytes: 2048
+cancelled_write_bytes: 0
+
+$ cat /proc/diskstats
+   8       0 hda 1204 0 9632 410 388 0 3104 220 0 630 630
+
+$ cat /proc/net/dev
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+  eth0:  482113     214    3    0    0     0          0         0    38211     214    0    0    0     0       0          0
+
+$ cat /proc/mounts
+/dev/hda / idbfs rw 0 0
+devfs /dev devfs rw 0 0
+proc /proc proc ro 0 0
+```
+
+- `stat` cumule le temps CPU simulé depuis le démarrage : un lecteur calcule
+  l'usage par différence entre deux lectures, comme `top`. `processes` est le
+  dernier PID attribué (les PID sont attribués dans l'ordre depuis 1).
+- `io` suit la règle de visibilité d'`environ` : le propriétaire, ou l'autorité
+  `System`.
+- Depuis la phase 4, `ResourceSamplingService` fait avancer le simulateur chaque
+  seconde simulée : `status`, `meminfo`, `uptime` et `loadavg` ne restent plus à
+  zéro dans un hôte réel.
 
 Visibilité : seuls les processus actifs apparaissent. L'appelant voit toujours
 son propre processus, et les autres avec `process.list` ou l'autorité `System`.
@@ -140,6 +193,8 @@ pour agir.
   stockage, et aucune écriture dans le dépôt racine.
 - `Tests/HackerOs.Commands.Wave5.Tests/PsCommandTests.cs` : `ps` contre le vrai
   fournisseur `/proc`.
+- `Tests/HackerOs.Platform.Core.Tests/FileSystem/Virtual/ProcMetricsTests.cs` :
+  fichiers de mesure de la phase 4 (voir [`system-metrics.md`](system-metrics.md)).
 
 ## Liste des tâches
 

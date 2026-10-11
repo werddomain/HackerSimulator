@@ -155,9 +155,6 @@
   -->
   <ItemGroup>
     <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.SystemMonitor" Adr="0056" Chantier="4-task-manager" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Apps.Browser" Adr="0056" Chantier="4-sdk-network" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.Commands" Adr="0056" Chantier="4-sdk-network" />
-    <HackerOsSdkBoundaryExemption Include="HackerOs.AppSdk.Terminal" Adr="0056" Chantier="4-sdk-shell-host" />
   </ItemGroup>
 
   <PropertyGroup>

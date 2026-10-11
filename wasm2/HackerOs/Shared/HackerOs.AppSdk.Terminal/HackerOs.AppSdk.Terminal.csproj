@@ -10,7 +10,6 @@
     <ProjectReference Include="..\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
     <ProjectReference Include="..\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
     <ProjectReference Include="..\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
-    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\HackerOs.AppSdk.VirtualKeyboard\HackerOs.AppSdk.VirtualKeyboard.csproj" />
   </ItemGroup>
 
