@@ -51,6 +51,22 @@ public sealed class CodeEditorRecoveryStoreTests
     }
 
     [Fact]
+    public async Task Superseded_save_reports_cancelled_without_error_text()
+    {
+        // The editor cancels a pending snapshot on every new edit. The provider then answers
+        // "Cancelled", which used to reach the error banner as the raw text "Cancelled".
+        MemoryFileSystemGateway gateway = new() { CancelWrites = true };
+        CodeEditorRecoveryStore store = new(gateway, "user", "/home/user");
+        CodeEditorSession session = new();
+        session.NewDocument().TryEdit("typing");
+
+        CodeEditorRecoveryResult saved = await store.SaveAsync(session.CaptureRecovery());
+
+        Assert.Equal(CodeEditorRecoveryStatus.Cancelled, saved.Status);
+        Assert.Null(saved.Error);
+    }
+
+    [Fact]
     public async Task Clear_removes_only_the_app_private_recovery_file()
     {
         MemoryFileSystemGateway gateway = new();
@@ -103,6 +119,7 @@ public sealed class CodeEditorRecoveryStoreTests
         private readonly DateTimeOffset _now = DateTimeOffset.UtcNow;
 
         public bool DenyReads { get; init; }
+        public bool CancelWrites { get; init; }
         public IReadOnlyCollection<string> Files => _nodes.Where(item => !item.Value.IsDirectory).Select(item => item.Key).ToArray();
 
         public bool DirectoryExists(string path) => _nodes.TryGetValue(path, out Node? node) && node.IsDirectory;
@@ -150,6 +167,12 @@ public sealed class CodeEditorRecoveryStoreTests
             FileSystemWriteRequest request, IFileSystemContentSource content,
             CancellationToken cancellationToken = default)
         {
+            if (CancelWrites)
+            {
+                return new FileSystemMutationResult(FileSystemTransactionResult.Cancelled(
+                    Guid.NewGuid(), Error(FileSystemOperation.Write, FileSystemErrorCode.Cancelled, request.Path)));
+            }
+
             if (!_nodes.TryGetValue(request.Path.Value, out Node? current))
             {
                 return Rejected(FileSystemOperation.Write, FileSystemErrorCode.NotFound, request.Path);

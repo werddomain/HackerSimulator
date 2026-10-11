@@ -22,6 +22,11 @@ public enum CodeEditorRecoveryStatus
     TooLarge,
     /// <summary>An optimistic write conflict occurred.</summary>
     Conflict,
+    /// <summary>
+    /// The caller cancelled the operation: a newer edit superseded this snapshot, or the window
+    /// closed. Not a failure, so it carries no error text and the editor never shows it.
+    /// </summary>
+    Cancelled,
     /// <summary>An unexpected stable VFS failure occurred.</summary>
     Failed
 }
@@ -292,6 +297,7 @@ public sealed class CodeEditorRecoveryStore
             new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Denied, Error: "Recovery access denied."),
         FileSystemErrorCode.RevisionConflict =>
             new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Conflict, Error: "Recovery changed concurrently."),
+        FileSystemErrorCode.Cancelled => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Cancelled),
         _ => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Failed, Error: code?.ToString() ?? "Recovery operation failed.")
     };
 

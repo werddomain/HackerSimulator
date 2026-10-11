@@ -59,6 +59,12 @@ lui-même), et la frappe dans ce fichier coûte environ 23 % de script en moins.
 La position du curseur est affichée par `CodeEditorCursorStatus`, qui se
 redessine seul.
 
+Chaque modification annule l'écriture de récupération en attente. Le système
+de fichiers répond alors `Cancelled`, que `CodeEditorRecoveryStore` et
+`CodeEditorFileService` traduisent en statut `Cancelled` sans texte d'erreur :
+la fenêtre ne l'affiche jamais. Avant, ce code brut arrivait dans le bandeau
+d'erreur (« Cancelled ») pendant la frappe.
+
 Entrée dans la boîte Ctrl+P et dans la zone de création de l'explorateur
 agit au relâchement de la touche : l'éditeur reprend le focus quand la boîte
 se ferme, et un traitement à l'appui laisserait la fin de la frappe insérer
@@ -123,3 +129,5 @@ Lenteur et dock (ADR 0063) :
   Terminal ».
 - [x] Essai dans Chromium : terminal embarqué, `cd`, titre, onglets, `exit`,
   Ctrl+J, Status, Problems.
+- [x] Une écriture annulée (récupération remplacée par une frappe plus
+  récente, fenêtre fermée) n'est plus affichée comme une erreur.
