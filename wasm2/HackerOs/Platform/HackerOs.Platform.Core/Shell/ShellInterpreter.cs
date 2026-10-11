@@ -113,6 +113,12 @@ public sealed class ShellInterpreter
                 session, parsed.Commands.Pipelines[index], options, line, cancellationToken).ConfigureAwait(false);
             // $? follows every pipeline, so `false && …` then `echo $?` and `a && echo $?` behave as in bash.
             session.LastExitCode = exitCode;
+            if (session.ExitRequestedStatus is { } exitStatus)
+            {
+                // `exit 0 && echo late` never prints: the shell stops reading the line (ADR 0058 §4).
+                exitCode = exitStatus;
+                break;
+            }
         }
 
         if (cancellationToken.IsCancellationRequested)

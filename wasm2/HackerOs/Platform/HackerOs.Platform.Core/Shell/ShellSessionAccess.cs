@@ -50,6 +50,9 @@ internal sealed class ShellSessionAccess(
     public IReadOnlyList<ShellCommandInfo> GetCommands() => interpreter.GetInstalledCommands();
 
     /// <inheritdoc />
+    public int Exit(int? exitStatus) => session.RequestExit(exitStatus ?? session.LastExitCode);
+
+    /// <inheritdoc />
     public ValueTask<int> RunElevatedAsync(
         IReadOnlyList<string> arguments,
         TextWriter standardOutput,

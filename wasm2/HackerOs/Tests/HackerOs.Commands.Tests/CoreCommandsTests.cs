@@ -6,6 +6,7 @@ using HackerOs.AppSdk;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Cd;
 using HackerOs.Commands.Echo;
+using HackerOs.Commands.Exit;
 using HackerOs.Commands.Ls;
 using HackerOs.Commands.Pwd;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -78,6 +79,43 @@ public sealed class CoreCommandsTests
         // Only `cd -` prints its target, as in bash.
         Assert.Equal("/" + Environment.NewLine, stdout.ToString());
         Assert.Equal("/home/user", shell.WorkingDirectory);
+    }
+
+    [Theory]
+    [InlineData(new string[0], 6, 6, "")]
+    [InlineData(new[] { "3" }, 3, 3, "")]
+    [InlineData(new[] { "256" }, 0, 0, "")]
+    [InlineData(new[] { "abc" }, 2, 2, "exit: abc: numeric argument required")]
+    public async Task ExitCommand_asks_the_shell_to_exit(string[] arguments, int expectedStatus, int expectedRequest, string error)
+    {
+        ExitCommand command = new(CreateManifest("exit", "org.hackeros.commands.exit"));
+        // A bare `exit` keeps $?: here 6.
+        FakeShellSession shell = new() { LastExitStatus = arguments.Length == 0 ? 6 : 0 };
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int exitCode = await command.ExecuteAsync(CreateContext(arguments, stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal(expectedStatus, exitCode);
+        Assert.Equal(expectedRequest, shell.ExitRequested);
+        Assert.Equal(error, stderr.ToString().TrimEnd());
+    }
+
+    [Fact]
+    public async Task ExitCommand_with_too_many_arguments_keeps_the_shell()
+    {
+        ExitCommand command = new(CreateManifest("exit", "org.hackeros.commands.exit"));
+        FakeShellSession shell = new();
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int exitCode = await command.ExecuteAsync(CreateContext(["1", "2"], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Null(shell.ExitRequested);
+        Assert.Equal("exit: too many arguments", stderr.ToString().TrimEnd());
     }
 
     [Fact]

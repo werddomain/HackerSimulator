@@ -88,7 +88,11 @@ public interface IHackShell : IAsyncDisposable
     /// <summary>
     /// Completes the word under the cursor, as <c>bash</c> does on Tab (ADR 0058, section 4): the
     /// first word of a command (start of the line, after <c>|</c>, <c>&amp;&amp;</c> or <c>;</c>)
-    /// is completed with the installed commands and their aliases.
+    /// is completed with the installed commands and their aliases; every other word (and a command
+    /// word containing <c>/</c>) with the paths of the shell's directory, <c>~</c> expanded. A
+    /// directory ends with <c>/</c>, hidden entries come only after a typed <c>.</c>, special
+    /// characters are escaped with <c>\</c>, and a directory the shell cannot read proposes
+    /// nothing, without an error.
     /// </summary>
     /// <param name="commandLine">The line being typed.</param>
     /// <param name="cursor">Cursor position in <paramref name="commandLine"/> (0 to its length).</param>
@@ -175,6 +179,13 @@ public sealed record HackShellCompletion(int WordStart, int WordLength, IReadOnl
     }
 
     /// <summary>
+    /// Gets what a terminal lists on the second Tab, one per candidate: the last path segment,
+    /// without its escapes (a directory keeps its <c>/</c>), as bash lists <c>notes/</c> rather
+    /// than <c>~/Documents/notes/</c>. Command names are listed as they are.
+    /// </summary>
+    public IReadOnlyList<string> DisplayCandidates => [.. Candidates.Select(GetDisplayName)];
+
+    /// <summary>
     /// Applies the completion to <paramref name="commandLine"/> as Tab does: a single candidate
     /// replaces the word and is followed by a space (none after a directory's <c>/</c>); several
     /// insert their common prefix; none leave the line alone.
@@ -195,5 +206,46 @@ public sealed record HackShellCompletion(int WordStart, int WordLength, IReadOnl
 
         cursor = WordStart + insertion.Length;
         return string.Concat(commandLine.AsSpan(0, WordStart), insertion, commandLine.AsSpan(wordEnd));
+    }
+
+    /// <summary>Last segment of a candidate, unescaped, with a directory's trailing <c>/</c>.</summary>
+    private static string GetDisplayName(string candidate)
+    {
+        bool directory = candidate.Length > 1 && candidate.EndsWith('/');
+        string trimmed = directory ? candidate[..^1] : candidate;
+        int start = 0;
+        for (int index = trimmed.Length - 1; index >= 0; index--)
+        {
+            if (trimmed[index] == '/' && !IsEscaped(trimmed, index))
+            {
+                start = index + 1;
+                break;
+            }
+        }
+
+        System.Text.StringBuilder name = new(trimmed.Length - start + 1);
+        for (int index = start; index < trimmed.Length; index++)
+        {
+            if (trimmed[index] == '\\' && index + 1 < trimmed.Length)
+            {
+                index++;
+            }
+
+            name.Append(trimmed[index]);
+        }
+
+        return directory ? name.Append('/').ToString() : name.ToString();
+    }
+
+    /// <summary>Whether an odd number of backslashes precedes <paramref name="index"/>.</summary>
+    private static bool IsEscaped(string text, int index)
+    {
+        int backslashes = 0;
+        for (int position = index - 1; position >= 0 && text[position] == '\\'; position--)
+        {
+            backslashes++;
+        }
+
+        return backslashes % 2 == 1;
     }
 }

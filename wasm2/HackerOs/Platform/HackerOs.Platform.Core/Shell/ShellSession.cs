@@ -99,6 +99,24 @@ public sealed class ShellSession
     /// <summary>Gets or sets the exit code of the last pipeline, read by <c>$?</c>.</summary>
     public int LastExitCode { get; set; }
 
+    /// <summary>
+    /// Gets the status <c>exit</c> asked the shell to end with, or <see langword="null"/> while it
+    /// keeps running. The interpreter stops the line once it is set; the host of an interactive
+    /// shell then ends the shell's process with it (ADR 0058, section 4).
+    /// </summary>
+    public int? ExitRequestedStatus { get; private set; }
+
+    /// <summary>Records an <c>exit</c> request, reduced modulo 256 as a process exit status is.</summary>
+    /// <param name="exitStatus">The requested status.</param>
+    /// <returns>The status the shell will exit with (0 to 255).</returns>
+    public int RequestExit(int exitStatus)
+    {
+        // `exit 300` exits with 44 and `exit -1` with 255, as under Linux.
+        int status = ((exitStatus % 256) + 256) % 256;
+        ExitRequestedStatus = status;
+        return status;
+    }
+
     /// <summary>Gets the shell process's working directory.</summary>
     public string CurrentDirectory => _environment.CurrentDirectory;
 

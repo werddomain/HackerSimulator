@@ -114,6 +114,7 @@ l'utilisateur (`~/.hackeros/aliases`) reste dans le shell.
 | `unset NOM…` | `org.hackeros.commands.unset` | `shell.control` | Retire des variables du shell ; une variable absente n'est pas une erreur. |
 | `env` | `org.hackeros.commands.env` | — | Son propre environnement, une ligne `NOM=valeur` par variable, triée. `env NOM=v commande` n'est pas pris en charge (code `125`). |
 | `sudo cmd args…` | `org.hackeros.commands.sudo` | `shell.control` | Voir ci-dessus. |
+| `exit [n]` | `org.hackeros.commands.exit` | `shell.control` | `IShellSession.Exit` : le shell sort avec `n` (modulo 256) ou `$?` ; la suite de la ligne n'est pas exécutée ; argument non numérique : code `2` ; trop d'arguments : code `1`, le shell reste ([`terminal-console.md`](terminal-console.md)). |
 | `alias`, `addalias`, `rmalias`, `unalias` | `org.hackeros.commands.alias` | `filesystem.user-home.*` | `rmalias`/`unalias` = `alias -r`, choisi par `argv[0]`. |
 
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
@@ -125,7 +126,7 @@ sinon.
 `TerminalPanel` ne garde que l'édition de ligne, l'affichage, la complétion et
 les fenêtres d'identifiants. La complétion par Tab propose les noms et alias
 des commandes **installées**, comme `help` ; depuis `4-sdk-shell-host`, c'est le
-shell qui la calcule (`IHackShell.CompleteAsync`, [`shell-host.md`](shell-host.md)). `TerminalBuiltins` et le crochet `IShellBuiltins` de l'interpréteur ont
+shell qui la calcule (`IHackShell.CompleteAsync`, [`shell-host.md`](shell-host.md)), chemins compris depuis `4-terminal` ([`terminal-console.md`](terminal-console.md)). `TerminalBuiltins` et le crochet `IShellBuiltins` de l'interpréteur ont
 disparu.
 
 ## Décisions clés

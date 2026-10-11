@@ -147,8 +147,8 @@ public sealed partial class ShellInterpreterTests
 
     [Theory]
     [InlineData("ec", 0, 2, new[] { "echo" }, "echo ")]
-    [InlineData("ex", 0, 2, new[] { "exitwith", "export" }, "ex")]
-    [InlineData("e", 0, 1, new[] { "echo", "env", "exitwith", "export" }, "e")]
+    [InlineData("ex", 0, 2, new[] { "exit", "exitwith", "export" }, "ex")]
+    [InlineData("e", 0, 1, new[] { "echo", "env", "exit", "exitwith", "export" }, "e")]
     [InlineData("echo a | up", 9, 2, new[] { "upper" }, "echo a | upper ")]
     [InlineData("exitwith 0 &&ec", 13, 2, new[] { "echo" }, "exitwith 0 &&echo ")]
     [InlineData("echo ec", 5, 0, new string[0], "echo ec")]
@@ -183,6 +183,155 @@ public sealed partial class ShellInterpreterTests
         HackShellCompletion completion = await shell.CompleteAsync("ma", 2);
 
         Assert.Equal(["man"], completion.Candidates);
+    }
+
+    [Theory]
+    [InlineData("cat no", new[] { "notes.txt" }, "cat notes.txt ")]
+    [InlineData("cat do", new[] { "docs/" }, "cat docs/")]
+    [InlineData("cat docs/", new[] { "docs/a.md", "docs/b.md", "docs/sub/" }, "cat docs/")]
+    [InlineData("cat docs/s", new[] { "docs/sub/" }, "cat docs/sub/")]
+    [InlineData("cat ~/do", new[] { "~/docs/" }, "cat ~/docs/")]
+    [InlineData("cat ~", new[] { "~/" }, "cat ~/")]
+    [InlineData("cat /home/alice/no", new[] { "/home/alice/notes.txt" }, "cat /home/alice/notes.txt ")]
+    [InlineData("cat ../alice/no", new[] { "../alice/notes.txt" }, "cat ../alice/notes.txt ")]
+    [InlineData("cat My", new[] { "My\\ Notes.txt" }, "cat My\\ Notes.txt ")]
+    [InlineData("cat My\\ N", new[] { "My\\ Notes.txt" }, "cat My\\ Notes.txt ")]
+    [InlineData("cat .h", new[] { ".hidden" }, "cat .hidden ")]
+    [InlineData("echo x > no", new[] { "notes.txt" }, "echo x > notes.txt ")]
+    [InlineData("echo x >no", new[] { "notes.txt" }, "echo x >notes.txt ")]
+    [InlineData("./do", new[] { "./docs/" }, "./docs/")]
+    [InlineData("cat missing/", new string[0], "cat missing/")]
+    [InlineData("cat NO", new string[0], "cat NO")]
+    public async Task Tab_completes_paths_from_the_shell_directory(string line, string[] candidates, string completed)
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        await fixture.MakeDirectoryAsync("/home/alice/docs/sub");
+        await fixture.WriteFileAsync("/home/alice/docs/a.md", "a");
+        await fixture.WriteFileAsync("/home/alice/docs/b.md", "b");
+        await fixture.WriteFileAsync("/home/alice/notes.txt", "n");
+        await fixture.WriteFileAsync("/home/alice/My Notes.txt", "m");
+        await fixture.WriteFileAsync("/home/alice/.hidden", "h");
+        await using IHackShell shell = await HackShell.StartAsync(fixture.Host);
+
+        HackShellCompletion completion = await shell.CompleteAsync(line, line.Length);
+
+        Assert.Equal(candidates, completion.Candidates);
+        Assert.Equal(completed, completion.ApplyTo(line, out _));
+    }
+
+    [Fact]
+    public async Task Path_completion_follows_the_shell_directory_and_hides_dot_files()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        await fixture.MakeDirectoryAsync("/home/alice/docs");
+        await fixture.WriteFileAsync("/home/alice/docs/report.md", "r");
+        await fixture.WriteFileAsync("/home/alice/docs/.draft", "d");
+        await using IHackShell shell = await HackShell.StartAsync(fixture.Host);
+        await RunHostedAsync(shell, "cd docs");
+
+        HackShellCompletion all = await shell.CompleteAsync("cat ", 4);
+        HackShellCompletion hidden = await shell.CompleteAsync("cat .", 5);
+
+        Assert.Equal(["report.md"], all.Candidates);
+        Assert.Equal([".draft"], hidden.Candidates);
+        // The terminal launching the shell stays where it was.
+        Assert.Equal("/home/alice", fixture.Host.Environment.CurrentDirectory);
+    }
+
+    [Fact]
+    public void Display_candidates_list_the_last_segment_as_bash()
+    {
+        HackShellCompletion completion = new(4, 7, ["~/docs/My\\ Notes.txt", "~/docs/sub/", "echo"]);
+
+        Assert.Equal(["My Notes.txt", "sub/", "echo"], completion.DisplayCandidates);
+    }
+
+    [Fact]
+    public async Task An_unreadable_directory_completes_nothing_without_error()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        await fixture.MakeDirectoryAsync("/home/alice/locked");
+        await fixture.WriteFileAsync("/home/alice/locked/secret.txt", "s");
+        using (HackExecutionContext.Enter(fixture.Host))
+        {
+            // Mode 0000: alice can no longer list it, as `ls locked` would fail.
+            await HackFile.SetUnixFileModeAsync("/home/alice/locked", UnixFileMode.None);
+        }
+
+        await using IHackShell shell = await HackShell.StartAsync(fixture.Host);
+        HackShellCompletion completion = await shell.CompleteAsync("cat locked/", 11);
+
+        Assert.Empty(completion.Candidates);
+    }
+
+    [Theory]
+    [InlineData("exit", 0)]
+    [InlineData("exit 7", 7)]
+    [InlineData("exit 300", 44)]
+    [InlineData("exit -1", 255)]
+    [InlineData("exit abc", 2)]
+    public async Task Exit_ends_the_shell_process_with_its_status(string line, int expected)
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        IHackShell shell = await HackShell.StartAsync(fixture.Host);
+        ProcessId pid = ProcessId.FromInt64(shell.ProcessId);
+
+        (int status, _, _) = await RunHostedAsync(shell, line);
+
+        Assert.Equal(expected, status);
+        Assert.True(shell.HasExited);
+        Assert.False(fixture.Manager.TryGetActive(pid, out _));
+        ProcessRecord ended = fixture.Manager.GetHistory().Last(p => p.Pid == pid);
+        Assert.Equal(expected, ended.ExitCode);
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => RunHostedAsync(shell, "echo late"));
+    }
+
+    [Fact]
+    public async Task Exit_stops_the_rest_of_the_line()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        IHackShell shell = await HackShell.StartAsync(fixture.Host);
+
+        (int status, string stdout, _) = await RunHostedAsync(shell, "exit 0 && echo late");
+
+        Assert.Equal(0, status);
+        Assert.Equal(string.Empty, stdout);
+        Assert.True(shell.HasExited);
+    }
+
+    [Fact]
+    public async Task Exit_without_argument_keeps_the_last_status()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        IHackShell shell = await HackShell.StartAsync(fixture.Host);
+        ProcessId pid = ProcessId.FromInt64(shell.ProcessId);
+
+        await RunHostedAsync(shell, "exitwith 3");
+        (int status, _, _) = await RunHostedAsync(shell, "exit");
+
+        Assert.Equal(3, status);
+        Assert.Equal(3, fixture.Manager.GetHistory().Last(p => p.Pid == pid).ExitCode);
+    }
+
+    [Fact]
+    public async Task Exit_in_a_pipe_or_with_too_many_arguments_keeps_the_shell()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        await using IHackShell shell = await HackShell.StartAsync(fixture.Host);
+
+        await RunHostedAsync(shell, "exit 4 | upper");
+        (int tooMany, _, string stderr) = await RunHostedAsync(shell, "exit 1 2");
+
+        Assert.False(shell.HasExited);
+        Assert.Equal(1, tooMany);
+        Assert.Equal("exit: too many arguments\n", stderr);
     }
 
     private static async Task<(int Status, string Stdout, string Stderr)> RunHostedAsync(IHackShell shell, string line)

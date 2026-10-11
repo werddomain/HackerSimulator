@@ -48,7 +48,7 @@ Un composant Razor qui reçoit le contexte de son app en paramètre utilise
 | `ExecuteAsync(ligne, stdin, stdout, stderr, ct)` | Exécute une ligne ; la sortie arrive au fil de l'eau. |
 | `ExecuteAsync(ligne, HackShellExecution, ct)` | Même chose avec l'écran alternatif (`FullScreen`) pour `nano`. |
 | `CompleteAsync(ligne, curseur, ct)` | Complétion par Tab (voir plus bas). |
-| `DisposeAsync()` | `exit` : tue les commandes encore en cours, puis termine `hsh` avec `$?`. |
+| `DisposeAsync()` | Fermeture du terminal : tue les commandes encore en cours, puis termine `hsh` avec `$?`. La commande `exit [n]` fait de même depuis le shell (`HasExited` devient vrai, [`terminal-console.md`](terminal-console.md)). |
 
 Une seule ligne s'exécute à la fois ; une seconde attend la fin de la
 première, comme un shell qui lit son terminal. Ctrl+C annule le jeton passé à
@@ -66,14 +66,18 @@ section 4) :
 
 - premier mot d'une commande (début de ligne, après `|`, `&&` ou `;`) : noms des
   commandes installées et de leurs alias statiques, sensibles à la casse ;
-- autres mots : rien pour l'instant. Les chemins arrivent avec le chantier
-  `4-terminal`.
+- autres mots (et premier mot contenant `/`) : chemins, relatifs au
+  répertoire du shell, `~` développé, dossiers finis par `/`, cachés après un
+  `.` tapé, caractères spéciaux échappés par `\` ; un dossier illisible ne
+  propose rien (chantier `4-terminal`, voir
+  [`terminal-console.md`](terminal-console.md)).
 
 `HackShellCompletion` donne `WordStart`, `WordLength`, `Candidates` (triés,
 un dossier finit par `/`) et `CommonPrefix`. `ApplyTo` applique la règle de
 Tab : un seul candidat est inséré suivi d'une espace (aucune après un `/`),
 plusieurs insèrent leur préfixe commun. `TerminalPanel` affiche la liste au
-second Tab sur la même ligne.
+second Tab sur la même ligne, avec `DisplayCandidates` (dernier segment de
+chaque chemin).
 
 ### `HackCredentialPrompt`
 

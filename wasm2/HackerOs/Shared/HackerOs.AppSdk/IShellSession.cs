@@ -49,6 +49,17 @@ public interface IShellSession
     IReadOnlyList<ShellCommandInfo> GetCommands();
 
     /// <summary>
+    /// Asks the shell to exit once the current command returns, like the <c>exit</c> built-in
+    /// (ADR 0058, section 4): the rest of the line is not run and the shell's process ends with
+    /// the given status, so its terminal closes the tab. Inside a pipe (<c>exit | cat</c>) the
+    /// request reaches a copy of the shell, as in bash's subshell, and is lost.
+    /// </summary>
+    /// <param name="exitStatus">The shell's exit status; <see langword="null"/> keeps <c>$?</c>.</param>
+    /// <returns>The status the shell will exit with (0 to 255).</returns>
+    /// <exception cref="NotSupportedException">The shell does not support being exited by a command.</exception>
+    int Exit(int? exitStatus) => throw new NotSupportedException("This shell cannot be exited by a command.");
+
+    /// <summary>
     /// Runs one command as root (ADR 0042, ADR 0051 section 4), as <c>sudo</c> does: the shell asks
     /// for an administrator's credentials, mints a single-use <c>SudoRoot</c> ticket and starts the
     /// command as a child of the caller with it, its output going to <paramref name="standardOutput"/>

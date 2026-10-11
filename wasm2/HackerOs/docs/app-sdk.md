@@ -23,7 +23,7 @@ section [API du SDK](#api-du-sdk).
 | `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement…). |
 | `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
 | `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
-| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`), qui héberge un shell par `HackShell`. |
+| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`), qui héberge un shell par `HackShell`, et console à onglets (`TerminalTabs`). |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
 Toute bibliothèque `Shared/HackerOs.AppSdk` ou `Shared/HackerOs.AppSdk.*` est
@@ -336,6 +336,10 @@ HackStorageSnapshot snapshot = await HackStorageDiagnostics.GetSnapshotAsync();
 | API | Passerelle | Capacité | Remplace | Document |
 |---|---|---|---|---|
 | `HackShell.StartAsync`, `IHackShell` (`ExecuteAsync`, `CompleteAsync`, `GetInstalledCommands`, `WorkingDirectory`, `ExitStatus`, `Prompt`, historique), `HackShellOptions`, `HackShellCompletion`, `HackCredentialPrompt` | `IAppExecutionContext.ShellHost` (`IAppShellHostGateway`) | `shell.host` (dangereuse) | `ShellInterpreter`, `ISessionService`, `IElevationService` dans `TerminalPanel` | [`shell-host.md`](shell-host.md) |
+
+`4-terminal` ajoute la complétion des chemins, `HackShellCompletion.DisplayCandidates`,
+`IShellSession.Exit` (commande `exit`) et le composant d'onglets `TerminalTabs`
+de `HackerOs.AppSdk.Terminal` ([`terminal-console.md`](terminal-console.md)).
 
 Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
 enfants et gardent leurs propres capacités. Le terminal lit les identifiants
