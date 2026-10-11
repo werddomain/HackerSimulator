@@ -38,6 +38,7 @@ public sealed class AppExecutionContextFactory
     private readonly LogFileWriter? _logWriter;
     private readonly IProcessEnvironmentTable? _environments;
     private readonly Func<string> _machineName;
+    private readonly Func<Shell.ShellHostService>? _shellHostProvider;
     private readonly AppCatalogGatewayServices? _appCatalog;
     private readonly ISimulatedNetworkService? _network;
     private readonly IServerConnectionService? _serverConnection;
@@ -73,6 +74,12 @@ public sealed class AppExecutionContextFactory
     /// </param>
     /// <param name="serverConnection">Optional server connection used by the real-network fallback.</param>
     /// <param name="proxy">Optional server proxy client used by the real-network fallback.</param>
+    /// <param name="shellHostProvider">
+    /// Lazily resolves the service behind <see cref="IAppExecutionContext.ShellHost"/> (ADR 0056,
+    /// section 7). Lazy for the same reason as <paramref name="intentDispatcherProvider"/>: the
+    /// interpreter depends on the orchestrator, which depends on this factory. Pass
+    /// <see langword="null"/> to leave shell hosting unsupported.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -89,7 +96,8 @@ public sealed class AppExecutionContextFactory
         AppCatalogGatewayServices? appCatalog = null,
         ISimulatedNetworkService? network = null,
         IServerConnectionService? serverConnection = null,
-        IProxyClient? proxy = null)
+        IProxyClient? proxy = null,
+        Func<Shell.ShellHostService>? shellHostProvider = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -107,6 +115,7 @@ public sealed class AppExecutionContextFactory
         _network = network;
         _serverConnection = serverConnection;
         _proxy = proxy;
+        _shellHostProvider = shellHostProvider;
     }
 
     /// <summary>
@@ -226,6 +235,20 @@ public sealed class AppExecutionContextFactory
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+
+        if (_shellHostProvider is not null)
+        {
+            // ADR 0056 section 7: the shell is a child process of this one, with this instance's
+            // capabilities for its own redirections and the same root elevation, if any.
+            context.ShellHost = new AppShellHostGateway(
+                _shellHostProvider,
+                capabilities,
+                principal,
+                () => context,
+                shellProcess => Create(
+                    Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
+                    shellProcess.AppInstanceId.Value, isRootElevated));
+        }
         return context;
     }
 
