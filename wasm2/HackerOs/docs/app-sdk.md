@@ -114,12 +114,9 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 
 | Projet | Violations au 2026-10-10 | Chantier qui retire l'exemption |
 |---|---|---|
-| `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog`, `IAppInstallationService`, `ISessionService`, `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet | `4-sdk-user-and-apps`, `4-sdk-system-admin` |
+| `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
 | `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
 | `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
-| `HackerOs.Apps.FileExplorer` | `Platform.Core` ; `AppCatalog`, `IAppEnablementRegistry`, `ISessionService` | `4-sdk-user-and-apps` |
-| `HackerOs.Apps.TextEditor` | `ISessionService` | `4-sdk-user-and-apps` |
-| `HackerOs.Apps.CodeEditor` | `ISessionService` | `4-sdk-user-and-apps` |
 | `HackerOs.AppSdk.Terminal` | `Platform.Core` (`ShellInterpreter`, `IElevationService`) | `4-sdk-shell-host` |
 
 Règles de la liste :
@@ -132,6 +129,9 @@ Règles de la liste :
   échoue sinon ;
 - `4-sdk-boundary-final` supprime le mécanisme (élément, propriété
   `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
+
+Sorties de la liste : FileExplorer, TextEditor et CodeEditor
+(`4-sdk-user-and-apps`, 2026-10-11).
 
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
@@ -170,14 +170,87 @@ Façades statiques existantes au début de la phase 4 :
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
-`Services`, `PermissionErrors`, `Environment`, `Network` (`4-sdk-network`).
+`Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
+(ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
 
-Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
-`HackProcess`, `HackServiceController`, `HackDns`, `HackPing`,
-`HackHttpClient`, `HackTcpClient`, `HackShell`, `HackPermissionAdministration`,
+### Utilisateur courant (ADR 0056 §1)
+
+```csharp
+HackUserInfo me = HackUser.Current;     // LoginName, DisplayName, HomeDirectory, IsAdministrator
+string docs = HackEnvironment.GetFolderPath(HackSpecialFolder.MyDocuments);   // /home/benoit/Documents
+HackUserInfo cached = HackUser.Describe(AppContext);   // sans contexte ambiant (rendu d'un composant)
+```
+
+- `HackUser.Current` décrit l'utilisateur **effectif** : `HackUser.Root`
+  (`root`, `/root`, administrateur) pour un processus lancé par `sudo`.
+- `HackSpecialFolder` : `UserProfile` (`~`), `Desktop`, `MyDocuments`
+  (`~/Documents`), `ApplicationData` (`~/.config`), `LocalApplicationData`
+  (`~/.local/share`). Le chemin est calculé, pas vérifié.
+- Aucune capacité. `IAppExecutionContext` gagne `UserLoginName` et
+  `UserDisplayName` (implémentations par défaut ; la fabrique les remplit
+  depuis le principal).
+- Remplace `ISessionService.CurrentPrincipal` dans FileExplorer, TextEditor et
+  CodeEditor. Comme `BuildRenderTree` ne tourne pas dans le contexte ambiant,
+  un composant qui affiche le dossier personnel utilise
+  `HackUser.Describe(AppContext)`.
+
+### Catalogue des apps (ADR 0056 §2)
+
+```csharp
+IReadOnlyList<HackAppInfo> apps = await HackApps.GetInstalledAsync();
+IReadOnlyList<HackAppInfo> editors = await HackApps.GetHandlersAsync("~/notes.md");
+await HackApps.LaunchAsync("org.hackeros.text-editor", ["/home/benoit/notes.md"]);
+HackOpenFileResult opened = await HackApps.OpenFileAsync("~/notes.md");   // Opened, ChooserRequired (+ CandidateAppIds), NoHandler
+```
+
+- `HackAppInfo` : `Id`, `Name`, `Description`, `Kind`, `Category`, `Icon`,
+  `Version`, `PublisherId`, `IsSystemApp`, `IsHidden`, `FileHandlers`.
+- `GetInstalledAsync` : apps installées pour l'utilisateur, triées par nom ;
+  une app désinstallée (ADR 0048) n'y figure pas. **Aucune capacité.**
+- `GetHandlersAsync` : apps fenêtrées installées qui déclarent l'extension ou
+  le type MIME ; le défaut de `/etc/hackeros/file-associations.json` en tête.
+- `LaunchAsync` et `OpenFileAsync` passent par `IAppIntentGateway`
+  (`apps.launch`). Échec : `HackAppLaunchException` (app inconnue,
+  désinstallée, ou erreur au démarrage).
+- `HackApps.Changed` (ou `AppContext.Catalog.Changed`, à préférer quand on se
+  désabonne dans `Dispose`, hors contexte ambiant) signale une installation ou
+  une désinstallation ; les gestionnaires s'exécutent dans le contexte de
+  l'app abonnée.
+- Passerelle : `IAppCatalogGateway Catalog` (`AppCatalogGateway`, Platform Core).
+
+### Gestion des apps (ADR 0056 §3)
+
+```csharp
+IReadOnlyList<HackAppInstallInfo> all = await HackAppManagement.GetAllAsync();   // App, State, UninstallClosure
+IReadOnlyList<string> removed = await HackAppManagement.UninstallAsync("org.hackeros.calculator", HackInstallScope.User);
+await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallScope.Machine);
+```
+
+- **Capacité `apps.manage`** (dangereuse) pour tous les membres. Paramètres la
+  déclare désormais.
+- `HackAppInstallState` : `Installed` (y compris une app système, signalée par
+  `App.IsSystemApp`), `UninstalledForUser`, `UninstalledForMachine`.
+- Portée `Machine` : l'agent d'authentification de l'OS demande un
+  administrateur ([`admin-authentication-agent.md`](admin-authentication-agent.md)),
+  puis l'OS écrit `/etc/hackeros/apps.config` lui-même. Refus ou annulation :
+  `HackUnauthorizedAccessException`.
+- App système, ou fermeture qui en contient une : `InvalidOperationException`,
+  avant toute demande de mot de passe. Réinstaller pour soi une app
+  désinstallée par l'administrateur : `InvalidOperationException`. App
+  inconnue : `ArgumentException`.
+- Passerelle : `IAppManagementGateway AppManagement` (`AppManagementGateway`,
+  sur `IAppInstallationService`).
+
+### Réseau (ADR 0056 §6)
+
+`HackDns`, `HackPing`, `HackHttpClient` et `HackTcpClient`, passerelle
+`IAppNetworkGateway Network`, repli réel décidé par l'OS : voir
+[`sdk-network.md`](sdk-network.md).
+
+Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
 `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
 `HackClipboard`…) sont ajoutées ici par leurs chantiers.
 
@@ -193,6 +266,16 @@ Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
 - Le contrôle d'injection compare les types par nom (assembly, nom complet) :
   l'assembly de l'app est chargée dans un contexte isolé.
 
+- `HackAppInfo` ajoute `PublisherId` et `IsHidden` à la liste de l'ADR 0056 :
+  l'onglet « Installed Apps » affiche l'éditeur, et un lanceur doit savoir
+  qu'une app est cachée. `HackApps.OpenFileAsync` rend un résultat plutôt que
+  rien, parce que l'explorateur doit proposer un choix quand plusieurs apps
+  conviennent. Les méthodes de `HackAppManagement` rendent les ids écrits.
+- Un composant enfant qui n'hérite pas de `HackComponentBase` appelle les
+  passerelles de `AppContext` directement (`AppContext.Catalog`,
+  `AppContext.AppManagement`) : ses gestionnaires d'événements ne sont pas dans
+  le contexte ambiant.
+
 ## Liste des tâches du chantier `rebuild/4-sdk-boundary`
 
 - [x] Cible MSBuild `ValidateHackerOsSdkBoundary` (`HOSAPP0030`, `HOSSDK0001`), références directes seulement.
@@ -203,3 +286,15 @@ Les API de l'ADR 0056 (`HackUser`, `HackApps`, `HackAppManagement`,
 - [x] Retrait des références `Platform.Core` inutilisées (Calculator, HackPaint, IconViewer, TextEditor, Browser).
 - [x] Projets de test `ManifestGenerator.Fixtures.ForbiddenReference` et `ForbiddenInjection`, tests unitaires de l'inspecteur.
 - [x] ADR 0059 (numéros des codes), ce document, `app-model.md`, plan et index à jour.
+
+## Liste des tâches du chantier `rebuild/4-sdk-user-and-apps`
+
+- [x] `HackUser`, `HackUserInfo`, `HackEnvironment.GetFolderPath`, `HackSpecialFolder`.
+- [x] `IAppExecutionContext` : `UserLoginName`, `UserDisplayName`, passerelles `Catalog` et `AppManagement`.
+- [x] `HackApps`, `HackAppInfo`, `IAppCatalogGateway` et `AppCatalogGateway`.
+- [x] `HackAppManagement`, `IAppManagementGateway` et `AppManagementGateway` (`apps.manage`).
+- [x] Agent d'authentification de l'OS, courtier et fenêtre ([`admin-authentication-agent.md`](admin-authentication-agent.md)).
+- [x] Migration de FileExplorer (« Open with », dossier personnel), TextEditor et CodeEditor ; FileExplorer perd sa référence à `Platform.Core`.
+- [x] Onglet « Installed Apps » de Paramètres sur le SDK ; `apps.manage` déclarée par Paramètres.
+- [x] Exemptions retirées : FileExplorer, TextEditor, CodeEditor ; Paramètres reste pour `4-sdk-system-admin`.
+- [x] Tests : agent, passerelles, `HackUser`, fenêtre.

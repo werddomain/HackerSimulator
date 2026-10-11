@@ -1,0 +1,76 @@
+@using HackerOs.AppSdk.Icons
+@using HackerOs.Platform.Core.Elevation
+@implements IDisposable
+
+@*
+    OS authentication agent of ADR 0055 section 5 (polkit-like). Rendered by the platform shell above
+    every window, never inside an app window: the app never sees the administrator's password.
+*@
+@if (_current is { } pending)
+{
+    AdministratorAuthenticationPromptRequest request = pending.Request;
+    <div class="aaa-veil"
+         @onkeydown="HandleKeyDown"
+         @onkeydown:stopPropagation="true"
+         @onclick:stopPropagation="true"
+         @oncontextmenu:preventDefault="true">
+        <section class="aaa-window"
+                 role="alertdialog"
+                 aria-modal="true"
+                 aria-labelledby="aaa-title"
+                 aria-describedby="aaa-operation">
+            <header class="aaa-banner">
+                <HackerIcon Library="IconLibrary.Lucide" Name="key-round" Size="28" Title="" class="aaa-key" />
+                <div>
+                    <h2 id="aaa-title">Authentification administrateur</h2>
+                    <p>Une application demande une opération réservée aux administrateurs.</p>
+                </div>
+            </header>
+
+            <div class="aaa-body">
+                <p id="aaa-operation" class="aaa-operation">@request.Operation</p>
+
+                <dl class="aaa-facts">
+                    <div><dt>Application</dt><dd>@request.App.Name <code>@request.App.Id</code></dd></div>
+                    <div><dt>Demandé par</dt><dd>@(request.RequestedBy?.LoginName.Value ?? "système")</dd></div>
+                </dl>
+
+                <form class="aaa-credentials" @onsubmit="AuthenticateAsync" @onsubmit:preventDefault="true">
+                    <label>
+                        <span>Nom d'administrateur</span>
+                        <input @ref="_loginInput"
+                               type="text"
+                               autocomplete="username"
+                               spellcheck="false"
+                               disabled="@_isVerifying"
+                               @bind="_login"
+                               @bind:event="oninput" />
+                    </label>
+                    <label>
+                        <span>Mot de passe</span>
+                        <input @ref="_passwordInput"
+                               type="password"
+                               autocomplete="current-password"
+                               disabled="@_isVerifying"
+                               @bind="_password"
+                               @bind:event="oninput" />
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <p class="aaa-error" role="alert">@_error</p>
+                    }
+
+                    <div class="aaa-actions">
+                        <button type="button" class="aaa-cancel" disabled="@_isVerifying" @onclick="Cancel">Annuler</button>
+                        <button type="submit" class="aaa-authenticate" disabled="@(!CanAuthenticate)">
+                            @(_isVerifying ? "Vérification..." : "Authentifier")
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <footer class="aaa-footer">Cette demande sera inscrite dans /var/log/auth.log</footer>
+        </section>
+    </div>
+}

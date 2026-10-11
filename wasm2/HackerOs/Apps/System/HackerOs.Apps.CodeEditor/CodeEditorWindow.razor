@@ -6,7 +6,6 @@
 @using HackerOs.AppSdk.Terminal
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Gateways
-@using HackerOs.Simulation.Abstractions.Sessions
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -15,7 +14,6 @@
 @implements IWindowCloseGuard
 @inject IJSRuntime JavaScript
 @inject MudBlazor.IDialogService MudDialogService
-@inject ISessionService SessionService
 
 <section class="code-editor" @onkeydown="HandleShortcutAsync" aria-label="Code Editor">
     <header class="editor-toolbar">
@@ -178,7 +176,7 @@
         _recoveryStore = new CodeEditorRecoveryStore(
             AppContext.FileSystem,
             AppContext.UserId,
-            SessionService.CurrentPrincipal?.HomePath ?? $"/home/{AppContext.UserId}");
+            HackUser.Describe(AppContext).HomeDirectory);
         _session.NewDocument();
         _editorSyncRequired = true;
     }
@@ -325,7 +323,7 @@
     private async Task OpenFolderAsync()
     {
         VirtualPath initialDirectory = _openFolder ?? VirtualPath.Parse(
-            SessionService.CurrentPrincipal?.HomePath ?? "/");
+            HackUser.Describe(AppContext).HomeDirectory);
         SelectFolderDialogResult result = await base.SelectFolderAsync(new SelectFolderDialogRequest
         {
             Title = "Open Folder",
@@ -384,7 +382,7 @@
     }
 
     private string TerminalInitialCwd() =>
-        _openFolder?.Value ?? SessionService.CurrentPrincipal?.HomePath ?? "/home/user";
+        _openFolder?.Value ?? HackUser.Describe(AppContext).HomeDirectory;
 
     private async Task LoadPathAsync(VirtualPath path, CodeEditorFileService service)
     {
