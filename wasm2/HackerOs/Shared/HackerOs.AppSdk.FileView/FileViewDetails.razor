@@ -31,7 +31,8 @@
             <tr role="row"
                 @key="item.FullPath.Value"
                 data-item-path="@item.FullPath.Value"
-                class="entry-row @(item.IsSelected ? "selected" : null)"
+                class="entry-row @(item.IsSelected ? "selected" : null) @(item.IsCut ? "cut" : null)"
+                data-drop-target="@(item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
                 tabindex="@(IsTabStop(item) ? 0 : -1)"
                 draggable="@(Owner.AllowDragDrop ? "true" : "false")"
                 @onclick="@(args => OnRowClickAsync(item, args))"
@@ -41,7 +42,8 @@
                 @onkeydown="@(args => OnRowKeyDownAsync(item, args))"
                 @ondragstart="@(args => OnRowDragStartAsync(item, args))"
                 @ondragover:preventDefault="@(item.IsDirectory && Owner.AllowDragDrop)"
-                @ondrop="@(args => OnRowDropAsync(item, args))">
+                @ondrop="@(args => OnRowDropAsync(item, args))"
+                @ondrop:stopPropagation="@item.IsDirectory">
                 @foreach (FileViewColumn column in EffectiveColumns)
                 {
                     <td role="gridcell" class="@("file-view-details-column-"+ column.Key)">

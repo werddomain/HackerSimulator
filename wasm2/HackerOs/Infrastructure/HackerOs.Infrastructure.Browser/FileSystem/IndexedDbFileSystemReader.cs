@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Schema;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.FileSystem;
@@ -14,10 +15,47 @@ internal sealed class IndexedDbFileSystemReader : IAsyncDisposable
     private readonly IndexedDbInteropAdapter _adapter;
 
     /// <summary>Initializes a browser filesystem metadata reader.</summary>
-    internal IndexedDbFileSystemReader(IJSRuntime runtime)
+    /// <param name="runtime">JavaScript runtime.</param>
+    /// <param name="disk">Optional statistics of <c>hda</c>; each lookup transaction counts as one 4 KiB read.</param>
+    internal IndexedDbFileSystemReader(IJSRuntime runtime, IBlockDeviceStatistics? disk = null)
     {
         ArgumentNullException.ThrowIfNull(runtime);
-        _adapter = new IndexedDbInteropAdapter(runtime);
+        _adapter = new IndexedDbInteropAdapter(runtime, disk);
+    }
+
+    /// <summary>
+    /// Sums the length of every distinct content blob that a file entry references: the bytes the
+    /// deduplicated store keeps for live files (ADR 0057 section 7). Two files with the same content
+    /// count once, as their chunks are stored once. Orphaned chunks awaiting cleanup are not counted.
+    /// </summary>
+    internal async ValueTask<long> MeasureStoredContentBytesAsync(CancellationToken cancellationToken = default)
+    {
+        await _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<JsonElement> results = await _adapter.ExecuteAsync(
+            Boundary,
+            IndexedDbTransactionMode.ReadOnly,
+            [new IndexedDbOperation("getAll", HackerOsIndexedDbSchema.FileSystemEntryStoreName)],
+            cancellationToken).ConfigureAwait(false);
+        JsonElement entries = results.Single();
+        if (entries.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("Persisted filesystem entry scan result is malformed.");
+        }
+
+        Dictionary<string, long> lengths = new(StringComparer.Ordinal);
+        foreach (JsonElement element in entries.EnumerateArray())
+        {
+            if (element.TryGetProperty("contentHash", out JsonElement hash)
+                && hash.ValueKind == JsonValueKind.String
+                && hash.GetString() is { Length: > 0 } contentHash
+                && element.TryGetProperty("length", out JsonElement length)
+                && length.ValueKind == JsonValueKind.Number)
+            {
+                lengths[contentHash] = length.GetInt64();
+            }
+        }
+
+        return lengths.Values.Sum();
     }
 
     /// <summary>Resolves a canonical path to its persisted entry, or null when a link is absent.</summary>

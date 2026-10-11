@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.Tests;
@@ -99,6 +100,44 @@ public sealed class IndexedDbFileSystemReaderTests
         Assert.Contains(HomeId, error.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task MeasureStoredContentBytesAsync_CountsEachDistinctContentOnce()
+    {
+        // Two files share one blob (stored once), one has its own, directories have none.
+        ScriptedJsObjectReference module = new(One("""
+            [
+              {"id":"a","kind":0,"length":1000,"contentHash":"h1"},
+              {"id":"b","kind":0,"length":1000,"contentHash":"h1"},
+              {"id":"c","kind":0,"length":24,"contentHash":"h2"},
+              {"id":"d","kind":1,"length":0,"contentHash":null}
+            ]
+            """));
+        await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module));
+
+        long used = await reader.MeasureStoredContentBytesAsync();
+
+        Assert.Equal(1024, used);
+        IndexedDbOperation scan = Operation(module.ExecuteInvocations[0]);
+        Assert.Equal("getAll", scan.Kind);
+    }
+
+    [Fact]
+    public async Task Transactions_are_reported_to_the_disk_statistics_as_4KiB_reads()
+    {
+        RecordingDisk disk = new();
+        ScriptedJsObjectReference module = new(
+            One(Entry(RootId, FileSystemEntryKind.Directory)),
+            One("null"));
+        await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module), disk);
+
+        await reader.ResolveAsync(VirtualPath.Parse("/missing"));
+
+        Assert.Equal(2, disk.Begun);
+        Assert.Equal(
+            [(BlockIoDirection.Read, 4096L, true), (BlockIoDirection.Read, 4096L, true)],
+            disk.Completed);
+    }
+
     private static IndexedDbOperation Operation(JsInvocation invocation) => Assert.Single(Operations(invocation));
 
     private static IReadOnlyList<IndexedDbOperation> Operations(JsInvocation invocation) =>
@@ -171,4 +210,24 @@ public sealed class IndexedDbFileSystemReaderTests
     }
 
     private sealed record JsInvocation(string Identifier, object?[] Arguments);
+
+    private sealed class RecordingDisk : IBlockDeviceStatistics
+    {
+        public int Begun { get; private set; }
+
+        public List<(BlockIoDirection Direction, long Bytes, bool Succeeded)> Completed { get; } = [];
+
+        public string DeviceName => "hda";
+
+        public int Major => 8;
+
+        public int Minor => 0;
+
+        public void Begin() => Begun++;
+
+        public void Complete(BlockIoDirection direction, long bytes, TimeSpan elapsed, bool succeeded) =>
+            Completed.Add((direction, bytes, succeeded));
+
+        public BlockDeviceCounters GetCounters() => default;
+    }
 }

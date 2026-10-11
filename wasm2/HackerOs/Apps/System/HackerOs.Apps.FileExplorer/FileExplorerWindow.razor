@@ -11,6 +11,9 @@
 @using HackerOs.AppSdk.Blazor.Interop
 @using HackerOs.AppSdk.Icons
 @using HackerOs.AppSdk.IO
+@using HackerOs.AppSdk.Clipboard
+@using HackerOs.AppSdk.FileView.Transfers
+@using HackerOs.Simulation.Abstractions.Notifications
 @using System.IO.Compression
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
@@ -33,6 +36,10 @@
     and menu entries to OnDeleteRequestedAsync, which moves the items to the trash (HackTrash) or, after a
     confirmation, deletes them permanently (ADR 0052, section 5). Rename/Properties/Open With instead go through FileView's public
     FileViewItem/SelectedItem surface directly, with zero duplicated logic.
+    Cut/copy/paste (ADR 0058, section 1) go through the session clipboard (HackClipboard, gnome-copied-files), so
+    another window can paste; FileView hands its Ctrl+X/C/V and menu entries to OnClipboardRequestedAsync and every
+    drop (folder, background, tree, breadcrumb, Places, Trash, host files) to OnDropRequestedAsync. Transfers run
+    through FileTransfer (Nautilus naming, Replace/Keep both/Skip window, per-item failure summary).
 *@
 <div class="file-explorer-container">
     <!-- Navigation & Address Toolbar -->
@@ -80,21 +87,37 @@
     <!-- Places sidebar -->
     <nav class="explorer-sidebar" aria-label="Places">
         <div class="sidebar-heading">Places</div>
-        <button class="sidebar-entry @(!_showTrash && _state.CurrentPath == GetHomePath() ? "active" : "")" @onclick="NavigateHomeAsync" title="Home">
-            <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" /> <span>Home</span>
-        </button>
-        <button class="sidebar-entry @(_showTrash ? "active" : "")" @onclick="ShowTrashAsync" title="Trash">
-            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Trash</span>
-        </button>
+        @if (_fileView is not null)
+        {
+            <FileViewDropZone Owner="_fileView" Destination="_homeDirectory">
+                <button class="sidebar-entry @(!_showTrash && _state.CurrentPath == GetHomePath() ? "active" : "")" @onclick="NavigateHomeAsync" title="Home">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" /> <span>Home</span>
+                </button>
+            </FileViewDropZone>
+            <FileViewDropZone Owner="_fileView" Dropped="OnTrashDropAsync">
+                <button class="sidebar-entry @(_showTrash ? "active" : "")" @onclick="ShowTrashAsync" title="Trash (drop here to delete)">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Trash</span>
+                </button>
+            </FileViewDropZone>
+        }
     </nav>
 
     <div class="explorer-main">
-    @if (_showTrash)
+    @if (_showTrash && _fileView is not null)
     {
-        <TrashView @ref="_trashView" Restored="OnTrashRestoredAsync" />
+        <FileViewDropZone Owner="_fileView" Dropped="OnTrashDropAsync" Class="explorer-trash-drop">
+            <TrashView @ref="_trashView" Restored="OnTrashRestoredAsync" />
+        </FileViewDropZone>
     }
 
     <div class="explorer-files @(_showTrash ? "hidden" : "")">
+    @if (_fileView is not null)
+    {
+        <div class="explorer-locationbar">
+            <FileViewBreadcrumb Owner="_fileView" RootLabel="Computer" />
+        </div>
+    }
+
     <!-- Actions Toolbar -->
     <div class="actions-toolbar">
         <button class="action-btn" @onclick="CreateFolderAsync" title="New Folder">
@@ -109,6 +132,20 @@
         <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="Move to Trash (Del)">
             <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Delete</span>
         </button>
+        <span class="toolbar-divider"></span>
+
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CutSelectedAsync" title="Cut (Ctrl+X)">
+            <HackerIcon Library="IconLibrary.Lucide" Name="scissors" Size="16" /> <span>Cut</span>
+        </button>
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CopySelectedAsync" title="Copy (Ctrl+C)">
+            <HackerIcon Library="IconLibrary.Lucide" Name="copy" Size="16" /> <span>Copy</span>
+        </button>
+        <button class="action-btn" disabled="@(!_canPaste)" @onclick="PasteHereAsync" title="Paste (Ctrl+V)">
+            <HackerIcon Library="IconLibrary.Lucide" Name="clipboard-paste" Size="16" /> <span>Paste</span>
+        </button>
+
+        <span class="toolbar-divider"></span>
+
         <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="ShowPropertiesAsync" title="Properties">
             <HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> <span>Properties</span>
         </button>
@@ -153,6 +190,10 @@
                   Filter="_searchFilter"
                   ContextMenuProviders="_contextMenuProviders"
                   DeleteRequested="OnDeleteRequestedAsync"
+                  DropRequested="OnDropRequestedAsync"
+                  ClipboardRequested="OnClipboardRequestedAsync"
+                  CanPaste="_canPaste"
+                  CutPaths="_cutPaths"
                   OwnerAppId="Manifest.Id" />
     </div>
 
@@ -183,6 +224,10 @@
     private bool _subscribedToFileView;
     private bool _showTrash;
     private TrashView? _trashView;
+    private VirtualPath _homeDirectory;
+    private bool _canPaste;
+    private IReadOnlyCollection<string> _cutPaths = [];
+    private bool _subscribedToClipboard;
 
     private int SelectedCount => _fileView?.SelectedItems.Count ?? 0;
 
@@ -199,6 +244,7 @@
         string homePath = GetHomePath();
         _state = new FileExplorerState(homePath);
         _initialDirectory = VirtualPath.Parse(homePath);
+        _homeDirectory = _initialDirectory;
         _addressInput = homePath;
         _searchFilter = MatchesSearchQuery;
         _contextMenuProviders = [new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError)];
@@ -214,6 +260,10 @@
     protected override async Task OnAppInitializedAsync()
     {
         _downloader = new BrowserFileDownloader(JSRuntime);
+        // Another window (or app) may cut or copy at any time: follow the session clipboard.
+        AppContext.Clipboard.Changed += OnClipboardChanged;
+        _subscribedToClipboard = true;
+        await ReadClipboardStateAsync();
         await base.OnAppInitializedAsync();
     }
 
@@ -226,6 +276,8 @@
             _fileView.OnPathChange += OnFileViewPathChanged;
             _fileView.Opened += OnFileViewItemOpened;
             _fileView.SelectionChanged += OnFileViewSelectionChanged;
+            // The breadcrumb and the Places drop zones need the view instance: render them now.
+            StateHasChanged();
         }
     }
 
@@ -509,6 +561,204 @@
         await _fileView.RefreshAsync();
     }
 
+    // ---- Clipboard (ADR 0056 section 12, ADR 0058 section 1) ----------------------------------------
+
+    private Task CutSelectedAsync() => PutSelectionOnClipboardAsync(HackClipboardFileOperation.Cut);
+
+    private Task CopySelectedAsync() => PutSelectionOnClipboardAsync(HackClipboardFileOperation.Copy);
+
+    private Task PasteHereAsync() =>
+        _fileView is null ? Task.CompletedTask : PasteIntoAsync(_fileView.CurrentDirectory);
+
+    /// <summary>FileView's Ctrl+X/C/V and its Cut/Copy/Paste/Paste Into Folder menu entries.</summary>
+    private Task OnClipboardRequestedAsync(FileViewClipboardRequestedEventArgs e) => e.Action switch
+    {
+        FileViewClipboardAction.Cut => PutOnClipboardAsync(e.Items, HackClipboardFileOperation.Cut),
+        FileViewClipboardAction.Copy => PutOnClipboardAsync(e.Items, HackClipboardFileOperation.Copy),
+        _ => PasteIntoAsync(e.Destination)
+    };
+
+    private Task PutSelectionOnClipboardAsync(HackClipboardFileOperation operation) =>
+        _fileView is null ? Task.CompletedTask : PutOnClipboardAsync(_fileView.SelectedItems, operation);
+
+    /// <summary>Cut or copy: writes the paths to the session clipboard. Nothing moves before the paste.</summary>
+    private async Task PutOnClipboardAsync(IReadOnlyList<FileViewItem> items, HackClipboardFileOperation operation)
+    {
+        if (items.Count == 0) return;
+
+        try
+        {
+            await HackClipboard.SetFileDropListAsync(items.Select(item => item.FullPath.Value), operation, AppContext.CancellationToken);
+            _errorMessage = null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ReportError("You don't have permission to use the clipboard.");
+        }
+    }
+
+    /// <summary>
+    /// Paste: copies (or, for cut files, moves) the clipboard's files into <paramref name="destination"/>.
+    /// After a cut, the clipboard is emptied once every file was moved.
+    /// </summary>
+    private async Task PasteIntoAsync(VirtualPath destination)
+    {
+        HackClipboardFileList? list;
+        try
+        {
+            list = await HackClipboard.GetFileDropListAsync(AppContext.CancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ReportError("You don't have permission to use the clipboard.");
+            return;
+        }
+
+        if (list is null || list.Paths.Count == 0) return;
+
+        bool cut = list.Operation == HackClipboardFileOperation.Cut;
+        FileTransferResult result = await FileTransfer.TransferAsync(
+            list.Paths,
+            destination.Value,
+            cut ? FileTransferMode.Move : FileTransferMode.Copy,
+            AskConflictAsync,
+            AppContext.CancellationToken);
+
+        if (cut && result.Succeeded)
+        {
+            await HackClipboard.ClearAsync(AppContext.CancellationToken);
+        }
+
+        ReportTransfer(result, cut ? "move" : "copy");
+        await RefreshAfterTransferAsync();
+    }
+
+    private void OnClipboardChanged(object? sender, EventArgs e) =>
+        _ = InvokeAsync(async () =>
+        {
+            await ReadClipboardStateAsync();
+            StateHasChanged();
+        });
+
+    /// <summary>Reads whether there is something to paste and which items to dim as cut.</summary>
+    private async Task ReadClipboardStateAsync()
+    {
+        try
+        {
+            HackClipboardFileList? list = await AppContext.Clipboard.GetFileDropListAsync(AppContext.CancellationToken);
+            _canPaste = list is { Paths.Count: > 0 };
+            _cutPaths = list is { Operation: HackClipboardFileOperation.Cut }
+                ? new HashSet<string>(list.Paths, StringComparer.Ordinal)
+                : [];
+        }
+        catch (Exception exception) when (exception is AppGatewayAccessDeniedException or NotSupportedException)
+        {
+            _canPaste = false;
+            _cutPaths = [];
+        }
+    }
+
+    // ---- Drag and drop (ADR 0058 section 1) ---------------------------------------------------------
+
+    /// <summary>
+    /// Every drop FileView hands over: HackerOS entries are moved (copied with Ctrl), with the conflict
+    /// window; files from the host system are imported. One summary covers both.
+    /// </summary>
+    private async Task OnDropRequestedAsync(FileViewDropRequestedEventArgs e)
+    {
+        if (e.Destination is not { } destination) return;
+
+        List<FileTransferItemResult> completed = [];
+        List<string> skipped = [];
+        List<FileTransferFailure> failures = [];
+
+        if (e.Entries.Count > 0)
+        {
+            FileTransferResult moved = await FileTransfer.TransferAsync(
+                e.Entries.Select(entry => entry.Path.Value).ToList(),
+                destination.Value,
+                e.Copy ? FileTransferMode.Copy : FileTransferMode.Move,
+                AskConflictAsync,
+                AppContext.CancellationToken);
+            completed.AddRange(moved.Completed);
+            skipped.AddRange(moved.Skipped);
+            failures.AddRange(moved.Failures);
+        }
+
+        if (e.HostFiles.Count > 0)
+        {
+            FileTransferResult imported = await FileTransfer.ImportAsync(e.HostFiles, destination.Value, AppContext.CancellationToken);
+            completed.AddRange(imported.Completed);
+            failures.AddRange(imported.Failures);
+        }
+
+        ReportTransfer(new FileTransferResult(completed, skipped, failures), e.Copy || e.Entries.Count == 0 ? "copy" : "move");
+        await RefreshAfterTransferAsync();
+    }
+
+    /// <summary>A drop on the Trash place or view: moves the dragged entries to the trash (ADR 0052).</summary>
+    private async Task OnTrashDropAsync(FileViewDropRequestedEventArgs e)
+    {
+        if (e.Entries.Count == 0) return;
+
+        FileTransferResult result = await FileTransfer.MoveToTrashAsync(
+            e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken);
+        ReportTransfer(result, "move to the trash");
+        await RefreshAfterTransferAsync();
+        if (_trashView is not null && _showTrash)
+        {
+            await _trashView.ReloadAsync();
+        }
+    }
+
+    /// <summary>The "Replace / Keep both / Skip" window; closing it skips the item.</summary>
+    private async Task<FileConflictResolution> AskConflictAsync(FileTransferConflict conflict)
+    {
+        DialogParameters parameters = new() { { nameof(FileConflictDialog.Conflict), conflict } };
+        IDialogReference dialog = await MudDialogService.ShowAsync<FileConflictDialog>("Name conflict", parameters);
+        DialogResult? result = await dialog.Result;
+        return result is { Canceled: false, Data: FileConflictResolution resolution }
+            ? resolution
+            : new FileConflictResolution(FileConflictChoice.Skip);
+    }
+
+    /// <summary>
+    /// Shows the end-of-operation summary: the failures (with their reason) in the error banner and as a
+    /// desktop notification; nothing when everything went through.
+    /// </summary>
+    private void ReportTransfer(FileTransferResult result, string verb)
+    {
+        string? summary = result.DescribeFailures(verb);
+        _errorMessage = summary;
+        if (summary is not null)
+        {
+            try
+            {
+                AppContext.Notifications.Post(NotificationSeverity.Warning, "File Explorer", summary);
+            }
+            catch (AppGatewayAccessDeniedException)
+            {
+                // The banner already shows it.
+            }
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshAfterTransferAsync()
+    {
+        if (_fileView is null) return;
+        try
+        {
+            await _fileView.RefreshAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // The current folder itself was moved away: go home.
+            await NavigateHomeAsync();
+        }
+    }
+
     private async Task ShowTrashAsync()
     {
         _showTrash = true;
@@ -522,35 +772,23 @@
     /// <summary>Restored elements may have landed in the folder FileView is showing.</summary>
     private Task OnTrashRestoredAsync(IReadOnlyList<string> paths) => _fileView?.RefreshAsync() ?? Task.CompletedTask;
 
+    /// <summary>
+    /// Toolbar "Upload": imports host files into the current folder, like a drop of host files — a taken
+    /// name gets a "(copy)" suffix rather than overwriting (ADR 0058, section 1).
+    /// </summary>
     private async Task UploadFilesAsync(InputFileChangeEventArgs e)
     {
         if (_fileView is null) return;
 
-        foreach (IBrowserFile file in e.GetMultipleFiles())
-        {
-            VirtualPath path = CombineChild(_fileView.CurrentDirectory, file.Name);
-
-            FileSystemResult<FileSystemEntrySnapshot> stat = await AppContext.FileSystem.StatAsync(new FileSystemStatRequest(path), AppContext.CancellationToken);
-            if (!stat.Succeeded && stat.Error?.Code == FileSystemErrorCode.NotFound)
-            {
-                FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
-                    new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
-                    AppContext.CancellationToken);
-
-                if (!createResult.Succeeded) continue;
-            }
-            else if (!stat.Succeeded)
-            {
-                continue;
-            }
-
-            // Unconditional write: an upload always replaces whatever is at this path with the freshly
-            // selected file — there is no "revision the browser read before editing" to protect here the
-            // way there is for a text editor.
-            BrowserFileContentSource source = new(file);
-            await AppContext.FileSystem.WriteAsync(new FileSystemWriteRequest(path), source, AppContext.CancellationToken);
-        }
-
+        IReadOnlyList<FileTransferHostFile> files = e.GetMultipleFiles(maximumFileCount: 100)
+            .Select(file => new FileTransferHostFile(
+                file.Name,
+                file.Size,
+                file.ContentType,
+                (maxBytes, cancellationToken) => Task.FromResult(file.OpenReadStream(maxBytes, cancellationToken))))
+            .ToList();
+        FileTransferResult result = await FileTransfer.ImportAsync(files, _fileView.CurrentDirectory.Value, AppContext.CancellationToken);
+        ReportTransfer(result, "upload");
         await _fileView.RefreshAsync();
     }
 
@@ -747,6 +985,11 @@
         }
 
         _eventSub?.Dispose();
+        if (_subscribedToClipboard)
+        {
+            AppContext.Clipboard.Changed -= OnClipboardChanged;
+        }
+
         if (_downloader is not null)
         {
             await _downloader.DisposeAsync();

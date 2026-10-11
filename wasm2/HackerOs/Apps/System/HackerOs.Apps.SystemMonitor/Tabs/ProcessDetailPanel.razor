@@ -1,0 +1,122 @@
+@namespace HackerOs.Apps.SystemMonitor.Tabs
+@inherits HackComponentBase
+
+<aside class="detail" aria-label="Process details">
+    <header class="detail-header">
+        <div>
+            <div class="detail-title">@Process.ProcessName</div>
+            <div class="detail-subtitle">PID @Process.Id · @Process.AppId</div>
+        </div>
+        <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnClose" aria-label="Close details">&#x2715;</button>
+    </header>
+
+    <div class="detail-body">
+        <section>
+            <h4>Overview</h4>
+            <dl class="kv">
+                <dt>State</dt><dd><span class="state-dot state-@Process.StateCode"></span>@Process.State (@Process.StateCode)</dd>
+                <dt>Kind</dt><dd>@Process.Kind</dd>
+                <dt>User</dt><dd title="@Process.UserId">@ProcessesTab.DisplayUser(Process.UserName)</dd>
+                <dt>Started</dt><dd class="mono">@Process.StartTime.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) UTC</dd>
+                <dt>CPU</dt><dd>@Units.Percent(Process.CpuUsage)</dd>
+                <dt>Memory</dt><dd>@Units.Bytes(Process.WorkingSet64)</dd>
+            </dl>
+        </section>
+
+        <section>
+            <h4>Command line</h4>
+            <code class="detail-code">@(Process.CommandLine.Length > 0 ? Process.CommandLine : "—")</code>
+            <h4>Working directory</h4>
+            <code class="detail-code">@(Process.WorkingDirectory ?? "—")</code>
+        </section>
+
+        <section>
+            <h4>Family</h4>
+            <dl class="kv">
+                <dt>Parent</dt>
+                <dd>
+                    @if (Parent is { } parent)
+                    {
+                        <button class="link-btn" @onclick="() => OnSelectProcess.InvokeAsync(parent.Id)">@parent.ProcessName (@parent.Id)</button>
+                    }
+                    else if (Process.ParentId is { } parentId)
+                    {
+                        <span>@parentId (not visible)</span>
+                    }
+                    else
+                    {
+                        <span>— (started by the OS)</span>
+                    }
+                </dd>
+                <dt>Children</dt>
+                <dd>
+                    @if (Children.Count == 0)
+                    {
+                        <span>none</span>
+                    }
+                    @foreach (HackProcess child in Children)
+                    {
+                        long childId = child.Id;
+                        <button class="link-btn" @onclick="() => OnSelectProcess.InvokeAsync(childId)">@child.ProcessName (@child.Id)</button>
+                    }
+                </dd>
+            </dl>
+        </section>
+
+        <section>
+            <h4>I/O <span class="detail-source">/proc/@Process.Id/io</span></h4>
+            @if (Process.IoCounters is { } io)
+            {
+                <dl class="kv">
+                    <dt>Read (rchar)</dt><dd>@Units.Bytes(io.ReadChars) · @Units.Count(io.ReadSyscalls) calls</dd>
+                    <dt>Written (wchar)</dt><dd>@Units.Bytes(io.WrittenChars) · @Units.Count(io.WriteSyscalls) calls</dd>
+                    <dt>From disk</dt><dd>@Units.Bytes(io.ReadBytes)</dd>
+                    <dt>To disk</dt><dd>@Units.Bytes(io.WriteBytes)</dd>
+                    <dt>Cancelled</dt><dd>@Units.Bytes(io.CancelledWriteBytes)</dd>
+                </dl>
+            }
+            else
+            {
+                <p class="detail-muted">Not readable: io is private to the process owner (mode 0400).</p>
+            }
+        </section>
+
+        <section>
+            <h4>Status <span class="detail-source">/proc/@Process.Id/status</span></h4>
+            <dl class="kv">
+                @foreach (KeyValuePair<string, string> field in Process.Status)
+                {
+                    <dt>@field.Key</dt><dd class="mono">@field.Value</dd>
+                }
+            </dl>
+        </section>
+
+        <section>
+            <h4>
+                Environment <span class="detail-source">/proc/@Process.Id/environ</span>
+                <button class="link-btn" @onclick="LoadEnvironmentAsync">reload</button>
+            </h4>
+            @if (_loadingEnvironment)
+            {
+                <p class="detail-muted">Reading…</p>
+            }
+            else if (_environment is null)
+            {
+                <p class="detail-muted">Not readable: environ is private to the process owner (mode 0400).</p>
+            }
+            else if (_environment.Count == 0)
+            {
+                <p class="detail-muted">Empty.</p>
+            }
+            else
+            {
+                <dl class="kv kv-env">
+                    @foreach (KeyValuePair<string, string> variable in _environment.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                    {
+                        <dt>@variable.Key</dt><dd class="mono">@variable.Value</dd>
+                    }
+                </dl>
+            }
+        </section>
+    </div>
+</aside>

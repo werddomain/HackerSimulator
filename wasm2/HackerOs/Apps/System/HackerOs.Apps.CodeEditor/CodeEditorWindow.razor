@@ -200,9 +200,11 @@
             SetStatus(recovery.Error ?? "Editor recovery could not be loaded.", isError: true);
         }
 
-        if (!string.IsNullOrWhiteSpace(LaunchFilePath))
+        // Explicit host parameter, otherwise the open-file intent's path (first launch argument).
+        VirtualPath? launchFile = !string.IsNullOrWhiteSpace(LaunchFilePath) ? VirtualPath.Parse(LaunchFilePath) : LaunchFile;
+        if (launchFile is { } path)
         {
-            await LoadPathAsync(VirtualPath.Parse(LaunchFilePath), _fileService!);
+            await LoadPathAsync(path, _fileService!);
         }
     }
 

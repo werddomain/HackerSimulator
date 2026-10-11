@@ -116,7 +116,6 @@ avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 |---|---|---|
 | `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
 | `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
-| `HackerOs.Apps.SystemMonitor` | `Platform.Core` ; `AppCatalog`, `AppLifecycleOrchestrator`, `IProcessManager`, `IEventBus` | `4-task-manager` |
 
 Règles de la liste :
 
@@ -168,12 +167,16 @@ Façades statiques existantes au début de la phase 4 :
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
+| `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
+| `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
+| `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
 
 Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Notifications`, `Logging`, `Clock`, `Processes`, `Intents`, `Watch`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
 (ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `ShellHost`
-(`4-sdk-shell-host`).
+(`4-sdk-shell-host`), `Drives` (ADR 0057, `4-proc-metrics`),
+`Clipboard` (ADR 0056 §12, `4-file-explorer`).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
@@ -252,9 +255,59 @@ await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallSco
 `IAppNetworkGateway Network`, repli réel décidé par l'OS : voir
 [`sdk-network.md`](sdk-network.md).
 
-Les autres API de l'ADR 0056 (`HackProcess`, `HackServiceController`, `HackShell`, `HackPermissionAdministration`,
-`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`,
-`HackClipboard`…) sont ajoutées ici par leurs chantiers.
+### Disques (ADR 0057 §7)
+
+`HackDriveInfo.GetDrivesAsync()` rend les montages qui ont une taille
+(aujourd'hui `/`), sur le modèle de `System.IO.DriveInfo` : `Name`,
+`DriveFormat` (`idbfs`), `DriveType` (`Fixed`), `VolumeLabel` (`hda`),
+`TotalSize`, `AvailableFreeSpace`, `TotalFreeSpace`, `RootDirectory`. Aucune
+capacité, comme `df`. Passerelle `IAppDriveGateway Drives`, implémentée par
+`AppDriveGateway` dans Platform Core. Les valeurs sont lues une fois, à l'appel.
+Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
+[`system-metrics.md`](system-metrics.md).
+
+### Processus et services (ADR 0056 §4 et §5)
+
+| API | Passerelle | Capacité | Remplace | Document |
+|---|---|---|---|---|
+| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `CloseMainWindowAsync`), `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
+| `HackServiceController` (`GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`), `HackServiceControllerStatus` | `Catalog` (liste), `/proc` (état), `Services` (`IAppServiceControlGateway`) | aucune pour lister ; `services.manage` (dangereuse) pour agir sur le service d'une autre app ou lire son type de démarrage | `AppCatalog` filtré sur `AppKind.Service`, orchestrateur | [`task-manager.md`](task-manager.md) |
+
+Les données d'un processus viennent de `/proc`, exactement ce que `ps` lit ; il
+n'y a pas d'abonnement aux événements de processus : un gestionnaire de tâches
+relit `/proc` chaque seconde.
+
+### Graphiques (ADR 0058 §2)
+
+`HackLineChart` (`HackerOs.AppSdk.Blazor.Charts`) trace en SVG natif une ou
+plusieurs `HackChartSeries`, la valeur la plus récente à droite, avec une
+légende et une échelle automatique ; ni bibliothèque ni JavaScript. Les
+couleurs viennent du thème (`--hos-chart-series-0` à `7`). Voir
+[`task-manager.md`](task-manager.md).
+
+### Presse-papiers (ADR 0056 §12)
+
+```csharp
+await HackClipboard.SetFileDropListAsync(["~/rapport.txt"], HackClipboardFileOperation.Cut);
+HackClipboardFileList? files = await HackClipboard.GetFileDropListAsync();   // Operation + Paths
+string? text = await HackClipboard.GetTextAsync();
+```
+
+- Un presse-papiers par **session**, partagé par toutes ses apps (`SystemClipboard`,
+  Platform Core), vidé à la déconnexion ; liste de fichiers au format GNOME
+  `x-special/gnome-copied-files`, lisible aussi en texte (les chemins).
+- **Capacités** `clipboard.read` (lecture) et `clipboard.write` (écriture,
+  vidage), normales. `Changed` ne demande aucune capacité.
+- `GetFileReferencesAsync` / `SetFileReferencesAsync` : `[Obsolete]`, formes de
+  « copier ». L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
+  supprimée (la vraie est dans Platform Core).
+- Passerelle : `IAppClipboardGateway Clipboard` (`AppClipboardGateway`, Platform Core).
+- `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
+  (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
+  [`file-explorer.md`](file-explorer.md).
+
+Les autres API de l'ADR 0056 (`HackPermissionAdministration`,
+`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`…) sont ajoutées ici par leurs chantiers.
 
 ### Hôte de shell (ADR 0056 §7)
 
@@ -269,6 +322,14 @@ de `HackerOs.AppSdk.Terminal` ([`terminal-console.md`](terminal-console.md)).
 Le shell est un processus `hsh` enfant de l'app ; ses commandes sont ses
 enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 (`HackCredentialPrompt`), l'OS les vérifie.
+
+### Arguments de lancement d'une fenêtre
+
+`WindowAppBase.LaunchArguments` rend les arguments du processus sans `argv[0]`
+(comme `Main(string[] args)`), et `WindowAppBase.LaunchFile` le premier s'il est
+un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
+l'app associée avec ce chemin : une app de document lit son fichier initial là
+(voir [`text-editor.md`](text-editor.md)).
 
 ## Décisions
 
@@ -314,3 +375,9 @@ enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 - [x] Onglet « Installed Apps » de Paramètres sur le SDK ; `apps.manage` déclarée par Paramètres.
 - [x] Exemptions retirées : FileExplorer, TextEditor, CodeEditor ; Paramètres reste pour `4-sdk-system-admin`.
 - [x] Tests : agent, passerelles, `HackUser`, fenêtre.
+
+## Liste des tâches du chantier `rebuild/4-file-explorer`
+
+- [x] `HackClipboard`, `HackClipboardFileList`, passerelle `IAppExecutionContext.Clipboard` ; `SystemClipboard` et `AppClipboardGateway` dans Platform Core.
+- [x] `HackDirectory.CopyAsync`, `FileTransfer` et les ajouts de `FileView` ([`file-explorer.md`](file-explorer.md)).
+- [x] Explorateur sur ces API ; capacités `clipboard.read`, `clipboard.write`, `notifications.post` déclarées. Aucune exemption à retirer (FileExplorer était déjà sorti de la liste).

@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -28,7 +29,8 @@ public sealed class MinimalAppExecutionContext(
     IAppFileSystemWatchGateway? watch = null,
     string? homeDirectory = null,
     IAppEnvironmentGateway? environment = null,
-    bool isRootElevated = false) : IAppExecutionContext
+    bool isRootElevated = false,
+    IAppClipboardGateway? clipboard = null) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
     public Guid InstanceId { get; } = Guid.NewGuid();
@@ -54,6 +56,7 @@ public sealed class MinimalAppExecutionContext(
     public IAppEnvironmentGateway Environment { get; } =
         environment ?? new FakeAppEnvironmentGateway(homeDirectory ?? $"/home/{userId}", userId);
     public bool IsRootElevated { get; } = isRootElevated;
+    public IAppClipboardGateway Clipboard => clipboard ?? throw Unsupported(nameof(Clipboard));
 
     private static NotSupportedException Unsupported(string gatewayName) =>
         new($"'{gatewayName}' was not provided to this test's MinimalAppExecutionContext.");

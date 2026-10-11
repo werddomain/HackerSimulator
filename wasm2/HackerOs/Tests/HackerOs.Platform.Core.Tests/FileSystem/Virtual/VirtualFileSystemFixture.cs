@@ -2,10 +2,12 @@ using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
+using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
@@ -29,7 +31,14 @@ internal sealed class VirtualFileSystemFixture
     {
         Clock = new ManualSimulationClock(BootUtc, TimeSpan.FromMilliseconds(100));
         Root = new MutationCountingProvider(new InMemoryFileSystemRepository());
-        Proc = new ProcFileSystemProvider(() => Processes, Resources, Hardware, Clock, environments: () => Environments);
+        Cpu = new CpuTimeAccounting(Hardware);
+        Proc = new ProcFileSystemProvider(
+            () => Processes,
+            Resources,
+            Hardware,
+            Clock,
+            environments: () => Environments,
+            metrics: new ProcMetricsSources(Cpu, ProcessIo, Disk, Network, () => Router!));
         Dev = new DevFileSystemProvider(Clock);
         Router = new FileSystemMountRouter(Root,
         [
@@ -37,7 +46,8 @@ internal sealed class VirtualFileSystemFixture
             new FileSystemMount(DevFileSystemProvider.DefaultMountPath, Dev)
         ]);
         TopicBus = new InMemoryTopicMessageBus(new CapabilityGrantRepository());
-        Service = new FileSystemService(Router, new FileSystemPathResolver(Router), new FileSystemAuthorizer(), TopicBus);
+        Service = new FileSystemService(
+            Router, new FileSystemPathResolver(Router), new FileSystemAuthorizer(), TopicBus, ioAccounting: ProcessIo);
         Seeder = new FileSystemSeeder(Service, mountRouter: Router);
     }
 
@@ -49,6 +59,18 @@ internal sealed class VirtualFileSystemFixture
     internal InMemoryProcessEnvironmentTable Environments { get; } = new();
 
     internal FakeResourceSimulator Resources { get; } = new();
+
+    /// <summary>CPU time per core behind <c>/proc/stat</c> (ADR 0057).</summary>
+    internal CpuTimeAccounting Cpu { get; }
+
+    /// <summary>Per-process I/O behind <c>/proc/&lt;pid&gt;/io</c>, fed by <see cref="Service"/>.</summary>
+    internal ProcessIoAccounting ProcessIo { get; } = new();
+
+    /// <summary>Statistics of <c>hda</c> behind <c>/proc/diskstats</c>.</summary>
+    internal BlockDeviceStatistics Disk { get; } = new();
+
+    /// <summary>Interface counters behind <c>/proc/net/dev</c>.</summary>
+    internal NetworkInterfaceStatistics Network { get; } = new();
 
     internal MutationCountingProvider Root { get; }
 

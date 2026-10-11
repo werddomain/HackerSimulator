@@ -4,6 +4,7 @@ using HackerOs.AppSdk.DragDrop;
 using HackerOs.AppSdk.FileView.ContextMenu;
 using HackerOs.AppSdk.FileView.Events;
 using HackerOs.AppSdk.FileView.Icons;
+using HackerOs.AppSdk.FileView.Transfers;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -130,6 +131,34 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public EventCallback<FileViewDeleteRequestedEventArgs> DeleteRequested { get; set; }
 
+    /// <summary>
+    /// When supplied, every drop (on a folder, the background, a tree node, a <see cref="FileViewBreadcrumb"/>
+    /// segment or a <see cref="FileViewDropZone"/>), including files dragged from the host system, is
+    /// handed to the host, which runs the transfer with its conflict rules (ADR 0058, section 1).
+    /// Without it, a HackerOS drag onto a folder or the background is moved (or copied with Ctrl) by
+    /// the control itself, and host files are ignored.
+    /// </summary>
+    [Parameter]
+    public EventCallback<FileViewDropRequestedEventArgs> DropRequested { get; set; }
+
+    /// <summary>
+    /// When supplied, Ctrl+X, Ctrl+C, Ctrl+V and the "Cut", "Copy", "Paste" and "Paste Into Folder"
+    /// menu entries are handed to the host, which owns the clipboard. Without it, none of them is offered.
+    /// </summary>
+    [Parameter]
+    public EventCallback<FileViewClipboardRequestedEventArgs> ClipboardRequested { get; set; }
+
+    /// <summary>Whether the clipboard holds files: "Paste" entries are greyed out otherwise. Set by the host.</summary>
+    [Parameter]
+    public bool CanPaste { get; set; }
+
+    /// <summary>
+    /// Paths currently cut to the clipboard: their items are shown dimmed until the paste (a cut
+    /// removes nothing by itself). Set by the host from <c>HackClipboard</c>.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyCollection<string>? CutPaths { get; set; }
+
     /// <summary>Gets the directory currently displayed.</summary>
     public VirtualPath CurrentDirectory { get; private set; }
 
@@ -205,6 +234,27 @@ public partial class FileView : IAsyncDisposable
         {
             _initialized = true;
             await NavigateAsync(InitialDirectory);
+        }
+
+        ApplyCutPaths();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AllowDragDrop && JavaScript is not null)
+        {
+            // Loaded up front so the first dragstart can write its payload synchronously, and so drops
+            // are stashed by the native listener before Blazor's handler reads them.
+            await AttachDropZoneAsync(_rootElement);
+        }
+    }
+
+    private void ApplyCutPaths()
+    {
+        foreach (FileViewItem item in _items)
+        {
+            item.IsCut = CutPaths is not null && CutPaths.Contains(item.FullPath.Value);
         }
     }
 
@@ -299,6 +349,8 @@ public partial class FileView : IAsyncDisposable
             {
                 continue;
             }
+
+            item.IsCut = CutPaths is not null && CutPaths.Contains(item.FullPath.Value);
 
             if (selectedNames.Contains(item.FileName))
             {
@@ -677,87 +729,253 @@ public partial class FileView : IAsyncDisposable
     }
 
     /// <summary>
-    /// Completes a drop onto <paramref name="target"/> (drag-drop, <c>FV-006</c>): ignored for non-directory
-    /// targets and for drags that aren't a HackerOS-internal file drag (an OS-level file drop is out of
-    /// scope — see <c>docs/Global-FileView-And-MessagingSystem/FileViewControl.md</c>). Ctrl held routes
-    /// through the existing <see cref="CopyItemsAsync"/>; otherwise through <see cref="MoveItemsAsync"/> —
-    /// both already raise the cancelable <see cref="Moving"/>/<see cref="Copying"/> events.
+    /// Completes a drop onto a directory item (drag-drop, <c>FV-006</c>): ignored for non-directory
+    /// targets (the drop then reaches the background, i.e. the current directory). See
+    /// <see cref="DropOntoAsync"/>.
     /// </summary>
-    internal async Task OnItemDropAsync(FileViewItem target, DragEventArgs args)
+    internal Task OnItemDropAsync(FileViewItem target, DragEventArgs args) =>
+        !AllowDragDrop || !target.IsDirectory ? Task.CompletedTask : DropOntoAsync(target.FullPath, args);
+
+    /// <summary>A drop on the background of the view, or on a file item: targets the current directory.</summary>
+    internal Task OnBackgroundDropAsync(DragEventArgs args) =>
+        !AllowDragDrop ? Task.CompletedTask : DropOntoAsync(CurrentDirectory, args);
+
+    /// <summary>
+    /// Completes a drop onto <paramref name="destination"/> (a folder, the background, a tree node or a
+    /// breadcrumb segment; ADR 0058, section 1). With <see cref="DropRequested"/>, the dropped HackerOS
+    /// entries and host files go to the host; otherwise Ctrl held routes through
+    /// <see cref="CopyItemsAsync"/> and a plain drop through <see cref="MoveItemsAsync"/>, both raising the
+    /// cancelable <see cref="Moving"/>/<see cref="Copying"/> events, and host files are ignored.
+    /// </summary>
+    internal async Task DropOntoAsync(VirtualPath destination, DragEventArgs args)
     {
-        if (!AllowDragDrop || !target.IsDirectory)
+        FileViewDropRequestedEventArgs? drop = await ReadDropAsync(destination, args);
+        if (drop is null)
         {
             return;
         }
 
-        if (args.DataTransfer?.Types is not { } types || !types.Contains(DragMimeType))
-        {
-            return;
-        }
-
-        IJSObjectReference module = await EnsureJsModuleAsync();
-        string? json = await module.InvokeAsync<string?>("getDragData", DragMimeType);
-        if (string.IsNullOrEmpty(json))
-        {
-            return;
-        }
-
-        FileViewDragEnvelope? envelope;
         try
         {
-            envelope = JsonSerializer.Deserialize(json, FileViewDragEnvelopeJsonSerializerContext.Default.FileViewDragEnvelope);
-        }
-        catch (JsonException)
-        {
-            return;
-        }
+            if (DropRequested.HasDelegate)
+            {
+                await DropRequested.InvokeAsync(drop);
+                return;
+            }
 
-        if (envelope is null)
-        {
-            return;
-        }
+            List<FileViewItem> resolved = [];
+            foreach (FileViewDraggedEntry entry in drop.Entries)
+            {
+                FileSystemResult<FileSystemEntrySnapshot> stat = await FileSystem.StatAsync(new FileSystemStatRequest(entry.Path));
+                if (stat.Succeeded)
+                {
+                    resolved.Add(new FileViewItem(entry.Path, FileTransfer.GetName(entry.Path.Value), entry.IsDirectory, stat.Value!.Metadata) { Owner = this });
+                }
+            }
 
-        List<FileViewItem> resolved = [];
-        foreach (VirtualFileDragPayload file in envelope.Files)
-        {
-            await ResolveDraggedItemAsync(file.FilePath, file.FileName, isDirectory: false, target, resolved);
-        }
+            if (resolved.Count == 0)
+            {
+                return;
+            }
 
-        foreach (VirtualFolderDragPayload folder in envelope.Folders)
-        {
-            await ResolveDraggedItemAsync(folder.FolderPath, folder.FolderName, isDirectory: true, target, resolved);
+            if (drop.Copy)
+            {
+                await CopyItemsAsync(resolved, destination);
+            }
+            else
+            {
+                await MoveItemsAsync(resolved, destination);
+            }
         }
-
-        if (resolved.Count == 0)
+        finally
         {
-            return;
-        }
-
-        if (args.CtrlKey)
-        {
-            await CopyItemsAsync(resolved, target.FullPath);
-        }
-        else
-        {
-            await MoveItemsAsync(resolved, target.FullPath);
+            await ReleaseHostFilesAsync(drop);
         }
     }
 
-    private async Task ResolveDraggedItemAsync(
-        string pathValue, string name, bool isDirectory, FileViewItem target, List<FileViewItem> resolved)
+    /// <summary>
+    /// Reads what was dropped (the stash of <c>FileView.razor.js</c>): the HackerOS drag payload, whose
+    /// entries are checked to exist and never include <paramref name="destination"/> itself, and the
+    /// files of a drop from the host system. <see langword="null"/> when nothing usable was dropped.
+    /// </summary>
+    /// <param name="destination">Target directory, or <see langword="null"/> for a drop zone without one.</param>
+    /// <param name="args">The Blazor drop event.</param>
+    internal async Task<FileViewDropRequestedEventArgs?> ReadDropAsync(VirtualPath? destination, DragEventArgs args)
     {
-        VirtualPath path = VirtualPath.Parse(pathValue);
-        if (Equals(path, target.FullPath))
+        if (!AllowDragDrop || args.DataTransfer?.Types is not { } types)
         {
-            // Dropping an item directly onto itself — a no-op, not an error.
+            return null;
+        }
+
+        bool internalDrag = types.Contains(DragMimeType);
+        bool hostFiles = types.Contains("Files");
+        if (!internalDrag && !hostFiles)
+        {
+            return null;
+        }
+
+        IJSObjectReference module = await EnsureJsModuleAsync();
+        List<FileViewDraggedEntry> entries = [];
+        if (internalDrag)
+        {
+            string? json = await module.InvokeAsync<string?>("getDragData", DragMimeType);
+            FileViewDragEnvelope? envelope = null;
+            if (!string.IsNullOrEmpty(json))
+            {
+                try
+                {
+                    envelope = JsonSerializer.Deserialize(json, FileViewDragEnvelopeJsonSerializerContext.Default.FileViewDragEnvelope);
+                }
+                catch (JsonException)
+                {
+                    envelope = null;
+                }
+            }
+
+            if (envelope is not null)
+            {
+                foreach (VirtualFileDragPayload file in envelope.Files)
+                {
+                    await AddDraggedEntryAsync(file.FilePath, isDirectory: false, destination, entries);
+                }
+
+                foreach (VirtualFolderDragPayload folder in envelope.Folders)
+                {
+                    await AddDraggedEntryAsync(folder.FolderPath, isDirectory: true, destination, entries);
+                }
+            }
+        }
+
+        List<FileTransferHostFile> files = [];
+        int token = 0;
+        if (hostFiles)
+        {
+            DroppedHostFiles dropped = await module.InvokeAsync<DroppedHostFiles>("takeDroppedFiles");
+            token = dropped.Token;
+            for (int index = 0; index < dropped.Files.Count; index++)
+            {
+                DroppedHostFile meta = dropped.Files[index];
+                int fileIndex = index;
+                files.Add(new FileTransferHostFile(
+                    meta.Name,
+                    meta.Size,
+                    string.IsNullOrEmpty(meta.Type) ? null : meta.Type,
+                    (maxBytes, cancellationToken) => OpenDroppedFileAsync(dropped.Token, fileIndex, maxBytes, cancellationToken)));
+            }
+        }
+
+        FileViewDropRequestedEventArgs drop = new(destination, entries, files, args.CtrlKey) { HostFileToken = token };
+        if (drop.IsEmpty)
+        {
+            await ReleaseHostFilesAsync(drop);
+            return null;
+        }
+
+        return drop;
+    }
+
+    /// <summary>Forgets the host File objects of a drop once its import is over.</summary>
+    internal async Task ReleaseHostFilesAsync(FileViewDropRequestedEventArgs drop)
+    {
+        if (drop.HostFileToken != 0 && _jsModule is not null)
+        {
+            await _jsModule.InvokeVoidAsync("releaseDroppedFiles", drop.HostFileToken);
+        }
+    }
+
+    /// <summary>Installs the native drag listeners of <c>FileView.razor.js</c> on an element (root, breadcrumb, drop zone).</summary>
+    internal async Task AttachDropZoneAsync(ElementReference element)
+    {
+        IJSObjectReference module = await EnsureJsModuleAsync();
+        await module.InvokeAsync<bool>("attachDropZone", element, DragMimeType);
+    }
+
+    private async Task<Stream> OpenDroppedFileAsync(int token, int index, long maxBytes, CancellationToken cancellationToken)
+    {
+        IJSObjectReference module = await EnsureJsModuleAsync();
+        IJSStreamReference reference = await module.InvokeAsync<IJSStreamReference>("openDroppedFile", cancellationToken, token, index);
+        return await reference.OpenReadStreamAsync(maxBytes, cancellationToken);
+    }
+
+    private async Task AddDraggedEntryAsync(string pathValue, bool isDirectory, VirtualPath? destination, List<FileViewDraggedEntry> entries)
+    {
+        VirtualPath path;
+        try
+        {
+            path = VirtualPath.Parse(pathValue);
+        }
+        catch (ArgumentException)
+        {
+            return;
+        }
+
+        if (destination is { } target && Equals(path, target))
+        {
+            // Dropping an item directly onto itself: a no-op, not an error.
             return;
         }
 
         FileSystemResult<FileSystemEntrySnapshot> stat = await FileSystem.StatAsync(new FileSystemStatRequest(path));
         if (stat.Succeeded)
         {
-            resolved.Add(new FileViewItem(path, name, isDirectory, stat.Value!.Metadata) { Owner = this });
+            entries.Add(new FileViewDraggedEntry(path, isDirectory));
         }
+    }
+
+    /// <summary>Shape returned by <c>takeDroppedFiles</c> in <c>FileView.razor.js</c>.</summary>
+    internal sealed record DroppedHostFiles(
+        [property: System.Text.Json.Serialization.JsonPropertyName("token")] int Token,
+        [property: System.Text.Json.Serialization.JsonPropertyName("files")] IReadOnlyList<DroppedHostFile> Files);
+
+    /// <summary>One host file's metadata, as <c>takeDroppedFiles</c> returns it.</summary>
+    internal sealed record DroppedHostFile(
+        [property: System.Text.Json.Serialization.JsonPropertyName("name")] string Name,
+        [property: System.Text.Json.Serialization.JsonPropertyName("size")] long Size,
+        [property: System.Text.Json.Serialization.JsonPropertyName("type")] string? Type);
+
+    /// <summary>
+    /// Keyboard shortcuts handled for the whole view (bubbled from any item, or from the focused
+    /// background): Ctrl+A selects every item; Ctrl+X, Ctrl+C and Ctrl+V go to <see cref="ClipboardRequested"/>.
+    /// </summary>
+    internal async Task OnRootKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (!(args.CtrlKey || args.MetaKey) || args.AltKey)
+        {
+            return;
+        }
+
+        switch (args.Key.ToLowerInvariant())
+        {
+            case "a" when AllowMultiSelect:
+                ChangeSelection([.. _items]);
+                break;
+            case "x":
+                await RequestClipboardAsync(FileViewClipboardAction.Cut, CurrentDirectory);
+                break;
+            case "c":
+                await RequestClipboardAsync(FileViewClipboardAction.Copy, CurrentDirectory);
+                break;
+            case "v":
+                await RequestClipboardAsync(FileViewClipboardAction.Paste, CurrentDirectory);
+                break;
+        }
+    }
+
+    /// <summary>Hands a cut, copy (of the selection) or paste (into <paramref name="destination"/>) to the host.</summary>
+    internal Task RequestClipboardAsync(FileViewClipboardAction action, VirtualPath destination)
+    {
+        if (!ClipboardRequested.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        IReadOnlyList<FileViewItem> items = action == FileViewClipboardAction.Paste ? [] : [.. _selection];
+        if (action != FileViewClipboardAction.Paste && items.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ClipboardRequested.InvokeAsync(new FileViewClipboardRequestedEventArgs(action, items, destination));
     }
 
     private string? BuildDragPayloadJson(IReadOnlyList<FileViewItem> items)

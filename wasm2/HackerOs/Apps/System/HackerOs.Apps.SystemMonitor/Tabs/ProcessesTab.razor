@@ -1,0 +1,94 @@
+@namespace HackerOs.Apps.SystemMonitor.Tabs
+@inherits HackComponentBase
+
+<div class="proc-tab">
+    <div class="proc-toolbar">
+        <input class="proc-filter"
+               type="search"
+               placeholder="Filter by name, app id or PID"
+               aria-label="Filter processes"
+               value="@Table.Filter"
+               @oninput="OnFilterInput" />
+        <span class="proc-count">
+            @Table.Visible.Count / @Table.Rows.Count processes
+            @if (Table.Selected.Count > 0)
+            {
+                <span class="proc-count-selected"> · @Table.Selected.Count selected</span>
+            }
+        </span>
+        <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="Details (Enter)">Details</button>
+        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="End the selected processes (Delete)">End task</button>
+    </div>
+
+    @if (EndTaskReport is { } report)
+    {
+        <div class="proc-report @(report.Failures.Count > 0 ? "has-failures" : "ok")" role="status">
+            <div class="proc-report-text">
+                <span>@ReportSummary(report)</span>
+                @if (report.Failures.Count > 0)
+                {
+                    <ul class="proc-report-failures">
+                        @foreach (EndTaskFailure failure in report.Failures)
+                        {
+                            <li><span class="mono">@failure.Pid</span> @failure.Name — @failure.Reason</li>
+                        }
+                    </ul>
+                }
+            </div>
+            <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnDismissReport" aria-label="Dismiss">&#x2715;</button>
+        </div>
+    }
+
+    <div class="proc-content @(DetailProcess is not null ? "with-detail" : null)">
+        <div class="proc-table-wrapper" tabindex="0" data-sysmon-selectable @onkeydown="OnKeyDownAsync">
+            <table class="sysmon-table proc-table" aria-multiselectable="true">
+                <thead>
+                    <tr>
+                        @foreach ((ProcessColumn column, string label, bool numeric) in Columns)
+                        {
+                            <th class="sortable @(numeric ? "num" : null) @(Table.SortColumn == column ? "sorted" : null)"
+                                aria-sort="@AriaSort(column)"
+                                @onclick="() => Table.ToggleSort(column)">
+                                @label<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (ProcessRow row in Table.Visible)
+                    {
+                        long pid = row.Pid;
+                        <tr class="@(Table.IsSelected(pid) ? "selected" : null)"
+                            aria-selected="@(Table.IsSelected(pid) ? "true" : "false")"
+                            @onclick="e => Table.Click(pid, e.CtrlKey || e.MetaKey, e.ShiftKey)"
+                            @ondblclick="() => OpenDetail(pid)">
+                            <td class="num mono">@row.Pid</td>
+                            <td>
+                                <span class="proc-name">@row.Name</span>
+                                <span class="proc-app">@row.AppId</span>
+                            </td>
+                            <td class="proc-user" title="@row.User">@DisplayUser(row.User)</td>
+                            <td><span class="state state-@row.StateCode">@row.State</span></td>
+                            <td class="num">@Units.Percent(row.CpuPercent)</td>
+                            <td class="num">@Units.Bytes(row.MemoryBytes)</td>
+                            <td class="num">@Units.Rate(row.ReadPerSecond)</td>
+                            <td class="num">@Units.Rate(row.WritePerSecond)</td>
+                        </tr>
+                    }
+                    @if (Table.Visible.Count == 0)
+                    {
+                        <tr class="proc-empty"><td colspan="8">@(Table.Rows.Count == 0 ? "No process visible (process.list grants the others)." : "No process matches the filter.")</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (DetailProcess is { } detail)
+        {
+            <ProcessDetailPanel Process="detail"
+                                AllProcesses="Processes.Values"
+                                OnClose="CloseDetail"
+                                OnSelectProcess="OpenDetail" />
+        }
+    </div>
+</div>

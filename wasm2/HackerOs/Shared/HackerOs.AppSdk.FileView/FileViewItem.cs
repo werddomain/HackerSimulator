@@ -48,6 +48,12 @@ public sealed class FileViewItem
     /// <summary>Gets whether this item is currently selected.</summary>
     public bool IsSelected { get; internal set; }
 
+    /// <summary>
+    /// Gets whether this item is cut to the clipboard and waits for a paste (<see cref="FileView.CutPaths"/>):
+    /// it is shown dimmed, like Nautilus does.
+    /// </summary>
+    public bool IsCut { get; internal set; }
+
     /// <summary>Gets whether this item is currently in inline rename mode.</summary>
     public bool IsRenaming { get; internal set; }
 

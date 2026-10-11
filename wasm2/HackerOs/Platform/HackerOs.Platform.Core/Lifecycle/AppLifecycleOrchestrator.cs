@@ -315,7 +315,10 @@ public sealed class AppLifecycleOrchestrator
             descriptor.Manifest.Kind,
             request.Principal.UserId,
             request.Principal.SessionId,
-            ResourceProfile.None,
+            // The manifest's declared weights feed the resource simulator, hence /proc/<pid>/status,
+            // /proc/stat and /proc/meminfo (ADR 0012, ADR 0057 section 1). The manifest validator
+            // already enforces the same [0, 1] and burst >= baseline rules as ResourceProfile.
+            ToResourceProfile(descriptor.Manifest.Resources),
             // argv[0] is the name the command was invoked as (an alias such as `unalias` included),
             // otherwise the manifest's command name (ADR 0050).
             [request.CommandName ?? descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
@@ -823,4 +826,15 @@ public sealed class AppLifecycleOrchestrator
         IAppExecutionContext Context,
         ServiceAppBase? ServiceInstance,
         Task? RunTask);
+
+    /// <summary>Maps a manifest's declared resource weights to the simulator's process profile.</summary>
+    private static ResourceProfile ToResourceProfile(AppResourceProfileManifest resources) => new(
+        resources.BaselineCpuWeight,
+        resources.BurstCpuWeight,
+        resources.BaselineMemoryWeight,
+        resources.BurstMemoryWeight,
+        resources.BaselineStorageIoWeight,
+        resources.BurstStorageIoWeight,
+        resources.BaselineNetworkIoWeight,
+        resources.BurstNetworkIoWeight);
 }
