@@ -398,6 +398,7 @@ pas modifié.
 | [0057](adr/0057-proc-metrics-for-task-manager.md) Mesures système dans `/proc` et `HackDriveInfo` | complète 0046 | section 8.2, gestionnaire de tâches |
 | [0058](adr/0058-base-app-features.md) Fonctionnalités des apps de base | — | D22, section 8.2, chantiers `rebuild/4-*` |
 | [0059](adr/0059-sdk-boundary-diagnostic-codes.md) Codes des diagnostics de la frontière du SDK | 0055 (numéros des codes) | `HOSAPP0030` et `HOSAPP0031`, les numéros de l'ADR 0055 étant déjà pris |
+| [0060](adr/0060-system-administration-sdk-adjustments.md) Ajustements de l'API d'administration du système | 0056 (sections 8, 9 et 11, en partie) | section 8.1 : `SystemPower`, `HackPermissionDecision`, écriture des documents de l'OS, presse-papiers de l'hôte pour Diagnostic |
 
 ## 11. Points de détail à fixer dans les ADR
 
@@ -456,6 +457,7 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 ### Phase 4 — SDK complet et apps de base
 - [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
   - [x] `HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement` et l'agent d'authentification de l'OS ; FileExplorer, TextEditor et CodeEditor sortent de la liste d'exemptions (`rebuild/4-sdk-user-and-apps`, ADR 0055 §5 et 0056 §1-3, [`app-sdk.md`](app-sdk.md), [`admin-authentication-agent.md`](admin-authentication-agent.md)).
+  - [x] `HackSettings.OpenSystemAsync`, `HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` ; Paramètres et Diagnostic sortent de la liste d'exemptions, qui est vide (`rebuild/4-sdk-system-admin`, ADR 0056 §8-11 et 0060, [`system-administration.md`](system-administration.md)).
 - [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
   - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)). Reste à vider la liste (`rebuild/4-sdk-boundary-final`).
   - [x] Hôte de shell : `HackShell`, capacité `shell.host`, `TerminalPanel` sans `Platform.Core`, CodeEditor système (`rebuild/4-sdk-shell-host`, ADR 0056 §7, [`shell-host.md`](shell-host.md)).

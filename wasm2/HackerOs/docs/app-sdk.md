@@ -112,10 +112,9 @@ par projet encore hors de la frontière, avec l'ADR et le ou les chantiers qui
 le corrigeront. Pour un projet exempté, les trois vérifications donnent des
 avertissements au lieu d'erreurs, et le test de sources `IJSRuntime` l'ignore.
 
-| Projet | Violations au 2026-10-10 | Chantier qui retire l'exemption |
-|---|---|---|
-| `HackerOs.Apps.Settings` | `Platform.Core`, `Infrastructure.Browser` ; `AppCatalog` et `ISessionService` (fenêtre, onglet Permissions), `IServiceProvider`, services de synchronisation, `ThemePreferenceService` ; `location.reload`, module IndexedDB d'un autre projet. L'onglet « Installed Apps » est passé au SDK (`4-sdk-user-and-apps`). | `4-sdk-system-admin` |
-| `HackerOs.Apps.Diagnostic` | `Platform.Core`, `Infrastructure.Browser` ; `navigator.clipboard` | `4-sdk-system-admin` |
+La liste est **vide** depuis `4-sdk-system-admin` (2026-10-11) : toutes les
+apps et bibliothèques du SDK respectent la frontière. Le mécanisme reste en
+place jusqu'à `4-sdk-boundary-final`, qui le supprime.
 
 Règles de la liste :
 
@@ -129,7 +128,9 @@ Règles de la liste :
   `_HackerOsSdkBoundaryExempt`, option `--boundary-exempt` du générateur).
 
 Sorties de la liste : FileExplorer, TextEditor et CodeEditor
-(`4-sdk-user-and-apps`, 2026-10-11).
+(`4-sdk-user-and-apps`, 2026-10-11) ; SystemMonitor (`4-task-manager`) ;
+Settings et Diagnostic (`4-sdk-system-admin`, voir
+[`system-administration.md`](system-administration.md)).
 
 Les références `Platform.Core` inutilisées de Calculator, HackPaint,
 IconViewer, TextEditor et Browser ont été retirées par `4-sdk-boundary` :
@@ -306,8 +307,29 @@ string? text = await HackClipboard.GetTextAsync();
   (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
   [`file-explorer.md`](file-explorer.md).
 
-Les autres API de l'ADR 0056 (`HackPermissionAdministration`,
-`HackServerConnection`, `HackSystem`, `HackStorageDiagnostics`…) sont ajoutées ici par leurs chantiers.
+### Administration du système (ADR 0056 §8 à §11, ADR 0060)
+
+```csharp
+await using HackSettingsDocument appearance = await HackSettings.OpenSystemAsync("appearance");
+await HackPermissionAdministration.SetMachineDecisionAsync(appId, capability, HackPermissionDecision.Deny);
+HackServerConnectionState server = await HackServerConnection.GetStateAsync();
+await HackSystem.RebootAsync();
+HackStorageSnapshot snapshot = await HackStorageDiagnostics.GetSnapshotAsync();
+```
+
+- `HackSettings.OpenSystemAsync` : documents de l'OS (`appearance`,
+  `ui-platform-preference`, `security`, `policy`), sans capacité ; les droits
+  des fichiers décident. `HackSettingsDocument.SetManyAsync` écrit plusieurs
+  clés en une seule modification (une seule approbation pour `/etc`).
+- `HackPermissionAdministration` (`permissions.manage`), `HackServerConnection`
+  (`server.connection.manage`), `HackSystem` (`system.power`),
+  `HackStorageDiagnostics` (`system.storage.inspect`) : capacités dangereuses.
+  Les changements machine et l'alimentation passent par l'agent
+  d'authentification de l'OS.
+- Passerelles : `SystemSettings`, `PermissionAdministration`,
+  `ServerConnection`, `SystemPower` (pas `System`, pour ne pas masquer
+  l'espace de noms) et `StorageDiagnostics`.
+- Détails : [`system-administration.md`](system-administration.md).
 
 ### Hôte de shell (ADR 0056 §7)
 
@@ -377,3 +399,12 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
 - [x] `HackClipboard`, `HackClipboardFileList`, passerelle `IAppExecutionContext.Clipboard` ; `SystemClipboard` et `AppClipboardGateway` dans Platform Core.
 - [x] `HackDirectory.CopyAsync`, `FileTransfer` et les ajouts de `FileView` ([`file-explorer.md`](file-explorer.md)).
 - [x] Explorateur sur ces API ; capacités `clipboard.read`, `clipboard.write`, `notifications.post` déclarées. Aucune exemption à retirer (FileExplorer était déjà sorti de la liste).
+
+## Liste des tâches du chantier `rebuild/4-sdk-system-admin`
+
+- [x] Capacités `permissions.manage`, `server.connection.manage`, `system.power`, `system.storage.inspect` (dangereuses).
+- [x] `HackSettings.OpenSystemAsync`, `HackSettingsDocument.SetManyAsync`, `IAppSystemSettingsGateway`.
+- [x] `HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` et leurs passerelles Platform Core, avec l'agent d'authentification.
+- [x] `SystemPowerService` (Platform Core) et appareil navigateur (`BrowserSystemPowerDevice`, `IndexedDbStorageInspector` dans l'hôte Ecosystem).
+- [x] Paramètres et Diagnostic sur le SDK public ; exemptions retirées (liste vide).
+- [x] Tests `SystemAdministrationGatewayTests` ; ADR 0060 ; doc [`system-administration.md`](system-administration.md).

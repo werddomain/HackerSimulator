@@ -40,6 +40,10 @@ classement.
 | `network.real.access` | **dangereuse** |
 | `gameplay.domain.access` | normale |
 | `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |
+| `permissions.manage` | **dangereuse** (`HackPermissionAdministration`, ADR 0056 §9 ; déclarée par Paramètres) |
+| `server.connection.manage` | **dangereuse** (`HackServerConnection`, ADR 0056 §10 ; déclarée par Paramètres) |
+| `system.power` | **dangereuse** (`HackSystem` : redémarrage, réinitialisation, ADR 0056 §11 ; déclarée par Paramètres) |
+| `system.storage.inspect` | **dangereuse** (`HackStorageDiagnostics`, ADR 0056 §11 ; déclarée par Diagnostic, seule app non système de la base à demander une approbation au premier lancement) |
 | `shell.host` | **dangereuse** (ADR 0056 §7 : héberger un shell dont les commandes agissent avec leurs propres droits, voir [`shell-host.md`](shell-host.md)) |
 
 Les phrases de risque sont celles de la table de l'ADR 0049.
