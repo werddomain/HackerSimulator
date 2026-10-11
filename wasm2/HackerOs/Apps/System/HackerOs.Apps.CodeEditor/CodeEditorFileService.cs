@@ -20,6 +20,11 @@ public enum CodeEditorFileStatus
     TooLarge,
     /// <summary>The optimistic VFS revision is stale.</summary>
     Conflict,
+    /// <summary>
+    /// The caller cancelled the operation (a newer request replaced it, or the window closed).
+    /// Not a failure: the editor never reports it to the user.
+    /// </summary>
+    Cancelled,
     /// <summary>The operation failed for another stable reason.</summary>
     Failed
 }
@@ -202,6 +207,8 @@ public sealed class CodeEditorFileService
             FileSystemErrorCode.NotFile =>
                 new CodeEditorLoadResult(
                     CodeEditorFileStatus.UnsupportedContent, path, Error: "Path is not a regular file."),
+            FileSystemErrorCode.Cancelled =>
+                new CodeEditorLoadResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorLoadResult(
                 CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Read failed.")
         };
@@ -217,6 +224,8 @@ public sealed class CodeEditorFileService
                 new CodeEditorSaveResult(CodeEditorFileStatus.NotFound, path, Error: "Destination not found."),
             FileSystemErrorCode.RevisionConflict =>
                 new CodeEditorSaveResult(CodeEditorFileStatus.Conflict, path, Error: "File changed on disk."),
+            FileSystemErrorCode.Cancelled =>
+                new CodeEditorSaveResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorSaveResult(
                 CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Write failed.")
         };

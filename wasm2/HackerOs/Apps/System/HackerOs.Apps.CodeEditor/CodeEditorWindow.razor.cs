@@ -102,7 +102,7 @@ public partial class CodeEditorWindow
                 SetStatus("Recovered unsaved editor session.", isError: false);
             }
         }
-        else if (recovery.Status is not CodeEditorRecoveryStatus.Missing)
+        else if (recovery.Status is not (CodeEditorRecoveryStatus.Missing or CodeEditorRecoveryStatus.Cancelled))
         {
             SetStatus(recovery.Error ?? "Editor recovery could not be loaded.", isError: true);
         }
@@ -325,7 +325,11 @@ public partial class CodeEditorWindow
         CodeEditorLoadResult result = await service.LoadAsync(path, AppContext.CancellationToken);
         if (!result.Succeeded || result.Content is null || result.Revision is null)
         {
-            SetStatus(result.Error ?? "Unable to open file.", isError: true);
+            if (result.Status is not CodeEditorFileStatus.Cancelled)
+            {
+                SetStatus(result.Error ?? "Unable to open file.", isError: true);
+            }
+
             return;
         }
 
@@ -444,7 +448,7 @@ public partial class CodeEditorWindow
                 await _explorer.RefreshAsync();
             }
         }
-        else
+        else if (result.Status is not CodeEditorFileStatus.Cancelled)
         {
             SetStatus(result.Error ?? "Save failed.", isError: true);
         }
@@ -1034,8 +1038,10 @@ public partial class CodeEditorWindow
         {
             CodeEditorRecoveryResult result = await _recoveryStore.SaveAsync(
                 _session.CaptureRecovery(), cancellationToken);
-            // A save superseded by a newer edit reports "Cancelled": not an error worth showing.
-            if (result.Status is not CodeEditorRecoveryStatus.Success && !cancellationToken.IsCancellationRequested)
+            // A snapshot superseded by a newer edit comes back Cancelled: the newer one will be
+            // written instead, so nothing went wrong. Only real failures reach the error banner.
+            if (result.Status is not (CodeEditorRecoveryStatus.Success or CodeEditorRecoveryStatus.Cancelled)
+                && !cancellationToken.IsCancellationRequested)
             {
                 await InvokeAsync(() => SetStatus(result.Error ?? "Editor recovery could not be saved.", isError: true));
             }
@@ -1060,7 +1066,11 @@ public partial class CodeEditorWindow
             return true;
         }
 
-        SetStatus(result.Error ?? "Editor recovery could not be cleared.", isError: true);
+        if (result.Status is not CodeEditorRecoveryStatus.Cancelled)
+        {
+            SetStatus(result.Error ?? "Editor recovery could not be cleared.", isError: true);
+        }
+
         return false;
     }
 

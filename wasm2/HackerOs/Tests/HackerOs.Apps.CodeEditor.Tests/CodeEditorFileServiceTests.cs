@@ -101,6 +101,23 @@ public sealed class CodeEditorFileServiceTests
         Assert.Equal(3, document.Revision);
     }
 
+    [Fact]
+    public async Task Cancelled_save_is_not_a_failure_and_keeps_the_buffer_dirty()
+    {
+        TestFileSystemGateway gateway = new() { CancelWrites = true };
+        gateway.AddText("/home/user/app.js", "old", revision: 3);
+        CodeEditorDocument document = CodeEditorDocument.CreateLoaded(
+            VirtualPath.Parse("/home/user/app.js"), "old", 3);
+        Assert.True(document.TryEdit("new").Succeeded);
+
+        CodeEditorSaveResult result = await new CodeEditorFileService(gateway).SaveAsync(
+            document, VirtualPath.Parse("/home/user/app.js"));
+
+        Assert.Equal(CodeEditorFileStatus.Cancelled, result.Status);
+        Assert.Null(result.Error);
+        Assert.True(document.IsDirty);
+    }
+
     private sealed class TestFileSystemGateway : IAppFileSystemGateway
     {
         private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
@@ -108,6 +125,7 @@ public sealed class CodeEditorFileServiceTests
 
         public bool DenyReads { get; init; }
         public bool RejectWritesWithConflict { get; init; }
+        public bool CancelWrites { get; init; }
         public string? CreatedPath { get; private set; }
         public long? LastExpectedWriteRevision { get; private set; }
         public FileSystemContentDescriptor? LastDescriptor { get; private set; }
@@ -152,6 +170,12 @@ public sealed class CodeEditorFileServiceTests
         {
             LastExpectedWriteRevision = request.ExpectedRevision;
             LastDescriptor = content.Descriptor;
+            if (CancelWrites)
+            {
+                return new FileSystemMutationResult(FileSystemTransactionResult.Cancelled(
+                    Guid.NewGuid(), Error(FileSystemOperation.Write, FileSystemErrorCode.Cancelled, request.Path)));
+            }
+
             if (RejectWritesWithConflict)
             {
                 return Rejected(
