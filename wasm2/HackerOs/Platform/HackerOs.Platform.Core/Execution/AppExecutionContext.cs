@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Shell;
 using HackerOs.AppSdk.Net;
 using HackerOs.AppSdk.Clipboard;
@@ -47,6 +48,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppCatalogGateway? catalog = null,
         IAppManagementGateway? appManagement = null,
         IAppNetworkGateway? network = null,
+        IAppDriveGateway? drives = null,
         IAppClipboardGateway? clipboard = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
@@ -79,6 +81,7 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         Catalog = catalog ?? UnsupportedAppGateways.Catalog;
         AppManagement = appManagement ?? UnsupportedAppGateways.Management;
         Network = network ?? UnsupportedNetworkGateway.Instance;
+        Drives = drives ?? UnsupportedDriveGateway.Instance;
         Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
     }
 
@@ -96,6 +99,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppNetworkGateway Network { get; }
+
+    /// <inheritdoc />
+    public IAppDriveGateway Drives { get; }
 
     /// <inheritdoc />
     public IAppClipboardGateway Clipboard { get; }
@@ -184,6 +190,15 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
         public Task<IHackShell> StartAsync(HackShellOptions options, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("This execution context factory was not configured with a shell host service.");
+    }
+
+    /// <summary>Drive gateway of a context built without a mount table (tests).</summary>
+    private sealed class UnsupportedDriveGateway : IAppDriveGateway
+    {
+        public static readonly UnsupportedDriveGateway Instance = new();
+
+        public ValueTask<IReadOnlyList<HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("This execution context has no drive information.");
     }
 
     /// <summary>Network gateway of a context built without a simulated network (tests).</summary>

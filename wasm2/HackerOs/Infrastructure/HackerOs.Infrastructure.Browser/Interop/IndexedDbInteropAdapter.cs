@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Text.Json;
 using HackerOs.Infrastructure.Browser.Schema;
 using HackerOs.Infrastructure.Browser.Storage;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.Interop;
@@ -13,16 +15,30 @@ internal sealed class IndexedDbInteropAdapter : IAsyncDisposable
 {
     internal const string ModulePath = "./_content/HackerOs.Infrastructure.Browser/indexedDb.js";
 
+    /// <summary>
+    /// Bytes a transaction is charged when its caller gives no size: one 4 KiB block, the size a
+    /// Linux filesystem reads or writes for an inode or directory update.
+    /// </summary>
+    internal const long MetadataBlockBytes = 4096;
+
     private readonly IJSRuntime _runtime;
+    private readonly IBlockDeviceStatistics? _disk;
     private readonly SemaphoreSlim _moduleGate = new(1, 1);
     private IJSObjectReference? _module;
     private bool _disposed;
 
     /// <summary>Initializes the adapter without importing JavaScript until the first operation.</summary>
-    public IndexedDbInteropAdapter(IJSRuntime runtime)
+    /// <param name="runtime">JavaScript runtime the module is imported into.</param>
+    /// <param name="disk">
+    /// Optional statistics of the OS disk <c>hda</c> (ADR 0057 section 4). When present, every
+    /// transaction this adapter runs is timed and counted as one read (read-only transaction) or
+    /// one write (read-write transaction) in <c>/proc/diskstats</c>.
+    /// </param>
+    public IndexedDbInteropAdapter(IJSRuntime runtime, IBlockDeviceStatistics? disk = null)
     {
         ArgumentNullException.ThrowIfNull(runtime);
         _runtime = runtime;
+        _disk = disk;
     }
 
     /// <summary>Opens the canonical database and applies a C#-owned declarative migration plan.</summary>
@@ -43,11 +59,52 @@ internal sealed class IndexedDbInteropAdapter : IAsyncDisposable
     /// <summary>
     /// Executes an ordered operation batch inside one named schema transaction boundary.
     /// </summary>
+    /// <param name="boundaryName">Declared transaction boundary.</param>
+    /// <param name="mode">Read-only or read-write.</param>
+    /// <param name="operations">Operations run in order inside the transaction.</param>
+    /// <param name="cancellationToken">Cancels the interop call.</param>
+    /// <param name="ioBytes">
+    /// Bytes the transaction moves, reported to the disk statistics (rounded up to 512-byte
+    /// sectors); <see cref="MetadataBlockBytes"/> when omitted.
+    /// </param>
     public async ValueTask<IReadOnlyList<JsonElement>> ExecuteAsync(
         string boundaryName,
         IndexedDbTransactionMode mode,
         IReadOnlyList<IndexedDbOperation> operations,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        long? ioBytes = null)
+    {
+        if (_disk is null)
+        {
+            return await ExecuteCoreAsync(boundaryName, mode, operations, cancellationToken).ConfigureAwait(false);
+        }
+
+        // The request is "in flight" from here to completion, like a bio between submit and end_io.
+        long started = Stopwatch.GetTimestamp();
+        bool succeeded = false;
+        _disk.Begin();
+        try
+        {
+            IReadOnlyList<JsonElement> results =
+                await ExecuteCoreAsync(boundaryName, mode, operations, cancellationToken).ConfigureAwait(false);
+            succeeded = true;
+            return results;
+        }
+        finally
+        {
+            _disk.Complete(
+                mode == IndexedDbTransactionMode.ReadOnly ? BlockIoDirection.Read : BlockIoDirection.Write,
+                ioBytes ?? MetadataBlockBytes,
+                Stopwatch.GetElapsedTime(started),
+                succeeded);
+        }
+    }
+
+    private async ValueTask<IReadOnlyList<JsonElement>> ExecuteCoreAsync(
+        string boundaryName,
+        IndexedDbTransactionMode mode,
+        IReadOnlyList<IndexedDbOperation> operations,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(boundaryName);
         ArgumentNullException.ThrowIfNull(operations);

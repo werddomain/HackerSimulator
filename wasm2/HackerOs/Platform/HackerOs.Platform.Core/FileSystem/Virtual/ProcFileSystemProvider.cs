@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Time;
 
@@ -11,7 +12,9 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// Serves the <c>/proc</c> mount (ADR 0046): one directory per visible active process plus the
 /// system files <c>meminfo</c>, <c>cpuinfo</c>, <c>uptime</c> and <c>loadavg</c>, all computed from
 /// <see cref="IProcessManager"/>, <see cref="IResourceSimulator"/>, <see cref="VirtualHardwareProfile"/>
-/// and <see cref="ISimulationClock"/> at the moment they are read. Nothing is ever stored.
+/// and <see cref="ISimulationClock"/> at the moment they are read, and the measurement files of
+/// ADR 0057 (<c>stat</c>, <c>diskstats</c>, <c>net/dev</c>, <c>mounts</c>, <c>&lt;pid&gt;/io</c>)
+/// computed from the counters of <see cref="ProcMetricsSources"/>. Nothing is ever stored.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -38,14 +41,18 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private const ushort PrivateFileMode = 0b100_000_000; // 0400
     private const int MaximumProcessNameLength = 15;
 
-    private static readonly string[] SystemFiles = ["cpuinfo", "loadavg", "meminfo", "uptime"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "status"];
+    private const string NetDirectory = "net";
+
+    private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
+    private static readonly string[] NetFiles = ["dev"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "status"];
 
     private readonly Func<IProcessManager> _processManager;
     private readonly IResourceSimulator _resources;
     private readonly VirtualHardwareProfile _hardware;
     private readonly Func<ProcessRecord, string?>? _userNameResolver;
     private readonly Func<IProcessEnvironmentTable?>? _environments;
+    private readonly ProcMetricsSources _metrics;
 
     /// <summary>Initializes the <c>/proc</c> provider.</summary>
     /// <param name="processManager">
@@ -66,6 +73,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// Lazily resolves the per-process environment table behind <c>cmdline</c>, <c>environ</c> and
     /// <c>cwd</c> (lazy for the same cycle as <paramref name="processManager"/>).
     /// </param>
+    /// <param name="metrics">
+    /// Counters behind <c>stat</c>, <c>&lt;pid&gt;/io</c>, <c>diskstats</c>, <c>net/dev</c> and
+    /// <c>mounts</c> (ADR 0057); when omitted, those files read as zeros.
+    /// </param>
     public ProcFileSystemProvider(
         Func<IProcessManager> processManager,
         IResourceSimulator resources,
@@ -73,7 +84,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         ISimulationClock clock,
         Func<ProcessRecord, string?>? userNameResolver = null,
         Func<Guid>? transactionIdFactory = null,
-        Func<IProcessEnvironmentTable?>? environments = null)
+        Func<IProcessEnvironmentTable?>? environments = null,
+        ProcMetricsSources? metrics = null)
         : base(DefaultMountPath, clock, transactionIdFactory)
     {
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
@@ -81,6 +93,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         _hardware = hardware ?? throw new ArgumentNullException(nameof(hardware));
         _userNameResolver = userNameResolver;
         _environments = environments;
+        _metrics = metrics ?? new ProcMetricsSources();
     }
 
     /// <inheritdoc />
@@ -112,9 +125,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         string[] segments = RelativeSegments(request.Path);
-        string text = segments.Length == 1
-            ? RenderSystemFile(segments[0])
-            : RenderProcessFile(FindVisible(ParsePid(segments[0])!.Value, context)!, segments[1]);
+        string text = segments switch
+        {
+            [string name] => RenderSystemFile(name),
+            [NetDirectory, string name] => RenderNetFile(name),
+            _ => RenderProcessFile(FindVisible(ParsePid(segments[0])!.Value, context)!, segments[1])
+        };
         return ValueTask.FromResult(TextHandle(request.Path, metadata, text));
     }
 
@@ -137,9 +153,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         string[] segments = RelativeSegments(request.Path);
-        IEnumerable<string> names = segments.Length == 0
-            ? RootNames(context)
-            : ProcessEntries;
+        IEnumerable<string> names = segments switch
+        {
+            [] => RootNames(context),
+            [NetDirectory] => NetFiles,
+            _ => ProcessEntries
+        };
 
         List<FileSystemDirectoryItem> items = [];
         foreach (string name in names.Order(StringComparer.Ordinal))
@@ -176,6 +195,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             ["self"] => SelfLink(path, context),
             [string name] when SystemFiles.Contains(name, StringComparer.Ordinal) =>
                 File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc),
+            [NetDirectory] => Directory(path, SystemPrincipal, SystemPrincipal, DirectoryMode, BootTimeUtc),
+            [NetDirectory, string name] => NetFiles.Contains(name, StringComparer.Ordinal)
+                ? File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc)
+                : null,
             [string pid] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
                 ? Directory(path, Owner(process), Owner(process), DirectoryMode, StartTime(process))
                 : null,
@@ -201,7 +224,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         return entry switch
         {
             "status" or "cmdline" => File(path, owner, owner, PublicFileMode, started),
-            "environ" => File(path, owner, owner, PrivateFileMode, started),
+            // io is private like environ (ADR 0057 section 3): the owner, or System authority.
+            "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
             "cwd" => Link(path, owner, owner, started,
                 EnvironmentOf(process)?.WorkingDirectory ?? $"/home/{HomeName(process, context)}"),
             _ => null
@@ -231,6 +255,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             yield return file;
         }
+
+        yield return NetDirectory;
 
         if (SelfLink(Child(MountPath, "self"), context) is not null)
         {
@@ -266,6 +292,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "environ" => EnvironmentOf(process) is { } environment
             ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
             : string.Empty,
+        "io" => RenderProcessIo(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
 
@@ -300,8 +327,137 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "cpuinfo" => RenderCpuInfo(),
         "uptime" => RenderUptime(),
         "loadavg" => RenderLoadAverage(),
+        "stat" => RenderStat(),
+        "diskstats" => RenderDiskStats(),
+        "mounts" => RenderMounts(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc system file.")
     };
+
+    private string RenderNetFile(string name) => name switch
+    {
+        "dev" => RenderNetDev(),
+        _ => throw new InvalidOperationException($"'{name}' is not a /proc/net file.")
+    };
+
+    /// <summary>
+    /// Renders <c>/proc/stat</c> (ADR 0057 section 2): the aggregate <c>cpu</c> line, one
+    /// <c>cpuN</c> line per core in <c>USER_HZ</c> since boot, then <c>btime</c>,
+    /// <c>processes</c> (forks since boot: PIDs are handed out in sequence from 1, so the last PID
+    /// counts them), <c>procs_running</c> and <c>procs_blocked</c>.
+    /// </summary>
+    private string RenderStat()
+    {
+        IReadOnlyList<CpuTimes> cores = _metrics.Cpu?.GetCores()
+            ?? [.. Enumerable.Repeat(new CpuTimes(0, 0, 0, 0), CoreCount)];
+        CpuTimes total = cores.Aggregate(new CpuTimes(0, 0, 0, 0), static (sum, core) => sum + core);
+        ProcessRecord[] active = [.. ActiveProcesses()];
+        int running = active.Count(static process => process.State == ProcessState.Running);
+
+        StringBuilder builder = new();
+        AppendCpuLine(builder, "cpu ", total);
+        for (int core = 0; core < cores.Count; core++)
+        {
+            AppendCpuLine(builder, $"cpu{core.ToString(CultureInfo.InvariantCulture)}", cores[core]);
+        }
+
+        builder.Append(CultureInfo.InvariantCulture, $"btime {BootTimeUtc.ToUnixTimeSeconds()}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"processes {LastPid(active)}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"procs_running {running}\n");
+        builder.Append("procs_blocked 0\n");
+        return builder.ToString();
+
+        static void AppendCpuLine(StringBuilder builder, string label, CpuTimes times) =>
+            builder.Append(CultureInfo.InvariantCulture, $"{label} {times.User} {times.Nice} {times.System} {times.Idle} 0 0 0 0 0 0\n");
+    }
+
+    /// <summary>Renders <c>/proc/&lt;pid&gt;/io</c> (ADR 0057 section 3, <c>proc_pid_io(5)</c>).</summary>
+    private string RenderProcessIo(ProcessRecord process)
+    {
+        ProcessIoCounters io = _metrics.ProcessIo?.Get(process.Pid) ?? ProcessIoCounters.Zero;
+        StringBuilder builder = new();
+        builder.Append(CultureInfo.InvariantCulture, $"rchar: {io.ReadChars}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"wchar: {io.WrittenChars}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"syscr: {io.ReadSyscalls}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"syscw: {io.WriteSyscalls}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"read_bytes: {io.ReadBytes}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"write_bytes: {io.WriteBytes}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"cancelled_write_bytes: {io.CancelledWriteBytes}\n");
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Renders <c>/proc/diskstats</c> (ADR 0057 section 4): one line for <c>hda</c>, laid out like
+    /// the kernel's <c>"%4d %7d %s %lu ..."</c>, with the first eleven statistics fields.
+    /// </summary>
+    private string RenderDiskStats()
+    {
+        IBlockDeviceStatistics? disk = _metrics.Disk;
+        BlockDeviceCounters counters = disk?.GetCounters() ?? default;
+        string name = disk?.DeviceName ?? "hda";
+        int major = disk?.Major ?? 8;
+        int minor = disk?.Minor ?? 0;
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{major,4} {minor,7} {name} {counters.ReadsCompleted} {counters.ReadsMerged} {counters.SectorsRead} {counters.MillisecondsReading} "
+            + $"{counters.WritesCompleted} {counters.WritesMerged} {counters.SectorsWritten} {counters.MillisecondsWriting} "
+            + $"{counters.IosInProgress} {counters.MillisecondsDoingIo} {counters.WeightedMillisecondsDoingIo}\n");
+    }
+
+    /// <summary>
+    /// Renders <c>/proc/net/dev</c> (ADR 0057 section 5): the kernel's two header lines, then one
+    /// line per interface in the kernel's <c>"%6s:%8llu %7llu ..."</c> layout.
+    /// </summary>
+    private string RenderNetDev()
+    {
+        IReadOnlyList<NetworkInterfaceCounters> interfaces = _metrics.Network?.GetInterfaces()
+            ??
+            [
+                new NetworkInterfaceCounters(NetworkInterfaceNames.Loopback, 0, 0, 0, 0, 0, 0, 0, 0),
+                new NetworkInterfaceCounters(NetworkInterfaceNames.Ethernet, 0, 0, 0, 0, 0, 0, 0, 0)
+            ];
+
+        StringBuilder builder = new();
+        builder.Append("Inter-|   Receive                                                |  Transmit\n");
+        builder.Append(" face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n");
+        foreach (NetworkInterfaceCounters nic in interfaces)
+        {
+            builder.Append(
+                CultureInfo.InvariantCulture,
+                $"{nic.Name,6}:{nic.ReceiveBytes,8} {nic.ReceivePackets,7} {nic.ReceiveErrors,4} {nic.ReceiveDropped,4} {0,4} {0,5} {0,10} {0,9} "
+                + $"{nic.TransmitBytes,8} {nic.TransmitPackets,7} {nic.TransmitErrors,4} {nic.TransmitDropped,4} {0,4} {0,5} {0,7} {0,10}\n");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Renders <c>/proc/mounts</c> (ADR 0057 section 6) in <c>fstab</c> format, one line per mount
+    /// of the router, root first.
+    /// </summary>
+    private string RenderMounts()
+    {
+        IEnumerable<MountDescription> mounts = _metrics.Mounts?.Invoke().Mounts.Select(MountDescription.From)
+            ??
+            [
+                new MountDescription("/dev/hda", "/", MountDescription.IndexedDbType, "rw"),
+                new MountDescription("proc", MountPath.Value, "proc", "ro")
+            ];
+
+        StringBuilder builder = new();
+        foreach (MountDescription mount in mounts)
+        {
+            builder.Append(CultureInfo.InvariantCulture, $"{mount.Source} {mount.MountPoint} {mount.Type} {mount.Options} 0 0\n");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>Gets the highest PID handed out so far, live or exited.</summary>
+    private long LastPid(IEnumerable<ProcessRecord> active) =>
+        active.Concat(_processManager().GetHistory())
+            .Select(static process => process.Pid.Value)
+            .DefaultIfEmpty(0)
+            .Max();
 
     private string RenderMemInfo()
     {
@@ -355,13 +511,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     {
         IReadOnlyList<SystemResourceSample> history = _resources.GetSystemHistory();
         DateTimeOffset now = NowUtc;
-        IProcessManager processes = _processManager();
         ProcessRecord[] active = [.. ActiveProcesses()];
         int running = active.Count(static process => process.State == ProcessState.Running);
-        long lastPid = active.Concat(processes.GetHistory())
-            .Select(static process => process.Pid.Value)
-            .DefaultIfEmpty(0)
-            .Max();
+        long lastPid = LastPid(active);
 
         return string.Create(
             CultureInfo.InvariantCulture,
