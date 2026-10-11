@@ -1,766 +1,303 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
-@using HackerOs.AppSdk.FileView
-@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.AppSdk.Icons
 @using HackerOs.AppSdk.Terminal
-@using HackerOs.Simulation.Abstractions.FileSystem
-@using HackerOs.Simulation.Abstractions.Gateways
 @using Microsoft.AspNetCore.Components.Web
-@using Microsoft.JSInterop
 @using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
 @implements IWindowCloseGuard
-@inject IJSRuntime JavaScript
-@inject MudBlazor.IDialogService MudDialogService
 
-<section class="code-editor" @onkeydown="HandleShortcutAsync" aria-label="Code Editor">
-    <header class="editor-toolbar">
-        <div class="file-actions" role="toolbar" aria-label="File actions">
-            <button id="code-new" class="toolbar-btn" @onclick="NewDocumentAsync">New</button>
-            <button id="code-open" class="toolbar-btn" @onclick="OpenFileAsync">Open</button>
-            <button id="code-open-folder" class="toolbar-btn" @onclick="OpenFolderAsync">Open Folder</button>
-            <button id="code-save" class="toolbar-btn" @onclick="SaveActiveAsync" disabled="@(ActiveDocument is null)">Save</button>
-            <button id="code-save-as" class="toolbar-btn" @onclick="SaveActiveAsAsync" disabled="@(ActiveDocument is null)">Save As</button>
-        </div>
-
-        <div class="view-actions" role="toolbar" aria-label="View actions">
-            <button id="code-toggle-terminal"
-                    class="toolbar-btn @(_showTerminalPanel ? "is-active" : null)"
-                    aria-pressed="@_showTerminalPanel"
-                    @onclick="ToggleTerminalPanel">Terminal</button>
-        </div>
-
-        <label class="language-label" for="code-language">
-            Mode
-            <select id="code-language"
-                    class="language-select"
-                    value="@ActiveDocument?.SyntaxMode"
-                    @onchange="ChangeSyntaxModeAsync"
-                    disabled="@(ActiveDocument is null)">
-                @foreach (CodeEditorSyntaxMode mode in Enum.GetValues<CodeEditorSyntaxMode>())
-                {
-                    <option value="@mode">@SyntaxModeLabel(mode)</option>
-                }
-            </select>
-        </label>
+@*
+    The editor's workbench, laid out as VS Code's: menu bar; activity bar (Explorer, Search);
+    resizable side bar; the editor group (tabs, breadcrumbs, Monaco filling the rest); the
+    resizable terminal panel; the status bar (cursor position, language). Sizes and keyboard
+    shortcuts are handled by CodeEditorWindow.razor.js; everything else is C#.
+*@
+<section class="code-editor" @ref="_root" aria-label="Code Editor">
+    @* MudMenu's activator wrapper is itself the focusable role="button" element, so the titles
+       are plain text calling the menu context (a nested <button> would be nested-interactive). *@
+    <header class="menubar" aria-label="Editor menu">
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
+            <ActivatorContent><span class="menu-title" id="code-menu-file" @onclick="context.ToggleAsync">File</span></ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="NewDocumentAsync"><span class="menu-entry"><span>New Text File</span><kbd>Ctrl+N</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="NewFileInFolderAsync" Disabled="@(_workspace is null)"><span class="menu-entry"><span>New File in Folder...</span></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="OpenFileAsync"><span class="menu-entry"><span>Open File...</span><kbd>Ctrl+O</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="OpenFolderAsync"><span class="menu-entry"><span>Open Folder...</span></span></MudMenuItem>
+                <MudMenuItem OnClick="CloseFolder" Disabled="@(_workspace is null)"><span class="menu-entry"><span>Close Folder</span></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="SaveActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Save</span><kbd>Ctrl+S</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="SaveActiveAsAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Save As...</span><kbd>Ctrl+Shift+S</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="SaveAllAsync" Disabled="@(!_session.Documents.Any(document => document.IsDirty))"><span class="menu-entry"><span>Save All</span></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="CloseActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Close Editor</span><kbd>Ctrl+W</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="CloseAllAsync" Disabled="@(_session.Documents.Count == 0)"><span class="menu-entry"><span>Close All Editors</span></span></MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
+            <ActivatorContent><span class="menu-title" id="code-menu-edit" @onclick="context.ToggleAsync">Edit</span></ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("undo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Undo</span><kbd>Ctrl+Z</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("redo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Redo</span><kbd>Ctrl+Y</kbd></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("actions.find"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Find</span><kbd>Ctrl+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.startFindReplaceAction"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Replace</span><kbd>Ctrl+H</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>Find in Folder</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.commentLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Toggle Line Comment</span><kbd>Ctrl+/</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.formatDocument"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Format Document</span><kbd>Shift+Alt+F</kbd></span></MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
+            <ActivatorContent><span class="menu-title" id="code-menu-view" @onclick="context.ToggleAsync">View</span></ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.quickCommand"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Command Palette...</span><kbd>F1</kbd></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="ShowExplorer"><span class="menu-entry"><span>Explorer</span><kbd>Ctrl+Shift+E</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>Search</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleSidebar"><span class="menu-entry"><span>Toggle Side Bar</span><kbd>Ctrl+B</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleTerminalPanel"><span class="menu-entry"><span>Terminal</span><kbd>Ctrl+`</kbd></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="ToggleMinimap"><span class="menu-entry"><span>@(_minimap ? "Hide Minimap" : "Show Minimap")</span></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleWordWrap"><span class="menu-entry"><span>@(_wordWrap ? "Disable Word Wrap" : "Word Wrap")</span><kbd>Alt+Z</kbd></span></MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
+            <ActivatorContent><span class="menu-title" id="code-menu-go" @onclick="context.ToggleAsync">Go</span></ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="QuickOpenAsync"><span class="menu-entry"><span>Go to File...</span><kbd>Ctrl+P</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.gotoLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Go to Line...</span><kbd>Ctrl+G</kbd></span></MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => CycleTabAsync(1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>Next Editor</span><kbd>Ctrl+Tab</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => CycleTabAsync(-1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>Previous Editor</span><kbd>Ctrl+Shift+Tab</kbd></span></MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <span class="menubar-title">@WindowTitle()</span>
     </header>
 
-    @* Not a full ARIA tablist pattern (no tabpanel counterparts, no arrow-key roving tabindex —
-       see docs/Human-test-needed-p2-GATE-003.md's keyboard-navigation gap), and each tab carries
-       its own close button, which the tablist/tab pattern doesn't allow as a sibling owned
-       element (axe aria-required-children). aria-pressed communicates the active document
-       without claiming a pattern this widget doesn't fully implement. *@
-    <nav class="tab-strip" aria-label="Open editor documents">
-        @foreach (CodeEditorDocument document in _session.Documents)
-        {
-            <div class="tab-shell @(document.Id == _session.ActiveDocumentId ? "is-active" : null)">
-                <button class="tab-select"
-                        aria-pressed="@(document.Id == _session.ActiveDocumentId)"
-                        @onclick="() => ActivateDocumentAsync(document.Id)">
-                    <span class="tab-name">@document.Title</span>
-                    @if (document.IsDirty)
-                    {
-                        <span class="dirty-marker" aria-label="Unsaved changes">●</span>
-                    }
-                </button>
-                <button class="tab-close"
-                        aria-label="Close @document.Title"
-                        @onclick="() => CloseDocumentAsync(document.Id)">×</button>
+    <div class="workbench-body">
+        <nav class="activity-bar" aria-label="Views">
+            <button type="button" id="code-activity-explorer"
+                    class="activity-button @(_sidebarVisible && _view == SideView.Explorer ? "is-active" : null)"
+                    title="Explorer (Ctrl+Shift+E)" aria-label="Explorer"
+                    aria-pressed="@(_sidebarVisible && _view == SideView.Explorer)"
+                    @onclick="() => ToggleView(SideView.Explorer)">
+                <HackerIcon Library="IconLibrary.Lucide" Name="files" Size="22" />
+            </button>
+            <button type="button" id="code-activity-search"
+                    class="activity-button @(_sidebarVisible && _view == SideView.Search ? "is-active" : null)"
+                    title="Search (Ctrl+Shift+F)" aria-label="Search"
+                    aria-pressed="@(_sidebarVisible && _view == SideView.Search)"
+                    @onclick="() => ToggleView(SideView.Search)">
+                <HackerIcon Library="IconLibrary.Lucide" Name="search" Size="22" />
+            </button>
+            <span class="activity-spacer"></span>
+            <button type="button" id="code-toggle-terminal"
+                    class="activity-button @(_showTerminalPanel ? "is-active" : null)"
+                    title="Toggle Terminal (Ctrl+`)" aria-label="Terminal"
+                    aria-pressed="@_showTerminalPanel"
+                    @onclick="ToggleTerminalPanel">
+                <HackerIcon Library="IconLibrary.Lucide" Name="terminal" Size="22" />
+            </button>
+        </nav>
+
+        @* Both views stay rendered while the side bar is open, so switching keeps the tree's
+           expansion and the search results, as VS Code does. *@
+        <aside class="side-bar @(_sidebarVisible ? null : "is-hidden")" aria-label="Side bar">
+            <div class="side-view @(_view == SideView.Explorer ? "is-active" : null)">
+                <CodeEditorExplorer @ref="_explorer"
+                                    Workspace="_workspace"
+                                    Watch="AppContext.Watch"
+                                    OwnerAppId="@Manifest.Id"
+                                    OnOpenFile="OpenFromWorkspaceAsync"
+                                    OnPreviewFile="PreviewFromWorkspaceAsync"
+                                    OnOpenFolder="OpenFolderAsync"
+                                    OnFindInFolder="FindInFolderAsync"
+                                    OnRenamed="OnWorkspaceRenamed"
+                                    OnDeleteRequested="DeleteItemsAsync" />
             </div>
-        }
-    </nav>
+            <div class="side-view @(_view == SideView.Search ? "is-active" : null)">
+                <CodeEditorSearchView @ref="_search"
+                                      Workspace="_workspace"
+                                      OpenContent="OpenDocumentContent"
+                                      OnOpenMatch="NavigateAsync"
+                                      OnOpenFolder="OpenFolderAsync" />
+            </div>
+        </aside>
+        <div class="sidebar-splitter @(_sidebarVisible ? null : "is-hidden")" data-resizes=".side-bar"
+             role="separator" aria-orientation="vertical" aria-label="Resize side bar"></div>
 
-    @if (!string.IsNullOrWhiteSpace(_statusMessage))
-    {
-        <div class="editor-message @(_statusIsError ? "is-error" : "is-information")"
-             role="@(_statusIsError ? "alert" : "status")">
-            @_statusMessage
-        </div>
-    }
+        <div class="main-column">
+            <div class="editor-group">
+                @* Not a full ARIA tablist pattern (no tabpanel counterparts, no arrow-key roving
+                   tabindex), and each tab carries its own close button, which the tablist/tab
+                   pattern doesn't allow (axe aria-required-children). aria-pressed communicates
+                   the active document without claiming a pattern this widget doesn't implement. *@
+                <nav class="tab-strip @(_session.Documents.Count == 0 ? "is-empty" : null)" aria-label="Open editor documents">
+                    @foreach (CodeEditorDocument document in _session.Documents)
+                    {
+                        bool active = document.Id == _session.ActiveDocumentId;
+                        string? hint = TabHint(document);
+                        <div class="tab-shell @(active ? "is-active" : null) @(document.IsDirty ? "is-dirty" : null)"
+                             @key="document.Id"
+                             title="@(document.Path?.Value ?? document.Title)"
+                             @onmouseup="args => OnTabMouseUpAsync(args, document.Id)">
+                            <button class="tab-select"
+                                    aria-pressed="@active"
+                                    @onclick="() => ActivateDocumentAsync(document.Id)">
+                                <HackerIcon Library="IconLibrary.Lucide" Name="file-code" Size="14" />
+                                <span class="tab-name">@document.Title</span>
+                                @if (hint is not null)
+                                {
+                                    <span class="tab-hint">@hint</span>
+                                }
+                            </button>
+                            <button class="tab-close"
+                                    aria-label="Close @document.Title"
+                                    title="Close (Ctrl+W)"
+                                    @onclick="() => CloseDocumentAsync(document.Id)">
+                                <span class="dirty-dot" aria-hidden="true">●</span>
+                                <span class="close-x" aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                    }
+                </nav>
 
-    <div class="editor-workspace">
-        @if (_openFolder is VirtualPath folder)
-        {
-            <aside class="editor-sidebar" aria-label="Folder explorer">
-                <div class="sidebar-header">@folder.Value</div>
-                <FileView @ref="_fileView"
-                          @key="folder"
-                          FileSystem="_openFolderFileSystem"
-                          Watch="AppContext.Watch"
-                          InitialDirectory="folder"
-                          Mode="FileViewMode.Tree"
-                          AllowMultiSelect="false"
-                          OwnerAppId="Manifest.Id" />
-            </aside>
-        }
-        <div class="editor-host" @ref="_editorHost"></div>
-    </div>
-
-    @if (_showTerminalPanel)
-    {
-        <section class="terminal-panel" aria-label="Integrated terminal">
-            <nav class="terminal-tabs" aria-label="Open terminals">
-                @for (int i = 0; i < _terminalTabIds.Count; i++)
+                @if (ActiveDocument is { } current)
                 {
-                    string tabId = _terminalTabIds[i];
-                    int tabNumber = i + 1;
-                    <div class="terminal-tab-shell @(tabId == _activeTerminalTabId ? "is-active" : null)">
-                        <button class="terminal-tab-select"
-                                aria-pressed="@(tabId == _activeTerminalTabId)"
-                                @onclick="() => ActivateTerminalTab(tabId)">Terminal @tabNumber</button>
-                        @if (_terminalTabIds.Count > 1)
+                    <div class="breadcrumbs" aria-label="Breadcrumbs">
+                        @foreach (string segment in Breadcrumbs(current))
                         {
-                            <button class="terminal-tab-close"
-                                    aria-label="Close Terminal @tabNumber"
-                                    @onclick="() => CloseTerminalTab(tabId)">×</button>
+                            <span class="crumb">@segment</span>
                         }
                     </div>
                 }
-                <button class="add-terminal-btn" aria-label="Add terminal" @onclick="AddTerminalTab">+</button>
-            </nav>
-            <div class="terminal-instances">
-                @foreach (string tabId in _terminalTabIds)
+
+                @if (!string.IsNullOrWhiteSpace(_statusMessage))
                 {
-                    <div class="terminal-instance @(tabId == _activeTerminalTabId ? "is-active" : null)" @key="tabId">
-                        <TerminalPanel AppContext="AppContext"
-                                       CallerAppId="org.hackeros.code-editor"
-                                       InitialCwd="@TerminalInitialCwd()"
-                                       OnExitRequested="() => OnTerminalExited(tabId)" />
+                    <div class="editor-message @(_statusIsError ? "is-error" : "is-information")"
+                         role="@(_statusIsError ? "alert" : "status")">
+                        <span>@_statusMessage</span>
+                        <button type="button" class="message-close" aria-label="Dismiss message" @onclick="ClearStatus">×</button>
                     </div>
                 }
-            </div>
-        </section>
-    }
 
-    <footer class="editor-statusbar" aria-label="Code editor status">
-        <span>@(ActiveDocument?.Path?.Value ?? "Unsaved buffer")</span>
-        <span>@(ActiveDocument is null ? "0 bytes" : $"{ActiveDocument.Utf8ByteCount} bytes")</span>
-        <span>@(ActiveDocument is null ? "Plain text" : SyntaxModeLabel(ActiveDocument.SyntaxMode))</span>
+                <div class="editor-area">
+                    <div class="editor-host @(ActiveDocument is null ? "is-empty" : null)" @ref="_editorHost"></div>
+                    @if (ActiveDocument is null)
+                    {
+                        <div class="watermark">
+                            <div class="watermark-logo" aria-hidden="true">&lt;/&gt;</div>
+                            <dl class="watermark-shortcuts">
+                                <dt>Go to File</dt><dd><kbd>Ctrl</kbd>+<kbd>P</kbd></dd>
+                                <dt>Find in Folder</dt><dd><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dd>
+                                <dt>New Text File</dt><dd><kbd>Ctrl</kbd>+<kbd>N</kbd></dd>
+                                <dt>Open File</dt><dd><kbd>Ctrl</kbd>+<kbd>O</kbd></dd>
+                                <dt>Toggle Terminal</dt><dd><kbd>Ctrl</kbd>+<kbd>`</kbd></dd>
+                            </dl>
+                            <div class="watermark-actions">
+                                <button type="button" id="code-new" class="link-button" @onclick="NewDocumentAsync">New File</button>
+                                <button type="button" id="code-open" class="link-button" @onclick="OpenFileAsync">Open File...</button>
+                                <button type="button" id="code-open-folder" class="link-button" @onclick="OpenFolderAsync">Open Folder...</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <CodeEditorQuickOpenPalette @ref="_quickOpen"
+                                            Workspace="_workspace"
+                                            OnPick="OnQuickOpenPickAsync"
+                                            OnClosed="FocusEditorAsync" />
+            </div>
+
+            @if (_showTerminalPanel)
+            {
+                <div class="panel-splitter" data-resizes=".terminal-panel"
+                     role="separator" aria-orientation="horizontal" aria-label="Resize terminal panel"></div>
+                <section class="terminal-panel" aria-label="Integrated terminal">
+                    <header class="panel-header">
+                        <span class="panel-title">Terminal</span>
+                        <nav class="terminal-tabs" aria-label="Open terminals">
+                            @for (int i = 0; i < _terminalTabIds.Count; i++)
+                            {
+                                string tabId = _terminalTabIds[i];
+                                int tabNumber = i + 1;
+                                <div class="terminal-tab-shell @(tabId == _activeTerminalTabId ? "is-active" : null)">
+                                    <button class="terminal-tab-select"
+                                            aria-pressed="@(tabId == _activeTerminalTabId)"
+                                            @onclick="() => ActivateTerminalTab(tabId)">
+                                        <HackerIcon Library="IconLibrary.Lucide" Name="terminal" Size="13" />
+                                        hsh @tabNumber
+                                    </button>
+                                    @if (_terminalTabIds.Count > 1)
+                                    {
+                                        <button class="terminal-tab-close"
+                                                aria-label="Close Terminal @tabNumber"
+                                                @onclick="() => CloseTerminalTab(tabId)">×</button>
+                                    }
+                                </div>
+                            }
+                        </nav>
+                        <span class="panel-actions">
+                            <button type="button" class="panel-button" aria-label="New Terminal" title="New Terminal" @onclick="AddTerminalTab">+</button>
+                            <button type="button" class="panel-button" aria-label="Close Panel" title="Close Panel" @onclick="ToggleTerminalPanel">×</button>
+                        </span>
+                    </header>
+                    <div class="terminal-instances">
+                        @foreach (string tabId in _terminalTabIds)
+                        {
+                            <div class="terminal-instance @(tabId == _activeTerminalTabId ? "is-active" : null)" @key="tabId">
+                                <TerminalPanel AppContext="AppContext"
+                                               CallerAppId="org.hackeros.code-editor"
+                                               InitialCwd="@TerminalInitialCwd()"
+                                               OnExitRequested="() => OnTerminalExited(tabId)" />
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    </div>
+
+    <footer class="statusbar" aria-label="Code editor status">
+        <span class="status-left">
+            @if (_workspace is not null)
+            {
+                <span class="status-item" title="@_workspace.Root.Value">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="folder-open" Size="13" />
+                    @_workspace.Name
+                </span>
+            }
+            @if (_dirtyCount > 0)
+            {
+                <span class="status-item" title="Unsaved editors">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="circle-dot" Size="13" />
+                    @_dirtyCount unsaved
+                </span>
+            }
+        </span>
+        <span class="status-right">
+            @if (ActiveDocument is not null)
+            {
+                <CodeEditorCursorStatus @ref="_cursorStatus" />
+                <span class="status-item">UTF-8</span>
+                <span class="status-item">LF</span>
+                <label class="status-item language-label" for="code-language">
+                    <span class="visually-hidden">Language mode</span>
+                    <select id="code-language"
+                            class="language-select"
+                            value="@ActiveDocument.SyntaxMode"
+                            @onchange="ChangeSyntaxModeAsync">
+                        @foreach (CodeEditorSyntaxMode mode in Enum.GetValues<CodeEditorSyntaxMode>())
+                        {
+                            <option value="@mode">@SyntaxModeLabel(mode)</option>
+                        }
+                    </select>
+                </label>
+            }
+        </span>
     </footer>
 </section>
-
-@code {
-    private CodeEditorSession _session = new();
-    private ElementReference _editorHost;
-    private CodeEditorFileService? _fileService;
-    private CodeEditorRecoveryStore? _recoveryStore;
-    private readonly SemaphoreSlim _recoveryGate = new(1, 1);
-    private CancellationTokenSource? _recoveryDebounce;
-    private IJSObjectReference? _module;
-    private IJSObjectReference? _editor;
-    private DotNetObjectReference<CodeEditorWindow>? _dotNetReference;
-    private bool _editorSyncRequired;
-    private bool _focusAfterSync;
-    private string? _statusMessage;
-    private bool _statusIsError;
-    private bool _recoveryClearedOnClose;
-    private VirtualPath? _openFolder;
-    private IAppFileSystemGateway? _openFolderFileSystem;
-    private FileView? _fileView;
-    private bool _subscribedToFileView;
-    private bool _showTerminalPanel;
-    private readonly List<string> _terminalTabIds = ["terminal-1"];
-    private string _activeTerminalTabId = "terminal-1";
-    private int _terminalTabCounter = 1;
-
-    /// <summary>Gets or sets an optional VFS path supplied by an open-file intent.</summary>
-    [Parameter]
-    public string? LaunchFilePath { get; set; }
-
-    private CodeEditorDocument? ActiveDocument => _session.ActiveDocument;
-
-    protected override void OnAppInitialized()
-    {
-        _fileService = new CodeEditorFileService(AppContext.FileSystem);
-        _recoveryStore = new CodeEditorRecoveryStore(
-            AppContext.FileSystem,
-            AppContext.UserId,
-            HackUser.Describe(AppContext).HomeDirectory);
-        _session.NewDocument();
-        _editorSyncRequired = true;
-    }
-
-    protected override async Task OnAppInitializedAsync()
-    {
-        CodeEditorRecoveryResult recovery = await _recoveryStore!.LoadAsync(AppContext.CancellationToken);
-        if (recovery.HasSession)
-        {
-            _session = CodeEditorSession.Restore(recovery.Session!);
-            if (_session.Documents.Count == 0)
-            {
-                _session.NewDocument();
-            }
-
-            SetStatus("Recovered unsaved editor session.", isError: false);
-        }
-        else if (recovery.Status is not CodeEditorRecoveryStatus.Missing)
-        {
-            SetStatus(recovery.Error ?? "Editor recovery could not be loaded.", isError: true);
-        }
-
-        // Explicit host parameter, otherwise the open-file intent's path (first launch argument).
-        VirtualPath? launchFile = !string.IsNullOrWhiteSpace(LaunchFilePath) ? VirtualPath.Parse(LaunchFilePath) : LaunchFile;
-        if (launchFile is { } path)
-        {
-            await LoadPathAsync(path, _fileService!);
-        }
-    }
-
-    protected override void OnAppAfterRender(bool firstRender)
-    {
-        base.OnAppAfterRender(firstRender);
-        if (_fileView is not null && !_subscribedToFileView)
-        {
-            _subscribedToFileView = true;
-            _fileView.Opened += OnFileViewOpened;
-        }
-    }
-
-    protected override async Task OnAppAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                _dotNetReference = DotNetObjectReference.Create(this);
-                _module = await JavaScript.InvokeAsync<IJSObjectReference>(
-                    "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
-                CodeEditorDocument? document = ActiveDocument;
-                _editor = await _module.InvokeAsync<IJSObjectReference>(
-                    "createEditor",
-                    _editorHost,
-                    _dotNetReference,
-                    document?.Content ?? string.Empty,
-                    ModeKey(document?.SyntaxMode ?? CodeEditorSyntaxMode.PlainText));
-                _editorSyncRequired = false;
-                await _editor.InvokeVoidAsync("focus");
-            }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException)
-            {
-                SetStatus("Code editor assets could not be initialized.", isError: true);
-            }
-        }
-
-        if (_editor is not null && _editorSyncRequired)
-        {
-            CodeEditorDocument? document = ActiveDocument;
-            await _editor.InvokeVoidAsync("setDocument", document?.Content ?? string.Empty);
-            await _editor.InvokeVoidAsync(
-                "setLanguage", ModeKey(document?.SyntaxMode ?? CodeEditorSyntaxMode.PlainText));
-            _editorSyncRequired = false;
-            if (_focusAfterSync)
-            {
-                _focusAfterSync = false;
-                await _editor.InvokeVoidAsync("focus");
-            }
-        }
-    }
-
-    /// <summary>Receives content changes from the isolated Monaco instance.</summary>
-    [JSInvokable]
-    public async Task OnEditorChanged(string content)
-    {
-        CodeEditorDocument? document = ActiveDocument;
-        if (document is null)
-        {
-            return;
-        }
-
-        CodeEditorEditResult result = document.TryEdit(content);
-        if (!result.Succeeded)
-        {
-            SetStatus(result.Error ?? "Edit rejected.", isError: true);
-            if (_editor is not null)
-            {
-                await _editor.InvokeVoidAsync("setDocument", document.Content);
-            }
-        }
-        else
-        {
-            ClearStatus();
-        }
-
-        ScheduleRecovery();
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private Task NewDocumentAsync()
-    {
-        _session.NewDocument();
-        RequestEditorSync(focus: true);
-        ClearStatus();
-        ScheduleRecovery();
-        return Task.CompletedTask;
-    }
-
-    private async Task OpenFileAsync()
-    {
-        OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
-        {
-            Title = "Open Source File",
-            Filters =
-            [
-                new FileDialogFilter(
-                    "Source and text files",
-                    [".cs", ".js", ".ts", ".html", ".css", ".json", ".md", ".txt"],
-                    ["text/plain", "text/x-csharp", "text/javascript", "text/typescript", "text/html", "text/css", "application/json", "text/markdown"]),
-                new FileDialogFilter("All files", [], [])
-            ],
-            RequestedAccess = SelectedFileAccess.ReadWrite
-        }, AppContext.CancellationToken);
-
-        if (result.Status != FileDialogStatus.Selected || result.Resources.Count == 0)
-        {
-            return;
-        }
-
-        SelectedFileResource selected = result.Resources[0];
-        CodeEditorFileService selectedService = new(
-            AppContext.FileSystem.WithSelectedHandle(selected.Handle));
-        await LoadPathAsync(selected.Path, selectedService);
-    }
-
-    private async Task OpenFolderAsync()
-    {
-        VirtualPath initialDirectory = _openFolder ?? VirtualPath.Parse(
-            HackUser.Describe(AppContext).HomeDirectory);
-        SelectFolderDialogResult result = await base.SelectFolderAsync(new SelectFolderDialogRequest
-        {
-            Title = "Open Folder",
-            InitialDirectory = initialDirectory
-        }, AppContext.CancellationToken);
-
-        if (result.Status != FileDialogStatus.Selected || result.Resource is null)
-        {
-            return;
-        }
-
-        _subscribedToFileView = false;
-        _openFolder = result.Resource.Path;
-        _openFolderFileSystem = AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle);
-        StateHasChanged();
-    }
-
-    /// <summary>Opens a file activated from the folder sidebar's tree into a new editor tab.</summary>
-    private async void OnFileViewOpened(object? sender, FileViewOpenedEventArgs e)
-    {
-        if (e.Item.IsDirectory || _openFolderFileSystem is null)
-        {
-            return;
-        }
-
-        await LoadPathAsync(e.Item.FullPath, new CodeEditorFileService(_openFolderFileSystem));
-    }
-
-    private void ToggleTerminalPanel() => _showTerminalPanel = !_showTerminalPanel;
-
-    private void AddTerminalTab()
-    {
-        _terminalTabCounter++;
-        string tabId = $"terminal-{_terminalTabCounter}";
-        _terminalTabIds.Add(tabId);
-        _activeTerminalTabId = tabId;
-    }
-
-    private void ActivateTerminalTab(string tabId) => _activeTerminalTabId = tabId;
-
-    private void CloseTerminalTab(string tabId)
-    {
-        if (_terminalTabIds.Count <= 1)
-        {
-            return;
-        }
-
-        int closedIndex = _terminalTabIds.IndexOf(tabId);
-        _terminalTabIds.Remove(tabId);
-
-        if (_activeTerminalTabId == tabId)
-        {
-            int nextIndex = Math.Min(closedIndex, _terminalTabIds.Count - 1);
-            _activeTerminalTabId = _terminalTabIds[nextIndex];
-        }
-    }
-
-    /// <summary>
-    /// A tab's shell exited (<c>exit</c>, Ctrl+D): its tab closes; the last one hides the panel,
-    /// and reopening it starts a fresh shell.
-    /// </summary>
-    private void OnTerminalExited(string tabId)
-    {
-        if (_terminalTabIds.Count <= 1)
-        {
-            _showTerminalPanel = false;
-            return;
-        }
-
-        CloseTerminalTab(tabId);
-    }
-
-    private string TerminalInitialCwd() =>
-        _openFolder?.Value ?? HackUser.Describe(AppContext).HomeDirectory;
-
-    private async Task LoadPathAsync(VirtualPath path, CodeEditorFileService service)
-    {
-        CodeEditorLoadResult result = await service.LoadAsync(path, AppContext.CancellationToken);
-        if (!result.Succeeded || result.Content is null || result.Revision is null)
-        {
-            SetStatus(result.Error ?? "Unable to open file.", isError: true);
-            return;
-        }
-
-        _session.OpenDocument(path, result.Content, result.Revision.Value);
-        RequestEditorSync(focus: true);
-        SetStatus($"Opened {path.Value}.", isError: false);
-        ScheduleRecovery();
-    }
-
-    private async Task SaveActiveAsync()
-    {
-        CodeEditorDocument? document = ActiveDocument;
-        if (document is null)
-        {
-            return;
-        }
-
-        if (document.Path is not VirtualPath path)
-        {
-            await SaveActiveAsAsync();
-            return;
-        }
-
-        await SaveDocumentAsync(document, path, _fileService!);
-    }
-
-    private async Task SaveActiveAsAsync()
-    {
-        CodeEditorDocument? document = ActiveDocument;
-        if (document is null)
-        {
-            return;
-        }
-
-        SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
-        {
-            Title = "Save Source File",
-            SuggestedFileName = document.Path is null ? SuggestedFileName(document) : document.Title,
-            ConfirmOverwrite = true
-        }, AppContext.CancellationToken);
-
-        if (result.Status != FileDialogStatus.Selected || result.Resource is null)
-        {
-            return;
-        }
-
-        CodeEditorFileService selectedService = new(
-            AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle));
-        await SaveDocumentAsync(document, result.Resource.Path, selectedService);
-    }
-
-    private async Task SaveDocumentAsync(
-        CodeEditorDocument document,
-        VirtualPath path,
-        CodeEditorFileService service)
-    {
-        CodeEditorSaveResult result = await service.SaveAsync(
-            document, path, AppContext.CancellationToken);
-        if (result.Succeeded)
-        {
-            SetStatus($"Saved {path.Value}.", isError: false);
-            if (_fileView is not null)
-            {
-                await _fileView.RefreshAsync();
-            }
-        }
-        else
-        {
-            SetStatus(result.Error ?? "Save failed.", isError: true);
-        }
-
-        ScheduleRecovery();
-    }
-
-    private Task ActivateDocumentAsync(Guid documentId)
-    {
-        if (_session.Activate(documentId))
-        {
-            RequestEditorSync(focus: true);
-            ClearStatus();
-            ScheduleRecovery();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task CloseDocumentAsync(Guid documentId)
-    {
-        CodeEditorCloseResult result = _session.Close(documentId);
-        if (result == CodeEditorCloseResult.ConfirmationRequired)
-        {
-            CodeEditorDocument document = _session.Documents.Single(item => item.Id == documentId);
-            bool? discard = await MudDialogService.ShowMessageBoxAsync(
-                "Unsaved Changes",
-                $"Discard unsaved changes in '{document.Title}'?",
-                yesText: "Discard",
-                cancelText: "Cancel");
-            if (discard != true)
-            {
-                return;
-            }
-
-            result = _session.Close(documentId, discardDirty: true);
-        }
-
-        if (result == CodeEditorCloseResult.Closed)
-        {
-            if (_session.Documents.Count == 0)
-            {
-                _session.NewDocument();
-            }
-
-            RequestEditorSync(focus: true);
-            ClearStatus();
-        }
-    }
-
-    /// <inheritdoc />
-    public async ValueTask<bool> ConfirmCloseAsync(CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        CodeEditorDocument[] dirtyDocuments = _session.Documents
-            .Where(document => document.IsDirty)
-            .ToArray();
-        if (dirtyDocuments.Length == 0)
-        {
-            return await ClearRecoveryForCloseAsync(cancellationToken);
-        }
-
-        string names = string.Join(", ", dirtyDocuments.Select(document => document.Title));
-        bool? discard = await MudDialogService.ShowMessageBoxAsync(
-            "Unsaved Editor Documents",
-            $"Close and discard unsaved changes in: {names}?",
-            yesText: "Discard and Close",
-            cancelText: "Keep Editing");
-        cancellationToken.ThrowIfCancellationRequested();
-        return discard == true && await ClearRecoveryForCloseAsync(cancellationToken);
-    }
-
-    private async Task ChangeSyntaxModeAsync(ChangeEventArgs args)
-    {
-        if (ActiveDocument is not CodeEditorDocument document
-            || !Enum.TryParse(args.Value?.ToString(), out CodeEditorSyntaxMode mode))
-        {
-            return;
-        }
-
-        document.SetSyntaxMode(mode);
-        if (_editor is not null)
-        {
-            await _editor.InvokeVoidAsync("setLanguage", ModeKey(mode));
-            await _editor.InvokeVoidAsync("focus");
-        }
-
-        ScheduleRecovery();
-    }
-
-    private async Task HandleShortcutAsync(KeyboardEventArgs args)
-    {
-        if (!args.CtrlKey)
-        {
-            return;
-        }
-
-        switch (args.Key)
-        {
-            case "s" or "S":
-                if (args.ShiftKey)
-                {
-                    await SaveActiveAsAsync();
-                }
-                else
-                {
-                    await SaveActiveAsync();
-                }
-                break;
-            case "o" or "O":
-                await OpenFileAsync();
-                break;
-            case "n" or "N":
-                await NewDocumentAsync();
-                break;
-            case "w" or "W" when ActiveDocument is not null:
-                await CloseDocumentAsync(ActiveDocument.Id);
-                break;
-        }
-    }
-
-    private void ScheduleRecovery()
-    {
-        _recoveryClearedOnClose = false;
-        _recoveryDebounce?.Cancel();
-        _recoveryDebounce?.Dispose();
-        _recoveryDebounce = new CancellationTokenSource();
-        _ = PersistRecoveryAfterDelayAsync(_recoveryDebounce.Token);
-    }
-
-    private async Task PersistRecoveryAfterDelayAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
-            await PersistRecoveryAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    private async Task PersistRecoveryAsync(CancellationToken cancellationToken)
-    {
-        if (_recoveryStore is null)
-        {
-            return;
-        }
-
-        await _recoveryGate.WaitAsync(cancellationToken);
-        try
-        {
-            CodeEditorRecoveryResult result = await _recoveryStore.SaveAsync(
-                _session.CaptureRecovery(), cancellationToken);
-            if (result.Status is not CodeEditorRecoveryStatus.Success)
-            {
-                SetStatus(result.Error ?? "Editor recovery could not be saved.", isError: true);
-            }
-        }
-        finally
-        {
-            _recoveryGate.Release();
-        }
-    }
-
-    private async Task<bool> ClearRecoveryForCloseAsync(CancellationToken cancellationToken)
-    {
-        if (_recoveryStore is null)
-        {
-            return true;
-        }
-
-        CodeEditorRecoveryResult result = await _recoveryStore.ClearAsync(cancellationToken);
-        if (result.Status == CodeEditorRecoveryStatus.Success)
-        {
-            _recoveryClearedOnClose = true;
-            return true;
-        }
-
-        SetStatus(result.Error ?? "Editor recovery could not be cleared.", isError: true);
-        return false;
-    }
-
-    private void RequestEditorSync(bool focus)
-    {
-        _editorSyncRequired = true;
-        _focusAfterSync = focus;
-        StateHasChanged();
-    }
-
-    private void SetStatus(string message, bool isError)
-    {
-        _statusMessage = message;
-        _statusIsError = isError;
-        StateHasChanged();
-    }
-
-    private void ClearStatus()
-    {
-        _statusMessage = null;
-        _statusIsError = false;
-    }
-
-    private static string SuggestedFileName(CodeEditorDocument document) =>
-        document.SyntaxMode switch
-        {
-            CodeEditorSyntaxMode.CSharp => "script.cs",
-            CodeEditorSyntaxMode.JavaScript => "script.js",
-            CodeEditorSyntaxMode.TypeScript => "script.ts",
-            CodeEditorSyntaxMode.Html => "index.html",
-            CodeEditorSyntaxMode.Css => "styles.css",
-            CodeEditorSyntaxMode.Json => "data.json",
-            CodeEditorSyntaxMode.Markdown => "README.md",
-            _ => "untitled.txt"
-        };
-
-    private static string SyntaxModeLabel(CodeEditorSyntaxMode mode) => mode switch
-    {
-        CodeEditorSyntaxMode.PlainText => "Plain Text",
-        CodeEditorSyntaxMode.CSharp => "C#",
-        CodeEditorSyntaxMode.JavaScript => "JavaScript",
-        CodeEditorSyntaxMode.TypeScript => "TypeScript",
-        CodeEditorSyntaxMode.Html => "HTML",
-        CodeEditorSyntaxMode.Css => "CSS",
-        CodeEditorSyntaxMode.Json => "JSON",
-        CodeEditorSyntaxMode.Markdown => "Markdown",
-        _ => mode.ToString()
-    };
-
-    private static string ModeKey(CodeEditorSyntaxMode mode) => mode switch
-    {
-        CodeEditorSyntaxMode.CSharp => "cSharp",
-        CodeEditorSyntaxMode.JavaScript => "javaScript",
-        CodeEditorSyntaxMode.TypeScript => "typeScript",
-        CodeEditorSyntaxMode.Html => "html",
-        CodeEditorSyntaxMode.Css => "css",
-        CodeEditorSyntaxMode.Json => "json",
-        CodeEditorSyntaxMode.Markdown => "markdown",
-        _ => "plainText"
-    };
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_fileView is not null)
-        {
-            _fileView.Opened -= OnFileViewOpened;
-        }
-
-        _recoveryDebounce?.Cancel();
-        _recoveryDebounce?.Dispose();
-        if (!_recoveryClearedOnClose)
-        {
-            try
-            {
-                await PersistRecoveryAsync(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                // Component disposal cannot surface a transient recovery failure.
-            }
-        }
-
-        if (_editor is not null)
-        {
-            try
-            {
-                await _editor.InvokeVoidAsync("destroy");
-                await _editor.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
-
-        if (_module is not null)
-        {
-            try
-            {
-                await _module.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
-
-        _dotNetReference?.Dispose();
-    }
-}

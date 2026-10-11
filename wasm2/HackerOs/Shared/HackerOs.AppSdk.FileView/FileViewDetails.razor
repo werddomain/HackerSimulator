@@ -39,6 +39,7 @@
                 @ondblclick="@(() => OnRowDoubleClickAsync(item))"
                 @oncontextmenu="@(args => OnRowContextMenuAsync(item, args))"
                 @oncontextmenu:preventDefault="true"
+                @oncontextmenu:stopPropagation="true"
                 @onkeydown="@(args => OnRowKeyDownAsync(item, args))"
                 @ondragstart="@(args => OnRowDragStartAsync(item, args))"
                 @ondragover:preventDefault="@(item.IsDirectory && Owner.AllowDragDrop)"

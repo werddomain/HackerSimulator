@@ -1,0 +1,78 @@
+@using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.FileView
+@using HackerOs.AppSdk.FileView.ContextMenu
+@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.AppSdk.Icons
+@using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Gateways
+@implements IDisposable
+
+@*
+    The Explorer view of the side bar, as in VS Code: the open folder as a tree (FileView, Tree
+    mode), a single click opens a file, and the header's buttons (or the tree's context menu)
+    create a file or a folder in the selected folder, with the name typed in place. Rename,
+    cut/copy and drag-and-drop are FileView's own; deletion is handed to the window (trash).
+*@
+<div class="explorer">
+    <div class="view-title">Explorer</div>
+
+    @if (Workspace is null)
+    {
+        <div class="explorer-empty">
+            <p>You have not yet opened a folder.</p>
+            <button type="button" class="primary-button" @onclick="OnOpenFolder">Open Folder</button>
+            <p class="hint">Opening a folder lists its files here, lets you create files and folders, and enables search across all its files (Ctrl+Shift+F) and quick open (Ctrl+P).</p>
+        </div>
+    }
+    else
+    {
+        <div class="folder-header" title="@Workspace.Root.Value">
+            <span class="folder-name">@Workspace.Name</span>
+            <span class="folder-actions" role="toolbar" aria-label="Explorer actions">
+                <button type="button" class="icon-button" id="explorer-new-file" title="New File..." aria-label="New File" @onclick="() => BeginCreate(CreationKind.File, null)">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" />
+                </button>
+                <button type="button" class="icon-button" id="explorer-new-folder" title="New Folder..." aria-label="New Folder" @onclick="() => BeginCreate(CreationKind.Folder, null)">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" />
+                </button>
+                <button type="button" class="icon-button" title="Refresh Explorer" aria-label="Refresh Explorer" @onclick="RefreshAsync">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="16" />
+                </button>
+            </span>
+        </div>
+
+        @if (_creating is not null)
+        {
+            <div class="create-row">
+                <HackerIcon Library="IconLibrary.Lucide" Name="@(_creating == CreationKind.File ? "file" : "folder")" Size="16" />
+                <input @ref="_createInput"
+                       class="create-input @(_createError is null ? null : "has-error")"
+                       aria-label="@(_creating == CreationKind.File ? "New file name" : "New folder name")"
+                       placeholder="@(_creating == CreationKind.File ? "file name" : "folder name")"
+                       @bind="_createName"
+                       @bind:event="oninput"
+                       @onkeydown="OnCreateKeyDown"
+                       @onkeyup="OnCreateKeyUpAsync"
+                       @onblur="OnCreateBlurAsync" />
+            </div>
+            <div class="create-target">in @Workspace.RelativePathOf(_createDirectory) @(_createDirectory == Workspace.Root ? "(root)" : null)</div>
+            @if (_createError is not null)
+            {
+                <div class="create-error" role="alert">@_createError</div>
+            }
+        }
+
+        <div class="explorer-tree">
+            <FileView @ref="_fileView"
+                      @key="Workspace.Root"
+                      FileSystem="Workspace.FileSystem"
+                      Watch="Watch"
+                      InitialDirectory="Workspace.Root"
+                      Mode="FileViewMode.Tree"
+                      AllowMultiSelect="false"
+                      ContextMenuProviders="_menuProviders"
+                      DeleteRequested="OnTreeDeleteRequestedAsync"
+                      OwnerAppId="OwnerAppId" />
+        </div>
+    }
+</div>

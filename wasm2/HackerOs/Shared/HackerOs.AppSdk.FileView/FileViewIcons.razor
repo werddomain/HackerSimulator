@@ -31,6 +31,7 @@
              @ondblclick="@(() => OnTileDoubleClickAsync(item))"
              @oncontextmenu="@(args => OnTileContextMenuAsync(item, args))"
              @oncontextmenu:preventDefault="true"
+             @oncontextmenu:stopPropagation="true"
              @onkeydown="@(args => OnTileKeyDownAsync(item, args))"
              @ondragstart="@(args => OnTileDragStartAsync(item, args))"
              @ondragover:preventDefault="@(item.IsDirectory && Owner.AllowDragDrop)"
