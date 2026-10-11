@@ -157,6 +157,12 @@ public sealed class CodeEditorDocument
         _savedContent = Content;
     }
 
+    /// <summary>
+    /// Follows a rename or move of the file (or of a folder above it) made in the explorer: the
+    /// buffer, its dirty state and revision are kept, only the path changes.
+    /// </summary>
+    public void Relocate(VirtualPath path) => Path = path;
+
     /// <summary>Captures C#-owned recovery state without browser or editor-framework types.</summary>
     public CodeEditorDocumentRecovery CaptureRecovery() => new(
         Id,
