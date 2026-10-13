@@ -53,6 +53,37 @@ internal sealed class ShellSessionAccess(
     public int Exit(int? exitStatus) => session.RequestExit(exitStatus ?? session.LastExitCode);
 
     /// <inheritdoc />
+    public string? GetVariable(string name) => session.GetVariable(name);
+
+    /// <inheritdoc />
+    public void AssignVariable(string name, string value)
+    {
+        RequireIdentifier(name);
+        ArgumentNullException.ThrowIfNull(value);
+        session.AssignVariable(name, value);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Listing ended jobs reports them, as bash's <c>jobs</c> does: they are forgotten afterwards.</remarks>
+    public IReadOnlyList<ShellJobInfo> Jobs
+    {
+        get
+        {
+            IReadOnlyList<ShellJobInfo> jobs = session.Jobs.Describe();
+            foreach (ShellJob job in session.Jobs.Jobs.Where(job => job.State != ShellJobState.Running))
+            {
+                job.Reported = true;
+            }
+
+            session.Jobs.RemoveReported();
+            return jobs;
+        }
+    }
+
+    /// <inheritdoc />
+    public bool KillJob(int jobId, bool force) => interpreter.KillJob(session, jobId, force);
+
+    /// <inheritdoc />
     public ValueTask<int> RunElevatedAsync(
         IReadOnlyList<string> arguments,
         TextWriter standardOutput,

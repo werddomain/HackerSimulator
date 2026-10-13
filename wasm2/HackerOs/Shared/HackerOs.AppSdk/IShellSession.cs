@@ -60,6 +60,35 @@ public interface IShellSession
     int Exit(int? exitStatus) => throw new NotSupportedException("This shell cannot be exited by a command.");
 
     /// <summary>
+    /// Gets one variable of the shell, exported or not (ADR 0064: <c>NAME=value</c> makes an
+    /// unexported shell variable that <see cref="Environment"/> does not list), or
+    /// <see langword="null"/> when it is not set. <c>export NAME</c> reads it here.
+    /// </summary>
+    /// <param name="name">Variable name.</param>
+    string? GetVariable(string name) => Environment.GetValueOrDefault(name);
+
+    /// <summary>
+    /// Assigns a variable as <c>NAME=value</c> does (ADR 0064): it stays exported if it was,
+    /// otherwise it becomes an unexported shell variable. Used by <c>read</c>.
+    /// </summary>
+    /// <param name="name">Variable name, matching <c>[A-Za-z_][A-Za-z0-9_]*</c>.</param>
+    /// <param name="value">New value.</param>
+    /// <exception cref="ArgumentException">The name is not a valid identifier.</exception>
+    void AssignVariable(string name, string value) => SetVariable(name, value);
+
+    /// <summary>Gets the shell's background jobs (<c>command &amp;</c>), oldest first, for <c>jobs</c> and <c>kill %n</c>.</summary>
+    IReadOnlyList<ShellJobInfo> Jobs => [];
+
+    /// <summary>
+    /// Stops a background job (<c>kill %n</c>): its running commands are killed and the job ends
+    /// as terminated.
+    /// </summary>
+    /// <param name="jobId">The job number shown by <c>jobs</c>.</param>
+    /// <param name="force"><see langword="true"/> for <c>SIGKILL</c>, otherwise a graceful stop (<c>SIGTERM</c>).</param>
+    /// <returns><see langword="false"/> when no such job exists.</returns>
+    bool KillJob(int jobId, bool force) => false;
+
+    /// <summary>
     /// Runs one command as root (ADR 0042, ADR 0051 section 4), as <c>sudo</c> does: the shell asks
     /// for an administrator's credentials, mints a single-use <c>SudoRoot</c> ticket and starts the
     /// command as a child of the caller with it, its output going to <paramref name="standardOutput"/>
@@ -87,3 +116,31 @@ public sealed record ShellCommandInfo(
     IReadOnlyList<string> Aliases,
     string Usage,
     string Description);
+
+/// <summary>State of a background job.</summary>
+public enum ShellJobState
+{
+    /// <summary>Still running.</summary>
+    Running,
+
+    /// <summary>Finished on its own (<see cref="ShellJobInfo.ExitStatus"/> holds its status).</summary>
+    Done,
+
+    /// <summary>Stopped by <c>kill</c> or by the shell.</summary>
+    Terminated
+}
+
+/// <summary>One background job, as listed by <c>jobs</c> (ADR 0064).</summary>
+/// <param name="Id">Job number (<c>%1</c>).</param>
+/// <param name="Command">The command line as typed, without the trailing <c>&amp;</c>.</param>
+/// <param name="State">Running, done or terminated.</param>
+/// <param name="ExitStatus">Exit status once done.</param>
+/// <param name="ProcessIds">Processes the job started, oldest first (<c>jobs -l</c>, <c>$!</c> is the last one).</param>
+/// <param name="IsCurrent"><see langword="true"/> for the current job (<c>+</c> in <c>jobs</c>, <c>%%</c>).</param>
+public sealed record ShellJobInfo(
+    int Id,
+    string Command,
+    ShellJobState State,
+    int? ExitStatus,
+    IReadOnlyList<int> ProcessIds,
+    bool IsCurrent);

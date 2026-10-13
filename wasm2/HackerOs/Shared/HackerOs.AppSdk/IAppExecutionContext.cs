@@ -242,6 +242,14 @@ public interface IAppExecutionContext
     /// overrides it.
     /// </summary>
     IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
+
+    /// <summary>
+    /// Gets the instance's standard streams (ADR 0064), behind <see cref="HackConsole"/>: the
+    /// terminal, pipe or file of the shell that started it, or <c>/dev/null</c> when it was
+    /// started from the desktop. Defaults to a detached console so existing implementations keep
+    /// compiling.
+    /// </summary>
+    IAppConsoleGateway Console => DetachedAppConsoleGateway.Instance;
 }
 
 /// <summary>

@@ -44,7 +44,7 @@ public sealed class ExportCommand : TerminalAppBase
             int equals = argument.IndexOf('=');
             string name = equals < 0 ? argument : argument[..equals];
             string value = equals < 0
-                ? shell.Environment.GetValueOrDefault(name) ?? string.Empty
+                ? shell.GetVariable(name) ?? string.Empty
                 : argument[(equals + 1)..];
             try
             {

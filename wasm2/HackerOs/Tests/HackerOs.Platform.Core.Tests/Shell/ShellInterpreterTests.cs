@@ -86,14 +86,15 @@ public sealed partial class ShellInterpreterTests
     }
 
     [Fact]
-    public async Task Variables_and_tilde_expand_without_word_splitting()
+    public async Task Variables_and_tilde_expand_and_unquoted_results_split_on_ifs()
     {
         Fixture fixture = await Fixture.CreateAsync();
         fixture.Session.SetVariable("GREETING", "hello   there");
 
-        Output output = await fixture.RunAsync("args $HOME ~ ~/docs ${USER}x $GREETING '$HOME' \"~\" $MISSING");
+        // ADR 0064: POSIX field splitting, so an unquoted empty variable disappears and quotes keep one field.
+        Output output = await fixture.RunAsync("args $HOME ~ ~/docs ${USER}x $GREETING \"$GREETING\" '$HOME' \"~\" $MISSING \"$MISSING\"");
 
-        Assert.Equal("/home/alice|/home/alice|/home/alice/docs|alicex|hello   there|$HOME|~|\n", output.Stdout);
+        Assert.Equal("/home/alice|/home/alice|/home/alice/docs|alicex|hello|there|hello   there|$HOME|~|\n", output.Stdout);
     }
 
     [Fact]
@@ -526,6 +527,16 @@ public sealed partial class ShellInterpreterTests
         }
     }
 
+    /// <summary>Prints one variable of its own process environment (what it inherited).</summary>
+    private sealed class PrintEnvCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await context.StandardOutput.WriteLineAsync(HackEnvironment.GetEnvironmentVariable(context.Arguments[0]) ?? "<unset>");
+            return 0;
+        }
+    }
+
     private sealed class CatOneCommand(AppManifest manifest) : TerminalAppBase(manifest)
     {
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
@@ -592,6 +603,7 @@ public sealed partial class ShellInterpreterTests
                 Command<CountCommand>("count"), Command<ExitWithCommand>("exitwith"), Command<YesCommand>("yes"),
                 Command<HeadOneCommand>("head1"), Command<HangCommand>("hang"), Command<WhereCommand>("where"),
                 Command<CatOneCommand>("cat1"), Command<AmRootCommand>("amroot"), Command<HasShellCommand>("hasshell"),
+                Command<PrintEnvCommand>("printenv1"),
                 .. CatalogCommands
             ];
             AppManifest host = HostManifest();
@@ -622,6 +634,8 @@ public sealed partial class ShellInterpreterTests
         }
 
         public InMemoryProcessManager Manager { get; }
+
+        public AppLifecycleOrchestrator Orchestrator => _orchestrator;
         public AppEnablementRegistry Enablement { get; }
         public InMemoryElevationTicketStore Tickets { get; } = new();
         public ShellInterpreter Interpreter { get; }
@@ -687,6 +701,12 @@ public sealed partial class ShellInterpreterTests
         {
             using IDisposable scope = HackExecutionContext.Enter(Host);
             await HackFile.WriteAllTextAsync(path, content);
+        }
+
+        public async Task SetModeAsync(string path, UnixFileMode mode)
+        {
+            using IDisposable scope = HackExecutionContext.Enter(Host);
+            await HackFile.SetUnixFileModeAsync(path, mode);
         }
 
         public async Task MakeDirectoryAsync(string path)

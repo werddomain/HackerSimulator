@@ -240,7 +240,7 @@ public sealed class ShellHostService
             using (HackExecutionContext.Enter(_context))
             {
                 return await ShellCompletion.CompleteAsync(
-                    commandLine, cursor, _interpreter.GetInstalledCommands(), _session.HomeDirectory, cancellationToken).ConfigureAwait(false);
+                    commandLine, cursor, [.. _interpreter.GetInstalledCommands(), .. _interpreter.GetLaunchableApplications()], _session.HomeDirectory, cancellationToken).ConfigureAwait(false);
             }
         }
 

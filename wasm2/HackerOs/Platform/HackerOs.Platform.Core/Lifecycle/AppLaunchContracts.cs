@@ -58,6 +58,10 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// The name the command was invoked as (a manifest alias such as <c>unalias</c>), which becomes
 /// <c>argv[0]</c> like on Linux; the manifest's command name when omitted.
 /// </param>
+/// <param name="ProcessStarted">
+/// Called with the new process as soon as it exists, before the app runs (ADR 0064): the shell
+/// records the process ids of a background job (<c>$!</c>, <c>jobs -l</c>, <c>kill %n</c>).
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -73,7 +77,8 @@ public sealed record AppLaunchRequest(
     TextWriter? StandardOutput = null,
     TextWriter? StandardError = null,
     IShellSession? Shell = null,
-    string? CommandName = null);
+    string? CommandName = null,
+    Action<ProcessRecord>? ProcessStarted = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus
