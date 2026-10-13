@@ -159,6 +159,48 @@ public sealed partial class ShellInterpreter
         return new ShellExecutionResult(exitCode, line.LastFailure, null, line.PermissionDenials);
     }
 
+    /// <summary>
+    /// Runs a command line in a subshell copy of <paramref name="session"/> with the given streams
+    /// (<see cref="IShellSession.RunAsync"/>: <c>watch</c>). Nothing it changes reaches the shell.
+    /// </summary>
+    internal async Task<int> RunInSubshellAsync(
+        ShellSession session,
+        string commandLine,
+        ShellExecutionOptions options,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        CancellationToken cancellationToken)
+    {
+        ShellParseResult parsed = ShellParser.Parse(commandLine);
+        if (parsed.Error is { } syntaxError)
+        {
+            await error.WriteLineAsync($"hsh: {syntaxError.Message}").ConfigureAwait(false);
+            return SyntaxErrorExitCode;
+        }
+
+        if (parsed.Commands is null)
+        {
+            return 0;
+        }
+
+        ShellSession copy = session.Fork();
+        Exec exec = new()
+        {
+            Session = copy,
+            Options = options,
+            Line = new LineState(null),
+            Source = commandLine,
+            In = input,
+            Out = output,
+            Err = error,
+            Token = cancellationToken,
+            Control = new ControlState()
+        };
+        int status = await RunListAsync(exec, parsed.Commands).ConfigureAwait(false);
+        return cancellationToken.IsCancellationRequested ? InterruptedExitCode : copy.ExitRequestedStatus ?? status;
+    }
+
     // ---- Lists, and-or lists, pipelines --------------------------------------------------
 
     /// <summary>Runs a list: each and-or list in turn, a background one as a job.</summary>

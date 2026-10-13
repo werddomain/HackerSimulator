@@ -36,11 +36,12 @@ public sealed class CurlApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite, AppCapabilities.NetworkRealAccess];
+        [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite, AppCapabilities.NetworkRealAccess,
+         AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite];
 
     /// <inheritdoc />
     public override TerminalCommand? Terminal =>
-        new("curl", "curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>");
+        new("curl", "curl [-I] [-v] [-L] [-s] [-f] [-o file|-O] [-H header] [-X <method>] [-d <data>] <url>");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

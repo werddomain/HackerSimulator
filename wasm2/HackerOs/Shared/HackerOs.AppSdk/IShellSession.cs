@@ -76,6 +76,25 @@ public interface IShellSession
     /// <exception cref="ArgumentException">The name is not a valid identifier.</exception>
     void AssignVariable(string name, string value) => SetVariable(name, value);
 
+    /// <summary>
+    /// Runs a command line in a copy of the shell (a subshell, ADR 0064), as <c>watch</c> and
+    /// <c>sh -c</c> do: full shell syntax, the shell's variables, functions and directory, but
+    /// nothing it changes reaches the shell.
+    /// </summary>
+    /// <param name="commandLine">The command line.</param>
+    /// <param name="standardInput">What the commands read.</param>
+    /// <param name="standardOutput">Where they write.</param>
+    /// <param name="standardError">Where they and the shell write errors.</param>
+    /// <param name="cancellationToken">Interrupts the commands.</param>
+    /// <returns>The exit status of the line (<c>2</c> for a syntax error).</returns>
+    ValueTask<int> RunAsync(
+        string commandLine,
+        TextReader standardInput,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException("This shell cannot run command lines for a command.");
+
     /// <summary>Gets the shell's background jobs (<c>command &amp;</c>), oldest first, for <c>jobs</c> and <c>kill %n</c>.</summary>
     IReadOnlyList<ShellJobInfo> Jobs => [];
 

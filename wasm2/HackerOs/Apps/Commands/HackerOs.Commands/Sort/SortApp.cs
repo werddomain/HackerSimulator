@@ -32,10 +32,10 @@ public sealed class SortApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
+        [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("sort", "sort [-r] [-n] [-u] [file...]");
+    public override TerminalCommand? Terminal => new("sort", "sort [-rnhVfbuc] [-k N[,M]] [-t sep] [-o file] [file...]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

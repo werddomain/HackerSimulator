@@ -53,6 +53,19 @@ internal sealed class ShellSessionAccess(
     public int Exit(int? exitStatus) => session.RequestExit(exitStatus ?? session.LastExitCode);
 
     /// <inheritdoc />
+    public async ValueTask<int> RunAsync(
+        string commandLine,
+        TextReader standardInput,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(commandLine);
+        return await interpreter.RunInSubshellAsync(
+            session, commandLine, options, standardInput, standardOutput, standardError, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public string? GetVariable(string name) => session.GetVariable(name);
 
     /// <inheritdoc />

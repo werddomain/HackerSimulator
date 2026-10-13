@@ -157,6 +157,13 @@ public sealed partial class ShellInterpreter
         }
 
         ShellCommandResolution? resolution = Resolver.Resolve(name, arguments);
+        if (resolution is null && name == "[")
+        {
+            // `[` is `test` called under another name (as /usr/bin/[ is on Linux); manifest command
+            // names cannot hold a bracket, so the shell links it, and argv[0] = "[" asks for `]`.
+            resolution = Resolver.Resolve("test", arguments) is { } test ? test with { CommandName = "[" } : null;
+        }
+
         if (resolution is not null && _enablement.IsEnabled(resolution.AppId))
         {
             return await LaunchCommandAsync(exec, resolution, assignments).ConfigureAwait(false);
@@ -403,7 +410,9 @@ public sealed partial class ShellInterpreter
                 Shell: shell,
                 CommandName: name,
                 ProcessStarted: processStarted),
-            options.FullScreen,
+            // Only a command writing to the terminal itself may take the screen over (nano, top,
+            // htop, watch): `top -n1 | head` or `htop > f` fall back to their text output.
+            ReferenceEquals(output, options.StandardOutput) ? options.FullScreen : null,
             cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<FileSystemError> denials = launch.PermissionDenials ?? [];

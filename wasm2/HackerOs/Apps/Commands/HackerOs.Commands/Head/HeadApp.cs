@@ -35,7 +35,7 @@ public sealed class HeadApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("head", "head [-n count] [file...]");
+    public override TerminalCommand? Terminal => new("head", "head [-n [-]count | -count] [-c bytes] [-qv] [file...]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

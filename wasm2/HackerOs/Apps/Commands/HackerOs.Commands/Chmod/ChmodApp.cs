@@ -35,7 +35,7 @@ public sealed class ChmodApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("chmod", "chmod <mode> <file...>");
+    public override TerminalCommand? Terminal => new("chmod", "chmod [-Rvcf] <mode> <file...>   (mode: 755, +x, u+x, go-w, a=r, ...)");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

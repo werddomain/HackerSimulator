@@ -124,13 +124,15 @@ internal static partial class TerminalAnsi
         for (int row = 0; row < lineCount; row++)
         {
             string line = (frame.Lines[row] ?? string.Empty).Replace('\t', ' '); // one cell, as the frame's cursor column counts it
-            if (line.Length > columns)
+            (line, int width, bool styled) = FitToColumns(line, columns);
+            output.Append(Csi).Append(row + 1).Append(";1H").Append(line);
+            if (styled)
             {
-                line = line[..columns];
+                // A coloured row (htop) must not bleed its attributes into the next one.
+                output.Append(Csi).Append("0m");
             }
 
-            output.Append(Csi).Append(row + 1).Append(";1H").Append(line);
-            if (line.Length < columns)
+            if (width < columns)
             {
                 // Not after a full row: with the cursor parked on the last cell, EL would erase it.
                 output.Append(Csi).Append('K');
@@ -152,5 +154,48 @@ internal static partial class TerminalAnsi
         }
 
         return output.ToString();
+    }
+
+    /// <summary>
+    /// Cuts a frame row to <paramref name="columns"/> visible cells, keeping its SGR and other
+    /// CSI sequences whole and uncounted (ADR 0064: full-screen commands such as <c>htop</c> colour
+    /// their rows).
+    /// </summary>
+    /// <returns>The row, its visible width, and whether it holds escape sequences.</returns>
+    internal static (string Line, int Width, bool Styled) FitToColumns(string line, int columns)
+    {
+        if (line.IndexOf('\x1b') < 0)
+        {
+            return line.Length > columns ? (line[..columns], columns, false) : (line, line.Length, false);
+        }
+
+        StringBuilder fitted = new(line.Length);
+        int width = 0;
+        for (int i = 0; i < line.Length; i++)
+        {
+            char ch = line[i];
+            if (ch == '\x1b' && i + 1 < line.Length && line[i + 1] == '[')
+            {
+                int end = i + 2;
+                while (end < line.Length && line[end] is < '@' or > '~')
+                {
+                    end++;
+                }
+
+                fitted.Append(line, i, Math.Min(end + 1, line.Length) - i);
+                i = end;
+                continue;
+            }
+
+            if (width == columns)
+            {
+                continue;
+            }
+
+            fitted.Append(ch);
+            width++;
+        }
+
+        return (fitted.ToString(), width, true);
     }
 }
