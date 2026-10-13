@@ -176,6 +176,8 @@ public sealed class ShellHostService
 
         public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() => _interpreter.GetInstalledCommands();
 
+        public bool NeedsMoreInput(string text) => ShellParser.Parse(text ?? string.Empty).IsIncomplete;
+
         public async Task<int> ExecuteAsync(string commandLine, HackShellExecution execution, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(commandLine);

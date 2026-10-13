@@ -1,4 +1,3 @@
-using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
@@ -488,29 +487,6 @@ public sealed partial class ShellInterpreter
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Substitutes variables, <c>$?</c> and <c>~</c> of a word without splitting or globbing
-    /// (kept for callers that only need a quick string, e.g. completion); command substitutions
-    /// expand to nothing.
-    /// </summary>
-    internal static string Expand(ShellWord word, ShellSession session)
-    {
-        StringBuilder text = new();
-        foreach (ShellWordPart part in word.Parts)
-        {
-            text.Append(part switch
-            {
-                ShellLiteralPart literal => literal.Text,
-                ShellVariablePart variable => session.GetVariable(variable.Name) ?? string.Empty,
-                ShellExitStatusPart => session.LastExitCode.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ShellTildePart => session.HomeDirectory,
-                _ => string.Empty
-            });
-        }
-
-        return text.ToString();
     }
 
     /// <summary>What one launched command did.</summary>

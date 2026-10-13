@@ -147,7 +147,7 @@ les raccourcis d'onglets ci-dessus jusqu'à `TerminalTabs`.
 - `Tests/HackerOs.AppSdk.Terminal.Tests/TerminalTabSetTests.cs` : ordre,
   fermeture, bascule des onglets.
 - `Tests/HackerOs.Ecosystem.Tests/BuildKnownLazyAppsTests.cs` : `exit` au
-  catalogue (46 apps, 34 commandes).
+  catalogue (74 apps, 62 commandes depuis l'ADR 0064).
 - Vérification dans le navigateur (publication Release) : `cd pro` + Tab →
   `cd projets/`, second Tab liste `alpha/  notes.txt`, le focus reste sur la
   ligne, un nouvel onglet s'ouvre dans `~/projets`, `exit` ferme l'onglet puis

@@ -158,6 +158,8 @@
     private CancellationTokenSource? _activeCts;
     private TerminalFullScreenSession? _fullScreenSession;
     private TerminalInputReader? _standardInput;
+    // The lines of an unfinished command (`for x in a b; do` + Enter), shown with the PS2 prompt `>`.
+    private string? _continuation;
     private readonly StringBuilder _inputLine = new();
     private IJSObjectReference? _module;
     private IJSObjectReference? _terminal;
@@ -253,7 +255,9 @@
     }
 
     /// <summary>Gets the prompt, from the shell's process (user, /etc/hostname, directory).</summary>
-    private string Prompt => _shell?.Prompt ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
+    private string Prompt => _continuation is not null
+        ? ">"
+        : _shell?.Prompt ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -556,6 +560,7 @@
                 Write("^C");
                 _promptVisible = false;
                 _editor.Reset();
+                _continuation = null;
                 ShowPrompt();
                 break;
             case "d":
@@ -691,16 +696,17 @@
     /// Ctrl+C (a host's <see cref="RunCommandAsync"/>). Returns the command's result, or
     /// <see langword="null"/> when nothing ran (empty line, shell gone).
     /// </summary>
-    private async Task<HackTerminalCommandResult?> ExecuteInputAsync(CancellationToken external = default)
+    private async Task<HackTerminalCommandResult?> ExecuteInputAsync(CancellationToken external = default, bool allowContinuation = true)
     {
         (_, int promptWidth) = TerminalAnsi.FormatPrompt(Prompt);
-        string rawLine = _editor.Text.Trim();
-        AppendTranscript(Prompt + " " + _editor.Text + "\n");
+        string typed = _editor.Text;
+        string rawLine = typed.Trim();
+        AppendTranscript(Prompt + " " + typed + "\n");
         Write(_editor.Commit(promptWidth, _columns));
         _atLineStart = true;
         _promptVisible = false;
 
-        if (string.IsNullOrWhiteSpace(rawLine))
+        if (_continuation is null && string.IsNullOrWhiteSpace(rawLine))
         {
             ShowPrompt();
             return null;
@@ -708,13 +714,27 @@
 
         if (_shell is null || _shell.HasExited)
         {
+            _continuation = null;
             WriteLine(_startError ?? "hsh: the shell has exited", TerminalAnsi.Error);
             ShowPrompt();
             return null;
         }
 
-        _shell.AddHistory(rawLine);
-        await UpdateTitleAsync(rawLine);
+        // ADR 0064: an unfinished command (`if …; then` + Enter, an open quote) asks for more
+        // with bash's PS2 prompt `>`; the lines then run together.
+        string line = _continuation is null ? rawLine : _continuation + "\n" + typed;
+        if (allowContinuation && _shell.NeedsMoreInput(line))
+        {
+            _continuation = line;
+            ShowPrompt();
+            return null;
+        }
+
+        _continuation = null;
+        rawLine = line.Contains('\n') ? line : rawLine;
+
+        _shell.AddHistory(TerminalHistory.ToSingleLine(rawLine));
+        await UpdateTitleAsync(TerminalHistory.ToSingleLine(rawLine));
         _activeCts = CancellationTokenSource.CreateLinkedTokenSource(external);
         _commandOutput = new StringBuilder();
         _fullScreenSession = new TerminalFullScreenSession(ApplyFullScreenStateAsync);
@@ -903,7 +923,7 @@
         RedrawLine();
         try
         {
-            HackTerminalCommandResult? result = await ExecuteInputAsync(command.CancellationToken);
+            HackTerminalCommandResult? result = await ExecuteInputAsync(command.CancellationToken, allowContinuation: false);
             command.Completion.TrySetResult(result ?? new HackTerminalCommandResult(command.Line, 1, string.Empty));
         }
         catch (Exception exception)

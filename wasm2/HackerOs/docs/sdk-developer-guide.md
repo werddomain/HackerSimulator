@@ -266,6 +266,28 @@ Le composant peut aussi implémenter :
 - `IAppBackHandler` pour gérer le bouton Retour (mobile et barre de titre) ;
   déclarer alors `SupportsBack => true`.
 
+### Lancée depuis le terminal
+
+Taper le dernier segment de l'identifiant de l'app dans le terminal la lance
+(ADR 0064) : `my-app --verbose notes.txt` pour `com.example.my-app`. Les mots
+qui suivent arrivent dans `LaunchArguments` (relatifs au dossier du shell :
+`HackPath.GetFullPath` les résout), et `HackConsole` écrit dans ce terminal,
+comme `printf` d'un programme graphique Linux :
+
+```csharp
+protected override void OnAppInitialized()
+{
+    if (HackConsole.IsAttached)
+    {
+        HackConsole.WriteLine($"my-app: opening {string.Join(' ', LaunchArguments)}");
+    }
+}
+```
+
+Le shell attend la fermeture de la fenêtre (`my-app &` rend l'invite) ;
+lancée du bureau, l'app écrit dans `/dev/null`. Voir
+[`shell-interpreter.md`](shell-interpreter.md#apps-lancées-par-leur-nom).
+
 ### Contexte ambiant et composants enfants
 
 Les façades `Hack*` savent quelle app les appelle grâce à un contexte ambiant

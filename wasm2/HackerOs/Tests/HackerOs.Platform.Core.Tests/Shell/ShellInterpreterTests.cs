@@ -723,7 +723,17 @@ public sealed partial class ShellInterpreterTests
                 new HackerOs.Commands.Cd.CdApp(), new HackerOs.Commands.Pwd.PwdApp(), new HackerOs.Commands.Export.ExportApp(),
                 new HackerOs.Commands.Unset.UnsetApp(), new HackerOs.Commands.Env.EnvApp(), new HackerOs.Commands.Help.HelpApp(),
                 new HackerOs.Commands.Sudo.SudoApp(), new HackerOs.Commands.Clear.ClearApp(), new HackerOs.Commands.Alias.AliasApp(),
-                new HackerOs.Commands.Exit.ExitApp()
+                new HackerOs.Commands.Exit.ExitApp(),
+                // ADR 0064: the commands added with the POSIX shell.
+                new HackerOs.Commands.Test.TestApp(), new HackerOs.Commands.True.TrueApp(), new HackerOs.Commands.False.FalseApp(),
+                new HackerOs.Commands.Read.ReadApp(), new HackerOs.Commands.Printf.PrintfApp(), new HackerOs.Commands.Seq.SeqApp(),
+                new HackerOs.Commands.Cut.CutApp(), new HackerOs.Commands.Tee.TeeApp(), new HackerOs.Commands.Uniq.UniqApp(),
+                new HackerOs.Commands.Sort.SortApp(), new HackerOs.Commands.Head.HeadApp(), new HackerOs.Commands.Tail.TailApp(),
+                new HackerOs.Commands.Ln.LnApp(), new HackerOs.Commands.Chmod.ChmodApp(), new HackerOs.Commands.Whoami.WhoamiApp(),
+                new HackerOs.Commands.Basename.BasenameApp(), new HackerOs.Commands.Dirname.DirnameApp(), new HackerOs.Commands.Zip.ZipApp(),
+                new HackerOs.Commands.Unzip.UnzipApp(), new HackerOs.Commands.Du.DuApp(), new HackerOs.Commands.Locate.LocateApp(),
+                new HackerOs.Commands.Jobs.JobsApp(), new HackerOs.Commands.Kill.KillApp(), new HackerOs.Commands.Which.WhichApp(),
+                new HackerOs.Commands.Sleep.SleepApp(), new HackerOs.Commands.Ip.IpApp(), new HackerOs.Commands.Top.TopApp()
             }.Select(AppDefinitionMapper.ToManifest)
         ];
 

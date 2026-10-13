@@ -54,6 +54,15 @@ public interface IHackShell : IAsyncDisposable
     IReadOnlyList<ShellCommandInfo> GetInstalledCommands();
 
     /// <summary>
+    /// Gets whether <paramref name="text"/> is an unfinished command (ADR 0064): an <c>if</c>
+    /// without <c>fi</c>, a <c>for</c> without <c>done</c>, an open quote, a trailing <c>|</c> or
+    /// <c>&amp;&amp;</c>, a here-document waiting for its delimiter. A terminal then asks for a
+    /// continuation line with bash's <c>PS2</c> prompt (<c>&gt;</c>).
+    /// </summary>
+    /// <param name="text">The lines typed so far, joined by newlines.</param>
+    bool NeedsMoreInput(string text) => false;
+
+    /// <summary>
     /// Runs one line: parsing, expansion, pipes, redirections, <c>&amp;&amp;</c>, then each command
     /// as a child process of the shell. Output is written as commands produce it.
     /// </summary>

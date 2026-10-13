@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Platform.Core.Shell;
@@ -284,5 +285,26 @@ public sealed partial class ShellInterpreterTests
         }
 
         throw new TimeoutException($"No process of {appId} started.");
+    }
+}
+
+/// <summary>The hosted shell tells its terminal when a typed command is unfinished (PS2, ADR 0064).</summary>
+public sealed partial class ShellInterpreterTests
+{
+    [Theory]
+    [InlineData("for x in a b; do", true)]
+    [InlineData("for x in a b; do\necho $x\ndone", false)]
+    [InlineData("echo \"open", true)]
+    [InlineData("ls |", true)]
+    [InlineData("cat <<EOF", true)]
+    [InlineData("ls -l", false)]
+    [InlineData("fi", false)]
+    public async Task The_hosted_shell_reports_unfinished_commands(string text, bool unfinished)
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Grant(AppCapabilities.ShellHost);
+        await using HackerOs.AppSdk.Shell.IHackShell shell = await HackerOs.AppSdk.Shell.HackShell.StartAsync(fixture.Host);
+
+        Assert.Equal(unfinished, shell.NeedsMoreInput(text));
     }
 }
