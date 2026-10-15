@@ -99,7 +99,7 @@ touche le navigateur est ici.
 | Dossier | Contenu |
 |---|---|
 | `Apps/System/` | Les 12 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer. |
-| `Apps/Commands/HackerOs.Commands` | Les 34 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`…), une classe `[AppManifest]` par commande (ADR 0051). |
+| `Apps/Commands/HackerOs.Commands` | Les 62 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051). |
 | `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme) ; elles ne sont pas installées dans l'hôte. |
 
 Une app est **système** quand l'hôte la déclare ainsi sur sa `ProjectReference`

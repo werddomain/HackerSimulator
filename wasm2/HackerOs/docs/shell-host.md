@@ -48,6 +48,8 @@ Un composant Razor qui reçoit le contexte de son app en paramètre utilise
 | `ExecuteAsync(ligne, stdin, stdout, stderr, ct)` | Exécute une ligne ; la sortie arrive au fil de l'eau. |
 | `ExecuteAsync(ligne, HackShellExecution, ct)` | Même chose avec l'écran alternatif (`FullScreen`) pour `nano`. |
 | `CompleteAsync(ligne, curseur, ct)` | Complétion par Tab (voir plus bas). |
+| `NeedsMoreInput(texte)` | ADR 0064 : la commande est-elle inachevée (`if` sans `fi`, guillemet ouvert, `\|` final…) ? Le terminal affiche alors l'invite `>` ([`terminal-emulator.md`](terminal-emulator.md)). |
+| `ExecuteAsync(…, HackShellExecution)` : `StandardInput` | ADR 0064 : l'entrée standard que le terminal donne à la ligne (`TerminalInputReader`). |
 | `DisposeAsync()` | Fermeture du terminal : tue les commandes encore en cours, puis termine `hsh` avec `$?`. La commande `exit [n]` fait de même depuis le shell (`HasExited` devient vrai, [`terminal-console.md`](terminal-console.md)). |
 
 Une seule ligne s'exécute à la fois ; une seconde attend la fin de la

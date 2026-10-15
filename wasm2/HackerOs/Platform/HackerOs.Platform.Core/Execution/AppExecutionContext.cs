@@ -210,6 +210,13 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// </remarks>
     public IAppShellHostGateway ShellHost { get; internal set; } = UnsupportedShellHostGateway.Instance;
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Bound by <c>AppLifecycleOrchestrator</c> when the launch request carries streams (a shell
+    /// started the instance, ADR 0064); detached otherwise.
+    /// </remarks>
+    public IAppConsoleGateway Console { get; internal set; } = DetachedAppConsoleGateway.Instance;
+
     /// <summary>Shell host of a context whose factory has no shell service (tests, legacy hosts).</summary>
     internal sealed class UnsupportedShellHostGateway : IAppShellHostGateway
     {

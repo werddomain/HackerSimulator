@@ -31,10 +31,10 @@ public sealed class KillApp : AppDefinition
     public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
 
     /// <inheritdoc />
-    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ProcessManage];
+    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ProcessManage, AppCapabilities.ShellControl];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("kill", "kill [-9] <pid...>");
+    public override TerminalCommand? Terminal => new("kill", "kill [-s sig | -SIG] <pid|%job...> | kill -l");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

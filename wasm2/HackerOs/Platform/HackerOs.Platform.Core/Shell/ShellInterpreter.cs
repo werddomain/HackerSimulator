@@ -1,7 +1,5 @@
-using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.AppSdk.IO;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -9,18 +7,21 @@ using HackerOs.Simulation.Abstractions.Processes;
 namespace HackerOs.Platform.Core.Shell;
 
 /// <summary>
-/// The headless shell <c>hsh</c> (ADR 0050, sections 1 to 4 and 7): parses a line, expands its
-/// words, opens redirections, runs pipeline stages at the same time connected by
-/// <see cref="ShellPipe"/>s, and chains pipelines with <c>&amp;&amp;</c>. Commands are started by
-/// <see cref="AppLifecycleOrchestrator"/> as children of the shell's process. The interpreter has
-/// no UI: the terminal and <c>ExecuteCommandIntent</c> both drive it.
+/// The headless shell <c>hsh</c>, a POSIX <c>sh</c> subset (ADR 0064, extending ADR 0050): parses
+/// a line or a script, expands its words, opens redirections, runs pipeline stages at the same
+/// time connected by <see cref="ShellPipe"/>s, chains and-or lists, runs compound commands,
+/// functions, scripts and background jobs. Commands are started by
+/// <see cref="AppLifecycleOrchestrator"/> as children of the shell's process; a name that is no
+/// command but the last segment of an app id (<c>text-editor</c>) starts that app. The interpreter
+/// has no UI: the terminal and <c>ExecuteCommandIntent</c> both drive it.
 /// </summary>
 /// <remarks>
-/// Exit codes: <c>127</c> command not found, <c>2</c> syntax error, <c>130</c> interrupted,
-/// <c>1</c> unhandled fault or failed redirection, <c>141</c> broken pipe; otherwise the
-/// command's own code. A pipeline's code is its last stage's (no <c>pipefail</c>).
+/// Exit codes: <c>127</c> command not found, <c>126</c> found but not executable, <c>2</c>
+/// syntax error, <c>130</c> interrupted, <c>1</c> unhandled fault or failed redirection,
+/// <c>141</c> broken pipe; otherwise the command's own code. A pipeline's code is its last
+/// stage's (no <c>pipefail</c>), inverted by <c>!</c>.
 /// </remarks>
-public sealed class ShellInterpreter
+public sealed partial class ShellInterpreter
 {
     /// <summary>Per-user alias file read for the first word of each command (unchanged location).</summary>
     public const string AliasFileRelativePath = ".hackeros/aliases";
@@ -28,13 +29,20 @@ public sealed class ShellInterpreter
     /// <summary>Exit code of a command that could not be found.</summary>
     public const int CommandNotFoundExitCode = 127;
 
+    /// <summary>Exit code of a command that was found but cannot be executed (a script without <c>+x</c>).</summary>
+    public const int NotExecutableExitCode = 126;
+
     /// <summary>Exit code of a line that did not parse.</summary>
     public const int SyntaxErrorExitCode = 2;
 
     /// <summary>Exit code of an interrupted pipeline (128 + SIGINT).</summary>
     public const int InterruptedExitCode = 130;
 
-    private static readonly Encoding FileEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+    /// <summary>Exit code of a command that hit a closed pipe (128 + SIGPIPE).</summary>
+    public const int BrokenPipeExitCode = 141;
+
+    /// <summary>Nested scripts, functions and <c>eval</c>s allowed before the shell refuses, as bash's <c>FUNCNEST</c>.</summary>
+    private const int MaximumCallDepth = 200;
 
     private readonly AppLifecycleOrchestrator _orchestrator;
     private readonly IAppEnablementRegistry _enablement;
@@ -54,19 +62,36 @@ public sealed class ShellInterpreter
     public ShellCommandResolver Resolver { get; }
 
     /// <summary>
-    /// Gets the installed commands, ordered by name: what <c>help</c> lists through
+    /// Gets the installed commands, ordered by name: the catalog's terminal apps, the shell itself
+    /// (<c>sh</c>) and its special built-ins. What <c>help</c> lists through
     /// <see cref="IShellSession.GetCommands"/> and what the terminal completes (ADR 0051, section 2).
     /// </summary>
     public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() =>
         [.. Resolver.GetTerminalCommands()
             .Where(manifest => _enablement.IsEnabled(manifest.Id))
             .Select(manifest => new ShellCommandInfo(
-                manifest.Terminal!.Name, manifest.Terminal.Aliases, manifest.Terminal.Usage, manifest.Description))];
+                manifest.Terminal!.Name, manifest.Terminal.Aliases, manifest.Terminal.Usage, manifest.Description))
+            .Concat(BuiltinCommands)
+            .OrderBy(command => command.Name, StringComparer.OrdinalIgnoreCase)];
 
-    /// <summary>Runs one line in <paramref name="session"/>.</summary>
-    /// <param name="session">The shell: process, environment, <c>$?</c>.</param>
-    /// <param name="commandLine">The line as typed.</param>
-    /// <param name="options">Output streams, built-ins and prompts.</param>
+    /// <summary>
+    /// Gets the window apps the shell starts by short name (ADR 0064), as completion entries:
+    /// <c>text-editor</c>, <c>browser</c>…, unless a command already has that name.
+    /// </summary>
+    public IReadOnlyList<ShellCommandInfo> GetLaunchableApplications()
+    {
+        HashSet<string> commands = new(GetInstalledCommands().SelectMany(command => command.Aliases.Prepend(command.Name)), StringComparer.OrdinalIgnoreCase);
+        return [.. Resolver.GetApplications()
+            .Where(manifest => _enablement.IsEnabled(manifest.Id))
+            .Select(manifest => (Manifest: manifest, Name: ShellCommandResolver.ShortName(manifest.Id)))
+            .Where(entry => !commands.Contains(entry.Name))
+            .Select(entry => new ShellCommandInfo(entry.Name, [], $"{entry.Name} [args...]", $"Start {entry.Manifest.Name}"))];
+    }
+
+    /// <summary>Runs one line (or several lines) typed in <paramref name="session"/>.</summary>
+    /// <param name="session">The shell: process, variables, <c>$?</c>, jobs.</param>
+    /// <param name="commandLine">The input as typed.</param>
+    /// <param name="options">Output streams and prompts.</param>
     /// <param name="cancellationToken">Ctrl+C: cancels every stage of the running pipeline and stops the line.</param>
     /// <returns>The exit code of the last pipeline that ran, and why it failed if it did not run.</returns>
     public async Task<ShellExecutionResult> ExecuteAsync(
@@ -78,6 +103,11 @@ public sealed class ShellInterpreter
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(commandLine);
         ArgumentNullException.ThrowIfNull(options);
+
+        if (session.IsInteractive)
+        {
+            await ReportFinishedJobsAsync(session, options.StandardError).ConfigureAwait(false);
+        }
 
         ShellParseResult parsed = ShellParser.Parse(commandLine);
         if (parsed.Error is { } syntaxError)
@@ -94,519 +124,706 @@ public sealed class ShellInterpreter
         }
 
         LineState line = new(options.Elevation);
-        int exitCode = 0;
-        ShellFailure failure = ShellFailure.None;
-        for (int index = 0; index < parsed.Commands.Pipelines.Count; index++)
+        Exec exec = new()
         {
-            if (index > 0 && exitCode != 0)
-            {
-                break;
-            }
+            Session = session,
+            Options = options,
+            Line = line,
+            Source = commandLine,
+            In = options.StandardInput ?? TextReader.Null,
+            Out = options.StandardOutput,
+            Err = options.StandardError,
+            Token = cancellationToken,
+            Control = new ControlState()
+        };
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                exitCode = InterruptedExitCode;
-                break;
-            }
-
-            (exitCode, failure) = await RunPipelineAsync(
-                session, parsed.Commands.Pipelines[index], options, line, cancellationToken).ConfigureAwait(false);
-            // $? follows every pipeline, so `false && …` then `echo $?` and `a && echo $?` behave as in bash.
-            session.LastExitCode = exitCode;
-            if (session.ExitRequestedStatus is { } exitStatus)
-            {
-                // `exit 0 && echo late` never prints: the shell stops reading the line (ADR 0058 §4).
-                exitCode = exitStatus;
-                break;
-            }
-        }
-
+        int exitCode = await RunListAsync(exec, parsed.Commands).ConfigureAwait(false);
         if (cancellationToken.IsCancellationRequested)
         {
             exitCode = InterruptedExitCode;
         }
 
+        if (session.ExitRequestedStatus is { } exitStatus)
+        {
+            exitCode = exitStatus;
+        }
+
+        // A `break` or `return` typed at the prompt has nothing left to leave.
+        exec.Control.Reset();
         session.LastExitCode = exitCode;
-        return new ShellExecutionResult(exitCode, failure, null, line.PermissionDenials);
+        if (session.IsInteractive)
+        {
+            await ReportFinishedJobsAsync(session, options.StandardError).ConfigureAwait(false);
+        }
+
+        return new ShellExecutionResult(exitCode, line.LastFailure, null, line.PermissionDenials);
     }
 
-    /// <summary>Expands every stage, then runs them all at once, connected by pipes.</summary>
-    private async Task<(int ExitCode, ShellFailure Failure)> RunPipelineAsync(
+    /// <summary>
+    /// Runs a command line in a subshell copy of <paramref name="session"/> with the given streams
+    /// (<see cref="IShellSession.RunAsync"/>: <c>watch</c>). Nothing it changes reaches the shell.
+    /// </summary>
+    internal async Task<int> RunInSubshellAsync(
         ShellSession session,
-        ShellPipeline pipeline,
+        string commandLine,
         ShellExecutionOptions options,
-        LineState line,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
         CancellationToken cancellationToken)
     {
-        // Expansion happens for the whole pipeline before any stage starts: stages run
-        // concurrently, so none may observe another one's side effects through $VAR or $?.
-        List<ExpandedStage> stages = [];
-        foreach (ShellCommand command in pipeline.Commands)
+        ShellParseResult parsed = ShellParser.Parse(commandLine);
+        if (parsed.Error is { } syntaxError)
         {
-            stages.Add(await ExpandAsync(session, command, options.StandardError, cancellationToken).ConfigureAwait(false));
+            await error.WriteLineAsync($"hsh: {syntaxError.Message}").ConfigureAwait(false);
+            return SyntaxErrorExitCode;
         }
 
-        using CancellationTokenSource pipelineCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        ShellPipe[] pipes = [.. Enumerable.Range(0, stages.Count - 1).Select(_ => new ShellPipe())];
-        Task<StageOutcome>[] running = new Task<StageOutcome>[stages.Count];
-        for (int index = 0; index < stages.Count; index++)
+        if (parsed.Commands is null)
         {
-            ShellPipe? input = index == 0 ? null : pipes[index - 1];
-            ShellPipe? output = index == stages.Count - 1 ? null : pipes[index];
-            running[index] = RunStageAsync(
-                session, stages[index], input, output, options, line, elevation: null, piped: stages.Count > 1, pipelineCancellation.Token);
+            return 0;
         }
 
-        StageOutcome[] outcomes = await Task.WhenAll(running).ConfigureAwait(false);
-        StageOutcome last = outcomes[^1];
-
-        // ADR 0042: a lone command that failed on a permission denial may be retried once with an
-        // administrator's one-shot approval. Its input was empty, so rerunning it is safe; a
-        // command that read the terminal's input is not rerun, the input is gone.
-        if (stages.Count == 1
-            && options.StandardInput is null
-            && last is { Failure: ShellFailure.None, ExitCode: not 0, Elevated: false, Denials.Count: > 0 }
-            && last.Denials[0].RequiredCapability is not null
-            && options.PermissionApproval is { } approve
-            && !cancellationToken.IsCancellationRequested)
+        ShellSession copy = session.Fork();
+        Exec exec = new()
         {
-            ShellElevation? ticket = await approve(
-                new ShellPermissionDenial(stages[0].Arguments[0], last.Denials[0]), cancellationToken).ConfigureAwait(false);
-            if (ticket is not null)
+            Session = copy,
+            Options = options,
+            Line = new LineState(null),
+            Source = commandLine,
+            In = input,
+            Out = output,
+            Err = error,
+            Token = cancellationToken,
+            Control = new ControlState()
+        };
+        int status = await RunListAsync(exec, parsed.Commands).ConfigureAwait(false);
+        return cancellationToken.IsCancellationRequested ? InterruptedExitCode : copy.ExitRequestedStatus ?? status;
+    }
+
+    // ---- Lists, and-or lists, pipelines --------------------------------------------------
+
+    /// <summary>Runs a list: each and-or list in turn, a background one as a job.</summary>
+    private async Task<int> RunListAsync(Exec exec, ShellCommandList list)
+    {
+        int status = 0;
+        foreach (ShellListItem item in list.Items)
+        {
+            if (ShouldStop(exec))
             {
-                last = await RunStageAsync(session, stages[0], null, null, options, line, ticket, piped: false, cancellationToken).ConfigureAwait(false);
+                break;
             }
+
+            if (item.Background)
+            {
+                StartBackgroundJob(exec, item);
+                status = 0;
+                exec.Session.LastExitCode = 0;
+                continue;
+            }
+
+            status = await RunAndOrAsync(exec, item.AndOr).ConfigureAwait(false);
         }
 
-        return (last.ExitCode, last.Failure);
+        return status;
     }
 
-    /// <summary>Runs one stage with its input, output and redirections, then closes its pipe ends.</summary>
-    private async Task<StageOutcome> RunStageAsync(
-        ShellSession session,
-        ExpandedStage stage,
-        ShellPipe? inputPipe,
-        ShellPipe? outputPipe,
-        ShellExecutionOptions options,
-        LineState line,
-        ShellElevation? elevation,
-        bool piped,
-        CancellationToken cancellationToken)
+    /// <summary><c>a &amp;&amp; b || c</c>: left to right, each pipeline run or skipped by the previous status.</summary>
+    private async Task<int> RunAndOrAsync(Exec exec, ShellAndOrList andOr)
     {
-        TextReader input = inputPipe?.Reader ?? options.StandardInput ?? TextReader.Null;
-        TextWriter output = outputPipe?.Writer ?? options.StandardOutput;
-        TextWriter error = options.StandardError;
-        RedirectionTarget? redirection = null;
-        StageOutcome outcome;
+        int status = exec.Session.LastExitCode;
+        for (int index = 0; index < andOr.Pipelines.Count; index++)
+        {
+            if (index > 0)
+            {
+                ShellAndOrOperator op = andOr.Operators[index - 1];
+                if ((op == ShellAndOrOperator.And && status != 0) || (op == ShellAndOrOperator.Or && status == 0))
+                {
+                    continue;
+                }
+            }
+
+            if (ShouldStop(exec))
+            {
+                break;
+            }
+
+            // Every pipeline but the last is tested by && or ||: set -e ignores its failure.
+            bool tested = index < andOr.Pipelines.Count - 1;
+            status = await RunPipelineAsync(exec, andOr.Pipelines[index], tested).ConfigureAwait(false);
+            // $? follows every pipeline, so `false && …` then `echo $?` and `a && echo $?` behave as in bash.
+            exec.Session.LastExitCode = status;
+        }
+
+        return status;
+    }
+
+    /// <summary>Runs every stage of a pipeline at once, connected by pipes.</summary>
+    private async Task<int> RunPipelineAsync(Exec exec, ShellPipeline pipeline, bool tested)
+    {
+        int status;
+        if (pipeline.Commands.Count == 1)
+        {
+            status = await RunCommandSafelyAsync(exec with { SingleStage = true }, pipeline.Commands[0]).ConfigureAwait(false);
+        }
+        else
+        {
+            using CancellationTokenSource pipelineCancellation = CancellationTokenSource.CreateLinkedTokenSource(exec.Token);
+            ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe())];
+            Task<int>[] running = new Task<int>[pipeline.Commands.Count];
+            for (int index = 0; index < pipeline.Commands.Count; index++)
+            {
+                ShellPipe? input = index == 0 ? null : pipes[index - 1];
+                ShellPipe? output = index == pipeline.Commands.Count - 1 ? null : pipes[index];
+                // Each stage runs in a subshell copy (ADR 0051 section 3): a `cd` or a variable
+                // set inside a pipe is lost when the stage ends.
+                Exec stage = exec with
+                {
+                    Session = exec.Session.Fork(),
+                    In = input?.Reader ?? exec.In,
+                    Out = output?.Writer ?? exec.Out,
+                    Token = pipelineCancellation.Token,
+                    Control = new ControlState(),
+                    SingleStage = false,
+                    LoopDepth = 0,
+                    CanReturn = false
+                };
+                running[index] = RunStageAsync(stage, pipeline.Commands[index], input, output);
+            }
+
+            int[] statuses = await Task.WhenAll(running).ConfigureAwait(false);
+            status = statuses[^1];
+        }
+
+        if (exec.Token.IsCancellationRequested)
+        {
+            status = InterruptedExitCode;
+        }
+
+        if (pipeline.Negated)
+        {
+            status = status == 0 ? 1 : 0;
+        }
+        else if (status != 0 && !tested && !exec.InCondition && exec.Session.Options.Contains('e') && exec.Session.ExitRequestedStatus is null)
+        {
+            // set -e: a failing command that nothing tests ends the shell.
+            exec.Session.RequestExit(status);
+        }
+
+        return status;
+    }
+
+    /// <summary>Runs one stage of a multi-stage pipeline, then closes its pipe ends like a process exiting.</summary>
+    private async Task<int> RunStageAsync(Exec stage, ShellCommand command, ShellPipe? input, ShellPipe? output)
+    {
         try
         {
-            outcome = await RunStageCoreAsync().ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            outcome = StageOutcome.Failed(InterruptedExitCode, ShellFailure.None);
+            int status = await RunCommandSafelyAsync(stage, command).ConfigureAwait(false);
+            return stage.Session.ExitRequestedStatus ?? status;
         }
         finally
         {
-            // Like a process exiting: its pipe ends close, so the reader sees end of stream and the
-            // writer feeding it gets "Broken pipe".
-            outputPipe?.CloseWriter();
-            inputPipe?.CloseReader();
-        }
-
-        if (redirection is not null && !await redirection.CloseAsync(error).ConfigureAwait(false))
-        {
-            // The file could not be published (e.g. `>>` to a file the user cannot write).
-            outcome = StageOutcome.Failed(1, ShellFailure.Redirection);
-        }
-
-        return outcome;
-
-        async Task<StageOutcome> RunStageCoreAsync()
-        {
-            if (stage.Error is not null)
-            {
-                return StageOutcome.Failed(1, ShellFailure.Fault);
-            }
-
-            if (stage.Redirections.Count > 0)
-            {
-                redirection = await OpenRedirectionsAsync(session, stage.Redirections, error, cancellationToken).ConfigureAwait(false);
-                if (redirection is null)
-                {
-                    return StageOutcome.Failed(1, ShellFailure.Redirection);
-                }
-
-                // The stage's output now goes to the file: the next stage reads an empty input.
-                outputPipe?.CloseWriter();
-                output = redirection.Writer;
-            }
-
-            if (stage.Arguments.Count == 0)
-            {
-                // `> f` alone: the redirection was the whole command.
-                return StageOutcome.Completed(0, [], elevated: false);
-            }
-
-            return await LaunchAsync(session, stage.Arguments, input, output, error, options, line, elevation, piped, cancellationToken).ConfigureAwait(false);
+            // The reader then sees end of stream, and the writer feeding it gets "Broken pipe".
+            output?.CloseWriter();
+            input?.CloseReader();
         }
     }
 
-    /// <summary>Resolves and starts one command, as a child of the shell's process.</summary>
-    private async Task<StageOutcome> LaunchAsync(
-        ShellSession session,
-        IReadOnlyList<string> arguments,
-        TextReader input,
-        TextWriter output,
-        TextWriter error,
-        ShellExecutionOptions options,
-        LineState line,
-        ShellElevation? elevation,
-        bool piped,
-        CancellationToken cancellationToken)
+    /// <summary>Runs a command, turning an interruption, a broken pipe or an expansion error into an exit status.</summary>
+    private async Task<int> RunCommandSafelyAsync(Exec exec, ShellCommand command)
     {
-        string name = arguments[0];
-        ShellCommandResolution? resolution = Resolver.Resolve(name, [.. arguments.Skip(1)]);
-        if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
+        try
         {
-            await error.WriteLineAsync($"hsh: {name}: command not found").ConfigureAwait(false);
-            return StageOutcome.Failed(CommandNotFoundExitCode, resolution is null ? ShellFailure.CommandNotFound : ShellFailure.Disabled);
+            return await RunCommandAsync(exec, command).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (exec.Token.IsCancellationRequested)
+        {
+            return InterruptedExitCode;
+        }
+        catch (ShellBrokenPipeException)
+        {
+            return BrokenPipeExitCode;
+        }
+        catch (ShellExpansionException exception)
+        {
+            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{exception.Message}").ConfigureAwait(false);
+            if (exec.Session.IsScript)
+            {
+                // A non-interactive shell exits on an expansion error (POSIX 2.8.1).
+                exec.Session.RequestExit(1);
+            }
+
+            return 1;
+        }
+    }
+
+    /// <summary>Runs one command of any kind.</summary>
+    private async Task<int> RunCommandAsync(Exec exec, ShellCommand command)
+    {
+        if (command is ShellSimpleCommand simple)
+        {
+            return await RunSimpleCommandAsync(exec, simple).ConfigureAwait(false);
         }
 
-        // ADR 0051 section 3: a command declaring shell.control run by an interactive shell acts on
-        // the shell itself, or on a copy inside a pipe (a subshell, whose changes are lost). The
-        // orchestrator still hands it over only if the capability is granted.
-        IShellSession? shell = session.IsInteractive && DeclaresShellControl(resolution.Manifest)
-            ? new ShellSessionAccess(this, piped ? session.Fork() : session, options, input)
-            : null;
+        if (command is ShellFunctionDefinition definition)
+        {
+            exec.Session.Functions[definition.Name] = definition;
+            return 0;
+        }
 
-        elevation ??= line.TakeElevation();
-        StageOutcome outcome = await StartAsync(
-            "hsh", session, resolution, session.ProcessId, input, output, error, options, elevation, shell, cancellationToken).ConfigureAwait(false);
-        line.AddDenials(outcome.Denials);
-        return outcome;
+        RedirectionScope? scope = null;
+        if (command.Redirections.Count > 0)
+        {
+            scope = await OpenRedirectionsAsync(exec, command.Redirections).ConfigureAwait(false);
+            if (scope is null)
+            {
+                exec.Line.LastFailure = ShellFailure.Redirection;
+                return 1;
+            }
+
+            exec = scope.Exec;
+        }
+
+        int status;
+        try
+        {
+            status = command switch
+            {
+                ShellGroupCommand { Subshell: true } group => await RunSubshellAsync(exec, group.Body).ConfigureAwait(false),
+                ShellGroupCommand group => await RunListAsync(exec, group.Body).ConfigureAwait(false),
+                ShellIfCommand @if => await RunIfAsync(exec, @if).ConfigureAwait(false),
+                ShellLoopCommand loop => await RunLoopAsync(exec, loop).ConfigureAwait(false),
+                ShellForCommand @for => await RunForAsync(exec, @for).ConfigureAwait(false),
+                ShellCaseCommand @case => await RunCaseAsync(exec, @case).ConfigureAwait(false),
+                _ => 0
+            };
+        }
+        finally
+        {
+            if (scope is not null && !await scope.CloseAsync().ConfigureAwait(false))
+            {
+                status = 1;
+            }
+        }
+
+        return status;
+    }
+
+    /// <summary><c>( list )</c>: a copy of the shell whose changes (directory, variables, <c>exit</c>) stay inside.</summary>
+    private async Task<int> RunSubshellAsync(Exec exec, ShellCommandList body)
+    {
+        ShellSession copy = exec.Session.Fork();
+        int status = await RunListAsync(exec with { Session = copy, Control = new ControlState(), LoopDepth = 0, CanReturn = false }, body).ConfigureAwait(false);
+        return copy.ExitRequestedStatus ?? status;
+    }
+
+    private async Task<int> RunIfAsync(Exec exec, ShellIfCommand command)
+    {
+        foreach (ShellIfBranch branch in command.Branches)
+        {
+            int condition = await RunListAsync(exec with { InCondition = true }, branch.Condition).ConfigureAwait(false);
+            if (ShouldStop(exec))
+            {
+                return condition;
+            }
+
+            if (condition == 0)
+            {
+                return await RunListAsync(exec, branch.Body).ConfigureAwait(false);
+            }
+        }
+
+        return command.Else is null ? 0 : await RunListAsync(exec, command.Else).ConfigureAwait(false);
+    }
+
+    private async Task<int> RunLoopAsync(Exec exec, ShellLoopCommand loop)
+    {
+        Exec body = exec with { LoopDepth = exec.LoopDepth + 1 };
+        int status = 0;
+        for (long iteration = 0; ; iteration++)
+        {
+            await YieldIfBusyAsync(iteration, exec.Token).ConfigureAwait(false);
+            int condition = await RunListAsync(body with { InCondition = true }, loop.Condition).ConfigureAwait(false);
+            if (LeaveLoop(body, out bool stop) || stop)
+            {
+                break;
+            }
+
+            if ((condition == 0) == loop.Until)
+            {
+                break;
+            }
+
+            status = await RunListAsync(body, loop.Body).ConfigureAwait(false);
+            if (LeaveLoop(body, out stop) || stop)
+            {
+                break;
+            }
+        }
+
+        return status;
+    }
+
+    private async Task<int> RunForAsync(Exec exec, ShellForCommand loop)
+    {
+        IReadOnlyList<string> items = loop.Items is null
+            ? exec.Session.PositionalParameters
+            : await CreateExpander(exec).ExpandFieldsAsync(loop.Items).ConfigureAwait(false);
+        Exec body = exec with { LoopDepth = exec.LoopDepth + 1 };
+        int status = 0;
+        for (int index = 0; index < items.Count; index++)
+        {
+            await YieldIfBusyAsync(index, exec.Token).ConfigureAwait(false);
+            exec.Session.AssignVariable(loop.Variable, items[index]);
+            status = await RunListAsync(body, loop.Body).ConfigureAwait(false);
+            if (LeaveLoop(body, out bool stop) || stop)
+            {
+                break;
+            }
+        }
+
+        return status;
+    }
+
+    private async Task<int> RunCaseAsync(Exec exec, ShellCaseCommand command)
+    {
+        ShellExpander expander = CreateExpander(exec);
+        string subject = await expander.ExpandStringAsync(command.Subject).ConfigureAwait(false);
+        foreach (ShellCaseItem item in command.Items)
+        {
+            foreach (ShellWord pattern in item.Patterns)
+            {
+                if (ShellPattern.IsMatch(subject, await expander.ExpandPatternAsync(pattern).ConfigureAwait(false)))
+                {
+                    return item.Body is null ? 0 : await RunListAsync(exec, item.Body).ConfigureAwait(false);
+                }
+            }
+        }
+
+        return 0;
     }
 
     /// <summary>
-    /// <c>sudo</c>'s side of the shell (ADR 0051, section 4; ADR 0042): refuses a shell built-in,
-    /// asks an administrator's credentials, then runs the command as root, as a child of the caller
-    /// (the <c>sudo</c> process) in the shell's directory, without access to the shell.
+    /// Applies a pending <c>break</c> or <c>continue</c> at the end of a loop iteration. Returns
+    /// <see langword="true"/> to leave the loop; <paramref name="stop"/> reports a <c>return</c>,
+    /// an <c>exit</c> or an interruption.
     /// </summary>
-    internal async ValueTask<int> RunElevatedAsync(
-        ShellSession session,
-        IReadOnlyList<string> arguments,
-        TextReader input,
-        TextWriter output,
-        TextWriter error,
-        ShellExecutionOptions options,
-        CancellationToken cancellationToken)
+    private static bool LeaveLoop(Exec exec, out bool stop)
     {
-        ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(output);
-        ArgumentNullException.ThrowIfNull(error);
-        if (arguments.Count == 0 || string.IsNullOrEmpty(arguments[0]))
+        ControlState control = exec.Control;
+        stop = false;
+        switch (control.Kind)
         {
-            throw new ArgumentException("A command name is required.", nameof(arguments));
-        }
-
-        string name = arguments[0];
-        ShellCommandResolution? resolution = Resolver.Resolve(name, [.. arguments.Skip(1)]);
-        if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
-        {
-            await error.WriteLineAsync($"sudo: {name}: command not found").ConfigureAwait(false);
-            return 1;
-        }
-
-        if (DeclaresShellControl(resolution.Manifest))
-        {
-            // The target never reaches the shell: an elevated `cd` would have nothing to act on.
-            await error.WriteLineAsync($"sudo: {name}: shell builtin").ConfigureAwait(false);
-            return 1;
-        }
-
-        if (options.CredentialPrompt is not { } prompt)
-        {
-            await error.WriteLineAsync("sudo: a terminal is required to read the password").ConfigureAwait(false);
-            return 1;
-        }
-
-        ShellElevation? ticket = await prompt($"Run as root: {string.Join(" ", arguments)}", cancellationToken).ConfigureAwait(false);
-        if (ticket is null)
-        {
-            await error.WriteLineAsync("sudo: authentication failed").ConfigureAwait(false);
-            return 1;
-        }
-
-        // Only the command is elevated: a redirection was already opened by the unelevated shell,
-        // so `sudo echo x > /etc/f` fails as on Linux.
-        ProcessId? parent = HackExecutionContext.CurrentOrNull?.ProcessId ?? session.ProcessId;
-        StageOutcome outcome = await StartAsync(
-            "sudo", session, resolution, parent, input, output, error, options, ticket, shell: null, cancellationToken).ConfigureAwait(false);
-        return outcome.ExitCode;
-    }
-
-    /// <summary>Starts a resolved command through the orchestrator and maps its launch status to an exit code.</summary>
-    private async Task<StageOutcome> StartAsync(
-        string caller,
-        ShellSession session,
-        ShellCommandResolution resolution,
-        ProcessId? parent,
-        TextReader input,
-        TextWriter output,
-        TextWriter error,
-        ShellExecutionOptions options,
-        ShellElevation? elevation,
-        IShellSession? shell,
-        CancellationToken cancellationToken)
-    {
-        string name = resolution.CommandName;
-        AppLaunchResult launch = await _orchestrator.LaunchAsync(
-            new AppLaunchRequest(
-                resolution.AppId,
-                session.Principal,
-                resolution.Arguments,
-                ParentPid: parent,
-                WorkingDirectory: VirtualPath.Parse(session.CurrentDirectory),
-                ElevationToken: elevation?.Token,
-                ElevationScope: elevation?.Scope,
-                ApprovalPrompt: options.ApprovalPrompt,
-                // A shell with no process of its own passes its environment explicitly.
-                Environment: parent is null ? session.GetVariables() : null,
-                StandardInput: input,
-                StandardOutput: output,
-                StandardError: error,
-                Shell: shell,
-                CommandName: name),
-            options.FullScreen,
-            cancellationToken).ConfigureAwait(false);
-
-        IReadOnlyList<FileSystemError> denials = launch.PermissionDenials ?? [];
-        switch (launch.Status)
-        {
-            case AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting:
-                return StageOutcome.Completed(launch.ExitCode ?? 0, denials, elevation is not null);
-            case AppLaunchStatus.NotFound:
-                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
-                return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.CommandNotFound);
-            case AppLaunchStatus.Disabled:
-                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
-                return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.Disabled);
-            case AppLaunchStatus.ElevationDenied:
-                await error.WriteLineAsync($"{caller}: {name}: elevation denied").ConfigureAwait(false);
-                return StageOutcome.Failed(1, ShellFailure.ElevationDenied);
-            default:
-                if (cancellationToken.IsCancellationRequested)
+            case ControlKind.Break:
+                if (control.Count > 1)
                 {
-                    return StageOutcome.Failed(InterruptedExitCode, ShellFailure.None);
-                }
-
-                await error.WriteLineAsync($"{caller}: {name}: {launch.ErrorMessage ?? launch.ErrorCode}").ConfigureAwait(false);
-                return StageOutcome.Failed(1, ShellFailure.Fault);
-        }
-    }
-
-    /// <summary>Whether a command asks for its calling shell (ADR 0051, section 3).</summary>
-    private static bool DeclaresShellControl(AppManifest manifest) =>
-        manifest.Capabilities.Contains(AppCapabilities.ShellControl, StringComparer.Ordinal);
-
-    /// <summary>
-    /// Expands one command's words (ADR 0050, section 3) and applies alias substitution to its
-    /// first word, as a shell does before resolving a command.
-    /// </summary>
-    private static async Task<ExpandedStage> ExpandAsync(
-        ShellSession session, ShellCommand command, TextWriter error, CancellationToken cancellationToken)
-    {
-        List<ShellWord> words = [.. command.Words];
-        List<ShellRedirection> redirections = [.. command.Redirections];
-        string? prefixError = null;
-
-        if (words.Count > 0 && words[0].PlainText is { } name && name != "alias")
-        {
-            string? value = await TryReadAliasAsync(session, name, cancellationToken).ConfigureAwait(false);
-            if (value is not null)
-            {
-                ShellParseResult alias = ShellParser.Parse(value);
-                if (alias.Commands is { Pipelines: [{ Commands: [ShellCommand aliased] }] } && aliased.Words.Count > 0)
-                {
-                    words = [.. aliased.Words, .. words.Skip(1)];
-                    redirections = [.. aliased.Redirections, .. redirections];
+                    control.Count--;
                 }
                 else
                 {
-                    prefixError = $"hsh: alias {name}: only a simple command can be aliased";
+                    control.Reset();
                 }
-            }
-        }
 
-        if (prefixError is not null)
-        {
-            await error.WriteLineAsync(prefixError).ConfigureAwait(false);
-            return new ExpandedStage([], [], prefixError);
-        }
-
-        return new ExpandedStage(
-            [.. words.Select(word => Expand(word, session))],
-            [.. redirections.Select(r => (r.Kind, Expand(r.Target, session)))],
-            null);
-    }
-
-    /// <summary>Substitutes variables, <c>$?</c> and <c>~</c>; the result is one argument, never re-split.</summary>
-    internal static string Expand(ShellWord word, ShellSession session)
-    {
-        StringBuilder text = new();
-        foreach (ShellWordPart part in word.Parts)
-        {
-            text.Append(part switch
-            {
-                ShellLiteralPart literal => literal.Text,
-                ShellVariablePart variable => session.GetVariable(variable.Name) ?? string.Empty,
-                ShellExitStatusPart => session.LastExitCode.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ShellTildePart => session.HomeDirectory,
-                _ => string.Empty
-            });
-        }
-
-        return text.ToString();
-    }
-
-    /// <summary>Looks <paramref name="name"/> up in <c>~/.hackeros/aliases</c> (<c>name=value</c> lines), as the shell's user.</summary>
-    private static async Task<string?> TryReadAliasAsync(ShellSession session, string name, CancellationToken cancellationToken)
-    {
-        if (session.Host is null)
-        {
-            return null;
-        }
-
-        string content;
-        try
-        {
-            using (HackExecutionContext.Enter(session.Host))
-            {
-                string path = $"{session.HomeDirectory.TrimEnd('/')}/{AliasFileRelativePath}";
-                if (!await HackFile.ExistsAsync(path, cancellationToken).ConfigureAwait(false))
+                return true;
+            case ControlKind.Continue:
+                if (control.Count > 1)
                 {
-                    return null;
+                    control.Count--;
+                    return true;
                 }
 
-                content = await HackFile.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-            }
+                control.Reset();
+                return false;
+            default:
+                stop = ShouldStop(exec);
+                return false;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            return null;
-        }
-
-        foreach (string rawLine in content.Split('\n'))
-        {
-            string entry = rawLine.TrimEnd('\r').Trim();
-            int equals = entry.IndexOf('=');
-            if (equals > 0 && string.Equals(entry[..equals], name, StringComparison.Ordinal))
-            {
-                return entry[(equals + 1)..];
-            }
-        }
-
-        return null;
     }
 
     /// <summary>
-    /// Opens a stage's redirections in order, with the host's identity and capabilities (ADR 0050,
-    /// section 4): each one is created or emptied (<c>&gt;</c>) or created (<c>&gt;&gt;</c>), and
-    /// the last one receives the output. Returns <see langword="null"/> after printing
-    /// <c>hsh: target: reason</c> when one cannot be opened.
+    /// Lets the browser breathe during a long loop: <c>while true; do :; done</c> made only of
+    /// built-ins would otherwise never return to the event loop, and Ctrl+C could never arrive.
     /// </summary>
-    private static async Task<RedirectionTarget?> OpenRedirectionsAsync(
-        ShellSession session,
-        IReadOnlyList<(ShellRedirectionKind Kind, string Target)> redirections,
-        TextWriter error,
-        CancellationToken cancellationToken)
+    private static async Task YieldIfBusyAsync(long iteration, CancellationToken cancellationToken)
     {
-        if (session.Host is null)
+        cancellationToken.ThrowIfCancellationRequested();
+        if (iteration > 0 && iteration % 64 == 0)
         {
-            await error.WriteLineAsync($"hsh: {redirections[0].Target}: cannot open files without a calling app").ConfigureAwait(false);
-            return null;
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
         }
-
-        HackFileStream? stream = null;
-        string target = string.Empty;
-        for (int index = 0; index < redirections.Count; index++)
-        {
-            (ShellRedirectionKind kind, target) = redirections[index];
-            try
-            {
-                using (HackExecutionContext.Enter(session.Host))
-                {
-                    if (kind == ShellRedirectionKind.Append)
-                    {
-                        // The engine has no append mode to check at open: an empty append creates the
-                        // file or proves it writable, so a permission problem stops the stage first.
-                        await HackFile.AppendAllTextAsync(target, string.Empty, cancellationToken).ConfigureAwait(false);
-                        stream = await HackFile.OpenAppendAsync(target, cancellationToken).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        stream = await HackFile.OpenWriteAsync(target, cancellationToken).ConfigureAwait(false);
-                    }
-                }
-
-                // Truncation (or creation) happens at open, like O_TRUNC|O_CREAT, so a permission
-                // problem stops the stage before it starts.
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
-            {
-                if (stream is not null)
-                {
-                    await DisposeQuietlyAsync(stream).ConfigureAwait(false);
-                }
-
-                await error.WriteLineAsync($"hsh: {target}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
-                return null;
-            }
-
-            if (index < redirections.Count - 1)
-            {
-                await DisposeQuietlyAsync(stream).ConfigureAwait(false);
-                stream = null;
-            }
-        }
-
-        return new RedirectionTarget(target, new StreamWriter(stream!, FileEncoding) { NewLine = "\n" });
     }
 
-    private static async Task DisposeQuietlyAsync(HackFileStream stream)
+    /// <summary>Whether the current list must stop: <c>break</c>, <c>continue</c>, <c>return</c>, <c>exit</c> or Ctrl+C.</summary>
+    private static bool ShouldStop(Exec exec) =>
+        exec.Control.Kind != ControlKind.None
+        || exec.Session.ExitRequestedStatus is not null
+        || exec.Token.IsCancellationRequested;
+
+    /// <summary>Prefix of the shell's own error messages: <c>hsh: </c>, or <c>script: </c> inside a script, as bash prints its <c>$0</c>.</summary>
+    private static string ErrorPrefix(Exec exec) => exec.Session.IsScript ? $"{exec.Session.ScriptName}: " : "hsh: ";
+
+    /// <summary>Creates the expander of one command, whose command substitutions run in subshell copies.</summary>
+    private ShellExpander CreateExpander(Exec exec) =>
+        new(exec.Session, body => RunCommandSubstitutionAsync(exec, body), exec.Token);
+
+    /// <summary><c>$(list)</c>: runs in a subshell copy, its output captured; <c>$?</c> becomes its status.</summary>
+    private async Task<string> RunCommandSubstitutionAsync(Exec exec, ShellCommandList body)
+    {
+        if (exec.Session.CallDepth >= MaximumCallDepth)
+        {
+            throw new ShellExpansionException("maximum nesting level exceeded");
+        }
+
+        StringWriter captured = new() { NewLine = "\n" };
+        ShellSession copy = exec.Session.Fork();
+        copy.CallDepth++;
+        int status = await RunListAsync(
+            exec with
+            {
+                Session = copy,
+                Out = captured,
+                Control = new ControlState(),
+                LoopDepth = 0,
+                CanReturn = false,
+                InCondition = false,
+                SingleStage = false
+            },
+            body).ConfigureAwait(false);
+        exec.Session.LastExitCode = copy.ExitRequestedStatus ?? status;
+        return captured.ToString();
+    }
+
+    // ---- Background jobs -----------------------------------------------------------------
+
+    /// <summary>
+    /// <c>list &amp;</c>: runs the and-or list in a subshell copy without waiting, with an empty
+    /// input and its own cancellation (Ctrl+C at the prompt does not reach it), and prints
+    /// <c>[n] pid</c> in an interactive shell.
+    /// </summary>
+    private void StartBackgroundJob(Exec exec, ShellListItem item)
+    {
+        ShellSession session = exec.Session;
+        string command = SourceText(exec.Source, item.Offset, item.Length);
+        CancellationTokenSource cancellation = session.Host is { } host
+            ? CancellationTokenSource.CreateLinkedTokenSource(host.CancellationToken)
+            : new CancellationTokenSource();
+        ShellJob job = session.Jobs.Add(command, cancellation);
+        Exec jobExec = exec with
+        {
+            Session = session.Fork(),
+            In = TextReader.Null,
+            Token = cancellation.Token,
+            Control = new ControlState(),
+            Line = new LineState(null),
+            InCondition = false,
+            SingleStage = false,
+            LoopDepth = 0,
+            CanReturn = false,
+            ProcessStarted = process =>
+            {
+                job.AddProcess(process.Pid);
+                session.LastBackgroundProcessId = process.Pid.Value;
+                exec.ProcessStarted?.Invoke(process);
+            }
+        };
+
+        job.Completion = RunJobAsync(jobExec, item.AndOr, job);
+        if (session.IsInteractive)
+        {
+            string pid = job.Processes.Count > 0 ? $" {job.Processes[^1].Value}" : string.Empty;
+            TryWriteLine(exec.Err, $"[{job.Id}]{pid}");
+        }
+    }
+
+    private async Task<int> RunJobAsync(Exec exec, ShellAndOrList andOr, ShellJob job)
+    {
+        // Let the caller print `[n] pid` and read its next line before the job runs on.
+        await Task.Yield();
+        int status;
+        try
+        {
+            status = await RunAndOrAsync(exec, andOr).ConfigureAwait(false);
+            status = exec.Session.ExitRequestedStatus ?? status;
+        }
+        catch (OperationCanceledException)
+        {
+            status = 143;
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+        {
+            // Its terminal went away (tab closed): the job ends with the hang-up.
+            status = 129;
+        }
+
+        bool terminated = job.Cancellation.IsCancellationRequested;
+        job.Finish(terminated ? 143 : status, terminated);
+        job.Cancellation.Dispose();
+        return status;
+    }
+
+    /// <summary>Prints <c>[1]+  Done   cmd</c> for each job that ended since the last report, then forgets it.</summary>
+    private static async Task ReportFinishedJobsAsync(ShellSession session, TextWriter error)
+    {
+        IReadOnlyList<ShellJob> jobs = session.Jobs.Jobs;
+        ShellJob? current = session.Jobs.Current;
+        foreach (ShellJob job in jobs)
+        {
+            if (job.State == ShellJobState.Running || job.Reported)
+            {
+                continue;
+            }
+
+            job.Reported = true;
+            try
+            {
+                await error.WriteLineAsync(FormatJob(job, ReferenceEquals(job, current))).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+            {
+                // Nothing to report to.
+            }
+        }
+
+        session.Jobs.RemoveReported();
+    }
+
+    /// <summary>Formats a job like bash's <c>jobs</c> and completion notices.</summary>
+    internal static string FormatJob(ShellJob job, bool current)
+    {
+        string state = job.State switch
+        {
+            ShellJobState.Running => "Running",
+            ShellJobState.Terminated => "Terminated",
+            _ when job.ExitStatus is null or 0 => "Done",
+            _ => $"Exit {job.ExitStatus}"
+        };
+        string suffix = job.State == ShellJobState.Running ? " &" : string.Empty;
+        return $"[{job.Id}]{(current ? '+' : '-')}  {state,-24}{job.Command}{suffix}";
+    }
+
+    /// <summary>Stops a job: its token is cancelled and its live processes are stopped (<c>kill %n</c>).</summary>
+    internal bool KillJob(ShellSession session, int jobId, bool force)
+    {
+        ShellJob? job = session.Jobs.Find(jobId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (job is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            job.Cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already over.
+        }
+
+        foreach (ProcessId pid in job.Processes)
+        {
+            _ = force ? _orchestrator.InterruptAsync(pid) : StopQuietlyAsync(pid);
+        }
+
+        return true;
+    }
+
+    private async Task StopQuietlyAsync(ProcessId pid)
     {
         try
         {
-            await stream.DisposeAsync().ConfigureAwait(false);
+            await _orchestrator.InterruptAsync(pid).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
         {
-            // Nothing more was written to it; the open already reported what mattered.
+            // Ended on its own.
         }
     }
 
-    /// <summary>A stage after expansion.</summary>
-    private sealed record ExpandedStage(
-        IReadOnlyList<string> Arguments,
-        IReadOnlyList<(ShellRedirectionKind Kind, string Target)> Redirections,
-        string? Error);
+    private static string SourceText(string source, int offset, int length) =>
+        offset >= 0 && offset + length <= source.Length ? source.Substring(offset, length).Trim() : string.Empty;
 
-    /// <summary>What one stage did.</summary>
-    private sealed record StageOutcome(int ExitCode, ShellFailure Failure, IReadOnlyList<FileSystemError> Denials, bool Elevated)
+    private static void TryWriteLine(TextWriter writer, string text)
     {
-        public static StageOutcome Completed(int exitCode, IReadOnlyList<FileSystemError> denials, bool elevated) =>
-            new(exitCode, ShellFailure.None, denials, elevated);
-
-        public static StageOutcome Failed(int exitCode, ShellFailure failure) => new(exitCode, failure, [], false);
+        try
+        {
+            writer.WriteLine(text);
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            // A closed output loses the notice, nothing more.
+        }
     }
 
-    /// <summary>State shared by the pipelines of one line.</summary>
+    // ---- Execution state -----------------------------------------------------------------
+
+    /// <summary>Everything one command runs with: its shell, streams, cancellation and control-flow state.</summary>
+    private sealed record Exec
+    {
+        public required ShellSession Session { get; init; }
+
+        public required ShellExecutionOptions Options { get; init; }
+
+        public required LineState Line { get; init; }
+
+        /// <summary>The text the commands were parsed from (job names).</summary>
+        public required string Source { get; init; }
+
+        public required TextReader In { get; init; }
+
+        public required TextWriter Out { get; init; }
+
+        public required TextWriter Err { get; init; }
+
+        public required CancellationToken Token { get; init; }
+
+        public required ControlState Control { get; init; }
+
+        /// <summary>Inside an <c>if</c>/<c>while</c> condition: <c>set -e</c> does not apply.</summary>
+        public bool InCondition { get; init; }
+
+        /// <summary>The command is a pipeline of its own (one-shot approval retry, ADR 0042).</summary>
+        public bool SingleStage { get; init; }
+
+        /// <summary>How many loops enclose the command (<c>break</c> and <c>continue</c> need one).</summary>
+        public int LoopDepth { get; init; }
+
+        /// <summary>Inside a function or a sourced script: <c>return</c> is allowed.</summary>
+        public bool CanReturn { get; init; }
+
+        /// <summary>Called with each process the command starts (background jobs).</summary>
+        public Action<ProcessRecord>? ProcessStarted { get; init; }
+    }
+
+    private enum ControlKind
+    {
+        None,
+        Break,
+        Continue,
+        Return
+    }
+
+    /// <summary>A pending <c>break n</c>, <c>continue n</c> or <c>return</c>, shared by the commands of one shell.</summary>
+    private sealed class ControlState
+    {
+        public ControlKind Kind { get; set; }
+
+        public int Count { get; set; }
+
+        public void Reset()
+        {
+            Kind = ControlKind.None;
+            Count = 0;
+        }
+    }
+
+    /// <summary>State shared by the commands of one line.</summary>
     private sealed class LineState(ShellElevation? elevation)
     {
         private readonly object _sync = new();
         private readonly List<FileSystemError> _denials = [];
         private ShellElevation? _elevation = elevation;
+
+        public ShellFailure LastFailure { get; set; }
 
         public IReadOnlyList<FileSystemError> PermissionDenials
         {
@@ -635,27 +852,6 @@ public sealed class ShellInterpreter
             lock (_sync)
             {
                 _denials.AddRange(denials);
-            }
-        }
-    }
-
-    /// <summary>The open file of a redirected stage.</summary>
-    private sealed class RedirectionTarget(string target, StreamWriter writer)
-    {
-        public StreamWriter Writer { get; } = writer;
-
-        /// <summary>Publishes the file; prints <c>hsh: target: reason</c> and returns false if that fails.</summary>
-        public async Task<bool> CloseAsync(TextWriter error)
-        {
-            try
-            {
-                await Writer.DisposeAsync().ConfigureAwait(false);
-                return true;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                await error.WriteLineAsync($"hsh: {target}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
-                return false;
             }
         }
     }

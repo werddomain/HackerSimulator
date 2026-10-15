@@ -24,6 +24,8 @@ public sealed class ShellSession
 {
     private readonly List<string> _history = [];
     private readonly IAppEnvironmentGateway _environment;
+    private readonly Dictionary<string, string> _shellVariables = new(StringComparer.Ordinal);
+    private readonly List<List<SavedVariable>> _localScopes = [];
     private int _historyIndex;
 
     /// <summary>Creates a shell running in the process of <paramref name="host"/>.</summary>
@@ -96,6 +98,15 @@ public sealed class ShellSession
     /// <summary>Gets whether this is an interactive shell (a terminal).</summary>
     public bool IsInteractive { get; }
 
+    /// <summary>
+    /// Gets whether this shell runs a script (ADR 0064): not interactive (no history, no alias
+    /// expansion, no job notices), but its commands such as <c>cd</c> and <c>read</c> act on it.
+    /// </summary>
+    public bool IsScript { get; init; }
+
+    /// <summary>Gets whether commands declaring <c>shell.control</c> receive this shell (ADR 0051): a terminal or a script.</summary>
+    public bool ProvidesShellControl => IsInteractive || IsScript;
+
     /// <summary>Gets or sets the exit code of the last pipeline, read by <c>$?</c>.</summary>
     public int LastExitCode { get; set; }
 
@@ -132,18 +143,163 @@ public sealed class ShellSession
     /// <summary>Gets the commands entered in this shell, oldest first.</summary>
     public IReadOnlyList<string> History => _history;
 
-    /// <summary>Gets one variable of the shell's process, or <see langword="null"/> when it is not set.</summary>
-    public string? GetVariable(string name) => _environment.GetVariable(name);
+    /// <summary>
+    /// Gets one variable of the shell: an exported variable of its process or an unexported shell
+    /// variable (ADR 0064), or <see langword="null"/> when it is not set.
+    /// </summary>
+    public string? GetVariable(string name) =>
+        _shellVariables.TryGetValue(name, out string? value) ? value : _environment.GetVariable(name);
+
+    /// <summary>Gets whether <paramref name="name"/> is an exported variable (part of the process environment).</summary>
+    public bool IsExported(string name) => !_shellVariables.ContainsKey(name) && _environment.GetVariable(name) is not null;
+
+    /// <summary>Gets the unexported shell variables (what <c>set</c> adds to <c>env</c>).</summary>
+    public IReadOnlyDictionary<string, string> GetShellVariables() => new Dictionary<string, string>(_shellVariables, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Assigns a variable as <c>NAME=value</c> does (ADR 0064): an exported variable keeps being
+    /// exported (its process environment changes), any other becomes an unexported shell variable
+    /// that commands do not inherit.
+    /// </summary>
+    /// <exception cref="ArgumentException">The name is invalid.</exception>
+    public void AssignVariable(string name, string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (!ShellParser.IsName(name))
+        {
+            throw new ArgumentException($"'{name}' is not a valid identifier.", nameof(name));
+        }
+
+        if (!_shellVariables.ContainsKey(name) && _environment.GetVariable(name) is not null)
+        {
+            _environment.SetVariable(name, value);
+            return;
+        }
+
+        _shellVariables[name] = value;
+    }
+
+    /// <summary>Gets or sets the positional parameters <c>$1</c>… of the running script or function.</summary>
+    public IReadOnlyList<string> PositionalParameters { get; set; } = [];
+
+    /// <summary>Gets or sets the command <c>trap … EXIT</c> registered, run when the script or shell exits.</summary>
+    public string? ExitTrap { get; set; }
+
+    /// <summary>Gets or sets <c>$0</c>: the shell's name, or the path of the script it runs.</summary>
+    public string ScriptName { get; set; } = "hsh";
+
+    /// <summary>Gets the functions defined in this shell, by name.</summary>
+    public Dictionary<string, ShellFunctionDefinition> Functions { get; private set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the shell's single-letter options set by <c>set -e</c>, <c>set -u</c>, <c>set -x</c>,
+    /// <c>set -f</c> (ADR 0064): errexit, nounset, xtrace, noglob.
+    /// </summary>
+    public HashSet<char> Options { get; private set; } = [];
+
+    /// <summary>Gets the shell's background jobs (<c>&amp;</c>), shared with its subshell copies.</summary>
+    public ShellJobTable Jobs { get; private set; } = new();
+
+    /// <summary>Gets or sets the process id of the last background job's last command (<c>$!</c>).</summary>
+    public long? LastBackgroundProcessId { get; set; }
+
+    /// <summary>Gets whether this is a subshell copy (<see cref="Fork"/>): its environment lives only in the copy.</summary>
+    public bool IsSubshell { get; private set; }
+
+    /// <summary>Gets or sets how deep in nested scripts and functions the shell is, to stop runaway recursion.</summary>
+    internal int CallDepth { get; set; }
+
+    /// <summary>Starts a function's scope for <c>local</c> variables.</summary>
+    internal void PushLocalScope() => _localScopes.Add([]);
+
+    /// <summary>Ends a function's scope: every variable made <c>local</c> in it gets its previous value back.</summary>
+    internal void PopLocalScope()
+    {
+        if (_localScopes.Count == 0)
+        {
+            return;
+        }
+
+        List<SavedVariable> saved = _localScopes[^1];
+        _localScopes.RemoveAt(_localScopes.Count - 1);
+        for (int index = saved.Count - 1; index >= 0; index--)
+        {
+            SavedVariable variable = saved[index];
+            _shellVariables.Remove(variable.Name);
+            TryUnsetEnvironment(variable.Name);
+            if (variable.Value is null)
+            {
+                continue;
+            }
+
+            if (variable.Exported)
+            {
+                TrySetVariable(variable.Name, variable.Value);
+            }
+            else
+            {
+                _shellVariables[variable.Name] = variable.Value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Makes <paramref name="name"/> local to the running function (<c>local</c>): its current value
+    /// is saved and restored when the function returns. Returns false outside a function.
+    /// </summary>
+    internal bool MakeLocal(string name)
+    {
+        if (_localScopes.Count == 0)
+        {
+            return false;
+        }
+
+        List<SavedVariable> scope = _localScopes[^1];
+        if (scope.Any(variable => variable.Name == name))
+        {
+            return true;
+        }
+
+        scope.Add(new SavedVariable(name, GetVariable(name), IsExported(name)));
+        return true;
+    }
+
+    /// <summary>Gets whether a function is running (for <c>local</c> and <c>return</c>).</summary>
+    internal bool InFunction => _localScopes.Count > 0;
+
+    private void TryUnsetEnvironment(string name)
+    {
+        try
+        {
+            _environment.SetVariable(name, null);
+        }
+        catch (NotSupportedException)
+        {
+        }
+    }
+
+    private sealed record SavedVariable(string Name, string? Value, bool Exported);
 
     /// <summary>Gets a copy of the shell process's environment.</summary>
     public IReadOnlyDictionary<string, string> GetVariables() => _environment.GetVariables();
 
-    /// <summary>Sets (or, with <see langword="null"/>, removes) a variable of the shell's own process.</summary>
+    /// <summary>
+    /// Sets (or, with <see langword="null"/>, removes) an exported variable of the shell's own
+    /// process, as <c>export</c> does: an unexported shell variable of that name becomes exported.
+    /// </summary>
     /// <exception cref="ArgumentException">The name or value is invalid.</exception>
-    public void SetVariable(string name, string? value) => _environment.SetVariable(name, value);
+    public void SetVariable(string name, string? value)
+    {
+        _shellVariables.Remove(name);
+        _environment.SetVariable(name, value);
+    }
 
-    /// <summary>Removes a variable of the shell; nothing happens when it is not set.</summary>
-    public void UnsetVariable(string name) => _environment.SetVariable(name, null);
+    /// <summary>Removes a variable of the shell, exported or not; nothing happens when it is not set.</summary>
+    public void UnsetVariable(string name)
+    {
+        _shellVariables.Remove(name);
+        _environment.SetVariable(name, null);
+    }
 
     /// <summary>
     /// Changes the shell's working directory, like the <c>cd</c> built-in. The target is checked
@@ -209,8 +365,22 @@ public sealed class ShellSession
             ProcessId,
             IsInteractive)
         {
-            LastExitCode = LastExitCode
+            LastExitCode = LastExitCode,
+            PositionalParameters = PositionalParameters,
+            ScriptName = ScriptName,
+            Functions = new Dictionary<string, ShellFunctionDefinition>(Functions, StringComparer.Ordinal),
+            Options = [.. Options],
+            Jobs = Jobs,
+            LastBackgroundProcessId = LastBackgroundProcessId,
+            IsSubshell = true,
+            IsScript = IsScript,
+            CallDepth = CallDepth
         };
+        foreach ((string name, string value) in _shellVariables)
+        {
+            copy._shellVariables[name] = value;
+        }
+
         copy._history.AddRange(_history);
         copy._historyIndex = copy._history.Count;
         return copy;

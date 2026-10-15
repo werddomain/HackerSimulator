@@ -35,7 +35,7 @@ public sealed class TailApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("tail", "tail [-n count] [file...]");
+    public override TerminalCommand? Terminal => new("tail", "tail [-n [+]count | -count] [-c bytes] [-f] [-qv] [file...]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

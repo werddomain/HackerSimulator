@@ -64,9 +64,22 @@ Chrome se réserve Ctrl+W, Ctrl+N et Ctrl+T (fermer l'onglet, nouvelle
 fenêtre, nouvel onglet) tant que HackerOS n'est pas installé en PWA : ces
 touches n'atteignent alors pas le terminal.
 
-Les touches tapées pendant qu'une commande tourne attendent la prochaine
-invite (file de frappe d'un tty, 4096 touches au plus). Il n'y a pas encore
-d'entrée standard pour les commandes.
+Pendant qu'une ligne s'exécute, les touches vont à l'**entrée standard** de
+ses commandes (ADR 0064 §6, `TerminalInputReader`), comme un tty en mode
+canonique : les caractères sont affichés en écho, Retour arrière et Ctrl+U
+effacent, Entrée envoie la ligne (`read`, `cat`, `sh` interactif la lisent),
+Ctrl+D sur une ligne vide est une fin d'entrée lue une fois, Ctrl+C
+interrompt. Ce que la commande n'a pas lu revient à l'invite suivante comme
+frappe anticipée (4096 touches au plus) : `sleep 5` puis `ls` + Entrée tapé
+pendant l'attente lance `ls` ensuite, comme sous Linux.
+
+Une commande inachevée (`for f in *; do` + Entrée, guillemet ouvert, `|`
+final, here-document) affiche l'invite de continuation `>` de bash (`PS2`) :
+le terminal le demande au shell par `IHackShell.NeedsMoreInput`, accumule les
+lignes, puis les exécute ensemble ; Ctrl+C abandonne. L'historique garde une
+seule ligne (`TerminalHistory.ToSingleLine` : `for f in *; do echo $f; done`).
+Les commandes envoyées par un hôte (`IHackTerminal.RunCommandAsync`) ne sont
+jamais continuées.
 
 `TerminalPanel.PushVirtualKey` (clavier virtuel) suit le même chemin que le
 clavier physique ; avec `UseVirtualKeyboard`, la zone de saisie cachée de
@@ -76,7 +89,11 @@ xterm.js reçoit `inputmode="none"`.
 
 Le contrat `IFullScreenTerminalSession` ne change pas. À l'entrée, le panneau
 écrit `ESC[?1049h` ; chaque `TerminalScreenFrame` est dessiné rangée par
-rangée (coupé à la largeur, sans repli), puis le curseur est placé ou caché ;
+rangée (coupé à la largeur, sans repli), puis le curseur est placé ou caché.
+Depuis l'ADR 0064, une rangée peut contenir des séquences SGR (couleurs,
+vidéo inverse : `htop`, barres de `nano`) : `TerminalAnsi.FitToColumns` les
+garde entières sans les compter dans la largeur, et un `ESC[0m` termine la
+rangée ;
 à la sortie, `ESC[?1049l` rend l'écran normal tel qu'il était. La taille de
 la grille (`UpdateTerminalViewport`) est donnée à la session dès le début de
 chaque commande, et un redimensionnement envoie `TerminalKey.Resize`.
@@ -95,6 +112,13 @@ chaque commande, et un redimensionnement envoie `TerminalKey.Resize`.
   en rouge et les bannières d'approbation en jaune.
 - **Invite colorée comme bash sous Debian** : `user@hôte` en vert gras,
   le dossier en bleu gras.
+- **`nano` suit GNU nano** (ADR 0064 §7) : `^O` demande le nom du fichier
+  (pré-rempli) et sert aussi d'« enregistrer sous », car xterm.js envoie le
+  même octet `0x0F` pour Ctrl+O et Ctrl+Maj+O ; `^S`, `^W`/`^F`, `^K`/`^U`,
+  `^C`, `^G`, `^A`/`^E`, `^Y`/`^V` ; barre de titre et deux rangées de
+  raccourcis en vidéo inverse ; la ligne du curseur défile horizontalement
+  (`<` et `>` aux bords) ; tabulations sur 8 colonnes. Ctrl+W reste réservé
+  par Chrome hors PWA : `^F` cherche aussi.
 
 ## Mettre à jour xterm.js
 
@@ -111,6 +135,8 @@ Puis versionner `package-lock.json` et `wwwroot/xterm/`.
 - `Tests/HackerOs.AppSdk.Terminal.Tests/TerminalInputDecoderTests.cs`
 - `Tests/HackerOs.AppSdk.Terminal.Tests/TerminalLineEditorTests.cs`
 - `Tests/HackerOs.AppSdk.Terminal.Tests/TerminalAnsiTests.cs`
+- `Tests/HackerOs.AppSdk.Terminal.Tests/TerminalInputReaderTests.cs` (entrée standard)
+- `Tests/HackerOs.Commands.Nano.Tests/NanoCommandTests.cs` (Write Out pré-rempli, couper/coller, recherche, défilement horizontal)
 - `VirtualScreen.cs` (dans le même projet) : petit écran à grille de
   caractères qui applique les séquences écrites, pour vérifier où finissent le
   texte et le curseur (repli, retour au début du bloc de l'invite, cadres).
@@ -131,4 +157,6 @@ retour), terminal intégré de l'éditeur de code.
 - [x] Copie, collage, raccourcis d'onglets laissés à l'interface.
 - [x] Clavier virtuel par le même chemin.
 - [x] Tests unitaires, vérification dans un navigateur.
+- [x] Entrée standard des commandes en mode canonique (`TerminalInputReader`, ADR 0064).
+- [x] Couleurs dans les cadres plein écran ; `nano` aux raccourcis de GNU nano (ADR 0064).
 - [x] ADR 0061, cette page, index.

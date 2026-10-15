@@ -6,6 +6,13 @@ chantier de la phase 3 : il s'appuie sur l'interpréteur
 ([`shell-interpreter.md`](shell-interpreter.md), ADR 0050 et 0054) et sur
 l'environnement de processus ([`process-environment.md`](process-environment.md)).
 
+> Depuis l'[ADR 0064](adr/0064-posix-shell-scripts-jobs-and-app-commands.md),
+> quelques **built-ins spéciaux** POSIX (`break`, `return`, `set`, `local`,
+> `eval`, `source`, `wait`, `fg`, `trap`…) vivent dans l'interpréteur
+> ([`shell-interpreter.md`](shell-interpreter.md#built-ins-spéciaux)) ; tout le
+> reste, y compris `read`, `jobs`, `test` et `which`, reste au catalogue. Les
+> commandes Linux ajoutées sont décrites dans [`linux-commands.md`](linux-commands.md).
+
 ## Objectif
 
 Le terminal ne connaît plus **aucun** nom de commande. `cd`, `pwd`, `clear`,
@@ -28,7 +35,7 @@ alice@hackeros:~$ sudo cat /etc/shadow | wc -l
 
 | Élément | Emplacement | Rôle |
 |---|---|---|
-| `IShellSession`, `ShellCommandInfo` | `Shared/HackerOs.AppSdk/IShellSession.cs` | Accès au shell appelant : répertoire, environnement, historique, `ChangeDirectoryAsync`, `SetVariable`, `UnsetVariable`, `GetCommands`, `RunElevatedAsync`. |
+| `IShellSession`, `ShellCommandInfo`, `ShellJobInfo`, `ShellJobState` | `Shared/HackerOs.AppSdk/IShellSession.cs` | Accès au shell appelant : répertoire, environnement, historique, `ChangeDirectoryAsync`, `SetVariable`, `UnsetVariable`, `GetCommands`, `RunElevatedAsync` ; depuis l'ADR 0064 `GetVariable` (variables non exportées comprises), `AssignVariable` (`read`), `RunAsync` (une ligne dans un sous-shell, `watch`), `Jobs` et `KillJob` (`jobs`, `kill %n`). Membres par défaut : une implémentation existante compile toujours. |
 | `TerminalExecutionContext.Shell` | `Shared/HackerOs.AppSdk/` | Le shell, ou `null`. |
 | `AppCapabilities.ShellControl` | `Shared/HackerOs.App.Abstractions/` | `shell.control`, classée **normale** (ADR 0049). |
 | `ShellSessionAccess` | `Platform/HackerOs.Platform.Core/Shell/` | Implémentation interne d'`IShellSession`, créée par l'interpréteur pour une étape. |
@@ -54,6 +61,8 @@ déclare `shell.control`. L'orchestrateur le transmet ensuite à
   perdus à la fin de l'étape.
 - `ExecuteCommandIntent` (shell non interactif) : `null`. `cd` y affiche
   `cd: no shell session` et rend `1`.
+- Script (ADR 0064) : le shell du script, dans son processus `hsh` ; un `cd`
+  ou un `read` du script n'atteint pas le terminal.
 
 ### `cd` : vérification sous l'identité de la commande
 
@@ -117,6 +126,10 @@ l'utilisateur (`~/.hackeros/aliases`) reste dans le shell.
 | `sudo cmd args…` | `org.hackeros.commands.sudo` | `shell.control` | Voir ci-dessus. |
 | `exit [n]` | `org.hackeros.commands.exit` | `shell.control` | `IShellSession.Exit` : le shell sort avec `n` (modulo 256) ou `$?` ; la suite de la ligne n'est pas exécutée ; argument non numérique : code `2` ; trop d'arguments : code `1`, le shell reste ([`terminal-console.md`](terminal-console.md)). |
 | `alias`, `addalias`, `rmalias`, `unalias` | `org.hackeros.commands.alias` | `filesystem.user-home.*` | `rmalias`/`unalias` = `alias -r`, choisi par `argv[0]`. |
+| `read [-r] [-p p] [nom…]` | `org.hackeros.commands.read` | `shell.control` | ADR 0064 : lit une ligne de l'entrée standard et affecte les champs par `AssignVariable` ([`linux-commands.md`](linux-commands.md)). |
+| `jobs [-lprs]` | `org.hackeros.commands.jobs` | `shell.control` | ADR 0064 : jobs du shell (`IShellSession.Jobs`). |
+| `kill [-SIG] pid\|%job` | `org.hackeros.commands.kill` | `process.manage`, `shell.control` | ADR 0064 : `%n` passe par `IShellSession.KillJob`. |
+| `which nom…`, `watch cmd` | `org.hackeros.commands.which`, `…watch` | `shell.control` | ADR 0064 : liste des commandes du shell ; `watch` relance la ligne par `IShellSession.RunAsync`. |
 
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
 `IShellSession.SetVariable` et `UnsetVariable` lèvent `ArgumentException`
@@ -159,7 +172,7 @@ disparu.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` et
   `Tests/HackerOs.Commands.Wave5.Tests/Wave5Tests.cs` : `cd`, `clear`, `help`
   avec `FakeShellSession` (`Tests/HackerOs.Tests.Support/`).
-- `Tests/HackerOs.Ecosystem.Tests` : 45 apps intégrées, 33 commandes.
+- `Tests/HackerOs.Ecosystem.Tests` : 74 apps intégrées, 62 commandes (depuis l'ADR 0064).
 
 ## Liste des tâches
 

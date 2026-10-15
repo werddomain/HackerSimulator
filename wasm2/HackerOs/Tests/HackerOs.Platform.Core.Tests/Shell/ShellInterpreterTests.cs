@@ -86,14 +86,15 @@ public sealed partial class ShellInterpreterTests
     }
 
     [Fact]
-    public async Task Variables_and_tilde_expand_without_word_splitting()
+    public async Task Variables_and_tilde_expand_and_unquoted_results_split_on_ifs()
     {
         Fixture fixture = await Fixture.CreateAsync();
         fixture.Session.SetVariable("GREETING", "hello   there");
 
-        Output output = await fixture.RunAsync("args $HOME ~ ~/docs ${USER}x $GREETING '$HOME' \"~\" $MISSING");
+        // ADR 0064: POSIX field splitting, so an unquoted empty variable disappears and quotes keep one field.
+        Output output = await fixture.RunAsync("args $HOME ~ ~/docs ${USER}x $GREETING \"$GREETING\" '$HOME' \"~\" $MISSING \"$MISSING\"");
 
-        Assert.Equal("/home/alice|/home/alice|/home/alice/docs|alicex|hello   there|$HOME|~|\n", output.Stdout);
+        Assert.Equal("/home/alice|/home/alice|/home/alice/docs|alicex|hello|there|hello   there|$HOME|~|\n", output.Stdout);
     }
 
     [Fact]
@@ -526,6 +527,16 @@ public sealed partial class ShellInterpreterTests
         }
     }
 
+    /// <summary>Prints one variable of its own process environment (what it inherited).</summary>
+    private sealed class PrintEnvCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await context.StandardOutput.WriteLineAsync(HackEnvironment.GetEnvironmentVariable(context.Arguments[0]) ?? "<unset>");
+            return 0;
+        }
+    }
+
     private sealed class CatOneCommand(AppManifest manifest) : TerminalAppBase(manifest)
     {
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
@@ -592,6 +603,7 @@ public sealed partial class ShellInterpreterTests
                 Command<CountCommand>("count"), Command<ExitWithCommand>("exitwith"), Command<YesCommand>("yes"),
                 Command<HeadOneCommand>("head1"), Command<HangCommand>("hang"), Command<WhereCommand>("where"),
                 Command<CatOneCommand>("cat1"), Command<AmRootCommand>("amroot"), Command<HasShellCommand>("hasshell"),
+                Command<PrintEnvCommand>("printenv1"),
                 .. CatalogCommands
             ];
             AppManifest host = HostManifest();
@@ -622,6 +634,8 @@ public sealed partial class ShellInterpreterTests
         }
 
         public InMemoryProcessManager Manager { get; }
+
+        public AppLifecycleOrchestrator Orchestrator => _orchestrator;
         public AppEnablementRegistry Enablement { get; }
         public InMemoryElevationTicketStore Tickets { get; } = new();
         public ShellInterpreter Interpreter { get; }
@@ -689,6 +703,12 @@ public sealed partial class ShellInterpreterTests
             await HackFile.WriteAllTextAsync(path, content);
         }
 
+        public async Task SetModeAsync(string path, UnixFileMode mode)
+        {
+            using IDisposable scope = HackExecutionContext.Enter(Host);
+            await HackFile.SetUnixFileModeAsync(path, mode);
+        }
+
         public async Task MakeDirectoryAsync(string path)
         {
             using IDisposable scope = HackExecutionContext.Enter(Host);
@@ -703,7 +723,17 @@ public sealed partial class ShellInterpreterTests
                 new HackerOs.Commands.Cd.CdApp(), new HackerOs.Commands.Pwd.PwdApp(), new HackerOs.Commands.Export.ExportApp(),
                 new HackerOs.Commands.Unset.UnsetApp(), new HackerOs.Commands.Env.EnvApp(), new HackerOs.Commands.Help.HelpApp(),
                 new HackerOs.Commands.Sudo.SudoApp(), new HackerOs.Commands.Clear.ClearApp(), new HackerOs.Commands.Alias.AliasApp(),
-                new HackerOs.Commands.Exit.ExitApp()
+                new HackerOs.Commands.Exit.ExitApp(),
+                // ADR 0064: the commands added with the POSIX shell.
+                new HackerOs.Commands.Test.TestApp(), new HackerOs.Commands.True.TrueApp(), new HackerOs.Commands.False.FalseApp(),
+                new HackerOs.Commands.Read.ReadApp(), new HackerOs.Commands.Printf.PrintfApp(), new HackerOs.Commands.Seq.SeqApp(),
+                new HackerOs.Commands.Cut.CutApp(), new HackerOs.Commands.Tee.TeeApp(), new HackerOs.Commands.Uniq.UniqApp(),
+                new HackerOs.Commands.Sort.SortApp(), new HackerOs.Commands.Head.HeadApp(), new HackerOs.Commands.Tail.TailApp(),
+                new HackerOs.Commands.Ln.LnApp(), new HackerOs.Commands.Chmod.ChmodApp(), new HackerOs.Commands.Whoami.WhoamiApp(),
+                new HackerOs.Commands.Basename.BasenameApp(), new HackerOs.Commands.Dirname.DirnameApp(), new HackerOs.Commands.Zip.ZipApp(),
+                new HackerOs.Commands.Unzip.UnzipApp(), new HackerOs.Commands.Du.DuApp(), new HackerOs.Commands.Locate.LocateApp(),
+                new HackerOs.Commands.Jobs.JobsApp(), new HackerOs.Commands.Kill.KillApp(), new HackerOs.Commands.Which.WhichApp(),
+                new HackerOs.Commands.Sleep.SleepApp(), new HackerOs.Commands.Ip.IpApp(), new HackerOs.Commands.Top.TopApp()
             }.Select(AppDefinitionMapper.ToManifest)
         ];
 

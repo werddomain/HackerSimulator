@@ -176,6 +176,8 @@ public sealed class ShellHostService
 
         public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() => _interpreter.GetInstalledCommands();
 
+        public bool NeedsMoreInput(string text) => ShellParser.Parse(text ?? string.Empty).IsIncomplete;
+
         public async Task<int> ExecuteAsync(string commandLine, HackShellExecution execution, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(commandLine);
@@ -240,7 +242,7 @@ public sealed class ShellHostService
             using (HackExecutionContext.Enter(_context))
             {
                 return await ShellCompletion.CompleteAsync(
-                    commandLine, cursor, _interpreter.GetInstalledCommands(), _session.HomeDirectory, cancellationToken).ConfigureAwait(false);
+                    commandLine, cursor, [.. _interpreter.GetInstalledCommands(), .. _interpreter.GetLaunchableApplications()], _session.HomeDirectory, cancellationToken).ConfigureAwait(false);
             }
         }
 

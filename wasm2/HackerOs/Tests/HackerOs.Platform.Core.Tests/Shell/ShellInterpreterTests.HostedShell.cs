@@ -147,8 +147,8 @@ public sealed partial class ShellInterpreterTests
 
     [Theory]
     [InlineData("ec", 0, 2, new[] { "echo" }, "echo ")]
-    [InlineData("ex", 0, 2, new[] { "exit", "exitwith", "export" }, "ex")]
-    [InlineData("e", 0, 1, new[] { "echo", "env", "exit", "exitwith", "export" }, "e")]
+    [InlineData("ex", 0, 2, new[] { "exec", "exit", "exitwith", "export" }, "ex")]
+    [InlineData("e", 0, 1, new[] { "echo", "env", "eval", "exec", "exit", "exitwith", "export" }, "e")]
     [InlineData("echo a | up", 9, 2, new[] { "upper" }, "echo a | upper ")]
     [InlineData("exitwith 0 &&ec", 13, 2, new[] { "echo" }, "exitwith 0 &&echo ")]
     [InlineData("echo ec", 5, 0, new string[0], "echo ec")]

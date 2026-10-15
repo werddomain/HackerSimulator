@@ -1,15 +1,21 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
-using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Commands.Common;
 
 namespace HackerOs.Commands.Tail;
 
 /// <summary>
-/// Implements the <c>tail</c> terminal command (`P4-W5-CMD-003`).
-/// Outputs the last N lines of stdin or virtual files (default 10).
+/// Implements the <c>tail</c> terminal command (`P4-W5-CMD-003`, options extended by ADR 0064):
+/// the last 10 lines of each file or of standard input; <c>-n N</c> (or <c>-N</c>) lines,
+/// <c>-n +N</c> from line N on, <c>-c N</c> characters, <c>-q</c>/<c>-v</c> headers, and
+/// <c>-f</c> to follow a file: it keeps printing what is appended (a log under
+/// <c>/var/log</c>) until Ctrl+C, checking the file every half second as inotify-less tail does.
 /// </summary>
 public sealed class TailCommand : TerminalAppBase
 {
+    /// <summary>How often <c>tail -f</c> looks at the file again.</summary>
+    internal static TimeSpan FollowInterval { get; set; } = TimeSpan.FromMilliseconds(500);
+
     public TailCommand(AppManifest manifest) : base(manifest) { }
 
     public override async ValueTask<int> ExecuteAsync(
@@ -19,57 +25,134 @@ public sealed class TailCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        int maxLines = 10;
+        long count = 10;
+        bool bytes = false, fromStart = false, follow = false, quiet = false, verbose = false;
         List<string> files = [];
-
-        var args = context.Arguments;
+        IReadOnlyList<string> args = context.Arguments;
         for (int i = 0; i < args.Count; i++)
         {
-            var a = args[i];
-            if (a == "-n" && i + 1 < args.Count && int.TryParse(args[++i], out var n)) maxLines = n;
-            else if (!a.StartsWith('-')) files.Add(a);
+            string a = args[i];
+            string? value = null;
+            if (a is "-n" or "-c" or "--lines" or "--bytes" && i + 1 < args.Count)
+            {
+                value = args[++i];
+                bytes = a is "-c" or "--bytes";
+            }
+            else if ((a.StartsWith("-n", StringComparison.Ordinal) || a.StartsWith("-c", StringComparison.Ordinal)) && a.Length > 2)
+            {
+                value = a[2..];
+                bytes = a[1] == 'c';
+            }
+            else if (a.Length > 1 && a[0] is '-' or '+' && a[1..].All(char.IsAsciiDigit))
+            {
+                value = a[0] == '+' ? a : a[1..];
+            }
+            else if (a is "-f" or "-F" or "--follow")
+            {
+                follow = true;
+                continue;
+            }
+            else if (a is "-q" or "--quiet" or "--silent")
+            {
+                quiet = true;
+                continue;
+            }
+            else if (a is "-v" or "--verbose")
+            {
+                verbose = true;
+                continue;
+            }
+            else
+            {
+                files.Add(a);
+                continue;
+            }
+
+            fromStart = value.StartsWith('+');
+            if (!long.TryParse(value.TrimStart('-', '+'), out count))
+            {
+                context.StandardError.WriteLine($"tail: invalid number of {(bytes ? "bytes" : "lines")}: '{value}'");
+                return 1;
+            }
         }
 
         if (files.Count == 0)
         {
-            Queue<string> queue = new();
-            string? line;
-            while ((line = await context.StandardInput.ReadLineAsync(cancellationToken)) != null)
-            {
-                queue.Enqueue(line);
-                if (queue.Count > maxLines) queue.Dequeue();
-            }
-            foreach (var l in queue) context.StandardOutput.WriteLine(l);
+            files.Add("-");
         }
-        else
+
+        int status = 0;
+        bool headers = verbose || (files.Count > 1 && !quiet);
+        Dictionary<string, int> seen = new(StringComparer.Ordinal);
+        for (int index = 0; index < files.Count; index++)
         {
-            foreach (var file in files)
+            string file = files[index];
+            string? text = await CommandIO.ReadTextAsync(context, file, "tail", cancellationToken);
+            if (text is null)
             {
-                var resolved = ResolvePath(context.WorkingDirectory, file);
-                var req = new FileSystemReadRequest(VirtualPath.Parse(resolved));
-                var res = await context.App.FileSystem.ReadAsync(req, cancellationToken);
-                if (!res.Succeeded || res.Value is null)
+                status = 1;
+                continue;
+            }
+
+            seen[file] = text.Length;
+            if (headers)
+            {
+                await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {(file == "-" ? "standard input" : file)} <==");
+            }
+
+            if (bytes)
+            {
+                int start = (int)Math.Clamp(fromStart ? count - 1 : text.Length - count, 0, text.Length);
+                await context.StandardOutput.WriteAsync(text[start..]);
+                continue;
+            }
+
+            List<string> lines = CommandIO.SplitLines(text);
+            int skip = (int)Math.Clamp(fromStart ? count - 1 : lines.Count - count, 0, lines.Count);
+            foreach (string line in lines.Skip(skip))
+            {
+                await context.StandardOutput.WriteLineAsync(line);
+            }
+        }
+
+        if (!follow || files.All(file => file == "-"))
+        {
+            return status;
+        }
+
+        // -f: print what is appended until interrupted (Ctrl+C ends with 130, as SIGINT does).
+        string? lastShown = files.Count > 1 ? files[^1] : null;
+        while (true)
+        {
+            await Task.Delay(FollowInterval, cancellationToken);
+            foreach (string file in files.Where(f => f != "-"))
+            {
+                string? text = await CommandIO.ReadTextAsync(context, file, "tail", cancellationToken);
+                if (text is null)
                 {
-                    context.StandardError.WriteLine($"tail: {file}: No such file or directory");
                     continue;
                 }
 
-                if (files.Count > 1) context.StandardOutput.WriteLine($"==> {file} <==");
-                using var reader = new StreamReader(res.Value.Content);
-                Queue<string> queue = new();
-                string? line;
-                while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+                int previous = seen.GetValueOrDefault(file);
+                if (text.Length < previous)
                 {
-                    queue.Enqueue(line);
-                    if (queue.Count > maxLines) queue.Dequeue();
+                    await context.StandardError.WriteLineAsync($"tail: {file}: file truncated");
+                    previous = 0;
                 }
-                foreach (var l in queue) context.StandardOutput.WriteLine(l);
+
+                if (text.Length > previous)
+                {
+                    if (files.Count > 1 && lastShown != file)
+                    {
+                        await context.StandardOutput.WriteLineAsync($"\n==> {file} <==");
+                        lastShown = file;
+                    }
+
+                    await context.StandardOutput.WriteAsync(text[previous..]);
+                }
+
+                seen[file] = text.Length;
             }
         }
-
-        return 0;
     }
-
-    private static string ResolvePath(string cwd, string path) =>
-        path.StartsWith('/') ? path : (cwd.TrimEnd('/') + "/" + path).Replace("//", "/");
 }

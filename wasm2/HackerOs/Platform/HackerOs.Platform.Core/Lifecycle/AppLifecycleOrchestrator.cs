@@ -356,6 +356,19 @@ public sealed class AppLifecycleOrchestrator
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
             isRootElevated, oneShotElevation);
+        request.ProcessStarted?.Invoke(process);
+        if (descriptor.Manifest.Kind != AppKind.Terminal
+            && context is AppExecutionContext concrete
+            && (request.StandardInput is not null || request.StandardOutput is not null || request.StandardError is not null))
+        {
+            // ADR 0064: a window or service started by a shell writes into that shell's terminal
+            // (HackConsole). The window outlives the command line, so a closed pipe or terminal
+            // must never fault it: its writes are then dropped, like output to a hung-up tty.
+            concrete.Console = new AttachedAppConsole(
+                request.StandardInput ?? TextReader.Null,
+                new ForgivingTextWriter(request.StandardOutput ?? TextWriter.Null),
+                new ForgivingTextWriter(request.StandardError ?? TextWriter.Null));
+        }
 
         try
         {
@@ -652,6 +665,13 @@ public sealed class AppLifecycleOrchestrator
             fullScreen,
             shell);
 
+        if (context is AppExecutionContext concreteContext)
+        {
+            // HackConsole in a command is its terminal context's streams.
+            concreteContext.Console = new AttachedAppConsole(
+                terminalContext.StandardInput, terminalContext.StandardOutput, terminalContext.StandardError);
+        }
+
         List<FileSystemError> permissionDenials = [];
         void OnPermissionDenied(object? sender, AppPermissionErrorEventArgs e) => permissionDenials.Add(e.Error);
         context.PermissionErrors.PermissionDenied += OnPermissionDenied;
@@ -685,6 +705,136 @@ public sealed class AppLifecycleOrchestrator
             AppLaunchStatus.Launched, stopped, context, exitCode,
             bufferedOutput?.ToString() ?? string.Empty, bufferedError?.ToString() ?? string.Empty,
             PermissionDenials: permissionDenials);
+    }
+
+    /// <summary>
+    /// Waits until a process has ended (ADR 0064): the shell waits for a window app it started in
+    /// the foreground, as a Linux shell waits for a GUI program until its window closes.
+    /// </summary>
+    /// <param name="pid">The process to wait for.</param>
+    /// <param name="cancellationToken">Stops waiting (the process keeps running).</param>
+    /// <returns>The process's exit code, or <c>0</c> when it ended without one (window closed).</returns>
+    public async Task<int> WaitForExitAsync(ProcessId pid, CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        IDisposable? subscription = _eventBus?.Subscribe<ProcessStateChangedEvent>(e =>
+        {
+            if (e.Pid == pid && e.NewState is ProcessState.Stopped or ProcessState.Faulted)
+            {
+                ended.TrySetResult();
+            }
+        });
+        try
+        {
+            while (_processManager.TryGetActive(pid, out _))
+            {
+                // The event wakes the wait at once; the poll covers a manager without an event bus.
+                Task delay = Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+                await Task.WhenAny(ended.Task, delay).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
+        finally
+        {
+            subscription?.Dispose();
+        }
+
+        ProcessRecord? record = _processManager.GetHistory().LastOrDefault(r => r.Pid == pid);
+        return record?.ExitCode ?? (record?.State == ProcessState.Faulted ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Starts an <c>hsh</c> process that runs a shell script (ADR 0064), as a child of
+    /// <paramref name="parent"/>: like <c>fork</c> + <c>exec</c> of <c>/bin/sh script</c>, it keeps
+    /// the parent shell's capabilities and root elevation, and gets its own directory and
+    /// environment copied from the parent.
+    /// </summary>
+    /// <param name="parent">The context of the shell running the script.</param>
+    /// <param name="principal">The user the script runs as.</param>
+    /// <param name="arguments"><c>argv</c> of the process: the script path then its arguments.</param>
+    /// <param name="workingDirectory">The directory the script starts in.</param>
+    /// <param name="environment">Variables applied over the inherited ones (a subshell's own environment, prefix assignments).</param>
+    /// <param name="processStarted">Called with the new process (background jobs record it).</param>
+    /// <returns>The process and its trusted context; the caller completes the process.</returns>
+    public (ProcessRecord Process, IAppExecutionContext Context) StartShellProcess(
+        IAppExecutionContext parent,
+        AuthenticatedPrincipal principal,
+        IReadOnlyList<string> arguments,
+        VirtualPath workingDirectory,
+        IReadOnlyDictionary<string, string>? environment,
+        Action<ProcessRecord>? processStarted = null)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+        ArgumentNullException.ThrowIfNull(principal);
+        ArgumentNullException.ThrowIfNull(arguments);
+        Dictionary<string, string>? overrides = environment is null ? null : new(environment, StringComparer.Ordinal);
+        if (overrides is not null)
+        {
+            overrides["PWD"] = workingDirectory.Value;
+        }
+
+        ProcessRecord process = _processManager.Start(new ProcessStartRequest(
+            parent.ProcessId,
+            ShellHostService.ShellAppId,
+            AppInstanceId.FromGuid(Guid.NewGuid()),
+            AppKind.Terminal,
+            principal.UserId,
+            principal.SessionId,
+            ResourceProfile.None,
+            arguments,
+            workingDirectory,
+            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value }));
+        try
+        {
+            _processManager.MarkRunning(process.Pid);
+            IAppExecutionContext context = _contextFactory.Create(
+                ShellHostService.ShellManifest, principal, process, parent.GrantedCapabilities,
+                process.AppInstanceId.Value, parent.IsRootElevated);
+            processStarted?.Invoke(process);
+            return (process, context);
+        }
+        catch
+        {
+            if (_processManager.TryGetActive(process.Pid, out _))
+            {
+                _processManager.Kill(process.Pid);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>Ends a script's <c>hsh</c> process with its exit status, unless it already ended (killed).</summary>
+    public void CompleteShellProcess(ProcessId pid, int exitCode)
+    {
+        if (_processManager.TryGetActive(pid, out _))
+        {
+            try
+            {
+                _processManager.Complete(pid, exitCode);
+            }
+            catch (KeyNotFoundException)
+            {
+                // Ended concurrently.
+            }
+        }
+    }
+
+    /// <summary>Stops a running window or service instance and its process (Ctrl+C on a foreground window app).</summary>
+    public async Task<bool> InterruptAsync(ProcessId pid)
+    {
+        if (await StopAsync(pid, ProcessExitReason.Killed).ConfigureAwait(false))
+        {
+            return true;
+        }
+
+        if (_processManager.TryGetActive(pid, out _))
+        {
+            _processManager.Kill(pid);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -865,4 +1015,86 @@ public sealed class AppLifecycleOrchestrator
         resources.BurstStorageIoWeight,
         resources.BaselineNetworkIoWeight,
         resources.BurstNetworkIoWeight);
+}
+
+/// <summary>The streams of an instance started by a shell (ADR 0064).</summary>
+internal sealed class AttachedAppConsole(TextReader input, TextWriter output, TextWriter error) : IAppConsoleGateway
+{
+    public bool IsAttached => true;
+
+    public TextReader In { get; } = input;
+
+    public TextWriter Out { get; } = output;
+
+    public TextWriter Error { get; } = error;
+}
+
+/// <summary>
+/// Forwards to a terminal, pipe or file, and silently drops the text once that end is gone
+/// (closed terminal, broken pipe): a window app must never fault because the shell that started
+/// it went away, as a GUI program ignores <c>EIO</c> on a hung-up terminal.
+/// </summary>
+internal sealed class ForgivingTextWriter(TextWriter inner) : TextWriter
+{
+    private volatile bool _broken;
+
+    public override System.Text.Encoding Encoding => inner.Encoding;
+
+    public override string NewLine
+    {
+        get => inner.NewLine;
+#pragma warning disable CS8765 // Nullability matches TextWriter.NewLine's setter.
+        set => inner.NewLine = value;
+#pragma warning restore CS8765
+    }
+
+    public override void Write(char value) => Forward(() => inner.Write(value));
+
+    public override void Write(string? value) => Forward(() => inner.Write(value));
+
+    public override void WriteLine(string? value) => Forward(() => inner.WriteLine(value));
+
+    public override Task WriteAsync(char value) => ForwardAsync(() => inner.WriteAsync(value));
+
+    public override Task WriteAsync(string? value) => ForwardAsync(() => inner.WriteAsync(value));
+
+    public override Task WriteLineAsync(string? value) => ForwardAsync(() => inner.WriteLineAsync(value));
+
+    public override void Flush() => Forward(inner.Flush);
+
+    public override Task FlushAsync() => ForwardAsync(inner.FlushAsync);
+
+    private void Forward(Action write)
+    {
+        if (_broken)
+        {
+            return;
+        }
+
+        try
+        {
+            write();
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            _broken = true;
+        }
+    }
+
+    private async Task ForwardAsync(Func<Task> write)
+    {
+        if (_broken)
+        {
+            return;
+        }
+
+        try
+        {
+            await write().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            _broken = true;
+        }
+    }
 }

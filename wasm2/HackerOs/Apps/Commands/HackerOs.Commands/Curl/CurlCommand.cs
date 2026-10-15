@@ -1,6 +1,7 @@
 using System.Net.Http;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
 
 namespace HackerOs.Commands.Curl;
@@ -37,6 +38,9 @@ public sealed class CurlCommand : TerminalAppBase
         bool verbose = false;
         string? method = null;
         string? postData = null;
+        string? outputFile = null;
+        bool remoteName = false;
+        List<KeyValuePair<string, string>> headers = [];
 
         IReadOnlyList<string> args = context.Arguments;
         for (int i = 0; i < args.Count; i++)
@@ -50,8 +54,25 @@ public sealed class CurlCommand : TerminalAppBase
                 case "-X" or "--request":
                     if (i + 1 < args.Count) method = args[++i].ToUpperInvariant();
                     break;
-                case "-d" or "--data":
+                case "-d" or "--data" or "--data-raw":
                     if (i + 1 < args.Count) postData = args[++i];
+                    break;
+                case "-o" or "--output":
+                    // ADR 0064: save the body to a file instead of standard output.
+                    if (i + 1 < args.Count) outputFile = args[++i];
+                    break;
+                case "-O" or "--remote-name": remoteName = true; break;
+                case "-s" or "--silent" or "-S" or "--show-error" or "-sS" or "-k" or "--insecure": break;
+                case "-f" or "--fail": /* HTTP errors always fail here (exit 22) */ break;
+                case "-H" or "--header":
+                    if (i + 1 < args.Count && args[++i].Split(':', 2) is [{ } name, { } value])
+                    {
+                        headers.Add(new(name.Trim(), value.Trim()));
+                    }
+
+                    break;
+                case "-A" or "--user-agent":
+                    if (i + 1 < args.Count) headers.Add(new("User-Agent", args[++i]));
                     break;
                 default:
                     if (!a.StartsWith('-')) url = a;
@@ -91,6 +112,10 @@ public sealed class CurlCommand : TerminalAppBase
         {
             using HackHttpClient client = new(_cookies);
             client.DefaultRequestHeaders["User-Agent"] = "curl/7.88.1";
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                client.DefaultRequestHeaders[header.Key] = header.Value;
+            }
             response = await client.SendAsync(
                 new HttpMethod(method), uri.AbsoluteUri, postData is null ? null : ParseForm(postData), cancellationToken)
                 .ConfigureAwait(false);
@@ -129,6 +154,26 @@ public sealed class CurlCommand : TerminalAppBase
         {
             context.StandardError.WriteLine($"curl: (22) The requested URL returned error: {response.StatusCode}");
             return 22;
+        }
+
+        if (remoteName)
+        {
+            outputFile = uri.Segments.Length > 0 && uri.Segments[^1].Trim('/') is { Length: > 0 } last ? Uri.UnescapeDataString(last) : "index.html";
+        }
+
+        if (outputFile is not null)
+        {
+            try
+            {
+                await HackFile.WriteAllBytesAsync(outputFile, response.Content, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                context.StandardError.WriteLine($"curl: (23) Failure writing output to destination: {outputFile}: {ShellErrorText.Describe(exception)}");
+                return 23;
+            }
+
+            return 0;
         }
 
         string body = response.ReadAsString();

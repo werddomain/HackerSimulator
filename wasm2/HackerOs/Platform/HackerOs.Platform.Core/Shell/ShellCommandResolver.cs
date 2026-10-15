@@ -60,6 +60,39 @@ public sealed class ShellCommandResolver
         return null;
     }
 
+    /// <summary>
+    /// Finds a window app by its short name (ADR 0064): the last segment of its id, without the
+    /// publisher namespace (<c>text-editor</c> for <c>org.hackeros.text-editor</c>), or its full
+    /// id. Used by the shell when no command has the name, like a GUI program found on
+    /// <c>PATH</c>.
+    /// </summary>
+    /// <param name="name">The name typed as the command.</param>
+    /// <returns>The app's manifest, or <see langword="null"/> when none (or several) match.</returns>
+    public AppManifest? ResolveApplication(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Contains('/'))
+        {
+            return null;
+        }
+
+        List<AppManifest> matches = [.. _catalog.Manifests.Values.Where(manifest =>
+            manifest.Kind == AppKind.Window
+            && (_enablement is null || _enablement.IsEnabled(manifest.Id))
+            && (string.Equals(manifest.Id, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ShortName(manifest.Id), name, StringComparison.OrdinalIgnoreCase)))];
+        return matches.Count == 1 ? matches[0] : matches.FirstOrDefault(m => string.Equals(m.Id, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Gets an app id without its namespace: the text after its last dot.</summary>
+    public static string ShortName(string appId) =>
+        appId.LastIndexOf('.') is var dot and >= 0 ? appId[(dot + 1)..] : appId;
+
+    /// <summary>Gets the window apps the shell can start by short name, ordered by that name (completion).</summary>
+    public IReadOnlyList<AppManifest> GetApplications() =>
+        [.. _catalog.Manifests.Values
+            .Where(manifest => manifest.Kind == AppKind.Window && (_enablement is null || _enablement.IsEnabled(manifest.Id)))
+            .OrderBy(manifest => ShortName(manifest.Id), StringComparer.OrdinalIgnoreCase)];
+
     /// <summary>Gets every registered terminal command manifest, ordered by command name.</summary>
     public IReadOnlyList<AppManifest> GetTerminalCommands() =>
         _catalog.Manifests.Values

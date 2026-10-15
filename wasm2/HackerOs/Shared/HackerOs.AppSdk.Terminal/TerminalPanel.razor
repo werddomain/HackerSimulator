@@ -157,6 +157,10 @@
     private int _rows = 24;
     private CancellationTokenSource? _activeCts;
     private TerminalFullScreenSession? _fullScreenSession;
+    private TerminalInputReader? _standardInput;
+    // The lines of an unfinished command (`for x in a b; do` + Enter), shown with the PS2 prompt `>`.
+    private string? _continuation;
+    private readonly StringBuilder _inputLine = new();
     private IJSObjectReference? _module;
     private IJSObjectReference? _terminal;
     private DotNetObjectReference<TerminalPanel>? _dotNetReference;
@@ -251,7 +255,9 @@
     }
 
     /// <summary>Gets the prompt, from the shell's process (user, /etc/hostname, directory).</summary>
-    private string Prompt => _shell?.Prompt ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
+    private string Prompt => _continuation is not null
+        ? ">"
+        : _shell?.Prompt ?? $"{InitialUsername}@{AppContext.Environment.MachineName}:~$";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -342,6 +348,14 @@
             return;
         }
 
+        if (_activeCts is not null && _standardInput is { } input)
+        {
+            // ADR 0064: while a command line runs, typing goes to its standard input through the
+            // tty's line discipline (canonical mode), echoed as it is typed.
+            HandleInputKey(input, key);
+            return;
+        }
+
         if (_typedKeys.Count < MaxTypeAhead)
         {
             _typedKeys.Enqueue(new TerminalInput(key, null));
@@ -401,6 +415,79 @@
                     left.Command?.Completion.TrySetException(new InvalidOperationException("The terminal was closed."));
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// The canonical-mode line discipline of a running command's standard input: printable keys
+    /// are echoed and gathered, Backspace and Ctrl+U erase, Enter sends the line, Ctrl+D sends
+    /// the partial line or, on an empty one, an end of input (ADR 0064).
+    /// </summary>
+    private void HandleInputKey(TerminalInputReader input, TerminalKeyEvent key)
+    {
+        switch (key.Key)
+        {
+            case TerminalKey.Enter:
+                Write("\n");
+                input.Push(_inputLine.Append('\n').ToString());
+                _inputLine.Clear();
+                break;
+            case TerminalKey.Backspace:
+                if (_inputLine.Length > 0)
+                {
+                    _inputLine.Length--;
+                    Write("\b \b");
+                }
+
+                break;
+            case TerminalKey.Character when key.Control:
+                switch (key.Text?.ToLowerInvariant())
+                {
+                    case "d" when _inputLine.Length == 0:
+                        input.PushEndOfInput();
+                        break;
+                    case "d":
+                        input.Push(_inputLine.ToString());
+                        _inputLine.Clear();
+                        break;
+                    case "u":
+                        Write(string.Concat(Enumerable.Repeat("\b \b", _inputLine.Length)));
+                        _inputLine.Clear();
+                        break;
+                }
+
+                break;
+            case TerminalKey.Character when !key.Alt && !string.IsNullOrEmpty(key.Text):
+                _inputLine.Append(key.Text);
+                Write(key.Text);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Hands what was typed while a command ran, and that it never read, back to the prompt as
+    /// type-ahead, as a tty keeps its input queue for the shell: finished lines run in turn.
+    /// </summary>
+    private void RequeueUnreadInput(string unread)
+    {
+        if (unread.Length == 0)
+        {
+            return;
+        }
+
+        List<TerminalInput> keys = [];
+        foreach (char ch in unread)
+        {
+            keys.Add(new TerminalInput(
+                ch == '\n' ? new TerminalKeyEvent(TerminalKey.Enter) : new TerminalKeyEvent(TerminalKey.Character, ch.ToString()),
+                null));
+        }
+
+        keys.AddRange(_typedKeys);
+        _typedKeys.Clear();
+        foreach (TerminalInput key in keys.Take(MaxTypeAhead))
+        {
+            _typedKeys.Enqueue(key);
         }
     }
 
@@ -473,6 +560,7 @@
                 Write("^C");
                 _promptVisible = false;
                 _editor.Reset();
+                _continuation = null;
                 ShowPrompt();
                 break;
             case "d":
@@ -608,16 +696,17 @@
     /// Ctrl+C (a host's <see cref="RunCommandAsync"/>). Returns the command's result, or
     /// <see langword="null"/> when nothing ran (empty line, shell gone).
     /// </summary>
-    private async Task<HackTerminalCommandResult?> ExecuteInputAsync(CancellationToken external = default)
+    private async Task<HackTerminalCommandResult?> ExecuteInputAsync(CancellationToken external = default, bool allowContinuation = true)
     {
         (_, int promptWidth) = TerminalAnsi.FormatPrompt(Prompt);
-        string rawLine = _editor.Text.Trim();
-        AppendTranscript(Prompt + " " + _editor.Text + "\n");
+        string typed = _editor.Text;
+        string rawLine = typed.Trim();
+        AppendTranscript(Prompt + " " + typed + "\n");
         Write(_editor.Commit(promptWidth, _columns));
         _atLineStart = true;
         _promptVisible = false;
 
-        if (string.IsNullOrWhiteSpace(rawLine))
+        if (_continuation is null && string.IsNullOrWhiteSpace(rawLine))
         {
             ShowPrompt();
             return null;
@@ -625,17 +714,33 @@
 
         if (_shell is null || _shell.HasExited)
         {
+            _continuation = null;
             WriteLine(_startError ?? "hsh: the shell has exited", TerminalAnsi.Error);
             ShowPrompt();
             return null;
         }
 
-        _shell.AddHistory(rawLine);
-        await UpdateTitleAsync(rawLine);
+        // ADR 0064: an unfinished command (`if …; then` + Enter, an open quote) asks for more
+        // with bash's PS2 prompt `>`; the lines then run together.
+        string line = _continuation is null ? rawLine : _continuation + "\n" + typed;
+        if (allowContinuation && _shell.NeedsMoreInput(line))
+        {
+            _continuation = line;
+            ShowPrompt();
+            return null;
+        }
+
+        _continuation = null;
+        rawLine = line.Contains('\n') ? line : rawLine;
+
+        _shell.AddHistory(TerminalHistory.ToSingleLine(rawLine));
+        await UpdateTitleAsync(TerminalHistory.ToSingleLine(rawLine));
         _activeCts = CancellationTokenSource.CreateLinkedTokenSource(external);
         _commandOutput = new StringBuilder();
         _fullScreenSession = new TerminalFullScreenSession(ApplyFullScreenStateAsync);
         _fullScreenSession.UpdateViewport(_columns, _rows);
+        _standardInput = new TerminalInputReader();
+        _inputLine.Clear();
         int status;
         try
         {
@@ -647,6 +752,7 @@
                 {
                     StandardOutput = new TerminalOutputWriter(WriteCommandOutput),
                     StandardError = new TerminalOutputWriter(WriteCommandOutput),
+                    StandardInput = _standardInput,
                     FullScreen = _fullScreenSession
                 },
                 _activeCts.Token);
@@ -669,6 +775,11 @@
         }
         finally
         {
+            _standardInput.CloseInput();
+            string unread = _standardInput.TakeUnread() + _inputLine;
+            _standardInput = null;
+            _inputLine.Clear();
+            RequeueUnreadInput(unread);
             await _fullScreenSession.DisposeAsync();
             _fullScreenSession = null;
             _activeCts.Dispose();
@@ -812,7 +923,7 @@
         RedrawLine();
         try
         {
-            HackTerminalCommandResult? result = await ExecuteInputAsync(command.CancellationToken);
+            HackTerminalCommandResult? result = await ExecuteInputAsync(command.CancellationToken, allowContinuation: false);
             command.Completion.TrySetResult(result ?? new HackTerminalCommandResult(command.Line, 1, string.Empty));
         }
         catch (Exception exception)

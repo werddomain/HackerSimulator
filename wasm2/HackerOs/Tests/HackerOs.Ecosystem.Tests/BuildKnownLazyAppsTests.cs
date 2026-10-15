@@ -11,7 +11,13 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        Assert.Equal(46, catalog.Manifests.Count);
+        Assert.Equal(74, catalog.Manifests.Count);
+        // ADR 0064: the Linux commands added with the POSIX shell.
+        foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read" })
+        {
+            Assert.Contains($"org.hackeros.commands.{command}", catalog.Manifests.Keys);
+        }
+
         Assert.Contains("org.hackeros.browser", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.diagnostic", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.hack-paint", catalog.Manifests.Keys);
@@ -100,7 +106,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(34, commands.Length);
+        Assert.Equal(62, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

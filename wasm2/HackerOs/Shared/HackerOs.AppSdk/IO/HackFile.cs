@@ -329,6 +329,37 @@ public static class HackFile
         await HackFileSystemCore.DeleteEntryAsync(gateway, resolved, recursive: false, HackEntryTarget.File, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Creates a symbolic link at <paramref name="path"/> that points to
+    /// <paramref name="pathToTarget"/>, like <see cref="File.CreateSymbolicLink(string, string)"/>
+    /// and <c>ln -s</c> (ADR 0064). The target text is stored as given (absolute or relative to
+    /// the link's directory) and need not exist: a dangling link is valid.
+    /// </summary>
+    /// <param name="path">Where to create the link; it must not exist.</param>
+    /// <param name="pathToTarget">The link's text.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>A snapshot of the new link.</returns>
+    /// <exception cref="HackIOException">An entry already exists at <paramref name="path"/>.</exception>
+    public static async Task<HackFileInfo> CreateSymbolicLinkAsync(string path, string pathToTarget, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(pathToTarget);
+        VirtualPath resolved = HackPath.Resolve(path, nameof(path));
+        IAppFileSystemGateway gateway = HackFileSystemCore.Gateway;
+        FileSystemMutationResult result = await gateway.CreateAsync(
+            new FileSystemCreateRequest(
+                resolved,
+                FileSystemEntryKind.SymbolicLink,
+                HackUnixFileMode.ToPermissions((UnixFileMode)0x1FF, nameof(path)),
+                symbolicLinkTarget: pathToTarget),
+            cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            throw HackFileSystemErrorTranslator.Translate(result.Transaction.Error!, HackEntryTarget.File, resolved.Value);
+        }
+
+        return await HackFileInfo.GetAsync(resolved.Value, cancellationToken).ConfigureAwait(false);
+    }
+
     // ----- Streams -----
 
     /// <summary>Opens a file for reading.</summary>

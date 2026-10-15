@@ -195,6 +195,7 @@ Les exceptions dérivent de `IOException` et `UnauthorizedAccessException` : un
 - [x] `HackPath`.
 - [x] Exceptions `Hack*` et traduction depuis `FileSystemErrorCode`.
 - [x] `HackFile` (lecture, écriture, ajout, copie, déplacement, suppression, flux, permissions).
+- [x] `HackFile.CreateSymbolicLinkAsync(chemin, cible)` (ADR 0064, `ln -s`) : comme `File.CreateSymbolicLink`, cible gardée telle quelle, lien pendant permis.
 - [x] `HackDirectory`.
 - [x] `HackFileSystemInfo`, `HackFileInfo`, `HackDirectoryInfo`.
 - [x] `HackFileStream`.

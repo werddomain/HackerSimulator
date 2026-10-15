@@ -82,6 +82,13 @@ Toutes les opérations visent le processus courant. Une commande qui fait
 l'accès contrôlé au shell (ADR 0051, `IShellSession`, voir
 [`shell-commands.md`](shell-commands.md)).
 
+Depuis l'ADR 0064, le shell distingue aussi les **variables non exportées**
+(`NOM=valeur` sans `export`) : elles vivent dans `ShellSession`, pas dans
+l'environnement du processus `hsh`, et ne sont donc ni dans
+`/proc/<pid>/environ` ni héritées par les commandes. `export NOM` les y
+place ; `NOM=valeur commande` ne passe `NOM` qu'à cette commande
+([`shell-interpreter.md`](shell-interpreter.md#variables)).
+
 `TerminalExecutionContext.WorkingDirectory` et `Environment` restent, pour la
 compatibilité : ils donnent l'état du processus au démarrage de la commande
 (tout l'environnement, plus seulement `HOME`).
