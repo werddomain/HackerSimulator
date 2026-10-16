@@ -127,7 +127,7 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
 - [ ] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071).
 
 ### Apps existantes (section 5.1)
-- [ ] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test).
+- [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
 - [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
 - [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.

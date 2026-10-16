@@ -18,7 +18,7 @@ namespace HackerOs.Apps.Settings;
 /// "for all users" scope is offered. A machine-scope change makes the OS ask an administrator to
 /// authenticate in its own window; this panel never sees a password.
 /// </remarks>
-public partial class InstalledAppsPanel : ComponentBase, IDisposable
+public partial class InstalledAppsPanel : IDisposable
 {
     private IReadOnlyList<HackAppInstallInfo>? _apps;
     private HackAppInstallInfo? _pending;
@@ -27,9 +27,13 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
     private bool _isBusy;
     private string? _message;
 
-    /// <summary>Gets or sets the Settings app's execution context (gateways and cancellation).</summary>
-    [Parameter, EditorRequired]
-    public IAppExecutionContext AppContext { get; set; } = null!;
+    /// <summary>
+    /// Gets the Settings window's execution context, cascaded by the window host. The panel derives
+    /// from <c>HackComponentBase</c> so its lifecycle and event handlers run inside the app's ambient
+    /// frame (ADR 0067: otherwise their time would be charged to the compositor).
+    /// </summary>
+    private IAppExecutionContext Context => AppContext
+        ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
 
     /// <summary>Window apps, sorted by name. Services are managed from System Monitor's Services tab.</summary>
     private IReadOnlyList<HackAppInstallInfo> Applications => [.. (_apps ?? [])
@@ -40,12 +44,12 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
         .Where(static entry => entry.App.Kind == AppKind.Terminal)];
 
     /// <summary>Only an administrator is offered "for all users" (ADR 0048 section 3); the OS still asks for their password.</summary>
-    private bool IsAdministrator => HackUser.Describe(AppContext).IsAdministrator;
+    private bool IsAdministrator => HackUser.Describe(Context).IsAdministrator;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
-        _catalog = AppContext.Catalog;
+        _catalog = Context.Catalog;
         _catalog.Changed += OnCatalogChanged;
         await ReloadAsync();
     }
@@ -69,7 +73,7 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
     {
         try
         {
-            _apps = await AppContext.AppManagement.GetAllAsync(AppContext.CancellationToken);
+            _apps = await Context.AppManagement.GetAllAsync(Context.CancellationToken);
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or AppGatewayAccessDeniedException)
         {
@@ -112,7 +116,7 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
         }
 
         HackInstallScope scope = IsAdministrator ? _scope : HackInstallScope.User;
-        bool done = await RunAsync(() => AppContext.AppManagement.UninstallAsync(entry.App.Id, scope, AppContext.CancellationToken));
+        bool done = await RunAsync(() => Context.AppManagement.UninstallAsync(entry.App.Id, scope, Context.CancellationToken));
         if (done)
         {
             _pending = null;
@@ -125,7 +129,7 @@ public partial class InstalledAppsPanel : ComponentBase, IDisposable
         HackInstallScope scope = entry.State == HackAppInstallState.UninstalledForMachine
             ? HackInstallScope.Machine
             : HackInstallScope.User;
-        return RunAsync(() => AppContext.AppManagement.ReinstallAsync(entry.App.Id, scope, AppContext.CancellationToken));
+        return RunAsync(() => Context.AppManagement.ReinstallAsync(entry.App.Id, scope, Context.CancellationToken));
     }
 
     /// <summary>Runs one install change and turns its outcome into a message; returns whether it succeeded.</summary>
