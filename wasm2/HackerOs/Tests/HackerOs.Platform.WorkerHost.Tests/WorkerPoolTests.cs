@@ -76,6 +76,23 @@ public sealed class WorkerPoolTests
     }
 
     [Fact]
+    public async Task A_command_that_spins_at_once_does_not_hold_the_next_command_behind_it()
+    {
+        await using OsFixture os = await StartedAsync();
+        TestCommands.ArmSpinners();
+        Task<ShellRun> spinning = os.RunAsync("spin");
+        await OsFixture.WaitUntilAsync(() => os.Pool!.GetWorkers().Any(w => w.Role == WorkerRole.Pool && w.ProcessIds.Count == 1));
+
+        // No wait for the core's heartbeat to go stale: it never proved the new process yields (ADR 0072).
+        ShellRun echo = await os.RunAsync(os.OpenShell(), "echo right away").WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal("right away\n", echo.Stdout);
+        Assert.Contains(os.Pool!.GetWorkers(), w => w.Role == WorkerRole.Overflow);
+        TestCommands.ReleaseSpinners();
+        Assert.Equal(0, (await spinning.WaitAsync(TimeSpan.FromSeconds(10))).ExitCode);
+    }
+
+    [Fact]
     public async Task At_the_ceiling_a_request_waits_for_a_free_worker_and_syslog_notes_it_once()
     {
         // hardwareConcurrency 2: one core and the ready worker fill the machine.

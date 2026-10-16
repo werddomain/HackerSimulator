@@ -20,6 +20,7 @@ internal sealed class WorkerConnection
     private readonly TaskCompletionSource _hello = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IWebWorker? _worker;
     private long _lastHeartbeat;
+    private long _lastPlaced;
     private long _emptySince;
     private bool _terminated;
 
@@ -122,11 +123,28 @@ internal sealed class WorkerConnection
         !IsTerminated && ProcessCount > 0 && HeartbeatAge is { } age && age > _pool.Options.UnresponsiveThreshold;
 
     /// <summary>
-    /// Gets whether the worker's thread can take a new process now (ADR 0071, section 3): it is
-    /// warmed up and answered its heartbeat recently, so it is not running a long slice.
+    /// Gets whether the worker's thread can take a new process now (ADR 0071, section 3, ADR 0072): it
+    /// is warmed up, answered its heartbeat recently — so it is not running a long slice — and, when
+    /// it was just given a process, sent a heartbeat at least one period after that, proving the new
+    /// process yields. Without the last rule a command that spins at once (<c>stress</c>) would look
+    /// free until its worker's heartbeat went stale, and the next command would queue behind it.
     /// </summary>
-    public bool IsFree =>
-        IsReady && (ProcessCount == 0 || (HeartbeatAge is { } age && age <= _pool.Options.BusyThreshold));
+    public bool IsFree
+    {
+        get
+        {
+            if (!IsReady || ProcessCount == 0)
+            {
+                return IsReady;
+            }
+
+            long last = Interlocked.Read(ref _lastHeartbeat);
+            long placed = Interlocked.Read(ref _lastPlaced);
+            return last != 0
+                && Stopwatch.GetElapsedTime(last) <= _pool.Options.BusyThreshold
+                && Stopwatch.GetElapsedTime(placed, last) >= _pool.Options.HeartbeatPeriod;
+        }
+    }
 
     /// <summary>Gets the life-cycle state shown in <c>/proc/hackeros/workers</c>.</summary>
     public WorkerState State =>
@@ -185,6 +203,7 @@ internal sealed class WorkerConnection
         {
             _sessions[session.Pid] = session;
             HostedTotal++;
+            Interlocked.Exchange(ref _lastPlaced, Stopwatch.GetTimestamp());
         }
     }
 

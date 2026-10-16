@@ -389,7 +389,14 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         }
     }
 
-    private void Log(string message) => output.WriteLine($"[smoke] {message}");
+    private void Log(string message)
+    {
+        // One prefix per line: verify-hosts.sh keeps only the lines that carry it.
+        foreach (string line in message.Split('\n'))
+        {
+            output.WriteLine($"[smoke] {line}");
+        }
+    }
 
     /// <summary>The end of an hsh prompt: <c>$</c> or <c>#</c> at the end of a rendered line.</summary>
     [GeneratedRegex(@"[$#]\s*$", RegexOptions.Multiline)]

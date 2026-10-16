@@ -18,7 +18,9 @@ public sealed class EscalationTests
         TestCommands.ArmSpinners();
         WorkerSnapshot core = os.Pool!.GetWorkers().Single(w => w.Role == WorkerRole.Pool);
         Task<ShellRun> sleeping = os.RunAsync(os.OpenShell(), "sleep 100");
-        await OsFixture.WaitUntilAsync(() => os.FindPid("org.hackeros.commands.sleep") is not null && os.Pool.GetWorkers().Any(w => w.ProcessIds.Count == 1));
+        await OsFixture.WaitUntilAsync(
+            () => os.FindPid("org.hackeros.commands.sleep") is not null && os.Pool.Connections.Any(w => w.Id == core.Id && w.ProcessCount == 1 && w.IsFree),
+            because: "sleep yields: its core heartbeats after taking it");
         Task<ShellRun> spinning = os.RunAsync("spin");
         await OsFixture.WaitUntilAsync(() => os.Pool.GetWorkers().Any(w => w.Id == core.Id && w.ProcessIds.Count == 2), because: "spin joins sleep on the free core");
         long spinPid = os.FindPid("org.test.spin")!.Value;
