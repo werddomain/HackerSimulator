@@ -22,7 +22,7 @@ namespace HackerOs.Platform.Core.Network;
 /// <remarks>
 /// <para>
 /// Every call checks the app's capability first (<c>network.simulated.read</c>, or
-/// <c>network.simulated.write</c> for an HTTP method other than GET and HEAD), then asks the
+/// <c>network.simulated.write</c> for an HTTP method other than GET, HEAD and OPTIONS), then asks the
 /// simulated network. Only when the simulated network does not know the target does the OS decide,
 /// on its own, whether to relay the call to the real Internet: the app must hold
 /// <c>network.real.access</c> and the optional server must be connected and hand out an access
@@ -33,7 +33,9 @@ namespace HackerOs.Platform.Core.Network;
 /// <para>
 /// What the proxy can relay is unchanged from the commands that used it directly before: GET (with
 /// body) and HEAD, a single-port TCP connect probe, and a timed HEAD standing in for an ICMP echo,
-/// which a browser cannot send. DNS, OS detection, port ranges and POST stay simulation-only.
+/// which a browser cannot send. DNS, OS detection, port ranges and every method with a body stay
+/// simulation-only. Inside the simulated network, any method travels with its headers and body
+/// (ADR 0074, section 1).
 /// </para>
 /// <para>
 /// This is also the one place network traffic of an app passes through, where ADR 0057 counts the
@@ -46,6 +48,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
 {
     private const int ProxyTimeoutSeconds = 10;
     private const int ProbeTimeoutSeconds = 5;
+    private const int MaxRedirects = 10;
 
     /// <summary>
     /// Memory the OS holds for one network operation in flight (ADR 0068): the default Linux TCP
@@ -240,13 +243,14 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         cancellationToken.ThrowIfCancellationRequested();
 
         string method = request.Method.ToUpperInvariant();
-        bool isRead = method is SimulatedHttpMethods.Get or SimulatedHttpMethods.Head;
-        _capabilities.Require(isRead ? AppCapabilities.NetworkSimulatedRead : AppCapabilities.NetworkSimulatedWrite);
+        _capabilities.Require(SimulatedHttpMethods.IsSafe(method)
+            ? AppCapabilities.NetworkSimulatedRead
+            : AppCapabilities.NetworkSimulatedWrite);
 
         SimulatedHost? host = _network.GetHost(request.RequestUri.Host);
         if (host is null)
         {
-            return isRead
+            return method is SimulatedHttpMethods.Get or SimulatedHttpMethods.Head
                 ? await SendRealAsync(request, method, cancellationToken).ConfigureAwait(false)
                 : HackNetworkResult<HackHttpResponse>.Failure(HackNetworkError.HostNotFound);
         }
@@ -258,48 +262,55 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
 
         Dictionary<string, Dictionary<string, string>> jar = ToJar(request.Cookies);
         HashSet<HackCookie> before = [.. FromJar(jar)];
-        string url = request.RequestUri.AbsoluteUri;
+        Uri currentUri = request.RequestUri;
+        SimulatedHttpBody? body = request.Content is { } content ? new SimulatedHttpBody(content.ContentType, content.Bytes.Span) : null;
+        int redirectCount = 0;
 
-        SimulatedNavigationResult navigation;
-        if (method == SimulatedHttpMethods.Post)
+        // ADR 0074 section 1: one exchange per hop, carrying the method, headers and body; the
+        // redirect rules are the browser's (RFC 9110 section 15.4), applied here so every app
+        // gets them the same way.
+        while (true)
         {
-            ImmutableDictionary<string, string> form = (request.Form ?? []).ToImmutableDictionary(StringComparer.Ordinal);
-            SimulatedHttpResponse posted = _network.Post(url, form, jar);
-            if (!posted.IsRedirect)
+            cancellationToken.ThrowIfCancellationRequested();
+            SimulatedExchangeResult exchange = _network.Send(method, currentUri.AbsoluteUri, request.Headers, body, jar);
+            if (exchange.NetworkError is not null)
             {
-                return HackNetworkResult<HackHttpResponse>.Success(
-                    BuildResponse(posted.StatusCode, request.RequestUri, posted.Page, 0, includeBody: true, jar, before));
+                return HackNetworkResult<HackHttpResponse>.Failure(MapSimulatedError(exchange.NetworkError));
             }
 
-            // 301/302/303 after a POST continue as a GET, as browsers and HttpClient do.
-            navigation = _network.Navigate(ResolveLocation(request.RequestUri, posted.RedirectUrl!), jar);
-            navigation = navigation with { RedirectCount = navigation.RedirectCount + 1 };
-        }
-        else if (isRead)
-        {
-            navigation = _network.Navigate(url, jar);
-        }
-        else
-        {
-            // Simulated sites only implement GET and POST.
-            return HackNetworkResult<HackHttpResponse>.Success(
-                BuildResponse(405, request.RequestUri, page: null, 0, includeBody: false, jar, before));
-        }
+            SimulatedHttpResponse response = exchange.Response!;
+            if (!response.IsRedirect)
+            {
+                return HackNetworkResult<HackHttpResponse>.Success(BuildResponse(
+                    response, currentUri, redirectCount, includeBody: method != SimulatedHttpMethods.Head, jar, before));
+            }
 
-        if (navigation.NetworkError is not null)
-        {
-            return HackNetworkResult<HackHttpResponse>.Failure(MapSimulatedError(navigation.NetworkError));
-        }
+            if (redirectCount == MaxRedirects)
+            {
+                return HackNetworkResult<HackHttpResponse>.Failure(HackNetworkError.TooManyRedirects);
+            }
 
-        return HackNetworkResult<HackHttpResponse>.Success(BuildResponse(
-            navigation.StatusCode,
-            new Uri(navigation.FinalUrl),
-            navigation.Page,
-            navigation.RedirectCount,
-            includeBody: method != SimulatedHttpMethods.Head,
-            jar,
-            before));
+            redirectCount++;
+            currentUri = new Uri(ResolveLocation(currentUri, response.RedirectUrl!));
+            if (RedirectBecomesGet(response.StatusCode, method))
+            {
+                method = SimulatedHttpMethods.Get;
+                body = null;
+            }
+        }
     }
+
+    /// <summary>
+    /// Whether a redirect turns the request into a body-less <c>GET</c>: 303 does for every method but
+    /// <c>HEAD</c>; 301 and 302 do for <c>POST</c> only (what every browser does, though the RFC
+    /// would keep the method); 307 and 308 never do.
+    /// </summary>
+    public static bool RedirectBecomesGet(int statusCode, string method) => statusCode switch
+    {
+        SimulatedHttpStatus.SeeOther => method != SimulatedHttpMethods.Head,
+        SimulatedHttpStatus.MovedPermanently or SimulatedHttpStatus.Found => method == SimulatedHttpMethods.Post,
+        _ => false
+    };
 
     private async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpCoreAsync(
         string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken)
@@ -483,10 +494,15 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         return new HackHostEntry(hostName, [IPAddress.Parse(ip)], aliases);
     }
 
+    /// <summary>
+    /// Turns a site's response into what the app receives. The body is the response's own
+    /// <see cref="SimulatedHttpBody"/> with its <c>Content-Type</c>; a historical structured page
+    /// travels as its text rendering, <c>text/plain</c>, with the page itself attached for the
+    /// browser. A response with neither has no <c>Content-Type</c>, like a real 204 or 302.
+    /// </summary>
     private static HackHttpResponse BuildResponse(
-        int statusCode,
+        SimulatedHttpResponse response,
         Uri finalUri,
-        SimulatedPage? page,
         int redirectCount,
         bool includeBody,
         Dictionary<string, Dictionary<string, string>> jar,
@@ -494,28 +510,42 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     {
         // A HEAD answer announces the length of the body a GET would have returned, without it.
         byte[] body = [];
-        if (page is not null)
+        string? contentType = null;
+        if (response.Body is { } responseBody)
+        {
+            body = responseBody.ToArray();
+            contentType = responseBody.ContentType;
+        }
+        else if (response.Page is { } page)
         {
             using StringWriter writer = new() { NewLine = "\n" };
             SimulatedPageTextFormatter.WriteTo(writer, page);
             body = Encoding.UTF8.GetBytes(writer.ToString());
+            contentType = "text/plain; charset=utf-8";
         }
 
         HackCookie[] setCookies = [.. FromJar(jar).Where(cookie => !before.Contains(cookie))];
         List<KeyValuePair<string, string>> headers =
         [
-            new("Content-Type", "text/plain; charset=utf-8"),
-            new("Content-Length", body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            .. setCookies.Select(cookie => new KeyValuePair<string, string>("Set-Cookie", $"{cookie.Name}={cookie.Value}; Path=/"))
+            .. response.Headers.Where(static header =>
+                !header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                && !header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
         ];
+        if (contentType is not null)
+        {
+            headers.Add(new("Content-Type", contentType));
+        }
+
+        headers.Add(new("Content-Length", body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        headers.AddRange(setCookies.Select(cookie => new KeyValuePair<string, string>("Set-Cookie", $"{cookie.Name}={cookie.Value}; Path=/")));
 
         return new HackHttpResponse(
-            statusCode,
-            HackHttpResponse.GetReasonPhrase(statusCode),
+            response.StatusCode,
+            HackHttpResponse.GetReasonPhrase(response.StatusCode),
             finalUri,
             headers,
             includeBody ? body : [],
-            page,
+            response.Page,
             redirectCount,
             setCookies);
     }

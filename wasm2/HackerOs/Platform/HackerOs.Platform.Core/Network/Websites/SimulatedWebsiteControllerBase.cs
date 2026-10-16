@@ -25,35 +25,79 @@ public abstract class SimulatedWebsiteControllerBase : ISimulatedWebsiteControll
     public abstract string SiteName { get; }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Routes are tried in registration order. As in ASP.NET Core, a <c>HEAD</c> request is served
+    /// by the matching <c>GET</c> route (the OS drops the body), <c>OPTIONS</c> on a known path
+    /// answers 204 with an <c>Allow</c> header, and a known path asked with a method it does not
+    /// implement answers 405 Method Not Allowed with <c>Allow</c>, not 404.
+    /// </remarks>
     public SimulatedHttpResponse ProcessRequest(SimulatedHttpRequest request)
     {
+        string method = request.Method.ToUpperInvariant();
+        string routeMethod = method == SimulatedHttpMethods.Head ? SimulatedHttpMethods.Get : method;
+        List<string> allowed = [];
+
         foreach (var entry in _routes)
         {
-            if (!string.Equals(entry.Method, request.Method, StringComparison.OrdinalIgnoreCase))
+            if (!TryMatchRoute(entry.PathPattern, request.Path, out var routeParams))
                 continue;
 
-            if (TryMatchRoute(entry.PathPattern, request.Path, out var routeParams))
+            if (!string.Equals(entry.Method, routeMethod, StringComparison.OrdinalIgnoreCase))
             {
-                var enriched = request with
-                {
-                    RouteParams = routeParams
-                };
-                return entry.Handler(enriched);
+                allowed.Add(entry.Method);
+                continue;
             }
+
+            var enriched = request with
+            {
+                RouteParams = routeParams
+            };
+            return entry.Handler(enriched);
         }
 
-        return SimulatedHttpResponse.NotFound(request.Path);
+        if (allowed.Count == 0)
+            return SimulatedHttpResponse.NotFound(request.Path);
+
+        if (allowed.Contains(SimulatedHttpMethods.Get, StringComparer.OrdinalIgnoreCase))
+            allowed.Add(SimulatedHttpMethods.Head);
+        allowed.Add(SimulatedHttpMethods.Options);
+
+        if (method == SimulatedHttpMethods.Options)
+        {
+            return SimulatedHttpResponse.NoContent() with
+            {
+                Headers = ImmutableDictionary<string, string>.Empty.Add("Allow", string.Join(", ", allowed.Distinct(StringComparer.OrdinalIgnoreCase)))
+            };
+        }
+
+        return SimulatedHttpResponse.MethodNotAllowed(allowed);
     }
 
     // ── Route registration helpers ─────────────────────────────────────────
 
-    /// <summary>Registers a GET handler for <paramref name="pathPattern"/>.</summary>
+    /// <summary>Registers a handler for <paramref name="method"/> on <paramref name="pathPattern"/>.</summary>
+    protected void Map(string method, string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
+        _routes.Add(new RouteEntry(method.ToUpperInvariant(), pathPattern, handler));
+
+    /// <summary>Registers a GET handler for <paramref name="pathPattern"/>; it also serves HEAD.</summary>
     protected void Get(string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
-        _routes.Add(new RouteEntry(SimulatedHttpMethods.Get, pathPattern, handler));
+        Map(SimulatedHttpMethods.Get, pathPattern, handler);
 
     /// <summary>Registers a POST handler for <paramref name="pathPattern"/>.</summary>
     protected void Post(string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
-        _routes.Add(new RouteEntry(SimulatedHttpMethods.Post, pathPattern, handler));
+        Map(SimulatedHttpMethods.Post, pathPattern, handler);
+
+    /// <summary>Registers a PUT handler for <paramref name="pathPattern"/>.</summary>
+    protected void Put(string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
+        Map(SimulatedHttpMethods.Put, pathPattern, handler);
+
+    /// <summary>Registers a PATCH handler for <paramref name="pathPattern"/>.</summary>
+    protected void Patch(string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
+        Map(SimulatedHttpMethods.Patch, pathPattern, handler);
+
+    /// <summary>Registers a DELETE handler for <paramref name="pathPattern"/>.</summary>
+    protected void Delete(string pathPattern, Func<SimulatedHttpRequest, SimulatedHttpResponse> handler) =>
+        Map(SimulatedHttpMethods.Delete, pathPattern, handler);
 
     // ── Path matching ──────────────────────────────────────────────────────
 

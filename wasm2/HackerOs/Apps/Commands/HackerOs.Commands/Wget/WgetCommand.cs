@@ -121,7 +121,7 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
             }
 
             string type = response.Headers.FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Value ?? "text/html";
-            await log.WriteLineAsync($"Length: {response.Content.Length} ({CommandIO.HumanSize(response.Content.Length)}) [{type}]");
+            await log.WriteLineAsync($"Length: {response.ContentBytes.Length} ({CommandIO.HumanSize(response.ContentBytes.Length)}) [{type}]");
             if (spider)
             {
                 await log.WriteLineAsync("Remote file exists.");
@@ -145,12 +145,12 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
 
                 await log.WriteLineAsync($"Saving to: '{target}'");
                 await log.WriteLineAsync();
-                await HackFile.WriteAllBytesAsync(target, response.Content, cancellationToken);
+                await HackFile.WriteAllBytesAsync(target, response.ContentBytes, cancellationToken);
                 string bar = new('=', 38);
-                await log.WriteLineAsync($"{HackPath.GetFileName(target),-20} 100%[{bar}>] {CommandIO.HumanSize(response.Content.Length),7}  --.-KB/s    in 0s");
+                await log.WriteLineAsync($"{HackPath.GetFileName(target),-20} 100%[{bar}>] {CommandIO.HumanSize(response.ContentBytes.Length),7}  --.-KB/s    in 0s");
                 await log.WriteLineAsync();
                 await log.WriteLineAsync(string.Create(CultureInfo.InvariantCulture,
-                    $"{context.App.Clock.UtcNow:yyyy-MM-dd HH:mm:ss} ({CommandIO.HumanSize(response.Content.Length)}B/s) - '{target}' saved [{response.Content.Length}/{response.Content.Length}]"));
+                    $"{context.App.Clock.UtcNow:yyyy-MM-dd HH:mm:ss} ({CommandIO.HumanSize(response.ContentBytes.Length)}B/s) - '{target}' saved [{response.ContentBytes.Length}/{response.ContentBytes.Length}]"));
                 await log.WriteLineAsync();
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)

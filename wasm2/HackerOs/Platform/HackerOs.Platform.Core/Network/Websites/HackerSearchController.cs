@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Text;
+using System.Text.Json;
 using HackerOs.Simulation.Abstractions.Network;
 
 namespace HackerOs.Platform.Core.Network.Websites;
@@ -22,7 +24,61 @@ public sealed class HackerSearchController : SimulatedWebsiteControllerBase
             var query = req.Query.TryGetValue("q", out var q) ? q : "";
             return SimulatedHttpResponse.Ok(BuildSearchResultsPage(query));
         });
+
+        // The search form of the structured page posts its fields: answer like a real site,
+        // with a redirect to the GET URL so the result page can be bookmarked and refreshed.
+        Post("/search", req =>
+        {
+            var query = req.FormBody?.GetValueOrDefault("q", "") ?? "";
+            return SimulatedHttpResponse.Redirect($"/search?q={Uri.EscapeDataString(query)}");
+        });
+
+        // ADR 0074 section 1: real bodies. A JSON API and a robots.txt, for curl and scripts.
+        Get("/api/search", req =>
+        {
+            var query = req.Query.TryGetValue("q", out var q) ? q : "";
+            return SimulatedHttpResponse.Json(BuildSearchResultsJson(query));
+        });
+        Get("/robots.txt", _ => SimulatedHttpResponse.Text(
+            "User-agent: *\nDisallow: /api/\n\n# Crawlers welcome. Hackers too.\n"));
     }
+
+    /// <summary>
+    /// Builds the JSON answer of <c>/api/search</c>. Written with <see cref="Utf8JsonWriter"/> rather
+    /// than reflection-based serialization so the platform stays trim-safe.
+    /// </summary>
+    internal static string BuildSearchResultsJson(string query)
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("query", query);
+            writer.WriteNumber("total", 0);
+            writer.WriteStartArray("results");
+            writer.WriteEndArray();
+            writer.WriteStartArray("featured");
+            foreach (var (title, url) in FeaturedLinks)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("title", title);
+                writer.WriteString("url", url);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(buffer.ToArray());
+    }
+
+    private static readonly (string Title, string Url)[] FeaturedLinks =
+    [
+        ("HackMail", "https://hackmail.com"),
+        ("CryptoBank", "https://cryptobank.com"),
+        ("Hacker Forum", "https://hackerz.forum"),
+    ];
 
     private static SimulatedPage BuildHomePage() => new(
         Title: "HackerSearch",

@@ -175,10 +175,12 @@ internal sealed class NetworkTrafficMeter(
         }
 
         int body = 0;
-        if (request.Form is { Count: > 0 } form)
+        if (request.Content is { } content)
         {
-            body = form.Sum(static pair => Uri.EscapeDataString(pair.Key).Length + 1 + Uri.EscapeDataString(pair.Value).Length)
-                + form.Count - 1;
+            // ADR 0074 section 1: the body travels as is, announced by its two headers.
+            head.Append("Content-Type: ").Append(content.ContentType).Append("\r\n");
+            head.Append("Content-Length: ").Append(content.Length).Append("\r\n");
+            body = content.Length;
         }
 
         if (request.Cookies.Count > 0)
@@ -200,7 +202,7 @@ internal sealed class NetworkTrafficMeter(
         }
 
         head.Append("\r\n");
-        return IpHeader + TcpHeader + Encoding.UTF8.GetByteCount(head.ToString()) + response.Content.Length;
+        return IpHeader + TcpHeader + Encoding.UTF8.GetByteCount(head.ToString()) + response.ContentBytes.Length;
     }
 
     private void Transmit(int bytes)

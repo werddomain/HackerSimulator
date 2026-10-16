@@ -4,7 +4,7 @@
 **Date:** 2026-08-03  
 **Deciders:** Architecture, Security  
 **Supersedes:** —  
-**Superseded by:** —  
+**Superseded by:** in part, [ADR 0074](0074-listening-ports-and-name-resolution.md) §1 (real HTTP bodies, 2026-10-16) and [ADR 0075](0075-browser-html-rendering.md) (isolated HTML rendering). `SimulatedPage` stays a valid response for the historical sites.  
 
 ---
 

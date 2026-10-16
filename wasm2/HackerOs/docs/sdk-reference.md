@@ -178,7 +178,8 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 |---|---|---|
 | `HackDns` | `GetHostAddressesAsync`, `GetHostEntryAsync` | [`sdk-network.md`](sdk-network.md) |
 | `HackPing` | `SendAsync` → `HackPingReply(Address, Status, RoundtripTime, Ttl)` | [`sdk-network.md`](sdk-network.md) |
-| `HackHttpClient` | `GetAsync`, `GetStringAsync`, `PostAsync`, `SendAsync`, `DefaultRequestHeaders`, `Cookies` ; `HackHttpResponse`, `HackHttpRequestException` | [`sdk-network.md`](sdk-network.md) |
+| `HackHttpClient` | `GetAsync`, `GetStringAsync`, `GetByteArrayAsync`, `GetFromJsonAsync`, `PostAsync` (formulaire ou contenu), `PostAsJsonAsync`, `PutAsync`, `PatchAsync`, `DeleteAsync`, `SendAsync`, `DefaultRequestHeaders`, `Cookies` ; `HackHttpResponse` (`ContentType`, `MediaType`, `Content`, `ContentBytes`, `GetHeader`, `ReadFromJson`), `HackHttpRequestException` | [`sdk-network.md`](sdk-network.md), [`http-bodies.md`](http-bodies.md) |
+| `HackHttpContent` | `HackStringContent`, `HackByteArrayContent`, `HackFormUrlEncodedContent`, `HackJsonContent` ; `ContentType`, `MediaType`, `CharSet`, `Length`, `ReadAsString`, `ReadAsByteArray` | [`http-bodies.md`](http-bodies.md) |
 | `HackTcpClient` | `ProbeAsync` (ports), `DetectOperatingSystemAsync` | [`sdk-network.md`](sdk-network.md) |
 
 Capacités : `network.simulated.*` ; le repli sur le vrai réseau est décidé par

@@ -55,6 +55,10 @@
         {
             <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" OnSubmit="HandleFormSubmitAsync" />
         }
+        else if (_currentBody is not null)
+        {
+            <ResponseBodyViewer View="_currentBody" StatusCode="_currentStatus" Url="@_finalUrl" />
+        }
         else
         {
             <!-- New-tab placeholder -->
@@ -84,7 +88,7 @@
         {
             <span class="status-error">@_networkError</span>
         }
-        else if (_currentPage is not null)
+        else if (_currentPage is not null || _currentBody is not null)
         {
             <span>&#10003; @_finalUrl</span>
         }

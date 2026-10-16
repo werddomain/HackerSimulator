@@ -1,20 +1,39 @@
 using System.Net.Http;
+using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
+using HackerOs.Simulation.Abstractions.Network;
 
 namespace HackerOs.Commands.Curl;
 
 /// <summary>
 /// Simulated <c>curl</c> terminal command (P4-W4-006) on <see cref="HackHttpClient"/>
-/// (ADR 0056, section 6). Supports <c>-I</c> (HEAD, headers only), <c>-v</c> (verbose),
-/// <c>-X</c> (method), <c>-d</c> (URL-encoded POST data) and <c>-L</c> (accepted; redirects are
-/// always followed). A host outside the simulated network is reached by the OS through the
-/// optional server when it can (GET and HEAD, ADR 0028/0034); otherwise curl reports
-/// "Could not resolve host", exit code 6. A response status of 400 or more prints no body and
-/// exits with 22, as <c>curl --fail</c> does.
+/// (ADR 0056, section 6), writing the raw response body (ADR 0074, section 1).
 /// </summary>
+/// <remarks>
+/// <para>
+/// Options: <c>-I</c> (HEAD, headers only), <c>-i</c> (status line and headers before the body),
+/// <c>-v</c> (request and response headers), <c>-X</c> (method), <c>-H</c> (header),
+/// <c>-A</c> (user agent), <c>-d</c>/<c>--data</c>/<c>--data-raw</c>/<c>--data-binary</c>
+/// (request body, <c>@file</c> reads a file), <c>--data-urlencode</c>, <c>--json</c>,
+/// <c>-o</c>/<c>-O</c> (save the body), <c>-f</c> (fail on HTTP errors), <c>-L</c> (accepted;
+/// redirects are always followed by the OS).
+/// </para>
+/// <para>
+/// As the real curl: <c>-d</c> sends its data as is with
+/// <c>Content-Type: application/x-www-form-urlencoded</c> and implies <c>POST</c>, several
+/// <c>-d</c> are joined with <c>&amp;</c>, a <c>-H "Content-Type: …"</c> replaces the type;
+/// <c>--json</c> sets <c>Content-Type</c> and <c>Accept</c> to JSON. An HTTP error status prints
+/// the body and exits 0, unless <c>-f</c> asks for exit code 22 and no body. A binary body is not
+/// written to the terminal unless <c>-o</c> names a file (or <c>-</c>).
+/// </para>
+/// <para>
+/// A host outside the simulated network is reached by the OS through the optional server when it
+/// can (GET and HEAD, ADR 0028/0034); otherwise curl reports "Could not resolve host", exit code 6.
+/// </para>
+/// </remarks>
 public sealed class CurlCommand : TerminalAppBase
 {
     private readonly HackCookieContainer _cookies = new();
@@ -32,15 +51,17 @@ public sealed class CurlCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Parse arguments: curl [-I] [-v] [-L] [-X <method>] [-d <data>] <url>
         string? url = null;
         bool headersOnly = false;
+        bool includeHeaders = false;
         bool verbose = false;
+        bool fail = false;
+        bool json = false;
         string? method = null;
-        string? postData = null;
         string? outputFile = null;
         bool remoteName = false;
         List<KeyValuePair<string, string>> headers = [];
+        List<DataPart> data = [];
 
         IReadOnlyList<string> args = context.Arguments;
         for (int i = 0; i < args.Count; i++)
@@ -49,13 +70,27 @@ public sealed class CurlCommand : TerminalAppBase
             switch (a)
             {
                 case "-I" or "--head": headersOnly = true; break;
+                case "-i" or "--include": includeHeaders = true; break;
                 case "-v" or "--verbose": verbose = true; break;
                 case "-L" or "--location": /* redirects are always followed */ break;
                 case "-X" or "--request":
                     if (i + 1 < args.Count) method = args[++i].ToUpperInvariant();
                     break;
-                case "-d" or "--data" or "--data-raw":
-                    if (i + 1 < args.Count) postData = args[++i];
+                case "-d" or "--data" or "--data-ascii":
+                    if (i + 1 < args.Count) data.Add(new DataPart(args[++i], DataKind.Ascii));
+                    break;
+                case "--data-raw":
+                    if (i + 1 < args.Count) data.Add(new DataPart(args[++i], DataKind.Raw));
+                    break;
+                case "--data-binary":
+                    if (i + 1 < args.Count) data.Add(new DataPart(args[++i], DataKind.Binary));
+                    break;
+                case "--data-urlencode":
+                    if (i + 1 < args.Count) data.Add(new DataPart(args[++i], DataKind.UrlEncode));
+                    break;
+                case "--json":
+                    if (i + 1 < args.Count) data.Add(new DataPart(args[++i], DataKind.Binary));
+                    json = true;
                     break;
                 case "-o" or "--output":
                     // ADR 0064: save the body to a file instead of standard output.
@@ -63,7 +98,7 @@ public sealed class CurlCommand : TerminalAppBase
                     break;
                 case "-O" or "--remote-name": remoteName = true; break;
                 case "-s" or "--silent" or "-S" or "--show-error" or "-sS" or "-k" or "--insecure": break;
-                case "-f" or "--fail": /* HTTP errors always fail here (exit 22) */ break;
+                case "-f" or "--fail" or "-sf" or "-fsS" or "-sSf": fail = true; break;
                 case "-H" or "--header":
                     if (i + 1 < args.Count && args[++i].Split(':', 2) is [{ } name, { } value])
                     {
@@ -98,13 +133,50 @@ public sealed class CurlCommand : TerminalAppBase
             return 3;
         }
 
-        method ??= postData is not null ? "POST" : headersOnly ? "HEAD" : "GET";
+        HackHttpContent? content = null;
+        if (data.Count > 0)
+        {
+            byte[] bytes;
+            try
+            {
+                bytes = await BuildDataAsync(data, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                context.StandardError.WriteLine($"curl: (26) Failed to open/read local data: {ShellErrorText.Describe(exception)}");
+                return 26;
+            }
+
+            // An explicit -H "Content-Type: …" wins over the type the data option implies.
+            string contentType = TakeHeader(headers, "Content-Type")
+                ?? (json ? SimulatedMediaTypes.ApplicationJson : SimulatedMediaTypes.FormUrlEncoded);
+            content = new HackByteArrayContent(bytes, contentType);
+        }
+
+        if (json && !headers.Any(static header => header.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase)))
+        {
+            headers.Add(new("Accept", SimulatedMediaTypes.ApplicationJson));
+        }
+
+        method ??= content is not null ? "POST" : headersOnly ? "HEAD" : "GET";
         if (verbose)
         {
             context.StandardOutput.WriteLine($"*   Trying {uri.Host}:{uri.Port}...");
             context.StandardOutput.WriteLine($"> {method} {uri.PathAndQuery} HTTP/1.1");
             context.StandardOutput.WriteLine($"> Host: {uri.Host}");
             context.StandardOutput.WriteLine("> User-Agent: curl/7.88.1");
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                context.StandardOutput.WriteLine($"> {header.Key}: {header.Value}");
+            }
+
+            if (content is not null)
+            {
+                context.StandardOutput.WriteLine($"> Content-Type: {content.ContentType}");
+                context.StandardOutput.WriteLine($"> Content-Length: {content.Length}");
+            }
+
+            context.StandardOutput.WriteLine(">");
         }
 
         HackHttpResponse response;
@@ -116,8 +188,8 @@ public sealed class CurlCommand : TerminalAppBase
             {
                 client.DefaultRequestHeaders[header.Key] = header.Value;
             }
-            response = await client.SendAsync(
-                new HttpMethod(method), uri.AbsoluteUri, postData is null ? null : ParseForm(postData), cancellationToken)
+
+            response = await client.SendAsync(new HttpMethod(method), uri.AbsoluteUri, content, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (HackHttpRequestException exception)
@@ -137,9 +209,15 @@ public sealed class CurlCommand : TerminalAppBase
             if (response.RedirectCount > 0)
                 context.StandardOutput.WriteLine($"* Followed {response.RedirectCount} redirect(s) to {response.RequestUri}");
             context.StandardOutput.WriteLine($"< HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
+            foreach (KeyValuePair<string, string> header in response.Headers)
+            {
+                context.StandardOutput.WriteLine($"< {header.Key}: {header.Value}");
+            }
+
+            context.StandardOutput.WriteLine("<");
         }
 
-        if (headersOnly)
+        if (headersOnly || includeHeaders)
         {
             context.StandardOutput.WriteLine($"HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}".TrimEnd());
             foreach (KeyValuePair<string, string> header in response.Headers)
@@ -147,10 +225,15 @@ public sealed class CurlCommand : TerminalAppBase
                 context.StandardOutput.WriteLine($"{header.Key}: {header.Value}");
             }
 
-            return 0;
+            if (headersOnly)
+            {
+                return 0;
+            }
+
+            context.StandardOutput.WriteLine();
         }
 
-        if (!response.IsSuccessStatusCode && response.StatusCode >= 400)
+        if (fail && response.StatusCode >= 400)
         {
             context.StandardError.WriteLine($"curl: (22) The requested URL returned error: {response.StatusCode}");
             return 22;
@@ -161,11 +244,11 @@ public sealed class CurlCommand : TerminalAppBase
             outputFile = uri.Segments.Length > 0 && uri.Segments[^1].Trim('/') is { Length: > 0 } last ? Uri.UnescapeDataString(last) : "index.html";
         }
 
-        if (outputFile is not null)
+        if (outputFile is not null and not "-")
         {
             try
             {
-                await HackFile.WriteAllBytesAsync(outputFile, response.Content, cancellationToken).ConfigureAwait(false);
+                await HackFile.WriteAllBytesAsync(outputFile, response.ContentBytes, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
@@ -174,6 +257,15 @@ public sealed class CurlCommand : TerminalAppBase
             }
 
             return 0;
+        }
+
+        // The real curl refuses to spray binary onto a terminal unless told to with "-o -".
+        if (outputFile is null && response.ContentBytes.Length > 0 && response.ContentType is { } type && !SimulatedMediaTypes.IsText(type))
+        {
+            context.StandardError.WriteLine("Warning: Binary output can mess up your terminal. Use \"--output -\" to tell");
+            context.StandardError.WriteLine("Warning: curl to output it to your terminal anyway, or consider \"--output");
+            context.StandardError.WriteLine("Warning: <FILE>\" to save to a file.");
+            return 23;
         }
 
         string body = response.ReadAsString();
@@ -186,19 +278,71 @@ public sealed class CurlCommand : TerminalAppBase
         return 0;
     }
 
-    /// <summary>Parses <c>key=value&amp;key2=value2</c> into form fields, unescaping both sides.</summary>
-    private static List<KeyValuePair<string, string>> ParseForm(string data)
+    /// <summary>How one data option turns its argument into body bytes, as the real curl does.</summary>
+    private enum DataKind
     {
-        List<KeyValuePair<string, string>> fields = [];
-        foreach (string pair in data.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        /// <summary><c>-d</c>: <c>@file</c> reads a file and drops its line breaks.</summary>
+        Ascii,
+
+        /// <summary><c>--data-raw</c>: the argument as is, <c>@</c> included.</summary>
+        Raw,
+
+        /// <summary><c>--data-binary</c>, <c>--json</c>: <c>@file</c> reads a file unchanged.</summary>
+        Binary,
+
+        /// <summary><c>--data-urlencode</c>: <c>name=value</c> with the value URL-encoded.</summary>
+        UrlEncode
+    }
+
+    private sealed record DataPart(string Value, DataKind Kind);
+
+    /// <summary>Builds the request body from every data option, joined with <c>&amp;</c> (curl's behavior).</summary>
+    private static async Task<byte[]> BuildDataAsync(List<DataPart> parts, CancellationToken cancellationToken)
+    {
+        List<byte> body = [];
+        foreach (DataPart part in parts)
         {
-            int separator = pair.IndexOf('=');
-            if (separator > 0)
+            if (body.Count > 0)
             {
-                fields.Add(new(Uri.UnescapeDataString(pair[..separator]), Uri.UnescapeDataString(pair[(separator + 1)..])));
+                body.Add((byte)'&');
             }
+
+            byte[] bytes = part.Kind switch
+            {
+                DataKind.Ascii when part.Value.StartsWith('@') =>
+                    [.. (await HackFile.ReadAllBytesAsync(part.Value[1..], cancellationToken).ConfigureAwait(false))
+                        .Where(static b => b is not (byte)'\r' and not (byte)'\n')],
+                DataKind.Binary when part.Value.StartsWith('@') =>
+                    await HackFile.ReadAllBytesAsync(part.Value[1..], cancellationToken).ConfigureAwait(false),
+                DataKind.UrlEncode => Encoding.UTF8.GetBytes(UrlEncodePart(part.Value)),
+                _ => Encoding.UTF8.GetBytes(part.Value)
+            };
+            body.AddRange(bytes);
         }
 
-        return fields;
+        return [.. body];
+    }
+
+    /// <summary><c>name=value</c> keeps the name and encodes the value; a bare value is encoded whole.</summary>
+    private static string UrlEncodePart(string value)
+    {
+        int separator = value.IndexOf('=');
+        return separator < 0
+            ? SimulatedHttpBody.EncodeFormComponent(value)
+            : $"{value[..separator]}={SimulatedHttpBody.EncodeFormComponent(value[(separator + 1)..])}";
+    }
+
+    /// <summary>Removes a header from the list and returns its value, or <see langword="null"/>.</summary>
+    private static string? TakeHeader(List<KeyValuePair<string, string>> headers, string name)
+    {
+        int index = headers.FindIndex(header => header.Key.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
+            return null;
+        }
+
+        string value = headers[index].Value;
+        headers.RemoveAt(index);
+        return value;
     }
 }

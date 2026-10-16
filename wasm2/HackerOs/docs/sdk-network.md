@@ -62,7 +62,9 @@ HackPingReply reply = await HackPing.SendAsync("hackersearch.net");          // 
 using HackHttpClient http = new(cookies);                                    // HackCookieContainer gardé par l'app
 HackHttpResponse page = await http.GetAsync("https://hackmail.com/inbox");
 HackHttpResponse login = await http.PostAsync("https://hackmail.com/login", [new("username", "agent")]);
-// page.StatusCode, ReasonPhrase, RequestUri (finale), Headers, Content, Page (site simulé), RedirectCount
+HackHttpResponse put = await http.PutAsync("https://api.hack/items/7", HackJsonContent.FromJson("{\"done\":true}"));
+// page.StatusCode, ReasonPhrase, RequestUri (finale), Headers, ContentType, Content (texte),
+// ContentBytes (octets), Page (site historique), RedirectCount — corps HTTP : http-bodies.md
 
 IReadOnlyList<HackPortProbeResult> ports = await HackTcpClient.ProbeAsync("10.0.0.5", 1, 1024);
 HackOsFingerprint? os = await HackTcpClient.DetectOperatingSystemAsync("10.0.0.5");
@@ -70,8 +72,10 @@ HackOsFingerprint? os = await HackTcpClient.DetectOperatingSystemAsync("10.0.0.5
 
 Comportement HTTP :
 
-- les redirections sont suivies (10 au plus) ; un `POST` redirigé par 301, 302
-  ou 303 continue en `GET`, comme un navigateur et `HttpClient` ;
+- les redirections sont suivies (10 au plus) ; un `POST` redirigé par 301 ou
+  302 continue en `GET`, 303 change toute méthode sauf `HEAD` en `GET`, 307 et
+  308 gardent la méthode et le corps, comme un navigateur et `HttpClient`
+  (ADR 0074 §1, [`http-bodies.md`](http-bodies.md)) ;
 - les cookies posés en route sont rangés dans le `HackCookieContainer` du client
   (le navigateur en a un par fenêtre) ;
 - un statut d'erreur (404, 500) est une réponse, pas une exception ;
@@ -80,9 +84,11 @@ Comportement HTTP :
   `HackHttpRequestException`, qui hérite de `HttpRequestException` et porte
   `NetworkError` et `ErrorCode` (`ERR_NAME_NOT_RESOLVED`…, affiché par le
   navigateur) ;
-- le corps d'une page simulée est son rendu texte
-  (`SimulatedPageTextFormatter`), celui qu'affichent `curl` et `cat` ; la page
-  structurée reste dans `Page` pour le navigateur.
+- toute méthode porte un corps typé (`HackHttpContent`) et toute réponse rend
+  ses octets avec leur `Content-Type` ([`http-bodies.md`](http-bodies.md)) ;
+- le corps d'une page d'un site historique est son rendu texte
+  (`SimulatedPageTextFormatter`, `text/plain`), celui qu'affichent `curl` et
+  `cat` ; la page structurée reste dans `Page` pour le navigateur.
 
 ## Repli sur le réseau réel
 
@@ -97,7 +103,7 @@ pas (ADR 0028, 0034, 0035) :
 | `HEAD` | requête du proxy sans corps |
 | `HackPing.SendAsync` | `HEAD` chronométré : un navigateur ne peut pas envoyer d'ICMP ; `Address` vaut `null` |
 | `HackTcpClient.ProbeAsync` sur **un seul** port | sondage TCP du proxy (ADR 0035) ; une plage n'est jamais relayée |
-| DNS, détection d'OS, `POST` | jamais : « hôte introuvable » |
+| DNS, détection d'OS, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` | jamais : « hôte introuvable » |
 
 Une erreur du proxy (`ServerConnectionException`, `HttpRequestException`)
 devient `HackNetworkError.ConnectionFailed` pour HTTP et le sondage, et
@@ -113,8 +119,10 @@ résultat est celui d'une machine sans passerelle par défaut.
   réponses reçues (min/moy/max/écart).
 - **`curl`** : `HackHttpClient.SendAsync` ; `-I` envoie un `HEAD` et affiche
   les en-têtes ; `-d` suit maintenant la redirection, comme `curl -L` (`-L`
-  était déjà sans effet) ; un statut ≥ 400 n'affiche pas le corps et sort
-  avec 22, comme `curl --fail`, que l'hôte soit simulé ou réel.
+  était déjà sans effet). Depuis `web/2-http-bodies` (ADR 0074 §1), `curl`
+  écrit le corps brut, envoie `-d`/`--json` tels quels et, comme le vrai
+  `curl`, n'échoue (code 22, sans corps) sur un statut ≥ 400 qu'avec `-f` ;
+  détail dans [`http-bodies.md`](http-bodies.md).
 - **`cat <url>`** : `HackHttpClient.GetAsync`, même rendu que `curl`.
 - **`nmap`** : `HackDns` pour l'adresse, `HackPing` pour la découverte de
   l'hôte, `HackTcpClient` pour le sondage et `-O`. `-p 80` et `-p 80-80` sont
