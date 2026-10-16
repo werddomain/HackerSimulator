@@ -306,7 +306,7 @@ internal sealed class OsFixture : IAsyncDisposable
                 {
                     UnixFileMode mode = await HackFile.GetUnixFileModeAsync(entry);
                     byte[] content = await HackFile.ReadAllBytesAsync(entry);
-                    lines.Add($"{entry} {(int)mode:o} {Convert.ToBase64String(content)}");
+                    lines.Add($"{entry} {Convert.ToString((int)mode, 8)} {Convert.ToBase64String(content)}");
                 }
             }
         }
