@@ -4,6 +4,7 @@ using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.Diagnostics;
+using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Processes.Accounting;
@@ -12,6 +13,7 @@ using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Simulation.Abstractions.Workers;
 
 namespace HackerOs.Ecosystem;
 
@@ -32,6 +34,9 @@ public sealed class EcosystemBootCoordinator
     private readonly AppInstallationService? _installation;
     private readonly ResourceSamplingService? _resourceSampling;
     private readonly ResourceAccountingPlan? _resourceAccounting;
+    private readonly SystemStartupSignal? _startup;
+    private readonly IRemoteProcessHost? _remoteHost;
+    private readonly IWorkerPoolStatus? _workers;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="logWriter">
@@ -54,6 +59,14 @@ public sealed class EcosystemBootCoordinator
     /// settings ignored because the build left a measurement out) are written to
     /// <c>/var/log/syslog</c> at boot. Optional for headless tests.
     /// </param>
+    /// <param name="startup">
+    /// The "system started" signal of ADR 0071, section 2, raised by <see cref="MarkSystemStarted"/>.
+    /// </param>
+    /// <param name="remoteHost">
+    /// The out-of-thread process host (ADR 0070), registered only by the WebAssembly hosts. Without it,
+    /// the boot notes in <c>/var/log/syslog</c> that <c>AppExecutionHost</c> is ignored (section 6).
+    /// </param>
+    /// <param name="workers">The worker pool, for the boot notice of its size and ceiling.</param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -68,7 +81,10 @@ public sealed class EcosystemBootCoordinator
         SimulationClockDriver? clockDriver = null,
         AppInstallationService? installation = null,
         ResourceSamplingService? resourceSampling = null,
-        ResourceAccountingPlan? resourceAccounting = null)
+        ResourceAccountingPlan? resourceAccounting = null,
+        SystemStartupSignal? startup = null,
+        IRemoteProcessHost? remoteHost = null,
+        IWorkerPoolStatus? workers = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -85,6 +101,26 @@ public sealed class EcosystemBootCoordinator
         _installation = installation;
         _resourceSampling = resourceSampling;
         _resourceAccounting = resourceAccounting;
+        _startup = startup;
+        _remoteHost = remoteHost;
+        _workers = workers;
+    }
+
+    /// <summary>
+    /// Raises the boot's end signal (ADR 0071, section 2): the session is open, the desktop shown and
+    /// the startup apps launched. The worker pool then waits for the browser to be idle (at most 2 s)
+    /// and warms up its ready worker and its cores. Idempotent; the host calls it once the desktop
+    /// has rendered.
+    /// </summary>
+    public void MarkSystemStarted()
+    {
+        if (_startup is null || _startup.IsStarted)
+        {
+            return;
+        }
+
+        _startup.MarkStarted();
+        _logWriter?.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "boot: system started (desktop shown)");
     }
 
     /// <summary>
@@ -105,6 +141,7 @@ public sealed class EcosystemBootCoordinator
         _resourceSampling?.Start();
         await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
         WriteResourceAccountingNotices();
+        WriteWorkerNotice();
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
@@ -166,6 +203,26 @@ public sealed class EcosystemBootCoordinator
         {
             _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, ResourceAccountingPlan.LogCategory, notice);
         }
+    }
+
+    /// <summary>
+    /// Notes in <c>/var/log/syslog</c> where headless processes run (ADR 0070): the worker pool's size
+    /// and ceiling, or, on a host without Web Workers (the server, section 6), that the manifests'
+    /// <c>execution</c> is ignored.
+    /// </summary>
+    private void WriteWorkerNotice()
+    {
+        if (_logWriter is null)
+        {
+            return;
+        }
+
+        string notice = _remoteHost is null
+            ? "workers: no Web Worker on this host: AppExecutionHost (pool, dedicated) is ignored, every process runs in the host process (ADR 0070, section 6)"
+            : _workers is null
+                ? "workers: commands and services run in Web Workers"
+                : $"workers: {_workers.PoolSize} pool worker(s), one per virtual core, plus one ready worker once the system is started; ceiling {_workers.Capacity} (navigator.hardwareConcurrency)";
+        _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "workers", notice);
     }
 
     /// <summary>
