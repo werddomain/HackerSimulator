@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ASP.Hack (ADR 0076): an ASP.NET MVC-like layer over the SDK's HackHttpListener. A site is a web
+    app process (AppKind.Web) running in the shared web worker; this library gives it a middleware
+    pipeline, routing, controllers, model binding, results, per-request DI and a cookie session.
+    The controller route table is generated at build by HackerOs.Tools.WebRouteGenerator (ADR 0082),
+    which links Routing/HackRouteTemplate.cs from this project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
+    <ProjectReference Include="..\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HackerOs.AppSdk.Web.Tests" />
+  </ItemGroup>
+
+</Project>

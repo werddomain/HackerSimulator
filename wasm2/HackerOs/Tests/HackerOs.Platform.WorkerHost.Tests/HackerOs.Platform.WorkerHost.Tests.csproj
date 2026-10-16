@@ -26,6 +26,11 @@
     <!-- ADR 0077/0080: hackwebd runs in the headless OS of these tests. -->
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" />
     <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
+    <!-- ADR 0076: an ASP.Hack MVC site (MvcSite.cs) served through the real web worker. -->
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Web\HackerOs.AppSdk.Web.csproj" />
+    <ProjectReference Include="..\..\Tools\HackerOs.Tools.WebRouteGenerator\HackerOs.Tools.WebRouteGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

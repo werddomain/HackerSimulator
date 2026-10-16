@@ -22,7 +22,9 @@ Une app peut maintenant **servir** du HTTP, et pas seulement en consommer :
   le worker `web` (décision de Benoit, plan §4.1, réponse 3).
 
 Le rendu des pages dans le navigateur (`web/4`) et le framework ASP.Hack
-(`web/5` et suivants) ne font pas partie de ce chantier.
+(`web/6` et suivants, voir [`asp-hack-mvc.md`](asp-hack-mvc.md)) ne font pas
+partie de ce chantier. Un site ASP.Hack est une app web comme les autres : son
+processus (`HackWebHost`) dérive de `WebServerAppBase`.
 
 ## Architecture
 

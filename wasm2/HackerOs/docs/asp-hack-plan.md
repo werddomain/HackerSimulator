@@ -163,7 +163,7 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [x] `web/3-listener-dns` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md))
 - [x] `web/4-browser-html` ([`browser-html-rendering.md`](browser-html-rendering.md), ADR 0079)
 - [x] `web/5-static-sites` ([`static-sites.md`](static-sites.md), ADR 0080)
-- [ ] `web/6-mvc-core`
+- [x] `web/6-mvc-core` ([`asp-hack-mvc.md`](asp-hack-mvc.md), ADR 0082)
 - [ ] `web/7-razor-views`
 - [ ] `web/8-cshtml-views`
 - [ ] `web/9-blazor-sites`

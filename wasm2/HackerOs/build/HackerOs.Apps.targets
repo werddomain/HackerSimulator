@@ -60,6 +60,22 @@
   </ItemGroup>
 
   <!--
+    ASP.Hack route generator (ADR 0082): a Roslyn source generator every app compiles with. It only
+    writes code when the app references HackerOs.AppSdk.Web (controllers, WebAppDefinition); for other
+    apps it does nothing. Analyzer only: never a runtime dependency of the app.
+  -->
+  <PropertyGroup>
+    <HackerOsWebRouteGeneratorProject Condition="'$(HackerOsWebRouteGeneratorProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.WebRouteGenerator/HackerOs.Tools.WebRouteGenerator.csproj</HackerOsWebRouteGeneratorProject>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
+    <ProjectReference Include="$(HackerOsWebRouteGeneratorProject)"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
     Generated manifests sit in the project directory (tracked by git for review) but are not
     content: they must never be copied or published under the same name by several apps.
   -->
@@ -177,10 +193,10 @@
       <!--
         Direct references only, captured at evaluation: the .NET SDK adds transitive ones to
         @(ProjectReference) during the build, and those are checked in the project declaring them.
-        The generator reference is build order only (ReferenceOutputAssembly=false), added by this file.
+        The generator references are build order / analyzer only (ReferenceOutputAssembly=false), added by this file.
       -->
       <_HackerOsBoundaryReference Include="@(_HackerOsDirectProjectReference->'%(FullPath)')"
-                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator'" />
+                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator' and '%(Filename)' != 'HackerOs.Tools.WebRouteGenerator'" />
       <_HackerOsBoundaryReference>
         <RelativePath>$([MSBuild]::MakeRelative('$(_HackerOsRepoRoot)', '%(Identity)').Replace('\', '/'))</RelativePath>
       </_HackerOsBoundaryReference>
