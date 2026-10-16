@@ -25,6 +25,9 @@ Un `cat` d'un gros fichier fait monter `rchar` du processus et les secteurs lus
 de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le CPU reste
 simulé : le navigateur ne mesure pas le CPU par app.
 
+La phase 5 remplacera le CPU et la mémoire simulés par une mesure réelle,
+optionnelle (ADR 0066 à 0068, [`execution-isolation-plan.md`](execution-isolation-plan.md)).
+
 Les compteurs vivent en mémoire, partent de zéro au démarrage et ne sont jamais
 persistés.
 

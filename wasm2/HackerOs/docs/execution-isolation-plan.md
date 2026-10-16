@@ -1,0 +1,130 @@
+# Phase 5 — exécution des apps : mesure du CPU et de la mémoire, arrêt propre, Web Workers
+
+**Statut :** plan validé avec Benoit le 2026-10-16. Il prolonge
+[`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md) (phases 1 à 4,
+fusionnées dans `main` par la PR #114) et lève l'exclusion « isolation
+d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0070.
+
+## 1. Objet
+
+- **Mesurer** le temps CPU et la mémoire réels de chaque processus, à la place
+  des valeurs simulées par `ResourceProfile`, et afficher « Not responding »
+  pour un processus qui monopolise son thread.
+- Permettre à un processus de **se terminer proprement** quand l'OS lui demande
+  de s'arrêter, et de rendre la main pendant un traitement long.
+- **Isoler** les processus sans interface (commandes, services) dans des Web
+  Workers, pour qu'une boucle infinie ne gèle plus l'OS et qu'un kill soit réel.
+
+## 2. Constat de départ
+
+- Blazor WebAssembly exécute toutes les apps sur **un seul thread**, dans un seul
+  tas .NET. Le navigateur ne mesure ni le CPU ni la mémoire par app.
+- `/proc/<pid>/status` (`VmRSS`, `Cpu`) et `/proc/stat` affichent des valeurs
+  tirées du `ResourceProfile` de l'app (ADR 0012, 0057). Le disque et le réseau
+  sont déjà réellement comptés.
+- `HackExecutionContext` sait à chaque instant quel processus exécute du code
+  (`AsyncLocal`, ADR 0043) : c'est la base de la mesure.
+- `StopAsync` fait déjà `SIGTERM` puis `SIGKILL` ; « End task » fait un
+  `kill -9`.
+- Les hôtes publient sans trimming (`PublishTrimmed=False`).
+
+## 3. Principes
+
+1. **Mesurer, pas contraindre.** Pas de quantum imposé, pas de limite mémoire,
+   pas d'OOM killer, pas de fenêtre « Forcer à quitter ».
+2. **Optionnel.** Chaque mesure se coupe au build (le code n'est pas livré) et
+   dans `appsettings.json` (aucun crochet installé). Coupée, on revient
+   exactement au comportement actuel.
+3. **Mimic the Metal.** Changements de contexte, `utime`/`stime`, compositeur,
+   `SIGTERM`/`SIGKILL`, workers = cœurs virtuels, formats `proc(5)`.
+4. **Le SDK ne change pas pour les apps existantes.** Une app gagne la mesure
+   sans changer une ligne ; une commande ne sait pas si elle tourne dans un
+   worker.
+
+## 4. Registre des décisions
+
+| # | Décision | ADR |
+|---|---|---|
+| 1 | Mesures CPU et mémoire indépendantes, coupables au build (projet `HackerOs.Platform.ResourceAccounting` référencé sous condition) et au démarrage (`appsettings.json`) ; coupées, retour au simulateur avec `CpuSource`/`MemSource: simulated` et la mention « estimated ». | 0066 |
+| 2 | Temps CPU mesuré par le rappel de changement de valeur de l'`AsyncLocal` ambiant ; `utime`, `stime`, temps hors frame imputé au compositeur ; `/proc/<pid>/stat`. | 0067 |
+| 3 | « Not responding » quand une tranche dépasse `UnresponsiveThresholdMs` (5 s) ; affichage seulement. | 0067 |
+| 4 | Mémoire en quatre couches : image, ressources de l'OS, allocations par tranche, tas réel réparti après chaque GC ; pas de limite. Le comptage du marshaling est écarté. | 0068 |
+| 5 | `StopRequested` (raison, échéance), `CheckpointAsync`, `TerminateAsync`, `ProcessExitReason.Terminated` ; escalade en quatre étapes ; « End task » devient `SIGTERM`, « Force kill » est ajouté. | 0069 |
+| 6 | Modèle hybride : apps à fenêtre sur le thread principal, commandes dans un pool d'un worker par cœur virtuel, services dans un worker dédié avec une réserve ; passerelles distantes ; battement de cœur ; seul un worker muet est terminé. | 0070 |
+| 7 | `HackerOs.Server` : mesures coupées par défaut, pas de worker, jusqu'à un ADR propre à cet hôte. | 0066, 0067, 0070 |
+
+## 5. Chantiers
+
+Chaque branche part de `rebuild/base` et sa PR vise `rebuild/base`.
+
+| Branche | Contenu | Dépend de |
+|---|---|---|
+| `rebuild/5-accounting-switches` | ADR 0066 : propriétés MSBuild, `build/HackerOs.ResourceAccounting.targets`, `RuntimeHostConfigurationOption`, projet `HackerOs.Platform.ResourceAccounting` (vide de mesure, avec le **crochet de changement de contexte** commun aux deux mesures), contrats nuls dans Simulation Abstractions, `wwwroot/appsettings.json` des hôtes, `CpuSource`/`MemSource`, mention « estimated ». | — |
+| `rebuild/5-cpu-accounting` | ADR 0067 : comptage `utime`/`stime`, compositeur, `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`, long tasks, « Not responding » et `Responding:`, test de surcoût (< 5 %). | `5-accounting-switches` |
+| `rebuild/5-memory-accounting` | ADR 0068 : quatre couches, champs de `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`. | `5-accounting-switches` |
+| `rebuild/5-graceful-stop` | ADR 0069 : `StopRequested`, `CheckpointAsync`, `TerminateAsync`, `Terminated`, ordonnanceur par processus et `HackProcessKilledException`, « End task » poli et « Force kill », `CheckpointAsync` dans les commandes longues. | — |
+| `rebuild/5-worker-processes` | ADR 0070 : `AppExecutionHost` dans le manifeste, `HackerOs.Platform.WorkerHost`, passerelles distantes et tests de parité, pool et réserve, battement de cœur, escalade étape 4, d'abord pour `HackerOs.Commands`. | les quatre autres |
+| `rebuild/5-final` | Vérification de bout en bout, `system-metrics.md`, `task-manager.md`, `app-sdk.md`, `sdk-reference.md`, index, cette liste à jour. | tous |
+
+Ordre :
+
+1. En parallèle : `5-accounting-switches` et `5-graceful-stop`.
+2. Après `5-accounting-switches`, en parallèle : `5-cpu-accounting` et
+   `5-memory-accounting`.
+3. `5-worker-processes`.
+4. `5-final`.
+
+## 6. Liste des tâches
+
+### Préparation
+- [x] Discuter les options avec Benoit (mesure optionnelle, mesure seulement,
+  « Not responding » seulement, pool ou worker par processus, jeton d'arrêt).
+- [x] Écrire ce plan et les ADR 0066 à 0070 (2026-10-16).
+
+### Mesure optionnelle (ADR 0066)
+- [ ] Propriétés MSBuild, `.targets` et référence conditionnelle.
+- [ ] `appsettings.json` des trois hôtes et lecture à la composition.
+- [ ] Retour au simulateur, `CpuSource`/`MemSource`, mention « estimated ».
+- [ ] Tests des quatre combinaisons, sans crochet quand c'est coupé.
+
+### CPU (ADR 0067)
+- [ ] Crochet de changement de contexte et comptage `utime`/`stime`/compositeur.
+- [ ] `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`.
+- [ ] Long tasks, « Not responding », `Responding:` et colonne du gestionnaire de tâches.
+- [ ] Test de surcoût.
+
+### Mémoire (ADR 0068)
+- [ ] Couches image, ressources de l'OS, allocations, résident.
+- [ ] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
+
+### Arrêt propre (ADR 0069)
+- [ ] `StopRequested`, `TerminateAsync`, `ProcessExitReason.Terminated`.
+- [ ] `CheckpointAsync` et son usage dans les commandes longues.
+- [ ] Ordonnanceur par processus, continuations jetées, `HackProcessKilledException`.
+- [ ] « End task » en `SIGTERM`, « Force kill » ajouté.
+
+### Web Workers (ADR 0070)
+- [ ] `AppExecutionHost` dans `[AppManifest]` et le générateur de manifeste.
+- [ ] Hôte de processus dans un worker et passerelles distantes, tests de parité.
+- [ ] Pool (un worker par cœur virtuel), réserve dédiée, placement des pipelines.
+- [ ] Battement de cœur, « Not responding » pendant le blocage, terminaison du worker.
+
+### Fin de phase
+- [ ] Vérification finale et documentation à jour (`rebuild/5-final`).
+
+## 7. Hors périmètre
+
+- Quantum imposé, limites mémoire, OOM killer, fenêtre « Forcer à quitter ».
+- Isolation cross-origin (COOP/COEP), threads WASM, `SharedArrayBuffer`.
+- Apps à fenêtre dans un worker.
+- Workers et mesures sur `HackerOs.Server`.
+
+## 8. Références
+
+- ADR [0066](adr/0066-optional-resource-accounting.md),
+  [0067](adr/0067-measured-cpu-time.md),
+  [0068](adr/0068-measured-process-memory.md),
+  [0069](adr/0069-graceful-stop-and-checkpoints.md),
+  [0070](adr/0070-worker-hosted-processes.md).
+- [`system-metrics.md`](system-metrics.md), [`task-manager.md`](task-manager.md),
+  [`app-sdk.md`](app-sdk.md).

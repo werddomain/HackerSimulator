@@ -372,7 +372,9 @@ Au minimum la parité avec le legacy (`src/apps/`), plus ces ajouts.
 ## 9. Hors périmètre pour l'instant
 
 - Isolation d'exécution des apps (watchdog, Web Workers) : une app avec une
-  boucle infinie gèle encore tout l'OS.
+  boucle infinie gèle encore tout l'OS. **Reprise par la phase 5**
+  ([`execution-isolation-plan.md`](execution-isolation-plan.md), ADR 0066 à
+  0070, 2026-10-16).
 - Magasin d'apps et installation d'apps tierces au runtime. Le format
   `manifest.json` généré est déjà pensé pour lui.
 - Serveur, synchronisation, mobile, contenu de jeu et réseau simulé : non
