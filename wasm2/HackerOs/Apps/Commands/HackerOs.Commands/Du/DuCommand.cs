@@ -1,6 +1,7 @@
 using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
 
@@ -103,7 +104,8 @@ public sealed class DuCommand(AppManifest manifest) : TerminalAppBase(manifest)
         /// <summary>Returns the usage of <paramref name="path"/>, printing it (and its children within the depth).</summary>
         public async Task<long> MeasureAsync(string path, string display, int depth)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            // ADR 0069: one checkpoint per directory level, and per child below.
+            await HackProcess.CheckpointAsync(cancellationToken);
             try
             {
                 if (!await HackDirectory.ExistsAsync(path, cancellationToken))
@@ -129,6 +131,7 @@ public sealed class DuCommand(AppManifest manifest) : TerminalAppBase(manifest)
                 HackDirectoryInfo directory = await HackDirectoryInfo.GetAsync(path, cancellationToken);
                 foreach (HackFileSystemInfo child in (await directory.GetFileSystemInfosAsync(cancellationToken: cancellationToken)).OrderBy(c => c.Name, StringComparer.Ordinal))
                 {
+                    await HackProcess.CheckpointAsync(cancellationToken);
                     string childDisplay = display.TrimEnd('/') + "/" + child.Name;
                     if (child.IsSymbolicLink)
                     {

@@ -152,6 +152,31 @@ public sealed class HackProcessTests
 
         Assert.Equal([(42L, false), (42L, false)], gateway.Calls);
         Assert.Equal([TimeSpan.FromSeconds(2), HackProcess.DefaultCloseTimeout], gateway.Timeouts);
+        Assert.Equal([ProcessExitReason.CloseRequested, ProcessExitReason.CloseRequested], gateway.Reasons);
+    }
+
+    [Fact]
+    public async Task TerminateAsync_sends_sigterm_with_a_five_second_grace_and_reports_a_forced_end()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        fixture.Processes.Active.AddRange(
+            [Process(OwnPid, "org.hackeros.system-monitor"), Process(42, "org.hackeros.text-editor"), Process(43, "org.hackeros.calculator")]);
+        RecordingProcessGateway gateway = new() { Denied = { 43 } };
+        using IDisposable scope = Enter(fixture, gateway, AppCapabilities.ProcessList);
+        HackProcess editor = await HackProcess.GetProcessByIdAsync(42);
+        HackProcess calculator = await HackProcess.GetProcessByIdAsync(43);
+
+        gateway.StopReason = ProcessExitReason.Completed;
+        Assert.True(await editor.TerminateAsync());
+        gateway.StopReason = ProcessExitReason.Timeout;
+        Assert.False(await editor.TerminateAsync(TimeSpan.FromSeconds(1)));
+        await Assert.ThrowsAsync<HackUnauthorizedAccessException>(() => calculator.TerminateAsync());
+
+        Assert.Equal([(42L, false), (42L, false)], gateway.Calls);
+        Assert.Equal([HackProcess.DefaultTerminateTimeout, TimeSpan.FromSeconds(1)], gateway.Timeouts);
+        Assert.Equal([ProcessExitReason.Terminated, ProcessExitReason.Terminated], gateway.Reasons);
+        Assert.Equal(TimeSpan.FromSeconds(5), HackProcess.DefaultTerminateTimeout);
+        Assert.True(editor.HasExited);
     }
 
     [Fact]
@@ -269,6 +294,7 @@ public sealed class HackProcessTests
         public HashSet<long> Gone { get; } = [];
         public List<(long Pid, bool Forced)> Calls { get; } = [];
         public List<TimeSpan> Timeouts { get; } = [];
+        public List<ProcessExitReason> Reasons { get; } = [];
         public ProcessExitReason StopReason { get; set; } = ProcessExitReason.CloseRequested;
 
         public ProcessRecord OwnProcess => throw new NotSupportedException();
@@ -286,6 +312,7 @@ public sealed class HackProcessTests
             Check(pid);
             Calls.Add((pid.Value, false));
             Timeouts.Add(timeout);
+            Reasons.Add(reason);
             ProcessRecord stopped = Process(pid.Value, "org.tests.stopped", ProcessState.Stopped);
             return new ProcessRecord(
                 stopped.Pid, stopped.ParentPid, stopped.AppId, stopped.AppInstanceId, stopped.Kind, stopped.UserId, stopped.SessionId,

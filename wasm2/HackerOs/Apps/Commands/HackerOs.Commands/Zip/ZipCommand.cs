@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
 
@@ -85,6 +86,7 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
 
                         foreach (ZipArchiveEntry entry in matches)
                         {
+                            await HackProcess.CheckpointAsync(cancellationToken);
                             if (!quiet)
                             {
                                 await context.StandardOutput.WriteLineAsync($"deleting: {entry.FullName}");
@@ -144,6 +146,8 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
             int status = 0;
             foreach (string child in (await HackDirectory.GetFileSystemEntriesAsync(source, cancellationToken: cancellationToken)).Order(StringComparer.Ordinal))
             {
+                // ADR 0069: compressing a tree is long work; give the thread back between entries.
+                await HackProcess.CheckpointAsync(cancellationToken);
                 string childPath = source.TrimEnd('/') + "/" + HackPath.GetFileName(child);
                 status |= await AddAsync(context, zip, childPath, recursive, junkPaths, quiet, level, cancellationToken);
             }

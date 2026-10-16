@@ -185,25 +185,38 @@ public partial class SystemMonitorWindow
 
     private void DismissEndTaskReport() => _endTaskReport = null;
 
-    /// <summary>Confirms, then ends every selected process; refusals are collected, not fatal.</summary>
-    private async Task EndTasksAsync(IReadOnlyList<ProcessRow> rows)
+    /// <summary>
+    /// "End task" (ADR 0069, section 4): confirms, then asks every selected process to stop
+    /// (<c>SIGTERM</c>, forced after 5 s); refusals are collected, not fatal.
+    /// </summary>
+    private Task EndTasksAsync(IReadOnlyList<ProcessRow> rows) => EndAsync(rows, EndTaskMode.Terminate);
+
+    /// <summary>"Force kill" (ADR 0069, section 4): confirms, then kills every selected process (<c>SIGKILL</c>).</summary>
+    private Task ForceKillAsync(IReadOnlyList<ProcessRow> rows) => EndAsync(rows, EndTaskMode.ForceKill);
+
+    private async Task EndAsync(IReadOnlyList<ProcessRow> rows, EndTaskMode mode)
     {
         if (rows.Count == 0)
         {
             return;
         }
 
+        bool force = mode == EndTaskMode.ForceKill;
         StringBuilder content = new();
-        content.Append(rows.Count == 1
-            ? "End this process? Unsaved work in it will be lost."
-            : $"End these {rows.Count.ToString(CultureInfo.InvariantCulture)} processes? Unsaved work in them will be lost.");
+        content.Append((rows.Count, force) switch
+        {
+            (1, false) => "End this process? It gets 5 seconds to close; unsaved work in it may be lost.",
+            (_, false) => $"End these {rows.Count.ToString(CultureInfo.InvariantCulture)} processes? Each gets 5 seconds to close; unsaved work in them may be lost.",
+            (1, true) => "Kill this process now? It cannot react: unsaved work in it will be lost.",
+            _ => $"Kill these {rows.Count.ToString(CultureInfo.InvariantCulture)} processes now? They cannot react: unsaved work in them will be lost."
+        });
         content.Append("\n\n");
         foreach (ProcessRow row in rows)
         {
             content.Append(CultureInfo.InvariantCulture, $"  {row.Pid,6}  {row.Name}  ({row.AppId})\n");
         }
 
-        MessageBoxDialogResult answer = await MessageBox("End task", content.ToString(), MessageBoxType.YesNo);
+        MessageBoxDialogResult answer = await MessageBox(force ? "Force kill" : "End task", content.ToString(), MessageBoxType.YesNo);
         if (answer.Result != MessageBoxResult.Yes)
         {
             return;
@@ -211,7 +224,9 @@ public partial class SystemMonitorWindow
 
         _endTaskReport = await EndTaskRunner.EndAsync(
             rows,
-            row => _processes.TryGetValue(row.Pid, out HackProcess? process) ? process.KillAsync(_lifetime.Token) : Task.CompletedTask);
+            row => _processes.TryGetValue(row.Pid, out HackProcess? process)
+                ? EndTaskRunner.End(process, mode, _lifetime.Token)
+                : Task.CompletedTask);
         _table.ClearSelection();
         await RefreshAsync();
     }

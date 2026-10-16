@@ -29,7 +29,7 @@ namespace HackerOs.Platform.Core.Tests.Lifecycle;
 /// and Service apps, singleton Window focusing, ordered service start/stop, and runtime
 /// enable/disable with dependency cascades.
 /// </summary>
-public sealed class AppLifecycleOrchestratorTests
+public sealed partial class AppLifecycleOrchestratorTests
 {
     [Fact]
     public async Task Launching_a_terminal_app_executes_it_synchronously_and_returns_its_exit_code_and_output()
@@ -821,6 +821,7 @@ public sealed class AppLifecycleOrchestratorTests
                 InstallationId.FromGuid(Guid.NewGuid()), DeviceId.FromGuid(Guid.NewGuid()), () => _now);
 
             ManualSimulationClock clock = new(_now, TimeSpan.FromSeconds(1));
+            Clock = clock;
             Manager = new InMemoryProcessManager(clock, Session, EventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
@@ -864,6 +865,7 @@ public sealed class AppLifecycleOrchestratorTests
         internal LocalSessionService Session { get; }
         internal InMemoryEventBus EventBus { get; }
         internal InMemoryProcessManager Manager { get; }
+        internal ManualSimulationClock Clock { get; }
         internal CapabilityGrantRepository Grants { get; }
         internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }

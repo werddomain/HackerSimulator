@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Intents;
@@ -683,10 +684,17 @@ public sealed class AppLifecycleOrchestrator
             // shell's, copied at creation), so the Hack* file API resolves relative paths exactly
             // like the shell does, and follows the command's own HackEnvironment changes.
             using IDisposable ambient = HackExecutionContext.Enter(context);
-            exitCode = await app.ExecuteAsync(terminalContext, executionCancellation.Token);
+            // ADR 0069: the command runs on its process's scheduler, so a kill drops its leftovers.
+            exitCode = await RunAsProcessAsync(context, () => app.ExecuteAsync(terminalContext, executionCancellation.Token).AsTask());
         }
-        catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested)
+        catch (HackProcessKilledException)
         {
+            // SIGKILL (kill -9, or a SIGTERM whose grace period ran out): 128 + 9, like a shell reports it.
+            exitCode = 137;
+        }
+        catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested || context.StopRequest is not null)
+        {
+            // Also when HackProcess.CheckpointAsync saw the stop request just before the token was cancelled (ADR 0069).
             exitCode = 130;
         }
         catch (ShellBrokenPipeException)
@@ -915,7 +923,11 @@ public sealed class AppLifecycleOrchestrator
     {
         try
         {
-            await service.RunAsync(context, context.CancellationToken);
+            await RunAsProcessAsync(context, async () =>
+            {
+                await service.RunAsync(context, context.CancellationToken);
+                return 0;
+            });
             if (_processManager.TryGetActive(pid, out _))
             {
                 _processManager.Complete(pid, 0);
@@ -933,6 +945,15 @@ public sealed class AppLifecycleOrchestrator
             }
         }
     }
+
+    /// <summary>
+    /// Runs the entry point of a headless process on its own scheduler (ADR 0069, section 3), when the
+    /// context comes from the trusted factory: a killed process's pending continuations are dropped
+    /// and the wait ends at once with <see cref="HackProcessKilledException"/>. Other contexts
+    /// (tests) run the entry point directly.
+    /// </summary>
+    private static Task<T> RunAsProcessAsync<T>(IAppExecutionContext context, Func<Task<T>> entryPoint) =>
+        context is AppExecutionContext trusted ? trusted.Control.RunAsync(entryPoint) : entryPoint();
 
     private AppLaunchResult StartWindow(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
     {
@@ -960,7 +981,8 @@ public sealed class AppLifecycleOrchestrator
 
         if (instance.ServiceInstance is ServiceAppBase service && _processManager.TryGetActive(pid, out _))
         {
-            using CancellationTokenSource stopBudget = new(TimeSpan.FromSeconds(5));
+            RequestServiceStop(pid, instance.Context, reason);
+            using CancellationTokenSource stopBudget = new(ServiceStopBudget);
             try
             {
                 await service.StopAsync(ToServiceStopReason(reason), stopBudget.Token);
@@ -986,6 +1008,29 @@ public sealed class AppLifecycleOrchestrator
             {
                 // Faults from the run task are already reflected in the process's Faulted state.
             }
+        }
+    }
+
+    /// <summary>Grace period a service gets to stop before its process is force-stopped.</summary>
+    private static readonly TimeSpan ServiceStopBudget = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Delivers <c>StopRequested</c> to a service the OS is about to stop (ADR 0069, section 1):
+    /// logout, shutdown, <c>systemctl stop</c>, app disabled. It comes before
+    /// <see cref="ServiceAppBase.StopAsync"/>, with the same 5-second deadline. A <c>SIGKILL</c>
+    /// (<see cref="ProcessExitReason.Killed"/>) is not announced.
+    /// </summary>
+    private static void RequestServiceStop(ProcessId pid, IAppExecutionContext context, ProcessExitReason reason)
+    {
+        if (reason == ProcessExitReason.Killed || context is not AppExecutionContext trusted)
+        {
+            return;
+        }
+
+        DateTimeOffset now = trusted.Clock.UtcNow;
+        if (trusted.Control.TryRequestStop(new ProcessStopRequest(pid, reason, now, now + ServiceStopBudget)))
+        {
+            trusted.Control.RaiseStopRequested();
         }
     }
 

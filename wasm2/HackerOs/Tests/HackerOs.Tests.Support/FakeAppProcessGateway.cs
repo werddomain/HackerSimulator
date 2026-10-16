@@ -14,6 +14,9 @@ public sealed class FakeAppProcessGateway : IAppProcessGateway
     /// <summary>Records every termination request this fake received, in call order.</summary>
     public List<(ProcessId Pid, bool Forced)> Terminations { get; } = [];
 
+    /// <summary>Records the grace period and reason of every graceful stop request (ADR 0069), in call order.</summary>
+    public List<(ProcessId Pid, TimeSpan Timeout, ProcessExitReason Reason)> StopRequests { get; } = [];
+
     /// <summary>PIDs on which the next termination call should throw <see cref="AppGatewayAccessDeniedException"/>.</summary>
     public HashSet<long> DeniedPids { get; } = [];
 
@@ -47,6 +50,7 @@ public sealed class FakeAppProcessGateway : IAppProcessGateway
             throw new KeyNotFoundException($"No active process with PID {pid.Value}.");
         }
         Terminations.Add((pid, false));
+        StopRequests.Add((pid, timeout, reason));
         return Task.FromResult(record);
     }
 

@@ -5,6 +5,12 @@
     <ProjectReference Include="..\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- ADR 0069: the OS's per-process scheduler stamps the time slice CheckpointAsync reads (HackProcessSlice). -->
+    <InternalsVisibleTo Include="HackerOs.Platform.Core" />
+    <InternalsVisibleTo Include="HackerOs.AppSdk.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

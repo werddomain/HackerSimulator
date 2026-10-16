@@ -38,12 +38,17 @@ namespace HackerOs.AppSdk.Diagnostics;
 /// push notification (ADR 0056, section 4).
 /// </para>
 /// <para>
-/// Stopping a process is a system call, not a file write: <see cref="KillAsync"/> and
-/// <see cref="CloseMainWindowAsync"/> go through <see cref="IAppProcessGateway"/>, and need
-/// <c>process.manage</c> for any process other than the caller's own.
+/// Stopping a process is a system call, not a file write: <see cref="KillAsync"/>,
+/// <see cref="TerminateAsync"/> and <see cref="CloseMainWindowAsync"/> go through
+/// <see cref="IAppProcessGateway"/>, and need <c>process.manage</c> for any process other than the
+/// caller's own.
+/// </para>
+/// <para>
+/// From inside, a process sees its own stop request through <see cref="Current"/> and gives the
+/// thread back during long work with <see cref="CheckpointAsync"/> (ADR 0069).
 /// </para>
 /// </remarks>
-public sealed class HackProcess
+public sealed partial class HackProcess
 {
     /// <summary>Grace period of <see cref="CloseMainWindowAsync"/> when none is given.</summary>
     public static readonly TimeSpan DefaultCloseTimeout = TimeSpan.FromSeconds(5);
@@ -224,7 +229,11 @@ public sealed class HackProcess
         return [.. processes.Where(process => process.ParentId == Id).OrderBy(static process => process.Id)];
     }
 
-    /// <summary>Stops the process immediately, like <c>kill -9</c>; its descendants stop with it.</summary>
+    /// <summary>
+    /// Stops the process immediately, like <c>kill -9</c> (<c>SIGKILL</c>); its descendants stop with
+    /// it. The process gets no <see cref="HackCurrentProcess.StopRequested"/>: its pending
+    /// continuations are dropped and its gateways throw <see cref="HackProcessKilledException"/>.
+    /// </summary>
     /// <param name="cancellationToken">Cancels the request.</param>
     /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
@@ -253,6 +262,8 @@ public sealed class HackProcess
     /// <summary>
     /// Asks the process to close, like clicking the close button of its window, and waits up to
     /// <paramref name="timeout"/> before the OS forces it, like <c>SIGTERM</c> then <c>SIGKILL</c>.
+    /// The process receives <see cref="HackCurrentProcess.StopRequested"/> with
+    /// <see cref="ProcessExitReason.CloseRequested"/>.
     /// </summary>
     /// <param name="timeout">Grace period; <see cref="DefaultCloseTimeout"/> when <see langword="null"/>.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
@@ -260,29 +271,8 @@ public sealed class HackProcess
     /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
-    public async Task<bool> CloseMainWindowAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-    {
-        IAppProcessGateway gateway = HackExecutionContext.Current.Processes;
-        ProcessRecord stopped;
-        try
-        {
-            // The gateway checks the capability inside its task: a denial surfaces on await.
-            stopped = await gateway.StopAsync(
-                ProcessId.FromInt64(Id), timeout ?? DefaultCloseTimeout, ProcessExitReason.CloseRequested, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (AppGatewayAccessDeniedException exception)
-        {
-            throw HackGatewayErrors.ToUnauthorized(exception);
-        }
-        catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
-        {
-            throw Exited(exception);
-        }
-
-        HasExited = true;
-        return stopped.ExitReason != ProcessExitReason.Timeout;
-    }
+    public Task<bool> CloseMainWindowAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
+        StopAsync(timeout ?? DefaultCloseTimeout, ProcessExitReason.CloseRequested, cancellationToken);
 
     /// <inheritdoc />
     public override string ToString() => $"{ProcessName} ({Id.ToString(CultureInfo.InvariantCulture)})";
