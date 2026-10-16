@@ -63,14 +63,14 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
 
             await RunCommandAsync(page, screen, "ps");
             string psOutput = await WaitForTerminalTextAsync(
-                rows, text => text.Contains("PID", StringComparison.Ordinal), "the ps header");
+                rows, text => OutputFinished(text, "PID"), "the ps output and the next prompt");
             Assert.Contains("hsh", psOutput, StringComparison.Ordinal);
             Log("ps listed the processes.");
 
             await RunCommandAsync(page, screen, "cat /proc/self/status");
             string status = await WaitForTerminalTextAsync(
-                rows, text => text.Contains("Pid:", StringComparison.Ordinal) && text.Contains("VmRSS:", StringComparison.Ordinal),
-                "/proc/self/status");
+                rows, text => OutputFinished(text, "Pid:") && text.Contains("VmRSS:", StringComparison.Ordinal),
+                "/proc/self/status and the next prompt");
             Assert.Contains("Name:", status, StringComparison.Ordinal);
             AssertSource(status, "CpuSource", settings.ExpectedCpuSource);
             AssertSource(status, "MemSource", settings.ExpectedMemSource);
@@ -399,6 +399,17 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>The end of an hsh prompt: <c>$</c> or <c>#</c> at the end of a rendered line.</summary>
+    /// <summary>
+    /// True once <paramref name="marker"/> is on screen and a shell prompt follows it. A command's
+    /// output reaches xterm.js in several writes (from a Web Worker, one message per write), so a
+    /// marker from the first line does not mean the rest is rendered; the next prompt does.
+    /// </summary>
+    private static bool OutputFinished(string text, string marker)
+    {
+        int at = text.LastIndexOf(marker, StringComparison.Ordinal);
+        return at >= 0 && PromptPattern().IsMatch(text[(at + marker.Length)..]);
+    }
+
     [GeneratedRegex(@"[$#]\s*$", RegexOptions.Multiline)]
     private static partial Regex PromptPattern();
 }
