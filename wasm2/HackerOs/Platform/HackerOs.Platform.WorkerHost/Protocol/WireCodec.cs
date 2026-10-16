@@ -473,9 +473,11 @@ internal static class WireCodec
         writer.WriteString("me", request.Method);
         writer.WriteString("u", request.RequestUri.OriginalString);
         WritePairs(writer, "hd", request.Headers);
-        if (request.Form is { } form)
+        if (request.Content is { } content)
         {
-            WritePairs(writer, "fm", form);
+            // ADR 0074 section 1: the body crosses the worker boundary as its type and bytes.
+            writer.WriteString("ct", content.ContentType);
+            writer.WriteBase64String("bd", content.Bytes.Span);
         }
 
         WriteCookies(writer, "ck", request.Cookies);
@@ -485,7 +487,9 @@ internal static class WireCodec
         element.GetString("me"),
         new Uri(element.GetString("u"), UriKind.Absolute),
         ReadPairs(element.GetProperty("hd")),
-        element.GetOptional("fm") is { } form ? ReadPairs(form) : null,
+        element.GetOptional("bd") is { } body
+            ? new HackHttpContent(body.GetBytesFromBase64(), element.GetString("ct"))
+            : null,
         ReadCookies(element.GetProperty("ck")));
 
     /// <summary>
@@ -498,7 +502,7 @@ internal static class WireCodec
         writer.WriteString("rp", response.ReasonPhrase);
         writer.WriteString("u", response.RequestUri.OriginalString);
         WritePairs(writer, "hd", response.Headers);
-        writer.WriteBase64String("b", response.Content);
+        writer.WriteBase64String("b", response.ContentBytes);
         writer.WriteNumber("rc", response.RedirectCount);
         WriteCookies(writer, "sk", response.SetCookies);
     }

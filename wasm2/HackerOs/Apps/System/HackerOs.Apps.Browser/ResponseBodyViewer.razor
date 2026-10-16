@@ -1,0 +1,55 @@
+@inherits HackerOs.AppSdk.Blazor.HackComponentBase
+@* Shows a response body that is not a structured simulated page (ADR 0074, section 1). *@
+
+<div class="body-viewer" data-kind="@View.Kind.ToString().ToLowerInvariant()">
+    <div class="body-viewer-bar">
+        <span class="body-viewer-type">@View.MediaType</span>
+        <span class="body-viewer-size">@FormatSize(View.Length)</span>
+        @if (StatusCode >= 400)
+        {
+            <span class="body-viewer-status">HTTP @StatusCode</span>
+        }
+    </div>
+
+    @switch (View.Kind)
+    {
+        case ResponseBodyKind.Text:
+        case ResponseBodyKind.Json:
+        case ResponseBodyKind.Html:
+            <pre class="body-viewer-text">@View.Text</pre>
+            break;
+        case ResponseBodyKind.Image:
+            <div class="body-viewer-image">
+                <img src="@View.DataUrl" alt="@Url" />
+            </div>
+            break;
+        case ResponseBodyKind.Binary:
+            <div class="body-viewer-binary" role="note">
+                <div class="binary-icon">&#128190;</div>
+                <p>This file can't be displayed in the browser.</p>
+                <p class="binary-hint">Use <code>curl -O @Url</code> or <code>wget</code> to save it.</p>
+            </div>
+            break;
+        default:
+            <div class="body-viewer-empty">The server returned no content.</div>
+            break;
+    }
+</div>
+
+@code {
+    /// <summary>The body to show.</summary>
+    [Parameter, EditorRequired] public ResponseBodyView View { get; set; } = default!;
+
+    /// <summary>Status code of the response, shown when it is an error.</summary>
+    [Parameter] public int StatusCode { get; set; }
+
+    /// <summary>URL of the response, for the image's alternative text and the download hint.</summary>
+    [Parameter] public string Url { get; set; } = string.Empty;
+
+    private static string FormatSize(int bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes / (1024.0 * 1024):0.#} MB"
+    };
+}

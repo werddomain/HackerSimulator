@@ -31,7 +31,7 @@ public sealed partial class Wave4NetworkTests
 
     public Wave4NetworkTests()
     {
-        var hosts = DefaultSimulatedHostCatalog.Build();
+        SimulatedHost[] hosts = [.. DefaultSimulatedHostCatalog.Build(), BodyEchoController.Host];
 
         var registry = new InMemorySimulatedWebsiteRegistry();
         registry.Register(new HackerSearchController());
@@ -39,6 +39,7 @@ public sealed partial class Wave4NetworkTests
         registry.Register(new CryptoBankController());
         registry.Register(new DarknetMarketController());
         registry.Register(new HackerForumController());
+        registry.Register(new BodyEchoController());
 
         _network = new InMemorySimulatedNetworkService(hosts, registry);
     }
@@ -363,14 +364,14 @@ public sealed partial class Wave4NetworkTests
     }
 
     [Fact]
-    public async Task CurlCommand_FullBody_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
+    public async Task CurlCommand_Fail_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
     {
         UseServer(new ConnectedServerConnectionService(), new SuccessBodyProxyClient(404, "Not Found"));
         var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
-        var context = CreateContext(["https://real-external-site.example"], stdoutWriter, stderrWriter);
+        var context = CreateContext(["-f", "https://real-external-site.example"], stdoutWriter, stderrWriter);
 
         int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
 

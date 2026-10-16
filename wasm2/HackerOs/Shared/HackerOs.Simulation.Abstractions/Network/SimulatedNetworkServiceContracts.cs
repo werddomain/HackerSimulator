@@ -111,10 +111,24 @@ public sealed record SimulatedNavigationResult(
     /// <summary>Error description when the host is down or the DNS name is unknown.</summary>
     string? NetworkError,
     /// <summary>Number of redirects followed (max 10).</summary>
-    int RedirectCount)
+    int RedirectCount,
+    /// <summary>Body of the final response (ADR 0074, section 1), or null.</summary>
+    SimulatedHttpBody? Body = null)
 {
     /// <summary>True when navigation completed with a renderable page.</summary>
     public bool IsSuccess => NetworkError is null && Page is not null;
+}
+
+/// <summary>
+/// Outcome of one HTTP exchange through <see cref="ISimulatedNetworkService.Send"/>: the raw
+/// response (redirects are not followed), or the network error that prevented any answer.
+/// </summary>
+/// <param name="Response">The site's response; <see langword="null"/> when <paramref name="NetworkError"/> is set.</param>
+/// <param name="NetworkError">One of <see cref="SimulatedNetworkErrors"/>, or <see langword="null"/>.</param>
+public sealed record SimulatedExchangeResult(SimulatedHttpResponse? Response, string? NetworkError)
+{
+    /// <summary>Gets whether a response came back.</summary>
+    public bool Succeeded => NetworkError is null && Response is not null;
 }
 
 /// <summary>
@@ -159,6 +173,24 @@ public interface ISimulatedNetworkService
     SimulatedHttpResponse Post(
         string url,
         System.Collections.Immutable.ImmutableDictionary<string, string> formBody,
+        Dictionary<string, Dictionary<string, string>> sessionCookies);
+
+    /// <summary>
+    /// Sends one HTTP request with any method, headers and body (ADR 0074, section 1) and returns
+    /// the raw response: redirects are NOT followed, so the caller decides how a 303 or a 307
+    /// continues. Cookies of the target host are taken from, and Set-Cookie applied to,
+    /// <paramref name="sessionCookies"/>.
+    /// </summary>
+    /// <param name="method">HTTP method (any case).</param>
+    /// <param name="url">Absolute http(s) URL; a bare host gets <c>https://</c>.</param>
+    /// <param name="headers">Request headers; <c>Content-Type</c> and <c>Content-Length</c> come from <paramref name="body"/>.</param>
+    /// <param name="body">Request body, or <see langword="null"/>.</param>
+    /// <param name="sessionCookies">Per-host cookie jar, updated in place.</param>
+    SimulatedExchangeResult Send(
+        string method,
+        string url,
+        IEnumerable<KeyValuePair<string, string>>? headers,
+        SimulatedHttpBody? body,
         Dictionary<string, Dictionary<string, string>> sessionCookies);
 
     /// <summary>

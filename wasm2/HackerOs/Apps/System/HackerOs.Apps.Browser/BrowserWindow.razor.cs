@@ -38,6 +38,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
     private bool   _isLoading;
     private string? _networkError;
     private SimulatedPage? _currentPage;
+    private ResponseBodyView? _currentBody;
+    private int _currentStatus;
 
     // ── Per-window session cookies, sent and filled by the OS on each request ──
     private readonly HackCookieContainer _cookies = new();
@@ -73,6 +75,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         _isLoading     = true;
         _networkError  = null;
         _currentPage   = null;
+        _currentBody   = null;
         StateHasChanged();
 
         try
@@ -98,18 +101,32 @@ public sealed partial class BrowserWindow : WindowAppBase, IDisposable
         }
     }
 
-    /// <summary>Shows a response: its page when it has one, otherwise an error with its status.</summary>
+    /// <summary>
+    /// Shows a response: its structured page when a historical site sent one, otherwise its body by
+    /// <c>Content-Type</c> (ADR 0074, section 1). A response with neither and an error status shows
+    /// the browser's own error page, as Chromium's "HTTP ERROR 500".
+    /// </summary>
     private void ShowResponse(HackHttpResponse response)
     {
-        if (response.Page is null)
+        _finalUrl      = response.RequestUri.AbsoluteUri;
+        _currentStatus = response.StatusCode;
+        _currentPage   = null;
+        _currentBody   = null;
+
+        if (response.Page is not null)
         {
-            _networkError = $"Request failed with status {response.StatusCode}.";
-            _finalUrl     = response.RequestUri.AbsoluteUri;
+            _currentPage = response.Page;
+        }
+        else if (response.ContentBytes.Length > 0 || response.IsSuccessStatusCode)
+        {
+            _currentBody = ResponseBodyPresenter.Present(response.ContentType, response.ContentBytes);
+        }
+        else
+        {
+            _networkError = $"HTTP ERROR {response.StatusCode}";
             return;
         }
 
-        _finalUrl      = response.RequestUri.AbsoluteUri;
-        _currentPage   = response.Page;
         _urlInputValue = _finalUrl;
         PushHistory(_finalUrl);
     }

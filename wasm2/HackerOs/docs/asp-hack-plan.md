@@ -158,7 +158,7 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [x] Validation du plan et des ADR par Benoit (questionnaire, 2026-10-16).
 
 ### Chantiers
-- [ ] `web/2-http-bodies`
+- [x] `web/2-http-bodies` ([`http-bodies.md`](http-bodies.md))
 - [ ] `web/3-listener-dns`
 - [ ] `web/4-browser-html`
 - [ ] `web/5-static-sites`

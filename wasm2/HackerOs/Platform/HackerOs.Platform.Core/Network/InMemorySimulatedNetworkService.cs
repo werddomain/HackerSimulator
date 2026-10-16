@@ -177,8 +177,32 @@ public sealed class InMemorySimulatedNetworkService : ISimulatedNetworkService
                 StatusCode: response.StatusCode,
                 Page: response.Page,
                 NetworkError: null,
-                RedirectCount: redirectCount);
+                RedirectCount: redirectCount,
+                Body: response.Body);
         }
+    }
+
+    /// <inheritdoc/>
+    public SimulatedExchangeResult Send(
+        string method,
+        string url,
+        IEnumerable<KeyValuePair<string, string>>? headers,
+        SimulatedHttpBody? body,
+        Dictionary<string, Dictionary<string, string>> sessionCookies)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(method);
+        ArgumentNullException.ThrowIfNull(sessionCookies);
+        if (!TryParseUrl(url, out string host, out string path, out var query))
+            return new SimulatedExchangeResult(null, SimulatedNetworkErrors.UnknownHost);
+
+        var request = SimulatedHttpRequest.Create(
+            method, host, path, query, headers, GetCookies(sessionCookies, host), body);
+        var (response, networkError) = Dispatch(request);
+        if (networkError is not null)
+            return new SimulatedExchangeResult(null, networkError);
+
+        ApplyCookies(sessionCookies, host, response!.SetCookies);
+        return new SimulatedExchangeResult(response, null);
     }
 
     /// <inheritdoc/>
@@ -187,18 +211,14 @@ public sealed class InMemorySimulatedNetworkService : ISimulatedNetworkService
         ImmutableDictionary<string, string> formBody,
         Dictionary<string, Dictionary<string, string>> sessionCookies)
     {
-        if (!TryParseUrl(url, out string host, out string path, out _))
-            return SimulatedHttpResponse.Error(SimulatedHttpStatus.NotFound, SimulatedNetworkErrors.UnknownHost);
-
-        var cookies   = GetCookies(sessionCookies, host);
-        var request   = SimulatedHttpRequest.Post(host, path, formBody, cookies);
-        var (response, _) = Dispatch(request);
-
-        if (response is null)
-            return SimulatedHttpResponse.Error(SimulatedHttpStatus.InternalError, SimulatedNetworkErrors.HostDown);
-
-        ApplyCookies(sessionCookies, host, response.SetCookies);
-        return response;
+        SimulatedExchangeResult result = Send(
+            SimulatedHttpMethods.Post, url, headers: null, SimulatedHttpBody.FormUrlEncoded(formBody), sessionCookies);
+        return result.NetworkError switch
+        {
+            null => result.Response!,
+            SimulatedNetworkErrors.UnknownHost => SimulatedHttpResponse.Error(SimulatedHttpStatus.NotFound, SimulatedNetworkErrors.UnknownHost),
+            _ => SimulatedHttpResponse.Error(SimulatedHttpStatus.InternalError, SimulatedNetworkErrors.HostDown)
+        };
     }
 
     /// <inheritdoc/>
