@@ -101,7 +101,7 @@ navigateur est ici.
 
 | Dossier | Contenu |
 |---|---|
-| `Apps/System/` | Les 12 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer. |
+| `Apps/System/` | Les 13 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
 | `Apps/Commands/HackerOs.Commands` | Les 63 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 14 qui touchent le shell ou l'écran (ADR 0070). |
 | `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme) ; elles ne sont pas installées dans l'hôte. |
 

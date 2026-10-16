@@ -69,8 +69,11 @@ public static class HackWebSiteFile
             return new HackWebSiteDeclaration(path, scope, owner, null, ["the file holds no site object"]);
         }
 
+        // Absent keys come back null from the source generator (init-only properties), not with their defaults.
         site = site with
         {
+            Name = site.Name ?? string.Empty,
+            Root = site.Root ?? string.Empty,
             Bindings = site.Bindings ?? [],
             DefaultDocuments = site.DefaultDocuments ?? HackWebSite.DefaultDefaultDocuments
         };

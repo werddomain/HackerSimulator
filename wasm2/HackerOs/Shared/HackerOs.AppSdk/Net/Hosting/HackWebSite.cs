@@ -68,8 +68,13 @@ public sealed record HackWebSite
     public bool DirectoryBrowsing { get; init; }
 
     /// <summary>Gets whether <c>hackwebd</c> serves the site; a stopped site keeps its file.</summary>
+    /// <remarks>
+    /// A settable property on purpose: the JSON source generator builds init-only properties through
+    /// an object initializer and gives an absent one <c>default</c>, so an <c>init</c> here would turn a
+    /// file with no <c>"enabled"</c> into a stopped site. A setter is only called when the key exists.
+    /// </remarks>
     [JsonPropertyName("enabled")]
-    public bool Enabled { get; init; } = true;
+    public bool Enabled { get; set; } = true;
 }
 
 /// <summary>A <c>.site</c> file read from disk, with where it lives and what is wrong with it.</summary>

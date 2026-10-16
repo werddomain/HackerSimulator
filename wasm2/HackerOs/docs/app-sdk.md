@@ -218,7 +218,9 @@ HackOpenFileResult opened = await HackApps.OpenFileAsync("~/notes.md");   // Ope
 ```
 
 - `HackAppInfo` : `Id`, `Name`, `Description`, `Kind`, `Category`, `Icon`,
-  `Version`, `PublisherId`, `IsSystemApp`, `IsHidden`, `FileHandlers`.
+  `Version`, `PublisherId`, `IsSystemApp`, `IsHidden`, `FileHandlers`, `Urls`
+  (adresses `web.urls` d'une app web, vide sinon ; liste des sites externes du
+  Web Server Manager).
 - `GetInstalledAsync` : apps installées pour l'utilisateur, triées par nom ;
   une app désinstallée (ADR 0048) n'y figure pas. **Aucune capacité.**
 - `GetHandlersAsync` : apps fenêtrées installées qui déclarent l'extension ou
