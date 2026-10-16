@@ -27,6 +27,11 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// <c>MemSource</c> of <c>/proc/&lt;pid&gt;/status</c>, and the measured lines of
 /// <c>/proc/meminfo</c>; missing or not measuring, the simulated value applies.
 /// </param>
+/// <param name="Workers">
+/// Lazily resolves the Web Worker pool (ADR 0070, 0071) behind <c>/proc/hackeros/workers</c>; the
+/// directory does not exist when it is missing or returns <see langword="null"/> (a host without
+/// workers, such as the server).
+/// </param>
 public sealed record ProcMetricsSources(
     ICpuTimeAccounting? Cpu = null,
     IProcessIoAccounting? ProcessIo = null,
@@ -34,7 +39,8 @@ public sealed record ProcMetricsSources(
     INetworkInterfaceStatistics? Network = null,
     Func<IFileSystemMountRouter>? Mounts = null,
     ICpuTimeAccountant? CpuAccountant = null,
-    IMemoryAccountant? MemoryAccountant = null);
+    IMemoryAccountant? MemoryAccountant = null,
+    Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null);
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>

@@ -16,6 +16,11 @@
     <InternalsVisibleTo Include="HackerOs.Platform.ResourceAccounting" />
     <!-- ADR 0067: the OS gateways open the "kernel" sub-frame (stime) with HackExecutionContext.EnterKernel. -->
     <InternalsVisibleTo Include="HackerOs.Platform.Core" />
+    <!-- ADR 0070: the worker host is the OS inside a Web Worker: it meters CPU with the same hook,
+         opens the kernel sub-frame around remote calls and waits for the work deferred on a stop
+         request. Apps still never can. -->
+    <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost" />
+    <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

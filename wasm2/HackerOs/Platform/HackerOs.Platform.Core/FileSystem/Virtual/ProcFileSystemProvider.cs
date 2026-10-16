@@ -43,6 +43,11 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private const string NetDirectory = "net";
 
+    /// <summary>HackerOS's own entries (ADR 0071, section 5), like the <c>/proc/sys</c> of a vendor kernel.</summary>
+    private const string HackerOsDirectory = "hackeros";
+
+    private const string WorkersFile = "workers";
+
     private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
     private static readonly string[] NetFiles = ["dev"];
     private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
@@ -135,6 +140,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             [string name] => RenderSystemFile(name),
             [NetDirectory, string name] => RenderNetFile(name),
+            [HackerOsDirectory, WorkersFile] => RenderWorkers(context),
             _ => RenderProcessFile(FindVisible(ParsePid(segments[0])!.Value, context)!, segments[1])
         };
         return ValueTask.FromResult(TextHandle(request.Path, metadata, text));
@@ -163,6 +169,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             [] => RootNames(context),
             [NetDirectory] => NetFiles,
+            [HackerOsDirectory] => [WorkersFile],
             _ => ProcessEntries
         };
 
@@ -205,6 +212,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [NetDirectory, string name] => NetFiles.Contains(name, StringComparer.Ordinal)
                 ? File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc)
                 : null,
+            [HackerOsDirectory] when WorkerPool() is not null =>
+                Directory(path, SystemPrincipal, SystemPrincipal, DirectoryMode, BootTimeUtc),
+            [HackerOsDirectory, WorkersFile] when WorkerPool() is not null =>
+                File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc),
             [string pid] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
                 ? Directory(path, Owner(process), Owner(process), DirectoryMode, StartTime(process))
                 : null,
@@ -263,6 +274,11 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         yield return NetDirectory;
+
+        if (WorkerPool() is not null)
+        {
+            yield return HackerOsDirectory;
+        }
 
         if (SelfLink(Child(MountPath, "self"), context) is not null)
         {
@@ -460,6 +476,55 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "mounts" => RenderMounts(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc system file.")
     };
+
+    private HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? WorkerPool() => _metrics.Workers?.Invoke();
+
+    /// <summary>
+    /// Renders <c>/proc/hackeros/workers</c> (ADR 0071, section 5): the ceiling and the pool size, then
+    /// one line per Web Worker with its role, state, virtual core, runtime memory, heartbeat age, busy
+    /// time and the processes it hosts (only those the caller may see, like <c>/proc/&lt;pid&gt;</c>).
+    /// </summary>
+    private string RenderWorkers(FileSystemAuthorizationContext context)
+    {
+        HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus pool = WorkerPool()!;
+        HashSet<long> visible = [.. VisibleProcesses(context).Select(static process => process.Pid.Value)];
+        StringBuilder builder = new();
+        builder.Append(CultureInfo.InvariantCulture, $"capacity {pool.Capacity}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"pool_size {pool.PoolSize}\n");
+        builder.Append("worker role       state          core memory_kb heartbeat_ms busy_ms pids\n");
+        foreach (HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot worker in pool.GetWorkers())
+        {
+            long[] pids = [.. worker.ProcessIds.Where(visible.Contains)];
+            builder.Append(CultureInfo.InvariantCulture, $"{worker.Id,-6} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{RoleName(worker.Role),-10} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{StateName(worker.State),-14} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(worker.Core is { } core ? core.ToString(CultureInfo.InvariantCulture) : "-"),-4} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{worker.RuntimeMemoryBytes / 1024,-9} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(worker.LastHeartbeatAgo is { } age ? ((long)age.TotalMilliseconds).ToString(CultureInfo.InvariantCulture) : "-"),-12} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(long)worker.BusyTime.TotalMilliseconds,-7} ");
+            builder.Append(pids.Length == 0 ? "-" : string.Join(',', pids));
+            builder.Append('\n');
+        }
+
+        return builder.ToString();
+
+        static string RoleName(HackerOs.Simulation.Abstractions.Workers.WorkerRole role) => role switch
+        {
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Pool => "pool",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Overflow => "overflow",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Dedicated => "dedicated",
+            _ => "ready"
+        };
+
+        static string StateName(HackerOs.Simulation.Abstractions.Workers.WorkerState state) => state switch
+        {
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Starting => "starting",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Idle => "idle",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Running => "running",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.NotResponding => "not-responding",
+            _ => "terminated"
+        };
+    }
 
     private string RenderNetFile(string name) => name switch
     {
