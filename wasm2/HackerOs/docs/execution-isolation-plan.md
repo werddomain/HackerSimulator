@@ -44,6 +44,12 @@ d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0071.
    Chaque chantier fait l'inventaire des apps, commandes et services de
    `Apps/` concernés et les migre avant sa PR (section 5.1) : ce n'est pas
    laissé à un chantier ultérieur.
+6. **Les trois hôtes restent opérationnels après chaque chantier.**
+   `OS/HackerOs.Ecosystem` (PWA autonome, sans serveur), `test/test` (Blazor
+   Web App de débogage) et `Server/HackerOs.Server` (rendu Interactive Server)
+   doivent compiler, se publier et **démarrer jusqu'au bureau** avant toute
+   fusion. La vérification de démarrage (section 5.2) fait partie du « fini »
+   de chaque PR `rebuild/5-*`, avec les mesures activées et coupées.
 
 ## 4. Registre des décisions
 
@@ -69,6 +75,7 @@ Chaque branche part de `rebuild/base` et sa PR vise `rebuild/base`.
 | `rebuild/5-memory-accounting` | ADR 0068 : quatre couches, champs de `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`. | `5-accounting-switches` |
 | `rebuild/5-graceful-stop` | ADR 0069 : `StopRequested`, `CheckpointAsync`, `TerminateAsync`, `Terminated`, ordonnanceur par processus et `HackProcessKilledException`, « End task » poli et « Force kill », `CheckpointAsync` dans les commandes longues. | — |
 | `rebuild/5-worker-processes` | ADR 0070 et 0071 : worker toujours prêt après le boot, débordement et plafond, `/proc/hackeros/workers`, `AppExecutionHost` dans le manifeste, `HackerOs.Platform.WorkerHost`, passerelles distantes et tests de parité, pool et réserve, battement de cœur, escalade étape 4, d'abord pour `HackerOs.Commands`. | les quatre autres |
+| `rebuild/5-host-smoke` | Section 5.2 : `build/verify-hosts.sh`, test Playwright de démarrage des trois hôtes avec repli sur le Chromium du conteneur, combinaisons des mesures ; corrige aussi le lancement des suites E2E existantes dans un conteneur. | — |
 | `rebuild/5-final` | Vérification de bout en bout, `system-metrics.md`, `task-manager.md`, `app-sdk.md`, `sdk-reference.md`, index, cette liste à jour. | tous |
 
 ### 5.1 Ce que chaque chantier fait pour les apps existantes
@@ -79,6 +86,27 @@ Chaque branche part de `rebuild/base` et sa PR vise `rebuild/base`.
 | `5-cpu-accounting`, `5-memory-accounting` | Aucune modification de code d'app ; le générateur de manifeste fournit la taille des assemblies (couche image) pour **toutes** les apps ; tests de `/proc/<pid>/stat` et `status` sur un échantillon de chaque famille (fenêtre, commande, service). |
 | `5-graceful-stop` | Chaque app à fenêtre et chaque service qui tient un état (éditeurs, explorateur pendant une copie, Paramètres, services) réagit à `StopRequested` : finit ou annule proprement son opération en cours, sans perte silencieuse (un éditeur avec des modifications non enregistrées garde un brouillon de récupération). Toute boucle longue de `Apps/` (commandes, copie récursive de l'explorateur, recherche du CodeEditor, zip) appelle `CheckpointAsync`. |
 | `5-worker-processes` | Chaque commande de `HackerOs.Commands` et chaque service déclare son `AppExecutionHost` (ou reçoit le bon défaut) ; les tests de parité exécutent **toutes** les commandes intégrées dans les deux modes ; une app qui ne peut pas tourner en worker reste en `MainThread`, avec la raison en commentaire. |
+
+### 5.2 Vérification des hôtes
+
+Le chantier `rebuild/5-host-smoke` ajoute un test de démarrage des trois hôtes,
+lancé par une seule commande (`build/verify-hosts.sh`) :
+
+- compile les trois hôtes et publie Ecosystem ;
+- lance chaque hôte (Ecosystem publié derrière un serveur statique, `test/test`
+  et `HackerOs.Server` par `dotnet run`), l'ouvre dans Chromium par Playwright
+  (repli sur `/opt/pw-browsers/chromium` quand la version attendue par Playwright
+  est absente, le cas des conteneurs) ;
+- attend l'écran de connexion puis le bureau, sans erreur dans la console, ouvre
+  le terminal, exécute `ps` et `cat /proc/self/status`, ouvre le gestionnaire de
+  tâches, puis ferme tout ;
+- refait le parcours d'Ecosystem avec les mesures coupées au build
+  (`-p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false`) et par
+  `appsettings.json`.
+
+Tant que ce test n'est pas fusionné, chaque chantier fait la même vérification à
+la main et la décrit dans sa PR. Une fois fusionné, chaque PR `rebuild/5-*`
+indique sa sortie.
 
 Ordre :
 
@@ -127,10 +155,15 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
 - [ ] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071).
 
 ### Apps existantes (section 5.1)
-- [ ] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test).
+- [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
 - [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
 - [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.
+
+### Hôtes (section 5.2)
+- [ ] `build/verify-hosts.sh` : les trois hôtes compilent, se publient et démarrent jusqu'au bureau.
+- [ ] Parcours avec les mesures coupées au build et par `appsettings.json`.
+- [ ] Chaque PR `rebuild/5-*` donne la sortie de la vérification.
 
 ### Fin de phase
 - [ ] Vérification finale et documentation à jour (`rebuild/5-final`).

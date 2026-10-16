@@ -147,6 +147,44 @@ services.AddSingleton<ICpuTimeAccountant>(provider =>
   étiquette `estimated` (petite, en pointillés, monospace) tant qu'une ligne
   au moins est simulée. L'app lit `HackProcess.Status` : le SDK ne change pas.
 
+## Apps existantes
+
+Section 5.1 du plan : le crochet compte au compositeur le code exécuté hors de
+tout frame, donc tout le code des apps de `Apps/` doit tourner dans le frame de
+son processus.
+
+| Point d'entrée | Qui ouvre le frame |
+|---|---|
+| Commande (`TerminalAppBase.ExecuteAsync`), service (`ServiceAppBase`) | l'OS, autour de l'appel ; le frame suit les continuations, minuteries et `Task.Run` |
+| Fenêtre (`WindowAppBase`) | paramètres, cycle de vie, événements, après-rendu |
+| Composant enfant | `HackComponentBase` (ou `HackEmbeddableComponent`), contexte reçu en cascade de `WindowAppRenderer` |
+| Dialogue MudBlazor (rendu hors de la fenêtre) | `FileExplorerDialogBase` : la fenêtre passe son contexte en paramètre `OwnerAppContext` |
+| Méthode `[JSInvokable]` | la méthode elle-même, en première instruction : `using IDisposable scope = HackExecutionContext.Enter(AppContext);` |
+
+Le rendu du balisage et la libération des composants restent hors frame : c'est
+le travail du compositeur (ADR 0067 §2).
+
+Migration faite dans ce chantier :
+
+- vers `HackComponentBase` : `NetworkTab`, `PerformanceTab`, `DiskTab`
+  (System Monitor), `CodeEditorSearchView`, `CodeEditorExplorer`,
+  `CodeEditorQuickOpenPalette`, `CodeEditorCursorStatus`,
+  `SimulatedPageRenderer` (Browser), `AppPermissionsPanel` et
+  `InstalledAppsPanel` (Settings, qui ne prennent plus `AppContext` en
+  paramètre mais le reçoivent en cascade) ;
+- vers `FileExplorerDialogBase` : `FileConflictDialog`, `OpenWithDialog`,
+  `FilePropertiesDialog` ;
+- frame ouvert en première instruction : `SystemMonitorWindow.SetWindowVisible`
+  et les quatre rappels JavaScript de `CodeEditorWindow`.
+
+`AmbientFrameSourceTests` (`HackerOs.Ecosystem.Tests`) lit toutes les sources de
+`Apps/` et échoue si un composant ne dérive pas (directement ou par une base de
+l'app) de `WindowAppBase`, `HackComponentBase` ou `HackEmbeddableComponent`, si
+une méthode `[JSInvokable]` n'entre pas dans le frame en premier, ou si du code
+utilise `ExecutionContext.SuppressFlow`, `UnsafeQueueUserWorkItem`,
+`UnsafeRegister` ou `new Thread(`. Avant la migration, il signalait les treize
+composants et les cinq rappels ci-dessus.
+
 ## Décisions
 
 - **Crochet dans `HackExecutionContext`, installation réservée.** Le frame est
@@ -175,6 +213,7 @@ services.AddSingleton<ICpuTimeAccountant>(provider =>
 | `HackerOs.Platform.Core.Tests` (`ProcFileSystemProviderTests`) | format de `status`, retour au simulateur, sources mesurées indépendantes |
 | `HackerOs.Ecosystem.Tests` (`ResourceAccountingCompositionTests`) | crochet installé seulement si une mesure est active (16 combinaisons), aucun crochet par le vrai chemin quand tout est coupé, lecture de la section, `appsettings.json` livrés |
 | `HackerOs.Apps.SystemMonitor.Tests` | mention « estimated » par colonne |
+| `HackerOs.Ecosystem.Tests` (`AmbientFrameSourceTests`) | tout le code des apps de `Apps/` dans un frame ambiant (composants, rappels JavaScript, pas d'évasion du contexte), avec un contrôle que l'analyse détecte bien une faute |
 
 Vérifié à la main : un build de `HackerOs.Ecosystem` avec les deux propriétés
 à `false` ne contient aucun fichier `HackerOs.Platform.ResourceAccounting*` et
@@ -191,3 +230,4 @@ son `runtimeconfig.json` porte les deux options à `false`.
 - [x] `CpuSource` / `MemSource` dans `/proc/<pid>/status`, mention « estimated » dans le gestionnaire de tâches.
 - [x] Tests des combinaisons, aucun crochet quand tout est coupé, observateur de test du crochet.
 - [x] Documentation et index.
+- [x] Apps existantes (plan §5.1) : composants de `Apps/` sur `HackComponentBase`, dialogues de l'explorateur sur `FileExplorerDialogBase`, rappels `[JSInvokable]` dans le frame, test `AmbientFrameSourceTests`.

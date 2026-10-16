@@ -23,9 +23,13 @@ public sealed partial class AppPermissionsPanel
     private string? _message;
     private bool _isBusy;
 
-    /// <summary>Gets or sets the Settings window's execution context.</summary>
-    [Parameter, EditorRequired]
-    public IAppExecutionContext AppContext { get; set; } = default!;
+    /// <summary>
+    /// Gets the Settings window's execution context, cascaded by the window host. The panel derives
+    /// from <c>HackComponentBase</c> so its lifecycle and event handlers run inside the app's ambient
+    /// frame (ADR 0067: otherwise their time would be charged to the compositor).
+    /// </summary>
+    private IAppExecutionContext Context => AppContext
+        ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -43,28 +47,28 @@ public sealed partial class AppPermissionsPanel
 
     private async Task RefreshAsync()
     {
-        _policy = await HackPermissionAdministration.GetPolicyAsync(AppContext, AppContext.CancellationToken);
-        _overview = await HackPermissionAdministration.GetOverviewAsync(AppContext, AppContext.CancellationToken);
+        _policy = await HackPermissionAdministration.GetPolicyAsync(Context, Context.CancellationToken);
+        _overview = await HackPermissionAdministration.GetOverviewAsync(Context, Context.CancellationToken);
     }
 
     private Task ChangePolicyAsync(HackDangerousCapabilityPolicy policy) =>
         policy == _policy
             ? Task.CompletedTask
             : RunAsync(
-                () => HackPermissionAdministration.SetPolicyAsync(AppContext, policy, AppContext.CancellationToken),
+                () => HackPermissionAdministration.SetPolicyAsync(Context, policy, Context.CancellationToken),
                 policy == HackDangerousCapabilityPolicy.Block ? "Politique : toujours bloquer." : "Politique : demander à un administrateur.");
 
     private Task SetMachineDecisionAsync(
         HackAppPermissionInfo app, HackCapabilityPermissionInfo capability, HackPermissionDecision decision) =>
         RunAsync(
             () => HackPermissionAdministration.SetMachineDecisionAsync(
-                AppContext, app.AppId, capability.Capability, decision, AppContext.CancellationToken),
+                Context, app.AppId, capability.Capability, decision, Context.CancellationToken),
             $"{app.AppName} : décision enregistrée, effective au prochain lancement.");
 
     private Task RemoveOwnDenialAsync(HackAppPermissionInfo app, HackCapabilityPermissionInfo capability) =>
         RunAsync(
             () => HackPermissionAdministration.RemoveOwnDenialAsync(
-                AppContext, app.AppId, capability.Capability, AppContext.CancellationToken),
+                Context, app.AppId, capability.Capability, Context.CancellationToken),
             $"{app.AppName} : votre refus est retiré, la question reviendra au prochain lancement.");
 
     private async Task RunAsync(Func<Task> action, string successMessage)

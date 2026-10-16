@@ -404,7 +404,10 @@ passent la vérification de la frontière sans exception (voir
 - Un composant enfant qui n'hérite pas de `HackComponentBase` appelle les
   passerelles de `AppContext` directement (`AppContext.Catalog`,
   `AppContext.AppManagement`) : ses gestionnaires d'événements ne sont pas dans
-  le contexte ambiant.
+  le contexte ambiant. *Phase 5 :* les panneaux de Settings (`InstalledAppsPanel`,
+  `AppPermissionsPanel`) héritent désormais de `HackComponentBase` et reçoivent
+  le contexte en cascade, comme tous les composants de `Apps/`
+  ([`resource-accounting.md`](resource-accounting.md#apps-existantes)).
 
 ## Vérification finale de la phase 4 (2026-10-16)
 
