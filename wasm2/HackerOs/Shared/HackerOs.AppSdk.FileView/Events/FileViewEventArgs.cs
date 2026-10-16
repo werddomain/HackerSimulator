@@ -237,7 +237,8 @@ public sealed record FileViewDraggedEntry(VirtualPath Path, bool IsDirectory);
 /// <summary>
 /// Hands a drop to the host (ADR 0058, section 1): HackerOS entries dragged from any
 /// <see cref="FileView"/>, and/or files dragged from the host system, dropped on a folder, on the
-/// background of the view, on a tree node, on a breadcrumb segment or on a <c>FileViewDropZone</c>.
+/// background of the view, on a tree node, on a breadcrumb segment or on a <c>FileViewDropZone</c>; also
+/// raised, as a copy into the current directory, for files pasted (Ctrl+V) from the host clipboard (ADR 0065).
 /// </summary>
 /// <param name="destination">Target directory, or <see langword="null"/> for a drop zone with no directory (the Trash).</param>
 /// <param name="entries">Dragged HackerOS entries, already checked to exist; never the destination itself.</param>

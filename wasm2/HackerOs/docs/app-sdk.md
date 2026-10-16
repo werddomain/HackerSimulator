@@ -306,6 +306,11 @@ string? text = await HackClipboard.GetTextAsync();
   « copier ». L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
   supprimée (la vraie est dans Platform Core).
 - Passerelle : `IAppClipboardGateway Clipboard` (`AppClipboardGateway`, Platform Core).
+- **Partage avec la vraie machine** (ADR 0065) : le texte copié par une app part
+  aussi vers le presse-papiers de l'hôte, et un collage de l'hôte devient
+  l'entrée courante, selon la clé `sharing` de `/etc/hackeros/clipboard.config`.
+  Une app ne parle jamais à `navigator.clipboard` ; `BrowserClipboard` est
+  `[Obsolete]`. Voir [`clipboard.md`](clipboard.md).
 - `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
   (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
   [`file-explorer.md`](file-explorer.md).

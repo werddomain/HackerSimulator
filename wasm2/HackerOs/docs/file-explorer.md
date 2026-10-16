@@ -35,12 +35,12 @@ FileExplorerWindow ──► FileView (SDK)        ── Ctrl+X/C/V, menus ─�
 |---|---|---|
 | `HackClipboard`, `HackClipboardFileList`, `HackClipboardFileOperation` | `Shared/HackerOs.AppSdk/Clipboard/` | Façade publique : texte et liste de fichiers (format GNOME `x-special/gnome-copied-files`). |
 | `IAppClipboardGateway` | idem | Passerelle `IAppExecutionContext.Clipboard` : `clipboard.read` / `clipboard.write`, événement `Changed`. |
-| `SystemClipboard` | `Platform/HackerOs.Platform.Core/Clipboard/` | Presse-papiers de l'OS : une sélection par session, cibles MIME (`text/plain`, `x-special/gnome-copied-files`), vidée à la déconnexion. En mémoire, comme un vrai presse-papiers. |
+| `SystemClipboard` | `Platform/HackerOs.Platform.Core/Clipboard/` | Presse-papiers de l'OS : une sélection par session, cibles MIME (`text/plain`, `x-special/gnome-copied-files`), vidée à la déconnexion. En mémoire, comme un vrai presse-papiers. Numéro de séquence, origine et partage du texte avec la vraie machine : [`clipboard.md`](clipboard.md) (ADR 0065). |
 | `AppClipboardGateway` | `Platform/HackerOs.Platform.Core/Execution/` | Passerelle de confiance par instance : vérifie la capacité à chaque appel, ne voit que sa session, rejoue `Changed` dans le contexte ambiant de l'app abonnée. |
 | `FileTransfer` et contrats | `Shared/HackerOs.AppSdk.FileView/Transfers/` | Copie, déplacement, import de fichiers de l'hôte, envoi à la corbeille ; noms Nautilus, conflits, refus d'un dossier dans lui-même, résumé des échecs. Tourne sur l'API `Hack*`, donc avec les droits de l'app. |
 | `FileView` (ajouts) | `Shared/HackerOs.AppSdk.FileView/` | Dépôt sur le fond, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths` (éléments atténués), Ctrl+A. |
 | `FileViewBreadcrumb`, `FileViewDropZone` | idem | Fil d'Ariane cliquable et déposable ; zone de dépôt générique pour le chrome de l'hôte. |
-| `FileView.razor.js` | idem | Écouteurs natifs `dragover` / `drop` : curseur déplacer/copier, surbrillance de la cible, capture du contenu et des `File` de l'hôte. |
+| `FileView.razor.js` | idem | Écouteurs natifs `dragover` / `drop` : curseur déplacer/copier, surbrillance de la cible, capture du contenu et des `File` de l'hôte. Depuis l'ADR 0065, Ctrl+V suit l'événement `paste` (`attachPasteTarget`) : des fichiers copiés sur la vraie machine et collés dans la vue sont importés comme un dépôt. |
 | `FileConflictDialog` | `Apps/System/HackerOs.Apps.FileExplorer/` | Fenêtre « Replace / Keep both / Skip » (MudBlazor, style gothique). |
 
 ## Usage et API

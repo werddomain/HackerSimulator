@@ -13,7 +13,13 @@ namespace HackerOs.AppSdk.Blazor.Interop;
 /// imported on first use; an app passes its own <see cref="IJSRuntime"/> (ADR 0055, section 3).
 /// The browser may refuse the write (no focus, no permission): the
 /// <see cref="JSException"/> is then thrown to the caller.
+/// <para>
+/// Obsolete since ADR 0065: <c>HackClipboard.SetTextAsync</c> reaches the host clipboard too, through
+/// the OS bridge, and honours the <c>sharing</c> key of <c>/etc/hackeros/clipboard.config</c>, which
+/// this helper bypasses. Kept one release for compatibility (ADR 0019).
+/// </para>
 /// </remarks>
+[Obsolete("Use HackClipboard.SetTextAsync: the OS mirrors clipboard text to the host and honours clipboard.config (ADR 0065).")]
 public sealed class BrowserClipboard : IAsyncDisposable
 {
     private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
