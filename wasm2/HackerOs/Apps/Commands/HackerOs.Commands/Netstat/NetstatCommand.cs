@@ -8,9 +8,10 @@ namespace HackerOs.Commands.Netstat;
 
 /// <summary>
 /// <c>netstat [-tulnap] [-i] [-r] [-s]</c> (ADR 0064), net-tools style (also answers as
-/// <c>ss</c>). The listening sockets are found the way an attacker's scan would: by probing
-/// this machine's own simulated stack (<c>127.0.0.1</c>, <see cref="HackTcpClient"/>), so what
-/// <c>nmap localhost</c> sees open is what <c>netstat -l</c> lists. <c>-i</c> shows the
+/// <c>ss</c>). The listening sockets come from the OS table of listening ports (ADR 0074,
+/// section 2, <see cref="HackIPGlobalProperties"/>, the same table as <c>/proc/net/tcp</c>): the
+/// sockets apps opened with <c>HackHttpListener</c> and the system daemons. With <c>-p</c>, the
+/// owner of a socket is shown only to its user and to root, as on Linux. <c>-i</c> shows the
 /// <c>/proc/net/dev</c> counters, <c>-r</c> the routing table, <c>-s</c> totals.
 /// </summary>
 public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manifest)
@@ -87,22 +88,43 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
             return 0;
         }
 
-        IReadOnlyList<HackPortProbeResult> open;
-        try
+        IReadOnlyList<HackTcpListenerInfo> listeners = await HackIPGlobalProperties.GetActiveTcpListenersAsync(cancellationToken);
+        if (programs && listeners.Any(static listener => listener.ProcessId is null))
         {
-            open = [.. (await HackTcpClient.ProbeAsync("127.0.0.1", 1, 10000, cancellationToken)).Where(port => port.State == HackPortState.Open)];
-        }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or System.Net.Sockets.SocketException or NotSupportedException)
-        {
-            open = [];
+            // net-tools prints this before the table when some owners are hidden from the caller.
+            await context.StandardError.WriteLineAsync("(Not all processes could be identified, non-owned process info");
+            await context.StandardError.WriteLineAsync(" will not be shown, you would have to be root to see it all.)");
         }
 
-        foreach (HackPortProbeResult port in open)
+        foreach (HackTcpListenerInfo listener in listeners)
         {
-            string local = numeric || port.ServiceName is null ? $"0.0.0.0:{port.Port}" : $"0.0.0.0:{port.ServiceName}";
-            string program = programs ? $" {(port.Port * 37 % 900) + 100}/{(port.ServiceVersion ?? port.ServiceName ?? "-").Split(' ')[0].ToLowerInvariant()}" : string.Empty;
+            string address = numeric || !listener.Address.Equals(System.Net.IPAddress.Loopback)
+                ? listener.Address.ToString()
+                : "localhost";
+            string port = numeric ? listener.Port.ToString(CultureInfo.InvariantCulture) : ServiceName(listener.Port);
+            string local = $"{address}:{port}";
+            string program = programs
+                ? " " + (listener.ProcessId is { } pid ? $"{pid}/{listener.ProgramName}" : "-")
+                : string.Empty;
             await context.StandardOutput.WriteLineAsync($"tcp        0      0 {local,-23} {"0.0.0.0:*",-23} LISTEN     {program}");
         }
+
         return 0;
     }
+
+    /// <summary>The name <c>/etc/services</c> gives a well-known port, or the number itself.</summary>
+    private static string ServiceName(int port) => port switch
+    {
+        21 => "ftp",
+        22 => "ssh",
+        23 => "telnet",
+        25 => "smtp",
+        53 => "domain",
+        80 => "http",
+        443 => "https",
+        3306 => "mysql",
+        5432 => "postgresql",
+        8080 => "http-alt",
+        _ => port.ToString(CultureInfo.InvariantCulture)
+    };
 }

@@ -67,7 +67,7 @@ plateforme et ne référencent jamais `Platform.*` ni `Infrastructure.*`
 
 | Projet | Contenu |
 |---|---|
-| `HackerOs.AppSdk` | Façades `Hack*` (fichiers, environnement, paramètres, réseau, processus, presse-papiers, administration…), `IAppExecutionContext`, classes de base `TerminalAppBase` et `ServiceAppBase`. |
+| `HackerOs.AppSdk` | Façades `Hack*` (fichiers, environnement, paramètres, réseau, processus, presse-papiers, administration…), `IAppExecutionContext`, classes de base `TerminalAppBase`, `ServiceAppBase` et `WebServerAppBase`. |
 | `HackerOs.AppSdk.Blazor` | `WindowAppBase`, `HackComponentBase`, dialogues (fichiers, message, saisie), graphiques `HackLineChart`, téléchargement et presse-papiers du navigateur. |
 | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (`FileView`, arbre, fil d'Ariane, menus, transferts). |
 | `HackerOs.AppSdk.Icons` | Bibliothèques d'icônes et composant `HackerIcon`. |

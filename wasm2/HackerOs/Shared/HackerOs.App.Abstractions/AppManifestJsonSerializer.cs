@@ -50,7 +50,8 @@ public static class AppManifestJsonSerializer
             "singleInstancePerUser",
             "autoStart",
             "supportsBack",
-            "execution"
+            "execution",
+            "web"
         });
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)
@@ -76,7 +77,8 @@ public static class AppManifestJsonSerializer
             Dependencies = manifest.Dependencies ?? [],
             Assets = manifest.Assets ?? [],
             FileHandlers = manifest.FileHandlers ?? [],
-            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] }
+            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] },
+            Web = manifest.Web is null ? null : manifest.Web with { Urls = manifest.Web.Urls ?? [] }
         };
     }
 
@@ -136,7 +138,9 @@ public static class AppManifestJsonSerializer
             Components = manifest.Components is null
                 ? null
                 : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
-                    .ThenBy(item => item.Type, StringComparer.Ordinal)]
+                    .ThenBy(item => item.Type, StringComparer.Ordinal)],
+            // The first URL is the site's primary address: the declared order is kept.
+            Web = manifest.Web
         };
     }
 
@@ -211,6 +215,9 @@ public static class AppManifestJsonSerializer
                 case "components":
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
+                case "web":
+                    ValidateObject(property.Value, $"{path}.web", ["urls"]);
+                    break;
                 default:
                     break;
             }
@@ -256,6 +263,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
+[JsonSerializable(typeof(WebAppManifest))]
 [JsonSerializable(typeof(AppKind))]
 [JsonSerializable(typeof(AppExecutionHost))]
 [JsonSerializable(typeof(AppLaunchVisibility))]

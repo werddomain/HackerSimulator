@@ -82,6 +82,7 @@ nommée `Execution` (`AppExecutionHost`, `HackerOs.App.Abstractions`) :
 | `MainThread` | `mainThread` | le thread principal du navigateur, avec le bureau | app à fenêtre (la seule valeur permise : elle a besoin du DOM) |
 | `Pool` | `pool` | un worker du pool, un par cœur virtuel ; les étapes d'un même pipeline vont sur le même | commande |
 | `Dedicated` | `dedicated` | un worker à lui, pris au worker prêt (ADR 0071) | service |
+| `Web` | `web` | le worker `web`, partagé par tous les sites (ADR 0073 §1) | app web (`AppKind.Web`, la seule à pouvoir l'utiliser) |
 | `Default` | — | laissé tel quel dans l'attribut : le générateur écrit le défaut du genre | — |
 
 ```csharp
@@ -106,6 +107,11 @@ public sealed class CdApp : AppDefinition { … }
   `unset`, `jobs`, `read`, `help`, `which`, `kill`, `sudo`, `watch`) et les
   commandes plein écran (`nano`, `top`, `htop`) ; le service d'exemple
   (événements typés). Les 49 autres commandes vont dans le pool.
+- Le validateur refuse `pool` et `dedicated` pour une app web
+  (`manifest.execution.web`) et `web` pour toute autre app
+  (`manifest.execution.web-only`). Une app web déclare ses URL par
+  `AppDefinition.Urls` (champ `web.urls`) : voir
+  [`listening-ports-and-dns.md`](listening-ports-and-dns.md).
 - Un hôte sans Web Worker (`HackerOs.Server`) ignore `execution` (ADR 0070 §6).
 
 Détails du mécanisme : [`worker-processes.md`](worker-processes.md).

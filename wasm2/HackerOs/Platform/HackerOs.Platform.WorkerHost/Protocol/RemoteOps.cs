@@ -46,6 +46,11 @@ internal static class RemoteOps
     public const string NetTcp = "net.tcp";
     public const string NetOs = "net.os";
 
+    // Listening sockets (ADR 0074, section 2): requests then travel as hreq/hres messages.
+    public const string NetListen = "net.listen";
+    public const string NetUnlisten = "net.unlisten";
+    public const string NetListeners = "net.listeners";
+
     // App catalog, services, drives, intents, clipboard.
     public const string CatalogInstalled = "cat.installed";
     public const string CatalogHandlers = "cat.handlers";

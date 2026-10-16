@@ -39,6 +39,12 @@ App (Browser, ping, curl, cat, nmap)
 simulé, `Network` lève `NotSupportedException` ; sans serveur ni proxy, le repli
 réel est simplement absent.
 
+Depuis `web/3-listener-dns`, `AppNetworkGateway` passe d'abord par le
+résolveur local `hackdns` (`/etc/hosts`, loopback, apps web, sites hébergés) :
+une cible locale est servie par la table des ports de l'OS, sur `lo`, et un nom
+`.hack` n'est jamais relayé au vrai réseau. Voir
+[`listening-ports-and-dns.md`](listening-ports-and-dns.md).
+
 ## Capacités
 
 | Opération | Capacité | Sans la capacité |
@@ -46,6 +52,7 @@ réel est simplement absent.
 | DNS, ping, `GET`, `HEAD`, sondage de ports, détection d'OS | `network.simulated.read` (normale) | `UnauthorizedAccessException` (interne : `AppGatewayAccessDeniedException`) |
 | `POST` et toute autre méthode HTTP | `network.simulated.write` (normale) | idem |
 | Repli sur le réseau réel | `network.real.access` (dangereuse) | aucun repli : « hôte introuvable » |
+| Écouter un port (`HackHttpListener`) hors de ses `web.urls` | `network.listen` (normale), plus `network.listen.privileged` (dangereuse) sous 1024 | `UnauthorizedAccessException` |
 
 Les classements sont inchangés (ADR 0049). Une app système reçoit ses capacités
 d'office.

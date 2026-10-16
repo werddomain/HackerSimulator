@@ -264,6 +264,74 @@ public sealed class AppManifestValidatorTests
         Assert.Equal(expected != AppExecutionHost.MainThread, AppExecutionHosts.IsWorker(expected));
     }
 
+    [Fact]
+    public void Validate_accepts_a_web_app_with_urls()
+    {
+        ManifestValidationResult result = AppManifestValidator.Validate(CreateWebManifest());
+
+        Assert.True(result.IsValid, string.Join("; ", result.Errors.Select(error => error.Code)));
+        Assert.Equal(AppExecutionHost.Web, AppExecutionHosts.Of(CreateWebManifest() with { Execution = null }));
+    }
+
+    [Theory]
+    [InlineData("intranet.hack/", "manifest.web.url.invalid")]
+    [InlineData("http://intranet.hack", "manifest.web.url.invalid")]
+    [InlineData("http://+:8080/", "manifest.web.url.invalid")]
+    [InlineData("http://intranet.hack/?q=1", "manifest.web.url.invalid")]
+    [InlineData("http://Intranet.hack:80/", "manifest.web.url.duplicate")]
+    public void Validate_rejects_bad_web_urls(string url, string code)
+    {
+        AppManifest manifest = CreateWebManifest() with { Web = new WebAppManifest(["http://intranet.hack/", url]) };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == code);
+    }
+
+    [Fact]
+    public void Validate_requires_urls_for_web_apps_and_forbids_them_elsewhere()
+    {
+        ManifestValidationResult noUrls = AppManifestValidator.Validate(CreateWebManifest() with { Web = new WebAppManifest([]) });
+        ManifestValidationResult onWindow = AppManifestValidator.Validate(CreateValidManifest() with { Web = new WebAppManifest(["http://x.hack/"]) });
+
+        Assert.Contains(noUrls.Errors, error => error.Code == "manifest.web.urls.required");
+        Assert.Contains(onWindow.Errors, error => error.Code == "manifest.web.forbidden");
+    }
+
+    [Fact]
+    public void Validate_forbids_file_system_capabilities_for_web_apps()
+    {
+        AppManifest manifest = CreateWebManifest() with { Capabilities = [AppCapabilities.FileSystemUserSelectedRead] };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == "manifest.web.filesystem");
+    }
+
+    [Theory]
+    [InlineData(AppKind.Web, AppExecutionHost.Pool, "manifest.execution.web")]
+    [InlineData(AppKind.Service, AppExecutionHost.Web, "manifest.execution.web-only")]
+    public void Validate_keeps_the_web_worker_for_web_apps(AppKind kind, AppExecutionHost execution, string code)
+    {
+        AppManifest manifest = (kind == AppKind.Web ? CreateWebManifest() : CreateValidManifest() with { Kind = kind, Capabilities = [] })
+            with { Execution = execution };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Contains(result.Errors, error => error.Code == code);
+    }
+
+    private static AppManifest CreateWebManifest() => CreateValidManifest() with
+    {
+        Id = "org.hackeros.intranet",
+        Name = "Intranet",
+        Kind = AppKind.Web,
+        Execution = AppExecutionHost.Web,
+        Capabilities = [],
+        Presentation = new PresentationManifest("system", AppLaunchVisibility.Hidden, []),
+        Web = new WebAppManifest(["http://intranet.hack/"])
+    };
+
     private static AppManifest CreateValidManifest() => new()
     {
         Id = "org.hackeros.text-editor",

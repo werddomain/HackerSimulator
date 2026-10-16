@@ -44,7 +44,11 @@ internal sealed class RemoteProcessSession
     private readonly Lock _gate = new();
     private readonly Dictionary<int, CancellationTokenSource> _calls = [];
     private readonly Dictionary<int, FileSystemContentReadHandle> _reads = [];
+    private readonly Dictionary<int, HackerOs.AppSdk.Net.IHackHttpListenerSocket> _listeners = [];
+    private readonly CancellationTokenSource _listening = new();
     private int _nextReadHandle;
+    private int _nextListener;
+    private bool _listenersClosed;
     private bool _stdoutClosed;
     private bool _stderrClosed;
     private bool _killAcknowledged;
@@ -178,6 +182,18 @@ internal sealed class RemoteProcessSession
         }
     }
 
+    /// <summary>The process answered a request of one of its listening sockets (<c>hres</c>).</summary>
+    public void OnHttpResponse(int socketId, long exchangeId, HackerOs.AppSdk.Net.HackHttpListenerReply reply)
+    {
+        HackerOs.AppSdk.Net.IHackHttpListenerSocket? socket;
+        lock (_gate)
+        {
+            _listeners.TryGetValue(socketId, out socket);
+        }
+
+        socket?.Respond(exchangeId, reply);
+    }
+
     /// <summary>Abandons a call whose token the worker cancelled.</summary>
     public void OnCancel(int id)
     {
@@ -249,12 +265,23 @@ internal sealed class RemoteProcessSession
         _context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
         List<FileSystemContentReadHandle> reads;
         List<CancellationTokenSource> calls;
+        List<HackerOs.AppSdk.Net.IHackHttpListenerSocket> listeners;
         lock (_gate)
         {
             reads = [.. _reads.Values];
             _reads.Clear();
             calls = [.. _calls.Values];
             _calls.Clear();
+            listeners = [.. _listeners.Values];
+            _listeners.Clear();
+            _listenersClosed = true;
+        }
+
+        // The kernel closes the sockets of a process that ends: the port is free again.
+        _listening.Cancel();
+        foreach (HackerOs.AppSdk.Net.IHackHttpListenerSocket listener in listeners)
+        {
+            _ = listener.DisposeAsync();
         }
 
         foreach (FileSystemContentReadHandle read in reads)
@@ -351,6 +378,67 @@ internal sealed class RemoteProcessSession
                 writer.WriteNumber("p", Pid);
                 writer.WriteNumber("n", text.Length);
             }));
+        }
+    }
+
+    /// <summary>
+    /// Opens a listening socket for the process (ADR 0074, section 2) and starts carrying its
+    /// requests to the worker as <c>hreq</c> messages; the worker buffers a request that arrives
+    /// before the answer naming the socket.
+    /// </summary>
+    private async Task<Action<Utf8JsonWriter>> ListenAsync(IReadOnlyList<string> prefixes, CancellationToken cancellationToken)
+    {
+        var result = await _context.Network.ListenHttpAsync(prefixes, cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            return writer => WireCodec.WriteNetwork(writer, result, static (_, _) => { });
+        }
+
+        HackerOs.AppSdk.Net.IHackHttpListenerSocket socket = result.Value!;
+        int id;
+        lock (_gate)
+        {
+            if (_listenersClosed)
+            {
+                _ = socket.DisposeAsync();
+                throw new HackProcessKilledException(Pid);
+            }
+
+            id = ++_nextListener;
+            _listeners[id] = socket;
+        }
+
+        _ = PumpListenerAsync(id, socket);
+        return writer =>
+        {
+            writer.WriteNumber("ne", (int)HackerOs.AppSdk.Net.HackNetworkError.None);
+            writer.WriteNumber("sk", id);
+            WireCodec.WriteStrings(writer, "px", socket.Prefixes);
+        };
+    }
+
+    /// <summary>Hands each request of one socket to the worker until the socket closes.</summary>
+    private async Task PumpListenerAsync(int id, HackerOs.AppSdk.Net.IHackHttpListenerSocket socket)
+    {
+        try
+        {
+            while (await socket.AcceptAsync(_listening.Token).ConfigureAwait(false) is { } exchange)
+            {
+                _worker.Post(WorkerMessage.Create(WorkerMessageType.HttpRequest, writer =>
+                {
+                    writer.WriteNumber("p", Pid);
+                    writer.WriteNumber("sk", id);
+                    WireCodec.WriteListenerExchange(writer, "ex", exchange);
+                }));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The process ended.
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _worker.Log($"pid {Pid}: listening socket {id} failed: {exception.Message}");
         }
     }
 
@@ -482,6 +570,28 @@ internal sealed class RemoteProcessSession
             {
                 var result = await c.Network.DetectOperatingSystemAsync(a.GetString("h"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteFingerprint);
+            }
+            case RemoteOps.NetListen:
+                return await ListenAsync(WireCodec.ReadStrings(a, "px"), cancellationToken).ConfigureAwait(false);
+            case RemoteOps.NetUnlisten:
+            {
+                HackerOs.AppSdk.Net.IHackHttpListenerSocket? socket;
+                lock (_gate)
+                {
+                    _listeners.Remove(a.GetInt32("sk"), out socket);
+                }
+
+                if (socket is not null)
+                {
+                    await socket.DisposeAsync().ConfigureAwait(false);
+                }
+
+                return static _ => { };
+            }
+            case RemoteOps.NetListeners:
+            {
+                var listeners = await c.Network.GetTcpListenersAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteListeners(writer, listeners);
             }
 
             case RemoteOps.CatalogInstalled:

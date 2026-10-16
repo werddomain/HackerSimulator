@@ -42,6 +42,17 @@ public abstract class ServiceAppBase : AppBase
     }
 
     /// <summary>
+    /// Initializes a service-like app of another kind: a web site (<see cref="AppKind.Web"/>,
+    /// <see cref="WebServerAppBase"/>) has the same lifecycle as a service (ADR 0073).
+    /// </summary>
+    /// <param name="manifest">Application manifest.</param>
+    /// <param name="kind">The kind the manifest must declare.</param>
+    private protected ServiceAppBase(AppManifest manifest, AppKind kind)
+        : base(manifest, kind)
+    {
+    }
+
+    /// <summary>
     /// Runs the service until it completes, faults, or receives session cancellation.
     /// </summary>
     /// <param name="context">Scoped application execution context.</param>

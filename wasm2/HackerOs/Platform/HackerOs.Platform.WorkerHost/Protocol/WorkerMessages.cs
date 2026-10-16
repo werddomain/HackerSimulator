@@ -45,6 +45,12 @@ internal static class WorkerMessageType
     /// <summary>Ctrl+C: cancel the process token, without a stop request.</summary>
     public const string Interrupt = "int";
 
+    /// <summary>
+    /// An HTTP request for a listening socket <c>sk</c> of the process (ADR 0074, section 2): the
+    /// exchange <c>ex</c>, answered by an <see cref="HttpResponse"/>.
+    /// </summary>
+    public const string HttpRequest = "hreq";
+
     // ---- worker → OS ------------------------------------------------------------------------
 
     /// <summary>The worker's .NET side is up and its assemblies are loaded.</summary>
@@ -79,6 +85,9 @@ internal static class WorkerMessageType
 
     /// <summary>A diagnostic line for <c>/var/log/syslog</c>.</summary>
     public const string Log = "log";
+
+    /// <summary>The reply <c>r</c> of the process to the exchange <c>x</c> of its socket <c>sk</c>.</summary>
+    public const string HttpResponse = "hres";
 }
 
 /// <summary>Writes and reads protocol messages: compact JSON, UTF-16 strings on the pipe.</summary>

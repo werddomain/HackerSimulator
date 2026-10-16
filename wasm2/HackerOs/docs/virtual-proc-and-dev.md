@@ -61,8 +61,9 @@ Contrats touchés :
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
 | `/proc/stat` | fichier `0444` | lignes `cpu` et `cpuN` en `USER_HZ`, `btime`, `processes`, `procs_running`, `procs_blocked` (phase 4) ; temps réels du thread principal sur `cpu0` quand la mesure CPU est active (ADR 0067) |
 | `/proc/diskstats` | fichier `0444` | une ligne pour `hda` (majeur 8, mineur 0), 14 champs (phase 4) |
-| `/proc/net/` | dossier `0555` | contient `dev` |
-| `/proc/net/dev` | fichier `0444` | en-tête du noyau, une ligne pour `lo` et une pour `eth0` (phase 4) |
+| `/proc/net/` | dossier `0555` | contient `dev` et `tcp` |
+| `/proc/net/dev` | fichier `0444` | en-tête du noyau, une ligne pour `lo` et une pour `eth0` (phase 4) ; le trafic local est compté sur `lo` depuis `web/3` |
+| `/proc/net/tcp` | fichier `0444` | sockets TCP à l'écoute au format `proc(5)` (adresse hexadécimale petit-boutiste, état `0A`, `uid`, inode), lus dans `ListeningPortTable` ; démons de `localhost` compris (`web/3`, [`listening-ports-and-dns.md`](listening-ports-and-dns.md)) |
 | `/proc/mounts` | fichier `0444` | une ligne par montage, format `fstab` (phase 4) |
 
 Exemple de `/proc/42/status` :

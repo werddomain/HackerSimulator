@@ -22,7 +22,9 @@ public static class AppEntryPointDiscovery
     {
         [AppKind.Window] = "HackerOs.AppSdk.Blazor.WindowAppBase",
         [AppKind.Terminal] = "HackerOs.AppSdk.TerminalAppBase",
-        [AppKind.Service] = "HackerOs.AppSdk.ServiceAppBase"
+        [AppKind.Service] = "HackerOs.AppSdk.ServiceAppBase",
+        // ADR 0073: a web site is a service-like process (WebServerAppBase derives from ServiceAppBase).
+        [AppKind.Web] = "HackerOs.AppSdk.ServiceAppBase"
     };
 
     private const string AppBackHandlerInterfaceFullName = "HackerOs.AppSdk.Blazor.IAppBackHandler";

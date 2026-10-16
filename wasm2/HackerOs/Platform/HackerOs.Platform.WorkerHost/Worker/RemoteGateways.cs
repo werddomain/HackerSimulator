@@ -28,14 +28,23 @@ internal sealed class RemoteProcessChannel
     private readonly WorkerRpcClient _rpc;
     private readonly RemoteProcessOutput _output;
     private readonly ProcessControlBlock _control;
+    private readonly Action<string>? _post;
 
-    public RemoteProcessChannel(long pid, WorkerRpcClient rpc, RemoteProcessOutput output, ProcessControlBlock control)
+    public RemoteProcessChannel(long pid, WorkerRpcClient rpc, RemoteProcessOutput output, ProcessControlBlock control, Action<string>? post = null)
     {
         Pid = pid;
         _rpc = rpc;
         _output = output;
         _control = control;
+        _post = post;
     }
+
+    /// <summary>Gets the listening sockets the process opened (ADR 0074, section 2).</summary>
+    public RemoteListenerTable Listeners { get; } = new();
+
+    /// <summary>Posts a raw protocol message (the reply to an HTTP request), outside the call/answer pairs.</summary>
+    public void Post(string message) =>
+        (_post ?? throw new InvalidOperationException("This channel cannot post messages."))(message);
 
     /// <summary>Gets the calling process.</summary>
     public long Pid { get; }
@@ -344,6 +353,179 @@ internal sealed class RemoteNetworkGateway(RemoteProcessChannel channel) : IAppN
         string hostNameOrAddress, CancellationToken cancellationToken = default) =>
         WireCodec.ReadNetwork(await channel.CallAsync(RemoteOps.NetOs, writer => writer.WriteString("h", hostNameOrAddress), cancellationToken).ConfigureAwait(false),
             WireCodec.ReadFingerprint);
+
+    /// <summary>
+    /// Opens the socket in the OS (its table of listening ports), then receives its requests as
+    /// <c>hreq</c> messages (ADR 0074, section 2): the site runs in the worker, the port lives in the OS.
+    /// </summary>
+    public async ValueTask<HackNetworkResult<IHackHttpListenerSocket>> ListenHttpAsync(
+        IReadOnlyList<string> prefixes, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(prefixes);
+        JsonElement answer = await channel.CallAsync(
+            RemoteOps.NetListen, writer => WireCodec.WriteStrings(writer, "px", prefixes), cancellationToken).ConfigureAwait(false);
+        HackNetworkError error = (HackNetworkError)answer.GetInt32("ne");
+        if (error != HackNetworkError.None)
+        {
+            return HackNetworkResult<IHackHttpListenerSocket>.Failure(error, answer.GetOptionalString("nm"));
+        }
+
+        RemoteHttpListenerSocket socket = new(channel, answer.GetInt32("sk"), WireCodec.ReadStrings(answer, "px"));
+        channel.Listeners.Add(socket);
+        return HackNetworkResult<IHackHttpListenerSocket>.Success(socket);
+    }
+
+    public async ValueTask<IReadOnlyList<HackTcpListenerInfo>> GetTcpListenersAsync(CancellationToken cancellationToken = default) =>
+        WireCodec.ReadListeners(await channel.CallAsync(RemoteOps.NetListeners, null, cancellationToken).ConfigureAwait(false));
+}
+
+/// <summary>
+/// The listening sockets of one process in a worker, by the id the OS gave them. A request that
+/// arrives before the answer naming its socket waits here; one for a closed socket is dropped (the
+/// OS has already reset its connection).
+/// </summary>
+internal sealed class RemoteListenerTable
+{
+    private readonly Lock _gate = new();
+    private readonly Dictionary<int, RemoteHttpListenerSocket> _sockets = [];
+    private readonly Dictionary<int, List<HackHttpListenerExchange>> _early = [];
+    private readonly HashSet<int> _closed = [];
+    private bool _allClosed;
+
+    /// <summary>Registers a socket the OS just opened and hands it the requests that came first.</summary>
+    public void Add(RemoteHttpListenerSocket socket)
+    {
+        List<HackHttpListenerExchange>? early;
+        lock (_gate)
+        {
+            _sockets[socket.Id] = socket;
+            _early.Remove(socket.Id, out early);
+        }
+
+        foreach (HackHttpListenerExchange exchange in early ?? [])
+        {
+            socket.Enqueue(exchange);
+        }
+    }
+
+    /// <summary>Hands one request to its socket.</summary>
+    public void Deliver(int id, HackHttpListenerExchange exchange)
+    {
+        RemoteHttpListenerSocket? socket;
+        lock (_gate)
+        {
+            if (_allClosed || _closed.Contains(id))
+            {
+                return;
+            }
+
+            if (!_sockets.TryGetValue(id, out socket))
+            {
+                if (!_early.TryGetValue(id, out List<HackHttpListenerExchange>? waiting))
+                {
+                    waiting = [];
+                    _early[id] = waiting;
+                }
+
+                waiting.Add(exchange);
+                return;
+            }
+        }
+
+        socket.Enqueue(exchange);
+    }
+
+    /// <summary>Forgets a socket its process closed.</summary>
+    public void Remove(int id)
+    {
+        lock (_gate)
+        {
+            _sockets.Remove(id);
+            _early.Remove(id);
+            _closed.Add(id);
+        }
+    }
+
+    /// <summary>The process ended: every socket stops accepting.</summary>
+    public void CloseAll()
+    {
+        List<RemoteHttpListenerSocket> sockets;
+        lock (_gate)
+        {
+            _allClosed = true;
+            sockets = [.. _sockets.Values];
+            _sockets.Clear();
+            _early.Clear();
+        }
+
+        foreach (RemoteHttpListenerSocket socket in sockets)
+        {
+            socket.Complete();
+        }
+    }
+}
+
+/// <summary>A listening socket seen from a worker: requests arrive as messages, replies leave as <c>hres</c>.</summary>
+internal sealed class RemoteHttpListenerSocket(RemoteProcessChannel channel, int id, IReadOnlyList<string> prefixes) : IHackHttpListenerSocket
+{
+    private readonly System.Threading.Channels.Channel<HackHttpListenerExchange> _queue =
+        System.Threading.Channels.Channel.CreateUnbounded<HackHttpListenerExchange>();
+    private int _disposed;
+
+    /// <summary>Gets the id the OS gave the socket.</summary>
+    public int Id { get; } = id;
+
+    public IReadOnlyList<string> Prefixes { get; } = prefixes;
+
+    public async ValueTask<HackHttpListenerExchange?> AcceptAsync(CancellationToken cancellationToken = default)
+    {
+        while (await _queue.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (_queue.Reader.TryRead(out HackHttpListenerExchange? exchange))
+            {
+                return exchange;
+            }
+        }
+
+        return null;
+    }
+
+    public void Respond(long exchangeId, HackHttpListenerReply reply)
+    {
+        ArgumentNullException.ThrowIfNull(reply);
+        channel.Post(WorkerMessage.Create(WorkerMessageType.HttpResponse, writer =>
+        {
+            writer.WriteNumber("p", channel.Pid);
+            writer.WriteNumber("sk", Id);
+            writer.WriteNumber("x", exchangeId);
+            WireCodec.WriteListenerReply(writer, "r", reply);
+        }));
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            channel.Listeners.Remove(Id);
+            Complete();
+            try
+            {
+                channel.Notify(RemoteOps.NetUnlisten, writer => writer.WriteNumber("sk", Id));
+            }
+            catch (Exception exception) when (exception is HackerOs.AppSdk.Diagnostics.HackProcessKilledException or InvalidOperationException)
+            {
+                // The process is going away: the OS closes its sockets itself.
+            }
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>Queues a request for <see cref="AcceptAsync"/>.</summary>
+    public void Enqueue(HackHttpListenerExchange exchange) => _queue.Writer.TryWrite(exchange);
+
+    /// <summary>Ends the queue: <see cref="AcceptAsync"/> returns <see langword="null"/>.</summary>
+    public void Complete() => _queue.Writer.TryComplete();
 }
 
 /// <summary><see cref="IAppCatalogGateway"/> in a worker. <see cref="Changed"/> is never raised: a process in a worker reads the catalog again when it needs it.</summary>

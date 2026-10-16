@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 
 namespace HackerOs.Platform.WorkerHost.Tests;
@@ -20,7 +21,10 @@ internal static class TestCommands
         Command<WorkerInfoCommand>("whereami"),
         Command<DedicatedEchoCommand>("dedicated-echo", AppExecutionHost.Dedicated),
         Command<ThrowCommand>("throw"),
-        Service<TestService>("org.test.ticker")
+        Command<ListenCommand>("listen") with { Capabilities = [AppCapabilities.NetworkListen] },
+        Service<TestService>("org.test.ticker"),
+        Web<EchoSite>("org.test.intranet", "http://intranet.hack/"),
+        Web<EchoSite>("org.test.wiki", "http://wiki.hack/")
     ];
 
     /// <summary>Lets every <c>spin</c> stuck in a terminated loopback worker return, so the test run ends cleanly.</summary>
@@ -57,6 +61,21 @@ internal static class TestCommands
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Execution = AppExecutionHost.Dedicated
+    };
+
+    private static AppManifest Web<TSite>(string id, string url) => new()
+    {
+        Id = id,
+        Name = id[(id.LastIndexOf('.') + 1)..],
+        Version = "1.0.0",
+        PublisherId = "org.test",
+        Description = "Test web app.",
+        Kind = AppKind.Web,
+        EntryPoint = new AppEntryPointManifest(AssemblyFile, typeof(TSite).FullName!),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
+        Resources = AppResourceProfileManifest.None,
+        Web = new WebAppManifest([url])
     };
 
     /// <summary>
@@ -119,6 +138,65 @@ internal static class TestCommands
     {
         public override ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("boom");
+    }
+
+    /// <summary>
+    /// <c>listen &lt;prefix&gt;...</c>: opens a <see cref="HackHttpListener"/> on the prefixes, prints the
+    /// outcome and closes it (ADR 0074: <c>EADDRINUSE</c>, privileged ports).
+    /// </summary>
+    public sealed class ListenCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            await using HackHttpListener listener = new();
+            foreach (string prefix in context.Arguments)
+            {
+                listener.Prefixes.Add(prefix);
+            }
+
+            try
+            {
+                await listener.StartAsync(cancellationToken);
+            }
+            catch (HackHttpListenerException exception)
+            {
+                await context.StandardError.WriteLineAsync($"listen: {HackNetworkErrorCodes.ToCode(exception.NetworkError)} ({exception.ErrorCode})");
+                return 1;
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                await context.StandardError.WriteLineAsync($"listen: denied: {exception.Message}");
+                return 2;
+            }
+
+            await context.StandardOutput.WriteLineAsync($"listening {string.Join(' ', listener.Prefixes)}");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// A web app that answers every request with what it received (method, host, path, cookie,
+    /// body) and where it runs; <c>/login</c> sets a cookie and redirects to <c>/</c>.
+    /// </summary>
+    public sealed class EchoSite(AppManifest manifest) : WebServerAppBase(manifest)
+    {
+        protected override Task ProcessRequestAsync(HackHttpListenerContext context, CancellationToken cancellationToken)
+        {
+            HackHttpListenerRequest request = context.Request;
+            if (request.Url.AbsolutePath == "/login")
+            {
+                context.Response.SetCookie("session", "agent");
+                context.Response.Redirect("/");
+                return Task.CompletedTask;
+            }
+
+            string where = HackExecutionContext.Current.GetType().Name == "RemoteAppExecutionContext" ? "worker" : "main";
+            request.Cookies.TryGetValue("session", out string? session);
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            context.Response.Write(
+                $"{Manifest.Name} {request.HttpMethod} {request.UserHostName}{request.RawUrl} session={session ?? "-"} body={request.ReadBodyAsString()} in={where} from={request.RemoteEndPoint.Address}\n");
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>A service that logs a line per simulated second and reports its stop.</summary>

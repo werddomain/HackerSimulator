@@ -10,7 +10,8 @@ namespace HackerOs.Platform.WorkerHost.Host;
 /// <summary>
 /// Runs commands and services in Web Workers (ADR 0070): the <see cref="IRemoteProcessHost"/> the
 /// WebAssembly hosts give the orchestrator. A command goes to a pool worker (its pipeline's, if it is
-/// a stage); a <c>Dedicated</c> process to a worker of its own.
+/// a stage); a <c>Dedicated</c> process to a worker of its own; a web app to the web worker every
+/// site shares (ADR 0074).
 /// </summary>
 public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
 {
@@ -23,7 +24,7 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
     public bool ShouldRunRemotely(AppManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        return manifest.Kind is AppKind.Terminal or AppKind.Service
+        return manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web
             && AppExecutionHosts.IsWorker(AppExecutionHosts.Of(manifest));
     }
 
@@ -112,7 +113,7 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
         }));
     }
 
-    /// <summary>A service running in a worker of its own (ADR 0070, section 3).</summary>
+    /// <summary>A service running in a worker of its own (ADR 0070, section 3), or a web app in the web worker (ADR 0074).</summary>
     private sealed class RemoteService(WorkerRemoteProcessHost host, RemoteProcessLaunch launch) : IRemoteService
     {
         private readonly TaskCompletionSource<RemoteProcessSession> _session = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -135,7 +136,9 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
             WorkerConnection worker;
             try
             {
-                worker = await host._pool.AcquireDedicatedAsync(context.CancellationToken).ConfigureAwait(false);
+                worker = AppExecutionHosts.Of(context.Manifest) == AppExecutionHost.Web
+                    ? await host._pool.AcquireWebAsync(context.CancellationToken).ConfigureAwait(false)
+                    : await host._pool.AcquireDedicatedAsync(context.CancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {

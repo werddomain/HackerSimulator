@@ -216,7 +216,9 @@ compte l'échange sur `eth0` :
 Un paquet est une requête ou une réponse (ADR 0057). Un hôte introuvable,
 injoignable, un délai dépassé ou une connexion refusée comptent la requête et
 une erreur de réception (`errs`). Un appel refusé faute de capacité ne sort
-pas : rien n'est compté. `lo` reste à zéro.
+pas : rien n'est compté. Depuis `web/3-listener-dns`, un échange avec un
+port local (cible résolue en loopback par `hackdns`) est compté sur `lo` et
+non sur `eth0` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)).
 
 ### Montages (`/proc/mounts`)
 

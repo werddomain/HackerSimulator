@@ -205,11 +205,66 @@ public static partial class AppManifestValidator
 
         if (!Enum.IsDefined(execution) || execution == AppExecutionHost.Default)
         {
-            AddError(errors, "manifest.execution.invalid", "execution", "Execution must be mainThread, pool or dedicated.");
+            AddError(errors, "manifest.execution.invalid", "execution", "Execution must be mainThread, pool, dedicated or web.");
         }
         else if (manifest.Kind == AppKind.Window && execution != AppExecutionHost.MainThread)
         {
             AddError(errors, "manifest.execution.window", "execution", "Window apps run on the main thread: they need the DOM.");
+        }
+        else if (manifest.Kind == AppKind.Web && execution is not (AppExecutionHost.Web or AppExecutionHost.MainThread))
+        {
+            // ADR 0073, section 1: the server code of every site shares the web worker.
+            AddError(errors, "manifest.execution.web", "execution", "Web apps run in the shared web worker (web) or on the main thread.");
+        }
+        else if (manifest.Kind != AppKind.Web && execution == AppExecutionHost.Web)
+        {
+            AddError(errors, "manifest.execution.web-only", "execution", "Only web apps run in the shared web worker.");
+        }
+    }
+
+    /// <summary>
+    /// Checks the web part of ADR 0073: a web app declares at least one valid, distinct URL; no
+    /// other kind declares any; and a site never asks for the file system (its data lives in the
+    /// host browser's IndexedDB, section 3).
+    /// </summary>
+    private static void ValidateWeb(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Kind != AppKind.Web)
+        {
+            if (manifest.Web is not null)
+            {
+                AddError(errors, "manifest.web.forbidden", "web", "Only web apps can declare web URLs.");
+            }
+
+            return;
+        }
+
+        if (manifest.Web is not { Urls.Count: > 0 } web)
+        {
+            AddError(errors, "manifest.web.urls.required", "web.urls", "Web apps must declare at least one URL, e.g. 'http://intranet.hack/'.");
+        }
+        else
+        {
+            HashSet<string> seen = new(StringComparer.Ordinal);
+            foreach (string url in web.Urls)
+            {
+                if (!WebAppUrls.TryParse(url, allowWildcardHost: false, out WebBinding binding, out string? error))
+                {
+                    AddError(errors, "manifest.web.url.invalid", "web.urls", error!);
+                }
+                else if (!seen.Add(binding.ToString()))
+                {
+                    AddError(errors, "manifest.web.url.duplicate", "web.urls", $"URL '{url}' is declared twice.");
+                }
+            }
+        }
+
+        foreach (string capability in manifest.Capabilities)
+        {
+            if (capability.StartsWith("filesystem.", StringComparison.Ordinal))
+            {
+                AddError(errors, "manifest.web.filesystem", "capabilities", $"A web site cannot request '{capability}': its data lives in the browser's database, not in the OS file system (ADR 0073).");
+            }
         }
     }
 
@@ -249,6 +304,7 @@ public static partial class AppManifestValidator
         }
 
         ValidateExecution(manifest, errors);
+        ValidateWeb(manifest, errors);
         ValidateComponents(manifest, errors);
 
         foreach (FileHandlerManifest handler in manifest.FileHandlers)

@@ -80,7 +80,8 @@ public sealed partial class Wave4NetworkTests
         var ports = _network.ScanPorts("localhost", 20, 100);
         Assert.NotEmpty(ports);
         Assert.Contains(ports, p => p.PortNumber == 22 && p.State == SimulatedPortState.Open);
-        Assert.Contains(ports, p => p.PortNumber == 80 && p.State == SimulatedPortState.Open);
+        // ADR 0074: localhost's simulated ports are its system daemons; HTTP belongs to the apps that listen.
+        Assert.DoesNotContain(ports, p => p.PortNumber == 80);
         Assert.DoesNotContain(ports, p => p.PortNumber == 3306);
     }
 
@@ -196,7 +197,8 @@ public sealed partial class Wave4NetworkTests
         var output = stdoutWriter.ToString();
         Assert.Contains("Nmap scan report for localhost (127.0.0.1)", output);
         Assert.Contains("22/tcp    open      ssh", output);
-        Assert.Contains("80/tcp    open      http", output);
+        // ADR 0074: nothing listens on localhost:80 until a web app opens it.
+        Assert.DoesNotContain("80/tcp", output);
     }
 
     // ── ADR 0035: nmap single-port real-network fallback ────────────────────

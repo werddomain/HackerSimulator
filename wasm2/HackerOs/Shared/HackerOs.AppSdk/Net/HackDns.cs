@@ -6,14 +6,53 @@ namespace HackerOs.AppSdk.Net;
 /// <param name="HostName">Canonical host name.</param>
 /// <param name="AddressList">Addresses of the host, never empty.</param>
 /// <param name="Aliases">Other names of the same host.</param>
-public sealed record HackHostEntry(string HostName, IReadOnlyList<IPAddress> AddressList, IReadOnlyList<string> Aliases);
+public sealed record HackHostEntry(string HostName, IReadOnlyList<IPAddress> AddressList, IReadOnlyList<string> Aliases)
+{
+    /// <summary>
+    /// Gets where the OS resolver (<c>hackdns</c>, ADR 0074 section 4) found the answer, as
+    /// <c>nslookup</c> shows it; <see cref="HackDnsSource.Unknown"/> for a reverse lookup.
+    /// </summary>
+    public HackDnsSource Source { get; init; }
+
+    /// <summary>
+    /// Gets a detail of <see cref="Source"/>: the id of the web app that declares the name, the file
+    /// and line of <c>/etc/hosts</c>, or <see langword="null"/>.
+    /// </summary>
+    public string? SourceDetail { get; init; }
+}
+
+/// <summary>
+/// The sources of the OS resolver <c>hackdns</c>, in the order it asks them (ADR 0074, section 4).
+/// </summary>
+public enum HackDnsSource
+{
+    /// <summary>Not recorded (reverse lookup, or a gateway without the resolver).</summary>
+    Unknown,
+
+    /// <summary>A line of <c>/etc/hosts</c>, which always wins.</summary>
+    HostsFile,
+
+    /// <summary><c>localhost</c> or an address of 127.0.0.0/8: this machine.</summary>
+    Loopback,
+
+    /// <summary>A URL declared by an installed web app (<c>web.urls</c> of its manifest).</summary>
+    WebApp,
+
+    /// <summary>A name bound by a hosted static site (ADR 0077).</summary>
+    HostedSite,
+
+    /// <summary>A host or site of the simulated network.</summary>
+    SimulatedNetwork
+}
 
 /// <summary>
 /// Name resolution, modeled on <see cref="Dns"/> (ADR 0056, section 6). Needs
 /// <c>network.simulated.read</c>.
 /// </summary>
 /// <remarks>
-/// Resolution reads the OS resolver (the simulated zone); a name it does not know throws a
+/// Resolution asks the OS resolver <c>hackdns</c> (ADR 0074, section 4): <c>/etc/hosts</c>, then
+/// <c>localhost</c>, the URLs of installed web apps, hosted sites and the simulated network; the
+/// answer's <see cref="HackHostEntry.Source"/> says which one answered. A name it does not know throws a
 /// <see cref="System.Net.Sockets.SocketException"/> with <see cref="System.Net.Sockets.SocketError.HostNotFound"/>, as
 /// <c>getaddrinfo</c> reports <c>EAI_NONAME</c>.
 /// </remarks>

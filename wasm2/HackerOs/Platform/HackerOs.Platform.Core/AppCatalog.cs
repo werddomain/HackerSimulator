@@ -107,6 +107,8 @@ public sealed class AppCatalog
             }
         }
 
+        ValidateWebHostNames(byId.Values, errors);
+
         HashSet<string> systemIds = new(StringComparer.Ordinal);
         foreach (string systemAppId in systemAppIds.Order(StringComparer.Ordinal))
         {
@@ -141,6 +143,34 @@ public sealed class AppCatalog
         return new AppCatalogBuildResult(
             new AppCatalog(readOnlyManifests, activationOrder, systemIds.ToFrozenSet(StringComparer.Ordinal)),
             []);
+    }
+
+    /// <summary>
+    /// ADR 0073, section 1: the resolver maps a host name to one web app, so two apps may not declare
+    /// the same name (<c>catalog.web.url-conflict</c>), whatever the port or path.
+    /// </summary>
+    private static void ValidateWebHostNames(IEnumerable<AppManifest> manifests, List<AppCatalogError> errors)
+    {
+        Dictionary<string, string> owners = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AppManifest manifest in manifests.Where(static item => item.Web is not null).OrderBy(static item => item.Id, StringComparer.Ordinal))
+        {
+            HashSet<string> ownHosts = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string url in manifest.Web!.Urls)
+            {
+                if (!WebAppUrls.TryParse(url, allowWildcardHost: false, out WebBinding binding, out _) || !ownHosts.Add(binding.Host))
+                {
+                    continue;
+                }
+
+                if (!owners.TryAdd(binding.Host, manifest.Id))
+                {
+                    errors.Add(new AppCatalogError(
+                        "catalog.web.url-conflict",
+                        manifest.Id,
+                        $"Host name '{binding.Host}' is already declared by '{owners[binding.Host]}'."));
+                }
+            }
+        }
     }
 
     private static void ValidateDependencies(

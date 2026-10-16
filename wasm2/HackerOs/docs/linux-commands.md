@@ -82,7 +82,8 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `curl` | `-I -i -v -L -s -f`, `-o FICHIER`, `-O`, `-H "Nom: valeur"`, `-A`, `-X`, `-d`/`--data-raw`/`--data-binary` (`@fichier`), `--data-urlencode`, `--json` | `-o`, `-O`, `-H`, `-A`, `-s` ajoutés par l'ADR 0064 ; corps bruts, `-i`, `--json`, `--data-*` et `-f` facultatif depuis `web/2-http-bodies` (ADR 0074 §1) : sans `-f`, une erreur HTTP affiche le corps et sort avec 0, comme le vrai `curl` ([`http-bodies.md`](http-bodies.md)). |
 | `wget` | `-O FICHIER` (`-O -` = sortie), `-P DOSSIER`, `-q`, `-S`, `--spider` | Ne remplace jamais : `fichier.1`, `fichier.2`… ; progression sur la sortie d'erreur. |
 | `ip` (`ifconfig`) | `addr`, `link`, `route`, `neigh`, `-br`, `-s`, `dev NOM` | `lo` 127.0.0.1/8 et `eth0` 192.168.1.100/24 derrière le routeur 192.168.1.1 du réseau simulé, MAC stable dérivée du nom de la machine ; compteurs réels de `/proc/net/dev`. |
-| `netstat` (`ss`) | `-t -u -l -n -a -p`, `-i`, `-r`, `-s` | Les ports à l'écoute sont ceux que le réseau simulé ouvre sur `127.0.0.1` (sondés par `HackTcpClient`, ce que `nmap localhost` voit) ; `-i` et `-s` lisent `/proc/net/dev`. |
+| `netstat` (`ss`) | `-t -u -l -n -a -p`, `-i`, `-r`, `-s` | Les ports à l'écoute viennent de la table des ports de l'OS (`HackIPGlobalProperties`, depuis `web/3`) : démons simulés de `localhost` et sockets des apps ; `-p` montre `PID/programme` pour root ou le même utilisateur, sinon `-` et la note de net-tools ; `-i` et `-s` lisent `/proc/net/dev`. |
+| `nslookup` | `<nom>` ou `<adresse>` | Interroge `hackdns` (`web/3`) : indique la source (`/etc/hosts`, loopback, app web, site hébergé ou réseau simulé) ; `NXDOMAIN` et code 1 si le nom est inconnu ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)). |
 
 ## Scripts
 

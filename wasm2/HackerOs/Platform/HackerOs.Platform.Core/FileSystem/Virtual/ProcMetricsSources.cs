@@ -32,6 +32,10 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// directory does not exist when it is missing or returns <see langword="null"/> (a host without
 /// workers, such as the server).
 /// </param>
+/// <param name="Listeners">
+/// Lazily resolves the table of listening ports (ADR 0074, section 2) behind <c>/proc/net/tcp</c>;
+/// missing, the file lists no socket.
+/// </param>
 public sealed record ProcMetricsSources(
     ICpuTimeAccounting? Cpu = null,
     IProcessIoAccounting? ProcessIo = null,
@@ -40,7 +44,8 @@ public sealed record ProcMetricsSources(
     Func<IFileSystemMountRouter>? Mounts = null,
     ICpuTimeAccountant? CpuAccountant = null,
     IMemoryAccountant? MemoryAccountant = null,
-    Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null);
+    Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null,
+    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null);
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>

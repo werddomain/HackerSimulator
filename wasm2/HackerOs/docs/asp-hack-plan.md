@@ -159,7 +159,7 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 
 ### Chantiers
 - [x] `web/2-http-bodies` ([`http-bodies.md`](http-bodies.md))
-- [ ] `web/3-listener-dns`
+- [x] `web/3-listener-dns` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md))
 - [ ] `web/4-browser-html`
 - [ ] `web/5-static-sites`
 - [ ] `web/6-mvc-core`

@@ -94,6 +94,18 @@ public static class AppCapabilities
     public const string NetworkSimulatedWrite = "network.simulated.write";
 
     /// <summary>
+    /// Listen on a TCP port of this machine with <c>HackHttpListener</c> (ADR 0074, section 2), from
+    /// 1024 up. A web app may always listen on the URLs of its own manifest without it (ADR 0073).
+    /// </summary>
+    public const string NetworkListen = "network.listen";
+
+    /// <summary>
+    /// Listen on a port below 1024, like Linux's <c>CAP_NET_BIND_SERVICE</c> (ADR 0074, section 2).
+    /// Dangerous: a privileged port is where users expect the machine's real services.
+    /// </summary>
+    public const string NetworkListenPrivileged = "network.listen.privileged";
+
+    /// <summary>
     /// Access the Game Domain engine, missions, hardware upgrades, and simulated security state.
     /// </summary>
     public const string GameplayDomainAccess = "gameplay.domain.access";
@@ -200,6 +212,11 @@ public static class AppCapabilities
             NetworkRealAccess,
             "Accéder au vrai réseau",
             "Joindre de vrais serveurs sur Internet par le serveur relais."),
+        Normal(NetworkListen, "Écouter un port réseau"),
+        Dangerous(
+            NetworkListenPrivileged,
+            "Écouter un port privilégié",
+            "Ouvrir un port inférieur à 1024, où l'on attend les vrais services de la machine (web, SSH...)."),
         Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
         Normal(ShellControl, "Agir sur le shell qui a lancé la commande"),
         Dangerous(

@@ -78,6 +78,8 @@ Détails : [`app-model.md`](app-model.md).
 | `ClipboardRead` / `Write` | `clipboard.read` / `.write` | normale | `HackClipboard` |
 | `NetworkSimulatedRead` / `Write` | `network.simulated.read` / `.write` | normale | réseau simulé |
 | `NetworkRealAccess` | `network.real.access` | **dangereuse** | vrai réseau par le serveur relais |
+| `NetworkListen` | `network.listen` | normale | `HackHttpListener` sur un préfixe hors de son manifeste |
+| `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
 | `GameplayDomainAccess` | `gameplay.domain.access` | normale | moteur de jeu |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
@@ -181,9 +183,13 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 | `HackHttpClient` | `GetAsync`, `GetStringAsync`, `GetByteArrayAsync`, `GetFromJsonAsync`, `PostAsync` (formulaire ou contenu), `PostAsJsonAsync`, `PutAsync`, `PatchAsync`, `DeleteAsync`, `SendAsync`, `DefaultRequestHeaders`, `Cookies` ; `HackHttpResponse` (`ContentType`, `MediaType`, `Content`, `ContentBytes`, `GetHeader`, `ReadFromJson`), `HackHttpRequestException` | [`sdk-network.md`](sdk-network.md), [`http-bodies.md`](http-bodies.md) |
 | `HackHttpContent` | `HackStringContent`, `HackByteArrayContent`, `HackFormUrlEncodedContent`, `HackJsonContent` ; `ContentType`, `MediaType`, `CharSet`, `Length`, `ReadAsString`, `ReadAsByteArray` | [`http-bodies.md`](http-bodies.md) |
 | `HackTcpClient` | `ProbeAsync` (ports), `DetectOperatingSystemAsync` | [`sdk-network.md`](sdk-network.md) |
+| `HackHttpListener` | `Prefixes`, `StartAsync`, `GetContextAsync`, `StopAsync`, `Close` ; `HackHttpListenerContext` (`Request`, `Response`), `HackHttpListenerRequest` (`HttpMethod`, `Url`, `Headers`, `QueryString`, `Cookies`, `Body`, `ReadForm`, `RemoteEndPoint`), `HackHttpListenerResponse` (`StatusCode`, `ContentType`, `Headers`, `OutputStream`, `RedirectLocation`, `Close`) | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
+| `HackIPGlobalProperties` | `GetActiveTcpListenersAsync` → `HackTcpListenerInfo`, `GetActiveTcpListenerEndPointsAsync` | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
+| `WebServerAppBase` (`HackerOs.AppSdk`) | `Urls`, `ProcessRequestAsync`, `OnListeningAsync` : base d'une app web (`AppKind.Web`) | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
 
 Capacités : `network.simulated.*` ; le repli sur le vrai réseau est décidé par
-l'OS et exige `network.real.access`.
+l'OS et exige `network.real.access` ; écouter hors de ses `Urls` exige
+`network.listen` (et `network.listen.privileged` sous 1024).
 
 ### Presse-papiers (`HackerOs.AppSdk.Clipboard`)
 

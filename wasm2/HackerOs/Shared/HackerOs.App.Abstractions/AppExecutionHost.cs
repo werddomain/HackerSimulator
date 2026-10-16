@@ -34,7 +34,14 @@ public enum AppExecutionHost
 
     /// <summary>A worker of its own, taken from the always-ready worker (default of a service, ADR 0071).</summary>
     [JsonStringEnumMemberName("dedicated")]
-    Dedicated = 3
+    Dedicated = 3,
+
+    /// <summary>
+    /// The shared web worker (ADR 0073, section 1): one worker for the server code of every web
+    /// site, like an IIS application pool (default and normal choice of a web app).
+    /// </summary>
+    [JsonStringEnumMemberName("web")]
+    Web = 4
 }
 
 /// <summary>Defaults and resolution of <see cref="AppExecutionHost"/> (ADR 0070, section 1).</summary>
@@ -43,7 +50,7 @@ public static class AppExecutionHosts
     /// <summary>
     /// Gets the default host of an app kind: <see cref="AppExecutionHost.MainThread"/> for a window
     /// app, <see cref="AppExecutionHost.Pool"/> for a command, <see cref="AppExecutionHost.Dedicated"/>
-    /// for a service.
+    /// for a service, <see cref="AppExecutionHost.Web"/> for a web site (ADR 0073).
     /// </summary>
     /// <param name="kind">The app kind.</param>
     /// <returns>The host the OS uses when the app declares none.</returns>
@@ -51,6 +58,7 @@ public static class AppExecutionHosts
     {
         AppKind.Terminal => AppExecutionHost.Pool,
         AppKind.Service => AppExecutionHost.Dedicated,
+        AppKind.Web => AppExecutionHost.Web,
         _ => AppExecutionHost.MainThread
     };
 
@@ -78,6 +86,6 @@ public static class AppExecutionHosts
 
     /// <summary>Gets whether <paramref name="host"/> runs the app in a Web Worker.</summary>
     /// <param name="host">An effective host.</param>
-    /// <returns><see langword="true"/> for <see cref="AppExecutionHost.Pool"/> and <see cref="AppExecutionHost.Dedicated"/>.</returns>
-    public static bool IsWorker(AppExecutionHost host) => host is AppExecutionHost.Pool or AppExecutionHost.Dedicated;
+    /// <returns><see langword="true"/> for <see cref="AppExecutionHost.Pool"/>, <see cref="AppExecutionHost.Dedicated"/> and <see cref="AppExecutionHost.Web"/>.</returns>
+    public static bool IsWorker(AppExecutionHost host) => host is AppExecutionHost.Pool or AppExecutionHost.Dedicated or AppExecutionHost.Web;
 }
