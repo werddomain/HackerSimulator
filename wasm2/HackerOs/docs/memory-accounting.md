@@ -91,7 +91,10 @@ composition. À chaque changement de contexte, il lit le compteur
 d'allocations du thread et attribue la différence depuis la lecture
 précédente au processus qui vient de quitter le thread (`From`) ; sans
 processus (rendu, compositeur, services de l'OS), elle va à l'OS. La dernière
-lecture est gardée par thread. Le chemin chaud est sans verrou et, une fois le
+lecture et le processus en cours sont gardés par thread : avant chaque lecture
+de `/proc`, la tranche en cours est attribuée (`FlushCurrentThread`), si bien
+qu'un processus qui lit son propre `/proc/self/status` y voit déjà ses
+allocations, comme une tâche en cours sous Linux. Le chemin chaud est sans verrou et, une fois le
 compteur du processus créé, sans allocation.
 
 ### Résidente

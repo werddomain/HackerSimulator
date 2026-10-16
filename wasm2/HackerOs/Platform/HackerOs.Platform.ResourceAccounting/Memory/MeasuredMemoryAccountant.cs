@@ -73,6 +73,7 @@ public sealed class MeasuredMemoryAccountant : IMemoryAccountant
         ArgumentNullException.ThrowIfNull(process);
         ArgumentNullException.ThrowIfNull(active);
 
+        _allocations.FlushCurrentThread();
         if (!IsMeasured(process))
         {
             usage = default;
@@ -93,6 +94,7 @@ public sealed class MeasuredMemoryAccountant : IMemoryAccountant
     {
         ArgumentNullException.ThrowIfNull(active);
 
+        _allocations.FlushCurrentThread();
         lock (_gate)
         {
             Refresh(active);

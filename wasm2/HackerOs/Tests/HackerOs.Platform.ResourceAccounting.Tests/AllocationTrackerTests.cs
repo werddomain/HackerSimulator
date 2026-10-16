@@ -39,6 +39,27 @@ public sealed class AllocationTrackerTests
     }
 
     [Fact]
+    public void A_running_process_is_charged_for_its_slice_so_far_on_flush()
+    {
+        // A process reading its own /proc/self/status sees its allocations, like a running task on Linux.
+        FakeHeapProbe probe = new();
+        AllocationTracker tracker = new(probe);
+        tracker.OnContextSwitch(new ExecutionContextSwitch(null, ProcessId.FromInt64(5), false));
+        probe.Allocated += 400;
+
+        tracker.FlushCurrentThread();
+        Assert.Equal(400, tracker.GetAllocatedBytes(ProcessId.FromInt64(5)));
+
+        probe.Allocated += 100;
+        tracker.OnContextSwitch(new ExecutionContextSwitch(ProcessId.FromInt64(5), null, false));
+        probe.Allocated += 30;
+        tracker.FlushCurrentThread();
+
+        Assert.Equal(500, tracker.GetAllocatedBytes(ProcessId.FromInt64(5))); // nothing counted twice
+        Assert.Equal(30, tracker.OsAllocatedBytes);
+    }
+
+    [Fact]
     public void Retain_forgets_dead_processes()
     {
         FakeHeapProbe probe = new();
