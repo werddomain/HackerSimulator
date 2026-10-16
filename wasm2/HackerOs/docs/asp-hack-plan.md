@@ -82,6 +82,8 @@ son navigateur :
 | 8 | Deux moteurs de vues : composants `.razor` rendus en HTML (`HtmlRenderer`), et vues `.cshtml` compilées au build par le compilateur Razor avec une classe de base ASP.Hack (après une preuve de faisabilité) ; compilation `.cshtml` dans l'OS plus tard. | 0076 |
 | 9 | Sites statiques déclarés en fichiers (`/etc/hackweb/sites/*.site`), servis par le service `hackwebd`, gérés par l'app « Web Server Manager » façon IIS, qui ne fait que piloter l'OS par le SDK. | 0077 |
 | 10 | Fenêtre détachée : une page s'ouvre dans une fenêtre du navigateur hôte, hors de l'OS ; cette fenêtre est pilotée par l'instance principale (lien d'affichage), sans second OS indépendant. Le même lien servira au deuxième écran. | 0078 |
+| 11 | Un site MVC garde ses données dans son dossier privé d'app (`filesystem.private.*`) ; un site Blazor interactif passe par les API MVC de son site. | 0073 |
+| 12 | Les sites internes utilisent le domaine `.hack` (`intranet.hack`) ; comme sur un vrai poste, `/etc/hosts` l'emporte toujours. | 0074 |
 
 ## 5. Chantiers
 
@@ -113,13 +115,10 @@ et `9` ; puis `8` ; puis `11`.
 - HTTPS réel, certificats, authentification complète (rôles, OAuth), OpenAPI,
   WebSockets.
 
-## 7. Questions encore ouvertes
+## 7. Questions ouvertes
 
-1. **Données d'un site** : proposé, un site MVC garde ses données dans son
-   dossier privé (`filesystem.private.*`, qui existe déjà) ; un site Blazor
-   interactif passe par les API MVC de son site.
-2. **Domaine des sites internes** : proposé `.hack` (`intranet.hack`). Comme sur
-   un vrai poste, `/etc/hosts` l'emporte toujours sur le reste.
+Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (décisions
+11 et 12 de la section 4).
 
 ## 8. Liste des tâches
 
