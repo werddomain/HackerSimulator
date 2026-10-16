@@ -42,4 +42,40 @@ public sealed class HackStopRequestedEventArgs : EventArgs
 
     /// <summary>Gets the grace period the OS gave, from <see cref="RequestedAt"/> to <see cref="Deadline"/>.</summary>
     public TimeSpan GracePeriod => Deadline - RequestedAt;
+
+    /// <summary>
+    /// Asks the OS to wait for <paramref name="work"/> (a recovery draft being written, the current
+    /// step of a copy) before it applies its default action — closing the window, ending the
+    /// service — like a suspension deferral. The OS never waits past <see cref="Deadline"/>: past it,
+    /// the process is killed whatever its deferred work.
+    /// </summary>
+    /// <param name="work">Work that must finish before the process ends.</param>
+    public void Defer(Task work)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        lock (_deferred)
+        {
+            _deferred.Add(work);
+        }
+    }
+
+    /// <summary>
+    /// Completes when every deferred work has ended, successfully or not (the OS only waits; a
+    /// failure is the app's to report).
+    /// </summary>
+    internal Task WhenDeferredWorkEndedAsync()
+    {
+        Task[] work;
+        lock (_deferred)
+        {
+            work = [.. _deferred];
+        }
+
+        return work.Length == 0
+            ? Task.CompletedTask
+            : Task.WhenAll(work).ContinueWith(static _ => { }, CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    private readonly List<Task> _deferred = [];
 }

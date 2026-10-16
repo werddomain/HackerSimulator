@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
@@ -275,7 +276,44 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
         {
             _permissionErrorHandlerAttached = true;
             AppContext.PermissionErrors.PermissionDenied += HandlePermissionDenied;
+            AppContext.StopRequested += HandleStopRequested;
         }
+    }
+
+    /// <summary>
+    /// Runs when the OS asks the app's process to stop (ADR 0069): <c>kill</c>, "End task", logout,
+    /// shutdown. The window closes once the returned task completes, or at
+    /// <see cref="HackStopRequestedEventArgs.Deadline"/> at the latest, when the OS kills the process.
+    /// An app that holds state finishes or cancels its current operation here, and keeps a recovery
+    /// draft of unsaved work instead of losing it silently. It is not called when the user closes the
+    /// window: <see cref="IWindowCloseGuard"/> asks the user then.
+    /// </summary>
+    /// <param name="e">Reason and deadline of the request.</param>
+    /// <returns>The work the OS waits for before closing the window.</returns>
+    protected virtual Task OnAppStopRequestedAsync(HackStopRequestedEventArgs e) => Task.CompletedTask;
+
+    /// <summary>
+    /// Hands the stop request to the app on the renderer's dispatcher (component state is touched)
+    /// and asks the OS to wait for it.
+    /// </summary>
+    private void HandleStopRequested(object? sender, HackStopRequestedEventArgs e)
+    {
+        Task work;
+        try
+        {
+            work = InvokeAsync(() =>
+            {
+                using IDisposable? scope = AmbientComponentDispatch.Enter(AppContext);
+                return OnAppStopRequestedAsync(e);
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            // Not attached to a renderer (never rendered): nothing on screen to save from.
+            work = OnAppStopRequestedAsync(e);
+        }
+
+        e.Defer(work);
     }
 
     /// <summary>

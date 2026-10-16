@@ -935,7 +935,27 @@ public sealed class AppLifecycleOrchestrator
         }
         catch (OperationCanceledException)
         {
-            // Expected once the process token is cancelled by StopInstanceAsync/logout/shutdown.
+            // Expected once the process token is cancelled. StopInstanceAsync (logout, shutdown,
+            // disable) unregisters the instance first and ends the process itself; a SIGTERM from
+            // another process (kill, End task, ADR 0069) leaves it registered: the service ended by
+            // honoring its token, so it completes within its grace period.
+            bool stoppedByEcosystem;
+            lock (_sync)
+            {
+                stoppedByEcosystem = !_running.ContainsKey(pid);
+            }
+
+            if (!stoppedByEcosystem && context.StopRequest is not null && _processManager.TryGetActive(pid, out _))
+            {
+                try
+                {
+                    _processManager.Complete(pid, 0);
+                }
+                catch (KeyNotFoundException)
+                {
+                    // Ended concurrently.
+                }
+            }
         }
         catch
         {
@@ -967,9 +987,45 @@ public sealed class AppLifecycleOrchestrator
                 descriptor, context, ServiceInstance: null, RunTask: null);
         }
 
+        if (context is AppExecutionContext trusted)
+        {
+            // ADR 0069: the default action of SIGTERM for a window app is to close its window,
+            // once the app's own handlers (recovery draft, current operation) are done.
+            ProcessId pid = process.Pid;
+            trusted.Control.StopRequested += request => _ = CloseWindowAfterStopRequestAsync(pid, trusted, request);
+        }
+
         ProcessRecord running = _processManager.MarkRunning(process.Pid);
 
         return new AppLaunchResult(AppLaunchStatus.Launched, running, context);
+    }
+
+    /// <summary>
+    /// Closes a window app asked to stop (<c>kill</c>, "End task", <c>CloseMainWindowAsync</c>) after
+    /// the work its handlers deferred, and before the deadline at which the process manager would
+    /// kill it. The process then ends with the request's reason, not as killed.
+    /// </summary>
+    private async Task CloseWindowAfterStopRequestAsync(ProcessId pid, AppExecutionContext context, ProcessStopRequest request)
+    {
+        try
+        {
+            TimeSpan remaining = request.Deadline - context.Clock.UtcNow;
+            await WaitForStopWorkAsync(context, context.Clock.DelayAsync(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero)).ConfigureAwait(false);
+            await StopAsync(pid, request.Reason).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is HackProcessKilledException or KeyNotFoundException or InvalidOperationException)
+        {
+            // Killed at the deadline, or ended meanwhile: nothing left to close.
+        }
+    }
+
+    /// <summary>Waits for the work the app deferred on its stop request, or until <paramref name="limit"/> completes.</summary>
+    private static async Task WaitForStopWorkAsync(IAppExecutionContext context, Task limit)
+    {
+        if (context.StopRequest is { } request)
+        {
+            await Task.WhenAny(request.WhenDeferredWorkEndedAsync(), limit).ConfigureAwait(false);
+        }
     }
 
     private async Task StopInstanceAsync(ProcessId pid, RunningInstance instance, ProcessExitReason reason)
@@ -979,10 +1035,16 @@ public sealed class AppLifecycleOrchestrator
             _running.Remove(pid);
         }
 
+        bool isService = instance.ServiceInstance is not null;
+        if (_processManager.TryGetActive(pid, out _) && AnnounceStop(pid, instance.Context, reason, isService))
+        {
+            // Logout, shutdown, disable: the app keeps a recovery draft or ends its operation first.
+            await WaitForStopWorkAsync(instance.Context, Task.Delay(StopBudget)).ConfigureAwait(false);
+        }
+
         if (instance.ServiceInstance is ServiceAppBase service && _processManager.TryGetActive(pid, out _))
         {
-            RequestServiceStop(pid, instance.Context, reason);
-            using CancellationTokenSource stopBudget = new(ServiceStopBudget);
+            using CancellationTokenSource stopBudget = new(StopBudget);
             try
             {
                 await service.StopAsync(ToServiceStopReason(reason), stopBudget.Token);
@@ -1011,27 +1073,36 @@ public sealed class AppLifecycleOrchestrator
         }
     }
 
-    /// <summary>Grace period a service gets to stop before its process is force-stopped.</summary>
-    private static readonly TimeSpan ServiceStopBudget = TimeSpan.FromSeconds(5);
+    /// <summary>Grace period an app gets to stop before its process is force-stopped.</summary>
+    private static readonly TimeSpan StopBudget = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Delivers <c>StopRequested</c> to a service the OS is about to stop (ADR 0069, section 1):
-    /// logout, shutdown, <c>systemctl stop</c>, app disabled. It comes before
-    /// <see cref="ServiceAppBase.StopAsync"/>, with the same 5-second deadline. A <c>SIGKILL</c>
-    /// (<see cref="ProcessExitReason.Killed"/>) is not announced.
+    /// Delivers <c>StopRequested</c> to an app the OS is about to stop (ADR 0069, section 1):
+    /// logout, shutdown, <c>systemctl stop</c>, app disabled, with a 5-second deadline. A
+    /// <c>SIGKILL</c> (<see cref="ProcessExitReason.Killed"/>) is not announced, nor is a window the
+    /// user closed (<see cref="ProcessExitReason.CloseRequested"/>): its close guard already asked
+    /// about unsaved work.
     /// </summary>
-    private static void RequestServiceStop(ProcessId pid, IAppExecutionContext context, ProcessExitReason reason)
+    /// <returns><see langword="true"/> when the app has a stop request to honor (this one or an earlier one).</returns>
+    private static bool AnnounceStop(ProcessId pid, IAppExecutionContext context, ProcessExitReason reason, bool isService)
     {
-        if (reason == ProcessExitReason.Killed || context is not AppExecutionContext trusted)
+        if (context is not AppExecutionContext trusted || trusted.IsKilled)
         {
-            return;
+            return false;
+        }
+
+        if (reason == ProcessExitReason.Killed || (!isService && reason == ProcessExitReason.CloseRequested))
+        {
+            return trusted.StopRequest is not null;
         }
 
         DateTimeOffset now = trusted.Clock.UtcNow;
-        if (trusted.Control.TryRequestStop(new ProcessStopRequest(pid, reason, now, now + ServiceStopBudget)))
+        if (trusted.Control.TryRequestStop(new ProcessStopRequest(pid, reason, now, now + StopBudget)))
         {
             trusted.Control.RaiseStopRequested();
         }
+
+        return true;
     }
 
     private static ServiceStopReason ToServiceStopReason(ProcessExitReason reason) => reason switch

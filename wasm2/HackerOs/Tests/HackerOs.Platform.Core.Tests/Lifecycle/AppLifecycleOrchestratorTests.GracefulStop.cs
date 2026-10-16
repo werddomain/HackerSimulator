@@ -129,6 +129,85 @@ public sealed partial class AppLifecycleOrchestratorTests
         Assert.Equal(now.AddSeconds(5), request.Deadline);
         Assert.False(StopProbe.TokenCancelledAtRequest);
         Assert.False(fixture.Manager.TryGetActive(StopProbe.Pid, out _));
+        // Announced first, then stopped by the ecosystem: OnStoppingAsync runs once.
+        Assert.Equal([ServiceStopReason.Logout], StopProbe.ServiceStops);
+    }
+
+    [Fact]
+    public async Task A_killed_service_runs_its_cleanup_once_with_the_terminated_reason()
+    {
+        StopProbe.Reset();
+        Fixture fixture = new(WaiterManifest() with
+        {
+            Id = "org.hackeros.listening-service",
+            EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(ListeningServiceApp).FullName!)
+        });
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.listening-service", principal, []));
+        await StopProbe.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        ProcessRecord stopped = await fixture.Manager.StopAsync(StopProbe.Pid, TimeSpan.FromSeconds(5), ProcessExitReason.Terminated)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal([ServiceStopReason.Terminated], StopProbe.ServiceStops);
+        Assert.NotEqual(ProcessExitReason.Timeout, stopped.ExitReason);
+    }
+
+    [Fact]
+    public async Task A_terminated_window_closes_once_its_deferred_work_is_done()
+    {
+        Fixture fixture = new(SingletonWindowManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        AppLaunchResult window = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.notes", principal, []));
+        TaskCompletionSource draftWritten = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.Context!.StopRequested += (_, e) => e.Defer(draftWritten.Task);
+
+        Task<ProcessRecord> stop = fixture.Manager.StopAsync(window.Process!.Pid, TimeSpan.FromSeconds(5), ProcessExitReason.Terminated);
+        await Task.Delay(50);
+        Assert.False(stop.IsCompleted);
+        Assert.True(fixture.Orchestrator.TryGetRunningInstance(window.Process.Pid, out _, out _));
+        draftWritten.SetResult();
+        ProcessRecord stopped = await stop.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Ended by itself with the request's reason: not timed out, not killed.
+        Assert.Equal(ProcessExitReason.Terminated, stopped.ExitReason);
+        Assert.False(fixture.Orchestrator.TryGetRunningInstance(window.Process.Pid, out _, out _));
+    }
+
+    [Fact]
+    public async Task A_window_whose_deferred_work_overruns_the_deadline_is_killed()
+    {
+        Fixture fixture = new(SingletonWindowManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        AppLaunchResult window = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.notes", principal, []));
+        window.Context!.StopRequested += (_, e) => e.Defer(new TaskCompletionSource().Task);
+
+        Task<ProcessRecord> stop = fixture.Manager.StopAsync(window.Process!.Pid, TimeSpan.FromSeconds(5), ProcessExitReason.Terminated);
+        fixture.Clock.Advance(6);
+        ProcessRecord stopped = await stop.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ProcessExitReason.Timeout, stopped.ExitReason);
+        Assert.Throws<HackProcessKilledException>(() => window.Context.FileSystem);
+    }
+
+    [Fact]
+    public async Task Logout_announces_itself_to_windows_but_a_user_close_does_not()
+    {
+        Fixture fixture = new(SingletonWindowManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        AppLaunchResult closed = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.notes", principal, []));
+        List<ProcessExitReason> heardByClosed = [];
+        closed.Context!.StopRequested += (_, e) => heardByClosed.Add(e.Reason);
+        await fixture.Orchestrator.StopAsync(closed.Process!.Pid, ProcessExitReason.CloseRequested);
+
+        AppLaunchResult open = await fixture.Orchestrator.LaunchAsync(new AppLaunchRequest("org.hackeros.notes", principal, []));
+        List<ProcessExitReason> heardByOpen = [];
+        open.Context!.StopRequested += (_, e) => heardByOpen.Add(e.Reason);
+        await fixture.Orchestrator.StopAllAsync(ProcessExitReason.Logout);
+
+        Assert.Empty(heardByClosed);
+        Assert.Equal([ProcessExitReason.Logout], heardByOpen);
+        Assert.Equal(ProcessExitReason.Logout, fixture.Manager.GetHistory().Last(r => r.Pid == open.Process!.Pid).ExitReason);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
@@ -162,6 +241,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         public static bool TimerFired;
         public static long Iterations;
         public static long Yields;
+        public static readonly List<ServiceStopReason> ServiceStops = [];
 
         public static void Reset()
         {
@@ -174,6 +254,10 @@ public sealed partial class AppLifecycleOrchestratorTests
             TimerFired = false;
             Iterations = 0;
             Yields = 0;
+            lock (ServiceStops)
+            {
+                ServiceStops.Clear();
+            }
         }
 
         public static void Listen()
@@ -238,6 +322,16 @@ public sealed partial class AppLifecycleOrchestratorTests
             StopProbe.Listen();
             StopProbe.Started.TrySetResult();
             return Task.Delay(Timeout.InfiniteTimeSpan, sessionCancellationToken);
+        }
+
+        protected override ValueTask OnStoppingAsync(ServiceStopReason reason, CancellationToken cancellationToken)
+        {
+            lock (StopProbe.ServiceStops)
+            {
+                StopProbe.ServiceStops.Add(reason);
+            }
+
+            return ValueTask.CompletedTask;
         }
     }
 
