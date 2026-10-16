@@ -472,6 +472,33 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Éditeur : remplacer et tout remplacer (`rebuild/4-text-editor`, ADR 0058 §3, [`text-editor.md`](text-editor.md)).
 - [x] Console : complétion par Tab et onglets (`rebuild/4-terminal`, ADR 0058 §4, [`terminal-console.md`](terminal-console.md)).
 
+### Après la phase 4 (hors plan initial, ADR 0061 à 0065)
+- [x] Terminal sur xterm.js, discipline de ligne en C#, écran alternatif (`rebuild/terminal-xterm`, PR #115, ADR 0061, [`terminal-emulator.md`](terminal-emulator.md)).
+- [x] Éditeur de code en atelier à la VS Code (`rebuild/code-editor-workspace` et `rebuild/code-editor-dock`, PR #117 à #119, ADR 0062, [`code-editor.md`](code-editor.md)) et composants d'app intégrables, terminal embarqué par `IHackTerminal` (ADR 0063, [`embedded-components.md`](embedded-components.md)).
+- [x] Shell POSIX, scripts, jobs, apps lancées par leur nom, commandes Linux, `nano` (PR #120 et #121, ADR 0064, [`shell-interpreter.md`](shell-interpreter.md), [`linux-commands.md`](linux-commands.md)).
+- [x] Presse-papiers de l'OS partagé avec l'hôte (PR #122, ADR 0065, [`clipboard.md`](clipboard.md)) — voir la phase 4 ci-dessus.
+
+### Vérification finale de la phase 4 (2026-10-16)
+
+Repasse de `rebuild/4-sdk-boundary-final` sur `rebuild/base` après les PR #115
+à #122, avant la fusion des phases 1 à 4 dans `main` (PR #114) :
+
+- [x] Frontière du SDK : la solution compile sans aucun avertissement ni
+  diagnostic `HOSAPP0002`, `HOSAPP0003`, `HOSAPP0030`, `HOSAPP0031` ou
+  `HOSSDK0001` ; aucune référence de `Apps/` ou du SDK vers `Platform.*`,
+  `Infrastructure.*` ou `Server.*` ; plus de mécanisme d'exemption ;
+  `SdkBoundarySourceTests` couvre toutes les apps, nouvelles comprises.
+- [x] Apps et composants ajoutés depuis #113 : SDK public seulement, capacités
+  déclarées dans leur `[AppManifest]`, aucune injection de service interne.
+- [x] Aucune API `[Obsolete]` utilisée dans `Apps/`.
+- [x] Une dérive corrigée : la copie du terminal contournait le presse-papiers
+  de l'OS et `clipboard.config` ; elle passe maintenant par le pont de l'ADR
+  0065 ([`terminal-emulator.md`](terminal-emulator.md)).
+- [x] Toutes les suites `Tests/*.Tests` hors E2E passent ; documentation sans
+  lien mort, index complets (`docs/README.md`, `docs/old/README.md`).
+
+Détail : [`app-sdk.md`](app-sdk.md#vérification-finale-de-la-phase-4-2026-10-16).
+
 ## 13. Références
 
 - [`old/README.md`](old/README.md) : index de l'ancienne documentation.
