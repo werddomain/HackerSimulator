@@ -10,7 +10,7 @@ using RouteGenerator = generator::HackerOs.Tools.WebRouteGenerator.WebRouteGener
 
 namespace HackerOs.AppSdk.Web.Tests.Generator;
 
-/// <summary>The build-time route generator: its errors and its output (ADR 0081).</summary>
+/// <summary>The build-time route generator: its errors and its output (ADR 0082).</summary>
 public sealed class WebRouteGeneratorTests
 {
     private const string Usings = """

@@ -19,7 +19,7 @@ public sealed class HackWebApplicationBuilder
     /// <param name="applicationId">The app id (<c>com.example.intranet</c>).</param>
     /// <param name="applicationName">The display name.</param>
     /// <param name="urls">The URLs the site serves.</param>
-    /// <param name="routes">The controller actions, as generated at build (ADR 0081).</param>
+    /// <param name="routes">The controller actions, as generated at build (ADR 0082).</param>
     public HackWebApplicationBuilder(string applicationId, string applicationName, IReadOnlyList<string> urls, HackControllerRouteTable routes)
     {
         ArgumentException.ThrowIfNullOrEmpty(applicationId);

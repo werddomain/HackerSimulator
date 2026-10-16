@@ -4,7 +4,7 @@
     ASP.Hack (ADR 0076): an ASP.NET MVC-like layer over the SDK's HackHttpListener. A site is a web
     app process (AppKind.Web) running in the shared web worker; this library gives it a middleware
     pipeline, routing, controllers, model binding, results, per-request DI and a cookie session.
-    The controller route table is generated at build by HackerOs.Tools.WebRouteGenerator (ADR 0081),
+    The controller route table is generated at build by HackerOs.Tools.WebRouteGenerator (ADR 0082),
     which links Routing/HackRouteTemplate.cs from this project.
   -->
   <PropertyGroup>

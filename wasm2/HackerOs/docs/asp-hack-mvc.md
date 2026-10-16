@@ -1,7 +1,7 @@
 # ASP.Hack MVC : pipeline, routage, contrôleurs et session
 
 Chantier `web/6-mvc-core` de la phase web. Décisions : [ADR 0076](adr/0076-asp-hack-mvc.md)
-(ASP.Hack MVC) et [ADR 0081](adr/0081-asp-hack-route-source-generator.md) (table
+(ASP.Hack MVC) et [ADR 0082](adr/0082-asp-hack-route-source-generator.md) (table
 de routes produite par un générateur de sources). Plan :
 [`asp-hack-plan.md`](asp-hack-plan.md). Socle réseau : [`listening-ports-and-dns.md`](listening-ports-and-dns.md).
 
@@ -90,7 +90,7 @@ UseExceptionPage : toute exception du pipeline → page d'erreur (sinon « 500 I
 | `Mvc/` | Attributs, `HackControllerBase` / `HackController` / `HackApiController`, `HackModelBinder`, `HackModelStateDictionary`, filtres, résultats, `HackUrlHelper`, `HackActionInvoker`, `HackResults`, contrat `HackControllerActionDescriptor`. |
 | `Sessions/` | `HackSession`, `HackSessionOptions`, `HackSessionStore`. |
 | `Diagnostics/` | `HackExceptionPage` (page d'erreur au style console). |
-| `Tools/HackerOs.Tools.WebRouteGenerator` | Générateur de sources Roslyn (ADR 0081) : table de routes et `<Nom>WebHost`, erreurs `HOSWEB0001` à `HOSWEB0007`. |
+| `Tools/HackerOs.Tools.WebRouteGenerator` | Générateur de sources Roslyn (ADR 0082) : table de routes et `<Nom>WebHost`, erreurs `HOSWEB0001` à `HOSWEB0007`. |
 
 ## Démarrage
 
@@ -258,11 +258,11 @@ session en mémoire d'ASP.NET Core).
 - [x] Bibliothèque `HackerOs.AppSdk.Web` : projet, solution, frontière du SDK.
 - [x] HTTP : contexte, requête, réponse, en-têtes, cookies, formulaire, échange indépendant du transport.
 - [x] Routage : gabarits, contraintes, préséance, `405`/`OPTIONS`/`HEAD`, génération d'URL.
-- [x] Générateur de sources (ADR 0081) branché sur les apps, erreurs `HOSWEB0001` à `HOSWEB0007`.
+- [x] Générateur de sources (ADR 0082) branché sur les apps, erreurs `HOSWEB0001` à `HOSWEB0007`.
 - [x] Contrôleurs, actions, filtres, `OnActionExecuting`.
 - [x] Liaison de modèle, `DataAnnotations`, `ModelState`, `400` automatique, `415`.
 - [x] Résultats JSON, Content, File, Redirect (dont `LocalRedirect`, `RedirectToAction`), `Created*`, problèmes RFC 9457.
 - [x] DI par requête, session par cookie, page d'erreur.
 - [x] `WebAppDefinition`, `HackWebHost` et entrée générée ; manifeste produit par le générateur de manifestes.
 - [x] Tests unitaires, du générateur et de bout en bout (`curl`, deux modes).
-- [x] ADR 0081, ce document, index, plan.
+- [x] ADR 0082, ce document, index, plan.

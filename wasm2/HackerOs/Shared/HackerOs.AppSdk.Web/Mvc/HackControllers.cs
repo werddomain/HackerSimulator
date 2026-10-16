@@ -23,7 +23,7 @@ public sealed class HackControllerContext : HackActionContext
 /// <remarks>
 /// A controller is a public, non-abstract class whose name ends with <c>Controller</c> by convention;
 /// its public instance methods are actions unless marked <c>[NonAction]</c>. A new instance serves each
-/// request, built with the services of the request scope by the generated code (ADR 0081).
+/// request, built with the services of the request scope by the generated code (ADR 0082).
 /// </remarks>
 public abstract class HackControllerBase
 {

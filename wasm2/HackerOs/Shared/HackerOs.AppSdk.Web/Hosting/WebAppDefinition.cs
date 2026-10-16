@@ -9,7 +9,7 @@ namespace HackerOs.AppSdk.Web.Hosting;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Declare it <c>partial</c>: the route generator (ADR 0081) then supplies <see cref="AppDefinition.EntryPoint"/>,
+/// Declare it <c>partial</c>: the route generator (ADR 0082) then supplies <see cref="AppDefinition.EntryPoint"/>,
 /// a generated <c>&lt;Name&gt;WebHost</c> process class that starts the site with the controllers of the
 /// assembly. A definition can still give its own entry point (a class deriving from <see cref="HackWebHost"/>).
 /// </para>

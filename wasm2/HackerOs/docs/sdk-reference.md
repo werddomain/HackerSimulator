@@ -163,6 +163,7 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 | API | Membres | Capacité | Document |
 |---|---|---|---|
 | `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `Changed` ; `HackAppInfo`, `HackOpenFileResult`, `HackAppLaunchException` | lecture : aucune ; lancement : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2) |
+| `HackBrowser` | `OpenAsync(url)`, `OpenDetachedAsync(url)` (fenêtre détachée, ADR 0078) ; `AppId`, `DetachedArgument` (`--detached`) | `apps.launch` | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackAppManagement` | `GetAllAsync`, `UninstallAsync`, `ReinstallAsync` ; `HackInstallScope`, `HackAppInstallState` | `apps.manage` | [`app-installation.md`](app-installation.md) |
 
 ### Processus et services
@@ -272,6 +273,7 @@ annulation.
 | `SettingOriginBadge` (`.Settings`) | Badge d'origine d'un paramètre (défaut, système, utilisateur, verrouillé) | [`settings-files.md`](settings-files.md) |
 | `BrowserFileDownloader` (`.Interop`) | `DownloadFileFromStreamAsync(fileName, stream)` : télécharger vers le vrai disque | [`file-explorer.md`](file-explorer.md) |
 | `BrowserClipboard` (`.Interop`) | `[Obsolete]` (ADR 0065) : utiliser `HackClipboard.SetTextAsync`, recopié vers l'hôte | [`clipboard.md`](clipboard.md) |
+| `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceContent` (`.Display`) | Fenêtres détachées du navigateur hôte (ADR 0078) : `OpenAsync(DisplaySurfaceOptions)` → `DisplaySurfaceOpenResult` (`Opened`, `Blocked`, `Unavailable`), `Surfaces`, `SurfacesChanged`, `CloseAllAsync` ; surface `Id`, `Title`, `Width`, `Height`, `HasFocus`, `State`, `Changed`, `SetTitleAsync`, `FocusAsync`, `CloseAsync` ; `<DisplaySurfaceContent Surface="…">` y dessine son contenu | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
 
 ### Vue de fichiers (`HackerOs.AppSdk.FileView`)

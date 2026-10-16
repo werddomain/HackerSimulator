@@ -1,7 +1,7 @@
 namespace HackerOs.AppSdk.Web.Mvc;
 
 // ADR 0076 §3: the attributes keep ASP.NET Core MVC's names; ASP.NET is never referenced, so they do
-// not clash. The route generator (ADR 0081) reads them at build time; nothing reads them by reflection.
+// not clash. The route generator (ADR 0082) reads them at build time; nothing reads them by reflection.
 
 /// <summary>
 /// An attribute route on a controller (prefix of its actions) or an action:

@@ -60,7 +60,7 @@
   </ItemGroup>
 
   <!--
-    ASP.Hack route generator (ADR 0081): a Roslyn source generator every app compiles with. It only
+    ASP.Hack route generator (ADR 0082): a Roslyn source generator every app compiles with. It only
     writes code when the app references HackerOs.AppSdk.Web (controllers, WebAppDefinition); for other
     apps it does nothing. Analyzer only: never a runtime dependency of the app.
   -->

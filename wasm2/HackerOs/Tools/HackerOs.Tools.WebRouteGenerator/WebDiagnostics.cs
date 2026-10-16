@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 namespace HackerOs.Tools.WebRouteGenerator;
 
 /// <summary>
-/// Build errors of ASP.Hack sites (ADR 0076 §3, ADR 0081). Every one is an error: a route that the
+/// Build errors of ASP.Hack sites (ADR 0076 §3, ADR 0082). Every one is an error: a route that the
 /// build cannot prove unambiguous or bindable never reaches the browser.
 /// </summary>
 internal static class WebDiagnostics

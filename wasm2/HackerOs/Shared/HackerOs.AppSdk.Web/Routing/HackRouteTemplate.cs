@@ -1,6 +1,6 @@
 // This file is compiled twice: in HackerOs.AppSdk.Web (net10.0), where the router matches requests
 // with it, and linked into HackerOs.Tools.WebRouteGenerator (netstandard2.0), where the build checks
-// and normalizes every controller route (ADR 0081). Keep it free of APIs netstandard2.0 lacks
+// and normalizes every controller route (ADR 0082). Keep it free of APIs netstandard2.0 lacks
 // (ranges, spans, string.Contains(char), NotNullWhen...).
 using System;
 using System.Collections.Generic;

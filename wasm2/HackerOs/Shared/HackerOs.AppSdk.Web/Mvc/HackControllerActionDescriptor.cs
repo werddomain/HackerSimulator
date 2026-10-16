@@ -1,7 +1,7 @@
 namespace HackerOs.AppSdk.Web.Mvc;
 
 /// <summary>
-/// One controller action as the build sees it (ADR 0081): names, routes, parameters, filters, and
+/// One controller action as the build sees it (ADR 0082): names, routes, parameters, filters, and
 /// the generated code that creates the controller, binds the arguments and calls the method. The
 /// route generator writes one per action into the site's <see cref="HackControllerRouteTable"/>;
 /// nothing is discovered by reflection at run time.
@@ -107,7 +107,7 @@ public enum HackBindingSource
 /// <param name="Source">Where its value comes from.</param>
 public sealed record HackActionParameterDescriptor(string Name, Type ParameterType, HackBindingSource Source);
 
-/// <summary>The controller actions of a site, written by the route generator (ADR 0081).</summary>
+/// <summary>The controller actions of a site, written by the route generator (ADR 0082).</summary>
 /// <param name="Actions">Every action of every controller of the assembly.</param>
 public sealed record HackControllerRouteTable(IReadOnlyList<HackControllerActionDescriptor> Actions)
 {
