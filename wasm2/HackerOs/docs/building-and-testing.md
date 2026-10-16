@@ -219,12 +219,22 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
 
 - **GitHub Actions** ne tourne plus (les jobs échouent sans exécuteur) : un
   build et des tests locaux verts font foi avant de fusionner.
-- Dans un conteneur, les suites E2E échouent aussi sur la branche de base
-  (version de Chromium attendue par Playwright absente) : comparer avec la
-  base plutôt que conclure à une régression.
-- Phase 5 : chaque PR `rebuild/5-*` vérifie que les trois hôtes démarrent
-  jusqu'au bureau ([`execution-isolation-plan.md`](execution-isolation-plan.md),
-  section 5.2) ; `build/verify-hosts.sh` l'automatisera.
+- Dans un conteneur cloud, les suites Playwright tournent sur le Chromium de
+  `/opt/pw-browsers` ([repli](#chromium-pour-playwright)). État au
+  2026-10-16 (après `dotnet build HackerOs.sln -c Release`, une suite à la
+  fois) :
+  - `HackerOs.E2E.Tests` : 16/16 ;
+  - `HackerOs.UI.E2E.Tests` : 8/10. Deux échecs de l'app, pas du harnais :
+    violations axe (`color-contrast` dans le lanceur et l'explorateur,
+    `aria-required-attr` dans Paramètres et le Code Editor,
+    `aria-prohibited-attr` dans le Code Editor) et bouton « Back » du shell
+    mobile absent après le rechargement de `ClockPanelMobileToggleTests` ;
+  - `HackerOs.Pwa.E2E.Tests` : 0/5, le conteneur n'a pas d'IPv6 et la suite
+    se lie volontairement à `[::1]` (le service worker refuse
+    `127.0.0.1` et `localhost`) : `SocketException : Address family not
+    supported by protocol`.
+- Phase 5 : chaque PR `rebuild/5-*` colle la sortie de
+  `build/verify-hosts.sh` ([Vérifier les trois hôtes](#vérifier-les-trois-hôtes)).
 - Un test de `AppInstallationService` est instable (environ une fois sur
   douze), sur la base aussi.
 
@@ -235,3 +245,5 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
 - [x] Build de la solution et contournements Linux connus.
 - [x] Lancement des trois hôtes et publication de la PWA.
 - [x] Suites de tests, filtrage, outils de test des apps, état connu.
+- [x] `build/verify-hosts.sh` : les trois hôtes, les combinaisons des mesures, le test de démarrage (`rebuild/5-host-smoke`).
+- [x] Repli des suites Playwright sur le Chromium du conteneur et leur état dans un conteneur.
