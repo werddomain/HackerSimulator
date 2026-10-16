@@ -115,6 +115,9 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
 - Dans un conteneur, les suites E2E échouent aussi sur la branche de base
   (version de Chromium attendue par Playwright absente) : comparer avec la
   base plutôt que conclure à une régression.
+- Phase 5 : chaque PR `rebuild/5-*` vérifie que les trois hôtes démarrent
+  jusqu'au bureau ([`execution-isolation-plan.md`](execution-isolation-plan.md),
+  section 5.2) ; `build/verify-hosts.sh` l'automatisera.
 - Un test de `AppInstallationService` est instable (environ une fois sur
   douze), sur la base aussi.
 

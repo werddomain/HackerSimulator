@@ -74,6 +74,9 @@ public partial class SystemMonitorWindow
     [JSInvokable]
     public async Task SetWindowVisible(bool visible)
     {
+        // A JavaScript callback runs outside the app's ambient scope (ADR 0043): enter it first, so
+        // this work is the app's, not the compositor's (ADR 0067).
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
         bool resumed = visible && !_windowVisible;
         _windowVisible = visible;
         if (!resumed)
@@ -82,9 +85,7 @@ public partial class SystemMonitorWindow
             return;
         }
 
-        // A JavaScript callback runs outside the app's ambient scope (ADR 0043): enter it, then
-        // refresh at once rather than showing a reading from before the window was minimized.
-        using IDisposable scope = HackExecutionContext.Enter(AppContext);
+        // Refresh at once rather than showing a reading from before the window was minimized.
         await RefreshAndRenderAsync();
     }
 

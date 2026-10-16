@@ -47,10 +47,11 @@ l'ADR 0055 est retirée de `build/HackerOs.Apps.targets`.
 | `Processes/EndTaskRunner.cs` | arrêt d'une sélection, refus signalés processus par processus |
 | `Tabs/*.razor` | un composant par onglet et le panneau de détail, chacun avec son CSS isolé |
 
-Les composants des onglets qui appellent le SDK (`ProcessesTab`,
-`ProcessDetailPanel`, `ServicesTab`) héritent de `HackComponentBase` : leurs
+Tous les composants des onglets héritent de `HackComponentBase` : leurs
 gestionnaires d'événements s'exécutent dans le contexte ambiant de l'app
-(ADR 0043).
+(ADR 0043). `PerformanceTab`, `DiskTab` et `NetworkTab`, qui n'appellent pas le
+SDK, y sont passés en phase 5 pour que leur temps soit compté à l'app et non au
+compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-existantes)).
 
 ## Fonctionnement
 
