@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<!-- Razor SDK: MvcSite has .razor views and an embedded wwwroot (web/7, ADR 0083). -->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,6 +13,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
