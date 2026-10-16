@@ -104,6 +104,23 @@
     font-size: 10px;
 }
 
+/* ADR 0066: discreet mark on a column whose values are simulated, not measured. */
+.est-tag {
+    margin-left: 6px;
+    padding: 0 4px;
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    color: var(--hos-text-secondary, #8b949e);
+    border: 1px dashed color-mix(in srgb, var(--hos-text-secondary, #8b949e) 55%, transparent);
+    border-radius: var(--hos-radius-sm, 4px);
+    opacity: 0.75;
+    cursor: help;
+}
+
 .proc-name {
     display: block;
     color: var(--hos-text-primary, #c9d1d9);

@@ -73,6 +73,11 @@ gestionnaires d'événements s'exécutent dans le contexte ambiant de l'app
 
 ### Processus
 
+- Mention « estimated » (ADR 0066) : l'en-tête des colonnes CPU et Memory porte
+  une petite étiquette en pointillés tant qu'une ligne au moins vient du
+  simulateur (`CpuSource:` / `MemSource:` de `/proc/<pid>/status` différent de
+  `measured`, lus dans `HackProcess.Status`). Son infobulle le dit. Voir
+  [`resource-accounting.md`](resource-accounting.md).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.

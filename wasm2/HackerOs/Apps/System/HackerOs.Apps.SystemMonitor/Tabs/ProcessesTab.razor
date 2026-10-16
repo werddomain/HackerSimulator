@@ -49,7 +49,10 @@
                             <th class="sortable @(numeric ? "num" : null) @(Table.SortColumn == column ? "sorted" : null)"
                                 aria-sort="@AriaSort(column)"
                                 @onclick="() => Table.ToggleSort(column)">
-                                @label<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
+                                @label@if (Table.IsEstimated(column))
+                                {
+                                    <span class="est-tag" title="Simulated from the app's resource profile, not measured (CpuSource/MemSource in /proc/&lt;pid&gt;/status)">estimated</span>
+                                }<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
                             </th>
                         }
                     </tr>

@@ -28,6 +28,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
+using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
@@ -162,6 +163,12 @@ public static class EcosystemServiceCollectionExtensions
         // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
         // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
         // the persistence, the filesystem service and each app's network gateway.
+        // Optional measured CPU and memory (ADR 0066): AddHackerOsResourceAccounting, called by the
+        // host before this method, may already have registered them. Otherwise both measurements are
+        // off and every per-process figure stays simulated, exactly as before phase 5.
+        services.TryAddSingleton(ResourceAccountingPlan.Disabled);
+        services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
+        services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
         services.AddScoped<IProcessIoAccounting, ProcessIoAccounting>();
         services.AddScoped<IBlockDeviceStatistics>(_ => new BlockDeviceStatistics());
         services.AddScoped<INetworkInterfaceStatistics, NetworkInterfaceStatistics>();
@@ -205,7 +212,9 @@ public static class EcosystemServiceCollectionExtensions
                         provider.GetRequiredService<IProcessIoAccounting>(),
                         provider.GetRequiredService<IBlockDeviceStatistics>(),
                         provider.GetRequiredService<INetworkInterfaceStatistics>(),
-                        () => provider.GetRequiredService<IFileSystemMountRouter>()))),
+                        () => provider.GetRequiredService<IFileSystemMountRouter>(),
+                        provider.GetRequiredService<ICpuTimeAccountant>(),
+                        provider.GetRequiredService<IMemoryAccountant>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));

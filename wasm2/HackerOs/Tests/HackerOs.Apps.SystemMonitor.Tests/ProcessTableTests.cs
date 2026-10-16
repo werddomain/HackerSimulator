@@ -133,6 +133,26 @@ public sealed class ProcessTableTests
         return table;
     }
 
+    [Fact]
+    public void Only_columns_with_simulated_values_are_marked_estimated()
+    {
+        // ADR 0066: the discreet "estimated" mark follows CpuSource/MemSource of /proc/<pid>/status.
+        ProcessTable table = new();
+        table.SetRows(
+        [
+            Row(1, "a", "org.a", 1, 1) with { CpuEstimated = false, MemoryEstimated = true },
+            Row(2, "b", "org.b", 1, 1) with { CpuEstimated = false, MemoryEstimated = false }
+        ]);
+
+        Assert.False(table.IsEstimated(ProcessColumn.Cpu));
+        Assert.True(table.IsEstimated(ProcessColumn.Memory));
+        Assert.False(table.IsEstimated(ProcessColumn.DiskRead));
+
+        table.SetRows([Row(1, "a", "org.a", 1, 1) with { CpuEstimated = true }]);
+        Assert.True(table.IsEstimated(ProcessColumn.Cpu));
+        Assert.False(table.IsEstimated(ProcessColumn.Memory));
+    }
+
     private static long[] Pids(ProcessTable table) => [.. table.Visible.Select(static row => row.Pid)];
 
     private static ProcessRow Row(long pid, string name, string appId, double cpu, long memory) =>

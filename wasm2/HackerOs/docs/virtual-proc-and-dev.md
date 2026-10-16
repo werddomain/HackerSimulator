@@ -77,11 +77,17 @@ Kind:	window
 Session:	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 VmRSS:	3072 kB
 Cpu:	12.5
+CpuSource:	simulated
+MemSource:	simulated
 ```
 
 `Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. `Cpu` est
 un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
-facile à analyser.
+facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
+`Cpu` et `VmRSS` : `measured` quand la mesure de la phase 5 répond pour ce
+processus, `simulated` sinon (mesure coupée, pas encore implémentée, ou
+processus du contenu de jeu) ; voir
+[`resource-accounting.md`](resource-accounting.md).
 
 Choix de calcul :
 

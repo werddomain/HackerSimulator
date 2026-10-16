@@ -82,13 +82,15 @@ Ordre :
 - [x] Écrire ce plan et les ADR 0066 à 0070 (2026-10-16).
 
 ### Mesure optionnelle (ADR 0066)
-- [ ] Propriétés MSBuild, `.targets` et référence conditionnelle.
-- [ ] `appsettings.json` des trois hôtes et lecture à la composition.
-- [ ] Retour au simulateur, `CpuSource`/`MemSource`, mention « estimated ».
-- [ ] Tests des quatre combinaisons, sans crochet quand c'est coupé.
+Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-accounting.md)).
+- [x] Propriétés MSBuild, `.targets` et référence conditionnelle.
+- [x] `appsettings.json` des trois hôtes et lecture à la composition.
+- [x] Retour au simulateur, `CpuSource`/`MemSource`, mention « estimated ».
+- [x] Tests des quatre combinaisons, sans crochet quand c'est coupé.
+- [x] Crochet commun de changement de contexte (`AsyncLocal` avec rappel, contrat d'observateur `IExecutionContextSwitchObserver`, diffuseur), installé seulement si une mesure est active.
 
 ### CPU (ADR 0067)
-- [ ] Crochet de changement de contexte et comptage `utime`/`stime`/compositeur.
+- [ ] Comptage `utime`/`stime`/compositeur sur le crochet de changement de contexte (crochet livré par `5-accounting-switches`).
 - [ ] `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`.
 - [ ] Long tasks, « Not responding », `Responding:` et colonne du gestionnaire de tâches.
 - [ ] Test de surcoût.

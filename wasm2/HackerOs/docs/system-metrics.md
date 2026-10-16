@@ -28,6 +28,20 @@ simulé : le navigateur ne mesure pas le CPU par app.
 La phase 5 remplacera le CPU et la mémoire simulés par une mesure réelle,
 optionnelle (ADR 0066 à 0068, [`execution-isolation-plan.md`](execution-isolation-plan.md)).
 
+### Deux sources pour le CPU et la mémoire d'un processus (ADR 0066)
+
+| Source | Quand | Indicateur |
+| --- | --- | --- |
+| **simulée** : `IResourceSimulator`, profil `ResourceProfile` de l'app | mesure coupée au build (`HackerOsCpuAccounting`, `HackerOsMemoryAccounting`) ou dans `appsettings.json` (`HackerOs:ResourceAccounting`), mesure pas encore implémentée, processus du contenu de jeu | `CpuSource: simulated`, `MemSource: simulated` ; mention « estimated » dans le gestionnaire de tâches |
+| **mesurée** : `ICpuTimeAccountant`, `IMemoryAccountant` alimentés par le crochet de changement de contexte | mesure livrée et activée, et le comptable répond pour ce processus | `CpuSource: measured`, `MemSource: measured` |
+
+Le fournisseur `/proc` reçoit les deux comptables par `ProcMetricsSources`
+(`CpuAccountant`, `MemoryAccountant`) et retombe sur le simulateur dès qu'un
+comptable ne répond pas. Le chantier `5-accounting-switches` livre les
+interrupteurs, le crochet et les comptables nuls : tout reste `simulated`
+jusqu'aux chantiers `5-cpu-accounting` et `5-memory-accounting`. Détails :
+[`resource-accounting.md`](resource-accounting.md).
+
 Les compteurs vivent en mémoire, partent de zéro au démarrage et ne sont jamais
 persistés.
 

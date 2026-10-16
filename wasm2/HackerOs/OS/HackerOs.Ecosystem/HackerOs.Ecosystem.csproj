@@ -57,4 +57,7 @@
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 
+  <!-- ADR 0066: optional CPU/memory accounting (HackerOsCpuAccounting, HackerOsMemoryAccounting). -->
+  <Import Project="..\..\build\HackerOs.ResourceAccounting.targets" />
+
 </Project>

@@ -227,7 +227,16 @@ public partial class SystemMonitorWindow
         process.CpuUsage,
         process.WorkingSet64,
         rate.ReadPerSecond,
-        rate.WritePerSecond);
+        rate.WritePerSecond,
+        CpuEstimated: !IsMeasured(process, "CpuSource"),
+        MemoryEstimated: !IsMeasured(process, "MemSource"));
+
+    /// <summary>
+    /// Reads a <c>CpuSource:</c>/<c>MemSource:</c> line of <c>/proc/&lt;pid&gt;/status</c> (ADR 0066).
+    /// A missing line (an OS older than phase 5) means simulated.
+    /// </summary>
+    private static bool IsMeasured(HackProcess process, string field) =>
+        process.Status.TryGetValue(field, out string? source) && string.Equals(source, "measured", StringComparison.Ordinal);
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

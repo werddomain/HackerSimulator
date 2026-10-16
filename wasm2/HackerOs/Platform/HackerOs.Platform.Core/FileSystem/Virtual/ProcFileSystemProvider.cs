@@ -303,9 +303,27 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderStatus(ProcessRecord process)
     {
+        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a game-content
+        // process that runs no code) the simulator's sample applies, exactly as before phase 5.
         ProcessResourceSample? sample = _resources.GetHistory(process.Pid).LastOrDefault();
-        long rssKb = (long)Math.Round((sample?.MemoryUsageBytes ?? 0) / 1024d, MidpointRounding.AwayFromZero);
-        double cpuPercent = (sample?.CpuUsage ?? 0) * 100d;
+        ResourceMeasurementSource cpuSource = ResourceMeasurementSource.Simulated;
+        double cpuUsage = sample?.CpuUsage ?? 0;
+        if (_metrics.CpuAccountant is { } cpuAccountant && cpuAccountant.TryGetCpuUsage(process.Pid, out double measuredCpu))
+        {
+            cpuSource = ResourceMeasurementSource.Measured;
+            cpuUsage = measuredCpu;
+        }
+
+        ResourceMeasurementSource memorySource = ResourceMeasurementSource.Simulated;
+        double memoryBytes = sample?.MemoryUsageBytes ?? 0;
+        if (_metrics.MemoryAccountant is { } memoryAccountant && memoryAccountant.TryGetResidentBytes(process.Pid, out long measuredBytes))
+        {
+            memorySource = ResourceMeasurementSource.Measured;
+            memoryBytes = measuredBytes;
+        }
+
+        long rssKb = (long)Math.Round(memoryBytes / 1024d, MidpointRounding.AwayFromZero);
+        double cpuPercent = cpuUsage * 100d;
 
         StringBuilder builder = new();
         AppendField(builder, "Name", ShortName(process.AppId));
@@ -318,7 +336,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "Session", process.SessionId.ToString());
         AppendField(builder, "VmRSS", $"{rssKb.ToString(CultureInfo.InvariantCulture)} kB");
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
+        AppendField(builder, "CpuSource", SourceText(cpuSource));
+        AppendField(builder, "MemSource", SourceText(memorySource));
         return builder.ToString();
+
+        static string SourceText(ResourceMeasurementSource source) =>
+            source == ResourceMeasurementSource.Measured ? "measured" : "simulated";
     }
 
     private string RenderSystemFile(string name) => name switch

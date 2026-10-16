@@ -42,6 +42,11 @@ public enum ProcessColumn
 /// <param name="MemoryBytes">Resident memory, in bytes.</param>
 /// <param name="ReadPerSecond">Disk bytes read per second.</param>
 /// <param name="WritePerSecond">Disk bytes written per second.</param>
+/// <param name="CpuEstimated">
+/// Whether <paramref name="CpuPercent"/> is simulated rather than measured (<c>CpuSource:</c> of
+/// <c>/proc/&lt;pid&gt;/status</c> other than <c>measured</c>, ADR 0066).
+/// </param>
+/// <param name="MemoryEstimated">Whether <paramref name="MemoryBytes"/> is simulated (<c>MemSource:</c>).</param>
 public sealed record ProcessRow(
     long Pid,
     long? ParentPid,
@@ -53,7 +58,9 @@ public sealed record ProcessRow(
     double CpuPercent,
     long MemoryBytes,
     double ReadPerSecond,
-    double WritePerSecond);
+    double WritePerSecond,
+    bool CpuEstimated = false,
+    bool MemoryEstimated = false);
 
 /// <summary>
 /// The state behind the Processes tab, without any UI: filter, sort and multiple selection, with
@@ -114,6 +121,19 @@ public sealed class ProcessTable
 
     /// <summary>Gets the selected rows, in display order.</summary>
     public IReadOnlyList<ProcessRow> SelectedRows => [.. Visible.Where(row => _selected.Contains(row.Pid))];
+
+    /// <summary>
+    /// Gets whether <paramref name="column"/> shows at least one simulated value, so the header can
+    /// carry the discreet "estimated" mention of ADR 0066. Only the CPU and memory columns can be.
+    /// </summary>
+    /// <param name="column">The column.</param>
+    /// <returns><see langword="true"/> when a row of the column is estimated.</returns>
+    public bool IsEstimated(ProcessColumn column) => column switch
+    {
+        ProcessColumn.Cpu => _rows.Any(static row => row.CpuEstimated),
+        ProcessColumn.Memory => _rows.Any(static row => row.MemoryEstimated),
+        _ => false
+    };
 
     /// <summary>Replaces the rows with a fresh reading, keeping the sort, the filter and the selection of surviving PIDs.</summary>
     /// <param name="rows">The processes of the last refresh.</param>
