@@ -15,8 +15,9 @@ fichier ou redirection, l'injection de dépendances par requête et une session
 par cookie. Le site est une app de genre `web` (ADR 0073) : l'OS la démarre au
 premier accès à l'une de ses URL et son code tourne dans le worker `web` partagé.
 
-Hors de ce chantier : vues `.razor`, `View()`, `PartialView()`, anti-falsification
-et `wwwroot` (`web/7-razor-views`), vues `.cshtml` (`web/8`), sites Blazor (`web/9`).
+Vues `.razor`, `View()`, `PartialView()`, anti-falsification et `wwwroot` :
+[`asp-hack-razor-views.md`](asp-hack-razor-views.md) (`web/7`, ADR 0083). Hors de
+ce chantier : vues `.cshtml` (`web/8`), sites Blazor (`web/9`).
 
 ## Exemple
 
@@ -210,14 +211,16 @@ session en mémoire d'ASP.NET Core).
 
 ## Contrat pour `web/7` et `web/9`
 
+`web/7` a réalisé sa part de ce contrat ([`asp-hack-razor-views.md`](asp-hack-razor-views.md)) ;
+le contrat reste la référence de `web/9`.
+
 - **Résultats.** Une vue est un `IHackActionResult` : `ExecuteResultAsync(HackActionContext)`
   reçoit `HttpContext`, `RouteValues`, `ActionDescriptor` et `ModelState`, et
   écrit dans `HttpContext.Response`. `View()` et `PartialView()` seront ajoutés à
   `HackController` (le contrôleur à vues), pas à `HackApiController`.
 - **Recherche de vue.** `HackControllerActionDescriptor.ControllerName` et
   `ActionName` donnent `Views/<Contrôleur>/<Action>` ; le générateur de routes
-  peut décrire d'autres éléments de l'assembly si `web/7` en a besoin (il lit
-  déjà tous les types).
+  écrit aussi la table des vues (`HackWebGeneratedRoutes.Views`, ADR 0083 §2).
 - **URL.** `IHackUrlHelper` (`Url` du contrôleur) est la base des helpers de
   vue (`HackLink`, `HackForm`) ; `HackLinkGenerator` est dans les services.
 - **Middlewares.** `UseStaticFiles()` sera un middleware ordinaire

@@ -3,7 +3,10 @@ using System.Text.Json.Serialization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Web.Hosting;
 using HackerOs.AppSdk.Web.Http;
+using HackerOs.AppSdk.Web.Antiforgery;
 using HackerOs.AppSdk.Web.Mvc;
+using HackerOs.AppSdk.Web.Tests.Views.Pages;
+using HackerOs.AppSdk.Web.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HackerOs.AppSdk.Web.Tests.Site;
@@ -26,6 +29,7 @@ public sealed partial class TestSite : WebAppDefinition
         builder.Mvc.Filters.Add(new TraceFilter("global"));
         HackWebApplication app = builder.Build();
         app.UseExceptionPage();
+        app.UseStaticFiles();
         app.Use(async (context, next) =>
         {
             context.Response.Headers["X-Powered-By"] = "ASP.Hack";
@@ -245,6 +249,59 @@ public sealed class HomeController : HackController
             context.Result = Content("stopped by controller");
         }
     }
+}
+
+/// <summary>A controller of pages rendered by Razor views (web/7, ADR 0083).</summary>
+public sealed class PagesController(NoteStore store) : HackController
+{
+    public IHackActionResult Index() => View(store);
+
+    public IHackActionResult Details(int id) => store.Find(id) is Note note ? View(note) : NotFound();
+
+    [HttpGet]
+    public IHackActionResult Edit() => View(new ContactForm { Name = "Ada", Age = 36 });
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IHackActionResult Edit(ContactForm form)
+    {
+        if (!ModelState.IsValid)
+        {
+            ModelState.AddModelError(string.Empty, "Please fix the errors below.");
+            return View(form);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [IgnoreAntiforgeryToken]
+    public string Open() => "open";
+
+    public IHackActionResult Plain() => View();
+
+    public IHackActionResult PlainModel() => View("Plain", "model");
+
+    public IHackActionResult Partial(int id) => PartialView("_NoteCard", store.Find(id));
+
+    public IHackActionResult Typed() => View<Loose>();
+
+    public IHackActionResult Shared() => View("Error");
+
+    public IHackActionResult Absolute() => View("~/Views/Shared/Error.razor");
+
+    public IHackActionResult Missing() => View("Nowhere");
+
+    public IHackActionResult WrongModel() => View("Details", "not a note");
+
+    public IHackActionResult Broken() => View();
+
+    public IHackActionResult NoBody() => View();
+
+    public IHackActionResult Injected() => View();
+
+    public IHackActionResult Status() => new HackViewResult { ViewName = "Plain", StatusCode = 418 };
 }
 
 /// <summary>A site without exception page nor controllers: a failure is a bare <c>500</c>.</summary>

@@ -1,6 +1,8 @@
 using HackerOs.AppSdk.Web.Mvc;
 using HackerOs.AppSdk.Web.Routing;
+using HackerOs.AppSdk.Web.Antiforgery;
 using HackerOs.AppSdk.Web.Sessions;
+using HackerOs.AppSdk.Web.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,7 +23,26 @@ public sealed class HackWebApplicationBuilder
     /// <param name="urls">The URLs the site serves.</param>
     /// <param name="routes">The controller actions, as generated at build (ADR 0082).</param>
     public HackWebApplicationBuilder(string applicationId, string applicationName, IReadOnlyList<string> urls, HackControllerRouteTable routes)
+        : this(applicationId, applicationName, urls, routes, HackViewTable.Empty, null)
     {
+    }
+
+    /// <summary>Initializes a builder with the site's views.</summary>
+    /// <param name="applicationId">The app id (<c>com.example.intranet</c>).</param>
+    /// <param name="applicationName">The display name.</param>
+    /// <param name="urls">The URLs the site serves.</param>
+    /// <param name="routes">The controller actions, as generated at build (ADR 0082).</param>
+    /// <param name="views">The views under <c>Views/</c>, as generated at build (ADR 0083).</param>
+    /// <param name="definitionType">The site definition's type; its assembly holds the embedded <c>wwwroot</c>.</param>
+    public HackWebApplicationBuilder(
+        string applicationId,
+        string applicationName,
+        IReadOnlyList<string> urls,
+        HackControllerRouteTable routes,
+        HackViewTable views,
+        Type? definitionType)
+    {
+        ArgumentNullException.ThrowIfNull(views);
         ArgumentException.ThrowIfNullOrEmpty(applicationId);
         ArgumentNullException.ThrowIfNull(urls);
         ArgumentNullException.ThrowIfNull(routes);
@@ -29,6 +50,8 @@ public sealed class HackWebApplicationBuilder
         ApplicationName = string.IsNullOrEmpty(applicationName) ? applicationId : applicationName;
         Urls = urls;
         Routes = routes;
+        Views = views;
+        DefinitionType = definitionType;
     }
 
     /// <summary>Gets the app id.</summary>
@@ -42,6 +65,15 @@ public sealed class HackWebApplicationBuilder
 
     /// <summary>Gets the controller actions of the site.</summary>
     public HackControllerRouteTable Routes { get; }
+
+    /// <summary>Gets the views of the site (<c>Views/**/*.razor</c>).</summary>
+    public HackViewTable Views { get; }
+
+    /// <summary>Gets the site definition's type, whose assembly embeds <c>wwwroot/</c>; <see langword="null"/> when unknown.</summary>
+    public Type? DefinitionType { get; }
+
+    /// <summary>Gets the anti-forgery settings (cookie, field and header names).</summary>
+    public HackAntiforgeryOptions Antiforgery { get; } = new();
 
     /// <summary>Gets the site's services (<c>Microsoft.Extensions.DependencyInjection</c>); a scope per request.</summary>
     public IServiceCollection Services { get; } = new ServiceCollection();
@@ -57,7 +89,7 @@ public sealed class HackWebApplicationBuilder
 
     /// <summary>
     /// Builds the application: adds the framework's services (JSON and MVC options, links, sessions,
-    /// <see cref="TimeProvider"/>) and creates the service provider. Call it once.
+    /// view engine, anti-forgery, <see cref="TimeProvider"/>) and creates the service provider. Call it once.
     /// </summary>
     /// <returns>The application, whose pipeline is still to describe.</returns>
     /// <exception cref="InvalidOperationException">Already built.</exception>
@@ -75,6 +107,9 @@ public sealed class HackWebApplicationBuilder
         Services.AddSingleton(new HackLinkGenerator(endpoints));
         Services.TryAddSingleton(TimeProvider.System);
         Services.TryAddSingleton<HackSessionStore>();
+        Services.AddSingleton(Antiforgery);
+        Services.TryAddSingleton<HackAntiforgery>();
+        Services.TryAddSingleton(new HackViewEngine(Views));
         ServiceProvider provider = Services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         _application = new HackWebApplication(this, provider, endpoints);
         return _application;
