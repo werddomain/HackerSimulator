@@ -39,16 +39,28 @@ public interface ICpuTimeAccountant
 /// Measured memory per process (ADR 0066, 0068). Same model as <see cref="ICpuTimeAccountant"/>:
 /// a <see langword="false"/> answer means the simulated value applies.
 /// </summary>
+/// <remarks>
+/// The reader passes the live process table with every call: the accountant uses it to split the
+/// real managed heap between the processes still alive and to forget the ones that are gone, like
+/// the kernel freeing a reaped task's pages. It never resolves the process table itself.
+/// </remarks>
 public interface IMemoryAccountant
 {
     /// <summary>Gets whether this accountant measures anything at all (<see langword="false"/> for the null accountant).</summary>
     bool IsMeasuring { get; }
 
-    /// <summary>Gets the measured resident memory (<c>VmRSS</c>) of <paramref name="pid"/>.</summary>
-    /// <param name="pid">The process to read.</param>
-    /// <param name="bytes">The resident size in bytes.</param>
-    /// <returns><see langword="true"/> when the process is measured; otherwise the simulator applies.</returns>
-    bool TryGetResidentBytes(ProcessId pid, out long bytes);
+    /// <summary>Gets the measured memory of one process, layer by layer (ADR 0068, section 1).</summary>
+    /// <param name="process">The process to read.</param>
+    /// <param name="active">Every live process, among which the resident heap is split.</param>
+    /// <param name="usage">The layers of <paramref name="process"/>.</param>
+    /// <returns><see langword="true"/> when the process is measured; otherwise the simulator applies (a game-content process that runs no code).</returns>
+    bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage usage);
+
+    /// <summary>Gets the measured memory of the whole machine, behind <c>/proc/meminfo</c>.</summary>
+    /// <param name="active">Every live process.</param>
+    /// <param name="usage">The machine-wide totals, shared images counted once.</param>
+    /// <returns><see langword="true"/> when memory is measured; otherwise the simulator applies.</returns>
+    bool TryGetSystemMemory(IReadOnlyList<ProcessRecord> active, out SystemMemoryUsage usage);
 }
 
 /// <summary>

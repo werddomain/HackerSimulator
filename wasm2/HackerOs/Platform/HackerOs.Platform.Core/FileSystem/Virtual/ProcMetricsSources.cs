@@ -22,8 +22,10 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// <c>/proc/&lt;pid&gt;/status</c>; missing or not measuring, the simulated value applies.
 /// </param>
 /// <param name="MemoryAccountant">
-/// Measured memory per process (ADR 0066, 0068), behind <c>VmRSS</c> and <c>MemSource</c>; missing
-/// or not measuring, the simulated value applies.
+/// Measured memory per process (ADR 0066, 0068), behind <c>VmRSS</c>, the layer fields
+/// (<c>RssAnon</c>, <c>RssFile</c>, <c>VmData</c>, <c>VmExe</c>, <c>HackAllocBytes</c>) and
+/// <c>MemSource</c> of <c>/proc/&lt;pid&gt;/status</c>, and the measured lines of
+/// <c>/proc/meminfo</c>; missing or not measuring, the simulated value applies.
 /// </param>
 public sealed record ProcMetricsSources(
     ICpuTimeAccounting? Cpu = null,

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.ResourceAccounting\HackerOs.Platform.ResourceAccounting.csproj" />
     <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
   </ItemGroup>
 
 </Project>

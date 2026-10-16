@@ -74,6 +74,10 @@ public sealed class ResourceAccountingPlanTests
         Assert.False(NullCpuTimeAccountant.Instance.IsMeasuring);
         Assert.False(NullCpuTimeAccountant.Instance.TryGetCpuUsage(Simulation.Abstractions.Processes.ProcessId.FromInt64(1), out _));
         Assert.False(NullMemoryAccountant.Instance.IsMeasuring);
-        Assert.False(NullMemoryAccountant.Instance.TryGetResidentBytes(Simulation.Abstractions.Processes.ProcessId.FromInt64(1), out _));
+        Assert.False(NullMemoryAccountant.Instance.TryGetSystemMemory([], out _));
+        Assert.False(NullKernelMemoryLedger.Instance.IsTracking);
+        Assert.Same(
+            Simulation.Abstractions.Processes.KernelMemoryCharge.None,
+            NullKernelMemoryLedger.Instance.Charge(Simulation.Abstractions.Processes.ProcessId.FromInt64(1), Simulation.Abstractions.Processes.KernelMemoryKind.Pipe, 10));
     }
 }

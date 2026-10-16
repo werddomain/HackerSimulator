@@ -18,9 +18,10 @@ l'[ADR 0067](adr/0067-measured-cpu-time.md) §1 que les chantiers
   actuel, avec un indicateur : `CpuSource:` / `MemSource:` dans
   `/proc/<pid>/status`, mention « estimated » dans le gestionnaire de tâches.
 
-Aucune mesure n'est encore faite : même active, une mesure lit le simulateur et
-`/proc` affiche `simulated`. Les chantiers suivants enregistreront de vrais
-`ICpuTimeAccountant` / `IMemoryAccountant` et des observateurs du crochet.
+La mémoire est mesurée depuis le chantier `5-memory-accounting`
+([`memory-accounting.md`](memory-accounting.md)) : son `AllocationTracker` est
+un observateur du crochet, et `MeasuredMemoryAccountant` remplace le comptable
+nul. Le CPU lit encore le simulateur jusqu'au chantier `5-cpu-accounting`.
 
 ## Architecture
 
@@ -134,15 +135,19 @@ services.AddSingleton<ICpuTimeAccountant>(provider =>
 });
 ```
 
-`AddHackerOsResourceAccounting` enregistre les comptables nuls par
-`TryAddSingleton` : une mesure enregistrée avant eux les remplace.
+`AddHackerOsResourceAccounting` enregistre les comptables nuls (et
+`NullKernelMemoryLedger`) par `TryAddSingleton` : une mesure enregistrée avant
+eux les remplace. La mémoire le fait déjà (`AddMeasuredMemory`, sous
+`ResourceAccountingFeatures.IsMemoryAccountingSupported`).
 
 ### Lecture
 
 - `/proc/<pid>/status` : `Cpu` et `VmRSS` prennent la valeur mesurée quand le
   comptable répond, sinon celle du simulateur ; `CpuSource:` et `MemSource:`
   valent `measured` ou `simulated`
-  ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)).
+  ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)). Une mémoire mesurée
+  ajoute ses couches après `VmRSS`, et `/proc/meminfo` ses lignes
+  ([`memory-accounting.md`](memory-accounting.md)).
 - Gestionnaire de tâches : l'en-tête des colonnes CPU et Memory porte une
   étiquette `estimated` (petite, en pointillés, monospace) tant qu'une ligne
   au moins est simulée. L'app lit `HackProcess.Status` : le SDK ne change pas.

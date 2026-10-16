@@ -1,4 +1,5 @@
 using System.Globalization;
+using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Simulation.Abstractions.Processes;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 #if HACKEROS_RESOURCE_ACCOUNTING
 using HackerOs.Platform.ResourceAccounting;
+using HackerOs.Platform.ResourceAccounting.Memory;
 #endif
 
 namespace HackerOs.Ecosystem;
@@ -45,7 +47,7 @@ public static class ResourceAccountingServiceCollectionExtensions
     /// <param name="configuration">The host configuration (<c>appsettings.json</c>); <see langword="null"/> reads as an absent section.</param>
     /// <returns>The resolved plan, also registered as a singleton.</returns>
     public static ResourceAccountingPlan AddHackerOsResourceAccounting(this IServiceCollection services, IConfiguration? configuration) =>
-        services.AddHackerOsResourceAccounting(ReadSettings(configuration), CompiledSupport, hookInstaller: null);
+        services.AddHackerOsResourceAccounting(ReadSettings(configuration), CompiledSupport, hookInstaller: null, images: null);
 
     /// <summary>
     /// Composes the accounting for explicit settings and build support. Tests use it to cover every
@@ -59,13 +61,18 @@ public static class ResourceAccountingServiceCollectionExtensions
     /// <see langword="null"/> uses the real hook on <c>HackExecutionContext</c>. Never called when no
     /// measurement is active.
     /// </param>
+    /// <param name="images">
+    /// The image of each app for the memory measurement (ADR 0068); <see langword="null"/> uses the
+    /// host's built-in catalog, <see cref="BuildKnownLazyApps.Images"/>.
+    /// </param>
     /// <returns>The resolved plan, also registered as a singleton.</returns>
     /// <exception cref="InvalidOperationException">A measurement is active but this assembly was built without the accounting project.</exception>
     public static ResourceAccountingPlan AddHackerOsResourceAccounting(
         this IServiceCollection services,
         ResourceAccountingSettings settings,
         ResourceAccountingBuildSupport build,
-        Func<IExecutionContextSwitchObserver, IDisposable>? hookInstaller)
+        Func<IExecutionContextSwitchObserver, IDisposable>? hookInstaller,
+        IReadOnlyDictionary<string, AppImage>? images = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(settings);
@@ -82,18 +89,46 @@ public static class ResourceAccountingServiceCollectionExtensions
             IDisposable installation = (hookInstaller ?? ContextSwitchHook.Install)(dispatcher);
             services.AddSingleton(dispatcher);
             services.AddSingleton(new ResourceAccountingHookInstallation(installation));
+            if (plan.MemoryActive && ResourceAccountingFeatures.IsMemoryAccountingSupported)
+            {
+                AddMeasuredMemory(services, dispatcher, images ?? BuildKnownLazyApps.Images);
+            }
 #else
             throw new InvalidOperationException(
                 "A resource measurement is active but HackerOs.Platform.ResourceAccounting is not built into this host.");
 #endif
         }
 
-        // No measurement is implemented yet (chantiers 5-cpu-accounting, 5-memory-accounting): an
-        // active measurement still reads the simulator, and /proc says "simulated".
+        // A measurement that is off (or, for the CPU, not implemented yet) reads the simulator, and
+        // /proc says "simulated". Registered measurements above win over these.
         services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
         services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
+        services.TryAddSingleton<IKernelMemoryLedger>(NullKernelMemoryLedger.Instance);
         return plan;
     }
+
+#if HACKEROS_RESOURCE_ACCOUNTING
+    /// <summary>
+    /// Composes the measured memory of ADR 0068: the allocation layer registered on the hook now, so
+    /// it counts from the first switch, the kernel-memory ledger the OS services charge, and the
+    /// accountant <c>/proc</c> reads.
+    /// </summary>
+    private static void AddMeasuredMemory(
+        IServiceCollection services,
+        ContextSwitchDispatcher dispatcher,
+        IReadOnlyDictionary<string, AppImage> images)
+    {
+        IManagedHeapProbe probe = GcManagedHeapProbe.Instance;
+        AllocationTracker allocations = new(probe);
+        KernelMemoryLedger kernel = new();
+        MeasuredMemoryAccountant accountant = new(allocations, kernel, images, probe);
+        services.AddSingleton(new MemoryAccountingRegistration(dispatcher.Register(allocations)));
+        services.AddSingleton(allocations);
+        services.AddSingleton(kernel);
+        services.AddSingleton<IKernelMemoryLedger>(kernel);
+        services.AddSingleton<IMemoryAccountant>(accountant);
+    }
+#endif
 
     /// <summary>
     /// Reads the <c>HackerOs:ResourceAccounting</c> section. A missing value takes its default
@@ -153,3 +188,10 @@ public static class ResourceAccountingServiceCollectionExtensions
 /// </summary>
 /// <param name="Installation">The installation returned by the hook installer.</param>
 public sealed record ResourceAccountingHookInstallation(IDisposable Installation);
+
+/// <summary>
+/// The memory measurement's registration on the context-switch dispatcher, kept alive with the
+/// service provider like the hook itself (ADR 0068).
+/// </summary>
+/// <param name="Registration">The dispatcher registration of the allocation layer.</param>
+public sealed record MemoryAccountingRegistration(IDisposable Registration);

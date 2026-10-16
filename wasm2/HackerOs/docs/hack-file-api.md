@@ -118,6 +118,12 @@ await using StreamWriter writer = new(flux);
 await writer.WriteLineAsync("ligne");
 ```
 
+Quand l'OS mesure la mémoire (ADR 0068), le tampon d'un flux d'écriture est
+compté dans la part noyau du processus (`VmData` de `/proc/<pid>/status`)
+jusqu'à la fermeture du flux, par `IAppFileSystemGateway.ChargeStreamBuffer()`
+(méthode par défaut qui ne charge rien : une passerelle de test n'a rien à
+faire). Voir [`memory-accounting.md`](memory-accounting.md).
+
 Le `Flush()` synchrone ne fait rien, et un `Dispose()` synchrone d'un flux qui
 contient des octets non publiés lève `InvalidOperationException` au lieu de les
 perdre. Le flux garde la passerelle de l'app qui l'a ouvert.

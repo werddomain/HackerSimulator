@@ -1,5 +1,6 @@
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.ResourceAccounting;
+using HackerOs.Platform.ResourceAccounting.Memory;
 using HackerOs.Simulation.Abstractions.Processes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,10 +53,14 @@ public sealed class ResourceAccountingCompositionTests
             Assert.Same(provider.GetRequiredService<ContextSwitchDispatcher>(), installed[0]);
         }
 
-        // Nothing measures yet (chantiers 5-cpu-accounting / 5-memory-accounting): every value
-        // stays simulated whatever the combination.
+        // The CPU does not measure yet (chantier 5-cpu-accounting). Memory measures exactly when it
+        // is built and enabled (ADR 0068), and its allocation layer then rides the hook.
+        bool memoryActive = buildMemory && enabledMemory;
         Assert.False(provider.GetRequiredService<ICpuTimeAccountant>().IsMeasuring);
-        Assert.False(provider.GetRequiredService<IMemoryAccountant>().IsMeasuring);
+        Assert.Equal(memoryActive, provider.GetRequiredService<IMemoryAccountant>().IsMeasuring);
+        Assert.Equal(memoryActive, provider.GetRequiredService<IKernelMemoryLedger>().IsTracking);
+        Assert.Equal(memoryActive, provider.GetService<AllocationTracker>() is not null);
+        Assert.Equal(memoryActive ? 1 : 0, provider.GetService<ContextSwitchDispatcher>()?.ObserverCount ?? 0);
         Assert.False(ContextSwitchHook.IsInstalled);
     }
 
@@ -88,6 +93,7 @@ public sealed class ResourceAccountingCompositionTests
         Assert.Same(ResourceAccountingPlan.Disabled, provider.GetRequiredService<ResourceAccountingPlan>());
         Assert.Same(NullCpuTimeAccountant.Instance, provider.GetRequiredService<ICpuTimeAccountant>());
         Assert.Same(NullMemoryAccountant.Instance, provider.GetRequiredService<IMemoryAccountant>());
+        Assert.Same(NullKernelMemoryLedger.Instance, provider.GetRequiredService<IKernelMemoryLedger>());
     }
 
     [Fact]
