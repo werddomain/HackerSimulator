@@ -227,6 +227,30 @@ public sealed class LogFileWriterTests
     }
 
     [Fact]
+    public async Task Attaching_another_filesystem_never_waits_for_a_flush_stuck_on_the_previous_one()
+    {
+        // HackerOs.Server: a reload disconnects the old circuit mid-flush (a JS call that never
+        // returns), then the new circuit attaches its own filesystem during boot.
+        LogTestFileSystem first = await LogTestFileSystem.CreateAsync();
+        LogTestFileSystem second = await LogTestFileSystem.CreateAsync();
+        HangingWriteFileSystem dead = new(first.Service);
+        LogFileWriter writer = new(first.Clock);
+        await writer.AttachAsync(dead);
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "old circuit");
+        Task stuck = writer.FlushAsync();
+        await dead.WriteStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "new circuit");
+        await writer.AttachAsync(second.Service).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(stuck.IsCompleted);
+        Assert.EndsWith("kernel: new circuit", Assert.Single(await second.ReadLinesAsync("/var/log/syslog")), StringComparison.Ordinal);
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "later");
+        await writer.FlushAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(2, (await second.ReadLinesAsync("/var/log/syslog")).Length);
+    }
+
+    [Fact]
     public async Task Logout_triggers_a_flush()
     {
         LogTestFileSystem fs = await LogTestFileSystem.CreateAsync();
@@ -290,5 +314,31 @@ public sealed class LogFileWriterTests
 
         public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(string.Empty)));
+    }
+
+    /// <summary>A filesystem whose writes never complete and ignore cancellation, like a JS call on a dead circuit.</summary>
+    private sealed class HangingWriteFileSystem(IFileSystemService inner) : IFileSystemService
+    {
+        private readonly TaskCompletionSource _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WriteStarted => _writeStarted.Task;
+
+        public string ProviderId => inner.ProviderId;
+
+        public async ValueTask<FileSystemMutationResult> WriteAsync(FileSystemWriteRequest request, IFileSystemContentSource content, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default)
+        {
+            _writeStarted.TrySetResult();
+            await new TaskCompletionSource().Task;
+            throw new InvalidOperationException("unreachable");
+        }
+
+        public ValueTask<FileSystemMutationResult> CreateAsync(FileSystemCreateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.CreateAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(FileSystemReadRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.ReadAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemDirectorySnapshot>> EnumerateAsync(FileSystemEnumerateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.EnumerateAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> MoveAsync(FileSystemMoveRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.MoveAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> CopyAsync(FileSystemCopyRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.CopyAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> DeleteAsync(FileSystemDeleteRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.DeleteAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemEntrySnapshot>> StatAsync(FileSystemStatRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.StatAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> SetPermissionsAsync(FileSystemSetPermissionsRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.SetPermissionsAsync(request, context, cancellationToken);
     }
 }

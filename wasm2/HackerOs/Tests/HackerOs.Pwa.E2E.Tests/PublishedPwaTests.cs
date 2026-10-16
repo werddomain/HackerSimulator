@@ -27,7 +27,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         await host.StartAsync(fixture.V1WwwrootPath, port);
 
         using IPlaywright playwright = await Playwright.CreateAsync();
-        await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
             new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
         IPage page = await browser.NewPageAsync();
         List<string> failures = PwaTestSupport.AttachDiagnostics(page);
@@ -68,7 +68,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
             await host.StartAsync(fixture.V1WwwrootPath, port);
 
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             PwaTestSupport.AttachDiagnostics(page);
@@ -101,7 +101,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         await host.StartAsync(fixture.V1WwwrootPath, port);
 
         using IPlaywright playwright = await Playwright.CreateAsync();
-        await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
             new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
         await using IBrowserContext context = await browser.NewContextAsync();
         IPage page = await context.NewPageAsync();
@@ -136,7 +136,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         await host.StartAsync(fixture.V1WwwrootPath, port);
 
         using IPlaywright playwright = await Playwright.CreateAsync();
-        await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
             new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
         IPage page = await browser.NewPageAsync();
         await PwaTestSupport.InstallBlobCaptureAsync(page);
@@ -220,7 +220,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         await host.StartAsync(fixture.V1WwwrootPath, port);
 
         using IPlaywright playwright = await Playwright.CreateAsync();
-        await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
             new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
         await using IBrowserContext context = await browser.NewContextAsync();
         IPage page = await context.NewPageAsync();

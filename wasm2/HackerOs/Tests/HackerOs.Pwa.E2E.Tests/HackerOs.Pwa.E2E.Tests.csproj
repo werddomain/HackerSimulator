@@ -28,4 +28,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HackerOs.E2E.Support\HackerOs.E2E.Support.csproj" />
+    <Using Include="HackerOs.E2E.Support" />
+  </ItemGroup>
+
 </Project>
