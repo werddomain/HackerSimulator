@@ -71,6 +71,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `systemctl` (`service`) | `list-units`, `list-unit-files`, `status`, `start`, `stop`, `restart`, `enable`, `disable`, `mask`, `unmask`, `is-active`, `is-enabled` | Les apps `Service` du catalogue vues comme des unités `nom.service` ; automatique = `enabled`, manuel = `disabled`, désactivé = `masked`. Agir sur le service d'une autre app demande `services.manage`. `service NOM ACTION` est accepté. |
 | `watch` | `-n SECONDES`, `-t`, `-g`, `-e` | Relance la ligne par `IShellSession.RunAsync` (sous-shell : tubes et variables marchent) et affiche sa dernière sortie en plein écran ; `q` ou Ctrl+C quitte. |
 | `sleep` | `N[smhd]…`, décimaux | Ctrl+C l'interrompt (130). |
+| `stress` | `-c N`, `-t SECONDES`, `--yield` | Comme `stress(1)` : N boucles de calcul sans rendre la main (`--yield` : avec points d'arrêt). Tourne dans un Web Worker : le bureau reste fluide, le cœur passe « not-responding », `kill -9` termine le worker ([`worker-processes.md`](worker-processes.md)). |
 | `whoami` | — | `root` sous `sudo`. |
 | `which` | `NOM…` | `/usr/bin/NOM` pour une commande installée, `/bin/sh` pour le shell ; code 1 sinon. |
 
@@ -102,7 +103,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail` avec les passerelles factices.
-- `Tests/HackerOs.Ecosystem.Tests` : 74 apps intégrées dont 62 commandes.
+- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées dont 63 commandes (`stress` ajoutée par `rebuild/5-worker-processes`).
 
 ## Liste des tâches
 

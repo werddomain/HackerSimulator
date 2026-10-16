@@ -42,7 +42,10 @@ component tree via `AddInteractiveWebAssemblyRenderMode`. It exists solely
 because a Blazor Web App host gives a better local debugging loop (server-side
 build/reload, `UseWebAssemblyDebugging`) than debugging the standalone WASM PWA
 directly. It references the same app assemblies as `HackerOs.Ecosystem` and
-adds MudBlazor's CDN font/CSS/JS for convenience during development.
+adds MudBlazor's CDN font/CSS/JS for convenience during development. Its
+browser side runs the Ecosystem's `Program.cs`, so it has the same Web Worker
+process pool (ADR 0070, [`../worker-processes.md`](../worker-processes.md));
+`HackerOs.Server` has none and runs every process in the server process.
 
 This host is not a distribution target and is not a dependency of any other
 project — it is expected to remain a permanent developer-facing harness, not a
