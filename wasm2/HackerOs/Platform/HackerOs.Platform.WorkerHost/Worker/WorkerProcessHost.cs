@@ -193,6 +193,8 @@ public sealed class WorkerProcessHost
             writer.WriteNumber("sq", ++_heartbeatSequence);
             writer.WriteNumber("heap", GC.GetTotalMemory(forceFullCollection: false));
             writer.WriteNumber("comm", memory.TotalCommittedBytes);
+            // The whole runtime: in a browser, the worker's WebAssembly memory (managed heap, runtime, code).
+            writer.WriteNumber("rss", Environment.WorkingSet);
             if (_meter is { } meter)
             {
                 writer.WriteNumber("busy", meter.BusyTime.Ticks);

@@ -85,15 +85,19 @@ public sealed class WorkerAwareCpuTimeAccountant : ICpuTimeAccountant
 
         _inner.TryGetProcessTimes(pid, out ProcessCpuTimes kernel);
         ProcessSample? sample = worker.GetSample(pid.Value);
+        // A stuck worker runs one of its processes: the stalled time is theirs (shared if several).
+        TimeSpan stalled = worker.StalledTime / Math.Max(1, worker.ProcessCount);
         times = new ProcessCpuTimes(
-            kernel.UserTime + (sample?.UserTime ?? TimeSpan.Zero),
+            kernel.UserTime + (sample?.UserTime ?? TimeSpan.Zero) + stalled,
             kernel.SystemTime + (sample?.SystemTime ?? TimeSpan.Zero),
-            kernel.LongTaskCount + (sample?.LongTasks ?? 0),
-            sample is { } s && s.LongestSlice > kernel.LongestSlice ? s.LongestSlice : kernel.LongestSlice,
+            kernel.LongTaskCount + (sample?.LongTasks ?? 0) + (stalled > TimeSpan.FromMilliseconds(50) ? 1 : 0),
+            Max(Max(sample?.LongestSlice ?? TimeSpan.Zero, kernel.LongestSlice), stalled),
             IsResponding: !worker.IsNotResponding,
             kernel.VoluntaryContextSwitches + (sample?.Slices ?? 0));
         return true;
     }
+
+    private static TimeSpan Max(TimeSpan left, TimeSpan right) => left > right ? left : right;
 }
 
 /// <summary>

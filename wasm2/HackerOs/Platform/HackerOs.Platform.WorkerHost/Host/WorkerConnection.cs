@@ -69,6 +69,17 @@ internal sealed class WorkerConnection
     /// <summary>Gets the CPU time the worker's thread spent running processes, from its heartbeats.</summary>
     public TimeSpan BusyTime { get; private set; }
 
+    /// <summary>
+    /// Gets the time since the last heartbeat that counts as busy: a worker hosting processes that
+    /// misses its heartbeat is running one of them without yielding (its meter cannot report until it
+    /// yields), so the kernel counts that time for them — as a looping process shows 100 % in
+    /// <c>top</c>. Zero while the heartbeat is on time.
+    /// </summary>
+    public TimeSpan StalledTime =>
+        ProcessCount > 0 && HeartbeatAge is { } age && age > _pool.Options.BusyThreshold
+            ? age - _pool.Options.HeartbeatPeriod
+            : TimeSpan.Zero;
+
     /// <summary>Gets the number of processes it hosts.</summary>
     public int ProcessCount
     {
@@ -317,7 +328,9 @@ internal sealed class WorkerConnection
     private void OnHeartbeat(JsonElement root)
     {
         Interlocked.Exchange(ref _lastHeartbeat, Stopwatch.GetTimestamp());
-        RuntimeMemoryBytes = root.GetInt64("heap");
+        // The runtime's whole memory when the platform reports it, else its managed heap.
+        long heap = root.GetInt64("heap");
+        RuntimeMemoryBytes = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
         if (root.GetOptional("busy") is { } busy)
         {
             BusyTime = TimeSpan.FromTicks(busy.GetInt64());

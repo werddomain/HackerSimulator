@@ -101,7 +101,7 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         {
             return [.. _workers.OrderBy(static worker => worker.Id).Select(static worker => new WorkerSnapshot(
                 worker.Id, worker.Role, worker.State, worker.Core, worker.ProcessIds,
-                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime))];
+                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime + worker.StalledTime))];
         }
     }
 
