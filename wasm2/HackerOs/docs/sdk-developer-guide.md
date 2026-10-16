@@ -483,6 +483,8 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Notifier l'utilisateur | `AppContext.Notifications.Post` | `notifications.post` |
 | Utilisateur, dossiers spéciaux, variables, arguments | `HackUser`, `HackEnvironment` | aucune |
 | Lancer une app, ouvrir un fichier avec son app | `HackApps.LaunchAsync`, `HackApps.OpenFileAsync` | `apps.launch` |
+| Ouvrir une page dans le navigateur, ou dans une fenêtre détachée | `HackBrowser.OpenAsync`, `HackBrowser.OpenDetachedAsync` | `apps.launch` |
+| Afficher une partie de sa fenêtre dans une fenêtre détachée | `IDisplaySurfaceService` (injecté) et `<DisplaySurfaceContent>` | aucune |
 | Presse-papiers | `HackClipboard` | `clipboard.read` / `.write` |
 | Réseau simulé (et réel si l'OS l'autorise) | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | `network.simulated.*`, `network.real.access` (dangereuse) |
 | Processus et services | `HackProcess`, `HackServiceController` | `process.list`, `process.manage`, `services.manage` |

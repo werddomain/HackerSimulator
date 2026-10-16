@@ -8,7 +8,9 @@ using HackerOs.Apps.Browser.Net;
 using HackerOs.Apps.Browser.Rendering;
 using HackerOs.Apps.Browser.Storage;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Blazor.Display;
 using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.Network;
 using Microsoft.AspNetCore.Components;
@@ -32,6 +34,12 @@ namespace HackerOs.Apps.Browser;
 /// All browsing state (history, cookies, <c>sessionStorage</c>, developer tools) belongs to the
 /// window and is discarded on close; <c>localStorage</c> is kept in the user's files
 /// (<see cref="PageStorage"/>).
+/// </para>
+/// <para>
+/// The page can move to a detached window of the host browser (ADR 0078 §3): the same tab, drawn
+/// in a display surface through <see cref="DisplaySurfaceContent"/>, still navigated and served by
+/// this window. Launched with <c>--detached</c> (see <c>HackBrowser.OpenDetachedAsync</c>), the
+/// window detaches before its first navigation.
 /// </para>
 /// </remarks>
 public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
@@ -75,6 +83,13 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private PageFrameDocument? _frameDocument;
     private PageSession? _session;
     private BrowserPageView? _pageView;
+    private FrameSource? _frameSource;
+
+    // ── Detached window (ADR 0078 §3) ────────────────────────────────────
+    private IDisplaySurfaceService? _surfaces;
+    private IDisplaySurface? _surface;
+    private string? _detachMessage;
+    private bool _detaching;
 
     // ── Per-window session state, sent and filled by the OS on each request ──
     private readonly HackCookieContainer _cookies = new();
@@ -89,6 +104,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private bool CanGoBack    => _historyPos > 0;
     private bool CanGoForward => _historyPos < _history.Count - 1;
     private bool CanViewSource => _currentBody is { Kind: ResponseBodyKind.Html };
+    private bool CanDetach => _surfaces is not null && !_detaching;
     private bool ShowsFrame => !_isLoading && _error is null && _currentPage is null && _frameDocument is not null && !_viewSource;
 
     private string SchemeIcon => _documentUrl?.Scheme switch
@@ -108,6 +124,10 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _ => string.Empty,
     };
 
+    /// <summary>The session's detached windows (ADR 0078); part of the Blazor SDK contracts.</summary>
+    [Inject]
+    private IDisplaySurfaceService DisplaySurfaces { get; set; } = default!;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
@@ -117,6 +137,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _composer = new HtmlPageComposer(_loader);
         _bridge = new PageBridgeHandler(_loader, _cookies);
         _devTools.Changed += OnDevToolsChanged;
+        _surfaces = DisplaySurfaces;
 
         try
         {
@@ -136,10 +157,24 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     {
         if (firstRender)
         {
+            // Asked to open detached (HackBrowser.OpenDetachedAsync): the window opens first, while
+            // the gesture that launched the app still lets the host browser open one.
+            if (LaunchArguments.Contains(HackBrowser.DetachedArgument, StringComparer.Ordinal))
+            {
+                await DetachAsync();
+            }
+
             // A file passed at launch (an .html opened from the file manager) wins over the home page.
             string start = LaunchFile is { } file ? BrowserUrl.FromLocalPath(file.Value).AbsoluteUri
                 : LaunchArguments.FirstOrDefault(argument => !argument.StartsWith('-')) ?? HomeUrl;
             await NavigateToAsync(start);
+            return;
+        }
+
+        // The detached window's title follows the page, as a browser tab's does.
+        if (_surface is { State: DisplaySurfaceState.Open } surface && surface.Title != SurfaceTitle)
+        {
+            await surface.SetTitleAsync(SurfaceTitle);
         }
     }
 
@@ -309,6 +344,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
 
         ComposedPage page = await _composer.ComposeAsync(html, session, bootstrap);
         cancellationToken.ThrowIfCancellationRequested();
+        _frameSource = new FrameSource(documentUrl, html, referrer);
         _session = session;
         _pageTitle = page.Title;
         _frameDocument = new PageFrameDocument(page.Html, token);
@@ -333,6 +369,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _currentPage = null;
         _currentBody = null;
         _frameDocument = null;
+        _frameSource = null;
         _session = null;
         _downloadedTo = null;
         _error = null;
@@ -394,6 +431,137 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private void ToggleDevTools() => _devToolsOpen = !_devToolsOpen;
 
     private void DismissAlert() => _alertMessage = null;
+
+    private void DismissDetachMessage() => _detachMessage = null;
+
+    // ── Detached window (ADR 0078 §3) ────────────────────────────────────
+
+    /// <summary>The source of the document in the frame, to write it again after it moved.</summary>
+    private sealed record FrameSource(Uri DocumentUrl, string Html, Uri? Referrer);
+
+    private string SurfaceTitle => string.IsNullOrWhiteSpace(_pageTitle)
+        ? (string.IsNullOrEmpty(_finalUrl) ? "HackerOS Browser" : _finalUrl)
+        : _pageTitle;
+
+    private Task ToggleDetachedAsync() => _surface is null ? DetachAsync() : ReattachAsync();
+
+    /// <summary>
+    /// Moves the page to a new detached window. Runs from the user's click (or right after the
+    /// launch that the click started): the host browser only opens windows after a gesture.
+    /// </summary>
+    private async Task DetachAsync()
+    {
+        if (_surfaces is null || _surface is not null || _detaching)
+        {
+            return;
+        }
+
+        _detaching = true;
+        try
+        {
+            DisplaySurfaceOpenResult result = await _surfaces.OpenAsync(new DisplaySurfaceOptions(SurfaceTitle));
+            switch (result.Status)
+            {
+                case DisplaySurfaceOpenStatus.Opened when result.Surface is { } surface:
+                    _detachMessage = null;
+                    _surface = surface;
+                    surface.Changed += OnSurfaceChanged;
+                    await RewriteFrameAsync();
+                    break;
+                case DisplaySurfaceOpenStatus.Blocked:
+                    _detachMessage = "The detached window was blocked by your browser. Allow pop-ups for HackerOS, then try again.";
+                    _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Warning, "The host browser blocked the detached window (pop-up blocker).", "browser"));
+                    break;
+                default:
+                    _detachMessage = "This HackerOS host cannot open detached windows.";
+                    break;
+            }
+        }
+        finally
+        {
+            _detaching = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Brings the page back into this window and closes the detached one.</summary>
+    private async Task ReattachAsync()
+    {
+        if (_surface is not { } surface)
+        {
+            return;
+        }
+
+        ForgetSurface();
+        await surface.CloseAsync();
+        await RewriteFrameAsync();
+        StateHasChanged();
+    }
+
+    private async Task ShowDetachedAsync()
+    {
+        if (_surface is { } surface)
+        {
+            await surface.FocusAsync();
+        }
+    }
+
+    private void ForgetSurface()
+    {
+        if (_surface is { } surface)
+        {
+            surface.Changed -= OnSurfaceChanged;
+            _surface = null;
+        }
+    }
+
+    /// <summary>
+    /// The surface changed outside any Blazor event: when the user closed the detached window (or
+    /// navigated it away), the page comes back into this window, as a browser does when a detached
+    /// tab's window closes… except that the tab survives.
+    /// </summary>
+    private void OnSurfaceChanged(IDisplaySurface surface)
+    {
+        if (surface.State == DisplaySurfaceState.Open || !ReferenceEquals(surface, _surface))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            using IDisposable scope = HackExecutionContext.Enter(AppContext);
+            if (!ReferenceEquals(surface, _surface))
+            {
+                return;
+            }
+
+            ForgetSurface();
+            await RewriteFrameAsync();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Writes the current HTML page again from the document already received (no new request to
+    /// the server): a frame that changes window starts a new browsing context, so the page restarts
+    /// with the cookies and <c>localStorage</c> it has now, like a reload served from cache.
+    /// </summary>
+    private async Task RewriteFrameAsync()
+    {
+        if (_frameSource is not { } source || _frameDocument is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await ShowHtmlAsync(source.DocumentUrl, source.Html, source.Referrer, _navigation?.Token ?? CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            // A navigation started meanwhile: it writes its own document.
+        }
+    }
 
     private void OnDevToolsChanged() => _ = InvokeAsync(StateHasChanged);
 
@@ -695,6 +863,13 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _navigation?.Cancel();
         _navigation?.Dispose();
         _devTools.Changed -= OnDevToolsChanged;
+
+        // The detached window belongs to this tab: it closes with it.
+        if (_surface is { } surface)
+        {
+            ForgetSurface();
+            await surface.CloseAsync();
+        }
 
         if (_storage is not null)
         {

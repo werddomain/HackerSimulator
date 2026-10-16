@@ -352,3 +352,95 @@
 .status-error {
     color: var(--hos-error, #ff3333);
 }
+
+/* ── Detached window (ADR 0078 §3) ──────────────────────────────────────────
+   The placeholder left in the OS window, and the chrome of the detached window itself (drawn
+   by this component, shown in the host browser's other window). */
+
+.detach-alert {
+    border-bottom-color: var(--hos-warning, #ffb000);
+}
+
+.browser-detached {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 100%;
+    padding: 24px;
+    text-align: center;
+    background:
+        repeating-linear-gradient(
+            -45deg,
+            transparent 0 14px,
+            color-mix(in srgb, var(--hos-accent, #33ff33) 6%, transparent) 14px 15px);
+}
+
+.detached-icon {
+    font-size: 56px;
+    color: var(--hos-accent, #33ff33);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--hos-accent, #33ff33) 60%, transparent);
+}
+
+.detached-title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--hos-text-primary, #33ff33);
+}
+
+.detached-url {
+    margin: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--hos-text-muted, #8fbf8f);
+    font-size: 12px;
+}
+
+.detached-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.surface-page {
+    flex: 1;
+    min-height: 0;
+}
+
+.surface-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--hos-toolbar-bg, var(--hos-bg-surface, #111));
+    border-bottom: 1px solid var(--hos-accent, #33ff33);
+    flex-shrink: 0;
+}
+
+.surface-address {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.surface-title {
+    color: var(--hos-text-primary, #33ff33);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.surface-url {
+    color: var(--hos-text-muted, #8fbf8f);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

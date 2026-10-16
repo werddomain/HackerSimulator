@@ -140,7 +140,8 @@ et `9` ; puis `8` ; puis `11`.
   plus tard.
 - Migrer HackMail, HackerSearch et les autres sites enregistrés vers ASP.Hack.
 - Deuxième écran du bureau (le lien d'affichage de l'ADR 0078 le prépare).
-- Sites Blazor dans une fenêtre détachée (voir ADR 0078 §4).
+- Sites Blazor dans une fenêtre détachée : la preuve de l'ADR 0078 §4 a réussi
+  (ADR 0081 §2), il reste à le brancher avec `web/9-blazor-sites`.
 - HTTPS réel, certificats, authentification complète (rôles, OAuth), OpenAPI,
   WebSockets.
 
@@ -166,5 +167,5 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [ ] `web/7-razor-views`
 - [ ] `web/8-cshtml-views`
 - [ ] `web/9-blazor-sites`
-- [ ] `web/10-detached-window`
+- [x] `web/10-detached-window` ([`detached-display-windows.md`](detached-display-windows.md), ADR 0081)
 - [ ] `web/11-sample-final`

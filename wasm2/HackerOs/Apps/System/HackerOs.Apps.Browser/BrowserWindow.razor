@@ -1,5 +1,6 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Blazor.Display
 @using HackerOs.Apps.Browser.DevTools
 @using HackerOs.Simulation.Abstractions.Network
 @using Microsoft.AspNetCore.Components.Web
@@ -40,10 +41,21 @@
             }
         </button>
         <button id="browser-btn-bookmarks" class="nav-btn" @onclick="ToggleBookmarksAsync" title="Bookmarks">&#9733;</button>
+        <button id="browser-btn-detach" class="nav-btn @(_surface is not null ? "toggled" : null)" @onclick="ToggleDetachedAsync"
+                title="@(_surface is null ? "Open in a detached window" : "Bring the page back into this window")"
+                aria-pressed="@(_surface is not null ? "true" : "false")" disabled="@(!CanDetach)">&#10697;</button>
     </div>
 
     <!-- Main Content Area -->
     <div class="browser-content">
+        @if (_detachMessage is not null)
+        {
+            <div class="page-alert detach-alert" role="alert">
+                <span class="page-alert-message">@_detachMessage</span>
+                <button class="action-btn" @onclick="DismissDetachMessage">OK</button>
+            </div>
+        }
+
         @if (_alertMessage is not null)
         {
             <div class="page-alert" role="alert">
@@ -53,6 +65,75 @@
             </div>
         }
 
+        @if (_surface is null)
+        {
+            @PageContent
+        }
+        else
+        {
+            <div class="browser-view">
+                <div class="browser-detached" role="status">
+                    <div class="detached-icon">&#10697;</div>
+                    <h1 class="detached-title">This page is open in a detached window</h1>
+                    <p class="detached-url">@_finalUrl</p>
+                    <div class="detached-actions">
+                        <button id="browser-btn-show-detached" class="action-btn" @onclick="ShowDetachedAsync">Show the window</button>
+                        <button id="browser-btn-reattach" class="action-btn" @onclick="ReattachAsync">Bring the page back here</button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (_devToolsOpen)
+        {
+            <DevToolsPanel Log="_devTools" OnClose="ToggleDevTools" />
+        }
+    </div>
+
+    <!-- Status Bar -->
+    <div class="browser-statusbar" aria-live="polite">
+        @if (_isLoading)
+        {
+            <span>Connecting to @_currentUrl&hellip;</span>
+        }
+        else if (_error is not null)
+        {
+            <span class="status-error">@_error.Code</span>
+        }
+        else if (_currentPage is not null || _currentBody is not null || _frameDocument is not null)
+        {
+            <span>&#10003; @(string.IsNullOrWhiteSpace(_pageTitle) ? _finalUrl : $"{_pageTitle} — {_finalUrl}")</span>
+        }
+    </div>
+</div>
+
+@if (_surface is not null)
+{
+    @* The detached window (ADR 0078 §3): rendered here, shown in the surface. *@
+    <DisplaySurfaceContent Surface="_surface">
+        <div class="browser-root surface-page">
+            <div class="surface-toolbar">
+                <span class="address-scheme @SchemeClass" title="@SchemeTitle">@SchemeIcon</span>
+                <span id="surface-address" class="surface-address" title="@_finalUrl">
+                    @if (!string.IsNullOrWhiteSpace(_pageTitle))
+                    {
+                        <span class="surface-title">@_pageTitle</span>
+                    }
+                    <span class="surface-url">@_finalUrl</span>
+                </span>
+                <button id="surface-btn-refresh" class="nav-btn" @onclick="RefreshAsync" title="Refresh (F5)">&#8635;</button>
+                <button id="surface-btn-reattach" class="nav-btn" @onclick="ReattachAsync" title="Bring the page back into HackerOS">&#8690; Reattach</button>
+            </div>
+            <div class="browser-content">
+                @PageContent
+            </div>
+        </div>
+    </DisplaySurfaceContent>
+}
+
+@code {
+    // The page area, drawn either in the window or in the detached surface (ADR 0078 §3).
+    private RenderFragment PageContent => @<text>
         <div class="browser-view @(ShowsFrame ? "frame-view" : null)">
         @if (_isLoading)
         {
@@ -111,26 +192,5 @@
         }
 
         </div>
-
-        @if (_devToolsOpen)
-        {
-            <DevToolsPanel Log="_devTools" OnClose="ToggleDevTools" />
-        }
-    </div>
-
-    <!-- Status Bar -->
-    <div class="browser-statusbar" aria-live="polite">
-        @if (_isLoading)
-        {
-            <span>Connecting to @_currentUrl&hellip;</span>
-        }
-        else if (_error is not null)
-        {
-            <span class="status-error">@_error.Code</span>
-        }
-        else if (_currentPage is not null || _currentBody is not null || _frameDocument is not null)
-        {
-            <span>&#10003; @(string.IsNullOrWhiteSpace(_pageTitle) ? _finalUrl : $"{_pageTitle} — {_finalUrl}")</span>
-        }
-    </div>
-</div>
+    </text>;
+}

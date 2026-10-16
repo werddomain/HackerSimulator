@@ -90,9 +90,23 @@ class PageFrame {
                 .then((payload) => {
                     // The tab may have moved on: a reply never reaches another document.
                     if (this.frame && this.frame.contentWindow === source && this.token === token) {
-                        source.postMessage({ hackBridge: "response", token, id: data.id, payload }, "*");
+                        this.postToPage(source, { hackBridge: "response", token, id: data.id, payload });
                     }
                 });
+        }
+    }
+
+    // The bridge trusts only messages from its parent window. When the page is shown in a
+    // detached display surface (ADR 0078 §3) its parent is that surface's window: the reply goes
+    // through the surface's relay so it comes from there. Messages the page posts to its parent
+    // are handed to this window by the surface.
+    postToPage(source, message) {
+        const parent = this.frame ? this.frame.ownerDocument.defaultView : null;
+        const relay = parent && parent !== window ? parent.hackerosSurfaceRelay : null;
+        if (relay) {
+            relay.post(source, message);
+        } else {
+            source.postMessage(message, "*");
         }
     }
 

@@ -38,6 +38,7 @@ using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Platform.Blazor.Components;
 using HackerOs.Platform.Blazor.Dialogs;
+using HackerOs.Platform.Blazor.Display;
 using HackerOs.Platform.Blazor.Security;
 using HackerOs.Platform.Blazor.Shell;
 using HackerOs.Platform.Blazor.Windows;
@@ -60,6 +61,8 @@ using HackerOs.Simulation.Abstractions.Sync;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Components;
+using HackerOs.AppSdk.Blazor.Display;
+using Microsoft.JSInterop;
 using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
@@ -625,6 +628,12 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<DialogCoordinator>(provider => new DialogCoordinator(
             provider.GetRequiredService<IFileDialogService>()));
         services.AddScoped<IDialogService>(provider => provider.GetRequiredService<DialogCoordinator>());
+        // Detached display surfaces (ADR 0078): windows of the host browser driven by this instance.
+        services.AddScoped<IDisplaySurfaceService>(provider => new DisplaySurfaceService(
+            provider.GetRequiredService<IJSRuntime>(),
+            provider.GetRequiredService<INotificationQueue>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<ISimulationClock>()));
         // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
         // component by contract; the provider's assembly is loaded as a launch would load it.
         services.AddScoped<IHackComponentHost>(provider =>
