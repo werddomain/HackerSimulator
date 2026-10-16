@@ -33,6 +33,8 @@ public partial class FileView : IAsyncDisposable
     private CancellationTokenSource? _watchLoopCts;
     private FileViewContextMenu? _contextMenu;
     private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<FileView>? _pasteCallbacks;
+    private bool _pasteTargetAttached;
     private ElementReference _rootElement;
     private FileSystemDirectorySnapshot? _lastSnapshot;
 
@@ -247,6 +249,15 @@ public partial class FileView : IAsyncDisposable
             // Loaded up front so the first dragstart can write its payload synchronously, and so drops
             // are stashed by the native listener before Blazor's handler reads them.
             await AttachDropZoneAsync(_rootElement);
+        }
+
+        if (firstRender && JavaScript is not null && (ClipboardRequested.HasDelegate || DropRequested.HasDelegate))
+        {
+            // Ctrl+V is read from the browser's paste event rather than the keydown (ADR 0065): the event
+            // comes after the host clipboard bridge updated the OS clipboard, and carries host files.
+            IJSObjectReference module = await EnsureJsModuleAsync();
+            _pasteCallbacks ??= DotNetObjectReference.Create(this);
+            _pasteTargetAttached = await module.InvokeAsync<bool>("attachPasteTarget", _rootElement, _pasteCallbacks);
         }
     }
 
@@ -846,24 +857,7 @@ public partial class FileView : IAsyncDisposable
             }
         }
 
-        List<FileTransferHostFile> files = [];
-        int token = 0;
-        if (hostFiles)
-        {
-            DroppedHostFiles dropped = await module.InvokeAsync<DroppedHostFiles>("takeDroppedFiles");
-            token = dropped.Token;
-            for (int index = 0; index < dropped.Files.Count; index++)
-            {
-                DroppedHostFile meta = dropped.Files[index];
-                int fileIndex = index;
-                files.Add(new FileTransferHostFile(
-                    meta.Name,
-                    meta.Size,
-                    string.IsNullOrEmpty(meta.Type) ? null : meta.Type,
-                    (maxBytes, cancellationToken) => OpenDroppedFileAsync(dropped.Token, fileIndex, maxBytes, cancellationToken)));
-            }
-        }
-
+        (IReadOnlyList<FileTransferHostFile> files, int token) = hostFiles ? await TakeHostFilesAsync(module) : ([], 0);
         FileViewDropRequestedEventArgs drop = new(destination, entries, files, args.CtrlKey) { HostFileToken = token };
         if (drop.IsEmpty)
         {
@@ -872,6 +866,60 @@ public partial class FileView : IAsyncDisposable
         }
 
         return drop;
+    }
+
+    /// <summary>
+    /// Takes the host files stashed by <c>FileView.razor.js</c> (by the last drop or paste), whose content
+    /// is only read when imported.
+    /// </summary>
+    private async Task<(IReadOnlyList<FileTransferHostFile> Files, int Token)> TakeHostFilesAsync(IJSObjectReference module)
+    {
+        DroppedHostFiles dropped = await module.InvokeAsync<DroppedHostFiles>("takeDroppedFiles");
+        List<FileTransferHostFile> files = [];
+        for (int index = 0; index < dropped.Files.Count; index++)
+        {
+            DroppedHostFile meta = dropped.Files[index];
+            int fileIndex = index;
+            files.Add(new FileTransferHostFile(
+                meta.Name,
+                meta.Size,
+                string.IsNullOrEmpty(meta.Type) ? null : meta.Type,
+                (maxBytes, cancellationToken) => OpenDroppedFileAsync(dropped.Token, fileIndex, maxBytes, cancellationToken)));
+        }
+
+        return (files, dropped.Token);
+    }
+
+    /// <summary>
+    /// Called by <c>FileView.razor.js</c> for a paste (Ctrl+V) on the view (ADR 0065). Files pasted from
+    /// the host clipboard are handed to <see cref="DropRequested"/> as a copy into the current
+    /// directory, exactly like a drop from the host; otherwise the paste goes to
+    /// <see cref="ClipboardRequested"/>, which reads the OS clipboard.
+    /// </summary>
+    /// <param name="hostFiles">Whether the paste carried host files the clipboard bridge accepted.</param>
+    [JSInvokable]
+    public async Task OnPasteShortcutAsync(bool hostFiles)
+    {
+        if (!hostFiles)
+        {
+            await RequestClipboardAsync(FileViewClipboardAction.Paste, CurrentDirectory);
+            return;
+        }
+
+        IJSObjectReference module = await EnsureJsModuleAsync();
+        (IReadOnlyList<FileTransferHostFile> files, int token) = await TakeHostFilesAsync(module);
+        FileViewDropRequestedEventArgs paste = new(CurrentDirectory, [], files, copy: true) { HostFileToken = token };
+        try
+        {
+            if (!paste.IsEmpty && DropRequested.HasDelegate)
+            {
+                await DropRequested.InvokeAsync(paste);
+            }
+        }
+        finally
+        {
+            await ReleaseHostFilesAsync(paste);
+        }
     }
 
     /// <summary>Forgets the host File objects of a drop once its import is over.</summary>
@@ -955,7 +1003,8 @@ public partial class FileView : IAsyncDisposable
             case "c":
                 await RequestClipboardAsync(FileViewClipboardAction.Copy, CurrentDirectory);
                 break;
-            case "v":
+            case "v" when !_pasteTargetAttached:
+                // With FileView.razor.js attached, the paste event drives Ctrl+V (OnPasteShortcutAsync).
                 await RequestClipboardAsync(FileViewClipboardAction.Paste, CurrentDirectory);
                 break;
         }
@@ -1118,5 +1167,7 @@ public partial class FileView : IAsyncDisposable
         {
             await _jsModule.DisposeAsync();
         }
+
+        _pasteCallbacks?.Dispose();
     }
 }

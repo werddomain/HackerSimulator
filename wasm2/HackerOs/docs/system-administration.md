@@ -22,7 +22,7 @@ Core ni Infrastructure.Browser.
 | Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
 | Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt), `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
 | Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |
-| SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte) |
+| SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte), `[Obsolete]` depuis l'ADR 0065 : Diagnostic copie par `HackClipboard`, que l'OS recopie vers l'hôte ([`clipboard.md`](clipboard.md)) |
 
 `AppExecutionContextFactory` reçoit un `SystemAdministrationGatewayServices`
 (résolutions paresseuses) et crée, pour chaque instance, les cinq passerelles
@@ -89,7 +89,9 @@ lancement.
 
 - Voir l'ADR 0060 : propriété `SystemPower` (pas `System`),
   `HackPermissionDecision.Ask`, couche système écrite avec les droits de
-  l'appelant, `SetManyAsync`, presse-papiers de l'hôte pour Diagnostic.
+  l'appelant, `SetManyAsync`, presse-papiers de l'hôte pour Diagnostic
+  (ce dernier point est remplacé par l'ADR 0065 : `HackClipboard` et
+  `clipboard.write`).
 - `IndexedDbInspectorService` reste dans Infrastructure.Browser ;
   l'adaptateur vers le SDK vit dans l'hôte Ecosystem.
 - L'ancien chemin par mot de passe de `AppPermissionAdministration` est gardé

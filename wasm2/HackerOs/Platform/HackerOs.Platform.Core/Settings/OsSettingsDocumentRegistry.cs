@@ -16,7 +16,8 @@ public static class OsSettingsDocumentRegistry
         [AppearanceSettingsDocuments.Document.DocumentId] = AppearanceSettingsDocuments.Document,
         [UiPlatformPreferenceSettingsDocuments.Document.DocumentId] = UiPlatformPreferenceSettingsDocuments.Document,
         [SecuritySettingsDocuments.Document.DocumentId] = SecuritySettingsDocuments.Document,
-        [PolicySettingsDocuments.Document.DocumentId] = PolicySettingsDocuments.Document
+        [PolicySettingsDocuments.Document.DocumentId] = PolicySettingsDocuments.Document,
+        [Clipboard.ClipboardSettingsDocuments.Document.DocumentId] = Clipboard.ClipboardSettingsDocuments.Document
     };
 
     /// <summary>Gets every listed document id.</summary>

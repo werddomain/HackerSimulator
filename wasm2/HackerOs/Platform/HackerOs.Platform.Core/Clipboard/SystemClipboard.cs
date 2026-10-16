@@ -5,15 +5,19 @@ using HackerOs.Simulation.Abstractions.Sessions;
 namespace HackerOs.Platform.Core.Clipboard;
 
 /// <summary>
-/// The OS clipboard (ADR 0056, section 12): one selection per session, owned by the platform and
-/// shared by every app of that session, like the X11 <c>CLIPBOARD</c> selection a desktop's clipboard
-/// manager keeps alive. Content is held as MIME-typed targets, as X11 offers them: <c>text/plain</c>
-/// always, plus <c>x-special/gnome-copied-files</c> for a file list. It lives in memory only: like a
-/// real clipboard, it does not survive a reboot.
+/// The OS clipboard (ADR 0056, section 12; ADR 0065): one selection per session, owned by the platform
+/// and shared by every app of that session, like the X11 <c>CLIPBOARD</c> selection a desktop's
+/// clipboard manager keeps alive. Content is held as one <see cref="SystemClipboardEntry"/> of
+/// MIME-typed targets, as X11 offers them: <c>text/plain</c>, <c>x-special/gnome-copied-files</c> for a
+/// file list, or any other format. Every change gets a new sequence number, like Windows'
+/// <c>GetClipboardSequenceNumber</c>. It lives in memory only: like a real clipboard, it does not
+/// survive a reboot, and nothing of it is ever persisted or encrypted.
 /// </summary>
 /// <remarks>
 /// Apps never see this class; each instance gets an <see cref="Execution.AppClipboardGateway"/> that
-/// checks <c>clipboard.read</c>/<c>clipboard.write</c> and only reaches its own session.
+/// checks <c>clipboard.read</c>/<c>clipboard.write</c> and only reaches its own session. The only other
+/// reader is the <see cref="HostClipboardBridge"/>, which mirrors <c>text/plain</c> to the real
+/// browser's clipboard as VirtualBox Guest Additions do (ADR 0065).
 /// </remarks>
 public sealed class SystemClipboard : IDisposable
 {
@@ -21,7 +25,8 @@ public sealed class SystemClipboard : IDisposable
     public const string TextMediaType = "text/plain";
 
     private readonly Lock _gate = new();
-    private readonly Dictionary<SessionId, IReadOnlyDictionary<string, string>> _selections = [];
+    private readonly Dictionary<SessionId, SystemClipboardEntry> _selections = [];
+    private readonly Dictionary<SessionId, long> _sequences = [];
     private readonly IDisposable? _logoutSubscription;
 
     /// <summary>Creates an empty clipboard.</summary>
@@ -44,20 +49,44 @@ public sealed class SystemClipboard : IDisposable
     {
         lock (_gate)
         {
-            return _selections.TryGetValue(session, out IReadOnlyDictionary<string, string>? targets)
-                && targets.TryGetValue(mediaType, out string? content)
+            return _selections.TryGetValue(session, out SystemClipboardEntry? entry)
+                && entry.Targets.TryGetValue(mediaType, out string? content)
                     ? content
                     : null;
+        }
+    }
+
+    /// <summary>Gets a session's whole clipboard entry, or <see langword="null"/> when it is empty.</summary>
+    /// <param name="session">Owning session.</param>
+    public SystemClipboardEntry? GetEntry(SessionId session)
+    {
+        lock (_gate)
+        {
+            return _selections.GetValueOrDefault(session);
+        }
+    }
+
+    /// <summary>
+    /// Gets a session's clipboard sequence number: 0 before the first change, then incremented by every
+    /// change (including clearing), so a reader can tell whether the clipboard changed since it last looked.
+    /// </summary>
+    /// <param name="session">Owning session.</param>
+    public long GetSequenceNumber(SessionId session)
+    {
+        lock (_gate)
+        {
+            return _sequences.GetValueOrDefault(session);
         }
     }
 
     /// <summary>Replaces a session's clipboard with text.</summary>
     /// <param name="session">Owning session.</param>
     /// <param name="text">Copied text.</param>
-    public void SetText(SessionId session, string text)
+    /// <param name="origin">Who put the text there; <see cref="SystemClipboardOrigin.Guest"/> for an app.</param>
+    public void SetText(SessionId session, string text, SystemClipboardOrigin origin = SystemClipboardOrigin.Guest)
     {
         ArgumentNullException.ThrowIfNull(text);
-        Replace(session, new Dictionary<string, string>(StringComparer.Ordinal) { [TextMediaType] = text });
+        SetTargets(session, new Dictionary<string, string>(StringComparer.Ordinal) { [TextMediaType] = text }, origin);
     }
 
     /// <summary>
@@ -69,11 +98,49 @@ public sealed class SystemClipboard : IDisposable
     public void SetFileDropList(SessionId session, HackClipboardFileList files)
     {
         ArgumentNullException.ThrowIfNull(files);
-        Replace(session, new Dictionary<string, string>(StringComparer.Ordinal)
+        SetTargets(session, new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [HackClipboardFileList.GnomeCopiedFilesMediaType] = files.ToGnomeCopiedFiles(),
             [TextMediaType] = files.ToText()
-        });
+        }, SystemClipboardOrigin.Guest);
+    }
+
+    /// <summary>
+    /// Replaces a session's clipboard with any set of formats (the extensible form of
+    /// <see cref="SetText"/> and <see cref="SetFileDropList"/>). An empty set clears the clipboard.
+    /// </summary>
+    /// <param name="session">Owning session.</param>
+    /// <param name="targets">Content per MIME type; copied, so later changes to the dictionary are not seen.</param>
+    /// <param name="origin">Who put the content there.</param>
+    /// <exception cref="ArgumentException">A media type is empty or a content is <see langword="null"/>.</exception>
+    public void SetTargets(SessionId session, IReadOnlyDictionary<string, string> targets, SystemClipboardOrigin origin)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+        Dictionary<string, string> copy = new(StringComparer.Ordinal);
+        foreach ((string mediaType, string content) in targets)
+        {
+            if (string.IsNullOrWhiteSpace(mediaType) || content is null)
+            {
+                throw new ArgumentException("Every clipboard target needs a media type and a content.", nameof(targets));
+            }
+
+            copy[mediaType] = content;
+        }
+
+        if (copy.Count == 0)
+        {
+            Clear(session);
+            return;
+        }
+
+        lock (_gate)
+        {
+            long sequence = _sequences.GetValueOrDefault(session) + 1;
+            _sequences[session] = sequence;
+            _selections[session] = new SystemClipboardEntry(copy, sequence, origin);
+        }
+
+        Changed?.Invoke(this, session);
     }
 
     /// <summary>Empties a session's clipboard, for instance after cut files were pasted or at logout.</summary>
@@ -84,6 +151,10 @@ public sealed class SystemClipboard : IDisposable
         lock (_gate)
         {
             removed = _selections.Remove(session);
+            if (removed)
+            {
+                _sequences[session] = _sequences.GetValueOrDefault(session) + 1;
+            }
         }
 
         if (removed)
@@ -92,16 +163,32 @@ public sealed class SystemClipboard : IDisposable
         }
     }
 
-    private void Replace(SessionId session, IReadOnlyDictionary<string, string> targets)
-    {
-        lock (_gate)
-        {
-            _selections[session] = targets;
-        }
-
-        Changed?.Invoke(this, session);
-    }
-
     /// <inheritdoc />
     public void Dispose() => _logoutSubscription?.Dispose();
+}
+
+/// <summary>One clipboard content: its formats, the sequence number of the change that set it and its origin.</summary>
+/// <param name="Targets">Content per MIME type (<c>text/plain</c>, <c>x-special/gnome-copied-files</c>…).</param>
+/// <param name="SequenceNumber">Sequence number of the change (see <see cref="SystemClipboard.GetSequenceNumber"/>).</param>
+/// <param name="Origin">Who put it there.</param>
+public sealed record SystemClipboardEntry(IReadOnlyDictionary<string, string> Targets, long SequenceNumber, SystemClipboardOrigin Origin)
+{
+    /// <summary>Gets the <c>text/plain</c> target, or <see langword="null"/> when the entry has none.</summary>
+    public string? Text => Targets.GetValueOrDefault(SystemClipboard.TextMediaType);
+}
+
+/// <summary>Who put the current content on the OS clipboard (ADR 0065).</summary>
+public enum SystemClipboardOrigin
+{
+    /// <summary>An app, through <c>HackClipboard</c>: the bridge mirrors its text to the host.</summary>
+    Guest,
+
+    /// <summary>
+    /// A native copy or cut inside HackerOS (a text field, the terminal): the browser itself already
+    /// handled the host side, so the bridge does not write it again.
+    /// </summary>
+    GuestNative,
+
+    /// <summary>The real machine's clipboard, received through a paste: never echoed back to the host.</summary>
+    Host
 }

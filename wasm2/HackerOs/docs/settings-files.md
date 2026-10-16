@@ -24,6 +24,7 @@ migration, en lecture seule.
 | Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` |
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
 | Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |
+| Partage du presse-papiers avec l'hôte (clé `sharing`, ADR 0065, voir [`clipboard.md`](clipboard.md)) | `/etc/hackeros/clipboard.config` | `~/.config/hackeros/clipboard.config` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).
@@ -124,7 +125,7 @@ await appearance.SetManyAsync(values, SettingLayer.System);        // /etc/hacke
 ```
 
 - Documents ouverts : `appearance`, `ui-platform-preference`, `security`,
-  `policy` (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
+  `policy`, `clipboard` (ADR 0065) (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
   `ArgumentException`.
 - Aucune capacité : les droits des fichiers décident (D16). La couche
   utilisateur est écrite par l'OS au nom de l'utilisateur de la session ; la

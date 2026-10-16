@@ -114,6 +114,52 @@ public sealed class FileViewDropAndClipboardTests
     }
 
     [Fact]
+    public async Task A_paste_event_without_host_files_pastes_the_os_clipboard()
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        (TestComponentRenderer renderer, TestableFileView view) = await RenderViewAsync(fixture, new FakeJSRuntime());
+        List<FileViewClipboardRequestedEventArgs> requests = [];
+        view.ClipboardRequested = new EventCallback<FileViewClipboardRequestedEventArgs>(null, (Func<FileViewClipboardRequestedEventArgs, Task>)(e =>
+        {
+            requests.Add(e);
+            return Task.CompletedTask;
+        }));
+
+        await renderer.RunAsync(() => view.OnPasteShortcutAsync(hostFiles: false));
+
+        FileViewClipboardRequestedEventArgs request = Assert.Single(requests);
+        Assert.Equal(FileViewClipboardAction.Paste, request.Action);
+        Assert.Equal(VirtualPath.Parse("/home/user"), request.Destination);
+    }
+
+    [Fact]
+    public async Task Host_files_pasted_are_copied_into_the_current_directory_like_a_drop()
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        (FakeJSRuntime runtime, FakeJSObjectReference module) = NewRuntime();
+        module.Handlers["takeDroppedFiles"] = _ => new FileView.DroppedHostFiles(9, [new FileView.DroppedHostFile("notes.txt", 5, "")]);
+        module.Handlers["releaseDroppedFiles"] = _ => null;
+        (TestComponentRenderer renderer, TestableFileView view) = await RenderViewAsync(fixture, runtime);
+        FileViewDropRequestedEventArgs? received = null;
+        view.DropRequested = new EventCallback<FileViewDropRequestedEventArgs>(null, (Func<FileViewDropRequestedEventArgs, Task>)(e =>
+        {
+            received = e;
+            return Task.CompletedTask;
+        }));
+
+        await renderer.RunAsync(() => view.OnPasteShortcutAsync(hostFiles: true));
+
+        Assert.NotNull(received);
+        Assert.Equal(VirtualPath.Parse("/home/user"), received.Destination);
+        Assert.True(received.Copy);
+        Assert.Empty(received.Entries);
+        Assert.Equal("notes.txt", received.HostFiles.Single().Name);
+        Assert.Null(received.HostFiles.Single().ContentType);
+        (string _, object?[]? args) = module.Calls.Single(call => call.Identifier == "releaseDroppedFiles");
+        Assert.Equal(9, args![0]);
+    }
+
+    [Fact]
     public async Task Cut_paths_are_dimmed_after_a_refresh()
     {
         FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();

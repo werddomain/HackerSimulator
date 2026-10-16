@@ -101,7 +101,8 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
                  {
                      AppearanceSettingsDocuments.Document,
                      UiPlatformPreferenceSettingsDocuments.Document,
-                     PolicySettingsDocuments.Document
+                     PolicySettingsDocuments.Document,
+                     Clipboard.ClipboardSettingsDocuments.Document
                  })
         {
             await WriteIfAbsentAsync(system, document.SystemPath, DefaultConfig(document), cancellationToken).ConfigureAwait(false);

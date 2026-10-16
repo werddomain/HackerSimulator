@@ -183,7 +183,9 @@ l'OS et exige `network.real.access`.
 `HackClipboard` : `GetTextAsync`, `SetTextAsync`, `ContainsTextAsync`,
 `GetFileDropListAsync`, `SetFileDropListAsync` (copier ou couper des
 fichiers), `ContainsFileDropListAsync`, `ClearAsync`, `Changed`. Capacités
-`clipboard.read` et `clipboard.write`. Voir [`file-explorer.md`](file-explorer.md).
+`clipboard.read` et `clipboard.write`. Le texte est partagé avec la vraie
+machine selon `/etc/hackeros/clipboard.config`. Voir [`file-explorer.md`](file-explorer.md)
+et [`clipboard.md`](clipboard.md).
 
 ### Composants intégrables (`HackerOs.AppSdk.Components`)
 
@@ -253,7 +255,7 @@ annulation.
 | `HackLineChart` (`.Charts`) | Graphique SVG : `Series` (`HackChartSeries(Name, Values)`), `Title`, `Capacity`, `Maximum`, `MinimumScale`, `ValueFormatter`, `Filled`, `ShowLegend`, `TimeSpanLabel`, `Size`, `Class` ; couleurs `--hos-chart-series-0..7` | [`task-manager.md`](task-manager.md) |
 | `SettingOriginBadge` (`.Settings`) | Badge d'origine d'un paramètre (défaut, système, utilisateur, verrouillé) | [`settings-files.md`](settings-files.md) |
 | `BrowserFileDownloader` (`.Interop`) | `DownloadFileFromStreamAsync(fileName, stream)` : télécharger vers le vrai disque | [`file-explorer.md`](file-explorer.md) |
-| `BrowserClipboard` (`.Interop`) | `WriteTextAsync` : presse-papiers du vrai navigateur | [`system-administration.md`](system-administration.md) |
+| `BrowserClipboard` (`.Interop`) | `[Obsolete]` (ADR 0065) : utiliser `HackClipboard.SetTextAsync`, recopié vers l'hôte | [`clipboard.md`](clipboard.md) |
 | `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
 
 ### Vue de fichiers (`HackerOs.AppSdk.FileView`)

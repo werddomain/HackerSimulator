@@ -10,7 +10,8 @@
 // Drops do not depend on that timing: attachDropZone installs native listeners on a FileView root,
 // breadcrumb or drop zone. Its capture-phase `drop` listener runs before Blazor's delegated handler and
 // stashes the HackerOS payload and the host File objects; the C# handler then reads the stash
-// (getDragData / takeDroppedFiles). Its `dragover` listener sets dropEffect so the cursor shows a move,
+// (getDragData / takeDroppedFiles). Host files pasted with Ctrl+V go through the same stash
+// (attachPasteTarget). Its `dragover` listener sets dropEffect so the cursor shows a move,
 // or a copy when Ctrl is held or the files come from the host, and highlights the folder under it.
 
 const hostFileStore = new Map();
@@ -133,6 +134,63 @@ export function attachDropZone(element, mimeType) {
     });
     element.addEventListener('drop', onDrop, true);
     element.__hackerOsDropZone = true;
+    return true;
+}
+
+// Ctrl+V on the view (ADR 0065). The browser's `paste` event, not the keydown, drives the paste: it
+// fires after the host clipboard bridge (hostClipboard.js of HackerOs.Infrastructure.Browser, listening
+// on the document in the capture phase) updated the OS clipboard, and it carries the host files of a
+// paste from the real machine. The bridge marks the event with `hackerOsHostFiles` (whether those files
+// are new host content allowed by clipboard.config); without the bridge, any pasted file counts.
+// Some browsers (Safari) fire no paste on a non-editable element: a Ctrl+V keydown not followed by a
+// paste within 250 ms still pastes the OS clipboard.
+function isEditable(target) {
+    return target instanceof Element
+        && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"]') !== null);
+}
+
+export function attachPasteTarget(element, callbacks) {
+    if (!element || element.__hackerOsPasteTarget) {
+        return false;
+    }
+
+    let pending = null;
+    const cancelPending = () => {
+        if (pending !== null) {
+            clearTimeout(pending);
+            pending = null;
+        }
+    };
+
+    element.addEventListener('keydown', e => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 'v' || isEditable(e.target)) {
+            return;
+        }
+
+        cancelPending();
+        pending = setTimeout(() => {
+            pending = null;
+            callbacks.invokeMethodAsync('OnPasteShortcutAsync', false);
+        }, 250);
+    });
+
+    element.addEventListener('paste', e => {
+        if (isEditable(e.target)) {
+            return;
+        }
+
+        cancelPending();
+        e.preventDefault();
+        const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
+        const hostFiles = files.length > 0 && e.hackerOsHostFiles !== false;
+        if (hostFiles) {
+            lastDrop = { mimeType: null, at: performance.now(), json: null, files };
+        }
+
+        callbacks.invokeMethodAsync('OnPasteShortcutAsync', hostFiles);
+    });
+
+    element.__hackerOsPasteTarget = true;
     return true;
 }
 

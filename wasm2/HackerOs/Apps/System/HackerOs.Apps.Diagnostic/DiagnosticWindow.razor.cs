@@ -4,6 +4,7 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Interop;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.AppSdk.IO;
 
 namespace HackerOs.Apps.Diagnostic;
@@ -19,14 +20,15 @@ namespace HackerOs.Apps.Diagnostic;
 /// the snapshot bypasses file permissions, so an administrator approves this app at its first
 /// launch);</item>
 /// <item>the save dialog and <see cref="HackFile"/> to save the JSON inside HackerOS;</item>
-/// <item><see cref="BrowserFileDownloader"/> and <see cref="BrowserClipboard"/> of the SDK to hand the
-/// JSON to the real browser (download, clipboard), which is the point of a diagnostic export
+/// <item><see cref="HackClipboard"/> (capability <c>clipboard.write</c>) to copy the JSON: the OS
+/// clipboard mirrors its text to the real machine's clipboard (ADR 0065), so it can be pasted outside
+/// HackerOS;</item>
+/// <item><see cref="BrowserFileDownloader"/> of the SDK to download the JSON to the real browser
 /// (ADR 0060).</item>
 /// </list>
 /// </remarks>
 public partial class DiagnosticWindow : IAsyncDisposable
 {
-    private BrowserClipboard? _clipboard;
     private BrowserFileDownloader? _downloader;
     private HackStorageSnapshot? _snapshot;
     private string _selectedStoreName = string.Empty;
@@ -42,7 +44,6 @@ public partial class DiagnosticWindow : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAppInitializedAsync()
     {
-        _clipboard = new BrowserClipboard(JS);
         _downloader = new BrowserFileDownloader(JS);
         await RefreshAsync();
     }
@@ -50,11 +51,6 @@ public partial class DiagnosticWindow : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_clipboard is not null)
-        {
-            await _clipboard.DisposeAsync();
-        }
-
         if (_downloader is not null)
         {
             await _downloader.DisposeAsync();
@@ -100,17 +96,17 @@ public partial class DiagnosticWindow : IAsyncDisposable
 
     private async Task CopyToClipboardAsync()
     {
-        if (_snapshot is null || _clipboard is null)
+        if (_snapshot is null)
         {
             return;
         }
 
         try
         {
-            await _clipboard.WriteTextAsync(_snapshot.ToExportJson());
+            await HackClipboard.SetTextAsync(_snapshot.ToExportJson(), AppContext.CancellationToken);
             ShowToast("IndexedDB JSON Dump copied to Clipboard!");
         }
-        catch (Microsoft.JSInterop.JSException exception)
+        catch (UnauthorizedAccessException exception)
         {
             ShowToast($"Copy failed: {exception.Message}");
         }

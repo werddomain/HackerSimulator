@@ -467,6 +467,10 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
             new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
+        // Shared clipboard with the real machine (ADR 0065), started by App.razor once settings exist.
+        // Depends on IJSRuntime through its channel — see this file's IJSRuntime scoping note.
+        services.AddScoped<HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardChannel, HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel>();
+        services.AddScoped<HackerOs.Platform.Core.Clipboard.HostClipboardBridge>();
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
