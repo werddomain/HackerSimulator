@@ -20,6 +20,7 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
     private readonly LogFileTarget? _target;
     private readonly long? _processId;
     private readonly IDiagnosticRedactor _redactor;
+    private readonly bool _isSystemApp;
 
     /// <summary>Initializes a logging gateway bound to one app.</summary>
     /// <param name="sink">In-memory buffer of recent entries.</param>
@@ -30,13 +31,18 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
     /// </param>
     /// <param name="processId">PID written in each line, when the hosting process is known.</param>
     /// <param name="redactor">Redactor applied to properties before they reach the file.</param>
+    /// <param name="isSystemApp">
+    /// Whether the app is a system app (ADR 0048), which may keep daemon logs of its own
+    /// (<see cref="AppendToLogFile"/>, ADR 0080).
+    /// </param>
     public AppLoggingGateway(
         IDiagnosticSink sink,
         ISimulationClock clock,
         string appId,
         LogFileWriter? writer = null,
         long? processId = null,
-        IDiagnosticRedactor? redactor = null)
+        IDiagnosticRedactor? redactor = null,
+        bool isSystemApp = false)
     {
         _sink = sink ?? throw new ArgumentNullException(nameof(sink));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -46,6 +52,7 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
         _target = writer is null ? null : LogFileTarget.ForApp(appId);
         _processId = processId;
         _redactor = redactor ?? new SensitiveKeyDiagnosticRedactor();
+        _isSystemApp = isSystemApp;
     }
 
     /// <inheritdoc />
@@ -57,5 +64,31 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
         {
             _writer.Enqueue(_target!, LogLineFormat.Format(DiagnosticRedaction.Apply(entry, _redactor), _processId));
         }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The line goes through <see cref="LogFileWriter"/> like every other log line: batched, rotated at
+    /// 1 MiB, written as <c>system:system 0644</c>. Without a writer (headless tests) it is kept in the
+    /// in-memory buffer with the file as its category, so tests can still read it back.
+    /// </remarks>
+    public void AppendToLogFile(string relativePath, string line)
+    {
+        if (!_isSystemApp)
+        {
+            throw new UnauthorizedAccessException($"Only a system app may write a daemon log under /var/log ('{_appId}' is not one).");
+        }
+
+        LogFileTarget target = LogFileTarget.ForDaemon(relativePath);
+        ArgumentNullException.ThrowIfNull(line);
+        // One entry is one line: a raw line break would forge a second entry.
+        string escaped = line.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal);
+        if (_writer is not null)
+        {
+            _writer.Enqueue(target, escaped);
+            return;
+        }
+
+        _sink.Record(new DiagnosticEntry(_clock.UtcNow, DiagnosticSeverity.Information, target.Path.Value, escaped, Guid.NewGuid(), null));
     }
 }

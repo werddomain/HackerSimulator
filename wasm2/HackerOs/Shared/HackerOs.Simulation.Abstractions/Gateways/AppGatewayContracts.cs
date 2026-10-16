@@ -214,6 +214,22 @@ public interface IAppLoggingGateway
 {
     /// <summary>Records one diagnostic entry attributed to the calling app.</summary>
     void Log(DiagnosticSeverity severity, string message, IReadOnlyDictionary<string, string>? properties = null);
+
+    /// <summary>
+    /// Appends one raw line to a daemon log file of its own, <c>/var/log/&lt;directory&gt;/&lt;file&gt;.log</c>,
+    /// like <c>nginx</c> writing <c>/var/log/nginx/access.log</c> (ADR 0080, section 3). Only a system
+    /// app may do so; the platform's log writer does the actual write (ADR 0045: an app never writes
+    /// under <c>/var/log</c> itself), with the same batching and rotation as every other log.
+    /// </summary>
+    /// <param name="relativePath">
+    /// <c>&lt;directory&gt;/&lt;file&gt;.log</c>, for example <c>hackweb/docs.access.log</c>. The
+    /// directory may not be <c>apps</c>, which belongs to <see cref="Log"/>.
+    /// </param>
+    /// <param name="line">The line, written as is (a line break inside it is escaped).</param>
+    /// <exception cref="UnauthorizedAccessException">The app is not a system app, or the host offers no daemon logs.</exception>
+    /// <exception cref="ArgumentException">The path is not a valid daemon log path.</exception>
+    void AppendToLogFile(string relativePath, string line) =>
+        throw new UnauthorizedAccessException("Daemon log files are not offered by this host.");
 }
 
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>

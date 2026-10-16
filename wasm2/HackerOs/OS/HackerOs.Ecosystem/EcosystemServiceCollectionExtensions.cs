@@ -444,6 +444,10 @@ public static class EcosystemServiceCollectionExtensions
             () => provider.GetRequiredService<ISimulatedNetworkService>().GetHost("127.0.0.1") is { } localhost
                 ? localhost.Ports.Where(static port => port.State == SimulatedPortState.Open).Select(static port => port.PortNumber)
                 : []));
+        // ADR 0080, section 4: hackdns publishes the names bound by the hosted static sites (.site files).
+        services.AddScoped<IHostedSiteNameSource>(provider => new HostedSiteNameSource(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>()));
         services.AddScoped<HackDnsResolver>(provider =>
         {
             AppCatalog appCatalog = provider.GetRequiredService<AppCatalog>();

@@ -29,6 +29,7 @@ internal static class RemoteOps
 
     // Logging, notifications: fire-and-forget.
     public const string Log = "log";
+    public const string LogFile = "log.file";
     public const string NotificationPost = "notify.post";
 
     // Clock.

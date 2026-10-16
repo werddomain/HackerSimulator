@@ -29,14 +29,16 @@ public sealed record DnsAnswer(
 
 /// <summary>
 /// Names bound by hosted static sites (ADR 0077, <c>hackwebd</c>): a binding such as
-/// <c>http://docs.hack/</c> makes <c>docs.hack</c> resolve to this machine. Implemented by the
-/// <c>web/5-static-sites</c> chantier; the resolver works without one.
+/// <c>http://docs.hack/</c> makes <c>docs.hack</c> resolve to this machine. Implemented by
+/// <see cref="HostedSiteNameSource"/>, which reads the <c>.site</c> files (ADR 0080, section 4); the
+/// resolver works without one.
 /// </summary>
 public interface IHostedSiteNameSource
 {
     /// <summary>Gets the name of the hosted site that binds <paramref name="hostName"/>, or <see langword="null"/>.</summary>
     /// <param name="hostName">A lower-case host name.</param>
-    string? FindSite(string hostName);
+    /// <param name="cancellationToken">Cancels the read of the site files.</param>
+    ValueTask<string?> FindSiteAsync(string hostName, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -150,7 +152,7 @@ public sealed class HackDnsResolver
             }
         }
 
-        DnsAnswer? answer = ResolveUncached(name, webApps);
+        DnsAnswer? answer = await ResolveUncachedAsync(name, webApps, cancellationToken).ConfigureAwait(false);
         if (answer is not null)
         {
             lock (_gate)
@@ -189,7 +191,7 @@ public sealed class HackDnsResolver
         }
     }
 
-    private DnsAnswer? ResolveUncached(string name, IReadOnlyList<AppManifest> webApps)
+    private async ValueTask<DnsAnswer?> ResolveUncachedAsync(string name, IReadOnlyList<AppManifest> webApps, CancellationToken cancellationToken)
     {
         if (WebAppUrls.IsLoopbackName(name))
         {
@@ -201,7 +203,7 @@ public sealed class HackDnsResolver
             return new DnsAnswer(name, [IPAddress.Loopback], [], HackDnsSource.WebApp, webApp.Id);
         }
 
-        if (_hostedSites?.FindSite(name) is { } site)
+        if (_hostedSites is not null && await _hostedSites.FindSiteAsync(name, cancellationToken).ConfigureAwait(false) is { } site)
         {
             return new DnsAnswer(name, [IPAddress.Loopback], [], HackDnsSource.HostedSite, site);
         }
@@ -267,7 +269,7 @@ public sealed class HackDnsResolver
     }
 
     /// <summary>Reads as the resolver daemon, root, like <c>systemd-resolved</c> reading <c>/etc/hosts</c>.</summary>
-    private static AppOperationContext RootOperation() => new()
+    internal static AppOperationContext RootOperation() => new()
     {
         AppId = "org.hackeros.kernel",
         UserId = "system",

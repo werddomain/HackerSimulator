@@ -1,0 +1,174 @@
+@using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Net.Hosting
+@inherits WindowAppBase
+@implements IAsyncDisposable
+
+<div class="wsm">
+    <header class="wsm-header">
+        <div class="wsm-brand">
+            <span class="wsm-glyph" aria-hidden="true">◈</span>
+            <span class="wsm-title">Web Server Manager</span>
+            <span class="wsm-daemon @DaemonClass" title="@DaemonTitle">@DaemonText</span>
+        </div>
+        <div class="wsm-actions">
+            <button class="wsm-btn" @onclick="RefreshAsync" title="Read the .site files and sockets again">Refresh</button>
+            @if (_snapshot?.Daemon is { } daemon)
+            {
+                @if (daemon.ProcessId is null)
+                {
+                    <button class="wsm-btn" @onclick="StartDaemonAsync">Start hackwebd</button>
+                }
+                else
+                {
+                    <button class="wsm-btn" @onclick="RestartDaemonAsync">Restart</button>
+                    <button class="wsm-btn wsm-btn-danger" @onclick="StopDaemonAsync">Stop</button>
+                }
+            }
+            <button class="wsm-btn wsm-btn-accent" @onclick="NewSiteAsync">+ New site</button>
+        </div>
+    </header>
+
+    @if (_message is not null)
+    {
+        <div class="wsm-banner @(_messageIsError ? "wsm-banner-error" : "wsm-banner-info")" role="@(_messageIsError ? "alert" : "status")">@_message</div>
+    }
+
+    <div class="wsm-body">
+        <nav class="wsm-sites" aria-label="Sites">
+            @foreach ((string title, string hint, IReadOnlyList<WebSiteRow> rows) in Groups)
+            {
+                <div class="wsm-group">
+                    <div class="wsm-group-title">@title <span class="wsm-group-hint">@hint</span></div>
+                    @if (rows.Count == 0)
+                    {
+                        <div class="wsm-empty">none</div>
+                    }
+                    @foreach (WebSiteRow row in rows)
+                    {
+                        <button class="wsm-site @(IsSelected(row) ? "wsm-site-selected" : null)" @onclick="() => SelectAsync(row)">
+                            <span class="wsm-dot wsm-state-@row.State.ToString().ToLowerInvariant()" aria-hidden="true"></span>
+                            <span class="wsm-site-name">@row.Name</span>
+                            <span class="wsm-site-state">@StateLabel(row.State)</span>
+                            <span class="wsm-site-url">@(row.MainUrl ?? "—")</span>
+                        </button>
+                    }
+                </div>
+            }
+        </nav>
+
+        <section class="wsm-detail">
+            @if (_editor is { } editor)
+            {
+                <div class="wsm-tabs" role="tablist">
+                    <button role="tab" aria-selected="@(_tab == DetailTab.Settings ? "true" : "false")" class="wsm-tab @(_tab == DetailTab.Settings ? "wsm-tab-active" : null)" @onclick="() => _tab = DetailTab.Settings">Settings</button>
+                    <button role="tab" aria-selected="@(_tab == DetailTab.Logs ? "true" : "false")" class="wsm-tab @(_tab == DetailTab.Logs ? "wsm-tab-active" : null)" disabled="@(editor.OriginalPath is null)" @onclick="ShowLogsAsync">Logs</button>
+                </div>
+
+                @if (_tab == DetailTab.Settings)
+                {
+                    <form class="wsm-form" @onsubmit="SaveAsync" @onsubmit:preventDefault>
+                        <label class="wsm-field">
+                            <span>Name</span>
+                            <input class="wsm-input" @bind="editor.Name" @bind:event="oninput" @bind:after="Validate" spellcheck="false" />
+                        </label>
+
+                        <fieldset class="wsm-field wsm-scope">
+                            <legend>Declared in</legend>
+                            <label><input type="radio" name="scope" checked="@(editor.Scope == HackWebSiteScope.User)" @onchange="() => SetScopeAsync(HackWebSiteScope.User)" /> my sites <code>~/.config/hackweb/sites</code> (ports ≥ 1024)</label>
+                            <label><input type="radio" name="scope" checked="@(editor.Scope == HackWebSiteScope.System)" @onchange="() => SetScopeAsync(HackWebSiteScope.System)" /> system <code>/etc/hackweb/sites</code> (administrator, served as www-data)</label>
+                        </fieldset>
+
+                        <label class="wsm-field">
+                            <span>Root folder</span>
+                            <span class="wsm-row">
+                                <input class="wsm-input" @bind="editor.Root" @bind:event="oninput" @bind:after="ValidateAsync" spellcheck="false" />
+                                <button type="button" class="wsm-btn" @onclick="BrowseRootAsync">Browse…</button>
+                            </span>
+                        </label>
+
+                        <label class="wsm-field">
+                            <span>Bindings <small>one listener prefix per line, the first is the main address</small></span>
+                            <textarea class="wsm-input wsm-textarea" rows="3" @bind="editor.Bindings" @bind:event="oninput" @bind:after="Validate" spellcheck="false"></textarea>
+                        </label>
+
+                        <label class="wsm-field">
+                            <span>Default documents <small>comma-separated, tried in order</small></span>
+                            <input class="wsm-input" @bind="editor.DefaultDocuments" @bind:event="oninput" @bind:after="Validate" spellcheck="false" />
+                        </label>
+
+                        <div class="wsm-checks">
+                            <label><input type="checkbox" @bind="editor.DirectoryBrowsing" /> Directory browsing ("Index of" when no default document)</label>
+                            <label><input type="checkbox" @bind="editor.Enabled" /> Enabled (hackwebd serves the site)</label>
+                        </div>
+
+                        @if (_errors.Count > 0)
+                        {
+                            <ul class="wsm-errors" role="alert">
+                                @foreach (string error in _errors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        }
+
+                        @if (_warning is not null)
+                        {
+                            <p class="wsm-warning">@_warning</p>
+                        }
+
+                        <div class="wsm-form-actions">
+                            <button type="submit" class="wsm-btn wsm-btn-accent" disabled="@(_errors.Count > 0)">Save</button>
+                            @if (editor.OriginalPath is not null)
+                            {
+                                <button type="button" class="wsm-btn" @onclick="ToggleEnabledAsync">@(editor.WasEnabled ? "Stop site" : "Start site")</button>
+                                <button type="button" class="wsm-btn" disabled="@(SelectedUrl is null)" @onclick="OpenInBrowserAsync">Open in browser</button>
+                                <button type="button" class="wsm-btn wsm-btn-danger" @onclick="DeleteAsync">Delete</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="wsm-btn" @onclick="CancelNew">Cancel</button>
+                            }
+                        </div>
+
+                        @if (editor.OriginalPath is not null)
+                        {
+                            <p class="wsm-file">file: <code>@editor.OriginalPath</code></p>
+                        }
+                    </form>
+                }
+                else
+                {
+                    <div class="wsm-logs">
+                        <h3>Access <code>/var/log/hackweb/@(editor.Name).access.log</code></h3>
+                        <pre class="wsm-log">@(_accessLines.Count == 0 ? "(no request yet)" : string.Join('\n', _accessLines))</pre>
+                        <h3>Errors <code>/var/log/hackweb/error.log</code></h3>
+                        <pre class="wsm-log wsm-log-errors">@(_errorLines.Count == 0 ? "(nothing logged for this site)" : string.Join('\n', _errorLines))</pre>
+                    </div>
+                }
+            }
+            else if (_selected is { App: { } app } external)
+            {
+                <div class="wsm-external">
+                    <h2>@app.Name <span class="wsm-tag">external</span></h2>
+                    <p>A web app (<code>@app.Id</code>) served by its own process, not by hackwebd. The OS starts it on the first request to one of its addresses. Its files belong to the app: they are read-only here.</p>
+                    <ul class="wsm-urls">
+                        @foreach (string url in external.Urls)
+                        {
+                            <li><code>@url</code></li>
+                        }
+                    </ul>
+                    <button class="wsm-btn" disabled="@(external.MainUrl is null)" @onclick="OpenInBrowserAsync">Open in browser</button>
+                </div>
+            }
+            else
+            {
+                <div class="wsm-placeholder">
+                    <p>Pick a site, or publish a folder with <strong>+ New site</strong>.</p>
+                    <p class="wsm-muted">Sites are plain files: <code>cat /etc/hackweb/sites/*.site</code>, <code>systemctl status hackwebd</code>, <code>netstat -tlnp</code>.</p>
+                </div>
+            }
+        </section>
+    </div>
+
+    <footer class="wsm-status" role="status">@StatusText</footer>
+</div>

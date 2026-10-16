@@ -247,7 +247,9 @@ public sealed class AppExecutionContextFactory
             fileSystem,
             events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
-            new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),
+            new AppLoggingGateway(
+                _diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value,
+                isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true),
             clock,
             new AppProcessGateway(_processManager, capabilities, process.Pid),
             intents,
