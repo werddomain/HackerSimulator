@@ -29,8 +29,8 @@
         <div class="perf-section-header">
             <h3>CPU</h3>
             <div class="perf-toggle" role="group" aria-label="CPU view">
-                <button class="sysmon-btn @(_perCore ? null : "active")" aria-pressed="@(!_perCore)" @onclick="() => _perCore = false">Total</button>
-                <button class="sysmon-btn @(_perCore ? "active" : null)" aria-pressed="@_perCore" @onclick="() => _perCore = true">Per core</button>
+                <button class="sysmon-btn @(_perCore ? null : "active")" aria-pressed="@(!_perCore ? "true" : "false")" @onclick="() => _perCore = false">Total</button>
+                <button class="sysmon-btn @(_perCore ? "active" : null)" aria-pressed="@(_perCore ? "true" : "false")" @onclick="() => _perCore = true">Per core</button>
             </div>
         </div>
         @if (!_perCore)

@@ -20,13 +20,13 @@
             </p>
             <div class="policy-options" role="radiogroup" aria-label="Politique des capacités dangereuses">
                 <button type="button" role="radio" class="@PolicyClass(HackDangerousCapabilityPolicy.Prompt)"
-                        aria-checked="@(_policy == HackDangerousCapabilityPolicy.Prompt)"
+                        aria-checked="@(_policy == HackDangerousCapabilityPolicy.Prompt ? "true" : "false")"
                         disabled="@_isBusy"
                         @onclick="() => ChangePolicyAsync(HackDangerousCapabilityPolicy.Prompt)">
                     Demander à un administrateur
                 </button>
                 <button type="button" role="radio" class="@PolicyClass(HackDangerousCapabilityPolicy.Block)"
-                        aria-checked="@(_policy == HackDangerousCapabilityPolicy.Block)"
+                        aria-checked="@(_policy == HackDangerousCapabilityPolicy.Block ? "true" : "false")"
                         disabled="@_isBusy"
                         @onclick="() => ChangePolicyAsync(HackDangerousCapabilityPolicy.Block)">
                     Toujours bloquer

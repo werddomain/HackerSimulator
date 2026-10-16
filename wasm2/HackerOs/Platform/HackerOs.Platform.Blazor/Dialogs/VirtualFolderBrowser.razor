@@ -6,7 +6,7 @@
 @using MudBlazor
 @implements IAsyncDisposable
 
-<section class="folder-browser" aria-label="Virtual filesystem browser" aria-busy="@_loading">
+<section class="folder-browser" aria-label="Virtual filesystem browser" aria-busy="@(_loading ? "true" : "false")">
     <nav class="breadcrumbs" aria-label="Current folder">
         @foreach (Breadcrumb breadcrumb in GetBreadcrumbs())
         {
