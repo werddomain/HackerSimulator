@@ -63,6 +63,9 @@ ordre :
 6. le relais du serveur optionnel, si `network.real.access`, serveur connecté et
    jeton valide (comportement actuel d'`AppNetworkGateway`).
 
+Les sites internes utilisent le domaine `.hack` (`intranet.hack`), qui
+n'existe pas sur Internet : le repli 6 ne s'applique jamais à ce domaine.
+
 Le résultat est mis en cache avec un TTL ; `/etc/hosts` modifié vide le cache.
 Une commande `nslookup` est ajoutée ; elle montre, comme `HackDns`, la source
 de la réponse.
