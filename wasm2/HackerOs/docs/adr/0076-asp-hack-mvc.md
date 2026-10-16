@@ -2,7 +2,8 @@
 
 ## Statut
 
-Proposé le 2026-10-16.
+Accepté le 2026-10-16 (proposé le même jour, puis validé par Benoit avec le
+questionnaire de la section 4 du plan).
 
 - **Phase du plan :** phase web ([`asp-hack-plan.md`](../asp-hack-plan.md)).
 - **Dépend de :** ADR 0073 (genre `Web`), ADR 0074 (`HackHttpListener`).
@@ -113,15 +114,18 @@ chantier `web/8-cshtml-views` commence par une preuve : compiler un `.cshtml`
 avec `@model`, `@inject`, `@section`, `_Layout` et `_ViewStart` contre une classe
 de base `HackRazorPage<TModel>` d'ASP.Hack, sans référencer ASP.NET MVC. Si la
 preuve réussit, `View()` trouve `Views/<Contrôleur>/<Action>.cshtml` aussi. Si
-elle échoue, un nouvel ADR décrit l'autre voie (moteur `.cshtml` interprété)
-avant tout code. La compilation d'un `.cshtml` **dans l'OS** (moteur Razor et
+elle échoue, l'autre voie est déjà choisie : un moteur `.cshtml` interprété,
+propre à ASP.Hack, qui couvre un sous-ensemble (`@model`, `@using`, `@if`,
+`@foreach`, `@switch`, expressions `@Model.X`, `@section`, `_Layout`,
+`_ViewStart`, partials) sans C# arbitraire dans la vue ; un ADR court en note
+alors les limites avant le code. La compilation d'un `.cshtml` **dans l'OS** (moteur Razor et
 Roslyn dans le navigateur) est hors périmètre, mais le choix d'une classe de
 base propre à ASP.Hack la rend possible plus tard.
 
 ## Conséquences
 
 - Le générateur de manifestes gagne la génération des routes des apps `Web`.
-- Les sites MVC tournent dans un worker dédié par défaut (ADR 0073 §1) ; leurs
+- Les sites MVC tournent dans le worker web partagé (ADR 0073 §1) ; leurs
   vues n'ont pas besoin du DOM.
 - Les noms d'attributs identiques à ASP.NET vivent dans l'espace de noms
   `HackerOs.AppSdk.Web.Mvc` et ne peuvent pas entrer en conflit (ASP.NET n'est

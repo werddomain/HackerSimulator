@@ -2,7 +2,8 @@
 
 ## Statut
 
-Proposé le 2026-10-16.
+Accepté le 2026-10-16 (proposé le même jour, puis validé par Benoit avec le
+questionnaire de la section 4 du plan).
 
 - **Phase du plan :** phase web ([`asp-hack-plan.md`](../asp-hack-plan.md)).
 - **Dépend de :** ADR 0074 §1 (corps HTTP réels).
@@ -36,8 +37,10 @@ Comme un vrai navigateur, l'app Browser :
 4. les remplace par des URL `blob:`/`data:` et écrit le document final dans
    l'iframe.
 
-Le panneau réseau de l'onglet (outils de développement simplifiés) liste ces
-requêtes, avec statut, type et taille.
+Les outils de développement du navigateur existent dès la v1, avec deux
+onglets : **Réseau** (chaque requête avec méthode, statut, type, taille et
+durée) et **Console** (sortie de `console.*` et erreurs JS de la page,
+relayées par le pont).
 
 ### 3. Le pont de la page
 

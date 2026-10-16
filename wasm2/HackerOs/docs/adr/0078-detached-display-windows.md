@@ -2,7 +2,8 @@
 
 ## Statut
 
-Proposé le 2026-10-16.
+Accepté le 2026-10-16 (proposé le même jour, puis validé par Benoit avec le
+questionnaire de la section 4 du plan).
 
 - **Phase du plan :** phase web ([`asp-hack-plan.md`](../asp-hack-plan.md)).
 - **Dépend de :** ADR 0075 (iframe isolée).

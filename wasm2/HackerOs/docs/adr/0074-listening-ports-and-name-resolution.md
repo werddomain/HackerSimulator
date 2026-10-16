@@ -2,7 +2,8 @@
 
 ## Statut
 
-Proposé le 2026-10-16.
+Accepté le 2026-10-16 (proposé le même jour, puis validé par Benoit avec le
+questionnaire de la section 4 du plan).
 
 - **Phase du plan :** phase web ([`asp-hack-plan.md`](../asp-hack-plan.md)).
 - **Complète :** ADR 0055 et 0056 §6 (réseau par le SDK), ADR 0057 (`/proc/net`).
@@ -62,6 +63,10 @@ ordre :
 5. le réseau simulé (hôtes et sites enregistrés) ;
 6. le relais du serveur optionnel, si `network.real.access`, serveur connecté et
    jeton valide (comportement actuel d'`AppNetworkGateway`).
+
+`https://` est accepté et traité comme `http://` (pas de chiffrement dans le
+réseau simulé) ; le navigateur affiche le cadenas. Des certificats simulés
+pourront venir plus tard dans un ADR à part.
 
 Les sites internes utilisent le domaine `.hack` (`intranet.hack`), qui
 n'existe pas sur Internet : le repli 6 ne s'applique jamais à ce domaine.

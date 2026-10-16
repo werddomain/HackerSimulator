@@ -1,8 +1,8 @@
 # Phase web — ASP.Hack : sites web internes de HackerOS
 
-**Statut :** plan proposé le 2026-10-16, en attente de validation par Benoit.
-Les décisions sont dans les ADR 0073 à 0078 (statut « Proposé »). Aucun code
-n'est écrit avant leur validation.
+**Statut :** plan validé par Benoit le 2026-10-16 (réponses au questionnaire de
+22 questions, section 4.1). Les décisions sont dans les ADR 0073 à 0078,
+acceptés le même jour.
 
 Branche d'intégration : `web/base`, créée depuis `main` après la fusion de
 `rebuild/base` (PR #131, phases 1 à 5). Chaque chantier part de `web/base`, sa
@@ -80,10 +80,39 @@ son navigateur :
 | 6 | Le navigateur rend du vrai HTML dans une iframe isolée (`sandbox="allow-scripts"`, sans même origine), charge lui-même les sous-ressources par le réseau simulé et relaie `fetch`, `XMLHttpRequest`, liens et formulaires ; `file://` lit les fichiers de l'OS. | 0075 |
 | 7 | ASP.Hack MVC : pipeline de middlewares, routage par attributs et conventionnel généré au build, liaison de modèle, résultats, DI par requête, session par cookie. | 0076 |
 | 8 | Deux moteurs de vues : composants `.razor` rendus en HTML (`HtmlRenderer`), et vues `.cshtml` compilées au build par le compilateur Razor avec une classe de base ASP.Hack (après une preuve de faisabilité) ; compilation `.cshtml` dans l'OS plus tard. | 0076 |
-| 9 | Sites statiques déclarés en fichiers (`/etc/hackweb/sites/*.site`), servis par le service `hackwebd`, gérés par l'app « Web Server Manager » façon IIS, qui ne fait que piloter l'OS par le SDK. | 0077 |
+| 9 | Sites statiques déclarés en fichiers (`/etc/hackweb/sites/*.site` par l'administrateur, `~/.config/hackweb/sites/*.site` par tout utilisateur sur un port ≥ 1024), servis par le service `hackwebd`, gérés par l'app « Web Server Manager » façon IIS, qui ne fait que piloter l'OS par le SDK. | 0077 |
 | 10 | Fenêtre détachée : une page s'ouvre dans une fenêtre du navigateur hôte, hors de l'OS ; cette fenêtre est pilotée par l'instance principale (lien d'affichage), sans second OS indépendant. Le même lien servira au deuxième écran. | 0078 |
 | 11 | Les données d'un site ne sont pas dans les fichiers de l'OS : une base au besoin dans la base locale du navigateur hôte (IndexedDB), nommée d'office d'après l'app par un helper du SDK web ; seuls les cookies, la saisie semi-automatique et les journaux de débogage activés par le site vont dans les fichiers de l'OS (Benoit, 2026-10-16 16:44Z, remplace le dossier privé validé à 16:34Z). | 0073 |
 | 12 | Les sites internes utilisent le domaine `.hack` (`intranet.hack`) ; comme sur un vrai poste, `/etc/hosts` l'emporte toujours. | 0074 |
+
+### 4.1 Questionnaire du 2026-10-16
+
+Benoit a retenu toutes les recommandations, avec une précision sur la question 3.
+
+| # | Question | Réponse | ADR |
+|---|---|---|---|
+| 1 | Genre d'app | nouveau genre `Web` | 0073 |
+| 2 | MVC et Blazor dans la même app | permis (routes MVC d'abord) | 0073 |
+| 3 | Où tourne le code serveur | worker, **un seul worker partagé par tous les sites** | 0073 |
+| 4 | Démarrage d'un site | à la demande | 0074 |
+| 5 | Ports < 1024 | approbation administrateur | 0074 |
+| 6 | HTTPS | accepté et traité comme HTTP | 0074 |
+| 7 | Analyse du HTML | C#, AngleSharp | 0075 |
+| 8 | `localStorage` d'une page | fichiers de l'OS, avec les cookies | 0075 |
+| 9 | Base d'un site | API calquée sur IndexedDB + helper typé | 0073 |
+| 10 | Base à la désinstallation | effacée après confirmation | 0073 |
+| 11 | Bases visibles dans l'OS | dans Diagnostic | 0073 |
+| 12 | WebSocket, EventSource, `window.open` | refusés en v1 | 0075 |
+| 13 | Outils de développement | Réseau et Console en v1 | 0075 |
+| 14 | Table des routes | générée au build | 0076 |
+| 15 | Session | en mémoire du processus | 0076 |
+| 16 | Noms des types | classes `Hack*`, attributs d'ASP.NET | 0076 |
+| 17 | `.cshtml` si la preuve échoue | moteur interprété maison | 0076 |
+| 18 | Format des sites statiques | JSON (`.site`) | 0077 |
+| 19 | Qui publie un site statique | tout utilisateur (port ≥ 1024, `~/.config`), administrateur pour `/etc` | 0077 |
+| 20 | Identité de `hackwebd` | compte `www-data` | 0077 |
+| 21 | Fenêtre détachée | pilotée par l'OS principal | 0078 |
+| 22 | Premier chantier | ordre du plan | — |
 
 ## 5. Chantiers
 
@@ -91,7 +120,7 @@ son navigateur :
 |---|---|---|
 | `web/1-adr` | Ce plan, ADR 0073 à 0078, index. | — |
 | `web/2-http-bodies` | Corps HTTP réels dans les contrats simulés et le SDK (`Content-Type`, octets, en-têtes) ; `SimulatedPage` reste pour les sites existants ; `curl` affiche le corps brut. | `1` |
-| `web/3-listener-dns` | `HackHttpListener`, `network.listen`, table des ports, `hackdns`, `/etc/hosts`, `Urls` du manifeste, activation à la demande, `netstat -tlnp`, `/proc/net/tcp`, passerelle distante pour un listener dans un worker. | `2` |
+| `web/3-listener-dns` | `HackHttpListener`, `network.listen`, table des ports, `hackdns`, `/etc/hosts`, `Urls` du manifeste, activation à la demande, `netstat -tlnp`, `/proc/net/tcp`, worker web partagé et passerelle distante pour un listener dans ce worker. | `2` |
 | `web/4-browser-html` | Iframe isolée, chargeur de sous-ressources, pont `fetch`/XHR/formulaires, `file://`, onglet « source », erreurs réseau. | `2` |
 | `web/5-static-sites` | Fichiers `.site`, service `hackwebd` (fichiers statiques, index, types MIME, 404), app Web Server Manager, ouverture d'un dossier comme site. | `3`, `4` |
 | `web/6-mvc-core` | Bibliothèque `HackerOs.AppSdk.Web` : `WebAppDefinition`, `HackWebApplication`, middlewares, générateur de routes, contrôleurs, liaison, résultats JSON/Content/File/Redirect, DI par requête, session. | `3` |
@@ -125,8 +154,8 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 ### Préparation
 - [x] Questions à Benoit et réponses (2026-10-16).
 - [x] Fusion de `rebuild/base` dans `main` (PR #131) et création de `web/base`.
-- [x] Ce plan et les ADR 0073 à 0078 (proposés).
-- [ ] Validation du plan et des ADR par Benoit.
+- [x] Ce plan et les ADR 0073 à 0078.
+- [x] Validation du plan et des ADR par Benoit (questionnaire, 2026-10-16).
 
 ### Chantiers
 - [ ] `web/2-http-bodies`

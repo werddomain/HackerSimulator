@@ -2,7 +2,8 @@
 
 ## Statut
 
-Proposé le 2026-10-16.
+Accepté le 2026-10-16 (proposé le même jour, puis validé par Benoit avec le
+questionnaire de la section 4 du plan).
 
 - **Phase du plan :** phase web ([`asp-hack-plan.md`](../asp-hack-plan.md)).
 - **Complète :** ADR 0047 (manifeste en classe C#), ADR 0049 (capacités),
@@ -40,9 +41,15 @@ public sealed class IntranetApp : WebAppDefinition
   de catalogue (`catalog.web.url-conflict`).
 - Un site peut être MVC seul, Blazor seul, ou les deux : les routes MVC passent
   d'abord, le reste va au composant Blazor.
-- Hôte d'exécution par défaut (ADR 0070) : `Dedicated` pour un site sans
-  Blazor (le rendu HTML n'a pas besoin du DOM), `MainThread` pour un site avec
-  Blazor.
+- Hôte d'exécution (ADR 0070) : le code serveur de **tous** les sites (MVC,
+  routes, vues) tourne dans **un seul worker partagé**, le worker web, comme un
+  pool d'applications IIS. Chaque site reste un processus distinct (PID, ligne
+  du gestionnaire de tâches, arrêt propre par `SIGTERM`), mais une boucle infinie
+  dans un site bloque tous les sites, pas l'OS ; « Force kill » d'un site qui ne
+  répond pas termine le worker web et donc tous les sites, qui redémarrent à la
+  requête suivante (activation à la demande, ADR 0074 §3). Le worker web
+  démarre avec le premier site appelé. La partie Blazor interactive d'un site
+  tourne sur le thread principal, où le navigateur la dessine (§4).
 
 ### 2. Deux sortes de sites, selon d'où viennent les fichiers
 
@@ -63,6 +70,14 @@ charge tels quels, comme sites externes sans processus.
   hôte (IndexedDB, comme le système de fichiers de l'OS lui-même), par un helper
   du SDK web qui impose un nom de base dérivé de l'identifiant de l'app
   (`hackweb.<id>`) : un site ne peut ni choisir ni ouvrir la base d'un autre.
+  L'API est calquée sur IndexedDB (magasins d'objets, index, transactions,
+  versions), avec un helper typé par-dessus (`HackWebDb`,
+  `store.GetAsync<Note>(id)`, `PutAsync`, `DeleteAsync`, requêtes par index).
+  IndexedDB étant disponible dans un Web Worker, la base s'ouvre depuis le
+  worker web.
+- La base d'un site est effacée avec l'app à la désinstallation, après
+  confirmation. L'app Diagnostic liste les bases des sites (nom, taille) et
+  permet de les vider ; elles n'apparaissent pas dans les fichiers de l'OS.
 - Seules les données propres au navigateur vont dans le système de fichiers de
   l'OS : cookies, saisie semi-automatique, et les journaux d'un site quand le
   site les active pour le débogage (`/var/log/hackweb/<id>.log`).
