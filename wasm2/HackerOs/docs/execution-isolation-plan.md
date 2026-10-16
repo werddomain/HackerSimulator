@@ -1,6 +1,7 @@
 # Phase 5 — exécution des apps : mesure du CPU et de la mémoire, arrêt propre, Web Workers
 
-**Statut :** plan validé avec Benoit le 2026-10-16. Il prolonge
+**Statut :** plan validé avec Benoit le 2026-10-16, **terminé le 2026-10-16**
+(PR #124 à #129, puis vérification finale `rebuild/5-final`, section 6). Il prolonge
 [`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md) (phases 1 à 4,
 fusionnées dans `main` par la PR #114) et lève l'exclusion « isolation
 d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0071.
@@ -188,10 +189,50 @@ Précisions de mise en œuvre (`rebuild/5-graceful-stop`, détail dans
 ### Hôtes (section 5.2)
 - [x] `build/verify-hosts.sh` : les trois hôtes compilent, se publient et démarrent jusqu'au bureau ; repli sur `/opt/pw-browsers/chromium` pour toutes les suites Playwright (`rebuild/5-host-smoke`).
 - [x] Parcours avec les mesures coupées au build et par `appsettings.json` (`CpuSource`/`MemSource` vérifiés pour chaque parcours).
-- [ ] Chaque PR `rebuild/5-*` donne la sortie de la vérification.
+- [x] Chaque PR `rebuild/5-*` donne la sortie de la vérification : sortie de `build/verify-hosts.sh` dans #128 et #129 ; #124 à #127, fusionnées avant le script, décrivent le même parcours fait à la main (règle de la section 5.2).
 
 ### Fin de phase
-- [ ] Vérification finale et documentation à jour (`rebuild/5-final`).
+- [x] Vérification finale et documentation à jour (`rebuild/5-final`, ci-dessous).
+
+### Vérification finale (`rebuild/5-final`, 2026-10-16)
+
+Sur `rebuild/base` à `47de11c` (après #129), dans un conteneur cloud :
+
+- `dotnet build HackerOs.sln -c Release` : 0 erreur, 0 avertissement.
+- Les 35 projets `Tests/*.Tests` hors E2E (environ 2 400 tests) passent, dont
+  `HackerOs.Platform.ResourceAccounting.Tests` (52), `HackerOs.Platform.WorkerHost.Tests`
+  (82, parité des 63 commandes) et `HackerOs.Platform.Core.Tests` (890).
+- `build/verify-hosts.sh` : le premier passage a échoué sur `test-host`. Le test de
+  démarrage lisait la sortie de `ps` dès l'en-tête `PID`, alors que la sortie d'une
+  commande lancée dans un Web Worker arrive en plusieurs écritures ; les lignes des
+  processus n'étaient pas encore affichées. `HostBootSmokeTests` attend maintenant
+  l'invite suivante après la sortie de `ps` et de `cat /proc/self/status`
+  (`OutputFinished`). Deux passages complets ensuite :
+
+```text
+== HackerOS host verification (47de11c) ==
+build HackerOs.Ecosystem         PASS
+build test                       PASS
+build HackerOs.Server            PASS
+build HackerOs.HostSmoke.Tests   PASS
+publish ecosystem                PASS
+publish ecosystem-build-off      PASS
+ecosystem                        PASS  30s
+ecosystem-build-off              PASS  31s
+ecosystem-settings-off           PASS  30s
+test-host                        PASS  46s
+server                           PASS  36s
+RESULT: PASS
+```
+
+- Documentation relue contre le code : `system-metrics.md`, `task-manager.md`,
+  `app-sdk.md`, `sdk-reference.md`, `project-overview.md`, `virtual-proc-and-dev.md`
+  et `linux-commands.md` décrivent déjà les ADR 0066 à 0072 (chaque chantier les a
+  mis à jour) ; les décomptes (32 capacités, 75 apps dont 63 commandes) sont exacts.
+- Restent hors de cette phase, notés dans
+  [`building-and-testing.md`](building-and-testing.md#état-connu) : deux échecs de
+  `HackerOs.UI.E2E.Tests` dus à l'app (accessibilité, bouton « Back » mobile) et la
+  suite PWA qui demande IPv6.
 
 ## 7. Hors périmètre
 

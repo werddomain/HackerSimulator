@@ -122,7 +122,8 @@ Déroulé :
    (styles scopés appliqués à la barre des tâches, puis au cadre des fenêtres :
    `display: flex` calculé, sinon le bundle `{Projet}.styles.css` de l'hôte
    manque), Terminal avec `ps` puis `cat /proc/self/status` (valeurs de `CpuSource:` et
-   `MemSource:` vérifiées), System Monitor (le processus du terminal est
+   `MemSource:` vérifiées ; chaque sortie est lue une fois l'invite suivante
+   affichée, car une commande dans un Web Worker écrit en plusieurs messages), System Monitor (le processus du terminal est
    listé), fermeture de chaque fenêtre. Toute erreur de la console ou de la
    page fait échouer le parcours, comme toute ligne `fail:` ou « Unhandled
    exception » du journal de l'hôte (erreurs d'un circuit `InteractiveServer`,
