@@ -111,6 +111,26 @@ public sealed class HackWebApplication : IAsyncDisposable
         return this;
     }
 
+    /// <summary>
+    /// Serves the project's <c>wwwroot/</c>, embedded in the site's assembly at build, read-only
+    /// (ADR 0073 §2, ADR 0083 §6): <c>/css/site.css</c>, <c>/</c> → <c>index.html</c>. Put it before
+    /// <see cref="MapControllers"/>'s middlewares so a file answers without reaching an action.
+    /// </summary>
+    /// <param name="configure">Changes the options (assembly, request path, default files, caching).</param>
+    /// <exception cref="InvalidOperationException">No assembly: the builder has no definition type and the options name none.</exception>
+    public HackWebApplication UseStaticFiles(Action<HackStaticFileOptions>? configure = null)
+    {
+        HackStaticFileOptions options = new() { Assembly = _builder.DefinitionType?.Assembly };
+        configure?.Invoke(options);
+        if (options.Assembly is null)
+        {
+            throw new InvalidOperationException("UseStaticFiles needs the assembly that embeds wwwroot: set options.Assembly, or build the site through its generated host.");
+        }
+
+        HackStaticFileMiddleware middleware = new(options);
+        return Use(next => context => middleware.InvokeAsync(context, next));
+    }
+
     /// <summary>Writes <c>Status Code: 404; Not Found</c> for an error status that has no body (ASP.NET's <c>UseStatusCodePages</c>).</summary>
     public HackWebApplication UseStatusCodePages() => Use(next => async context =>
     {

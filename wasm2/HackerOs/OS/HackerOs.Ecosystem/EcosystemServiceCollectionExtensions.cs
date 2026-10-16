@@ -540,13 +540,13 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IAppEnablementRegistry>(),
             provider.GetRequiredService<IOsSettingsService>()));
 
-        // Simulated network (ADR 0034) — smoke-test seed only, not the full "Game domain" content
-        // pack ADR 0023 scoped separately. Enough for curl/ping/nmap's simulated path to work now
-        // that the commands themselves are wired into the catalog.
+        // Simulated network (ADR 0085, replacing ADR 0034's smoke-test-only seed): the default
+        // hosts and sites (hackersearch.net is the Browser's home page) plus the .hackeros
+        // smoke-test fixtures, which the E2E tests and the docs still use.
         services.AddSingleton<ISimulatedWebsiteRegistry>(_ =>
         {
             InMemorySimulatedWebsiteRegistry registry = new();
-            foreach (ISimulatedWebsiteController controller in SmokeTestNetworkSeed.Websites)
+            foreach (ISimulatedWebsiteController controller in DefaultSimulatedHostCatalog.BuildWebsites().Concat(SmokeTestNetworkSeed.Websites))
             {
                 registry.Register(controller);
             }
@@ -554,7 +554,7 @@ public static class EcosystemServiceCollectionExtensions
             return registry;
         });
         services.AddSingleton<ISimulatedNetworkService>(provider => new InMemorySimulatedNetworkService(
-            SmokeTestNetworkSeed.Hosts,
+            [.. DefaultSimulatedHostCatalog.Build(), .. SmokeTestNetworkSeed.Hosts],
             provider.GetRequiredService<ISimulatedWebsiteRegistry>()));
 
         services.AddScoped<AppLifecycleOrchestrator>(provider => new AppLifecycleOrchestrator(

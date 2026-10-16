@@ -5,6 +5,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Web.Hosting;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.DependencyInjection;
 using RouteGenerator = generator::HackerOs.Tools.WebRouteGenerator.WebRouteGenerator;
 
@@ -30,7 +32,7 @@ public sealed class WebRouteGeneratorTests
         return [.. platform.Concat(sdk).Distinct().Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))];
     });
 
-    private static (ImmutableArray<Diagnostic> Diagnostics, Compilation Output) Run(string source)
+    private static (ImmutableArray<Diagnostic> Diagnostics, Compilation Output) Run(string source, params RazorFile[] razorFiles)
     {
         CSharpParseOptions parseOptions = new(LanguageVersion.Latest);
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -38,9 +40,46 @@ public sealed class WebRouteGeneratorTests
             [CSharpSyntaxTree.ParseText(Usings + source, parseOptions)],
             References.Value,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-        GeneratorDriver driver = CSharpGeneratorDriver.Create([new RouteGenerator().AsSourceGenerator()], parseOptions: parseOptions);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            [new RouteGenerator().AsSourceGenerator()],
+            additionalTexts: razorFiles.Select(file => (AdditionalText)new RazorText(file)),
+            parseOptions: parseOptions,
+            optionsProvider: new RazorOptions());
         driver.RunGeneratorsAndUpdateCompilation(compilation, out Compilation output, out ImmutableArray<Diagnostic> diagnostics);
         return (diagnostics, output);
+    }
+
+    /// <summary>A <c>.razor</c> file as the Razor SDK passes it: a project-relative <c>TargetPath</c> (base64 in the editorconfig).</summary>
+    private sealed record RazorFile(string TargetPath, string Content = "");
+
+    private sealed class RazorText(RazorFile file) : AdditionalText
+    {
+        public RazorFile File => file;
+
+        public override string Path => "/site/" + file.TargetPath;
+
+        public override SourceText GetText(CancellationToken cancellationToken = default) => SourceText.From(file.Content);
+    }
+
+    private sealed class RazorOptions : AnalyzerConfigOptionsProvider
+    {
+        public override AnalyzerConfigOptions GlobalOptions { get; } = new Options(new()
+        {
+            ["build_property.RootNamespace"] = "Example.Intranet-Site",
+            ["build_property.MSBuildProjectDirectory"] = "/site"
+        });
+
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => new Options([]);
+
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => new Options(new()
+        {
+            ["build_metadata.AdditionalFiles.TargetPath"] = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(((RazorText)textFile).File.TargetPath))
+        });
+
+        private sealed class Options(Dictionary<string, string> values) : AnalyzerConfigOptions
+        {
+            public override bool TryGetValue(string key, out string value) => values.TryGetValue(key, out value!);
+        }
     }
 
     private static string[] Ids(string source) => [.. Run(source).Diagnostics.Select(diagnostic => diagnostic.Id).Distinct()];
@@ -164,5 +203,44 @@ public sealed class WebRouteGeneratorTests
                 public string List() => "a";
             }
             """));
+    }
+
+    [Fact]
+    public void Views_under_Views_are_listed_with_the_class_names_the_razor_compiler_gives_them()
+    {
+        (ImmutableArray<Diagnostic> diagnostics, Compilation output) = Run("""
+            [AppManifest]
+            public sealed partial class Intranet : WebAppDefinition
+            {
+                public override string Id => "org.example.intranet";
+                public override string Name => "Intranet";
+                public override IReadOnlyList<string> Urls => ["http://intranet.hack/"];
+            }
+
+            namespace Example.Intranet_Site.Views.Home { public sealed class Index : Microsoft.AspNetCore.Components.ComponentBase { } public sealed class _2_items : Microsoft.AspNetCore.Components.ComponentBase { } }
+            namespace Example.Intranet_Site.Views.Shared { public sealed class _Layout : Microsoft.AspNetCore.Components.ComponentBase { } }
+            namespace Custom.Area { public sealed class Dashboard : Microsoft.AspNetCore.Components.ComponentBase { } }
+            namespace Custom.Imported { public sealed class Card : Microsoft.AspNetCore.Components.ComponentBase { } }
+            """,
+            new RazorFile("Views/Home/Index.razor", "<h1>hi</h1>"),
+            new RazorFile("Views/Home/2 items.razor"),
+            new RazorFile("Views/Shared/_Layout.razor"),
+            new RazorFile("Views/Admin/Dashboard.razor", "@namespace Custom.Area\n<p>x</p>"),
+            new RazorFile("Views/Widgets/_Imports.razor", "@namespace Custom.Imported"),
+            new RazorFile("Views/Widgets/Deep/Card.razor"),
+            new RazorFile("_Imports.razor", "@using System"),
+            new RazorFile("Components/NotAView.razor"));
+
+        Assert.Empty(diagnostics);
+        Assert.Empty(output.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        string table = output.SyntaxTrees.Single(tree => tree.FilePath.EndsWith("HackWebGeneratedRoutes.g.cs", StringComparison.Ordinal)).ToString();
+        Assert.Contains("""new("Home/Index", typeof(global::Example.Intranet_Site.Views.Home.Index))""", table);
+        Assert.Contains("""new("Home/2 items", typeof(global::Example.Intranet_Site.Views.Home._2_items))""", table);
+        Assert.Contains("""new("Shared/_Layout", typeof(global::Example.Intranet_Site.Views.Shared._Layout))""", table);
+        Assert.Contains("""new("Admin/Dashboard", typeof(global::Custom.Area.Dashboard))""", table);
+        Assert.Contains("""new("Widgets/Deep/Card", typeof(global::Custom.Imported.Card))""", table);
+        Assert.DoesNotContain("_Imports", table);
+        Assert.DoesNotContain("NotAView", table);
+        Assert.Contains("HackWebGeneratedRoutes.Views)", output.SyntaxTrees.Single(tree => tree.FilePath.EndsWith("WebHost.g.cs", StringComparison.Ordinal)).ToString());
     }
 }

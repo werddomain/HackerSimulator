@@ -76,6 +76,28 @@
   </ItemGroup>
 
   <!--
+    ASP.Hack wwwroot (ADR 0073 §2, ADR 0083 §6): a site's wwwroot/ is embedded in its assembly as resources
+    named "wwwroot/<relative path>" and served read-only by UseStaticFiles; it is never a static web asset
+    of the host (an app's wwwroot would otherwise land under _content/). On by default for a project that
+    references HackerOs.AppSdk.Web; set HackerOsEmbedWebRoot to true/false to decide yourself.
+  -->
+  <Target Name="_HackerOsEmbedWebRoot" BeforeTargets="AssignTargetPaths;ResolveStaticWebAssetsInputs;ResolveProjectStaticWebAssets">
+    <PropertyGroup>
+      <_HackerOsReferencesWebSdk Condition="'%(ProjectReference.Filename)' == 'HackerOs.AppSdk.Web'">true</_HackerOsReferencesWebSdk>
+      <HackerOsEmbedWebRoot Condition="'$(HackerOsEmbedWebRoot)' == '' and '$(_HackerOsReferencesWebSdk)' == 'true'">true</HackerOsEmbedWebRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(HackerOsEmbedWebRoot)' == 'true'">
+      <_HackerOsWebRootFile Include="$(MSBuildProjectDirectory)/wwwroot/**" />
+      <Content Remove="@(_HackerOsWebRootFile)" />
+      <None Remove="@(_HackerOsWebRootFile)" />
+      <EmbeddedResource Include="@(_HackerOsWebRootFile)"
+                        LogicalName="wwwroot/%(RecursiveDir)%(Filename)%(Extension)"
+                        WithCulture="false"
+                        Type="Non-Resx" />
+    </ItemGroup>
+  </Target>
+
+  <!--
     Generated manifests sit in the project directory (tracked by git for review) but are not
     content: they must never be copied or published under the same name by several apps.
   -->
