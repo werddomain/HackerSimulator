@@ -290,6 +290,18 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         }
     }
 
+    /// <summary>Gets the live workers (diagnostics and tests).</summary>
+    internal IReadOnlyList<WorkerConnection> Connections
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _workers];
+            }
+        }
+    }
+
     /// <summary>Gets the worker hosting <paramref name="pid"/>, if any.</summary>
     internal WorkerConnection? FindHost(long pid)
     {

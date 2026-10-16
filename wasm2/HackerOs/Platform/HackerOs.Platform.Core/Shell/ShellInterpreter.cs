@@ -37,6 +37,9 @@ public sealed partial class ShellInterpreter
     /// <summary>Exit code of a line that did not parse.</summary>
     public const int SyntaxErrorExitCode = 2;
 
+    /// <summary>Exit code of a command ended by <c>SIGKILL</c> (128 + 9).</summary>
+    internal const int KilledExitCode = 137;
+
     /// <summary>Exit code of an interrupted pipeline (128 + SIGINT).</summary>
     public const int InterruptedExitCode = 130;
 

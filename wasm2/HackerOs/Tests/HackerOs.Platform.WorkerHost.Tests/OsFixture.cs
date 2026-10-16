@@ -114,7 +114,7 @@ internal sealed class OsFixture : IAsyncDisposable
         AppEnablementRegistry enablement = new(Catalog);
         AppExecutionContextFactory contextFactory = new(
             _grants, fileSystem, EventBus, topicBus, new InMemoryNotificationQueue(maxEntriesPerUser: 20),
-            new BoundedDiagnosticSink(maxEntries: 100), Clock, Manager,
+            Diagnostics, Clock, Manager,
             intentDispatcherProvider: () => Dispatcher!,
             logWriter: Log,
             network: new InMemorySimulatedNetworkService(SmokeTestNetworkSeed.Hosts, SmokeTestWebsites()),
@@ -130,7 +130,11 @@ internal sealed class OsFixture : IAsyncDisposable
                 poolOptions ?? FastOptions,
                 Clock,
                 () => Manager,
-                (message, pid) => Log.Write(LogFileTarget.Syslog, HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning, "kernel", message, pid),
+                (message, pid) =>
+                {
+                    Syslog.Enqueue(pid is { } id ? $"[{id}] {message}" : message);
+                    Log.Write(LogFileTarget.Syslog, HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning, "kernel", message, pid);
+                },
                 Startup);
         }
 
@@ -178,6 +182,9 @@ internal sealed class OsFixture : IAsyncDisposable
 
     public LogFileWriter Log { get; }
 
+    /// <summary>Gets every app's diagnostic entries (what <c>/var/log/apps/&lt;appId&gt;.log</c> receives).</summary>
+    public BoundedDiagnosticSink Diagnostics { get; } = new(maxEntries: 1000);
+
     public AppCatalog Catalog { get; }
 
     public AppLifecycleOrchestrator Orchestrator { get; }
@@ -193,6 +200,9 @@ internal sealed class OsFixture : IAsyncDisposable
     public WorkerPool? Pool { get; }
 
     public SystemStartupSignal Startup { get; } = new();
+
+    /// <summary>Gets the lines the worker pool wrote to <c>/var/log/syslog</c>, prefixed with their PID.</summary>
+    public System.Collections.Concurrent.ConcurrentQueue<string> Syslog { get; } = new();
 
     public AuthenticatedPrincipal Principal { get; private set; } = default!;
 
@@ -233,13 +243,20 @@ internal sealed class OsFixture : IAsyncDisposable
     public void Grant(string appId, string capability) =>
         _grants.Grant(appId, Principal.UserId.ToString(), capability, CapabilityGrantSource.SystemPolicy, AppAuthority.Administrator);
 
+    /// <summary>Opens another shell on the same terminal (a second tab), to act while the first one is busy.</summary>
+    public ShellSession OpenShell() => new(Host, Principal);
+
     /// <summary>Runs one command line in the terminal's shell, capturing its output.</summary>
-    public async Task<ShellRun> RunAsync(string line, string? input = null, CancellationToken cancellationToken = default)
+    public Task<ShellRun> RunAsync(string line, string? input = null, CancellationToken cancellationToken = default) =>
+        RunAsync(Session, line, input, cancellationToken);
+
+    /// <summary>Runs one command line in <paramref name="session"/>, capturing its output.</summary>
+    public async Task<ShellRun> RunAsync(ShellSession session, string line, string? input = null, CancellationToken cancellationToken = default)
     {
         StringWriter stdout = new() { NewLine = "\n" };
         StringWriter stderr = new() { NewLine = "\n" };
         ShellExecutionResult result = await Interpreter.ExecuteAsync(
-            Session,
+            session,
             line,
             new ShellExecutionOptions
             {
@@ -311,6 +328,29 @@ internal sealed class OsFixture : IAsyncDisposable
             }
         }
     }
+
+    /// <summary>Waits until <paramref name="condition"/> holds, polling.</summary>
+    public static async Task WaitUntilAsync(Func<bool> condition, TimeSpan? timeout = null, string? because = null)
+    {
+        DateTime deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                Assert.Fail($"Timed out waiting{(because is null ? string.Empty : ": " + because)}.");
+            }
+
+            await Task.Delay(10);
+        }
+    }
+
+    /// <summary>Gets the log lines of one app.</summary>
+    public Task<string> ReadAppLogAsync(string appId) =>
+        Task.FromResult(string.Join('\n', Diagnostics.Entries.Where(entry => entry.Category == appId).Select(static entry => entry.Message)));
+
+    /// <summary>Gets the PID of the running process of <paramref name="appId"/>.</summary>
+    public long? FindPid(string appId) =>
+        Manager.GetActiveProcesses().LastOrDefault(process => process.AppId == appId)?.Pid.Value;
 
     public async ValueTask DisposeAsync()
     {

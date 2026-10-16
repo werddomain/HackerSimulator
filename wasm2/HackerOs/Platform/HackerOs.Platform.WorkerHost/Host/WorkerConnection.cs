@@ -164,12 +164,16 @@ internal sealed class WorkerConnection
         }
     }
 
+    /// <summary>Gets how many processes this worker has hosted since it started.</summary>
+    public int HostedTotal { get; private set; }
+
     /// <summary>Registers a process placed on this worker.</summary>
     public void Add(RemoteProcessSession session)
     {
         lock (_gate)
         {
             _sessions[session.Pid] = session;
+            HostedTotal++;
         }
     }
 

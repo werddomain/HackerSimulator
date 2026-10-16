@@ -276,7 +276,8 @@ public sealed class WorkerProcessHost
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            exit = new RemoteProcessExit(RemoteProcessExitStatus.Faulted, FaultMessage: $"{exception.GetType().Name}: {exception.Message}");
+            // The message alone, as the in-process launch reports it (lifecycle.entry-point.fault).
+            exit = new RemoteProcessExit(RemoteProcessExitStatus.Faulted, FaultMessage: exception.Message);
         }
 
         End(process, exit);
