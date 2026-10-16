@@ -273,6 +273,36 @@ public sealed class AppExecutionContextTests
         }
     }
 
+    [Fact]
+    public async Task Context_home_directory_is_the_principals_login_home_not_its_user_id()
+    {
+        Fixture fixture = new();
+        IAppExecutionContext context = await fixture.CreateContextAsync([]);
+
+        Assert.Equal("/home/alice", context.HomeDirectory);
+    }
+
+    [Fact]
+    public async Task Clock_callbacks_and_event_handlers_run_inside_the_subscribing_apps_ambient_context()
+    {
+        // ADR 0043: a gateway callback runs on the publisher's flow, so the gateway re-enters its own app.
+        Fixture fixture = new();
+        IAppExecutionContext context = await fixture.CreateContextAsync([]);
+        IAppExecutionContext? seenByClock = null;
+        IAppExecutionContext? seenByEvent = null;
+        context.Clock.Schedule(TimeSpan.FromSeconds(1), () => seenByClock = HackExecutionContext.CurrentOrNull);
+        using IDisposable subscription = context.Events.Subscribe<AmbientProbeEvent>(_ => seenByEvent = HackExecutionContext.CurrentOrNull);
+
+        fixture.Clock.Advance();
+        fixture.EventBus.Publish(new AmbientProbeEvent());
+
+        Assert.Same(context, seenByClock);
+        Assert.Same(context, seenByEvent);
+        Assert.Null(HackExecutionContext.CurrentOrNull);
+    }
+
+    private sealed record AmbientProbeEvent;
+
     private sealed class Fixture
     {
         private int _entryId = 1;
@@ -316,10 +346,9 @@ public sealed class AppExecutionContextTests
             Manager = new InMemoryProcessManager(Clock, Session, EventBus);
             Notifications = new InMemoryNotificationQueue(maxEntriesPerUser: 20);
             Diagnostics = new BoundedDiagnosticSink(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([]);
             Registry = new FileSystemSelectedResourceHandleRegistry(Clock, Grants, EventBus);
             Factory = new AppExecutionContextFactory(
-                Grants, FileSystem, Settings, EventBus, TopicBus, Notifications, Diagnostics, Clock, Manager);
+                Grants, FileSystem, EventBus, TopicBus, Notifications, Diagnostics, Clock, Manager);
 
             Manifest = new AppManifest
             {
@@ -350,7 +379,6 @@ public sealed class AppExecutionContextTests
         internal CapabilityGrantRepository Grants { get; }
         internal InMemoryNotificationQueue Notifications { get; }
         internal BoundedDiagnosticSink Diagnostics { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
         internal FileSystemSelectedResourceHandleRegistry Registry { get; }
         internal AppExecutionContextFactory Factory { get; }
         internal LocalLoginName AliceLoginName { get; }

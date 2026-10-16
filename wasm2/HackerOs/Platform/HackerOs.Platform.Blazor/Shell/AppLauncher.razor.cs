@@ -80,6 +80,8 @@ public partial class AppLauncher : ComponentBase, IDisposable
     protected override async Task OnInitializedAsync()
     {
         _principal = SessionService.CurrentPrincipal;
+        // An uninstall or reinstall (ADR 0048) while the menu is open updates it in place.
+        Enablement.Changed += OnEnablementChanged;
         if (_principal is not null)
         {
             Preferences.Changed += OnPreferencesChanged;
@@ -289,6 +291,25 @@ public partial class AppLauncher : ComponentBase, IDisposable
         });
     }
 
+    private void OnEnablementChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            RebuildProjection();
+            StateHasChanged();
+        });
+    }
+
     private void RefreshPinnedAppIds()
     {
         _pinnedAppIds = _principal is null
@@ -384,6 +405,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
     public void Dispose()
     {
         _disposed = true;
+        Enablement.Changed -= OnEnablementChanged;
         if (_preferencesSubscribed)
         {
             Preferences.Changed -= OnPreferencesChanged;

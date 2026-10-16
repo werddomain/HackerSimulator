@@ -17,10 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Cat\HackerOs.Commands.Cat.csproj" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Curl\HackerOs.Commands.Curl.csproj" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nmap\HackerOs.Commands.Nmap.csproj" />
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Ping\HackerOs.Commands.Ping.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
     <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />

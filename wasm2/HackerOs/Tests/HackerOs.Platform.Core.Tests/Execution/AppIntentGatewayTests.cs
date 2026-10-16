@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
@@ -185,12 +186,12 @@ public sealed class AppIntentGatewayTests
                 InstallationId.FromGuid(Guid.NewGuid()), DeviceId.FromGuid(Guid.NewGuid()), () => _now), eventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
+            Settings = new OsSettingsService(fileSystem, Session, clock);
 
             // Resolved lazily, mirroring the production wiring in EcosystemServiceCollectionExtensions:
             // AppIntentDispatcher depends (via AppLifecycleOrchestrator) on this very factory.
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, eventBus, topicBus, notifications, diagnostics, clock, Manager,
+                Grants, fileSystem, eventBus, topicBus, notifications, diagnostics, clock, Manager,
                 intentDispatcherProvider: () => _dispatcher!);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
@@ -205,7 +206,7 @@ public sealed class AppIntentGatewayTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, descriptors, enablement, Manager, Grants, contextFactory, Settings);
+                catalog, descriptors, enablement, Manager, Grants, contextFactory);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
             _dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }
@@ -213,7 +214,7 @@ public sealed class AppIntentGatewayTests
         internal LocalSessionService Session { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
+        internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
 
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");

@@ -1,3 +1,5 @@
+using HackerOs.AppSdk.Settings;
+using HackerOs.Platform.Core.Settings;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
@@ -132,7 +134,7 @@ public sealed class HeadlessKernelIntegrationTests
             Name = "Kernel Smoke",
             Version = "1.0.0",
             PublisherId = "org.hackeros",
-            Description = "Exercises the filesystem and settings gateways end to end.",
+            Description = "Exercises the filesystem gateway and settings files end to end.",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(KernelSmokeApp).FullName!),
             SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
@@ -143,8 +145,13 @@ public sealed class HeadlessKernelIntegrationTests
             [
                 AppCapabilities.FileSystemUserHomeRead,
                 AppCapabilities.FileSystemUserHomeWrite,
+                AppCapabilities.FileSystemPrivateRead,
+                AppCapabilities.FileSystemPrivateWrite,
                 AppCapabilities.FileAssociationsRead
-            ]
+            ],
+            Settings = new AppSettingsSchemaManifest(
+                1,
+                [new AppSettingFieldManifest("greeting", AppSettingValueType.String, "unset", AppSettingScope.AppUser, AppSettingSensitivity.Public)])
         };
 
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
@@ -204,11 +211,18 @@ public sealed class HeadlessKernelIntegrationTests
 
             await context.StandardOutput.WriteLineAsync("FS-OK".AsMemory(), cancellationToken);
 
-            SettingsReadResult settings = await app.Settings.ReadAsync(FileAssociationSettingsDocuments.Path, cancellationToken);
-            if (settings.Status != SettingsReadStatus.Success
-                || settings.Document?.Content != FileAssociationSettingsDocuments.EmptyDocumentContent)
+            // Settings are real files (ADR 0044): the default applies, then a write lands in
+            // ~/.config/<appId>/settings.config and is read back through the same files.
+            if (await HackSettings.GetAsync<string>(app, "greeting", cancellationToken) != "unset")
             {
-                await context.StandardError.WriteLineAsync($"settings-read-failed:{settings.Status}");
+                await context.StandardError.WriteLineAsync("settings-default-failed");
+                return 1;
+            }
+
+            await HackSettings.SetAsync(app, "greeting", "hello", cancellationToken);
+            if (await HackSettings.GetAsync<string>(app, "greeting", cancellationToken) != "hello")
+            {
+                await context.StandardError.WriteLineAsync("settings-roundtrip-failed");
                 return 1;
             }
 
@@ -266,9 +280,9 @@ public sealed class HeadlessKernelIntegrationTests
             Manager = new InMemoryProcessManager(clock, Session, eventBus);
             InMemoryNotificationQueue notifications = new(maxEntriesPerUser: 20);
             BoundedDiagnosticSink diagnostics = new(maxEntries: 100);
-            Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
+            Settings = new OsSettingsService(fileSystem, Session, clock);
             AppExecutionContextFactory contextFactory = new(
-                Grants, fileSystem, Settings, eventBus, topicBus, notifications, diagnostics, clock, Manager);
+                Grants, fileSystem, eventBus, topicBus, notifications, diagnostics, clock, Manager);
 
             AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
@@ -282,14 +296,14 @@ public sealed class HeadlessKernelIntegrationTests
 
             AppEnablementRegistry enablement = new(catalog);
             Orchestrator = new AppLifecycleOrchestrator(
-                catalog, Discovery.Descriptors!, enablement, Manager, Grants, contextFactory, Settings);
+                catalog, Discovery.Descriptors!, enablement, Manager, Grants, contextFactory);
         }
 
         internal LocalSessionService Session { get; }
         internal FileSystemSeeder Seeder { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
-        internal InMemorySettingsDocumentService Settings { get; }
+        internal IOsSettingsService Settings { get; }
         internal AppDiscoveryResult Discovery { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal BoundedAuditLog AuditLog { get; }

@@ -17,10 +17,11 @@ public sealed class FileSystemSeederTests
 
         string[] paths =
         [
-            "/", "/bin", "/etc", "/home", "/tmp", "/var", "/var/log",
+            "/", "/bin", "/etc", "/home", "/tmp", "/var", "/var/log", "/var/log/apps",
             "/home/alice", "/home/alice/Desktop", "/home/alice/Documents",
             "/home/alice/Downloads", "/home/alice/.config",
-            "/home/alice/.config/hackeros", "/home/alice/.config/apps"
+            "/home/alice/.config/hackeros", "/etc/hackeros", "/var/lib/hackeros",
+            "/home/alice/.local/state/hackeros"
         ];
         foreach (string path in paths)
         {
@@ -76,13 +77,62 @@ public sealed class FileSystemSeederTests
         Assert.Equal("bob", bob.Metadata.OwnerId);
     }
 
+    [Fact]
+    public async Task Seed_survives_a_boot_writer_creating_var_log_apps_concurrently()
+    {
+        // Boot log writers create files in /var/log while the seeder runs: its create of
+        // /var/log/apps then sees /var/log at a newer revision (RevisionConflict) and must re-read
+        // the parent and retry, not fail the boot.
+        Fixture fixture = new(inner => new RacingCreateService(
+            inner, VirtualPath.Parse("/var/log/apps"), VirtualPath.Parse("/var/log/syslog")));
+
+        await fixture.Seeder.SeedAsync("alice", "users");
+
+        FileSystemResult<FileSystemEntrySnapshot> apps = await fixture.Repository.StatAsync(
+            new FileSystemStatRequest(VirtualPath.Parse("/var/log/apps")),
+            fixture.SystemContext);
+        Assert.Equal(FileSystemEntryKind.Directory, apps.Value?.Metadata.Kind);
+    }
+
+    /// <summary>Creates <c>siblingPath</c> just before the seeder's first create of <c>racedPath</c>.</summary>
+    private sealed class RacingCreateService(IFileSystemService inner, VirtualPath racedPath, VirtualPath siblingPath) : IFileSystemService
+    {
+        private bool _raced;
+
+        public string ProviderId => inner.ProviderId;
+
+        public async ValueTask<FileSystemMutationResult> CreateAsync(
+            FileSystemCreateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default)
+        {
+            if (!_raced && request.Path == racedPath)
+            {
+                _raced = true;
+                await inner.CreateAsync(
+                    new FileSystemCreateRequest(siblingPath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0x01A4)),
+                    context,
+                    cancellationToken);
+            }
+
+            return await inner.CreateAsync(request, context, cancellationToken);
+        }
+
+        public ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(FileSystemReadRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.ReadAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemDirectorySnapshot>> EnumerateAsync(FileSystemEnumerateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.EnumerateAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> WriteAsync(FileSystemWriteRequest request, IFileSystemContentSource content, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.WriteAsync(request, content, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> MoveAsync(FileSystemMoveRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.MoveAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> CopyAsync(FileSystemCopyRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.CopyAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> DeleteAsync(FileSystemDeleteRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.DeleteAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemEntrySnapshot>> StatAsync(FileSystemStatRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.StatAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> SetPermissionsAsync(FileSystemSetPermissionsRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.SetPermissionsAsync(request, context, cancellationToken);
+    }
+
     private sealed class Fixture
     {
         private int _entryId = 1;
         private int _transactionId = 100;
         private readonly DateTimeOffset _now = new(2026, 8, 1, 12, 0, 0, TimeSpan.Zero);
 
-        internal Fixture()
+        internal Fixture(Func<IFileSystemService, IFileSystemService>? wrap = null)
         {
             FixedTimeProvider timeProvider = new(_now);
             Repository = new InMemoryFileSystemRepository(
@@ -96,11 +146,13 @@ public sealed class FileSystemSeederTests
                 new FileSystemAuthorizer(),
                 new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => _now)),
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
-            Seeder = new FileSystemSeeder(service, timeProvider);
+            Service = service;
+            Seeder = new FileSystemSeeder(wrap is null ? service : wrap(service), timeProvider);
             SystemContext = CreateSystemContext(_now);
         }
 
         internal InMemoryFileSystemRepository Repository { get; }
+        internal FileSystemService Service { get; }
         internal FileSystemSeeder Seeder { get; }
         internal FileSystemAuthorizationContext SystemContext { get; }
 

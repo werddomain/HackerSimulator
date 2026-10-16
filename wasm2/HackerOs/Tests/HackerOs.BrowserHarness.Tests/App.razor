@@ -114,15 +114,14 @@
             {
                 await VerifyReloadPersistenceAsync();
                 _status = "passed";
-                _message = "Settings and filesystem data survived a page reload.";
+                _message = "Filesystem data survived a page reload.";
                 StateHasChanged();
                 return;
             }
 
             await ResetDatabaseAsync();
             await VerifyGroupRepositoryAsync();
-            await VerifySettingsServiceAsync();
-            await VerifyWindowGeometryPersistenceAsync();
+            await VerifyLegacySettingsStoreAsync();
             await VerifyFileSystemProviderAsync();
             await VerifyBackupRestoreAsync();
             await VerifyOrphanCleanupAsync();
@@ -173,72 +172,15 @@
             "Missing group lookup did not return null.");
     }
 
-    private async Task VerifySettingsServiceAsync()
+    /// <summary>
+    /// Settings are files since ADR 0044; the retired IndexedDB store is only read once by the
+    /// migration. Reading it through the real browser module must work on an unchanged schema.
+    /// </summary>
+    private async Task VerifyLegacySettingsStoreAsync()
     {
-        SettingsDocumentKey key = SettingsDocumentKey.ForAppUser("org.hackeros.browser-harness", "user");
-        VirtualPath path = SettingsDocumentPathFactory.GetProjectionPath(key);
-        SettingsDocumentDefinition definition = new(
-            path,
-            key,
-            "initial",
-            "text/plain",
-            "settings.read",
-            "settings.write",
-            AppAuthority.User,
-            AppAuthority.User,
-            new AcceptAllValidator());
-        AppOperationContext context = new()
-        {
-            AppId = "org.hackeros.browser-harness",
-            UserId = "user",
-            UserAuthority = AppAuthority.User,
-            GrantedCapabilities = new HashSet<string>(
-                ["settings.read", "settings.write"],
-                StringComparer.Ordinal)
-        };
-
-        await using IndexedDbSettingsDocumentService service = new(JsRuntime, [definition]);
-        SettingsReadResult initial = await service.ReadAsync(path, context);
-        Require(initial.Status == SettingsReadStatus.Success, "Initial settings read failed.");
-        Require(initial.Document?.Content == "initial", "Initial settings content differs.");
-
-        SettingsWriteResult written = await service.WriteAsync(
-            new SettingsWriteRequest(path, "updated", initial.Document!.Revision),
-            context);
-        Require(written.Status == SettingsWriteStatus.Success, "Settings write failed.");
-
-        SettingsWriteResult conflict = await service.WriteAsync(
-            new SettingsWriteRequest(path, "stale", initial.Document.Revision),
-            context);
-        Require(conflict.Status == SettingsWriteStatus.Conflict, "Stale settings write did not conflict.");
-
-        SettingsReadResult loaded = await service.ReadAsync(path, context);
-        Require(loaded.Document?.Content == "updated", "Committed settings content was not retained.");
-    }
-
-    private async Task VerifyWindowGeometryPersistenceAsync()
-    {
-        SettingsDocumentDefinition definition = WindowGeometrySettings.CreateDefinition(
-            "org.hackeros.browser-harness", "user", "browser-installation");
-        AppOperationContext context = new()
-        {
-            AppId = "org.hackeros.browser-harness",
-            UserId = "user",
-            UserAuthority = AppAuthority.User,
-            GrantedCapabilities = new HashSet<string>(
-                [AppCapabilities.SettingsRead, AppCapabilities.SettingsWrite],
-                StringComparer.Ordinal)
-        };
-
-        await using IndexedDbSettingsDocumentService service = new(JsRuntime, [definition]);
-        WindowGeometryPersistence persistence = new(service);
-        Require(await persistence.RestoreAsync(definition, context) is null, "Fresh window geometry was not empty.");
-
-        WindowBounds expected = new(31, 47, 760, 520);
-        SettingsWriteStatus status = await persistence.SaveAsync(
-            definition, expected, isEligible: true, context);
-        Require(status == SettingsWriteStatus.Success, "Window geometry write failed.");
-        Require(await persistence.RestoreAsync(definition, context) == expected, "Window geometry did not round-trip.");
+        await using IndexedDbLegacySettingsStore store = new(JsRuntime);
+        IReadOnlyList<HackerOs.Simulation.Abstractions.Settings.LegacySettingsRecord> records = await store.ReadAllAsync();
+        Require(records.Count == 0, "A fresh database exposed legacy settings records.");
     }
 
     private async Task VerifyFileSystemProviderAsync()
@@ -326,38 +268,6 @@
 
     private async Task VerifyReloadPersistenceAsync()
     {
-        SettingsDocumentKey key = SettingsDocumentKey.ForAppUser("org.hackeros.browser-harness", "user");
-        VirtualPath settingsPath = SettingsDocumentPathFactory.GetProjectionPath(key);
-        SettingsDocumentDefinition definition = new(
-            settingsPath,
-            key,
-            "initial",
-            "text/plain",
-            "settings.read",
-            "settings.write",
-            AppAuthority.User,
-            AppAuthority.User,
-            new AcceptAllValidator());
-        AppOperationContext operation = new()
-        {
-            AppId = "org.hackeros.browser-harness",
-            UserId = "user",
-            UserAuthority = AppAuthority.User,
-            GrantedCapabilities = new HashSet<string>(
-                ["settings.read", "settings.write"],
-                StringComparer.Ordinal)
-        };
-
-        await using (IndexedDbSettingsDocumentService settings = new(JsRuntime, [definition]))
-        {
-            SettingsReadResult persisted = await settings.ReadAsync(settingsPath, operation);
-            Require(
-                persisted.Status == SettingsReadStatus.Success
-                    && persisted.Document?.Content == "updated"
-                    && persisted.Document.Revision == 2,
-                "Settings did not survive reload at the committed revision.");
-        }
-
         await using IndexedDbFileSystemProvider provider = new(JsRuntime);
         FileSystemResult<FileSystemEntrySnapshot> file = await provider.StatAsync(
             new FileSystemStatRequest(VirtualPath.Parse("/reload-proof.txt")),
@@ -453,11 +363,5 @@
         {
             throw new InvalidOperationException(message);
         }
-    }
-
-    private sealed class AcceptAllValidator : ISettingsDocumentValidator
-    {
-        /// <inheritdoc />
-        public IReadOnlyList<string> Validate(string content) => [];
     }
 }

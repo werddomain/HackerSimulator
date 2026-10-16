@@ -126,7 +126,7 @@ public partial class FileViewIcons : IAsyncDisposable
     {
         "Enter" => Owner.ActivateItemAsync(item),
         "F2" => RenameAsync(item),
-        "Delete" => DeleteAsync(item),
+        "Delete" => DeleteAsync(item, args.ShiftKey),
         // The grid visually wraps, but true 2D layout (knowing tiles-per-row) isn't available from C# —
         // all four arrows move through Owner.Items order, same as a flat listbox. A scoping decision, not
         // a bug: still fully keyboard-operable, just not spatially "up a row"/"down a row" like a native grid.
@@ -153,10 +153,10 @@ public partial class FileViewIcons : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private Task DeleteAsync(FileViewItem item)
+    private Task DeleteAsync(FileViewItem item, bool permanent)
     {
         item.Select();
-        return Owner.DeleteSelectedAsync();
+        return Owner.DeleteSelectedAsync(permanent);
     }
 
     private string GetRenameBuffer(FileViewItem item)

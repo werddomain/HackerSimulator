@@ -52,8 +52,8 @@ public enum AppSettingSensitivity
 
 /// <summary>
 /// Identifies the canonical settings ownership scope a manifest may declare, mirroring
-/// <c>SettingsScope</c> in <c>HackerOs.Simulation.Abstractions</c>. Declaring a scope here is only a
-/// request; <c>SettingsScopePolicy</c> still authorizes roaming and OS/admin scopes at runtime.
+/// <c>SettingsScope</c> in <c>HackerOs.Simulation.Abstractions</c>. Declaring a scope here grants
+/// nothing: settings are files since ADR 0044, so access is decided by file rights alone.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AppSettingScope>))]
 public enum AppSettingScope

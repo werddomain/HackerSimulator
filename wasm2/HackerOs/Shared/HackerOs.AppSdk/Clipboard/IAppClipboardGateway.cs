@@ -1,27 +1,66 @@
 namespace HackerOs.AppSdk.Clipboard;
 
 /// <summary>
-/// Gateway for typed clipboard operations within HackerOS applications.
+/// The session's clipboard as one app instance sees it (ADR 0056, section 12), behind
+/// <see cref="HackClipboard"/>. There is one clipboard per session, shared by every app of that
+/// session, like the X11 <c>CLIPBOARD</c> selection: what one window copies, another pastes.
 /// </summary>
+/// <remarks>
+/// Reading requires <c>clipboard.read</c>, writing requires <c>clipboard.write</c> (both normal
+/// capabilities). A missing one raises
+/// <see cref="HackerOs.Simulation.Abstractions.Gateways.AppGatewayAccessDeniedException"/>; the
+/// <see cref="HackClipboard"/> facade turns it into <c>HackUnauthorizedAccessException</c>.
+/// </remarks>
 public interface IAppClipboardGateway
 {
     /// <summary>
-    /// Gets text content from the clipboard.
+    /// Raised after any app of the session changed the clipboard. Subscribing needs no capability
+    /// (only the fact that it changed is told); handlers run inside the subscribing app's ambient scope.
     /// </summary>
-    Task<string?> GetTextAsync();
+    event EventHandler? Changed;
 
     /// <summary>
-    /// Sets text content on the clipboard.
+    /// Gets the clipboard as text: the text last copied, or the paths of a file list one per line, as
+    /// GNOME offers <c>text/plain</c> next to <c>x-special/gnome-copied-files</c>. <see langword="null"/>
+    /// when the clipboard is empty. Requires <c>clipboard.read</c>.
     /// </summary>
-    Task SetTextAsync(string text);
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask<string?> GetTextAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the clipboard with text. Requires <c>clipboard.write</c>.</summary>
+    /// <param name="text">Text to copy.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask SetTextAsync(string text, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets virtual file path references from the clipboard.
+    /// Gets the file list last cut or copied, or <see langword="null"/> when the clipboard holds no
+    /// files. Requires <c>clipboard.read</c>.
     /// </summary>
-    Task<IReadOnlyList<string>> GetFileReferencesAsync();
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask<HackClipboardFileList?> GetFileDropListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sets virtual file path references on the clipboard.
+    /// Replaces the clipboard with a file list to cut or copy, stored in the GNOME
+    /// <c>x-special/gnome-copied-files</c> format. Requires <c>clipboard.write</c>.
     /// </summary>
-    Task SetFileReferencesAsync(IReadOnlyList<string> filePaths);
+    /// <param name="files">Operation and absolute paths.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask SetFileDropListAsync(HackClipboardFileList files, CancellationToken cancellationToken = default);
+
+    /// <summary>Empties the clipboard. Requires <c>clipboard.write</c>.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask ClearAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the file paths on the clipboard, or an empty list. Requires <c>clipboard.read</c>.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    [Obsolete("Use GetFileDropListAsync, which also tells whether the files were cut or copied (ADR 0056, section 12).")]
+    async ValueTask<IReadOnlyList<string>> GetFileReferencesAsync(CancellationToken cancellationToken = default) =>
+        (await GetFileDropListAsync(cancellationToken).ConfigureAwait(false))?.Paths ?? [];
+
+    /// <summary>Copies file paths to the clipboard. Requires <c>clipboard.write</c>.</summary>
+    /// <param name="filePaths">Absolute paths.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    [Obsolete("Use SetFileDropListAsync with HackClipboardFileOperation.Copy (ADR 0056, section 12).")]
+    ValueTask SetFileReferencesAsync(IReadOnlyList<string> filePaths, CancellationToken cancellationToken = default) =>
+        SetFileDropListAsync(new HackClipboardFileList(HackClipboardFileOperation.Copy, filePaths ?? []), cancellationToken);
 }

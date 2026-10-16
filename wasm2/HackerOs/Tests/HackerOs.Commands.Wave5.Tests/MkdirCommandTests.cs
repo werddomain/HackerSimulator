@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Mkdir;
 using HackerOs.Tests.Support;
@@ -13,7 +14,7 @@ public sealed class MkdirCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs, "newdir");
 
-        int exitCode = await new MkdirCommand(MkdirCommand.StaticManifest)
+        int exitCode = await new MkdirCommand(AppDefinitionMapper.ToManifest(new MkdirApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -26,7 +27,7 @@ public sealed class MkdirCommandTests
         FakeAppFileSystemGateway fs = new();
         TerminalExecutionContext context = CreateContext(fs, "newdir");
 
-        int exitCode = await new MkdirCommand(MkdirCommand.StaticManifest)
+        int exitCode = await new MkdirCommand(AppDefinitionMapper.ToManifest(new MkdirApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -39,7 +40,7 @@ public sealed class MkdirCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(MkdirCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new MkdirApp()), fileSystem: racing),
             ["newdir"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -47,7 +48,7 @@ public sealed class MkdirCommandTests
             "/home/user",
             new Dictionary<string, string>());
 
-        int exitCode = await new MkdirCommand(MkdirCommand.StaticManifest)
+        int exitCode = await new MkdirCommand(AppDefinitionMapper.ToManifest(new MkdirApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -61,7 +62,7 @@ public sealed class MkdirCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
         TerminalExecutionContext context = CreateContext(fs);
 
-        int exitCode = await new MkdirCommand(MkdirCommand.StaticManifest)
+        int exitCode = await new MkdirCommand(AppDefinitionMapper.ToManifest(new MkdirApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -69,7 +70,7 @@ public sealed class MkdirCommandTests
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(MkdirCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new MkdirApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

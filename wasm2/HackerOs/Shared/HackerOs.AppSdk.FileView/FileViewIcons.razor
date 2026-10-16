@@ -22,7 +22,8 @@
              @key="item.FullPath.Value"
              data-item-path="@item.FullPath.Value"
              aria-selected="@item.IsSelected"
-             class="file-view-tile @(item.IsSelected ? "selected" : null)"
+             class="file-view-tile @(item.IsSelected ? "selected" : null) @(item.IsCut ? "cut" : null)"
+             data-drop-target="@(item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
              tabindex="@(IsTabStop(item) ? 0 : -1)"
              draggable="@(Owner.AllowDragDrop ? "true" : "false")"
              @onmousedown:stopPropagation="true"
@@ -30,10 +31,12 @@
              @ondblclick="@(() => OnTileDoubleClickAsync(item))"
              @oncontextmenu="@(args => OnTileContextMenuAsync(item, args))"
              @oncontextmenu:preventDefault="true"
+             @oncontextmenu:stopPropagation="true"
              @onkeydown="@(args => OnTileKeyDownAsync(item, args))"
              @ondragstart="@(args => OnTileDragStartAsync(item, args))"
              @ondragover:preventDefault="@(item.IsDirectory && Owner.AllowDragDrop)"
-             @ondrop="@(args => OnTileDropAsync(item, args))">
+             @ondrop="@(args => OnTileDropAsync(item, args))"
+             @ondrop:stopPropagation="@item.IsDirectory">
             <ShellIcon Icon="ResolveIcon(item)" Size="32" />
             @if (item.IsRenaming)
             {

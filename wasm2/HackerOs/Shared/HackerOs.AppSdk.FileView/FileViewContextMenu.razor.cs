@@ -47,6 +47,16 @@ public partial class FileViewContextMenu
         }
     }
 
+    private Task RequestOnSelectionAsync(FileViewItem item, FileViewClipboardAction action)
+    {
+        if (!item.IsSelected)
+        {
+            item.Select();
+        }
+
+        return Owner.RequestClipboardAsync(action, Owner.CurrentDirectory);
+    }
+
     private static bool Applies(IFileViewContextMenuProvider provider, FileViewContextMenuScope scope, FileViewItem? item) =>
         provider.Scope switch
         {
@@ -68,6 +78,14 @@ public partial class FileViewContextMenu
                 items.Add(new FileViewMenuItem(
                     "new-folder", "New Folder", ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-plus"),
                     Owner.CreateFolderInteractiveAsync));
+                if (Owner.ClipboardRequested.HasDelegate)
+                {
+                    items.Add(new FileViewMenuItem(
+                        "paste", "Paste", ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
+                        () => Owner.RequestClipboardAsync(FileViewClipboardAction.Paste, Owner.CurrentDirectory),
+                        IsDisabled: !Owner.CanPaste));
+                }
+
                 items.Add(new FileViewMenuItem(
                     "refresh", "Refresh", ShellIconDescriptor.Vector(IconLibrary.Lucide, "refresh-cw"),
                     () => Owner.RefreshAsync()));
@@ -80,6 +98,25 @@ public partial class FileViewContextMenu
                     items.Add(new FileViewMenuItem(
                         "open", "Open", ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-open"),
                         () => Owner.ActivateItemAsync(item)));
+                    if (Owner.ClipboardRequested.HasDelegate)
+                    {
+                        // Like a desktop file manager: a right-click on an unselected item acts on it alone.
+                        items.Add(new FileViewMenuItem(
+                            "cut", "Cut", ShellIconDescriptor.Vector(IconLibrary.Lucide, "scissors"),
+                            () => RequestOnSelectionAsync(item, FileViewClipboardAction.Cut),
+                            IsSeparatorBefore: true));
+                        items.Add(new FileViewMenuItem(
+                            "copy", "Copy", ShellIconDescriptor.Vector(IconLibrary.Lucide, "copy"),
+                            () => RequestOnSelectionAsync(item, FileViewClipboardAction.Copy)));
+                        if (item.IsDirectory)
+                        {
+                            items.Add(new FileViewMenuItem(
+                                "paste-into", "Paste Into Folder", ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
+                                () => Owner.RequestClipboardAsync(FileViewClipboardAction.Paste, item.FullPath),
+                                IsDisabled: !Owner.CanPaste));
+                        }
+                    }
+
                     items.Add(new FileViewMenuItem(
                         "rename", "Rename", ShellIconDescriptor.Vector(IconLibrary.Lucide, "pencil"),
                         () =>
@@ -95,6 +132,18 @@ public partial class FileViewContextMenu
                             item.Select();
                             return Owner.DeleteSelectedAsync();
                         }));
+
+                    // Only meaningful when the host turns the plain "Delete" into a trash move (ADR 0052).
+                    if (Owner.DeleteRequested.HasDelegate)
+                    {
+                        items.Add(new FileViewMenuItem(
+                            "delete-permanently", "Delete permanently", ShellIconDescriptor.Vector(IconLibrary.Lucide, "octagon-x"),
+                            () =>
+                            {
+                                item.Select();
+                                return Owner.DeleteSelectedAsync(permanent: true);
+                            }));
+                    }
                 }
 
                 break;

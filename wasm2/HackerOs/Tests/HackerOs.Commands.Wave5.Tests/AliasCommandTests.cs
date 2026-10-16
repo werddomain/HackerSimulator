@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Alias;
 using HackerOs.Tests.Support;
@@ -36,7 +37,7 @@ public sealed class AliasCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
 
         TerminalExecutionContext context = CreateContext(fs, "missing");
-        int exitCode = await new AliasCommand(AliasCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        int exitCode = await new AliasCommand(AppDefinitionMapper.ToManifest(new AliasApp())).ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
         Assert.Contains("not found", context.StandardError.ToString());
@@ -62,7 +63,7 @@ public sealed class AliasCommandTests
         FakeAppFileSystemGateway fs = new FakeAppFileSystemGateway().WithDirectory("/home/user");
 
         TerminalExecutionContext context = CreateContext(fs, "-r", "missing");
-        int exitCode = await new AliasCommand(AliasCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        int exitCode = await new AliasCommand(AppDefinitionMapper.ToManifest(new AliasApp())).ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
         Assert.Contains("not found", context.StandardError.ToString());
@@ -76,7 +77,7 @@ public sealed class AliasCommandTests
 
         RaceOnNextMutationFileSystemGateway racing = new(fs, "/home/user/.hackeros/aliases");
         TerminalExecutionContext context = new(
-            new MinimalAppExecutionContext(AliasCommand.StaticManifest, fileSystem: racing),
+            new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new AliasApp()), fileSystem: racing),
             ["ll=ls -la --color"],
             new StringReader(string.Empty),
             new StringWriter(),
@@ -84,7 +85,7 @@ public sealed class AliasCommandTests
             "/home/user",
             new Dictionary<string, string> { ["HOME"] = "/home/user" });
 
-        int exitCode = await new AliasCommand(AliasCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        int exitCode = await new AliasCommand(AppDefinitionMapper.ToManifest(new AliasApp())).ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
         Assert.Contains("failed to save", context.StandardError.ToString());
@@ -93,19 +94,19 @@ public sealed class AliasCommandTests
     private static async Task<int> Run(FakeAppFileSystemGateway fs, params string[] arguments)
     {
         TerminalExecutionContext context = CreateContext(fs, arguments);
-        return await new AliasCommand(AliasCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        return await new AliasCommand(AppDefinitionMapper.ToManifest(new AliasApp())).ExecuteAsync(context, CancellationToken.None);
     }
 
     private static async Task<string> RunCapturingOutput(FakeAppFileSystemGateway fs, params string[] arguments)
     {
         TerminalExecutionContext context = CreateContext(fs, arguments);
-        await new AliasCommand(AliasCommand.StaticManifest).ExecuteAsync(context, CancellationToken.None);
+        await new AliasCommand(AppDefinitionMapper.ToManifest(new AliasApp())).ExecuteAsync(context, CancellationToken.None);
         return context.StandardOutput.ToString()!;
     }
 
     private static TerminalExecutionContext CreateContext(
         FakeAppFileSystemGateway fs, params string[] arguments) => new(
-        new MinimalAppExecutionContext(AliasCommand.StaticManifest, fileSystem: fs),
+        new MinimalAppExecutionContext(AppDefinitionMapper.ToManifest(new AliasApp()), fileSystem: fs),
         arguments,
         new StringReader(string.Empty),
         new StringWriter(),

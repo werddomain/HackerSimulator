@@ -121,7 +121,7 @@ public partial class FileViewDetails
     {
         "Enter" => Owner.ActivateItemAsync(item),
         "F2" => RenameAsync(item),
-        "Delete" => DeleteAsync(item),
+        "Delete" => DeleteAsync(item, args.ShiftKey),
         "ArrowDown" => MoveActiveAsync(item, 1),
         "ArrowUp" => MoveActiveAsync(item, -1),
         _ => Task.CompletedTask
@@ -145,10 +145,10 @@ public partial class FileViewDetails
         return Task.CompletedTask;
     }
 
-    private Task DeleteAsync(FileViewItem item)
+    private Task DeleteAsync(FileViewItem item, bool permanent)
     {
         item.Select();
-        return Owner.DeleteSelectedAsync();
+        return Owner.DeleteSelectedAsync(permanent);
     }
 
     private string GetRenameBuffer(FileViewItem item)

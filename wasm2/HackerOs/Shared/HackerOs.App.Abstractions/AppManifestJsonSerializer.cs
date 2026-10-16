@@ -46,6 +46,7 @@ public static class AppManifestJsonSerializer
             "update",
             "fileHandlers",
             "terminal",
+            "components",
             "singleInstancePerUser",
             "autoStart",
             "supportsBack"
@@ -53,6 +54,29 @@ public static class AppManifestJsonSerializer
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)
             ?? throw new JsonException("The provided manifest payload deserialized to null.");
+    }
+
+    /// <summary>
+    /// Replaces the optional collections that source-generated deserialization leaves
+    /// <see langword="null"/> when a property is omitted with empty lists, as the runtime model expects.
+    /// </summary>
+    /// <param name="manifest">A freshly deserialized manifest.</param>
+    /// <returns>The same manifest with every optional collection non-null.</returns>
+    public static AppManifest NormalizeOptionalCollections(AppManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return manifest with
+        {
+            Presentation = manifest.Presentation with { IconAssetPaths = manifest.Presentation.IconAssetPaths ?? [] },
+            Localizations = manifest.Localizations ?? [],
+            Capabilities = manifest.Capabilities ?? [],
+            DeclaredTopicPermissions = manifest.DeclaredTopicPermissions ?? [],
+            Intents = manifest.Intents ?? [],
+            Dependencies = manifest.Dependencies ?? [],
+            Assets = manifest.Assets ?? [],
+            FileHandlers = manifest.FileHandlers ?? [],
+            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] }
+        };
     }
 
     private static AppManifest CreateCanonicalManifest(AppManifest manifest)
@@ -107,7 +131,11 @@ public static class AppManifestJsonSerializer
             Settings = settings,
             FileHandlers = [.. manifest.FileHandlers.OrderBy(item => item.MediaType ?? string.Empty, StringComparer.Ordinal)
                 .ThenBy(item => item.Extensions.Count)
-                .ThenBy(item => string.Join("|", item.Extensions), StringComparer.Ordinal)]
+                .ThenBy(item => string.Join("|", item.Extensions), StringComparer.Ordinal)],
+            Components = manifest.Components is null
+                ? null
+                : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
+                    .ThenBy(item => item.Type, StringComparer.Ordinal)]
         };
     }
 
@@ -179,6 +207,9 @@ public static class AppManifestJsonSerializer
                 case "terminal":
                     ValidateObject(property.Value, $"{path}.terminal", ["name", "aliases", "usage"]);
                     break;
+                case "components":
+                    ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
+                    break;
                 default:
                     break;
             }
@@ -223,6 +254,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(UpdateManifest))]
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
+[JsonSerializable(typeof(AppComponentManifest))]
 [JsonSerializable(typeof(AppKind))]
 [JsonSerializable(typeof(AppLaunchVisibility))]
 [JsonSerializable(typeof(AppSettingValueType))]

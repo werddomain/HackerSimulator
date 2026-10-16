@@ -1,6 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.Platform.Blazor.Dialogs
+@using HackerOs.Platform.Blazor.Security
 @using HackerOs.Platform.Blazor.Windows
 @using HackerOs.Platform.Core.Discovery
 @using HackerOs.Platform.Core.FileSystem
@@ -90,6 +91,10 @@
             }
         </div>
     }
+
+    @* ADR 0049: secure-desktop approval, above every window and the taskbar. *@
+    <DangerousCapabilityApprovalOverlay />
+    <AdministratorAuthenticationOverlay />
 </div>
 
 @code {

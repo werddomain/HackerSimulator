@@ -1,9 +1,17 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
-using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.Apps;
+using HackerOs.Platform.Core.Events;
+using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Time;
+using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.JSInterop;
 
@@ -12,11 +20,13 @@ namespace HackerOs.Ecosystem.Tests;
 public sealed class EcosystemBootCoordinatorTests
 {
     private readonly IndexedDbFileSystemBootstrapper _fsBootstrapper;
-    private readonly IndexedDbSettingsDocumentService _settings;
+    private readonly FileSystemService _fileSystem;
+    private readonly SettingsStoreToFilesMigration _settings;
     private readonly FakeCapabilityGrantRepository _grants = new();
     private readonly FakeAppCatalogRepository _catalog = new();
     private readonly AppCatalog _selectedCatalog = CreateEmptyCatalog();
-    private readonly AppEnablementRegistry _enablement;
+    private readonly ManualSimulationClock _clock = new(DateTimeOffset.UnixEpoch, TimeSpan.FromSeconds(1));
+    private readonly AppEnablementToFilesMigration _enablement;
     private readonly FakeLocalGroupRepository _groups = new();
     private readonly FakeLocalUserRepository _users = new();
 
@@ -24,8 +34,12 @@ public sealed class EcosystemBootCoordinatorTests
     {
         IJSRuntime jsRuntime = new TestJsRuntime();
         _fsBootstrapper = new IndexedDbFileSystemBootstrapper(jsRuntime);
-        _settings = new IndexedDbSettingsDocumentService(jsRuntime, []);
-        _enablement = new AppEnablementRegistry(_selectedCatalog);
+        _fileSystem = CreateFileSystem();
+        _settings = new SettingsStoreToFilesMigration(
+            _fileSystem,
+            new ManualSimulationClock(DateTimeOffset.UnixEpoch, TimeSpan.FromSeconds(1)),
+            new EmptyLegacySettingsStore());
+        _enablement = new AppEnablementToFilesMigration(_fileSystem, _clock, _selectedCatalog);
     }
 
     [Fact]
@@ -72,6 +86,39 @@ public sealed class EcosystemBootCoordinatorTests
     }
 
     [Fact]
+    public async Task BootAsync_installs_the_default_settings_files_in_etc()
+    {
+        EcosystemBootCoordinator bootCoordinator = new(
+            _fsBootstrapper, _settings, _grants, _catalog, _selectedCatalog, _enablement, _groups, _users);
+
+        await bootCoordinator.BootAsync();
+
+        foreach (string path in new[]
+                 {
+                     "/etc/hackeros/appearance.config",
+                     "/etc/hackeros/ui-platform-preference.config",
+                     "/etc/hackeros/policy.config",
+                     "/etc/hackeros/file-associations.json"
+                 })
+        {
+            FileSystemResult<FileSystemEntrySnapshot> stat = await _fileSystem.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse(path)),
+                new FileSystemAuthorizationContext(
+                    new AppOperationContext
+                    {
+                        AppId = "org.hackeros.shell",
+                        UserId = "system",
+                        UserAuthority = AppAuthority.System,
+                        GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+                        IsSystemOperation = true
+                    },
+                    groupIds: ["system"],
+                    DateTimeOffset.UnixEpoch));
+            Assert.True(stat.Succeeded, path);
+        }
+    }
+
+    [Fact]
     public async Task BootAsync_reconciles_the_host_selected_catalog()
     {
         EcosystemBootCoordinator bootCoordinator = new(
@@ -80,23 +127,23 @@ public sealed class EcosystemBootCoordinatorTests
             _grants,
             _catalog,
             BuildKnownLazyApps.Catalog,
-            new AppEnablementRegistry(BuildKnownLazyApps.Catalog),
+            new AppEnablementToFilesMigration(_fileSystem, _clock, BuildKnownLazyApps.Catalog),
             _groups,
             _users);
 
         await bootCoordinator.BootAsync();
 
-        Assert.Equal(36, _catalog.SelectedManifests.Count);
+        Assert.Equal(74, _catalog.SelectedManifests.Count);
         Assert.Contains(_catalog.SelectedManifests, manifest => manifest.Id == "org.hackeros.hack-paint");
     }
 
     [Fact]
-    public async Task BootAsync_hydrates_enablement_registry_from_persisted_disabled_entries()
+    public async Task BootAsync_moves_persisted_disabled_entries_into_the_machine_apps_config()
     {
-        AppEnablementRegistry enablement = new(BuildKnownLazyApps.Catalog);
         _catalog.ReconcileResult =
         [
-            new PersistedAppCatalogEntry(BuildKnownLazyApps.Catalog.Manifests["org.hackeros.hack-paint"], IsEnabled: false)
+            new PersistedAppCatalogEntry(BuildKnownLazyApps.Catalog.Manifests["org.hackeros.hack-paint"], IsEnabled: false),
+            new PersistedAppCatalogEntry(BuildKnownLazyApps.Catalog.Manifests["org.hackeros.terminal"], IsEnabled: false)
         ];
         EcosystemBootCoordinator bootCoordinator = new(
             _fsBootstrapper,
@@ -104,14 +151,17 @@ public sealed class EcosystemBootCoordinatorTests
             _grants,
             _catalog,
             BuildKnownLazyApps.Catalog,
-            enablement,
+            new AppEnablementToFilesMigration(_fileSystem, _clock, BuildKnownLazyApps.Catalog),
             _groups,
             _users);
 
-        Assert.True(enablement.IsEnabled("org.hackeros.hack-paint"));
         await bootCoordinator.BootAsync();
 
-        Assert.False(enablement.IsEnabled("org.hackeros.hack-paint"));
+        // ADR 0048 section 6: the machine-wide ADR 0032 disable becomes a machine uninstall; a
+        // system app (the terminal) is never migrated.
+        string content = await ReadSystemFileAsync("/etc/hackeros/apps.config");
+        Assert.Contains("org.hackeros.hack-paint=true", content);
+        Assert.DoesNotContain("org.hackeros.terminal", content);
     }
 
     [Fact]
@@ -150,6 +200,25 @@ public sealed class EcosystemBootCoordinatorTests
         await Assert.ThrowsAsync<OperationCanceledException>(() => bootCoordinator.BootAsync(cts.Token).AsTask());
     }
 
+    private async Task<string> ReadSystemFileAsync(string path)
+    {
+        IAppFileSystemGateway gateway = new HackerOs.Platform.Core.Execution.AppFileSystemGateway(
+            _fileSystem,
+            _clock,
+            new AppOperationContext
+            {
+                AppId = "org.hackeros.shell",
+                UserId = "system",
+                UserAuthority = AppAuthority.System,
+                GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+                IsSystemOperation = true
+            },
+            ["system"]);
+        SettingsFileReadResult read = await SettingsTextFile.ReadAsync(gateway, VirtualPath.Parse(path));
+        Assert.True(read.Exists, path);
+        return read.Content!;
+    }
+
     private sealed class TestJsRuntime : IJSRuntime
     {
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
@@ -167,6 +236,23 @@ public sealed class EcosystemBootCoordinatorTests
 
             return new ValueTask<TValue>(default(TValue)!);
         }
+    }
+
+    private static FileSystemService CreateFileSystem()
+    {
+        int entryId = 1;
+        int transactionId = 100;
+        InMemoryFileSystemRepository repository = new(
+            () => FileSystemEntryId.FromGuid(new Guid(entryId++, 0, 0, new byte[8])),
+            () => new Guid(transactionId++, 0, 0, new byte[8]),
+            TimeProvider.System);
+        FileSystemMountRouter router = new(repository);
+        return new FileSystemService(
+            router,
+            new FileSystemPathResolver(router),
+            new FileSystemAuthorizer(),
+            new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
+            () => new Guid(transactionId++, 0, 0, new byte[8]));
     }
 
     private static AppCatalog CreateEmptyCatalog() =>

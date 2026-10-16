@@ -205,11 +205,9 @@ public sealed class FileDialogCoordinatorTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities { get; } = new TestCapabilityChecker(allowCapabilities);
         public IAppFileSystemGateway FileSystem { get; } = new StrictFileSystemGateway();
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
         public IAppLoggingGateway Logging => throw new NotSupportedException();
-        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
         public IAppClockGateway Clock => throw new NotSupportedException();
         public IAppProcessGateway Processes => throw new NotSupportedException();
     }

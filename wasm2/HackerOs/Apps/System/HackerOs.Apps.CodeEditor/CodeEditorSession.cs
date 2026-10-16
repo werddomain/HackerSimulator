@@ -105,6 +105,37 @@ public sealed class CodeEditorSession
         return CodeEditorCloseResult.Closed;
     }
 
+    /// <summary>
+    /// Re-points the tabs of a renamed file, or of every file under a renamed folder, from
+    /// <paramref name="oldPath"/> to <paramref name="newPath"/>. Returns how many tabs moved.
+    /// </summary>
+    public int RelocatePaths(VirtualPath oldPath, VirtualPath newPath)
+    {
+        string oldPrefix = oldPath.Value == "/" ? "/" : oldPath.Value + "/";
+        int moved = 0;
+        foreach (CodeEditorDocument document in _documents)
+        {
+            if (document.Path is not { } path)
+            {
+                continue;
+            }
+
+            if (path == oldPath)
+            {
+                document.Relocate(newPath);
+                moved++;
+            }
+            else if (path.Value.StartsWith(oldPrefix, StringComparison.Ordinal))
+            {
+                string rest = path.Value[oldPrefix.Length..];
+                document.Relocate(VirtualPath.Parse(newPath.Value == "/" ? "/" + rest : newPath.Value + "/" + rest));
+                moved++;
+            }
+        }
+
+        return moved;
+    }
+
     /// <summary>Captures all buffers for a host-provided persistence boundary.</summary>
     public CodeEditorSessionRecovery CaptureRecovery() => new(
         _documents.Select(document => document.CaptureRecovery()).ToArray(),

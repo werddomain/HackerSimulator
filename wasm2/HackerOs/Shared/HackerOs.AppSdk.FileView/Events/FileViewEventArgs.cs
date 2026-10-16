@@ -97,6 +97,23 @@ public sealed class FileViewDeletingEventArgs(IReadOnlyList<FileViewItem> items)
     public IReadOnlyList<FileViewItem> Items { get; } = items;
 }
 
+/// <summary>
+/// Hands a delete action initiated through <see cref="FileView"/>'s own UI (Delete key, Shift+Delete,
+/// context menu) to the host, when the host supplied <see cref="FileView.DeleteRequested"/> — for
+/// instance to move the items to the trash instead of deleting them (ADR 0052, section 5).
+/// </summary>
+public sealed class FileViewDeleteRequestedEventArgs(IReadOnlyList<FileViewItem> items, bool permanent) : EventArgs
+{
+    /// <summary>Gets the items the user asked to delete.</summary>
+    public IReadOnlyList<FileViewItem> Items { get; } = items;
+
+    /// <summary>
+    /// Gets whether the user asked for a permanent deletion (Shift+Delete or "Delete permanently")
+    /// rather than the default, reversible one.
+    /// </summary>
+    public bool Permanent { get; } = permanent;
+}
+
 /// <summary>Raised after a delete action has completed.</summary>
 public sealed class FileViewDeletedEventArgs(IReadOnlyList<VirtualPath> paths) : EventArgs
 {
@@ -176,4 +193,78 @@ public sealed class FileViewContextMenuOpeningEventArgs(
 
     /// <summary>Gets the mutable menu item collection about to be shown.</summary>
     public FileViewMenuItemCollection Items { get; } = items;
+}
+
+/// <summary>What the user asked the clipboard to do through <see cref="FileView"/>'s keys or menus (ADR 0058, section 1).</summary>
+public enum FileViewClipboardAction
+{
+    /// <summary>Ctrl+X or "Cut": put the items on the clipboard to move them at the next paste.</summary>
+    Cut = 0,
+
+    /// <summary>Ctrl+C or "Copy": put the items on the clipboard to copy them at the next paste.</summary>
+    Copy = 1,
+
+    /// <summary>Ctrl+V, "Paste" or "Paste Into Folder": paste the clipboard into <see cref="FileViewClipboardRequestedEventArgs.Destination"/>.</summary>
+    Paste = 2
+}
+
+/// <summary>
+/// Hands a cut, copy or paste initiated through <see cref="FileView"/>'s own UI to the host, which
+/// owns the clipboard (<c>HackClipboard</c>) and runs the transfer. Supplied only when the host set
+/// <see cref="FileView.ClipboardRequested"/>.
+/// </summary>
+/// <param name="action">Cut, copy or paste.</param>
+/// <param name="items">Items to cut or copy (the selection); empty for a paste.</param>
+/// <param name="destination">Directory to paste into: the current one, or the folder the menu was opened on.</param>
+public sealed class FileViewClipboardRequestedEventArgs(
+    FileViewClipboardAction action, IReadOnlyList<FileViewItem> items, VirtualPath destination) : EventArgs
+{
+    /// <summary>Gets the requested action.</summary>
+    public FileViewClipboardAction Action { get; } = action;
+
+    /// <summary>Gets the items to cut or copy.</summary>
+    public IReadOnlyList<FileViewItem> Items { get; } = items;
+
+    /// <summary>Gets the directory a paste targets.</summary>
+    public VirtualPath Destination { get; } = destination;
+}
+
+/// <summary>One HackerOS entry carried by a drag (from this view, another window, or another app's <see cref="FileView"/>).</summary>
+/// <param name="Path">Absolute path of the dragged entry.</param>
+/// <param name="IsDirectory">Whether the entry is a directory.</param>
+public sealed record FileViewDraggedEntry(VirtualPath Path, bool IsDirectory);
+
+/// <summary>
+/// Hands a drop to the host (ADR 0058, section 1): HackerOS entries dragged from any
+/// <see cref="FileView"/>, and/or files dragged from the host system, dropped on a folder, on the
+/// background of the view, on a tree node, on a breadcrumb segment or on a <c>FileViewDropZone</c>; also
+/// raised, as a copy into the current directory, for files pasted (Ctrl+V) from the host clipboard (ADR 0065).
+/// </summary>
+/// <param name="destination">Target directory, or <see langword="null"/> for a drop zone with no directory (the Trash).</param>
+/// <param name="entries">Dragged HackerOS entries, already checked to exist; never the destination itself.</param>
+/// <param name="hostFiles">Files dropped from the host system; read only when the host imports them.</param>
+/// <param name="copy">Whether Ctrl was held (copy); otherwise a move.</param>
+public sealed class FileViewDropRequestedEventArgs(
+    VirtualPath? destination,
+    IReadOnlyList<FileViewDraggedEntry> entries,
+    IReadOnlyList<Transfers.FileTransferHostFile> hostFiles,
+    bool copy) : EventArgs
+{
+    /// <summary>Gets the target directory, or <see langword="null"/> for a drop zone without one.</summary>
+    public VirtualPath? Destination { get; } = destination;
+
+    /// <summary>Gets the dragged HackerOS entries.</summary>
+    public IReadOnlyList<FileViewDraggedEntry> Entries { get; } = entries;
+
+    /// <summary>Gets the files dropped from the host system.</summary>
+    public IReadOnlyList<Transfers.FileTransferHostFile> HostFiles { get; } = hostFiles;
+
+    /// <summary>Gets whether Ctrl was held: copy instead of move.</summary>
+    public bool Copy { get; } = copy;
+
+    /// <summary>Gets whether the drop carries nothing usable.</summary>
+    public bool IsEmpty => Entries.Count == 0 && HostFiles.Count == 0;
+
+    /// <summary>Key under which <c>FileView.razor.js</c> keeps the host File objects until the drop is handled.</summary>
+    internal int HostFileToken { get; init; }
 }

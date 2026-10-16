@@ -5,6 +5,8 @@ using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Intents;
+using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Processes;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -12,6 +14,9 @@ using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
+
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Shell;
 
 namespace HackerOs.Platform.Core.Lifecycle;
 
@@ -30,13 +35,13 @@ public sealed class AppLifecycleOrchestrator
     private readonly IProcessManager _processManager;
     private readonly ICapabilityGrantRepository _grants;
     private readonly AppExecutionContextFactory _contextFactory;
-    private readonly ISettingsDocumentService _settings;
     private readonly IEventBus? _eventBus;
     private readonly IAppDescriptorLoader? _descriptorLoader;
-    private readonly IPersistentAppCatalogRepository? _catalogRepository;
     private readonly IServiceProvider? _services;
     private readonly IFileSystemService? _fileSystem;
     private readonly IElevationTicketStore? _elevationTickets;
+    private readonly IDangerousCapabilityGate? _dangerousCapabilityGate;
+    private readonly LoginEnvironmentProvider? _loginEnvironment;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
 
@@ -47,15 +52,8 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="processManager">Process lifecycle manager backing every launch.</param>
     /// <param name="grants">Capability grant repository used to compute each launch's granted set.</param>
     /// <param name="contextFactory">Trusted execution-context factory.</param>
-    /// <param name="settings">Canonical settings service, used to invalidate stale file-association defaults on disable.</param>
     /// <param name="eventBus">Optional typed event bus for cross-subsystem lifecycle cleanup.</param>
     /// <param name="descriptorLoader">Optional lazy descriptor loader for assemblies not eagerly discovered.</param>
-    /// <param name="catalogRepository">
-    /// Optional durable catalog store (ADR 0032). When supplied, <see cref="DisableAsync"/> and
-    /// <see cref="EnableAsync"/> persist enablement changes here in addition to updating the
-    /// in-memory <see cref="AppEnablementRegistry"/>, so a disable/enable survives past this
-    /// process. Omitted in contexts (mostly tests) that don't need durability.
-    /// </param>
     /// <param name="services">
     /// Optional DI container used to construct terminal/service app instances (ADR 0034). When
     /// supplied, <see cref="RunTerminalAsync"/>/<see cref="StartService"/> use
@@ -78,6 +76,17 @@ public sealed class AppLifecycleOrchestrator
     /// (e.g. in tests that don't exercise elevation), a supplied token is always denied — the
     /// previous, narrower behavior tests still rely on.
     /// </param>
+    /// <param name="dangerousCapabilityGate">
+    /// Optional launch gate of ADR 0049 section 5. When supplied, every launch of an app declaring
+    /// a dangerous capability goes through it before the process is created (approval overlay,
+    /// <c>auth.log</c>, grants aligned with <c>app-permissions.config</c>), and policy <c>block</c>
+    /// refuses the one-shot approval of ADR 0042 for those capabilities. When omitted, a non-system
+    /// app simply never holds a dangerous capability (the login seeder withholds them).
+    /// </param>
+    /// <param name="loginEnvironment">
+    /// Optional source of the login environment (<c>/etc/environment</c>, ADR 0050 section 5) given
+    /// to processes with no parent. When omitted, they get the fixed login variables only.
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -85,13 +94,13 @@ public sealed class AppLifecycleOrchestrator
         IProcessManager processManager,
         ICapabilityGrantRepository grants,
         AppExecutionContextFactory contextFactory,
-        ISettingsDocumentService settings,
         IEventBus? eventBus = null,
         IAppDescriptorLoader? descriptorLoader = null,
-        IPersistentAppCatalogRepository? catalogRepository = null,
         IServiceProvider? services = null,
         IFileSystemService? fileSystem = null,
-        IElevationTicketStore? elevationTickets = null)
+        IElevationTicketStore? elevationTickets = null,
+        IDangerousCapabilityGate? dangerousCapabilityGate = null,
+        LoginEnvironmentProvider? loginEnvironment = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -99,13 +108,13 @@ public sealed class AppLifecycleOrchestrator
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _eventBus = eventBus;
         _descriptorLoader = descriptorLoader;
-        _catalogRepository = catalogRepository;
         _services = services;
         _fileSystem = fileSystem;
         _elevationTickets = elevationTickets;
+        _dangerousCapabilityGate = dangerousCapabilityGate;
+        _loginEnvironment = loginEnvironment;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
     }
 
@@ -146,6 +155,34 @@ public sealed class AppLifecycleOrchestrator
     /// </summary>
     public bool TryGetDescriptor(string appId, [NotNullWhen(true)] out AppDescriptor? descriptor) =>
         _descriptors.TryGetValue(appId, out descriptor);
+
+    /// <summary>
+    /// Gets a catalog app's descriptor, loading its assembly first when the host lazy-loads it
+    /// (ADR 0063: an app's embeddable component lives in that assembly).
+    /// </summary>
+    /// <param name="appId">Catalog app id.</param>
+    /// <param name="cancellationToken">Cancels the wait for the app's asset (the shared download continues).</param>
+    /// <returns>The descriptor, or <see langword="null"/> with the reason when the app is unknown or its asset did not load.</returns>
+    public async Task<(AppDescriptor? Descriptor, string? Error)> EnsureDescriptorAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        if (_descriptors.TryGetValue(appId, out AppDescriptor? descriptor))
+        {
+            return (descriptor, null);
+        }
+
+        if (_descriptorLoader is null)
+        {
+            return (null, $"The app '{appId}' is not available in this host.");
+        }
+
+        AppDescriptorLoadResult loaded = await _descriptorLoader
+            .EnsureAvailableAsync(appId, cancellationToken)
+            .ConfigureAwait(false);
+        return loaded.Status == AppDescriptorLoadStatus.Available && _descriptors.TryGetValue(appId, out descriptor)
+            ? (descriptor, null)
+            : (null, loaded.Detail ?? $"The app '{appId}' is not available in this host.");
+    }
 
     /// <summary>Attempts to resolve the active descriptor and context for a running process.</summary>
     public bool TryGetRunningInstance(ProcessId pid, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
@@ -242,7 +279,7 @@ public sealed class AppLifecycleOrchestrator
         }
 
         bool isRootElevated = false;
-        OneShotElevationGrantSet? oneShotElevation = null;
+        ElevationTicket? capabilityTicket = null;
         if (request.ElevationToken is Guid elevationToken && request.ElevationScope is ElevationScope elevationScope)
         {
             if (_elevationTickets is null
@@ -258,12 +295,47 @@ public sealed class AppLifecycleOrchestrator
             }
             else if (ticket.Capability is not null)
             {
-                oneShotElevation = new OneShotElevationGrantSet();
-                oneShotElevation.Grant(ticket.Capability, ticket.Path);
+                capabilityTicket = ticket;
             }
         }
 
+        // ADR 0049 section 5: decide pending dangerous capabilities before the process exists, so
+        // the instance's capabilities are frozen at launch with the administrator's answer.
+        DangerousCapabilityGateResult? dangerous = null;
+        if (_dangerousCapabilityGate is not null
+            && DangerousCapabilityEvaluator.DeclaresDangerousCapabilities(descriptor.Manifest))
+        {
+            dangerous = await _dangerousCapabilityGate
+                .EnsureDecidedAsync(descriptor.Manifest, request.Principal, request.ApprovalPrompt, request.Interactive, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        OneShotElevationGrantSet? oneShotElevation = null;
+        if (dangerous is { BlocksOneShotApproval: true })
+        {
+            // ADR 0049 section 3: under policy block the one-shot approval of ADR 0042 is refused
+            // for every dangerous capability of a non-system app (sudo is not concerned).
+            if (capabilityTicket?.Capability is { } ticketCapability && AppCapabilities.IsDangerous(ticketCapability))
+            {
+                return new AppLaunchResult(AppLaunchStatus.ElevationDenied, ErrorCode: "lifecycle.elevation.blocked-by-policy");
+            }
+
+            oneShotElevation = new OneShotElevationGrantSet();
+            foreach (string capability in AppCapabilities.All.Where(AppCapabilities.IsDangerous))
+            {
+                oneShotElevation.Block(capability);
+            }
+        }
+
+        if (capabilityTicket is not null)
+        {
+            oneShotElevation ??= new OneShotElevationGrantSet();
+            oneShotElevation.Grant(capabilityTicket.Capability!, capabilityTicket.Path);
+        }
+
         HashSet<string> grantedCapabilities = ComputeGrantedCapabilities(descriptor.Manifest, request.Principal);
+        (VirtualPath? workingDirectory, IReadOnlyDictionary<string, string>? environment) =
+            await ResolveStartEnvironmentAsync(request, cancellationToken).ConfigureAwait(false);
         ProcessRecord process = _processManager.Start(new ProcessStartRequest(
             request.ParentPid,
             request.AppId,
@@ -271,19 +343,42 @@ public sealed class AppLifecycleOrchestrator
             descriptor.Manifest.Kind,
             request.Principal.UserId,
             request.Principal.SessionId,
-            ResourceProfile.None));
+            // The manifest's declared weights feed the resource simulator, hence /proc/<pid>/status,
+            // /proc/stat and /proc/meminfo (ADR 0012, ADR 0057 section 1). The manifest validator
+            // already enforces the same [0, 1] and burst >= baseline rules as ResourceProfile.
+            ToResourceProfile(descriptor.Manifest.Resources),
+            // argv[0] is the name the command was invoked as (an alias such as `unalias` included),
+            // otherwise the manifest's command name (ADR 0050).
+            [request.CommandName ?? descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
+            workingDirectory,
+            environment));
 
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
             isRootElevated, oneShotElevation);
+        request.ProcessStarted?.Invoke(process);
+        if (descriptor.Manifest.Kind != AppKind.Terminal
+            && context is AppExecutionContext concrete
+            && (request.StandardInput is not null || request.StandardOutput is not null || request.StandardError is not null))
+        {
+            // ADR 0064: a window or service started by a shell writes into that shell's terminal
+            // (HackConsole). The window outlives the command line, so a closed pipe or terminal
+            // must never fault it: its writes are then dropped, like output to a hung-up tty.
+            concrete.Console = new AttachedAppConsole(
+                request.StandardInput ?? TextReader.Null,
+                new ForgivingTextWriter(request.StandardOutput ?? TextWriter.Null),
+                new ForgivingTextWriter(request.StandardError ?? TextWriter.Null));
+        }
 
         try
         {
             return descriptor.Manifest.Kind switch
             {
                 AppKind.Terminal => await RunTerminalAsync(
-                    descriptor, process, context, request.Arguments, request.Principal, request.WorkingDirectory,
-                    fullScreen, cancellationToken),
+                    descriptor, process, context, request, fullScreen,
+                    // ADR 0051 section 3: the shell reaches only a command granted shell.control.
+                    grantedCapabilities.Contains(AppCapabilities.ShellControl) ? request.Shell : null,
+                    cancellationToken),
                 AppKind.Service => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
@@ -333,7 +428,8 @@ public sealed class AppLifecycleOrchestrator
                 continue;
             }
 
-            results.Add(await LaunchAsync(new AppLaunchRequest(appId, principal, [])));
+            // Nobody is watching an auto-start: pending dangerous capabilities are deferred (ADR 0049 section 5.4).
+            results.Add(await LaunchAsync(new AppLaunchRequest(appId, principal, [], Interactive: false)));
         }
 
         return results;
@@ -446,12 +542,14 @@ public sealed class AppLifecycleOrchestrator
 
     /// <summary>
     /// Disables one app and every enabled app that transitively depends on it, stopping their
-    /// active processes in dependents-first order and invalidating any stale file-association
-    /// default that named the disabled app (`P1-APP-010`, `P1-APP-011`).
+    /// active processes in dependents-first order (`P1-APP-011`). Internal since ADR 0048: only
+    /// <c>AppInstallationService</c> calls it, to enforce an uninstall written in <c>apps.config</c>.
+    /// File-association preferences are deliberately left untouched, so a reinstall finds them again;
+    /// <see cref="FileAssociationResolver"/> already ignores a disabled app.
     /// </summary>
     /// <param name="appId">App to disable.</param>
     /// <param name="reason">Reason recorded against stopped processes.</param>
-    public async Task<AppDisableResult> DisableAsync(string appId, ProcessExitReason reason = ProcessExitReason.Disabled)
+    internal async Task<AppDisableResult> DisableAsync(string appId, ProcessExitReason reason = ProcessExitReason.Disabled)
     {
         if (!_catalog.Manifests.ContainsKey(appId))
         {
@@ -479,55 +577,41 @@ public sealed class AppLifecycleOrchestrator
         }
 
         _enablement.MarkDisabled(closure);
-        if (_catalogRepository is not null)
-        {
-            foreach (string disabledAppId in closure)
-            {
-                await _catalogRepository.SetEnabledAsync(disabledAppId, false).ConfigureAwait(false);
-            }
-        }
-
         foreach (string disabledAppId in closure)
         {
             _eventBus?.Publish(new AppDisabledEvent(disabledAppId));
         }
 
-        await InvalidateAssociationDefaultsAsync(appId);
         return new AppDisableResult(true, closure, []);
     }
 
     /// <summary>
     /// Re-enables one app, failing with an explanatory error when a non-optional dependency is
-    /// missing or still disabled (`P1-APP-011`).
+    /// missing or still disabled (`P1-APP-011`). Internal since ADR 0048, like <see cref="DisableAsync"/>.
     /// </summary>
     /// <param name="appId">App to enable.</param>
-    public async Task<AppEnableResult> EnableAsync(string appId)
+    internal Task<AppEnableResult> EnableAsync(string appId)
     {
         if (!_catalog.Manifests.ContainsKey(appId))
         {
-            return new AppEnableResult(false, [$"lifecycle.app.not-found:{appId}"]);
+            return Task.FromResult(new AppEnableResult(false, [$"lifecycle.app.not-found:{appId}"]));
         }
 
         if (_enablement.IsEnabled(appId))
         {
-            return new AppEnableResult(true, []);
+            return Task.FromResult(new AppEnableResult(true, []));
         }
 
         IReadOnlyList<string> blocking = _enablement.ComputeBlockingDependencies(appId);
         if (blocking.Count > 0)
         {
-            return new AppEnableResult(
+            return Task.FromResult(new AppEnableResult(
                 false,
-                [.. blocking.Select(dependency => $"lifecycle.enable.dependency-disabled:{dependency}")]);
+                [.. blocking.Select(dependency => $"lifecycle.enable.dependency-disabled:{dependency}")]));
         }
 
         _enablement.MarkEnabled(appId);
-        if (_catalogRepository is not null)
-        {
-            await _catalogRepository.SetEnabledAsync(appId, true).ConfigureAwait(false);
-        }
-
-        return new AppEnableResult(true, []);
+        return Task.FromResult(new AppEnableResult(true, []));
     }
 
     private HashSet<string> ComputeGrantedCapabilities(AppManifest manifest, AuthenticatedPrincipal principal)
@@ -551,29 +635,42 @@ public sealed class AppLifecycleOrchestrator
         AppDescriptor descriptor,
         ProcessRecord process,
         IAppExecutionContext context,
-        IReadOnlyList<string> arguments,
-        AuthenticatedPrincipal principal,
-        VirtualPath? workingDirectory,
+        AppLaunchRequest request,
         IFullScreenTerminalSession? fullScreen,
+        IShellSession? shell,
         CancellationToken cancellationToken)
     {
         _processManager.MarkRunning(process.Pid);
 
+        // ADR 0050 section 6: the context keeps the process's state at command start, for
+        // compatibility; the live values are read through HackEnvironment.
+        IAppEnvironmentGateway processEnvironment = context.Environment;
+
         TerminalAppBase app = (TerminalAppBase)CreateAppInstance(descriptor);
-        using StringWriter stdout = new();
-        using StringWriter stderr = new();
-        using StringReader stdin = new(string.Empty);
+        // ADR 0050 section 4: streams supplied by the shell (terminal, pipe, redirected file) are
+        // written as the command runs; without them the output is buffered for the caller.
+        using StringWriter? bufferedOutput = request.StandardOutput is null ? new StringWriter() : null;
+        using StringWriter? bufferedError = request.StandardError is null ? new StringWriter() : null;
+        using StringReader emptyInput = new(string.Empty);
         using CancellationTokenSource executionCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, cancellationToken);
         TerminalExecutionContext terminalContext = new(
             context,
-            arguments,
-            stdin,
-            stdout,
-            stderr,
-            workingDirectory?.Value ?? principal.HomePath,
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = principal.HomePath },
-            fullScreen);
+            request.Arguments,
+            request.StandardInput ?? emptyInput,
+            request.StandardOutput ?? bufferedOutput!,
+            request.StandardError ?? bufferedError!,
+            processEnvironment.CurrentDirectory,
+            processEnvironment.GetVariables(),
+            fullScreen,
+            shell);
+
+        if (context is AppExecutionContext concreteContext)
+        {
+            // HackConsole in a command is its terminal context's streams.
+            concreteContext.Console = new AttachedAppConsole(
+                terminalContext.StandardInput, terminalContext.StandardOutput, terminalContext.StandardError);
+        }
 
         List<FileSystemError> permissionDenials = [];
         void OnPermissionDenied(object? sender, AppPermissionErrorEventArgs e) => permissionDenials.Add(e.Error);
@@ -582,21 +679,222 @@ public sealed class AppLifecycleOrchestrator
         int exitCode;
         try
         {
+            // ADR 0043/0050: the command runs as this app, in its process's working directory (the
+            // shell's, copied at creation), so the Hack* file API resolves relative paths exactly
+            // like the shell does, and follows the command's own HackEnvironment changes.
+            using IDisposable ambient = HackExecutionContext.Enter(context);
             exitCode = await app.ExecuteAsync(terminalContext, executionCancellation.Token);
         }
         catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested)
         {
             exitCode = 130;
         }
+        catch (ShellBrokenPipeException)
+        {
+            // ADR 0050 section 4: the reader of its output exited and the command let the "Broken
+            // pipe" error escape, as a Linux process killed by SIGPIPE (128 + 13).
+            exitCode = 141;
+        }
         finally
         {
             context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
         }
 
-        ProcessRecord stopped = _processManager.Complete(process.Pid, exitCode);
+        ProcessRecord stopped = CompleteUnlessEnded(process, exitCode);
         return new AppLaunchResult(
-            AppLaunchStatus.Launched, stopped, context, exitCode, stdout.ToString(), stderr.ToString(),
+            AppLaunchStatus.Launched, stopped, context, exitCode,
+            bufferedOutput?.ToString() ?? string.Empty, bufferedError?.ToString() ?? string.Empty,
             PermissionDenials: permissionDenials);
+    }
+
+    /// <summary>
+    /// Waits until a process has ended (ADR 0064): the shell waits for a window app it started in
+    /// the foreground, as a Linux shell waits for a GUI program until its window closes.
+    /// </summary>
+    /// <param name="pid">The process to wait for.</param>
+    /// <param name="cancellationToken">Stops waiting (the process keeps running).</param>
+    /// <returns>The process's exit code, or <c>0</c> when it ended without one (window closed).</returns>
+    public async Task<int> WaitForExitAsync(ProcessId pid, CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        IDisposable? subscription = _eventBus?.Subscribe<ProcessStateChangedEvent>(e =>
+        {
+            if (e.Pid == pid && e.NewState is ProcessState.Stopped or ProcessState.Faulted)
+            {
+                ended.TrySetResult();
+            }
+        });
+        try
+        {
+            while (_processManager.TryGetActive(pid, out _))
+            {
+                // The event wakes the wait at once; the poll covers a manager without an event bus.
+                Task delay = Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+                await Task.WhenAny(ended.Task, delay).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
+        finally
+        {
+            subscription?.Dispose();
+        }
+
+        ProcessRecord? record = _processManager.GetHistory().LastOrDefault(r => r.Pid == pid);
+        return record?.ExitCode ?? (record?.State == ProcessState.Faulted ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Starts an <c>hsh</c> process that runs a shell script (ADR 0064), as a child of
+    /// <paramref name="parent"/>: like <c>fork</c> + <c>exec</c> of <c>/bin/sh script</c>, it keeps
+    /// the parent shell's capabilities and root elevation, and gets its own directory and
+    /// environment copied from the parent.
+    /// </summary>
+    /// <param name="parent">The context of the shell running the script.</param>
+    /// <param name="principal">The user the script runs as.</param>
+    /// <param name="arguments"><c>argv</c> of the process: the script path then its arguments.</param>
+    /// <param name="workingDirectory">The directory the script starts in.</param>
+    /// <param name="environment">Variables applied over the inherited ones (a subshell's own environment, prefix assignments).</param>
+    /// <param name="processStarted">Called with the new process (background jobs record it).</param>
+    /// <returns>The process and its trusted context; the caller completes the process.</returns>
+    public (ProcessRecord Process, IAppExecutionContext Context) StartShellProcess(
+        IAppExecutionContext parent,
+        AuthenticatedPrincipal principal,
+        IReadOnlyList<string> arguments,
+        VirtualPath workingDirectory,
+        IReadOnlyDictionary<string, string>? environment,
+        Action<ProcessRecord>? processStarted = null)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+        ArgumentNullException.ThrowIfNull(principal);
+        ArgumentNullException.ThrowIfNull(arguments);
+        Dictionary<string, string>? overrides = environment is null ? null : new(environment, StringComparer.Ordinal);
+        if (overrides is not null)
+        {
+            overrides["PWD"] = workingDirectory.Value;
+        }
+
+        ProcessRecord process = _processManager.Start(new ProcessStartRequest(
+            parent.ProcessId,
+            ShellHostService.ShellAppId,
+            AppInstanceId.FromGuid(Guid.NewGuid()),
+            AppKind.Terminal,
+            principal.UserId,
+            principal.SessionId,
+            ResourceProfile.None,
+            arguments,
+            workingDirectory,
+            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value }));
+        try
+        {
+            _processManager.MarkRunning(process.Pid);
+            IAppExecutionContext context = _contextFactory.Create(
+                ShellHostService.ShellManifest, principal, process, parent.GrantedCapabilities,
+                process.AppInstanceId.Value, parent.IsRootElevated);
+            processStarted?.Invoke(process);
+            return (process, context);
+        }
+        catch
+        {
+            if (_processManager.TryGetActive(process.Pid, out _))
+            {
+                _processManager.Kill(process.Pid);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>Ends a script's <c>hsh</c> process with its exit status, unless it already ended (killed).</summary>
+    public void CompleteShellProcess(ProcessId pid, int exitCode)
+    {
+        if (_processManager.TryGetActive(pid, out _))
+        {
+            try
+            {
+                _processManager.Complete(pid, exitCode);
+            }
+            catch (KeyNotFoundException)
+            {
+                // Ended concurrently.
+            }
+        }
+    }
+
+    /// <summary>Stops a running window or service instance and its process (Ctrl+C on a foreground window app).</summary>
+    public async Task<bool> InterruptAsync(ProcessId pid)
+    {
+        if (await StopAsync(pid, ProcessExitReason.Killed).ConfigureAwait(false))
+        {
+            return true;
+        }
+
+        if (_processManager.TryGetActive(pid, out _))
+        {
+            _processManager.Kill(pid);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Records a command's exit, unless its process already ended: killed with <c>kill</c>, or with
+    /// the shell that ran it when its terminal closed (ADR 0056, section 7). The record of that
+    /// earlier end is kept, as the exit of a process killed by a signal is the signal's.
+    /// </summary>
+    private ProcessRecord CompleteUnlessEnded(ProcessRecord process, int exitCode)
+    {
+        try
+        {
+            return _processManager.Complete(process.Pid, exitCode);
+        }
+        catch (KeyNotFoundException)
+        {
+            return _processManager.GetHistory().LastOrDefault(record => record.Pid == process.Pid) ?? process;
+        }
+    }
+
+    /// <summary>
+    /// Computes what the new process starts with (ADR 0050, section 5). A process with no parent
+    /// (desktop launch, service) gets the session's login environment and the home directory; a
+    /// child inherits its parent's, which the process manager copies. In both cases an explicit
+    /// directory also updates <c>PWD</c>, as the shell does when it starts a command after <c>cd</c>,
+    /// then the request's own variables apply on top.
+    /// </summary>
+    private async ValueTask<(VirtualPath? WorkingDirectory, IReadOnlyDictionary<string, string>? Environment)> ResolveStartEnvironmentAsync(
+        AppLaunchRequest request,
+        CancellationToken cancellationToken)
+    {
+        VirtualPath? workingDirectory = request.WorkingDirectory;
+        Dictionary<string, string> environment = new(StringComparer.Ordinal);
+        if (request.ParentPid is null)
+        {
+            AuthenticatedPrincipal principal = request.Principal;
+            IReadOnlyDictionary<string, string> login = _loginEnvironment is null
+                ? LoginEnvironment.Build(principal.LoginName.Value, principal.HomePath, environmentFile: null)
+                : await _loginEnvironment.GetAsync(principal, cancellationToken).ConfigureAwait(false);
+            foreach ((string name, string value) in login)
+            {
+                environment[name] = value;
+            }
+
+            workingDirectory ??= VirtualPath.Parse(principal.HomePath);
+            environment["PWD"] = workingDirectory.Value.Value;
+        }
+        else if (workingDirectory is { } explicitDirectory)
+        {
+            environment["PWD"] = explicitDirectory.Value;
+        }
+
+        if (request.Environment is { } overrides)
+        {
+            foreach ((string name, string value) in overrides)
+            {
+                environment[name] = value;
+            }
+        }
+
+        return (workingDirectory, environment.Count == 0 ? null : environment);
     }
 
     private AppLaunchResult StartService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
@@ -700,44 +998,103 @@ public sealed class AppLifecycleOrchestrator
         _ => ServiceStopReason.Shutdown
     };
 
-    private async Task InvalidateAssociationDefaultsAsync(string disabledAppId)
-    {
-        AppOperationContext systemContext = new()
-        {
-            AppId = "org.hackeros.settings",
-            UserId = "system",
-            UserAuthority = AppAuthority.System,
-            GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal)
-            {
-                AppCapabilities.FileAssociationsRead,
-                AppCapabilities.FileAssociationsWrite
-            },
-            IsSystemOperation = true
-        };
-
-        SettingsReadResult read = await _settings.ReadAsync(FileAssociationSettingsDocuments.Path, systemContext);
-        if (read.Status != SettingsReadStatus.Success || read.Document is null)
-        {
-            return;
-        }
-
-        FileAssociationIndex index = FileAssociationIndex.Build(read.Document.Content);
-        if (!index.Entries.Any(entry => entry.AppId == disabledAppId))
-        {
-            return;
-        }
-
-        string updated = FileAssociationIndex.Serialize(
-            index.Entries.Where(entry => entry.AppId != disabledAppId).ToArray());
-        await _settings.WriteAsync(
-            new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, updated, read.Document.Revision),
-            systemContext);
-    }
-
     /// <summary>Tracks one currently running app instance so it can be stopped later.</summary>
     private sealed record RunningInstance(
         AppDescriptor Descriptor,
         IAppExecutionContext Context,
         ServiceAppBase? ServiceInstance,
         Task? RunTask);
+
+    /// <summary>Maps a manifest's declared resource weights to the simulator's process profile.</summary>
+    private static ResourceProfile ToResourceProfile(AppResourceProfileManifest resources) => new(
+        resources.BaselineCpuWeight,
+        resources.BurstCpuWeight,
+        resources.BaselineMemoryWeight,
+        resources.BurstMemoryWeight,
+        resources.BaselineStorageIoWeight,
+        resources.BurstStorageIoWeight,
+        resources.BaselineNetworkIoWeight,
+        resources.BurstNetworkIoWeight);
+}
+
+/// <summary>The streams of an instance started by a shell (ADR 0064).</summary>
+internal sealed class AttachedAppConsole(TextReader input, TextWriter output, TextWriter error) : IAppConsoleGateway
+{
+    public bool IsAttached => true;
+
+    public TextReader In { get; } = input;
+
+    public TextWriter Out { get; } = output;
+
+    public TextWriter Error { get; } = error;
+}
+
+/// <summary>
+/// Forwards to a terminal, pipe or file, and silently drops the text once that end is gone
+/// (closed terminal, broken pipe): a window app must never fault because the shell that started
+/// it went away, as a GUI program ignores <c>EIO</c> on a hung-up terminal.
+/// </summary>
+internal sealed class ForgivingTextWriter(TextWriter inner) : TextWriter
+{
+    private volatile bool _broken;
+
+    public override System.Text.Encoding Encoding => inner.Encoding;
+
+    public override string NewLine
+    {
+        get => inner.NewLine;
+#pragma warning disable CS8765 // Nullability matches TextWriter.NewLine's setter.
+        set => inner.NewLine = value;
+#pragma warning restore CS8765
+    }
+
+    public override void Write(char value) => Forward(() => inner.Write(value));
+
+    public override void Write(string? value) => Forward(() => inner.Write(value));
+
+    public override void WriteLine(string? value) => Forward(() => inner.WriteLine(value));
+
+    public override Task WriteAsync(char value) => ForwardAsync(() => inner.WriteAsync(value));
+
+    public override Task WriteAsync(string? value) => ForwardAsync(() => inner.WriteAsync(value));
+
+    public override Task WriteLineAsync(string? value) => ForwardAsync(() => inner.WriteLineAsync(value));
+
+    public override void Flush() => Forward(inner.Flush);
+
+    public override Task FlushAsync() => ForwardAsync(inner.FlushAsync);
+
+    private void Forward(Action write)
+    {
+        if (_broken)
+        {
+            return;
+        }
+
+        try
+        {
+            write();
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            _broken = true;
+        }
+    }
+
+    private async Task ForwardAsync(Func<Task> write)
+    {
+        if (_broken)
+        {
+            return;
+        }
+
+        try
+        {
+            await write().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            _broken = true;
+        }
+    }
 }

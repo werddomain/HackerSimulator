@@ -8,6 +8,9 @@ namespace HackerOs.Platform.Core.Time;
 /// </summary>
 public sealed class ManualSimulationClock : ISimulationClock
 {
+    // Guards _pending, _faults and _insertionSequence: since SimulationClockDriver advances this
+    // clock from a timer callback, Schedule/Dispose can race with Advance outside a browser.
+    private readonly Lock _gate = new();
     private readonly List<ScheduledCallback> _pending = [];
     private readonly List<SimulationSchedulerFault> _faults = [];
     private long _insertionSequence;
@@ -41,7 +44,16 @@ public sealed class ManualSimulationClock : ISimulationClock
     public TimeSpan TickDuration { get; }
 
     /// <summary>Gets every callback fault recorded so far, in the order it occurred.</summary>
-    public IReadOnlyList<SimulationSchedulerFault> Faults => _faults;
+    public IReadOnlyList<SimulationSchedulerFault> Faults
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _faults];
+            }
+        }
+    }
 
     /// <inheritdoc />
     public IDisposable Schedule(TimeSpan delay, Action callback)
@@ -55,9 +67,12 @@ public sealed class ManualSimulationClock : ISimulationClock
         long ticksToWait = delay == TimeSpan.Zero
             ? 0
             : (long)Math.Ceiling(delay / TickDuration);
-        ScheduledCallback entry = new(CurrentTick + ticksToWait, _insertionSequence++, callback);
-        _pending.Add(entry);
-        return new ScheduledCallbackHandle(_pending, entry);
+        lock (_gate)
+        {
+            ScheduledCallback entry = new(CurrentTick + ticksToWait, _insertionSequence++, callback);
+            _pending.Add(entry);
+            return new ScheduledCallbackHandle(this, entry);
+        }
     }
 
     /// <inheritdoc />
@@ -111,28 +126,40 @@ public sealed class ManualSimulationClock : ISimulationClock
 
     private void RunDueCallbacks()
     {
-        List<ScheduledCallback> due = [.. _pending
-            .Where(callback => callback.DueTick <= CurrentTick)
-            .OrderBy(callback => callback.DueTick)
-            .ThenBy(callback => callback.Sequence)];
+        List<ScheduledCallback> due;
+        lock (_gate)
+        {
+            due = [.. _pending
+                .Where(callback => callback.DueTick <= CurrentTick)
+                .OrderBy(callback => callback.DueTick)
+                .ThenBy(callback => callback.Sequence)];
+        }
 
         foreach (ScheduledCallback callback in due)
         {
-            _pending.Remove(callback);
+            lock (_gate)
+            {
+                _pending.Remove(callback);
+            }
+
+            // Callbacks run outside the lock: they routinely re-arm themselves through Schedule.
             try
             {
                 callback.Callback();
             }
             catch (Exception exception)
             {
-                _faults.Add(new SimulationSchedulerFault(CurrentTick, exception));
+                lock (_gate)
+                {
+                    _faults.Add(new SimulationSchedulerFault(CurrentTick, exception));
+                }
             }
         }
     }
 
     private sealed record ScheduledCallback(long DueTick, long Sequence, Action Callback);
 
-    private sealed class ScheduledCallbackHandle(List<ScheduledCallback> pending, ScheduledCallback entry) : IDisposable
+    private sealed class ScheduledCallbackHandle(ManualSimulationClock clock, ScheduledCallback entry) : IDisposable
     {
         private bool _disposed;
 
@@ -144,7 +171,10 @@ public sealed class ManualSimulationClock : ISimulationClock
             }
 
             _disposed = true;
-            pending.Remove(entry);
+            lock (clock._gate)
+            {
+                clock._pending.Remove(entry);
+            }
         }
     }
 }

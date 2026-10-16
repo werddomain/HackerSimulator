@@ -146,5 +146,11 @@ public sealed class LauncherAppProjectionTests
         public bool IsEnabled(string appId) => !_disabled.Contains(appId);
 
         public IReadOnlyCollection<string> DisabledAppIds => _disabled;
+
+        public event EventHandler? Changed
+        {
+            add { }
+            remove { }
+        }
     }
 }

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands.Nano\HackerOs.Commands.Nano.csproj" />
+    <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
   </ItemGroup>
 
 </Project>

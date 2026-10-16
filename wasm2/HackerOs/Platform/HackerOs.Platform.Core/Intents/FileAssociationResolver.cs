@@ -1,6 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Lifecycle;
-using HackerOs.Simulation.Abstractions;
+using HackerOs.Platform.Core.Settings;
 
 namespace HackerOs.Platform.Core.Intents;
 
@@ -35,6 +35,11 @@ public sealed record FileHandlerResolution(
     string? AppId,
     IReadOnlyList<string> CandidateAppIds);
 
+/// <summary>Every app that can open a file, for "Open with" (ADR 0056, section 2).</summary>
+/// <param name="AppIds">Candidate app IDs, the configured default first.</param>
+/// <param name="DefaultAppId">The configured default, when one applies.</param>
+public sealed record FileHandlerCandidates(IReadOnlyList<string> AppIds, string? DefaultAppId);
+
 /// <summary>
 /// Resolves which app should open or edit a file using the documented precedence order, per
 /// `P1-APP-008` and `P1-APP-009`: an explicit request target first, then an administrator-configured
@@ -44,10 +49,10 @@ public sealed class FileAssociationResolver
 {
     private readonly AppCatalog _catalog;
     private readonly IAppEnablementRegistry _enablement;
-    private readonly ISettingsDocumentService _settings;
+    private readonly IOsSettingsService _settings;
 
-    /// <summary>Initializes the resolver over a catalog, enablement registry, and settings service.</summary>
-    public FileAssociationResolver(AppCatalog catalog, IAppEnablementRegistry enablement, ISettingsDocumentService settings)
+    /// <summary>Initializes the resolver over a catalog, enablement registry, and the OS settings files.</summary>
+    public FileAssociationResolver(AppCatalog catalog, IAppEnablementRegistry enablement, IOsSettingsService settings)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
@@ -56,11 +61,10 @@ public sealed class FileAssociationResolver
 
     /// <summary>Resolves an <see cref="OpenFileIntent"/> to a target app, or to a chooser/failure outcome.</summary>
     /// <param name="intent">Intent describing the target file, action, and any explicit preference.</param>
-    /// <param name="readContext">Trusted operation context used to read the association document.</param>
-    public async ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, AppOperationContext readContext)
+    /// <param name="cancellationToken">Cancels the read of the association document.</param>
+    public async ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(intent);
-        ArgumentNullException.ThrowIfNull(readContext);
 
         string? extension = GetExtension(intent.Path);
         string action = intent.Action == FileIntentAction.Edit ? "edit" : "open";
@@ -75,16 +79,15 @@ public sealed class FileAssociationResolver
                 : new FileHandlerResolution(FileHandlerResolutionStatus.TargetInvalid, null, []);
         }
 
-        SettingsReadResult read = await _settings.ReadAsync(FileAssociationSettingsDocuments.Path, readContext);
-        if (read.Status == SettingsReadStatus.Success && read.Document is not null)
+        // /etc/hackeros/file-associations.json is world-readable (0644): resolving a handler is a
+        // routine user operation, so the OS reads it as itself.
+        string content = await FileAssociationSettingsDocuments.ReadAsync(_settings, cancellationToken).ConfigureAwait(false);
+        FileAssociationIndex index = FileAssociationIndex.Build(content);
+        if (index.TryGetDefault(extension, intent.MediaType, action, out FileAssociationEntry entry)
+            && _enablement.IsEnabled(entry.AppId)
+            && _catalog.Manifests.ContainsKey(entry.AppId))
         {
-            FileAssociationIndex index = FileAssociationIndex.Build(read.Document.Content);
-            if (index.TryGetDefault(extension, intent.MediaType, action, out FileAssociationEntry entry)
-                && _enablement.IsEnabled(entry.AppId)
-                && _catalog.Manifests.ContainsKey(entry.AppId))
-            {
-                return new FileHandlerResolution(FileHandlerResolutionStatus.ConfiguredDefault, entry.AppId, [entry.AppId]);
-            }
+            return new FileHandlerResolution(FileHandlerResolutionStatus.ConfiguredDefault, entry.AppId, [entry.AppId]);
         }
 
         string[] candidates = [.. _catalog.Manifests.Values
@@ -100,6 +103,40 @@ public sealed class FileAssociationResolver
             1 => new FileHandlerResolution(FileHandlerResolutionStatus.SoleCandidate, candidates[0], candidates),
             _ => new FileHandlerResolution(FileHandlerResolutionStatus.ChooserRequired, null, candidates)
         };
+    }
+
+    /// <summary>
+    /// Lists every enabled window app that can open or edit <paramref name="path"/> ("Open with",
+    /// ADR 0056 section 2): the configured default first when there is one, then the other
+    /// candidates in ordinal id order.
+    /// </summary>
+    /// <returns>The candidate ids and, when one applies, the configured default (also first in the list).</returns>
+    /// <param name="path">File to open.</param>
+    /// <param name="mediaType">MIME type when known, matched besides the extension.</param>
+    /// <param name="cancellationToken">Cancels the read of the association document.</param>
+    public async ValueTask<FileHandlerCandidates> GetHandlerAppIdsAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default)
+    {
+        string? extension = GetExtension(path);
+        List<string> handlers = [.. _catalog.Manifests.Values
+            .Where(manifest => manifest.Kind == AppKind.Window
+                && _enablement.IsEnabled(manifest.Id)
+                && (HandlesFile(manifest, extension, mediaType, "open") || HandlesFile(manifest, extension, mediaType, "edit")))
+            .Select(manifest => manifest.Id)
+            .OrderBy(id => id, StringComparer.Ordinal)];
+
+        string content = await FileAssociationSettingsDocuments.ReadAsync(_settings, cancellationToken).ConfigureAwait(false);
+        FileAssociationIndex index = FileAssociationIndex.Build(content);
+        if (index.TryGetDefault(extension, mediaType, "open", out FileAssociationEntry entry)
+            && _enablement.IsEnabled(entry.AppId)
+            && _catalog.Manifests.ContainsKey(entry.AppId))
+        {
+            handlers.Remove(entry.AppId);
+            handlers.Insert(0, entry.AppId);
+            return new FileHandlerCandidates(handlers, entry.AppId);
+        }
+
+        return new FileHandlerCandidates(handlers, null);
     }
 
     private static bool HandlesFile(AppManifest manifest, string? extension, string? mediaType, string action) =>

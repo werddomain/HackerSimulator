@@ -147,7 +147,9 @@ public static class ConfigDocumentFormat
         return builder.ToString();
     }
 
-    private static int FindUnescapedEquals(string text)
+    /// <summary>Finds the first `=` not preceded by a `\` escape, or -1 when there is none.</summary>
+    /// <param name="text">Trimmed key/value line.</param>
+    internal static int FindUnescapedEquals(string text)
     {
         for (int index = 0; index < text.Length; index++)
         {
@@ -165,6 +167,16 @@ public static class ConfigDocumentFormat
 
         return -1;
     }
+
+    /// <summary>Decodes the value escapes of the grammar (`\#`, `\=`, `\\`, `\n`, `\r`, `\t`).</summary>
+    /// <param name="value">Raw value text as written after `=`.</param>
+    /// <returns>The decoded value.</returns>
+    public static string UnescapeValue(string value) => Unescape(value);
+
+    /// <summary>Encodes a value so it round-trips through <see cref="UnescapeValue"/>.</summary>
+    /// <param name="value">Decoded value.</param>
+    /// <returns>Escaped text safe to write after `=`.</returns>
+    public static string EscapeValue(string value) => Escape(value);
 
     private static string Unescape(string value)
     {

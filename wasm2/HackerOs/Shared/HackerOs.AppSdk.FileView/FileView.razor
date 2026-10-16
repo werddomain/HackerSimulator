@@ -6,7 +6,16 @@
     FileView.razor.cs (FV-001 and later) — this file is markup only, per this repo's collocated-asset
     convention for non-trivial components.
 *@
-<div class="file-view" data-mode="@Mode" @ref="_rootElement" @oncontextmenu="OnBackgroundContextMenuAsync" @oncontextmenu:preventDefault="true">
+<div class="file-view"
+     data-mode="@Mode"
+     data-drop-target
+     tabindex="-1"
+     @ref="_rootElement"
+     @oncontextmenu="OnBackgroundContextMenuAsync"
+     @oncontextmenu:preventDefault="true"
+     @onkeydown="OnRootKeyDownAsync"
+     @ondragover:preventDefault="AllowDragDrop"
+     @ondrop="OnBackgroundDropAsync">
     @if (Mode == FileViewMode.Details)
     {
         <FileViewDetails Owner="this" />

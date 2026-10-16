@@ -2,7 +2,6 @@ using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.Catalog;
 using HackerOs.Infrastructure.Browser.FileSystem;
-using HackerOs.Infrastructure.Browser.Diagnostics;
 using HackerOs.Infrastructure.Browser.Interop;
 using HackerOs.Infrastructure.Browser.Policy;
 using HackerOs.Infrastructure.Browser.ServerConnection;
@@ -10,6 +9,10 @@ using HackerOs.Infrastructure.Browser.Sessions;
 using HackerOs.Infrastructure.Browser.Settings;
 using HackerOs.Infrastructure.Browser.Sync;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Ecosystem.Administration;
+using HackerOs.Platform.Core.Administration;
+using HackerOs.Platform.Core.Power;
+using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
@@ -17,16 +20,21 @@ using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.FileSystem;
+using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
+using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Sessions;
+using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.Core.Time;
+using HackerOs.Platform.Blazor.Components;
 using HackerOs.Platform.Blazor.Dialogs;
+using HackerOs.Platform.Blazor.Security;
 using HackerOs.Platform.Blazor.Shell;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
@@ -37,7 +45,9 @@ using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Metrics;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.ServerConnection;
@@ -45,6 +55,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Sync;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,47 +83,47 @@ public static class EcosystemServiceCollectionExtensions
         services.AddMudServices();
 
         services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<ISimulationClock>(_ => new ManualSimulationClock(
+        // One ManualSimulationClock, driven in live hosts by SimulationClockDriver (ADR 0012);
+        // the boot sequence starts the driver.
+        services.AddSingleton(_ => new ManualSimulationClock(
             DateTimeOffset.UtcNow,
             TimeSpan.FromMilliseconds(100)));
+        services.AddSingleton<ISimulationClock>(provider => provider.GetRequiredService<ManualSimulationClock>());
+        services.AddSingleton(provider => new SimulationClockDriver(
+            provider.GetRequiredService<ManualSimulationClock>(),
+            provider.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ISimulationRandom>(_ => new SeededSimulationRandom(1));
 
         services.AddSingleton<IDiagnosticRedactor>(_ => new SensitiveKeyDiagnosticRedactor());
         services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
+        // In-memory buffer of recent entries for live viewers and the boot error screen. Logs
+        // themselves are files under /var/log, written only by LogFileWriter (ADR 0045).
         services.AddSingleton<IDiagnosticSink>(provider => new EventPublishingDiagnosticSink(
             new BoundedDiagnosticSink(1024),
             provider.GetRequiredService<IEventBus>()));
-        services.AddSingleton<IAuditLog>(_ => new BoundedAuditLog(512));
-        services.AddScoped<IndexedDbDiagnosticRepository>(provider => new IndexedDbDiagnosticRepository(
-            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-            provider.GetRequiredService<IDiagnosticRedactor>(),
-            1024));
-        services.AddScoped<IPersistentDiagnosticRepository>(provider =>
-            provider.GetRequiredService<IndexedDbDiagnosticRepository>());
-        // ILoggerProvider must stay Singleton — ASP.NET Core builds the host's ILoggerFactory
-        // once, before any circuit exists, so it can never depend on a Scoped service. This is
-        // fine for WASM hosts (IJSRuntime is available immediately there, no circuit concept),
-        // but the server host construct-injecting a Scoped IPersistentDiagnosticRepository here
-        // would violate scope validation at the moment ASP.NET Core eagerly builds every
-        // registered ILoggerProvider — see the comment where Server/HackerOs.Server/Program.cs
-        // strips this exact descriptor back out for that host, right after calling this method.
+        services.AddSingleton(provider => new LogFileWriter(
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IDiagnosticSink>(),
+            provider.GetRequiredService<IEventBus>()));
+        services.AddSingleton<IAuditLog>(provider => new FileAuditLog(
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<IDiagnosticRedactor>()));
+        // Every dependency is a singleton, so the host's root ILoggerFactory can build this provider
+        // before any Blazor scope exists. ILogger<T> entries land in /var/log/syslog.
         services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
             provider.GetRequiredService<IDiagnosticSink>(),
-            provider.GetRequiredService<IPersistentDiagnosticRepository>(),
-            provider.GetRequiredService<ISimulationClock>()));
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IDiagnosticRedactor>()));
         // Keep this provider scoped to HackerOS's own log categories: the ASP.NET Core host
         // (Kestrel, hosting lifetime, HTTPS redirection, etc.) also resolves every registered
-        // ILoggerProvider, and its framework-internal chatter isn't a HackerOS diagnostic event
-        // -- and on the server side, IJSRuntime can't reach a real IndexedDB, so every one of
-        // those entries would otherwise fail to persist.
+        // ILoggerProvider, and its framework-internal chatter isn't a HackerOS diagnostic event.
         services.AddLogging(builder =>
         {
             builder.AddFilter<HackerOsDiagnosticLoggerProvider>("Microsoft", LogLevel.None);
             builder.AddFilter<HackerOsDiagnosticLoggerProvider>("System", LogLevel.None);
         });
 
-        // Depends on IPersistentDiagnosticRepository, which is Scoped (see above) — see this
-        // file's IJSRuntime scoping note.
         services.AddScoped<HostExceptionReporter>();
         services.AddSingleton<INotificationQueue>(_ => new InMemoryNotificationQueue(100));
 
@@ -137,12 +148,10 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<ILocalGroupRepository>(provider =>
             provider.GetRequiredService<IndexedDbLocalGroupRepository>());
 
-        services.AddScoped<IndexedDbSettingsDocumentService>(provider =>
-            new IndexedDbSettingsDocumentService(
-                provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                CreateSystemSettingsDefinitions()));
-        services.AddScoped<ISettingsDocumentService>(provider =>
-            provider.GetRequiredService<IndexedDbSettingsDocumentService>());
+        // Settings are files (ADR 0044). The retired IndexedDB settings store is only read once by
+        // the migration below; it is never written again.
+        services.AddScoped<ILegacySettingsStore>(provider =>
+            new IndexedDbLegacySettingsStore(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<IndexedDbCapabilityGrantRepository>();
         services.AddScoped<IPersistentCapabilityGrantRepository>(provider =>
             provider.GetRequiredService<IndexedDbCapabilityGrantRepository>());
@@ -150,18 +159,76 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<ITopicMessageBus>(provider =>
             new InMemoryTopicMessageBus(provider.GetRequiredService<ICapabilityGrantRepository>()));
 
-        services.AddScoped<IndexedDbFileSystemProvider>();
+        // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
+        // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
+        // the persistence, the filesystem service and each app's network gateway.
+        services.AddScoped<IProcessIoAccounting, ProcessIoAccounting>();
+        services.AddScoped<IBlockDeviceStatistics>(_ => new BlockDeviceStatistics());
+        services.AddScoped<INetworkInterfaceStatistics, NetworkInterfaceStatistics>();
+        services.AddScoped<ICpuTimeAccounting>(provider =>
+        {
+            AppCatalog catalog = provider.GetRequiredService<AppCatalog>();
+            // System time: system services, and processes the catalog does not know (OS-owned).
+            return new CpuTimeAccounting(
+                VirtualHardwareProfile.Default,
+                process => !catalog.Manifests.ContainsKey(process.AppId)
+                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)));
+        });
+
+        services.AddScoped<IndexedDbFileSystemProvider>(provider => new IndexedDbFileSystemProvider(
+            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
+            provider.GetRequiredService<IBlockDeviceStatistics>()));
+        services.AddScoped<IStorageUsageProvider>(provider => new IndexedDbStorageUsageProvider(
+            provider.GetRequiredService<IndexedDbFileSystemProvider>(),
+            provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<IndexedDbFileSystemBootstrapper>();
         services.AddScoped<IFileSystemProvider>(provider =>
             provider.GetRequiredService<IndexedDbFileSystemProvider>());
+        // /proc and /dev are virtual, read-only mounts computed on every read and never written to
+        // IndexedDB (ADR 0046). The process manager is resolved lazily: it depends on the session
+        // service, which depends on FileSystemSeeder, which reaches /proc through this router.
         services.AddScoped<IFileSystemMountRouter>(provider =>
-            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>()));
+            new FileSystemMountRouter(provider.GetRequiredService<IFileSystemProvider>(),
+            [
+                new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, new ProcFileSystemProvider(
+                    () => provider.GetRequiredService<IProcessManager>(),
+                    provider.GetRequiredService<IResourceSimulator>(),
+                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<ISimulationClock>(),
+                    process => provider.GetRequiredService<ISessionService>().CurrentPrincipal is { } principal
+                        && principal.UserId == process.UserId
+                            ? principal.LoginName.Value
+                            : null,
+                    environments: () => provider.GetRequiredService<IProcessEnvironmentTable>(),
+                    metrics: new ProcMetricsSources(
+                        provider.GetRequiredService<ICpuTimeAccounting>(),
+                        provider.GetRequiredService<IProcessIoAccounting>(),
+                        provider.GetRequiredService<IBlockDeviceStatistics>(),
+                        provider.GetRequiredService<INetworkInterfaceStatistics>(),
+                        () => provider.GetRequiredService<IFileSystemMountRouter>()))),
+                new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
+                    provider.GetRequiredService<ISimulationClock>()))
+            ]));
         // Depends on IFileSystemMountRouter, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<IFileSystemPathResolver, FileSystemPathResolver>();
         services.AddSingleton<IFileSystemAuthorizer, FileSystemAuthorizer>();
         services.AddScoped<IFileSystemService, FileSystemService>();
         services.AddTransient<FileSystemSeeder>();
+        // Depends on IFileSystemService, which is Scoped (see above) — see this file's IJSRuntime
+        // scoping note.
+        services.AddScoped<SettingsStoreToFilesMigration>(provider => new SettingsStoreToFilesMigration(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<ILegacySettingsStore>(),
+            provider.GetService<ILogger<SettingsStoreToFilesMigration>>()));
+        services.AddScoped<IOsSettingsService>(provider => new OsSettingsService(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetService<ITopicMessageBus>(),
+            provider.GetService<IEventBus>(),
+            provider.GetService<ILogger<OsSettingsService>>()));
 
         services.AddScoped<WebCryptoPasswordHasher>(provider =>
             new WebCryptoPasswordHasher(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
@@ -188,22 +255,17 @@ public static class EcosystemServiceCollectionExtensions
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
         });
 
-        // Settings domain sync (ADR 0029) — reuses the connection above; a no-op when disconnected.
+        // Sync plumbing shared by every domain below; each is a no-op when disconnected. Settings
+        // have no domain of their own anymore: user settings are home files carried by FileSystem
+        // sync (ADR 0044 section 10).
         services.AddScoped<ISyncCursorRepository>(provider =>
             new IndexedDbSyncCursorRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<ISyncRecordStateRepository>(provider =>
             new IndexedDbSyncRecordStateRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.TryAddSingleton<ISyncClient, HttpSyncClient>();
-        services.AddScoped<ISettingsSyncService>(provider => new SettingsSyncService(
-            CreateSystemSettingsDefinitions(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
-            provider.GetRequiredService<IServerConnectionService>(),
-            provider.GetRequiredService<ISyncClient>(),
-            provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
 
         // FileSystem domain sync (ADR 0030) — reuses the same connection and sync scaffolding as
-        // Settings sync above; scoped to the active session's own /home/{userId}, so a no-op when
+        // above; scoped to the active session's own /home/{userId}, so a no-op when
         // disconnected or no session is active.
         services.AddSingleton<IContentTransferClient, HttpContentTransferClient>();
         services.AddScoped<IFileSystemSyncService>(provider => new FileSystemSyncService(
@@ -223,18 +285,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>()));
 
-        // FileAssociations + AppCatalog domain sync (ADR 0033) — completes the original five-domain
-        // sync roadmap. FileAssociations reuses the Settings-document plumbing under its own domain
-        // string; AppCatalog syncs only the ADR 0032 enablement flag, never the manifest.
+        // FileAssociations domain sync (ADR 0033): /etc/hackeros/file-associations.json under its own
+        // domain string. The AppCatalog domain is retired by ADR 0048: uninstalls are apps.config
+        // files, and the user layer travels with /home through the FileSystem domain.
         services.AddScoped<IFileAssociationsSyncService>(provider => new FileAssociationsSyncService(
-            provider.GetRequiredService<ISettingsDocumentService>(),
-            provider.GetRequiredService<IServerConnectionService>(),
-            provider.GetRequiredService<ISyncClient>(),
-            provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
-        services.AddScoped<IAppCatalogSyncService>(provider => new AppCatalogSyncService(
-            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
-            provider.GetRequiredService<AppEnablementRegistry>(),
+            provider.GetRequiredService<IOsSettingsService>(),
             provider.GetRequiredService<IServerConnectionService>(),
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
@@ -257,6 +312,51 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IAdminElevationVerifier>(),
             provider.GetRequiredService<IElevationTicketStore>()));
 
+        // Dangerous capabilities (ADR 0049): remembered decisions, the launch gate and its
+        // secure-desktop overlay (the broker is the host's default approval prompt), and the
+        // administration behind Settings > Permissions. Scoped: they read the session user's files.
+        services.AddScoped<IAppPermissionStore>(provider => new AppPermissionStore(
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetService<ILogger<AppPermissionStore>>()));
+        services.AddScoped<DangerousCapabilityApprovalBroker>();
+        services.AddScoped<IDangerousCapabilityApprovalPrompt>(provider =>
+            provider.GetRequiredService<DangerousCapabilityApprovalBroker>());
+        services.AddScoped<IDangerousCapabilityGate>(provider => new DangerousCapabilityGate(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<ICapabilityGrantRepository>(),
+            provider.GetRequiredService<IAppPermissionStore>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetRequiredService<IDangerousCapabilityApprovalPrompt>()));
+        // OS authentication agent (ADR 0055 section 5, polkit-like): gateways that need an
+        // administrator ask it; its secure-desktop overlay is rendered by the shell.
+        services.AddScoped<AdministratorAuthenticationBroker>();
+        services.AddScoped<IAdministratorAuthenticationPrompt>(provider =>
+            provider.GetRequiredService<AdministratorAuthenticationBroker>());
+        services.AddScoped<IAdministratorAuthenticationAgent>(provider => new AdministratorAuthenticationAgent(
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetRequiredService<IAdministratorAuthenticationPrompt>()));
+        services.AddScoped<AppPermissionAdministration>(provider => new AppPermissionAdministration(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppPermissionStore>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<IAdminElevationVerifier>(),
+            provider.GetRequiredService<IAuditLog>()));
+        // Reboot and factory reset (ADR 0056 section 11): the browser reloads the page and deletes
+        // the OS database; HackSystem reaches them only after the authentication agent agreed.
+        services.AddScoped<ISystemPowerDevice>(provider =>
+            new BrowserSystemPowerDevice(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddScoped<SystemPowerService>(provider => new SystemPowerService(
+            provider.GetRequiredService<ISystemPowerDevice>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<IAuditLog>()));
+        // Raw storage snapshot behind HackStorageDiagnostics (ADR 0056 section 11).
+        services.AddScoped<IStorageInspector>(provider =>
+            new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -271,17 +371,37 @@ public static class EcosystemServiceCollectionExtensions
                 asyncHasher: (password, salt, iterations, length, ct) =>
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct),
                 grantRepository: provider.GetService<ICapabilityGrantRepository>(),
-                catalog: provider.GetService<AppCatalog>());
+                catalog: provider.GetService<AppCatalog>(),
+                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>());
         });
+        // Per-process arguments, working directory and environment (ADR 0050): filled and
+        // emptied by the process manager, read by /proc and each app's Environment gateway.
+        services.AddScoped<InMemoryProcessEnvironmentTable>();
+        services.AddScoped<IProcessEnvironmentTable>(provider =>
+            provider.GetRequiredService<InMemoryProcessEnvironmentTable>());
         services.AddScoped<IProcessManager>(provider =>
             new InMemoryProcessManager(
                 provider.GetRequiredService<ISimulationClock>(),
                 provider.GetRequiredService<ISessionService>(),
-                provider.GetRequiredService<IEventBus>()));
+                provider.GetRequiredService<IEventBus>(),
+                environments: provider.GetRequiredService<InMemoryProcessEnvironmentTable>()));
+        // Login environment (/etc/environment) and machine name (/etc/hostname), ADR 0050.
+        services.AddScoped<LoginEnvironmentProvider>(provider => new LoginEnvironmentProvider(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetService<ILogger<LoginEnvironmentProvider>>()));
         services.AddSingleton<IResourceSimulator>(provider => new DeterministicResourceSimulator(
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),
             VirtualHardwareProfile.Default));
+        // The scheduler tick: samples every process once per simulated second (ADR 0057), started
+        // by the boot sequence next to the clock driver.
+        services.AddScoped<ResourceSamplingService>(provider => new ResourceSamplingService(
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IResourceSimulator>(),
+            () => provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<ICpuTimeAccounting>(),
+            provider.GetRequiredService<IProcessIoAccounting>()));
 
         services.AddScoped<IndexedDbAppCatalogRepository>();
         services.AddScoped<IPersistentAppCatalogRepository>(provider =>
@@ -296,7 +416,6 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<AppExecutionContextFactory>(provider => new AppExecutionContextFactory(
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<IFileSystemService>(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
             provider.GetRequiredService<ITopicMessageBus>(),
             provider.GetRequiredService<INotificationQueue>(),
@@ -305,11 +424,57 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessManager>(),
             // Resolved lazily: AppIntentDispatcher depends (transitively, via AppLifecycleOrchestrator)
             // on this very factory, so eagerly injecting it here would be circular.
-            intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>()));
+            intentDispatcherProvider: () => provider.GetRequiredService<AppIntentDispatcher>(),
+            logWriter: provider.GetRequiredService<LogFileWriter>(),
+            environments: provider.GetRequiredService<IProcessEnvironmentTable>(),
+            machineName: () => provider.GetRequiredService<LoginEnvironmentProvider>().HostName,
+            // ADR 0056 section 6: each app's Network gateway, with the OS-owned real-network fallback.
+            network: provider.GetRequiredService<ISimulatedNetworkService>(),
+            serverConnection: provider.GetRequiredService<IServerConnectionService>(),
+            proxy: provider.GetRequiredService<IProxyClient>(),
+            // HackApps / HackAppManagement (ADR 0056 sections 2 and 3). Lazy for the same reason:
+            // the installation service depends on the orchestrator, which depends on this factory.
+            appCatalog: new AppCatalogGatewayServices(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                () => provider.GetRequiredService<FileAssociationResolver>(),
+                () => provider.GetRequiredService<IAppInstallationService>(),
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+            // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
+            shellHostProvider: () => provider.GetRequiredService<ShellHostService>(),
+            // ADR 0057: traffic counters for /proc/net/dev and /proc/<pid>/io, and HackDriveInfo.
+            metrics: new SystemMetricsServices(
+                provider.GetRequiredService<INetworkInterfaceStatistics>(),
+                provider.GetRequiredService<IProcessIoAccounting>(),
+                new AppDriveGateway(
+                    () => provider.GetRequiredService<IFileSystemMountRouter>(),
+                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<IStorageUsageProvider>())),
+            // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
+            clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
+            // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
+            // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
+            administration: new SystemAdministrationGatewayServices(
+                () => provider.GetRequiredService<IOsSettingsService>(),
+                () => provider.GetRequiredService<AppPermissionAdministration>(),
+                new ServerConnectionGatewayServices(
+                    () => provider.GetRequiredService<IServerConnectionService>(),
+                    () => provider.GetRequiredService<IFileSystemSyncService>(),
+                    () => provider.GetRequiredService<IGrantsSyncService>(),
+                    () => provider.GetRequiredService<IFileAssociationsSyncService>()),
+                () => provider.GetRequiredService<SystemPowerService>(),
+                () => provider.GetRequiredService<IStorageInspector>(),
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
+        services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
+            new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
+        // Shared clipboard with the real machine (ADR 0065), started by App.razor once settings exist.
+        // Depends on IJSRuntime through its channel — see this file's IJSRuntime scoping note.
+        services.AddScoped<HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardChannel, HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel>();
+        services.AddScoped<HackerOs.Platform.Core.Clipboard.HostClipboardBridge>();
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
-            provider.GetRequiredService<ISettingsDocumentService>()));
+            provider.GetRequiredService<IOsSettingsService>()));
 
         // Simulated network (ADR 0034) — smoke-test seed only, not the full "Game domain" content
         // pack ADR 0023 scoped separately. Enough for curl/ping/nmap's simulated path to work now
@@ -335,13 +500,42 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessManager>(),
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<AppExecutionContextFactory>(),
-            provider.GetRequiredService<ISettingsDocumentService>(),
             provider.GetRequiredService<IEventBus>(),
             descriptorLoaderProvider?.Invoke(provider),
-            provider.GetRequiredService<IPersistentAppCatalogRepository>(),
             provider,
             provider.GetRequiredService<IFileSystemService>(),
-            provider.GetRequiredService<IElevationTicketStore>()));
+            provider.GetRequiredService<IElevationTicketStore>(),
+            provider.GetRequiredService<IDangerousCapabilityGate>(),
+            provider.GetRequiredService<LoginEnvironmentProvider>()));
+        // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
+        // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
+        // AppEnablementRegistry every launch path consults.
+        services.AddScoped<AppEnablementToFilesMigration>(provider => new AppEnablementToFilesMigration(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetService<ILogger<AppEnablementToFilesMigration>>()));
+        services.AddScoped<AppInstallationService>(provider => new AppInstallationService(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<AppEnablementRegistry>(),
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<ITopicMessageBus>(),
+            provider.GetRequiredService<IEventBus>(),
+            provider.GetService<ILogger<AppInstallationService>>()));
+        services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
+        // The headless shell hsh (ADR 0050): the terminal runs every line through it.
+        services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppEnablementRegistry>()));
+        // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
+        services.AddScoped<ShellHostService>(provider => new ShellHostService(
+            provider.GetRequiredService<ShellInterpreter>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IElevationService>()));
         services.AddScoped<AppIntentDispatcher>(provider => new AppIntentDispatcher(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
@@ -368,6 +562,16 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<DialogCoordinator>(provider => new DialogCoordinator(
             provider.GetRequiredService<IFileDialogService>()));
         services.AddScoped<IDialogService>(provider => provider.GetRequiredService<DialogCoordinator>());
+        // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
+        // component by contract; the provider's assembly is loaded as a launch would load it.
+        services.AddScoped<IHackComponentHost>(provider =>
+        {
+            AppLifecycleOrchestrator orchestrator = provider.GetRequiredService<AppLifecycleOrchestrator>();
+            return new HackComponentHost(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                orchestrator.EnsureDescriptorAsync);
+        });
         services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
         // Scoped, not Singleton: on the server host these back live desktop/window state for one
         // circuit. A Singleton here outlives circuit reconnects (e.g. a hard browser reload, which
@@ -401,6 +605,7 @@ public static class EcosystemServiceCollectionExtensions
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
         services.AddScoped<HackerOs.Platform.Core.Appearance.ThemePreferenceService>();
+        services.AddScoped<WindowGeometryPersistence>();
         services.AddScoped<StartMenuPreferencesService>();
         // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see
         // above) — see this file's IJSRuntime scoping note.
@@ -414,13 +619,4 @@ public static class EcosystemServiceCollectionExtensions
         AppCatalogBuildResult result = AppCatalog.Build([]);
         return result.Catalog ?? throw new InvalidOperationException("The empty app catalog must be valid.");
     }
-
-    private static SettingsDocumentDefinition[] CreateSystemSettingsDefinitions() =>
-    [
-        PolicySettingsDocuments.CreateDefinition(),
-        FileAssociationSettingsDocuments.CreateDefinition(),
-        HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.CreateDefinition(),
-        StartMenuSettingsDocuments.CreateDefinition(),
-        UiPlatformPreferenceSettingsDocuments.CreateDefinition()
-    ];
 }

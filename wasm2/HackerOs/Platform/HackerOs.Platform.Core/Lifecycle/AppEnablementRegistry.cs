@@ -11,6 +11,12 @@ public interface IAppEnablementRegistry
 
     /// <summary>Gets every currently disabled app ID.</summary>
     IReadOnlyCollection<string> DisabledAppIds { get; }
+
+    /// <summary>
+    /// Raised after apps were disabled or enabled again (an uninstall or reinstall, ADR 0048), so
+    /// lists such as the launcher refresh without being reopened.
+    /// </summary>
+    event EventHandler? Changed;
 }
 
 /// <summary>Describes the outcome of a runtime disable request, per `P1-APP-011`.</summary>
@@ -31,6 +37,11 @@ public sealed record AppEnableResult(bool Success, IReadOnlyList<string> Errors)
 /// Tracks which catalog apps are currently enabled and computes dependency-aware cascades for
 /// runtime enable/disable requests. Never mutates the underlying <see cref="AppCatalog"/>.
 /// </summary>
+/// <remarks>
+/// Since ADR 0048 this is no longer a durable state of its own: "disabled" means "uninstalled", and
+/// <c>AppInstallationService</c> keeps this registry equal to the effective content of the two
+/// <c>apps.config</c> files. It stays the single checkpoint every launch path consults.
+/// </remarks>
 public sealed class AppEnablementRegistry : IAppEnablementRegistry
 {
     private readonly object _sync = new();
@@ -125,24 +136,39 @@ public sealed class AppEnablementRegistry : IAppEnablementRegistry
         }
     }
 
+    /// <inheritdoc />
+    public event EventHandler? Changed;
+
     /// <summary>Marks every app ID disabled. Used only after the caller has stopped their processes.</summary>
     public void MarkDisabled(IEnumerable<string> appIds)
     {
+        bool changed = false;
         lock (_sync)
         {
             foreach (string appId in appIds)
             {
-                _disabled.Add(appId);
+                changed |= _disabled.Add(appId);
             }
+        }
+
+        if (changed)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 
     /// <summary>Marks one app ID enabled.</summary>
     public void MarkEnabled(string appId)
     {
+        bool changed;
         lock (_sync)
         {
-            _disabled.Remove(appId);
+            changed = _disabled.Remove(appId);
+        }
+
+        if (changed)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 }

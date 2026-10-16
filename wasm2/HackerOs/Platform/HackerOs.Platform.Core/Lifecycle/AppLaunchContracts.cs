@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
@@ -16,15 +17,51 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// </param>
 /// <param name="ParentPid">Optional parent process, when launched as a child of another process.</param>
 /// <param name="WorkingDirectory">
-/// Initial virtual working directory for a <see cref="HackerOs.App.Abstractions.AppKind.Terminal"/>
-/// launch (e.g. the invoking shell's current directory); defaults to the principal's home when
-/// omitted, instead of always starting at the filesystem root.
+/// Initial working directory of the new process (e.g. the invoking shell's current directory,
+/// ADR 0050 section 5); when omitted, the parent's directory is inherited, or the principal's home
+/// for a process with no parent.
 /// </param>
 /// <param name="ElevationToken">
 /// Optional single-use elevation ticket token (`ADR 0042`), minted by <see cref="IElevationService"/>.
 /// Consumed exactly once against <see cref="ElevationScope"/> before this launch proceeds.
 /// </param>
 /// <param name="ElevationScope">The scope the ticket in <see cref="ElevationToken"/> authorizes.</param>
+/// <param name="ApprovalPrompt">
+/// Prompt for pending dangerous capabilities (ADR 0049 section 5); the terminal passes its text
+/// mode. <see langword="null"/> uses the host's default (the secure-desktop overlay).
+/// </param>
+/// <param name="Interactive">
+/// <see langword="false"/> for a launch nobody is watching (a service auto-started with the
+/// session): pending dangerous capabilities are then deferred instead of prompted.
+/// </param>
+/// <param name="Environment">
+/// Environment variables applied over the inherited ones (ADR 0050, section 5): the parent's when
+/// <see cref="ParentPid"/> is set, otherwise the login environment.
+/// </param>
+/// <param name="StandardInput">
+/// Standard input of a <see cref="HackerOs.App.Abstractions.AppKind.Terminal"/> app (ADR 0050,
+/// section 4): a pipe from the previous pipeline stage. <see langword="null"/> gives an empty
+/// input (end of stream at once, like <c>/dev/null</c>).
+/// </param>
+/// <param name="StandardOutput">
+/// Standard output of a Terminal app: the terminal, a pipe or a redirected file. When supplied, the
+/// command writes there as it runs and <see cref="AppLaunchResult.StandardOutput"/> stays empty;
+/// when <see langword="null"/>, the output is buffered and returned in the result.
+/// </param>
+/// <param name="StandardError">Standard error of a Terminal app, with the same rule as <see cref="StandardOutput"/>.</param>
+/// <param name="Shell">
+/// The interactive shell starting a Terminal app (ADR 0051, section 3). It reaches the command as
+/// <see cref="TerminalExecutionContext.Shell"/> only when the command's granted capabilities
+/// include <see cref="AppCapabilities.ShellControl"/>.
+/// </param>
+/// <param name="CommandName">
+/// The name the command was invoked as (a manifest alias such as <c>unalias</c>), which becomes
+/// <c>argv[0]</c> like on Linux; the manifest's command name when omitted.
+/// </param>
+/// <param name="ProcessStarted">
+/// Called with the new process as soon as it exists, before the app runs (ADR 0064): the shell
+/// records the process ids of a background job (<c>$!</c>, <c>jobs -l</c>, <c>kill %n</c>).
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -32,7 +69,16 @@ public sealed record AppLaunchRequest(
     ProcessId? ParentPid = null,
     VirtualPath? WorkingDirectory = null,
     Guid? ElevationToken = null,
-    ElevationScope? ElevationScope = null);
+    ElevationScope? ElevationScope = null,
+    IDangerousCapabilityApprovalPrompt? ApprovalPrompt = null,
+    bool Interactive = true,
+    IReadOnlyDictionary<string, string>? Environment = null,
+    TextReader? StandardInput = null,
+    TextWriter? StandardOutput = null,
+    TextWriter? StandardError = null,
+    IShellSession? Shell = null,
+    string? CommandName = null,
+    Action<ProcessRecord>? ProcessStarted = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

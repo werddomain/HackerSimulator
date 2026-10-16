@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Tests.Settings;
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
@@ -17,7 +18,7 @@ public sealed class FileAssociationResolverTests
         Fixture fixture = new(NotepadManifest());
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/notes.txt"), FileIntentAction.Open, PreferredAppId: "org.hackeros.notepad");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ExplicitTarget, resolution.Status);
         Assert.Equal("org.hackeros.notepad", resolution.AppId);
@@ -29,7 +30,7 @@ public sealed class FileAssociationResolverTests
         Fixture fixture = new(NotepadManifest());
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/photo.png"), FileIntentAction.Open, PreferredAppId: "org.hackeros.notepad");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.TargetInvalid, resolution.Status);
     }
@@ -41,7 +42,7 @@ public sealed class FileAssociationResolverTests
         fixture.Disable("org.hackeros.notepad");
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/notes.txt"), FileIntentAction.Open, PreferredAppId: "org.hackeros.notepad");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.TargetInvalid, resolution.Status);
     }
@@ -53,7 +54,7 @@ public sealed class FileAssociationResolverTests
         await fixture.ConfigureDefaultAsync(".txt", "org.hackeros.texteditor");
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/notes.txt"), FileIntentAction.Open);
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ConfiguredDefault, resolution.Status);
         Assert.Equal("org.hackeros.texteditor", resolution.AppId);
@@ -65,7 +66,7 @@ public sealed class FileAssociationResolverTests
         Fixture fixture = new(NotepadManifest());
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/notes.txt"), FileIntentAction.Open);
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.SoleCandidate, resolution.Status);
         Assert.Equal("org.hackeros.notepad", resolution.AppId);
@@ -77,7 +78,7 @@ public sealed class FileAssociationResolverTests
         Fixture fixture = new(NotepadManifest(), TextEditorManifest());
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/notes.txt"), FileIntentAction.Open);
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ChooserRequired, resolution.Status);
         Assert.Equal(["org.hackeros.notepad", "org.hackeros.texteditor"], resolution.CandidateAppIds);
@@ -89,7 +90,7 @@ public sealed class FileAssociationResolverTests
         Fixture fixture = new(NotepadManifest());
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/photo.png"), FileIntentAction.Open);
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.NoHandler, resolution.Status);
     }
@@ -108,7 +109,7 @@ public sealed class FileAssociationResolverTests
             VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open,
             PreferredAppId: "org.hackeros.file-explorer", MediaType: "inode/directory");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ExplicitTarget, resolution.Status);
         Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
@@ -121,7 +122,7 @@ public sealed class FileAssociationResolverTests
         await fixture.ConfigureMediaTypeDefaultAsync("inode/directory", "org.hackeros.file-explorer");
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ConfiguredDefault, resolution.Status);
         Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
@@ -130,14 +131,14 @@ public sealed class FileAssociationResolverTests
     [Fact]
     public async Task A_sole_directory_candidate_is_used_without_a_configured_default()
     {
-        // FileAssociationSettingsDocuments.EmptyDocumentContent seeds org.hackeros.file-explorer as the
+        // FileAssociationSettingsDocuments.DefaultContent seeds org.hackeros.file-explorer as the
         // inode/directory default (INT-009) — cleared here so this test genuinely exercises the
         // no-configured-default candidate path, not the configured-default path INT-009 itself covers.
         Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
         await fixture.ClearAssociationsAsync();
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.SoleCandidate, resolution.Status);
         Assert.Equal("org.hackeros.file-explorer", resolution.AppId);
@@ -150,7 +151,7 @@ public sealed class FileAssociationResolverTests
         await fixture.ClearAssociationsAsync();
         OpenFileIntent intent = new(VirtualPath.Parse("/home/alice/Documents"), FileIntentAction.Open, MediaType: "inode/directory");
 
-        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent, fixture.ReadContext);
+        FileHandlerResolution resolution = await fixture.Resolver.ResolveAsync(intent);
 
         Assert.Equal(FileHandlerResolutionStatus.ChooserRequired, resolution.Status);
         Assert.Equal(["org.hackeros.archiver", "org.hackeros.file-explorer"], resolution.CandidateAppIds);
@@ -204,6 +205,7 @@ public sealed class FileAssociationResolverTests
     private sealed class Fixture
     {
         private readonly AppEnablementRegistry _enablement;
+        private readonly SettingsFilesHarness _harness = new();
 
         internal Fixture(params AppManifest[] manifests)
         {
@@ -211,62 +213,25 @@ public sealed class FileAssociationResolverTests
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
             AppCatalog catalog = catalogResult.Catalog!;
             _enablement = new AppEnablementRegistry(catalog);
-            Settings = new InMemorySettingsDocumentService([FileAssociationSettingsDocuments.CreateDefinition()]);
-            Resolver = new FileAssociationResolver(catalog, _enablement, Settings);
-            ReadContext = new AppOperationContext
-            {
-                AppId = "org.hackeros.shell",
-                UserId = "alice",
-                UserAuthority = AppAuthority.User,
-                GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal) { AppCapabilities.FileAssociationsRead },
-                IsSystemOperation = false
-            };
-            WriteContext = ReadContext with
-            {
-                GrantedCapabilities = new HashSet<string>(StringComparer.Ordinal)
-                {
-                    AppCapabilities.FileAssociationsRead, AppCapabilities.FileAssociationsWrite
-                },
-                UserAuthority = AppAuthority.Administrator
-            };
+            Resolver = new FileAssociationResolver(catalog, _enablement, _harness.Settings);
         }
 
-        internal InMemorySettingsDocumentService Settings { get; }
         internal FileAssociationResolver Resolver { get; }
-        internal AppOperationContext ReadContext { get; }
-        internal AppOperationContext WriteContext { get; }
 
         internal void Disable(string appId) => _enablement.MarkDisabled([appId]);
 
-        internal async Task ConfigureDefaultAsync(string extension, string appId)
-        {
-            SettingsReadResult read = await Settings.ReadAsync(FileAssociationSettingsDocuments.Path, WriteContext);
-            string content = $$"""
-                {"schemaVersion":1,"associations":[{"extension":"{{extension}}","appId":"{{appId}}","actions":["open","edit"]}]}
-                """;
-            SettingsWriteResult write = await Settings.WriteAsync(
-                new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, content, read.Document!.Revision), WriteContext);
-            Assert.Equal(SettingsWriteStatus.Success, write.Status);
-        }
+        // The associations are the administrator file /etc/hackeros/file-associations.json (ADR 0044).
+        internal Task ConfigureDefaultAsync(string extension, string appId) => WriteAsync($$"""
+            {"schemaVersion":1,"associations":[{"extension":"{{extension}}","appId":"{{appId}}","actions":["open","edit"]}]}
+            """);
 
-        internal async Task ConfigureMediaTypeDefaultAsync(string mediaType, string appId)
-        {
-            SettingsReadResult read = await Settings.ReadAsync(FileAssociationSettingsDocuments.Path, WriteContext);
-            string content = $$"""
-                {"schemaVersion":1,"associations":[{"mediaType":"{{mediaType}}","appId":"{{appId}}","actions":["open"]}]}
-                """;
-            SettingsWriteResult write = await Settings.WriteAsync(
-                new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, content, read.Document!.Revision), WriteContext);
-            Assert.Equal(SettingsWriteStatus.Success, write.Status);
-        }
+        internal Task ConfigureMediaTypeDefaultAsync(string mediaType, string appId) => WriteAsync($$"""
+            {"schemaVersion":1,"associations":[{"mediaType":"{{mediaType}}","appId":"{{appId}}","actions":["open"]}]}
+            """);
 
-        internal async Task ClearAssociationsAsync()
-        {
-            SettingsReadResult read = await Settings.ReadAsync(FileAssociationSettingsDocuments.Path, WriteContext);
-            SettingsWriteResult write = await Settings.WriteAsync(
-                new SettingsWriteRequest(FileAssociationSettingsDocuments.Path, "{\"schemaVersion\":1,\"associations\":[]}", read.Document!.Revision),
-                WriteContext);
-            Assert.Equal(SettingsWriteStatus.Success, write.Status);
-        }
+        internal Task ClearAssociationsAsync() => WriteAsync("{\"schemaVersion\":1,\"associations\":[]}");
+
+        private Task WriteAsync(string content) =>
+            _harness.WriteAsRootAsync(FileAssociationSettingsDocuments.File.Resolve(null).Value, content);
     }
 }

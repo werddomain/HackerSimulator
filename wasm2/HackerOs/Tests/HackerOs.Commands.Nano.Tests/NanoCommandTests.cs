@@ -14,13 +14,13 @@ public sealed class NanoCommandTests
     [Fact]
     public async Task ExecuteAsync_WithoutFullScreen_ReturnsUnsupportedError()
     {
-        NanoCommand command = new(NanoCommand.StaticManifest);
+        NanoCommand command = new(AppDefinitionMapper.ToManifest(new NanoApp()));
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new("");
 
         TerminalExecutionContext context = new(
-            app: new StubAppExecutionContext(NanoCommand.StaticManifest),
+            app: new StubAppExecutionContext(AppDefinitionMapper.ToManifest(new NanoApp())),
             arguments: ["sample.txt"],
             standardInput: stdin,
             standardOutput: stdout,
@@ -43,10 +43,12 @@ public sealed class NanoCommandTests
             new TerminalKeyEvent(TerminalKey.End),
             new TerminalKeyEvent(TerminalKey.Character, "!"),
             new TerminalKeyEvent(TerminalKey.Character, "o", Control: true),
+            // ADR 0064: ^O asks "File Name to Write:" prefilled with the file, like GNU nano.
+            new TerminalKeyEvent(TerminalKey.Enter),
             new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
         TerminalExecutionContext context = CreateContext(fileSystem, terminal, "sample.txt");
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest)
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
@@ -63,7 +65,7 @@ public sealed class NanoCommandTests
         TestFullScreenTerminal terminal = new() { ThrowCancellationOnRead = true };
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await new NanoCommand(NanoCommand.StaticManifest).ExecuteAsync(
+            await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
                 CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None));
 
         Assert.True(terminal.Entered);
@@ -82,13 +84,88 @@ public sealed class NanoCommandTests
             new TerminalKeyEvent(TerminalKey.Enter),
             new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest).ExecuteAsync(
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
             CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
 
         Assert.Equal(0, exitCode);
         Assert.Equal("/home/user/copy.txt", fileSystem.CreatedPath);
         Assert.Equal("/home/user/copy.txt", fileSystem.WrittenPath);
         Assert.Equal("hello!", fileSystem.WrittenContent);
+    }
+
+    [Fact]
+    public async Task WriteOut_prompt_is_prefilled_and_editing_it_saves_under_another_name()
+    {
+        TestFileSystemGateway fileSystem = new("hello", "/home/user/sample.txt");
+        List<TerminalKeyEvent> keys = [new(TerminalKey.Character, "o", Control: true)];
+        keys.AddRange(Enumerable.Repeat(new TerminalKeyEvent(TerminalKey.Backspace), "sample.txt".Length));
+        keys.Add(new(TerminalKey.Character, "renamed.txt"));
+        keys.Add(new(TerminalKey.Enter));
+        keys.Add(new(TerminalKey.Character, "x", Control: true));
+        TestFullScreenTerminal terminal = new([.. keys]);
+
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
+            CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("/home/user/renamed.txt", fileSystem.CreatedPath);
+        Assert.Contains(terminal.Frames, frame => frame.Lines.Any(line => line.Contains("File Name to Write: sample.txt")));
+    }
+
+    [Fact]
+    public async Task Cut_and_paste_move_whole_lines()
+    {
+        TestFileSystemGateway fileSystem = new("a\nb\nc", "/home/user/sample.txt");
+        TestFullScreenTerminal terminal = new(
+            new TerminalKeyEvent(TerminalKey.Character, "k", Control: true),
+            new TerminalKeyEvent(TerminalKey.ArrowDown),
+            new TerminalKeyEvent(TerminalKey.Character, "u", Control: true),
+            new TerminalKeyEvent(TerminalKey.Character, "s", Control: true),
+            new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
+
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
+            CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("b\na\nc", fileSystem.WrittenContent);
+    }
+
+    [Fact]
+    public async Task Where_is_moves_the_cursor_to_the_next_match()
+    {
+        TestFileSystemGateway fileSystem = new("one\ntwo\nthree", "/home/user/sample.txt");
+        TestFullScreenTerminal terminal = new(
+            new TerminalKeyEvent(TerminalKey.Character, "w", Control: true),
+            new TerminalKeyEvent(TerminalKey.Character, "thr"),
+            new TerminalKeyEvent(TerminalKey.Enter),
+            new TerminalKeyEvent(TerminalKey.Character, "X"),
+            new TerminalKeyEvent(TerminalKey.Character, "s", Control: true),
+            new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
+
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
+            CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("one\ntwo\nXthree", fileSystem.WrittenContent);
+    }
+
+    [Fact]
+    public async Task A_long_line_scrolls_horizontally_to_keep_the_cursor_visible()
+    {
+        string longLine = new string('x', 100) + "END";
+        TestFileSystemGateway fileSystem = new(longLine, "/home/user/sample.txt");
+        TestFullScreenTerminal terminal = new(
+            new TerminalKeyEvent(TerminalKey.End),
+            new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
+
+        await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(
+            CreateContext(fileSystem, terminal, "sample.txt"), CancellationToken.None);
+
+        TerminalScreenFrame frame = terminal.Frames[^1];
+        Assert.StartsWith("<", frame.Lines[1]);
+        Assert.Contains("END", frame.Lines[1]);
+        Assert.InRange(frame.Cursor.Column, 1, 79);
+        Assert.Equal('D', frame.Lines[1][frame.Cursor.Column - 1]);
     }
 
     [Fact]
@@ -99,7 +176,7 @@ public sealed class NanoCommandTests
         TestFullScreenTerminal terminal = new();
         TerminalExecutionContext context = CreateContext(fileSystem, terminal, "denied.txt");
 
-        int exitCode = await new NanoCommand(NanoCommand.StaticManifest)
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp()))
             .ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
@@ -111,7 +188,7 @@ public sealed class NanoCommandTests
         IAppFileSystemGateway fileSystem,
         IFullScreenTerminalSession? terminal,
         params string[] arguments) => new(
-            new StubAppExecutionContext(NanoCommand.StaticManifest, fileSystem),
+            new StubAppExecutionContext(AppDefinitionMapper.ToManifest(new NanoApp()), fileSystem),
             arguments,
             new StringReader(string.Empty),
             new StringWriter(),
@@ -135,11 +212,9 @@ public sealed class NanoCommandTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities => throw new NotSupportedException();
         public IAppFileSystemGateway FileSystem { get; } = fileSystem ?? new TestFileSystemGateway(string.Empty, "/unused");
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
         public IAppEventGateway Events => throw new NotSupportedException();
         public IAppNotificationGateway Notifications => throw new NotSupportedException();
         public IAppLoggingGateway Logging => throw new NotSupportedException();
-        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
         public IAppClockGateway Clock => throw new NotSupportedException();
         public IAppProcessGateway Processes => throw new NotSupportedException();
     }

@@ -16,6 +16,10 @@ public sealed class TerminalExecutionContext
     /// <param name="workingDirectory">Current virtual filesystem directory.</param>
     /// <param name="environment">Read-only shell environment for this execution.</param>
     /// <param name="fullScreen">Optional renderer-independent alternate-screen session.</param>
+    /// <param name="shell">
+    /// The calling shell, for a command that declares <c>shell.control</c> and was started by an
+    /// interactive shell (ADR 0051, section 3); <see langword="null"/> otherwise.
+    /// </param>
     public TerminalExecutionContext(
         IAppExecutionContext app,
         IReadOnlyList<string> arguments,
@@ -24,7 +28,8 @@ public sealed class TerminalExecutionContext
         TextWriter standardError,
         string workingDirectory,
         IReadOnlyDictionary<string, string> environment,
-        IFullScreenTerminalSession? fullScreen = null)
+        IFullScreenTerminalSession? fullScreen = null,
+        IShellSession? shell = null)
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -42,6 +47,7 @@ public sealed class TerminalExecutionContext
         WorkingDirectory = workingDirectory;
         Environment = environment;
         FullScreen = fullScreen;
+        Shell = shell;
     }
 
     /// <summary>Gets the scoped application execution context.</summary>
@@ -69,4 +75,12 @@ public sealed class TerminalExecutionContext
     /// Gets the optional full-screen terminal session. Ordinary stream commands can ignore it.
     /// </summary>
     public IFullScreenTerminalSession? FullScreen { get; }
+
+    /// <summary>
+    /// Gets the shell that ran this command, so <c>cd</c>, <c>export</c>, <c>help</c> or
+    /// <c>sudo</c> can act on it (ADR 0051, section 3). Non-null only when the command declares
+    /// <c>shell.control</c> and an interactive shell started it; a command run by an app through
+    /// <c>ExecuteCommandIntent</c> gets <see langword="null"/>.
+    /// </summary>
+    public IShellSession? Shell { get; }
 }

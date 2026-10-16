@@ -31,23 +31,6 @@
 </div>
 
 @code {
-    public static AppManifest StaticManifest { get; } = new()
-    {
-        SchemaVersion = 1,
-        Id = "org.hackeros.samples.window-app",
-        Name = "Sample Window App",
-        Version = "1.0.0",
-        PublisherId = "pub.hackeros",
-        Description = "Complete sample Window application",
-        Kind = AppKind.Window,
-        EntryPoint = new AppEntryPointManifest("HackerOs.Samples.WindowApp.dll", "HackerOs.Samples.WindowApp.SampleWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
-        Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
-        Capabilities = [AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],
-        Resources = AppResourceProfileManifest.None,
-        SingleInstancePerUser = true
-    };
-
     private string _fileStatus = "No file operation performed.";
     private string _capabilityStatus = "Click button to test capability access.";
 

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
+    <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
   </ItemGroup>
 
 </Project>

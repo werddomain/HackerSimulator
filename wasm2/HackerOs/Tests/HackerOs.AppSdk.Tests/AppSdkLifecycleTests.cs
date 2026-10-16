@@ -131,7 +131,6 @@ public sealed class AppSdkLifecycleTests
 
         public IAppFileSystemGateway FileSystem => throw new NotSupportedException();
 
-        public IAppSettingsGateway Settings => throw new NotSupportedException();
 
         public IAppEventGateway Events => throw new NotSupportedException();
 
@@ -139,7 +138,6 @@ public sealed class AppSdkLifecycleTests
 
         public IAppLoggingGateway Logging => throw new NotSupportedException();
 
-        public IAppDiagnosticsGateway Diagnostics => throw new NotSupportedException();
 
         public IAppClockGateway Clock => throw new NotSupportedException();
 

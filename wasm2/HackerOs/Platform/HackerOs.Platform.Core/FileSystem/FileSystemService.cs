@@ -1,7 +1,11 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Events;
+using HackerOs.Platform.Core.FileSystem.Virtual;
+using HackerOs.Platform.Core.Metrics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Core.FileSystem;
 
@@ -13,7 +17,14 @@ namespace HackerOs.Platform.Core.FileSystem;
 /// <c>docs/Global-FileView-And-MessagingSystem/MessagingSystem.md</c> (<c>MSG-011</c>/<c>MSG-012</c>).
 /// The <c>shared/filesystem/changed</c> channel is registered once, in this singleton's constructor,
 /// owner-only for publish under <see cref="KernelPublisherIdentity"/> so no app can ever forge a change
-/// notification.
+/// notification. Paths owned by an <see cref="IVirtualFileSystemProvider"/> (<c>/proc</c>, <c>/dev</c>)
+/// never publish one (ADR 0046).
+/// <para>
+/// It is also where the bytes each process reads and writes are counted for
+/// <c>/proc/&lt;pid&gt;/io</c> (ADR 0057 section 3): every app gateway and every command reaches
+/// files through this service, and only here is the mount known, which tells persistent storage
+/// (<c>read_bytes</c>, <c>write_bytes</c>) from the virtual <c>/proc</c> and <c>/dev</c>.
+/// </para>
 /// </remarks>
 public sealed class FileSystemService : IFileSystemService
 {
@@ -23,15 +34,27 @@ public sealed class FileSystemService : IFileSystemService
     private readonly ITopicMessageBus _topicBus;
     private readonly Func<Guid> _transactionIdFactory;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly IProcessIoAccounting? _ioAccounting;
 
     /// <summary>Initializes the mounted filesystem service.</summary>
+    /// <param name="router">Mount table.</param>
+    /// <param name="pathResolver">Link-aware path resolver.</param>
+    /// <param name="authorizer">Permission and capability policy.</param>
+    /// <param name="topicBus">Bus the change notifications are published on.</param>
+    /// <param name="transactionIdFactory">Optional deterministic transaction ID source for tests.</param>
+    /// <param name="clock">Optional time source for tests.</param>
+    /// <param name="ioAccounting">
+    /// Optional per-process I/O accounting (ADR 0057); when present, the bytes a process reads and
+    /// writes through this service are charged to the PID of its operation context.
+    /// </param>
     public FileSystemService(
         IFileSystemMountRouter router,
         IFileSystemPathResolver pathResolver,
         IFileSystemAuthorizer authorizer,
         ITopicMessageBus topicBus,
         Func<Guid>? transactionIdFactory = null,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        IProcessIoAccounting? ioAccounting = null)
     {
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
@@ -39,6 +62,7 @@ public sealed class FileSystemService : IFileSystemService
         _topicBus = topicBus ?? throw new ArgumentNullException(nameof(topicBus));
         _transactionIdFactory = transactionIdFactory ?? Guid.NewGuid;
         _clock = clock ?? (static () => DateTimeOffset.UtcNow);
+        _ioAccounting = ioAccounting;
 
         _topicBus.RegisterSharedChannel(
             TopicNames.Shared("filesystem").Segment("changed").Build(),
@@ -81,10 +105,14 @@ public sealed class FileSystemService : IFileSystemService
         }
 
         FileSystemMountResolution route = _router.Resolve(path);
-        return await route.Mount.Provider.ReadAsync(
+        FileSystemResult<FileSystemContentReadHandle> read = await route.Mount.Provider.ReadAsync(
             new FileSystemReadRequest(path, FileSystemLinkBehavior.NoFollow),
             context,
             cancellationToken);
+        return read.Succeeded && AccountedProcess(context) is { } pid
+            ? FileSystemResult<FileSystemContentReadHandle>.Success(
+                CountReads(read.Value!, pid, fromStorage: route.Mount.Provider is not IVirtualFileSystemProvider))
+            : read;
     }
 
     /// <inheritdoc />
@@ -209,11 +237,20 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(denial);
         }
 
-        FileSystemMutationResult result = await _router.Resolve(path).Mount.Provider.WriteAsync(
+        IFileSystemProvider target = _router.Resolve(path).Mount.Provider;
+        ProcessId? writer = AccountedProcess(context);
+        WriteCountingContentSource? counted = writer is null ? null : new WriteCountingContentSource(content);
+        FileSystemMutationResult result = await target.WriteAsync(
             new FileSystemWriteRequest(path, request.ExpectedRevision),
-            content,
+            (IFileSystemContentSource?)counted ?? content,
             context,
             cancellationToken);
+        if (counted is { Opened: true })
+        {
+            // One write(2) per call: the provider consumes the whole content in one operation.
+            _ioAccounting!.RecordWrite(writer!.Value, counted.Bytes, toStorage: target is not IVirtualFileSystemProvider);
+        }
+
         if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
         {
             PublishChange(path, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.ContentModified);
@@ -581,15 +618,25 @@ public sealed class FileSystemService : IFileSystemService
     {
         string userId = context.OperationContext.UserId;
         string? username = context.OperationContext.UserName;
+        string appId = context.OperationContext.AppId;
 
-        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}/.config/apps/{context.OperationContext.AppId}"))
+        // ADR 0044: an app's own user settings layer, ~/.config/<appId>/, is app-private storage.
+        if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}/.config/{appId}"))
         {
             return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
         }
 
-        if (IsWithin(path, $"/home/{userId}/.config/apps/{context.OperationContext.AppId}"))
+        if (IsWithin(path, $"/home/{userId}/.config/{appId}"))
         {
             return isWrite ? AppCapabilities.FileSystemPrivateWrite : AppCapabilities.FileSystemPrivateRead;
+        }
+
+        // ADR 0044: an app reads its own system settings layer, /etc/<appId>/, without the broad
+        // filesystem.system.read; writing it stays filesystem.system.write plus Administrator
+        // authority and mode bits (the files belong to system:system).
+        if (!isWrite && IsWithin(path, $"/etc/{appId}"))
+        {
+            return AppCapabilities.FileSystemPrivateRead;
         }
 
         if (!string.IsNullOrWhiteSpace(username) && IsWithin(path, $"/home/{username}"))
@@ -638,6 +685,25 @@ public sealed class FileSystemService : IFileSystemService
         VirtualPath.Parse(parent.Value == "/" ? $"/{name.Value}" : $"{parent.Value}/{name.Value}");
 
     /// <summary>Publishes one change notification for <paramref name="affectedPath"/> to its parent directory's topic.</summary>
+    /// <summary>
+    /// Gets the process an operation is charged to: its PID when I/O accounting is on and the
+    /// caller is a process (system operations outside any process are not charged).
+    /// </summary>
+    private ProcessId? AccountedProcess(FileSystemAuthorizationContext context) =>
+        _ioAccounting is not null && context.OperationContext.ProcessId is > 0 and { } pid
+            ? ProcessId.FromInt64(pid)
+            : null;
+
+    /// <summary>Wraps a read handle so each read call on its content is charged to <paramref name="pid"/>.</summary>
+    private FileSystemContentReadHandle CountReads(FileSystemContentReadHandle handle, ProcessId pid, bool fromStorage)
+    {
+        IProcessIoAccounting accounting = _ioAccounting!;
+        return new FileSystemContentReadHandle(
+            handle.Entry,
+            handle.Descriptor,
+            new ReadCountingStream(handle.Content, read => accounting.RecordRead(pid, read, fromStorage)));
+    }
+
     private void PublishChange(
         VirtualPath affectedPath,
         FileSystemEntryKind entryKind,
@@ -645,6 +711,13 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemChangeKind kind,
         VirtualPath? movedToPath = null)
     {
+        // Virtual mounts (/proc, /dev) are computed on read and never change "on disk": like
+        // inotify on Linux's /proc, they never raise change notifications (ADR 0046).
+        if (_router.Resolve(affectedPath).Mount.Provider is IVirtualFileSystemProvider)
+        {
+            return;
+        }
+
         TopicName topic = FileSystemTopics.ForDirectory(GetParent(affectedPath));
         _topicBus.Publish(
             topic,

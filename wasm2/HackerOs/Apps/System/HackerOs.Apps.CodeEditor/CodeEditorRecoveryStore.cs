@@ -22,6 +22,11 @@ public enum CodeEditorRecoveryStatus
     TooLarge,
     /// <summary>An optimistic write conflict occurred.</summary>
     Conflict,
+    /// <summary>
+    /// The caller cancelled the operation: a newer edit superseded this snapshot, or the window
+    /// closed. Not a failure, so it carries no error text and the editor never shows it.
+    /// </summary>
+    Cancelled,
     /// <summary>An unexpected stable VFS failure occurred.</summary>
     Failed
 }
@@ -65,7 +70,7 @@ public sealed class CodeEditorRecoveryStore
     /// <c>AppContext.UserId</c>, an internal id, not the login name used in VFS paths.
     /// </param>
     /// <param name="homePath">
-    /// The user's actual home directory (e.g. <c>SessionService.CurrentPrincipal.HomePath</c>),
+    /// The user's actual home directory (<c>HackUser.Current.HomeDirectory</c>),
     /// used to build <see cref="RecoveryPath"/>. <c>AppContext.UserId</c> is not a path segment —
     /// using it directly here previously pointed every recovery read/write at a nonexistent
     /// <c>/home/{userId}</c> directory, so saves always failed with a raw "NotFound" status.
@@ -292,6 +297,7 @@ public sealed class CodeEditorRecoveryStore
             new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Denied, Error: "Recovery access denied."),
         FileSystemErrorCode.RevisionConflict =>
             new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Conflict, Error: "Recovery changed concurrently."),
+        FileSystemErrorCode.Cancelled => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Cancelled),
         _ => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Failed, Error: code?.ToString() ?? "Recovery operation failed.")
     };
 

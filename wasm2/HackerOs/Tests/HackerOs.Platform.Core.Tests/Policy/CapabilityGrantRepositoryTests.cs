@@ -124,14 +124,14 @@ public sealed class CapabilityGrantRepositoryTests
         repository.Grant(
             "org.hackeros.settings",
             "user-1",
-            AppCapabilities.SettingsSystemWrite,
+            AppCapabilities.FileSystemSystemWrite,
             CapabilityGrantSource.AdministratorApproval,
             AppAuthority.Administrator);
 
         CapabilityPolicyEvaluation evaluation = repository.Evaluate(
             "org.hackeros.settings",
             "user-1",
-            AppCapabilities.SettingsSystemWrite,
+            AppCapabilities.FileSystemSystemWrite,
             AppAuthority.User,
             AppAuthority.Administrator);
 

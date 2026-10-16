@@ -73,6 +73,7 @@ stores than its boundary declares:
 - `GroupWrite` — `groups` alone.
 - `SessionLifecycle` — `sessions` alone.
 - `SettingsDocumentWrite` — `settings` alone (one document + revision bump).
+- `LegacySettingsRead` — `settings` alone, read-only `getAll` for the one-time settings-to-files migration (ADR 0044).
 - `FileSystemMetadataMutation` — `fsEntries` + `fsLinks` together; content is
   excluded (see `FileSystemContentWrite`).
 - `FileSystemContentWrite` — `fsContent` alone; ordering against the metadata

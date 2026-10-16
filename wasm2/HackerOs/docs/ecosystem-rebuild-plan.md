@@ -1,7 +1,9 @@
 # Plan de refonte de l'écosystème HackerOS
 
-**Statut :** plan validé avec Benoit le 2026-10-10. Aucune ligne de code n'a
-encore été écrite pour ce plan. Ce document remplace
+**Statut :** plan validé avec Benoit le 2026-10-10. Les quatre phases sont
+réalisées et fusionnées dans `rebuild/base` (phase 4 terminée le 2026-10-11 par
+`rebuild/4-sdk-boundary-final`) ; la section 12 renvoie au document de chaque
+chantier. Ce document remplace
 `old/implementation-status.md` et `old/integration-task-list.md` comme
 référence de direction pour l'écosystème. Ces deux documents restent dans
 [`old/`](old/) comme historique.
@@ -151,6 +153,8 @@ dépendance à Blazor, utilisable par les apps fenêtre, terminal et service.
   navigateur.
 
 ### 5.2 Paramètres en fichiers
+
+Mise en œuvre : [`settings-files.md`](settings-files.md).
 
 - **Source de vérité :** le fichier. Le magasin IndexedDB `settings` séparé
   disparaît pour les paramètres d'app et de système. Une migration copie les
@@ -381,17 +385,22 @@ pas modifié.
 
 | Nouvel ADR | Remplace | Contenu |
 |---|---|---|
-| API fichier `Hack*` et contexte ambiant | — | D3, D4, D5, section 5.1 |
-| Paramètres en fichiers | 0004, 0011 (partiellement), 0029 si impacté | D16 à D18, section 5.2, syntaxe du verrou |
-| Journaux en fichiers | — | D19, section 5.3, tailles de rotation |
-| Systèmes de fichiers virtuels `/proc` et `/dev` | — | D20, section 5.4 |
-| Manifeste en classe C# et génération | 0010 | D6, D7, D8, section 6.1-6.2 |
-| Apps système et désinstallation | complète 0032 | D9 à D11, section 6.3 |
-| Permissions dangereuses et approbation | complète 0002, 0003 | D23 à D25, section 6.4 |
-| Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
-| Commandes regroupées, sans exception codée en dur | 0034 | D14, section 7.3 |
-| Corbeille | — | D15, section 7.4 |
-| Apps de base sur le SDK public uniquement | — | D21, section 8.1 |
+| [0043](adr/0043-hack-file-api-and-ambient-context.md) API fichier `Hack*` et contexte ambiant | — | D3, D4, D5, section 5.1 |
+| [0044](adr/0044-settings-as-files.md) Paramètres en fichiers | 0004, 0011 (partiellement), 0029 | D16 à D18, section 5.2, syntaxe du verrou |
+| [0045](adr/0045-logs-as-files.md) Journaux en fichiers | — | D19, section 5.3, tailles de rotation |
+| [0046](adr/0046-virtual-proc-and-dev-filesystems.md) Systèmes de fichiers virtuels `/proc` et `/dev` | complète 0008 | D20, section 5.4 |
+| [0047](adr/0047-app-definition-and-generated-manifests.md) Manifeste en classe C# et génération | 0010 (en partie) | D6, D7, D8, section 6.1-6.2 |
+| [0048](adr/0048-system-apps-and-uninstall.md) Apps système et désinstallation | complète 0032, remplace en partie 0033 | D9 à D11, section 6.3 |
+| [0049](adr/0049-dangerous-capabilities-and-admin-approval.md) Permissions dangereuses et approbation | complète 0002, 0003, 0042 | D23 à D25, section 6.4 |
+| [0050](adr/0050-shell-grammar-and-process-environment.md) Grammaire du shell et environnement de processus | 0014 | D12, D13, section 7.1-7.2 |
+| [0051](adr/0051-unified-commands-project.md) Commandes regroupées, sans exception codée en dur | 0034 (section 1) | D14, section 7.3 |
+| [0052](adr/0052-trash.md) Corbeille | — | D15, section 7.4 |
+| [0055](adr/0055-base-apps-on-public-sdk-only.md) Apps de base sur le SDK public uniquement | complète 0019 | D21, section 8.1 : références et injections permises, vérification au build, agent d'authentification |
+| [0056](adr/0056-sdk-apis-for-system-apps.md) API du SDK qui remplacent les services internes | complète 0044, 0048, 0049 | section 8.1 : une API et une capacité par besoin des apps système |
+| [0057](adr/0057-proc-metrics-for-task-manager.md) Mesures système dans `/proc` et `HackDriveInfo` | complète 0046 | section 8.2, gestionnaire de tâches |
+| [0058](adr/0058-base-app-features.md) Fonctionnalités des apps de base | — | D22, section 8.2, chantiers `rebuild/4-*` |
+| [0059](adr/0059-sdk-boundary-diagnostic-codes.md) Codes des diagnostics de la frontière du SDK | 0055 (numéros des codes) | `HOSAPP0030` et `HOSAPP0031`, les numéros de l'ADR 0055 étant déjà pris |
+| [0060](adr/0060-system-administration-sdk-adjustments.md) Ajustements de l'API d'administration du système | 0056 (sections 8, 9 et 11, en partie) | section 8.1 : `SystemPower`, `HackPermissionDecision`, écriture des documents de l'OS, presse-papiers de l'hôte pour Diagnostic |
 
 ## 11. Points de détail à fixer dans les ADR
 
@@ -412,40 +421,83 @@ l'ADR correspondant, avec la valeur proposée ci-dessous par défaut.
 - [x] Discuter le constat et lever les ambiguïtés avec Benoit (25 questions).
 - [x] Déplacer les anciens documents dans `docs/old/`, sauf `docs/adr/`, et corriger les liens.
 - [x] Rédiger ce plan et le nouvel index `docs/README.md`.
-- [ ] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
+- [x] Écrire les ADR de la section 10, phase par phase, avant le code de chaque phase.
+  - [x] Phase 1 : ADR 0043 à 0046 (2026-10-10).
+  - [x] Phase 2 : ADR 0047 à 0049 (2026-10-10), avec leurs chantiers `rebuild/2-*`.
+  - [x] Phase 3 : ADR 0050 à 0052 (2026-10-10), avec leurs chantiers `rebuild/3-*` (tableau dans l'ADR 0052).
+  - [x] Phase 4 : ADR 0055 à 0058 (2026-10-10), avec leurs chantiers `rebuild/4-*` (tableau dans l'ADR 0058).
 
 ### Phase 1 — Fichiers
-- [ ] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
-- [ ] Créer les exceptions `Hack*` et la traduction depuis `FileSystemErrorCode`.
-- [ ] Mettre en place le contexte d'exécution ambiant positionné par l'OS.
-- [ ] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes.
-- [ ] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides.
-- [ ] Créer l'API typée de paramètres et adapter l'app Paramètres.
-- [ ] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer.
-- [ ] Monter `/proc` et `/dev` en virtuel.
-- [ ] Tests de contrat pour chaque point.
+- [x] Créer les types `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo`, `HackDirectoryInfo`, `HackFileStream`, `HackFileSystemWatcher`.
+- [x] Créer les exceptions `Hack*` et la traduction depuis `FileSystemErrorCode`.
+- [x] Mettre en place le contexte d'exécution ambiant positionné par l'OS. Voir [`hack-file-api.md`](hack-file-api.md).
+- [x] Remplacer le magasin de paramètres séparé par des fichiers, avec migration des valeurs existantes ([`settings-files.md`](settings-files.md)).
+- [x] Implémenter les couches `/etc` puis `~/.config`, le verrou administrateur et la tolérance aux fichiers invalides ([`settings-files.md`](settings-files.md)).
+- [x] Créer l'API typée de paramètres et adapter l'app Paramètres ([`settings-files.md`](settings-files.md)).
+- [x] Écrire les journaux dans `/var/log` avec rotation, et adapter Error Log Viewer ([`logging.md`](logging.md)).
+- [x] Monter `/proc` et `/dev` en virtuel ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)).
+- [x] Tests de contrat pour chaque point (section « Tests » de chaque document).
 
 ### Phase 2 — Modèle d'app
-- [ ] Créer `AppDefinition` et l'attribut `[AppManifest]`.
-- [ ] Créer la tâche MSBuild de génération de `manifest.json` par app, avec validation.
-- [ ] Créer la tâche d'agrégation `BuiltInApplications.json` et le `.targets` « une référence suffit ».
-- [ ] Migrer les apps existantes, puis supprimer `app.manifest.json` écrits à la main et `StaticManifest`.
-- [ ] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
-- [ ] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.
+- [x] Créer `AppDefinition` et l'attribut `[AppManifest]` ([`app-model.md`](app-model.md)).
+- [x] Créer la tâche MSBuild de génération de `manifest.json` par app, avec validation.
+- [x] Créer la tâche d'agrégation `BuiltInApplications.json` et le `.targets` « une référence suffit ».
+- [x] Migrer les apps existantes, puis supprimer `app.manifest.json` écrits à la main et `StaticManifest` ([`app-model.md`](app-model.md#migration-des-apps)).
+- [x] Implémenter la liste des apps système, la désinstallation machine et utilisateur, et la réinstallation.
+  - [x] Liste des apps système : `AppCatalog.IsSystemApp`, `IsSystemApp="true"` sur les `ProjectReference` de l'hôte (`rebuild/2-system-apps`, [`app-model.md`](app-model.md#apps-système-adr-0048-1)).
+  - [x] Désinstallation machine et utilisateur, réinstallation (`rebuild/2-app-uninstall`, ADR 0048, [`app-installation.md`](app-installation.md)).
+- [x] Classer les capacités, créer la fenêtre d'approbation et la politique de sécurité.
+  - [x] Classement des capacités, retrait de `settings.*` et `diagnostics.*`, seeder selon le statut système (`rebuild/2-capability-classification`, [`capabilities.md`](capabilities.md)).
+  - [x] Fenêtre d'approbation et politique de sécurité (`rebuild/2-dangerous-approval`, ADR 0049, [`dangerous-capability-approval.md`](dangerous-capability-approval.md)).
 
 ### Phase 3 — Shell, commandes et corbeille
-- [ ] Étendre le parseur : pipes, redirections, `&&`, variables.
-- [ ] Ajouter répertoire courant et environnement par processus.
-- [ ] Fusionner les 28 projets de commandes et rendre `cd`, `pwd`, `clear`, `help` normales.
-- [ ] Implémenter la corbeille et l'API `HackTrash`.
+- [x] Étendre le parseur : pipes, redirections, `&&`, variables (`rebuild/3-shell-interpreter`, ADR 0050 et 0054, [`shell-interpreter.md`](shell-interpreter.md)).
+- [x] Ajouter répertoire courant et environnement par processus (`rebuild/3-process-environment`, ADR 0050 et 0053, [`process-environment.md`](process-environment.md)).
+- [x] Fusionner les 28 projets de commandes et rendre `cd`, `pwd`, `clear`, `help` normales.
+  - [x] Fusion des 28 projets dans `HackerOs.Commands`, une seule `ProjectReference` dans l'hôte (`rebuild/3-commands-merge`, ADR 0051 §1, [`app-model.md`](app-model.md#commandes-intégrées--un-seul-projet-adr-0051)).
+  - [x] `cd`, `pwd`, `clear`, `help`, `sudo`, `export`, `unset`, `env` du catalogue, `IShellSession` et `shell.control`, plus aucun nom codé en dur dans le terminal (`rebuild/3-shell-commands`, ADR 0051 §2-5, [`shell-commands.md`](shell-commands.md)).
+- [x] Implémenter la corbeille et l'API `HackTrash` (`rebuild/3-trash`, ADR 0052, [`trash.md`](trash.md)).
 
 ### Phase 4 — SDK complet et apps de base
-- [ ] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
-- [ ] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
-- [ ] Explorateur : couper, copier, coller, corbeille, glisser-déposer.
-- [ ] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc`.
-- [ ] Éditeur : remplacer et tout remplacer.
-- [ ] Console : complétion par Tab et onglets.
+- [x] Inventorier les services internes injectés par les apps système et ajouter leurs équivalents au SDK.
+  - [x] `HackUser`, `HackEnvironment.GetFolderPath`, `HackApps`, `HackAppManagement` et l'agent d'authentification de l'OS ; FileExplorer, TextEditor et CodeEditor sortent de la liste d'exemptions (`rebuild/4-sdk-user-and-apps`, ADR 0055 §5 et 0056 §1-3, [`app-sdk.md`](app-sdk.md), [`admin-authentication-agent.md`](admin-authentication-agent.md)).
+  - [x] `HackSettings.OpenSystemAsync`, `HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` ; Paramètres et Diagnostic sortent de la liste d'exemptions, qui est vide (`rebuild/4-sdk-system-admin`, ADR 0056 §8-11 et 0060, [`system-administration.md`](system-administration.md)).
+- [x] Ajouter le test d'architecture qui interdit les références internes depuis `Apps/`.
+  - [x] Vérification au build des références et des injections, test `IJSRuntime`, liste d'exemptions temporaire (`rebuild/4-sdk-boundary`, ADR 0055 et 0059, [`app-sdk.md`](app-sdk.md)).
+  - [x] Hôte de shell : `HackShell`, capacité `shell.host`, `TerminalPanel` sans `Platform.Core`, CodeEditor système (`rebuild/4-sdk-shell-host`, ADR 0056 §7, [`shell-host.md`](shell-host.md)).
+  - [x] Mécanisme d'exemption supprimé : toute violation de la frontière est une erreur, aucun projet ne peut s'y soustraire, toute la solution compile sans diagnostic de frontière (`rebuild/4-sdk-boundary-final`, ADR 0055 §6, [`app-sdk.md`](app-sdk.md#fin-des-exemptions-temporaires-adr-0055-6)).
+- [x] Explorateur : couper, copier, coller, corbeille, glisser-déposer (`rebuild/4-file-explorer`, ADR 0056 §12 et 0058 §1, [`file-explorer.md`](file-explorer.md)).
+  - [x] Presse-papiers de l'OS partagé avec l'hôte (texte, fichiers collés, réglage `clipboard.config`), Diagnostic sur `HackClipboard` (`rebuild/4-file-explorer`, ADR 0065, [`clipboard.md`](clipboard.md)).
+- [x] Gestionnaire de tâches : performance, disque, réseau, détail, filtre, sélection multiple, via `/proc` (`rebuild/4-proc-metrics` et `rebuild/4-task-manager`, ADR 0057 et 0058 §2, [`system-metrics.md`](system-metrics.md), [`task-manager.md`](task-manager.md)).
+- [x] Éditeur : remplacer et tout remplacer (`rebuild/4-text-editor`, ADR 0058 §3, [`text-editor.md`](text-editor.md)).
+- [x] Console : complétion par Tab et onglets (`rebuild/4-terminal`, ADR 0058 §4, [`terminal-console.md`](terminal-console.md)).
+
+### Après la phase 4 (hors plan initial, ADR 0061 à 0065)
+- [x] Terminal sur xterm.js, discipline de ligne en C#, écran alternatif (`rebuild/terminal-xterm`, PR #115, ADR 0061, [`terminal-emulator.md`](terminal-emulator.md)).
+- [x] Éditeur de code en atelier à la VS Code (`rebuild/code-editor-workspace` et `rebuild/code-editor-dock`, PR #117 à #119, ADR 0062, [`code-editor.md`](code-editor.md)) et composants d'app intégrables, terminal embarqué par `IHackTerminal` (ADR 0063, [`embedded-components.md`](embedded-components.md)).
+- [x] Shell POSIX, scripts, jobs, apps lancées par leur nom, commandes Linux, `nano` (PR #120 et #121, ADR 0064, [`shell-interpreter.md`](shell-interpreter.md), [`linux-commands.md`](linux-commands.md)).
+- [x] Presse-papiers de l'OS partagé avec l'hôte (PR #122, ADR 0065, [`clipboard.md`](clipboard.md)) — voir la phase 4 ci-dessus.
+
+### Vérification finale de la phase 4 (2026-10-16)
+
+Repasse de `rebuild/4-sdk-boundary-final` sur `rebuild/base` après les PR #115
+à #122, avant la fusion des phases 1 à 4 dans `main` (PR #114) :
+
+- [x] Frontière du SDK : la solution compile sans aucun avertissement ni
+  diagnostic `HOSAPP0002`, `HOSAPP0003`, `HOSAPP0030`, `HOSAPP0031` ou
+  `HOSSDK0001` ; aucune référence de `Apps/` ou du SDK vers `Platform.*`,
+  `Infrastructure.*` ou `Server.*` ; plus de mécanisme d'exemption ;
+  `SdkBoundarySourceTests` couvre toutes les apps, nouvelles comprises.
+- [x] Apps et composants ajoutés depuis #113 : SDK public seulement, capacités
+  déclarées dans leur `[AppManifest]`, aucune injection de service interne.
+- [x] Aucune API `[Obsolete]` utilisée dans `Apps/`.
+- [x] Une dérive corrigée : la copie du terminal contournait le presse-papiers
+  de l'OS et `clipboard.config` ; elle passe maintenant par le pont de l'ADR
+  0065 ([`terminal-emulator.md`](terminal-emulator.md)).
+- [x] Toutes les suites `Tests/*.Tests` hors E2E passent ; documentation sans
+  lien mort, index complets (`docs/README.md`, `docs/old/README.md`).
+
+Détail : [`app-sdk.md`](app-sdk.md#vérification-finale-de-la-phase-4-2026-10-16).
 
 ## 13. Références
 

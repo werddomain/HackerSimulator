@@ -1,4 +1,8 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Administration;
+using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Settings;
+using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -28,6 +32,39 @@ public interface IAppExecutionContext
     /// <summary>Gets the authenticated user identifier that initiated the operation.</summary>
     string UserId { get; }
 
+    /// <summary>
+    /// Gets the acting user's canonical home directory (<c>/home/{login}</c>), used by
+    /// <see cref="HackExecutionContext"/> as the default working directory and by
+    /// <see cref="IO.HackPath.GetFullPath(string)"/> to expand <c>~</c>, and as the root of the user settings layer
+    /// (<c>~/.config/&lt;appId&gt;/</c>, ADR 0044). Defaults to
+    /// <c>/home/{UserId}</c> so existing implementations keep compiling; the trusted platform
+    /// factory overrides it with the principal's real home path (ADR 0043).
+    /// </summary>
+    string HomeDirectory => $"/home/{UserId}";
+
+    /// <summary>
+    /// Gets whether this one launch runs as full root through <c>sudo</c> (ADR 0042). The effective
+    /// user is then <c>root</c>, whose home is <c>/root</c>: per-user data written on its behalf,
+    /// such as the trash (ADR 0052), goes there rather than under <see cref="HomeDirectory"/>.
+    /// Defaults to <see langword="false"/> so existing implementations keep compiling; the trusted
+    /// platform factory sets it from the launch.
+    /// </summary>
+    bool IsRootElevated => false;
+
+    /// <summary>
+    /// Gets the session user's login name, read by <see cref="HackUser"/> (ADR 0056, section 1).
+    /// Defaults to the process environment's user name so existing implementations keep compiling;
+    /// the trusted platform factory sets it from the authenticated principal.
+    /// </summary>
+    string UserLoginName => Environment.UserName;
+
+    /// <summary>
+    /// Gets the session user's display name, read by <see cref="HackUser"/> (ADR 0056, section 1).
+    /// Defaults to <see cref="UserLoginName"/>; the trusted platform factory sets it from the
+    /// authenticated principal.
+    /// </summary>
+    string UserDisplayName => UserLoginName;
+
     /// <summary>Gets the acting user's authority for this operation.</summary>
     AppAuthority UserAuthority { get; }
 
@@ -52,20 +89,17 @@ public interface IAppExecutionContext
     /// <summary>Gets this instance's authorized, capability-checked filesystem gateway.</summary>
     IAppFileSystemGateway FileSystem { get; }
 
-    /// <summary>Gets this instance's authorized canonical settings gateway.</summary>
-    IAppSettingsGateway Settings { get; }
-
     /// <summary>Gets this instance's typed event bus gateway.</summary>
     IAppEventGateway Events { get; }
 
     /// <summary>Gets this instance's authorized notification-posting gateway.</summary>
     IAppNotificationGateway Notifications { get; }
 
-    /// <summary>Gets this instance's structured diagnostic logging gateway.</summary>
+    /// <summary>
+    /// Gets this instance's structured diagnostic logging gateway. Entries land in
+    /// <c>/var/log/apps/&lt;appId&gt;.log</c> (ADR 0045); reading logs back is plain file access.
+    /// </summary>
     IAppLoggingGateway Logging { get; }
-
-    /// <summary>Gets this instance's authorized diagnostic-log read gateway.</summary>
-    IAppDiagnosticsGateway Diagnostics { get; }
 
     /// <summary>Gets this instance's read-only deterministic simulation clock gateway.</summary>
     IAppClockGateway Clock { get; }
@@ -112,6 +146,303 @@ public interface IAppExecutionContext
     /// overrides it with the same live instance <see cref="HackerOs.App.Abstractions.AppOperationContext"/> reads.
     /// </summary>
     OneShotElevationGrantSet OneShotElevation => new();
+
+    /// <summary>
+    /// Gets this instance's own process environment: arguments, working directory, environment
+    /// variables, user and machine names (ADR 0050, section 6), read by <c>HackEnvironment</c>.
+    /// Defaults to a detached, read-only view (home directory, <c>HOME</c> only) so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with the live process entry.
+    /// </summary>
+    IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
+
+    /// <summary>
+    /// Gets this instance's network stack: resolution, ping, HTTP and TCP probes, with the OS's
+    /// real-network fallback (ADR 0056, section 6), read by <c>HackDns</c>, <c>HackPing</c>,
+    /// <c>HackHttpClient</c> and <c>HackTcpClient</c>. Defaults to an unsupported gateway so existing
+    /// <see cref="IAppExecutionContext"/> implementations that predate this member keep compiling;
+    /// the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    Net.IAppNetworkGateway Network => new Net.UnsupportedAppNetworkGateway();
+
+    /// <summary>
+    /// Gets this instance's read access to the app catalog, behind <see cref="HackApps"/> (ADR 0056,
+    /// section 2). Defaults to an unsupported gateway so existing implementations keep compiling; the
+    /// trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    IAppCatalogGateway Catalog => new UnsupportedAppCatalogGateway();
+
+    /// <summary>
+    /// Gets this instance's uninstall/reinstall gateway, behind <see cref="HackAppManagement"/>
+    /// (ADR 0056, section 3; capability <c>apps.manage</c>). Defaults to an unsupported gateway so
+    /// existing implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IAppManagementGateway AppManagement => new UnsupportedAppManagementGateway();
+
+    /// <summary>
+    /// Gets this instance's access to the OS's own settings documents, behind
+    /// <see cref="HackSettings.OpenSystemAsync(string, CancellationToken)"/> (ADR 0056, section 8; no
+    /// capability, file permissions decide). Defaults to an unsupported gateway so existing
+    /// implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IAppSystemSettingsGateway SystemSettings => UnsupportedAdministrationGateways.SystemSettings;
+
+    /// <summary>
+    /// Gets this instance's dangerous-capability administration gateway, behind
+    /// <see cref="HackPermissionAdministration"/> (ADR 0056, section 9; capability
+    /// <c>permissions.manage</c>). Defaults to an unsupported gateway; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppPermissionAdministrationGateway PermissionAdministration => UnsupportedAdministrationGateways.Permissions;
+
+    /// <summary>
+    /// Gets this instance's optional-server connection gateway, behind
+    /// <see cref="HackServerConnection"/> (ADR 0056, section 10; capability
+    /// <c>server.connection.manage</c>). Defaults to an unsupported gateway; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    IAppServerConnectionGateway ServerConnection => UnsupportedAdministrationGateways.ServerConnection;
+
+    /// <summary>
+    /// Gets this instance's reboot and factory-reset gateway, behind <see cref="HackSystem"/>
+    /// (ADR 0056, section 11; capability <c>system.power</c> plus an administrator). Named
+    /// <c>SystemPower</c> rather than <c>System</c> so it never hides the <c>System</c> namespace in
+    /// implementing classes. Defaults to an unsupported gateway; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppSystemPowerGateway SystemPower => UnsupportedAdministrationGateways.SystemPower;
+
+    /// <summary>
+    /// Gets this instance's raw storage inspection gateway, behind
+    /// <see cref="HackStorageDiagnostics"/> (ADR 0056, section 11; capability
+    /// <c>system.storage.inspect</c>). Defaults to an unsupported gateway; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    IAppStorageDiagnosticsGateway StorageDiagnostics => UnsupportedAdministrationGateways.StorageDiagnostics;
+
+    /// <summary>
+    /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
+    /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
+    /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
+    /// compiling; the trusted platform factory overrides it with a real implementation.
+    /// </summary>
+    Shell.IAppShellHostGateway ShellHost => new UnsupportedAppShellHostGateway();
+
+    /// <summary>
+    /// Gets this instance's view of the mounted disks' space, behind <see cref="IO.HackDriveInfo"/>
+    /// (ADR 0057, section 7; no capability). Defaults to an unsupported gateway so existing
+    /// implementations keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
+
+    /// <summary>
+    /// Gets this instance's view of the session clipboard, behind <see cref="HackClipboard"/> (ADR 0056,
+    /// section 12; capabilities <c>clipboard.read</c> and <c>clipboard.write</c>). Defaults to an
+    /// unsupported gateway so existing implementations keep compiling; the trusted platform factory
+    /// overrides it.
+    /// </summary>
+    IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
+
+    /// <summary>
+    /// Gets the instance's standard streams (ADR 0064), behind <see cref="HackConsole"/>: the
+    /// terminal, pipe or file of the shell that started it, or <c>/dev/null</c> when it was
+    /// started from the desktop. Defaults to a detached console so existing implementations keep
+    /// compiling.
+    /// </summary>
+    IAppConsoleGateway Console => DetachedAppConsoleGateway.Instance;
+}
+
+/// <summary>
+/// Defaults of the administration gateways (ADR 0056, sections 8 to 11) for contexts that don't wire
+/// them up: every call throws <see cref="NotSupportedException"/>.
+/// </summary>
+public static class UnsupportedAdministrationGateways
+{
+    private const string Message = "This IAppExecutionContext implementation does not provide this administration gateway.";
+
+    /// <summary>Unsupported <see cref="IAppSystemSettingsGateway"/>.</summary>
+    public static IAppSystemSettingsGateway SystemSettings { get; } = new UnsupportedSystemSettings();
+
+    /// <summary>Unsupported <see cref="IAppPermissionAdministrationGateway"/>.</summary>
+    public static IAppPermissionAdministrationGateway Permissions { get; } = new UnsupportedPermissions();
+
+    /// <summary>Unsupported <see cref="IAppServerConnectionGateway"/>.</summary>
+    public static IAppServerConnectionGateway ServerConnection { get; } = new UnsupportedServerConnection();
+
+    /// <summary>Unsupported <see cref="IAppSystemPowerGateway"/>.</summary>
+    public static IAppSystemPowerGateway SystemPower { get; } = new UnsupportedSystemPower();
+
+    /// <summary>Unsupported <see cref="IAppStorageDiagnosticsGateway"/>.</summary>
+    public static IAppStorageDiagnosticsGateway StorageDiagnostics { get; } = new UnsupportedStorageDiagnostics();
+
+    private sealed class UnsupportedSystemSettings : IAppSystemSettingsGateway
+    {
+        public AppSystemSettingsDocumentInfo Describe(string documentId) => throw new NotSupportedException(Message);
+
+        public ValueTask<HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot> ReadAsync(
+            string documentId, CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask SetAsync(
+            string documentId,
+            IReadOnlyList<KeyValuePair<string, string>> values,
+            HackerOs.Simulation.Abstractions.Settings.SettingLayer target,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask ResetAsync(
+            string documentId,
+            string qualifiedKey,
+            HackerOs.Simulation.Abstractions.Settings.SettingLayer target,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask<IAsyncDisposable> WatchAsync(
+            string documentId, Func<ValueTask> onChanged, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedPermissions : IAppPermissionAdministrationGateway
+    {
+        public ValueTask<HackDangerousCapabilityPolicy> GetPolicyAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<HackAppPermissionInfo>> GetOverviewAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetPolicyAsync(HackDangerousCapabilityPolicy policy, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetMachineDecisionAsync(
+            string appId, string capability, HackPermissionDecision decision, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask RemoveOwnDenialAsync(string appId, string capability, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedServerConnection : IAppServerConnectionGateway
+    {
+        public ValueTask<HackServerConnectionState> GetStateAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackServerConnectionState> ConnectAsync(
+            Uri serverUrl, string login, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackServerConnectionState> CreateAccountAsync(
+            Uri serverUrl, string login, string password, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask SyncAsync(HackSyncDomain domain, HackSyncDirection direction, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedSystemPower : IAppSystemPowerGateway
+    {
+        public ValueTask RebootAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask FactoryResetAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedStorageDiagnostics : IAppStorageDiagnosticsGateway
+    {
+        public ValueTask<HackStorageSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Clipboard"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppClipboardGateway : IAppClipboardGateway
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public ValueTask<string?> GetTextAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask SetTextAsync(string text, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask<HackClipboardFileList?> GetFileDropListAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask SetFileDropListAsync(HackClipboardFileList files, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask ClearAsync(CancellationToken cancellationToken = default) => throw Unsupported();
+
+    private static NotSupportedException Unsupported() =>
+        new("This IAppExecutionContext implementation does not provide a Clipboard gateway.");
+}
+/// <summary>Default <see cref="IAppExecutionContext.Drives"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
+{
+    public ValueTask<IReadOnlyList<IO.HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Drives gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppCatalogGateway : IAppCatalogGateway
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public ValueTask<IReadOnlyList<HackAppInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
+
+    public ValueTask<IReadOnlyList<HackAppInfo>> GetHandlersAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.AppManagement"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppManagementGateway : IAppManagementGateway
+{
+    public ValueTask<IReadOnlyList<HackAppInstallInfo>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+
+    public ValueTask<IReadOnlyList<string>> UninstallAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+
+    public ValueTask<IReadOnlyList<string>> ReinstallAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide an AppManagement gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.ShellHost"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppShellHostGateway : Shell.IAppShellHostGateway
+{
+    public Task<Shell.IHackShell> StartAsync(Shell.HackShellOptions options, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a ShellHost gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.Environment"/> for contexts with no live process environment.</summary>
+file sealed class DetachedAppEnvironmentGateway(IAppExecutionContext context) : IAppEnvironmentGateway
+{
+    public string CurrentDirectory => context.HomeDirectory;
+
+    public string UserName => context.UserId;
+
+    public string MachineName => "hackeros";
+
+    public IReadOnlyList<string> GetCommandLineArgs() => [context.Manifest.Id];
+
+    public string? GetVariable(string name) => name == "HOME" ? context.HomeDirectory : null;
+
+    public IReadOnlyDictionary<string, string> GetVariables() =>
+        new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = context.HomeDirectory };
+
+    public void SetCurrentDirectory(VirtualPath directory) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation has no live process environment.");
+
+    public void SetVariable(string name, string? value) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation has no live process environment.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.PermissionErrors"/> for contexts that don't wire one up.</summary>

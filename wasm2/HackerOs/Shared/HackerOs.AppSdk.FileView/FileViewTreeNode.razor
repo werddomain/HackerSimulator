@@ -7,7 +7,8 @@
     rename/context-menu handlers as FileViewDetails/FileViewIcons — a node doesn't know it's in a tree.
 *@
 <li role="treeitem" aria-level="@Depth" aria-selected="@Node.Item.IsSelected" aria-expanded="@AriaExpanded">
-    <div class="file-view-tree-row @(Node.Item.IsSelected ? "selected" : null)"
+    <div class="file-view-tree-row @(Node.Item.IsSelected ? "selected" : null) @(Node.Item.IsCut ? "cut" : null)"
+         data-drop-target="@(Node.Item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
          data-item-path="@Node.Item.FullPath.Value"
          tabindex="@(IsTabStop() ? 0 : -1)"
          draggable="@(Owner.AllowDragDrop ? "true" : "false")"
@@ -15,10 +16,12 @@
          @ondblclick="OnRowDoubleClickAsync"
          @oncontextmenu="OnRowContextMenuAsync"
          @oncontextmenu:preventDefault="true"
+         @oncontextmenu:stopPropagation="true"
          @onkeydown="OnRowKeyDownAsync"
          @ondragstart="OnRowDragStartAsync"
          @ondragover:preventDefault="@(Node.Item.IsDirectory && Owner.AllowDragDrop)"
-         @ondrop="OnRowDropAsync">
+         @ondrop="OnRowDropAsync"
+         @ondrop:stopPropagation="@Node.Item.IsDirectory">
         <button type="button"
                 class="file-view-tree-toggle"
                 disabled="@(!Node.Item.IsDirectory)"

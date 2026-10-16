@@ -89,4 +89,25 @@ public sealed class CodeEditorSessionTests
     {
         Assert.Equal(expected, CodeEditorSyntaxModeDetector.FromPath(VirtualPath.Parse(path)));
     }
+
+    [Fact]
+    public void Renaming_a_file_or_folder_moves_its_tabs_and_keeps_unsaved_edits()
+    {
+        CodeEditorSession session = new();
+        CodeEditorDocument app = session.OpenDocument(VirtualPath.Parse("/p/src/App.cs"), "a", 1);
+        CodeEditorDocument util = session.OpenDocument(VirtualPath.Parse("/p/src/util/Tools.cs"), "b", 1);
+        CodeEditorDocument other = session.OpenDocument(VirtualPath.Parse("/p/srcx/Other.cs"), "c", 1);
+        Assert.True(util.TryEdit("b edited").Succeeded);
+
+        int renamedFile = session.RelocatePaths(VirtualPath.Parse("/p/src/App.cs"), VirtualPath.Parse("/p/src/Program.cs"));
+        int renamedFolder = session.RelocatePaths(VirtualPath.Parse("/p/src"), VirtualPath.Parse("/p/source"));
+
+        Assert.Equal(1, renamedFile);
+        Assert.Equal(2, renamedFolder);
+        Assert.Equal("/p/source/Program.cs", app.Path?.Value);
+        Assert.Equal("Program.cs", app.Title);
+        Assert.Equal("/p/source/util/Tools.cs", util.Path?.Value);
+        Assert.True(util.IsDirty);
+        Assert.Equal("/p/srcx/Other.cs", other.Path?.Value);
+    }
 }

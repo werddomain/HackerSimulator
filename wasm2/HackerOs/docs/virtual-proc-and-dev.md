@@ -1,0 +1,213 @@
+# `/proc` et `/dev` virtuels
+
+Mise en œuvre de la section 5.4 du [plan de refonte](ecosystem-rebuild-plan.md)
+(décision D20) selon l'[ADR 0046](adr/0046-virtual-proc-and-dev-filesystems.md).
+
+## Rôle
+
+HackerOS expose l'état du système comme Linux : `/proc` décrit les processus,
+la mémoire, le CPU et la charge ; `/dev` offre les périphériques `null`, `zero`,
+`random` et `urandom`. Les deux montages sont **calculés à chaque lecture** et
+**jamais écrits dans IndexedDB**.
+
+## Architecture
+
+Code : `Platform/HackerOs.Platform.Core/FileSystem/Virtual/`.
+
+| Type | Rôle |
+| --- | --- |
+| `IVirtualFileSystemProvider` | Marqueur d'un fournisseur calculé, jamais persisté. `FileSystemService` n'émet aucun `FileSystemChangeEvent` pour ses chemins. |
+| `VirtualFileSystemProvider` | Base commune : identité stable (SHA-256 de `"<providerId>:<chemin>"`), révision = `CurrentTick + 1`, refus `PermissionDenied` de toute création, suppression, déplacement, copie et `chmod`. |
+| `ProcFileSystemProvider` (`procfs`) | Monté sur `/proc`. Lit `IProcessManager`, `IResourceSimulator`, `VirtualHardwareProfile` et `ISimulationClock`, et les compteurs de `ProcMetricsSources` (ADR 0057, [`system-metrics.md`](system-metrics.md)). |
+| `DevFileSystemProvider` (`devfs`) | Monté sur `/dev`. Quatre entrées `CharacterDevice` en `0666`. |
+
+Branchement : `EcosystemServiceCollectionExtensions` passe les deux montages au
+`FileSystemMountRouter`, pour les deux hôtes WASM. Le gestionnaire de processus
+est résolu **à la demande** : il dépend du service de session, qui dépend du
+`FileSystemSeeder`, qui atteint `/proc` par le routeur. Une résolution immédiate
+fermerait un cycle.
+
+Points de montage : le routeur ne fusionne pas les montages dans le listage du
+parent. `FileSystemSeeder` reçoit donc le routeur et crée `/proc` (`0555`) et
+`/dev` (`0755`), vides, **directement dans le fournisseur racine**. `ls /` les
+montre, puis le fournisseur virtuel les masque.
+
+Contrats touchés :
+
+- `FileSystemEntryKind.CharacterDevice` et `CharacterDeviceMetadata`
+  (`Shared/HackerOs.Simulation.Abstractions/FileSystem/FileSystemEntryMetadata.cs`).
+  Les fournisseurs IndexedDB et mémoire refusent de créer ce type
+  (`UnsupportedOperation`). `ls -l` l'affiche avec `c` (et les liens avec `l`).
+- `AppOperationContext.ProcessId` (`long?`), renseigné par
+  `AppExecutionContextFactory`. Il sert à `/proc/self` et à la visibilité.
+
+## Contenu
+
+### `/proc`
+
+| Chemin | Type et mode | Contenu |
+| --- | --- | --- |
+| `/proc/<pid>/` | dossier `0555`, propriétaire = utilisateur du processus | — |
+| `/proc/<pid>/status` | fichier `0444` | voir ci-dessous |
+| `/proc/<pid>/cmdline` | fichier `0444` | arguments séparés et terminés par NUL ([`process-environment.md`](process-environment.md)) ; `appId\0` sans entrée d'environnement |
+| `/proc/<pid>/environ` | fichier `0400` | paires `NOM=valeur` terminées par NUL (phase 3) ; vide sans entrée |
+| `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
+| `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
+| `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
+| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
+| `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
+| `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
+| `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
+| `/proc/stat` | fichier `0444` | lignes `cpu` et `cpuN` en `USER_HZ`, `btime`, `processes`, `procs_running`, `procs_blocked` (phase 4) |
+| `/proc/diskstats` | fichier `0444` | une ligne pour `hda` (majeur 8, mineur 0), 14 champs (phase 4) |
+| `/proc/net/` | dossier `0555` | contient `dev` |
+| `/proc/net/dev` | fichier `0444` | en-tête du noyau, une ligne pour `lo` et une pour `eth0` (phase 4) |
+| `/proc/mounts` | fichier `0444` | une ligne par montage, format `fstab` (phase 4) |
+
+Exemple de `/proc/42/status` :
+
+```text
+Name:	code-editor-del
+State:	R (running)
+Pid:	42
+PPid:	7
+Uid:	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+AppId:	org.hackeros.apps.code-editor-deluxe
+Kind:	window
+Session:	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+VmRSS:	3072 kB
+Cpu:	12.5
+```
+
+`Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. `Cpu` est
+un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
+facile à analyser.
+
+Choix de calcul :
+
+- `MemAvailable` vaut `MemFree` : la simulation n'a pas de cache à libérer.
+- L'inactivité d'`uptime` est cumulée sur tous les cœurs, comme sous Linux :
+  `uptime × (cœurs − usage moyen)`, l'usage moyen venant de l'historique système
+  borné.
+- `loadavg` fait la moyenne de `TotalCpuUsage` sur les échantillons de
+  l'historique compris dans chaque fenêtre. L'historique étant borné, les
+  fenêtres de 5 et 15 minutes se réduisent aux échantillons disponibles.
+- Horodatages : démarrage du processus pour `/proc/<pid>`, démarrage de l'OS
+  (`maintenant − tick × durée du tick`) sinon ; le contenu des fichiers est daté
+  de maintenant. La taille des fichiers est toujours `0`.
+
+Fichiers de mesure (phase 4, [ADR 0057](adr/0057-proc-metrics-for-task-manager.md)).
+Leurs compteurs et la façon dont ils sont pris sont décrits dans
+[`system-metrics.md`](system-metrics.md). Exemples :
+
+```text
+$ cat /proc/stat
+cpu  4705 0 1210 93620 0 0 0 0 0 0
+cpu0 2402 0 611 46790 0 0 0 0 0 0
+cpu1 2303 0 599 46830 0 0 0 0 0 0
+btime 1791640800
+processes 312
+procs_running 3
+procs_blocked 0
+
+$ cat /proc/42/io
+rchar: 18342
+wchar: 2210
+syscr: 12
+syscw: 3
+read_bytes: 16384
+write_bytes: 2048
+cancelled_write_bytes: 0
+
+$ cat /proc/diskstats
+   8       0 hda 1204 0 9632 410 388 0 3104 220 0 630 630
+
+$ cat /proc/net/dev
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+  eth0:  482113     214    3    0    0     0          0         0    38211     214    0    0    0     0       0          0
+
+$ cat /proc/mounts
+/dev/hda / idbfs rw 0 0
+devfs /dev devfs rw 0 0
+proc /proc proc ro 0 0
+```
+
+- `stat` cumule le temps CPU simulé depuis le démarrage : un lecteur calcule
+  l'usage par différence entre deux lectures, comme `top`. `processes` est le
+  dernier PID attribué (les PID sont attribués dans l'ordre depuis 1).
+- `io` suit la règle de visibilité d'`environ` : le propriétaire, ou l'autorité
+  `System`.
+- Depuis la phase 4, `ResourceSamplingService` fait avancer le simulateur chaque
+  seconde simulée : `status`, `meminfo`, `uptime` et `loadavg` ne restent plus à
+  zéro dans un hôte réel.
+
+Visibilité : seuls les processus actifs apparaissent. L'appelant voit toujours
+son propre processus, et les autres avec `process.list` ou l'autorité `System`.
+Un PID invisible répond `NotFound`.
+
+### `/dev`
+
+| Chemin | Lecture | Écriture |
+| --- | --- | --- |
+| `/dev/null` | fin de flux immédiate | absorbée |
+| `/dev/zero` | flux infini de `0x00` | absorbée |
+| `/dev/random`, `/dev/urandom` | flux infini de `RandomNumberGenerator` | absorbée |
+
+Les flux infinis rendent au plus 4 Kio par lecture et respectent l'annulation :
+un lecteur borne lui-même sa lecture. En lecture asynchrone, ils cèdent la main
+au navigateur tous les 16 blocs, pour qu'un `cat /dev/zero` laisse l'interface
+répondre et puisse être interrompu. Une écriture vide le flux reçu, réussit
+sans changer de révision et n'émet aucun événement.
+
+## Utilisation
+
+Tout passe par l'API fichier ordinaire (`IFileSystemService`, puis
+`IAppFileSystemGateway` côté app). Lire `/proc` ou `/dev` demande
+`filesystem.system.read` ; écrire dans `/dev` demande `filesystem.system.write`.
+
+`ps` lit maintenant `/proc` : il liste `/proc`, lit chaque `/proc/<pid>/status`
+et prend l'heure de création de `/proc/<pid>` comme heure de démarrage. Son
+manifeste déclare `filesystem.system.read` en plus de `process.list`. La colonne
+`STAT` affiche la lettre Linux (`R`, `S`…). `kill` garde `IAppProcessGateway`
+pour agir.
+
+## Décisions clés
+
+- **Migration de `ps` avancée.** L'ADR 0046 (section 5) plaçait cette migration
+  en phase 3. Elle est faite dès la phase 1, comme le demande la section 5.4 du
+  plan, parce qu'elle ne dépend que de `/proc`. La refonte des commandes de la
+  phase 3 la conserve. Le gestionnaire de tâches est passé à `/proc` en
+  phase 4 ([`task-manager.md`](task-manager.md), `HackProcess`).
+- **Pas d'événements de changement** : le marqueur `IVirtualFileSystemProvider`
+  est vérifié au seul endroit qui publie, `FileSystemService`.
+- **Mutations refusées par le fournisseur lui-même**, en plus des bits de mode :
+  même l'autorité `System`, qui ignore les modes, reçoit `PermissionDenied`.
+
+## Tests
+
+- `Tests/HackerOs.Platform.Core.Tests/FileSystem/Virtual/` : listage de `/`,
+  formats exacts de `status`, `meminfo`, `cpuinfo`, `uptime` et `loadavg`,
+  visibilité selon `process.list`, `/proc/self`, refus des mutations, `/dev/null`,
+  lecture bornée de `/dev/zero`, annulation, refus de `CharacterDevice` par le
+  stockage, et aucune écriture dans le dépôt racine.
+- `Tests/HackerOs.Commands.Wave5.Tests/PsCommandTests.cs` : `ps` contre le vrai
+  fournisseur `/proc`.
+- `Tests/HackerOs.Platform.Core.Tests/FileSystem/Virtual/ProcMetricsTests.cs` :
+  fichiers de mesure de la phase 4 (voir [`system-metrics.md`](system-metrics.md)).
+
+## Liste des tâches
+
+- [x] Ajouter `FileSystemEntryKind.CharacterDevice` et `CharacterDeviceMetadata`.
+- [x] Faire refuser `CharacterDevice` par les fournisseurs IndexedDB et mémoire.
+- [x] Ajouter `AppOperationContext.ProcessId` et le renseigner.
+- [x] Écrire la base `VirtualFileSystemProvider` et le marqueur `IVirtualFileSystemProvider`.
+- [x] Écrire `ProcFileSystemProvider`.
+- [x] Écrire `DevFileSystemProvider`.
+- [x] Couper les événements de changement pour les montages virtuels.
+- [x] Créer les points de montage `/proc` et `/dev` dans `FileSystemSeeder`.
+- [x] Monter les deux fournisseurs dans `EcosystemServiceCollectionExtensions`.
+- [x] Afficher `c` et `l` dans `ls -l`.
+- [x] Faire lire `/proc` par `ps`.
+- [x] Écrire les tests de contrat.

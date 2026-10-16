@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.FileSystem;
@@ -20,17 +21,29 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
     {
     }
 
+    /// <summary>Initializes the persistent browser filesystem provider, counting its transactions.</summary>
+    /// <param name="runtime">JavaScript runtime.</param>
+    /// <param name="disk">
+    /// Statistics of the OS disk <c>hda</c> (ADR 0057 section 4); every IndexedDB transaction of
+    /// this provider is reported there.
+    /// </param>
+    public IndexedDbFileSystemProvider(IJSRuntime runtime, IBlockDeviceStatistics? disk)
+        : this(runtime, TimeProvider.System, null, null, disk)
+    {
+    }
+
     internal IndexedDbFileSystemProvider(
         IJSRuntime runtime,
         TimeProvider timeProvider,
         Func<FileSystemEntryId>? entryIdFactory,
-        Func<Guid>? transactionIdFactory)
+        Func<Guid>? transactionIdFactory,
+        IBlockDeviceStatistics? disk = null)
     {
         ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(timeProvider);
-        _reader = new IndexedDbFileSystemReader(runtime);
-        _writer = new IndexedDbFileSystemWriter(runtime);
-        _contentRepository = new IndexedDbFileContentRepository(runtime, timeProvider: timeProvider);
+        _reader = new IndexedDbFileSystemReader(runtime, disk);
+        _writer = new IndexedDbFileSystemWriter(runtime, disk);
+        _contentRepository = new IndexedDbFileContentRepository(runtime, timeProvider: timeProvider, disk: disk);
         _timeProvider = timeProvider;
         _entryIdFactory = entryIdFactory ?? (() => FileSystemEntryId.FromGuid(Guid.NewGuid()));
         _transactionIdFactory = transactionIdFactory ?? Guid.NewGuid;
@@ -38,6 +51,13 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
 
     /// <inheritdoc />
     public string ProviderId => "indexeddb";
+
+    /// <summary>
+    /// Measures the bytes the deduplicated content store keeps for live files, the "used" space of
+    /// <c>HackDriveInfo</c> (ADR 0057 section 7).
+    /// </summary>
+    public ValueTask<long> MeasureStoredContentBytesAsync(CancellationToken cancellationToken = default) =>
+        _reader.MeasureStoredContentBytesAsync(cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
@@ -161,6 +181,12 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
         if (request.Path.Value == "/")
         {
             return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.ProtectedEntry, request.Path);
+        }
+
+        // Character devices are virtual-only (/dev, ADR 0046): never persisted to IndexedDB.
+        if (request.Kind == FileSystemEntryKind.CharacterDevice)
+        {
+            return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.UnsupportedOperation, request.Path);
         }
 
         try

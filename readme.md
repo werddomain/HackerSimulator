@@ -4,6 +4,16 @@ A simulator game that recreates the experience of being a hacker, featuring mult
 
 View the current working version [(Here)](https://werddomain.github.io/HackerSimulator/)
 
+## Active codebase: HackerOS (C# / Blazor WebAssembly)
+
+The project is being ported to C# and Blazor WebAssembly under
+[`wasm2/HackerOs/`](wasm2/HackerOs/README.md). That is where all new work
+happens; the TypeScript application described below (`src/`) is kept read-only
+as a behavioral reference. Documentation (in French) starts at
+[`wasm2/HackerOs/docs/README.md`](wasm2/HackerOs/docs/README.md), with a
+[project overview](wasm2/HackerOs/docs/project-overview.md) and an
+[app SDK developer guide](wasm2/HackerOs/docs/sdk-developer-guide.md).
+
 ## Project Overview
 
 Hacker Simulator is an interactive web-based application that simulates various hacking scenarios and computer environments. Users can interact with multiple applications including a terminal, text editor, code editor, system monitor, file explorer, and more.

@@ -1,0 +1,167 @@
+# Explorateur de fichiers : couper, copier, coller et glisser-déposer
+
+## Objet
+
+Chantier `rebuild/4-file-explorer` de la phase 4 (ADR 0056 §12, ADR 0058 §1).
+L'explorateur (`Apps/System/HackerOs.Apps.FileExplorer`) atteint la parité avec
+le legacy (`src/apps/file-explorer.ts`) et la dépasse :
+
+- **couper, copier, coller** par Ctrl+X, Ctrl+C, Ctrl+V, la barre d'outils et le
+  menu contextuel (« Cut », « Copy », « Paste », « Paste Into Folder »), au
+  travers du **presse-papiers de la session** : une autre fenêtre de
+  l'explorateur, ou une autre app, colle ce qu'une fenêtre a coupé ;
+- **conflits de noms à la Nautilus** : une copie dont le nom est pris devient
+  `rapport (copy).txt`, puis `rapport (copy 2).txt`… ; un déplacement demande
+  « Replace », « Keep both » ou « Skip », avec « Apply to all » ;
+- **glisser-déposer** sur un dossier, sur le fond de la vue, sur un nœud de
+  l'arbre, sur un segment du fil d'Ariane, sur les entrées « Home » et « Trash »
+  du panneau Places, sur la vue Corbeille, entre deux fenêtres, et depuis le
+  bureau réel de l'utilisateur (fichiers de l'hôte) ;
+- un **résumé des échecs** à la fin de chaque opération (bandeau et
+  notification), avec la raison par élément ; une erreur n'arrête pas les autres.
+
+## Architecture
+
+```text
+FileExplorerWindow ──► FileView (SDK)        ── Ctrl+X/C/V, menus ──► ClipboardRequested
+        │                 │  FileView.razor.js  ── dépôts ─────────► DropRequested
+        │                 ├─ FileViewBreadcrumb (fil d'Ariane, cibles de dépôt)
+        │                 └─ FileViewDropZone   (Home, Trash, vue Corbeille)
+        ├──► HackClipboard ──► IAppClipboardGateway ──► AppClipboardGateway ──► SystemClipboard (une sélection par session)
+        └──► FileTransfer (SDK) ──► HackFile / HackDirectory / HackTrash (contexte ambiant de l'app)
+```
+
+| Pièce | Où | Rôle |
+|---|---|---|
+| `HackClipboard`, `HackClipboardFileList`, `HackClipboardFileOperation` | `Shared/HackerOs.AppSdk/Clipboard/` | Façade publique : texte et liste de fichiers (format GNOME `x-special/gnome-copied-files`). |
+| `IAppClipboardGateway` | idem | Passerelle `IAppExecutionContext.Clipboard` : `clipboard.read` / `clipboard.write`, événement `Changed`. |
+| `SystemClipboard` | `Platform/HackerOs.Platform.Core/Clipboard/` | Presse-papiers de l'OS : une sélection par session, cibles MIME (`text/plain`, `x-special/gnome-copied-files`), vidée à la déconnexion. En mémoire, comme un vrai presse-papiers. Numéro de séquence, origine et partage du texte avec la vraie machine : [`clipboard.md`](clipboard.md) (ADR 0065). |
+| `AppClipboardGateway` | `Platform/HackerOs.Platform.Core/Execution/` | Passerelle de confiance par instance : vérifie la capacité à chaque appel, ne voit que sa session, rejoue `Changed` dans le contexte ambiant de l'app abonnée. |
+| `FileTransfer` et contrats | `Shared/HackerOs.AppSdk.FileView/Transfers/` | Copie, déplacement, import de fichiers de l'hôte, envoi à la corbeille ; noms Nautilus, conflits, refus d'un dossier dans lui-même, résumé des échecs. Tourne sur l'API `Hack*`, donc avec les droits de l'app. |
+| `FileView` (ajouts) | `Shared/HackerOs.AppSdk.FileView/` | Dépôt sur le fond, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths` (éléments atténués), Ctrl+A. |
+| `FileViewBreadcrumb`, `FileViewDropZone` | idem | Fil d'Ariane cliquable et déposable ; zone de dépôt générique pour le chrome de l'hôte. |
+| `FileView.razor.js` | idem | Écouteurs natifs `dragover` / `drop` : curseur déplacer/copier, surbrillance de la cible, capture du contenu et des `File` de l'hôte. Depuis l'ADR 0065, Ctrl+V suit l'événement `paste` (`attachPasteTarget`) : des fichiers copiés sur la vraie machine et collés dans la vue sont importés comme un dépôt. |
+| `FileConflictDialog` | `Apps/System/HackerOs.Apps.FileExplorer/` | Fenêtre « Replace / Keep both / Skip » (MudBlazor, style gothique). |
+
+## Usage et API
+
+### Presse-papiers (`HackClipboard`)
+
+```csharp
+await HackClipboard.SetFileDropListAsync(["~/rapport.txt", "Documents"], HackClipboardFileOperation.Cut);
+HackClipboardFileList? files = await HackClipboard.GetFileDropListAsync();   // Operation + Paths absolus
+bool canPaste = await HackClipboard.ContainsFileDropListAsync();
+string? text = await HackClipboard.GetTextAsync();   // une liste de fichiers se lit comme ses chemins
+await HackClipboard.SetTextAsync("bonjour");
+await HackClipboard.ClearAsync();
+AppContext.Clipboard.Changed += OnClipboardChanged;   // une autre app a coupé ou copié
+```
+
+Contenu de la cible `x-special/gnome-copied-files`, comme GNOME Files :
+
+```text
+cut
+file:///home/benoit/rapport.txt
+file:///home/benoit/Documents
+```
+
+`IAppClipboardGateway.GetFileReferencesAsync` et `SetFileReferencesAsync` restent,
+marqués `[Obsolete]`, comme formes de « copier » (ADR 0056 §12).
+
+### Transferts (`FileTransfer`)
+
+```csharp
+FileTransferResult copied = await FileTransfer.CopyAsync(paths, "/home/benoit/Backup");
+FileTransferResult moved = await FileTransfer.MoveAsync(paths, destination, conflict => AskUserAsync(conflict));
+FileTransferResult imported = await FileTransfer.ImportAsync(hostFiles, destination);
+FileTransferResult trashed = await FileTransfer.MoveToTrashAsync(paths);
+string? summary = moved.DescribeFailures("move");   // « Could not move 'x': permission denied. »
+```
+
+Règles :
+
+| Cas | Comportement |
+|---|---|
+| Copie, nom pris (y compris coller dans le même dossier) | `nom (copy).ext`, puis `nom (copy 2).ext`… ; un nom déjà suffixé continue la série. Pas d'extension séparée pour un dossier ou un fichier caché (`.bashrc (copy)`). |
+| Déplacement, nom pris | Fenêtre « Replace » (supprime la destination, dossier compris), « Keep both » (nom de copie), « Skip » ; « Apply to all » vaut pour le reste de l'opération. Fermer la fenêtre = « Skip ». |
+| Couper puis coller dans le dossier d'origine | Rien. |
+| Dossier vers lui-même ou un descendant | Refusé avant toute écriture ; les autres éléments continuent. |
+| Fichiers de l'hôte | Écrits comme une copie (nom de copie si pris), 256 Mio au plus par fichier. |
+| Erreur | Une raison par élément (`permission denied`, `read-only file system`, `no longer exists`…), sans arrêter les autres. |
+
+Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
+
+### `FileView`
+
+| Paramètre | Rôle |
+|---|---|
+| `DropRequested` | Reçoit chaque dépôt (`FileViewDropRequestedEventArgs` : `Destination`, `Entries`, `HostFiles`, `Copy`). Sans lui, la vue déplace (Ctrl : copie) elle-même et ignore les fichiers de l'hôte. |
+| `ClipboardRequested` | Reçoit Ctrl+X/C/V et les entrées de menu (`FileViewClipboardRequestedEventArgs` : `Action`, `Items`, `Destination`). Sans lui, ces entrées n'existent pas. |
+| `CanPaste` | Grise « Paste » et « Paste Into Folder ». |
+| `CutPaths` | Chemins coupés : leurs éléments sont atténués (`FileViewItem.IsCut`). |
+
+`FileViewMenuItem` gagne `IsDisabled`. Identifiants des nouvelles entrées :
+`cut`, `copy`, `paste-into` (dossier), `paste` (fond).
+
+```razor
+<FileViewBreadcrumb Owner="_fileView" RootLabel="Computer" />
+<FileViewDropZone Owner="_fileView" Destination="_home">…</FileViewDropZone>
+<FileViewDropZone Owner="_fileView" Dropped="OnTrashDropAsync">…</FileViewDropZone>
+```
+
+Le curseur indique l'opération pendant le survol : déplacer, copier avec Ctrl ou
+pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
+
+## Décisions clés
+
+- **Un presse-papiers par session, dans Platform Core.** Comme la sélection
+  `CLIPBOARD` de X11 tenue par le gestionnaire de presse-papiers du bureau : toutes
+  les apps de la session le partagent, une autre session ne le voit pas, il est
+  vidé à la déconnexion et ne survit pas à un redémarrage. L'ancienne classe en
+  mémoire `AppClipboardGateway` du SDK, non branchée, est supprimée.
+- **Format GNOME.** La liste est stockée en `x-special/gnome-copied-files` et en
+  `text/plain` : une app qui lit du texte voit les chemins (ADR 0056 §12).
+- **`FileTransfer` dans `HackerOs.AppSdk.FileView`.** Toute app qui affiche une
+  `FileView` (sélecteurs, CodeEditor) peut reprendre les mêmes règles ; le code
+  n'utilise que l'API `Hack*`, donc les capacités et les droits de l'app.
+- **`HackDirectory.CopyAsync`.** .NET n'a pas de `Directory.Copy` ; l'ADR 0058
+  demande une copie récursive. Le moteur copie l'arbre en une transaction ; entre
+  deux montages, la façade le recrée entrée par entrée (même repli que
+  `MoveAsync`).
+- **Dépôts lus par un écouteur natif.** Le gestionnaire C# d'un `drop` ne peut pas
+  compter sur `window.event` ; l'écouteur `drop` en phase de capture de
+  `FileView.razor.js` garde le contenu et les `File` de l'hôte, que le C# lit
+  ensuite. Le contenu d'un fichier de l'hôte n'est lu qu'au moment de l'import
+  (`IJSStreamReference`). Le document archivé
+  `old/Global-FileView-And-MessagingSystem/FileViewControl.md` disait le dépôt de
+  fichiers de l'hôte hors de portée : ce n'est plus le cas.
+- **Remplacer un dossier le supprime définitivement**, comme Nautilus en mode
+  « Replace » ; la fenêtre le dit.
+- **Envoi depuis la barre d'outils** : passe par `FileTransfer.ImportAsync` et ne
+  remplace plus un fichier existant (nom de copie), comme un dépôt.
+- **Capacités de l'explorateur** : `clipboard.read`, `clipboard.write` et
+  `notifications.post` (résumé des échecs), toutes normales.
+
+## Tests
+
+- `Tests/HackerOs.Platform.Core.Tests/Execution/AppClipboardGatewayTests.cs` :
+  partage entre apps d'une session, isolement des sessions, capacités,
+  `Changed`, vidage à la déconnexion, façade `HackClipboard`, format GNOME.
+- `Tests/HackerOs.AppSdk.FileView.Tests/FileTransferTests.cs` : noms de copie,
+  copie récursive, dossier dans lui-même, déplacement sur place, choix de
+  conflit, « Apply to all », échec isolé, import, corbeille.
+- `Tests/HackerOs.AppSdk.FileView.Tests/FileViewDropAndClipboardTests.cs` : dépôt
+  sur le fond, remise à `DropRequested`, fichiers de l'hôte, raccourcis,
+  éléments coupés, fil d'Ariane.
+- `Tests/HackerOs.AppSdk.Tests/IO/HackDirectoryTests.cs` : `HackDirectory.CopyAsync`.
+
+## Liste des tâches du chantier `rebuild/4-file-explorer`
+
+- [x] `IAppClipboardGateway` complet, `HackClipboard`, `HackClipboardFileList` (format GNOME), anciens membres `[Obsolete]`.
+- [x] `SystemClipboard` et `AppClipboardGateway` dans Platform Core, branchés par la fabrique et l'hôte.
+- [x] `HackDirectory.CopyAsync` (copie récursive).
+- [x] `FileTransfer` : copie, déplacement avec conflits, import de fichiers de l'hôte, corbeille, résumé des échecs.
+- [x] `FileView` : dépôt sur le fond et les nœuds de l'arbre, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths`, Ctrl+A, entrées de menu.
+- [x] `FileViewBreadcrumb` et `FileViewDropZone` ; écouteurs natifs et fichiers de l'hôte dans `FileView.razor.js`.
+- [x] Explorateur : barre d'outils Cut/Copy/Paste, fil d'Ariane, dépôts sur Home, Trash et la vue Corbeille, fenêtre de conflit, notification des échecs, envoi par `FileTransfer`.
+- [x] Tests, ce document, `app-sdk.md`, `hack-file-api.md`, `trash.md`, plan et index.

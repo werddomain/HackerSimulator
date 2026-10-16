@@ -132,16 +132,6 @@ public interface IAppFileSystemGateway
     IAppFileSystemGateway WithSelectedHandle(FileSystemSelectedResourceHandle handle);
 }
 
-/// <summary>Provides one app instance's authorized canonical settings access.</summary>
-public interface IAppSettingsGateway
-{
-    /// <summary>Reads the current revision of one settings document.</summary>
-    ValueTask<SettingsReadResult> ReadAsync(VirtualPath path, CancellationToken cancellationToken = default);
-
-    /// <summary>Atomically validates and replaces one settings document.</summary>
-    ValueTask<SettingsWriteResult> WriteAsync(SettingsWriteRequest request, CancellationToken cancellationToken = default);
-}
-
 /// <summary>
 /// Provides one app instance's typed event bus access. Subscriptions are attributed to the
 /// app instance so platform code can trace and, if necessary, force-dispose leaked subscriptions.
@@ -216,21 +206,6 @@ public interface IAppLoggingGateway
 {
     /// <summary>Records one diagnostic entry attributed to the calling app.</summary>
     void Log(DiagnosticSeverity severity, string message, IReadOnlyDictionary<string, string>? properties = null);
-}
-
-/// <summary>
-/// Provides one app instance's authorized read access to system diagnostic log entries,
-/// requiring <see cref="AppCapabilities.DiagnosticsRead"/>.
-/// </summary>
-public interface IAppDiagnosticsGateway
-{
-    /// <summary>Gets every retained diagnostic entry, oldest first.</summary>
-    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsRead"/>.</exception>
-    IReadOnlyList<DiagnosticEntry> Entries { get; }
-
-    /// <summary>Discards every retained diagnostic entry.</summary>
-    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.DiagnosticsClear"/>.</exception>
-    void Clear();
 }
 
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>

@@ -14,10 +14,11 @@ namespace HackerOs.AppSdk.Blazor;
 /// Component lifecycle overrides are sealed so framework setup cannot be skipped.
 /// Apps use the corresponding <c>OnApp*</c> hooks instead.
 /// </remarks>
-public abstract class WindowAppBase : ComponentBase
+public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender
 {
     private Guid? _boundInstanceId;
     private bool _permissionErrorHandlerAttached;
+    private bool _hasCalledOnAfterRender;
 
     [Inject]
     private IWindowAppFrameworkLifecycle? FrameworkLifecycle { get; set; }
@@ -49,9 +50,73 @@ public abstract class WindowAppBase : ComponentBase
     /// <summary>Gets the validated window app manifest.</summary>
     protected AppManifest Manifest => AppContext.Manifest;
 
-    /// <summary>Prevents apps from replacing parameter assignment and bypassing lifecycle validation.</summary>
-    public sealed override Task SetParametersAsync(ParameterView parameters) =>
-        base.SetParametersAsync(parameters);
+    /// <summary>
+    /// Gets the arguments this window was launched with, without <c>argv[0]</c> (the app id), like
+    /// <c>Main(string[] args)</c>. Opening a file from the File Explorer or with <c>open</c> starts
+    /// the handler app with the file's absolute path as its first argument
+    /// (<c>OpenFileIntent</c>, ADR 0050), so a document app reads its initial file here.
+    /// </summary>
+    protected IReadOnlyList<string> LaunchArguments
+    {
+        get
+        {
+            IReadOnlyList<string> argv = AppContext.Environment.GetCommandLineArgs();
+            return argv.Count > 1 ? [.. argv.Skip(1)] : [];
+        }
+    }
+
+    /// <summary>
+    /// Gets the file this window was asked to open: the first launch argument when it is an
+    /// absolute virtual path, otherwise <see langword="null"/> (a plain launch from the menu).
+    /// </summary>
+    protected VirtualPath? LaunchFile
+    {
+        get
+        {
+            if (LaunchArguments is not [{ } first, ..] || !first.StartsWith('/'))
+            {
+                return null;
+            }
+
+            try
+            {
+                return VirtualPath.Parse(first);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Prevents apps from replacing parameter assignment and bypassing lifecycle validation. The
+    /// synchronous lifecycle (and the continuations of the asynchronous one) runs inside the app's
+    /// <see cref="HackExecutionContext"/> scope (ADR 0043).
+    /// </summary>
+    public sealed override Task SetParametersAsync(ParameterView parameters)
+    {
+        IAppExecutionContext? context = parameters.TryGetValue(nameof(AppContext), out IAppExecutionContext? supplied)
+            ? supplied
+            : AppContext;
+        using IDisposable? scope = AmbientComponentDispatch.Enter(context);
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <summary>Runs every UI event handler of the app inside its ambient scope (ADR 0043).</summary>
+    Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg) =>
+        AmbientComponentDispatch.HandleEventAsync(AppContext, callback, arg, StateHasChanged);
+
+    /// <summary>Runs the after-render lifecycle inside the app's ambient scope (ADR 0043).</summary>
+    Task IHandleAfterRender.OnAfterRenderAsync()
+    {
+        bool firstRender = !_hasCalledOnAfterRender;
+        _hasCalledOnAfterRender = true;
+
+        using IDisposable? scope = AmbientComponentDispatch.Enter(AppContext);
+        OnAfterRender(firstRender);
+        return OnAfterRenderAsync(firstRender);
+    }
 
     /// <inheritdoc />
     protected sealed override void OnInitialized()
@@ -233,7 +298,11 @@ public abstract class WindowAppBase : ComponentBase
 
         e.ErrorHandled = true;
 
-        if (ElevationVerifier is not null && e.Error.RequiredCapability is not null)
+        // ADR 0049 section 3: under dangerousCapabilities=block, a dangerous capability of a
+        // non-system app cannot be approved once either, so no prompt is offered.
+        if (ElevationVerifier is not null
+            && e.Error.RequiredCapability is not null
+            && !AppContext.OneShotElevation.IsBlocked(e.Error.RequiredCapability))
         {
             EnsureBasicDialogService();
             CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest

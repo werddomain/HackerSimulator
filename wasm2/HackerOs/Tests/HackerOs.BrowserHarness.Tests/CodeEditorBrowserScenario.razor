@@ -37,7 +37,8 @@
         _module = await JavaScript.InvokeAsync<IJSObjectReference>(
             "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
         _editor = await _module.InvokeAsync<IJSObjectReference>(
-            "createEditor", _host, _dotNetReference, _document.Content, "cSharp");
+            "createEditor", _host, _dotNetReference, new { });
+        await _editor.InvokeVoidAsync("showDocument", _document.Id.ToString(), _document.Content, "cSharp");
         _document.SetSyntaxMode(CodeEditorSyntaxMode.CSharp);
         _status = "ready";
         StateHasChanged();
@@ -46,12 +47,16 @@
 
     /// <summary>Receives exact content produced by the locally bundled editor.</summary>
     [JSInvokable]
-    public Task OnEditorChanged(string content)
+    public Task OnEditorChanged(string documentId, string content)
     {
         CodeEditorEditResult result = _document.TryEdit(content);
         _status = result.Succeeded ? "edited" : "rejected";
         return InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>Cursor reports are not part of this contract proof.</summary>
+    [JSInvokable]
+    public Task OnCursorChanged(int line, int column, int selectedLength) => Task.CompletedTask;
 
     private async Task UseJsonAsync()
     {

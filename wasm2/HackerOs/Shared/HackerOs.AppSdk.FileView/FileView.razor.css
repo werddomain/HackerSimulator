@@ -5,3 +5,20 @@
     height: 100%;
     overflow: auto;
 }
+
+.file-view:focus {
+    outline: none;
+}
+
+/* A folder (or the whole view) under a drag: FileView.razor.js toggles this class on [data-drop-target]. */
+.file-view ::deep .file-view-drop-hover,
+.file-view.file-view-drop-hover {
+    outline: 1px dashed var(--hos-accent, #42d392);
+    outline-offset: -2px;
+    background: color-mix(in srgb, var(--hos-accent, #42d392) 12%, transparent);
+}
+
+/* Cut items wait for a paste: dimmed, like Nautilus. */
+.file-view ::deep .cut {
+    opacity: 0.45;
+}

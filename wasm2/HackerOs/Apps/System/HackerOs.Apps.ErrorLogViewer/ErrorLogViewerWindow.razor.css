@@ -125,3 +125,77 @@
     background-color: var(--hos-badge-bg, var(--hos-bg-elevated, #21262d));
     color: var(--hos-text-muted, #6e7681);
 }
+
+.logviewer-subtitle {
+    margin-left: 8px;
+    font-weight: normal;
+    color: var(--hos-text-muted, #8b949e);
+}
+
+.logviewer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.logviewer-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.logviewer-select {
+    background-color: var(--hos-input-bg, var(--hos-bg-base, #0d1117));
+    color: var(--hos-text-primary, #c9d1d9);
+    border: 1px solid var(--hos-border, #30363d);
+    border-radius: var(--hos-radius-sm, 4px);
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    max-width: 260px;
+}
+
+.logviewer-toggle input {
+    accent-color: var(--hos-accent, #42d392);
+}
+
+.logviewer-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.logviewer-btn-danger:hover:not(:disabled) {
+    border-color: var(--hos-error, #f85149);
+    color: var(--hos-error, #f85149);
+}
+
+.logviewer-error {
+    padding: 8px 16px;
+    color: var(--hos-error, #f85149);
+    background-color: color-mix(in srgb, var(--hos-error, #ff8f87) 12%, var(--hos-bg-base, #101417));
+    border-bottom: 1px solid var(--hos-border-subtle, #30363d);
+    font-size: 12px;
+}
+
+.log-time,
+.log-source,
+.log-file {
+    white-space: nowrap;
+    color: var(--hos-text-secondary, #8b949e);
+}
+
+.log-message {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.logviewer-status {
+    padding: 4px 16px;
+    font-size: 11px;
+    color: var(--hos-text-muted, #8b949e);
+    background-color: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
+    border-top: 1px solid var(--hos-border-subtle, #30363d);
+}

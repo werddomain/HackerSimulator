@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Tests.Settings;
 using HackerOs.Server.Contracts.Sync;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.ServerConnection;
@@ -10,7 +12,8 @@ namespace HackerOs.Platform.Core.Tests.ServerConnection;
 
 /// <summary>
 /// Exercises <see cref="FileAssociationsSyncService"/> (ADR 0033) against fakes for every
-/// dependency — mirrors <c>SettingsSyncServiceTests</c>'s approach, narrowed to the one document
+/// dependency — covering the one administrator file
+/// (<c>/etc/hackeros/file-associations.json</c>, ADR 0044)
 /// this adapter handles and the distinct <see cref="SyncDomain.FileAssociations"/> domain string.
 /// </summary>
 public sealed class FileAssociationsSyncServiceTests
@@ -35,7 +38,7 @@ public sealed class FileAssociationsSyncServiceTests
     public async Task PushAsync_FirstPush_SendsRevisionOneUnderFileAssociationsDomain()
     {
         var settings = new FakeSettingsDocumentService();
-        settings.Seed(FileAssociationSettingsDocuments.Path, "{\"associations\":[]}", revision: 1);
+        settings.Seed("{\"associations\":[]}");
         var syncClient = new FakeSyncClient();
         var service = CreateService(settings, syncClient, Connected);
 
@@ -51,7 +54,7 @@ public sealed class FileAssociationsSyncServiceTests
     public async Task PushAsync_UnchangedSinceLastSync_SendsNothing()
     {
         var settings = new FakeSettingsDocumentService();
-        settings.Seed(FileAssociationSettingsDocuments.Path, "{\"associations\":[]}", revision: 1);
+        settings.Seed("{\"associations\":[]}");
         var syncClient = new FakeSyncClient();
         var service = CreateService(settings, syncClient, Connected);
 
@@ -65,14 +68,14 @@ public sealed class FileAssociationsSyncServiceTests
     public async Task PushAsync_SameServerConnection_AlwaysProducesTheSameRecordId()
     {
         var settings = new FakeSettingsDocumentService();
-        settings.Seed(FileAssociationSettingsDocuments.Path, "{\"associations\":[]}", revision: 1);
+        settings.Seed("{\"associations\":[]}");
         var syncClient = new FakeSyncClient();
         var service = CreateService(settings, syncClient, Connected);
         await service.PushAsync();
         Guid firstRecordId = syncClient.PushCalls[0].Records[0].RecordId;
 
         var secondSettings = new FakeSettingsDocumentService();
-        secondSettings.Seed(FileAssociationSettingsDocuments.Path, "{\"associations\":[]}", revision: 1);
+        secondSettings.Seed("{\"associations\":[]}");
         var secondSyncClient = new FakeSyncClient();
         var secondService = CreateService(secondSettings, secondSyncClient, Connected);
         await secondService.PushAsync();
@@ -84,7 +87,7 @@ public sealed class FileAssociationsSyncServiceTests
     public async Task PullAsync_AppliesEnvelope_AndAdvancesCursorOnlyWhenGiven()
     {
         var settings = new FakeSettingsDocumentService();
-        settings.Seed(FileAssociationSettingsDocuments.Path, "{\"associations\":[]}", revision: 1);
+        settings.Seed("{\"associations\":[]}");
         Guid recordId = ComputeExpectedRecordId();
         var syncClient = new FakeSyncClient
         {
@@ -93,7 +96,7 @@ public sealed class FileAssociationsSyncServiceTests
                 new PullResponse(
                     SyncDomain.FileAssociations,
                     [new SyncRecordEnvelope(recordId, SyncDomain.FileAssociations, 1, Connected.AccountId, Connected.DeviceId,
-                        5, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "hash", false, "{\"associations\":[{\"ext\":\"txt\"}]}")],
+                        5, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "hash", false, "{\"schemaVersion\":1,\"associations\":[{\"extension\":\".txt\",\"appId\":\"org.hackeros.texteditor\",\"actions\":[\"open\"]}]}")],
                     NextCursor: null,
                     HasMore: false,
                     DateTimeOffset.UtcNow)
@@ -104,8 +107,33 @@ public sealed class FileAssociationsSyncServiceTests
 
         await service.PullAsync();
 
-        Assert.Equal("{\"associations\":[{\"ext\":\"txt\"}]}", settings.CurrentContent(FileAssociationSettingsDocuments.Path));
+        Assert.Equal("{\"schemaVersion\":1,\"associations\":[{\"extension\":\".txt\",\"appId\":\"org.hackeros.texteditor\",\"actions\":[\"open\"]}]}", settings.CurrentContent());
         Assert.Null(await cursorRepository.GetCursorAsync(SyncDomain.FileAssociations));
+    }
+
+    [Fact]
+    public async Task PullAsync_NeverWritesAnInvalidRemoteDocumentOverTheLocalFile()
+    {
+        var settings = new FakeSettingsDocumentService();
+        settings.Seed(FileAssociationSettingsDocuments.DefaultContent);
+        var syncClient = new FakeSyncClient
+        {
+            PullResponses = new Queue<PullResponse>(
+            [
+                new PullResponse(
+                    SyncDomain.FileAssociations,
+                    [new SyncRecordEnvelope(ComputeExpectedRecordId(), SyncDomain.FileAssociations, 1, Connected.AccountId, Connected.DeviceId,
+                        5, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "hash", false, "not json")],
+                    NextCursor: null,
+                    HasMore: false,
+                    DateTimeOffset.UtcNow)
+            ])
+        };
+        var service = CreateService(settings, syncClient, Connected);
+
+        await service.PullAsync();
+
+        Assert.Equal(FileAssociationSettingsDocuments.DefaultContent, settings.CurrentContent());
     }
 
     [Fact]
@@ -133,7 +161,7 @@ public sealed class FileAssociationsSyncServiceTests
         ServerConnectionState? connectionState,
         InMemorySyncCursorRepository? cursorRepository = null) =>
         new(
-            settings,
+            settings.Service,
             new FakeServerConnectionService(connectionState),
             syncClient,
             cursorRepository ?? new InMemorySyncCursorRepository(),
@@ -215,39 +243,18 @@ public sealed class FileAssociationsSyncServiceTests
         }
     }
 
-    private sealed class FakeSettingsDocumentService : ISettingsDocumentService
+    /// <summary>Real OS settings service over an in-memory filesystem, seeded as root.</summary>
+    private sealed class FakeSettingsDocumentService
     {
-        private readonly Dictionary<VirtualPath, (string Content, long Revision)> _documents = [];
+        private readonly SettingsFilesHarness _harness = new();
 
-        public void Seed(VirtualPath path, string content, long revision) => _documents[path] = (content, revision);
+        internal IOsSettingsService Service => _harness.Settings;
 
-        public string? CurrentContent(VirtualPath path) => _documents.TryGetValue(path, out var doc) ? doc.Content : null;
+        public void Seed(string content) =>
+            _harness.WriteAsRootAsync(Path, content).GetAwaiter().GetResult();
 
-        public ValueTask<SettingsReadResult> ReadAsync(
-            VirtualPath path, AppOperationContext context, CancellationToken cancellationToken = default)
-        {
-            if (!_documents.TryGetValue(path, out var doc))
-            {
-                return ValueTask.FromResult(new SettingsReadResult(SettingsReadStatus.NotFound, null, "settings.not-found"));
-            }
+        public string? CurrentContent() => _harness.ReadAsync(Path).GetAwaiter().GetResult();
 
-            return ValueTask.FromResult(new SettingsReadResult(
-                SettingsReadStatus.Success, new SettingsDocumentSnapshot(path, doc.Content, "application/json", doc.Revision), null));
-        }
-
-        public ValueTask<SettingsWriteResult> WriteAsync(
-            SettingsWriteRequest request, AppOperationContext context, CancellationToken cancellationToken = default)
-        {
-            _documents.TryGetValue(request.Path, out var existing);
-            if (existing.Revision != request.ExpectedRevision)
-            {
-                return ValueTask.FromResult(new SettingsWriteResult(SettingsWriteStatus.Conflict, null, ["settings.revision-conflict"]));
-            }
-
-            long newRevision = request.ExpectedRevision + 1;
-            _documents[request.Path] = (request.Content, newRevision);
-            return ValueTask.FromResult(new SettingsWriteResult(
-                SettingsWriteStatus.Success, new SettingsDocumentSnapshot(request.Path, request.Content, "application/json", newRevision), null));
-        }
+        private static string Path => FileAssociationSettingsDocuments.File.Resolve(null).Value;
     }
 }

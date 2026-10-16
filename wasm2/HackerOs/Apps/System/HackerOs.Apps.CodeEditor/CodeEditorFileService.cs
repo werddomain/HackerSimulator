@@ -20,6 +20,11 @@ public enum CodeEditorFileStatus
     TooLarge,
     /// <summary>The optimistic VFS revision is stale.</summary>
     Conflict,
+    /// <summary>
+    /// The caller cancelled the operation (a newer request replaced it, or the window closed).
+    /// Not a failure: the editor never reports it to the user.
+    /// </summary>
+    Cancelled,
     /// <summary>The operation failed for another stable reason.</summary>
     Failed
 }
@@ -77,20 +82,21 @@ public sealed class CodeEditorFileService
         }
 
         await using FileSystemContentReadHandle handle = result.Value;
-        if (handle.Descriptor.Kind == FileSystemContentKind.Binary)
-        {
-            return new CodeEditorLoadResult(
-                CodeEditorFileStatus.UnsupportedContent, path, Error: "Binary files cannot be edited as source text.");
-        }
-
         if (handle.Entry.Metadata is FileMetadata metadata
             && metadata.Length > CodeEditorDocument.MaxDocumentBytes)
         {
             return TooLargeLoad(path);
         }
 
-        using StreamReader reader = new(handle.Content, Encoding.UTF8, true, leaveOpen: true);
-        string content = await reader.ReadToEndAsync(cancellationToken);
+        // Text or binary is decided from the bytes, not from the descriptor of the last write: an
+        // empty file made by "New File" is tagged binary but is an empty source file.
+        string? content = await HackerOs.AppSdk.IO.HackTextContent.TryReadAsync(handle.Content, cancellationToken);
+        if (content is null)
+        {
+            return new CodeEditorLoadResult(
+                CodeEditorFileStatus.UnsupportedContent, path, Error: "Binary files cannot be edited as source text.");
+        }
+
         if (Encoding.UTF8.GetByteCount(content) > CodeEditorDocument.MaxDocumentBytes)
         {
             return TooLargeLoad(path);
@@ -201,6 +207,8 @@ public sealed class CodeEditorFileService
             FileSystemErrorCode.NotFile =>
                 new CodeEditorLoadResult(
                     CodeEditorFileStatus.UnsupportedContent, path, Error: "Path is not a regular file."),
+            FileSystemErrorCode.Cancelled =>
+                new CodeEditorLoadResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorLoadResult(
                 CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Read failed.")
         };
@@ -216,6 +224,8 @@ public sealed class CodeEditorFileService
                 new CodeEditorSaveResult(CodeEditorFileStatus.NotFound, path, Error: "Destination not found."),
             FileSystemErrorCode.RevisionConflict =>
                 new CodeEditorSaveResult(CodeEditorFileStatus.Conflict, path, Error: "File changed on disk."),
+            FileSystemErrorCode.Cancelled =>
+                new CodeEditorSaveResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorSaveResult(
                 CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Write failed.")
         };

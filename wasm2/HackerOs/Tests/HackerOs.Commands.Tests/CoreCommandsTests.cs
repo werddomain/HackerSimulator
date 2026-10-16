@@ -6,16 +6,14 @@ using HackerOs.AppSdk;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Cd;
 using HackerOs.Commands.Echo;
+using HackerOs.Commands.Exit;
 using HackerOs.Commands.Ls;
 using HackerOs.Commands.Pwd;
-using HackerOs.Platform.Core.ServerConnection;
-using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
-using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.Processes;
-using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Tests.Support;
 using Xunit;
 
 namespace HackerOs.Commands.Tests;
@@ -65,46 +63,79 @@ public sealed class CoreCommandsTests
     }
 
     [Fact]
-    public async Task CdCommand_returns_zero_for_valid_directory_and_error_for_missing()
+    public async Task CdCommand_changes_the_calling_shell_directory()
+    {
+        CdCommand command = new(CreateManifest("cd", "org.hackeros.cmd.cd"));
+        FakeShellSession shell = new(workingDirectory: "/");
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int moved = await command.ExecuteAsync(CreateContext(["/home/user"], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+        int back = await command.ExecuteAsync(CreateContext(["-"], stdout, stderr, stdin, "/home/user", shell), CancellationToken.None);
+        int home = await command.ExecuteAsync(CreateContext([], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal([0, 0, 0], [moved, back, home]);
+        // Only `cd -` prints its target, as in bash.
+        Assert.Equal("/" + Environment.NewLine, stdout.ToString());
+        Assert.Equal("/home/user", shell.WorkingDirectory);
+    }
+
+    [Theory]
+    [InlineData(new string[0], 6, 6, "")]
+    [InlineData(new[] { "3" }, 3, 3, "")]
+    [InlineData(new[] { "256" }, 0, 0, "")]
+    [InlineData(new[] { "abc" }, 2, 2, "exit: abc: numeric argument required")]
+    public async Task ExitCommand_asks_the_shell_to_exit(string[] arguments, int expectedStatus, int expectedRequest, string error)
+    {
+        ExitCommand command = new(CreateManifest("exit", "org.hackeros.commands.exit"));
+        // A bare `exit` keeps $?: here 6.
+        FakeShellSession shell = new() { LastExitStatus = arguments.Length == 0 ? 6 : 0 };
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int exitCode = await command.ExecuteAsync(CreateContext(arguments, stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal(expectedStatus, exitCode);
+        Assert.Equal(expectedRequest, shell.ExitRequested);
+        Assert.Equal(error, stderr.ToString().TrimEnd());
+    }
+
+    [Fact]
+    public async Task ExitCommand_with_too_many_arguments_keeps_the_shell()
+    {
+        ExitCommand command = new(CreateManifest("exit", "org.hackeros.commands.exit"));
+        FakeShellSession shell = new();
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+
+        int exitCode = await command.ExecuteAsync(CreateContext(["1", "2"], stdout, stderr, stdin, "/", shell), CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Null(shell.ExitRequested);
+        Assert.Equal("exit: too many arguments", stderr.ToString().TrimEnd());
+    }
+
+    [Fact]
+    public async Task CdCommand_without_a_shell_fails()
     {
         CdCommand command = new(CreateManifest("cd", "org.hackeros.cmd.cd"));
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
 
-        TerminalExecutionContext validContext = CreateContext(
-            arguments: ["/home/user"],
-            stdout: stdout,
-            stderr: stderr,
-            stdin: stdin,
-            cwd: "/");
+        int exitCode = await command.ExecuteAsync(CreateContext(["/tmp"], stdout, stderr, stdin, "/"), CancellationToken.None);
 
-        int validCode = await command.ExecuteAsync(validContext, CancellationToken.None);
-        Assert.Equal(0, validCode);
-        Assert.Equal("/home/user" + Environment.NewLine, stdout.ToString());
-
-        using StringWriter stdoutMissing = new();
-        using StringWriter stderrMissing = new();
-        TerminalExecutionContext missingContext = CreateContext(
-            arguments: ["/nonexistent"],
-            stdout: stdoutMissing,
-            stderr: stderrMissing,
-            stdin: stdin,
-            cwd: "/");
-
-        int missingCode = await command.ExecuteAsync(missingContext, CancellationToken.None);
-        Assert.Equal(1, missingCode);
-        Assert.Contains("No such file or directory", stderrMissing.ToString());
+        Assert.Equal(1, exitCode);
+        Assert.Equal("cd: no shell session" + Environment.NewLine, stderr.ToString());
     }
 
     [Fact]
     public async Task CatCommand_outputs_file_content_or_error_for_missing_file()
     {
-        CatCommand command = new(
-            CreateManifest("cat", "org.hackeros.cmd.cat"),
-            new NullSimulatedNetworkService(),
-            new NeverConnectedServerConnectionService(),
-            new UnusedProxyClient());
+        CatCommand command = new(CreateManifest("cat", "org.hackeros.cmd.cat"));
         using StringWriter stdout = new();
         using StringWriter stderr = new();
         using StringReader stdin = new(string.Empty);
@@ -161,7 +192,8 @@ public sealed class CoreCommandsTests
         TextWriter stdout,
         TextWriter stderr,
         TextReader stdin,
-        string cwd)
+        string cwd,
+        IShellSession? shell = null)
     {
         AppManifest manifest = CreateManifest("cmd", "org.hackeros.cmd.test");
         LocalUserId userId = LocalUserId.FromGuid(Guid.NewGuid());
@@ -179,7 +211,7 @@ public sealed class CoreCommandsTests
             ["HOME"] = "/home/user"
         };
 
-        return new TerminalExecutionContext(app, arguments, stdin, stdout, stderr, cwd, env);
+        return new TerminalExecutionContext(app, arguments, stdin, stdout, stderr, cwd, env, shell: shell);
     }
 
     private static AppManifest CreateManifest(string name, string id) =>
@@ -221,11 +253,9 @@ public sealed class CoreCommandsTests
         public CancellationToken CancellationToken => CancellationToken.None;
         public ICapabilityChecker Capabilities => throw new NotImplementedException();
         public IAppFileSystemGateway FileSystem { get; }
-        public IAppSettingsGateway Settings => throw new NotImplementedException();
         public IAppEventGateway Events => throw new NotImplementedException();
         public IAppNotificationGateway Notifications => throw new NotImplementedException();
         public IAppLoggingGateway Logging => throw new NotImplementedException();
-        public IAppDiagnosticsGateway Diagnostics => throw new NotImplementedException();
         public IAppClockGateway Clock => throw new NotImplementedException();
         public IAppProcessGateway Processes => throw new NotImplementedException();
     }
@@ -337,62 +367,5 @@ public sealed class CoreCommandsTests
         public ValueTask<FileSystemMutationResult> DeleteAsync(FileSystemDeleteRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public ValueTask<FileSystemMutationResult> SetPermissionsAsync(FileSystemSetPermissionsRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAppFileSystemGateway WithSelectedHandle(FileSystemSelectedResourceHandle handle) => this;
-    }
-
-    /// <summary>Fake that never recognizes a host, proving VFS-only cat arguments never touch the network.</summary>
-    private sealed class NullSimulatedNetworkService : ISimulatedNetworkService
-    {
-        public SimulatedNavigationResult Navigate(string url, Dictionary<string, Dictionary<string, string>> sessionCookies) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public SimulatedHttpResponse Post(string url, ImmutableDictionary<string, string> formBody, Dictionary<string, Dictionary<string, string>> sessionCookies) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public double? Ping(string hostnameOrIp) => throw new NotSupportedException("Not exercised by these tests.");
-
-        public IReadOnlyList<SimulatedPort> ScanPorts(string hostnameOrIp, int firstPort, int lastPort) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public SimulatedHost? GetHost(string hostnameOrIp) => null;
-
-        public IReadOnlyList<SimulatedHost> AllHosts => throw new NotSupportedException("Not exercised by these tests.");
-
-        public ISimulatedDns Dns => throw new NotSupportedException("Not exercised by these tests.");
-    }
-
-    /// <summary>Fake used only to prove the pure-VFS path is unaffected: this device is never connected.</summary>
-    private sealed class NeverConnectedServerConnectionService : IServerConnectionService
-    {
-        public ValueTask<ServerConnectionState?> GetStateAsync(CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<ServerConnectionState?>(null);
-
-        public Task<ServerConnectionState> ConnectWithNewAccountAsync(
-            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public Task<ServerConnectionState> ConnectWithExistingAccountAsync(
-            Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-
-        public Task<string?> EnsureAccessTokenAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-    }
-
-    /// <summary>Fake that always throws: proves the real-network path is never reached in these tests.</summary>
-    private sealed class UnusedProxyClient : IProxyClient
-    {
-        public Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
-            Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("The proxy client must not be called by these tests.");
-
-        public Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
-            Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("The proxy client must not be called by these tests.");
-
-        public Task<ProxyPolicyResponse> GetPolicyAsync(
-            Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("The proxy client must not be called by these tests.");
     }
 }
