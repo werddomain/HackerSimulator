@@ -22,7 +22,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             page.Console += (_, message) => Console.WriteLine($"browser console [{message.Type}]: {message.Text}");
@@ -87,7 +87,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];
@@ -151,7 +151,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             await NavigateWhenReadyAsync(page, $"{address}/?scenario=window");
@@ -233,7 +233,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             page.Console += (_, message) => Console.WriteLine($"browser console [{message.Type}]: {message.Text}");
@@ -280,7 +280,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             await using IBrowserContext context = await browser.NewContextAsync(
                 new BrowserNewContextOptions { HasTouch = true, ViewportSize = new() { Width = 1100, Height = 760 } });
@@ -353,7 +353,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions
                 {
                     Channel = "chrome",
@@ -399,7 +399,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             await NavigateWhenReadyAsync(page, address);
@@ -502,7 +502,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IBrowserContext context = await browser.NewContextAsync();
             IPage firstPage = await context.NewPageAsync();
@@ -602,7 +602,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IBrowserContext context = await browser.NewContextAsync();
             IPage page = await context.NewPageAsync();
@@ -647,7 +647,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync(new BrowserNewPageOptions
             {
@@ -738,7 +738,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];
@@ -792,7 +792,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];
@@ -844,7 +844,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];
@@ -909,7 +909,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];
@@ -951,7 +951,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
 
@@ -988,7 +988,7 @@ public sealed class IndexedDbBrowserContractTests
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
             IPage page = await browser.NewPageAsync();
             List<string> failures = [];

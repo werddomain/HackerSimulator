@@ -126,7 +126,7 @@ Plus de détails sur les hôtes dans [`old/hosting-model.md`](old/hosting-model.
 | `Tools/HackerOs.Tools.ManifestGenerator` | Génère `manifest.json` depuis la classe `[AppManifest]` de chaque app, vérifie la frontière du SDK et agrège `BuiltInApplications.json` dans l'hôte ([`app-model.md`](app-model.md)). |
 | `Tools/icon-import` | Script Node d'import des bibliothèques d'icônes. |
 | `Samples/HackerOs.Windowing.SampleHost` | Hôte d'exemple du gestionnaire de fenêtres seul. |
-| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, et des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles. |
+| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) et le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
 | `build/HackerOs.Apps.targets` | Cibles MSBuild du modèle d'app (génération, agrégation, frontière du SDK). |
 
 ## Le système simulé

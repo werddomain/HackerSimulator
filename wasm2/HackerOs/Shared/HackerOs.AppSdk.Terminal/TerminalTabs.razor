@@ -188,21 +188,30 @@
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_shortcutTrap is not null)
+        // Under InteractiveServer the circuit may already be gone (page reload, closed tab): the
+        // browser-side listener and module went with it, as TerminalPanel also assumes.
+        try
         {
-            try
+            if (_shortcutTrap is not null)
             {
-                await _shortcutTrap.InvokeVoidAsync("dispose");
-            }
-            catch (JSException)
-            {
-                // The element is already gone with its listener.
+                try
+                {
+                    await _shortcutTrap.InvokeVoidAsync("dispose");
+                }
+                catch (JSException)
+                {
+                    // The element is already gone with its listener.
+                }
+
+                await _shortcutTrap.DisposeAsync();
             }
 
-            await _shortcutTrap.DisposeAsync();
+            if (_module is not null)
+                await _module.DisposeAsync();
         }
-
-        if (_module is not null)
-            await _module.DisposeAsync();
+        catch (JSDisconnectedException)
+        {
+            // Nothing left to release on the browser side.
+        }
     }
 }

@@ -26,7 +26,16 @@ namespace HackerOs.Platform.Core.Diagnostics;
 /// <b>Flush triggers.</b> Every <see cref="FlushInterval"/> of simulated time
 /// (<see cref="ISimulationClock.Schedule"/>), as soon as <see cref="FlushThreshold"/> lines wait, on
 /// <see cref="SessionLoggedOutEvent"/>, and on <see cref="DisposeAsync"/>. Only one flush runs at a
-/// time.
+/// time per attached filesystem.
+/// </para>
+/// <para>
+/// <b>Re-attaching.</b> The writer is a host singleton, but under <c>InteractiveServer</c>
+/// (<c>HackerOs.Server</c>, ADR 0027) each circuit mounts its own scoped filesystem and attaches it
+/// at boot. A reload can disconnect the previous circuit in the middle of a flush, leaving a JS
+/// interop call that never returns. Attaching a different filesystem therefore abandons the
+/// previous one: its flush token is cancelled and later flushes use a fresh gate, so the new
+/// circuit's boot never waits behind a dead one. Lines of an abandoned batch stay in the
+/// in-memory sink only.
 /// </para>
 /// <para>
 /// <b>Before the filesystem exists.</b> Lines accumulate in the queue until the boot sequence calls
@@ -61,11 +70,10 @@ public sealed class LogFileWriter : IAsyncDisposable
     private readonly Channel<PendingLine> _queue;
     private readonly ISimulationClock _clock;
     private readonly IDiagnosticSink? _memoryBuffer;
-    private readonly SemaphoreSlim _flushGate = new(1, 1);
     private readonly Lock _stateGate = new();
     private readonly HashSet<string> _failingTargets = new(StringComparer.Ordinal);
     private readonly IDisposable? _logoutSubscription;
-    private IFileSystemService? _fileSystem;
+    private Attachment? _attachment;
     private IDisposable? _periodicFlush;
     private long _droppedSinceLastFlush;
     private long _totalDropped;
@@ -98,7 +106,7 @@ public sealed class LogFileWriter : IAsyncDisposable
     }
 
     /// <summary>Gets whether a filesystem is attached and flushes actually write files.</summary>
-    public bool IsAttached => Volatile.Read(ref _fileSystem) is not null;
+    public bool IsAttached => Volatile.Read(ref _attachment) is not null;
 
     /// <summary>Gets the number of lines currently waiting to be written.</summary>
     public int PendingCount => _queue.Reader.Count;
@@ -148,7 +156,8 @@ public sealed class LogFileWriter : IAsyncDisposable
     /// <summary>
     /// Attaches the mounted filesystem once IndexedDB bootstrap has completed, starts the periodic
     /// flush, and immediately writes every line queued since startup. Attaching again (e.g. after a
-    /// host re-initialization) only swaps the filesystem used by later flushes.
+    /// host re-initialization) only swaps the filesystem used by later flushes; a different
+    /// filesystem abandons a flush still running against the previous one (see remarks).
     /// </summary>
     /// <param name="fileSystem">Mounted, authorized filesystem; the writer uses a system context.</param>
     /// <param name="cancellationToken">Cancels the initial flush.</param>
@@ -157,12 +166,20 @@ public sealed class LogFileWriter : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(fileSystem);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        Attachment? replaced = null;
         lock (_stateGate)
         {
-            _fileSystem = fileSystem;
+            if (_attachment is null || !ReferenceEquals(_attachment.FileSystem, fileSystem))
+            {
+                replaced = _attachment;
+                _attachment = new Attachment(fileSystem);
+            }
+
             _periodicFlush ??= _clock.Schedule(FlushInterval, OnPeriodicFlush);
         }
 
+        // Outside the lock: cancellation runs the abandoned flush's continuations synchronously.
+        replaced?.Abandon();
         await FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -173,24 +190,38 @@ public sealed class LogFileWriter : IAsyncDisposable
     /// <param name="cancellationToken">Cancels waiting for the flush gate and the file operations.</param>
     public async Task FlushAsync(CancellationToken cancellationToken = default)
     {
-        await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        while (Volatile.Read(ref _attachment) is { } attachment)
         {
-            IFileSystemService? fileSystem = Volatile.Read(ref _fileSystem);
-            if (fileSystem is null)
+            try
             {
+                await FlushToAsync(attachment, cancellationToken).ConfigureAwait(false);
                 return;
             }
+            catch (OperationCanceledException) when (attachment.IsAbandoned && !cancellationToken.IsCancellationRequested)
+            {
+                // The filesystem was replaced while this flush waited or wrote: what is still
+                // queued goes to the new one.
+            }
+        }
+    }
 
+    /// <summary>Drains the queue into <paramref name="attachment"/>, one flush at a time per attachment.</summary>
+    private async Task FlushToAsync(Attachment attachment, CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, attachment.AbandonedToken);
+        await attachment.FlushGate.WaitAsync(linked.Token).ConfigureAwait(false);
+        try
+        {
             List<(LogFileTarget Target, List<string> Lines)> batches = DrainQueue();
             foreach ((LogFileTarget target, List<string> lines) in batches)
             {
-                await WriteBatchAsync(fileSystem, target, lines, cancellationToken).ConfigureAwait(false);
+                await WriteBatchAsync(attachment.FileSystem, target, lines, linked.Token).ConfigureAwait(false);
             }
         }
         finally
         {
-            _flushGate.Release();
+            attachment.FlushGate.Release();
         }
     }
 
@@ -252,8 +283,19 @@ public sealed class LogFileWriter : IAsyncDisposable
         {
             // Wait out a flush already in progress, then clear the request flag before draining:
             // a request arriving during our own flush must start another one, not be swallowed.
-            await _flushGate.WaitAsync().ConfigureAwait(false);
-            _flushGate.Release();
+            if (Volatile.Read(ref _attachment) is { } attachment)
+            {
+                try
+                {
+                    await attachment.FlushGate.WaitAsync(attachment.AbandonedToken).ConfigureAwait(false);
+                    attachment.FlushGate.Release();
+                }
+                catch (OperationCanceledException)
+                {
+                    // Replaced meanwhile: FlushAsync below uses the new attachment.
+                }
+            }
+
             Volatile.Write(ref _flushRequested, 0);
             await FlushAsync().ConfigureAwait(false);
         }
@@ -607,5 +649,32 @@ public sealed class LogFileWriter : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult<Stream>(new MemoryStream(content, writable: false));
         }
+    }
+
+    /// <summary>
+    /// One attached filesystem with its own flush gate, so a flush stuck on a filesystem that will
+    /// never answer (a disconnected circuit) never blocks flushes to its replacement.
+    /// </summary>
+    private sealed class Attachment(IFileSystemService fileSystem)
+    {
+        private readonly CancellationTokenSource _abandoned = new();
+
+        /// <summary>Gets the attached filesystem.</summary>
+        public IFileSystemService FileSystem { get; } = fileSystem;
+
+        /// <summary>Gets the gate allowing one flush at a time to this filesystem.</summary>
+        public SemaphoreSlim FlushGate { get; } = new(1, 1);
+
+        /// <summary>Gets a token cancelled once another filesystem replaces this one.</summary>
+        public CancellationToken AbandonedToken => _abandoned.Token;
+
+        /// <summary>Gets whether another filesystem replaced this one.</summary>
+        public bool IsAbandoned => _abandoned.IsCancellationRequested;
+
+        /// <summary>
+        /// Cancels flushes still running against this filesystem. The token source is not disposed:
+        /// a flush that ignores cancellation may still hold a registration on it.
+        /// </summary>
+        public void Abandon() => _abandoned.Cancel();
     }
 }
