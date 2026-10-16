@@ -132,10 +132,11 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
 - [x] Crochet commun de changement de contexte (`AsyncLocal` avec rappel, contrat d'observateur `IExecutionContextSwitchObserver`, diffuseur), installé seulement si une mesure est active.
 
 ### CPU (ADR 0067)
-- [ ] Comptage `utime`/`stime`/compositeur sur le crochet de changement de contexte (crochet livré par `5-accounting-switches`).
-- [ ] `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`.
-- [ ] Long tasks, « Not responding », `Responding:` et colonne du gestionnaire de tâches.
-- [ ] Test de surcoût.
+Fait par `rebuild/5-cpu-accounting` ([`cpu-accounting.md`](cpu-accounting.md)).
+- [x] Comptage `utime`/`stime`/compositeur sur le crochet de changement de contexte (crochet livré par `5-accounting-switches`).
+- [x] `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`.
+- [x] Long tasks, « Not responding », `Responding:` et colonne du gestionnaire de tâches.
+- [x] Test de surcoût.
 
 ### Mémoire (ADR 0068)
 - [ ] Couches image, ressources de l'OS, allocations, résident.
@@ -156,6 +157,7 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
 
 ### Apps existantes (section 5.1)
 - [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
+- [x] Temps CPU : `/proc/<pid>/stat` et `status` testés sur une fenêtre (Calculatrice), une commande (`echo`) et un service (service d'exemple) réels, sans modifier leur code (`5-cpu-accounting`).
 - [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
 - [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.

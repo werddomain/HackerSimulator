@@ -82,14 +82,24 @@ public static class ResourceAccountingServiceCollectionExtensions
             IDisposable installation = (hookInstaller ?? ContextSwitchHook.Install)(dispatcher);
             services.AddSingleton(dispatcher);
             services.AddSingleton(new ResourceAccountingHookInstallation(installation));
+
+            if (plan.CpuActive)
+            {
+                // ADR 0067: utime/stime per process, compositor and idle, long tasks and "Not
+                // responding". Registered before any app code runs, so it sees every switch.
+                MeasuredCpuTimeAccountant cpu = new(plan.Settings.UnresponsiveThreshold);
+                services.AddSingleton(new ResourceAccountingObserverRegistration(dispatcher.Register(cpu)));
+                services.AddSingleton(cpu);
+                services.AddSingleton<ICpuTimeAccountant>(cpu);
+            }
 #else
             throw new InvalidOperationException(
                 "A resource measurement is active but HackerOs.Platform.ResourceAccounting is not built into this host.");
 #endif
         }
 
-        // No measurement is implemented yet (chantiers 5-cpu-accounting, 5-memory-accounting): an
-        // active measurement still reads the simulator, and /proc says "simulated".
+        // A measurement switched off (or not yet implemented: memory, chantier 5-memory-accounting)
+        // keeps its null accountant: /proc reads the simulator and says "simulated".
         services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
         services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
         return plan;
@@ -153,3 +163,10 @@ public static class ResourceAccountingServiceCollectionExtensions
 /// </summary>
 /// <param name="Installation">The installation returned by the hook installer.</param>
 public sealed record ResourceAccountingHookInstallation(IDisposable Installation);
+
+/// <summary>
+/// A measurement's registration on the <c>ContextSwitchDispatcher</c>, kept alive with the service
+/// provider like <see cref="ResourceAccountingHookInstallation"/>.
+/// </summary>
+/// <param name="Registration">The registration returned by the dispatcher.</param>
+public sealed record ResourceAccountingObserverRegistration(IDisposable Registration);

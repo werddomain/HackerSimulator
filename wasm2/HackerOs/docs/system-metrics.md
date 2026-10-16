@@ -14,7 +14,8 @@ Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
 
 | Fichier ou API | Mesure | Source |
 | --- | --- | --- |
-| `/proc/stat` | temps CPU cumulé par cœur, en `USER_HZ` | **simulé** : simulateur de ressources |
+| `/proc/stat` | temps CPU cumulé par cœur, en `USER_HZ` | **mesuré** quand la mesure CPU est active (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)), **simulé** sinon : simulateur de ressources |
+| `/proc/<pid>/stat` | `utime` et `stime` d'un processus | **mesuré** au changement de contexte (ADR 0067), sinon reconstruit depuis le simulateur |
 | `/proc/<pid>/io` | octets lus et écrits par un processus | **compté** : service de fichiers et passerelle réseau |
 | `/proc/diskstats` | requêtes, secteurs et temps du disque `hda` | **compté** : transactions IndexedDB du système de fichiers |
 | `/proc/net/dev` | octets et paquets de `lo` et `eth0` | **compté** : passerelle réseau des apps |
@@ -22,11 +23,11 @@ Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
 | `HackDriveInfo` | taille et espace libre de `/` | profil matériel, contenu stocké, quota du navigateur |
 
 Un `cat` d'un gros fichier fait monter `rchar` du processus et les secteurs lus
-de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le CPU reste
-simulé : le navigateur ne mesure pas le CPU par app.
-
-La phase 5 remplacera le CPU et la mémoire simulés par une mesure réelle,
-optionnelle (ADR 0066 à 0068, [`execution-isolation-plan.md`](execution-isolation-plan.md)).
+de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le navigateur
+ne mesure pas le CPU par app : depuis la phase 5, l'OS le chronomètre lui-même
+à chaque changement de contexte (ADR 0067), quand la mesure est active. La
+mémoire mesurée suivra (ADR 0068,
+[`execution-isolation-plan.md`](execution-isolation-plan.md)).
 
 ### Deux sources pour le CPU et la mémoire d'un processus (ADR 0066)
 
@@ -38,8 +39,10 @@ optionnelle (ADR 0066 à 0068, [`execution-isolation-plan.md`](execution-isolati
 Le fournisseur `/proc` reçoit les deux comptables par `ProcMetricsSources`
 (`CpuAccountant`, `MemoryAccountant`) et retombe sur le simulateur dès qu'un
 comptable ne répond pas. Le chantier `5-accounting-switches` livre les
-interrupteurs, le crochet et les comptables nuls : tout reste `simulated`
-jusqu'aux chantiers `5-cpu-accounting` et `5-memory-accounting`. Détails :
+interrupteurs, le crochet et les comptables nuls ; le chantier
+`5-cpu-accounting` livre `MeasuredCpuTimeAccountant`
+([`cpu-accounting.md`](cpu-accounting.md)) ; la mémoire reste `simulated`
+jusqu'au chantier `5-memory-accounting`. Détails :
 [`resource-accounting.md`](resource-accounting.md).
 
 Les compteurs vivent en mémoire, partent de zéro au démarrage et ne sont jamais
@@ -85,6 +88,13 @@ fournisseur IndexedDB et à `AppExecutionContextFactory`
 ## Comment chaque mesure est prise
 
 ### CPU (`/proc/stat`)
+
+Mesure CPU active (ADR 0067) : `CpuTimeAccounting` ignore les échantillons
+simulés et rend sur `cpu0` les vrais temps du thread principal (`user` = somme
+des `utime`, `system` = somme des `stime` plus le compositeur, `idle` = le
+reste) ; les autres cœurs du profil matériel restent `idle`. Voir
+[`cpu-accounting.md`](cpu-accounting.md). Ce qui suit décrit le mode simulé,
+toujours utilisé quand la mesure est coupée.
 
 Avant ce chantier, rien n'appelait `IResourceSimulator.Tick` dans un hôte réel :
 `status`, `meminfo` et `loadavg` restaient à zéro. `ResourceSamplingService`

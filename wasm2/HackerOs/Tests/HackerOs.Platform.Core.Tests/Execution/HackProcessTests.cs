@@ -71,6 +71,52 @@ public sealed class HackProcessTests
     }
 
     [Fact]
+    public async Task Processor_times_and_responding_come_from_proc_stat_and_status_when_measured()
+    {
+        // ADR 0067: utime/stime of /proc/<pid>/stat behind the Process-like properties.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(new MeasuredTimes(
+            new ProcessCpuTimes(TimeSpan.FromMilliseconds(1230), TimeSpan.FromMilliseconds(450), 2, TimeSpan.FromSeconds(7), false, 9)));
+        fixture.Processes.Active.AddRange([Process(OwnPid, "org.hackeros.system-monitor"), Process(42, "org.hackeros.text-editor")]);
+        using IDisposable scope = Enter(fixture, AppCapabilities.ProcessList);
+
+        HackProcess process = await HackProcess.GetProcessByIdAsync(42);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(1230), process.UserProcessorTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(450), process.PrivilegedProcessorTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(1680), process.TotalProcessorTime);
+        Assert.False(process.Responding);
+        Assert.Equal("measured", process.Status["CpuSource"]);
+    }
+
+    [Fact]
+    public async Task Simulated_processor_time_is_rebuilt_from_the_simulator_and_the_process_responds()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        ProcessRecord editor = Process(42, "org.hackeros.text-editor");
+        fixture.Processes.Active.AddRange([Process(OwnPid, "org.hackeros.system-monitor"), editor]);
+        fixture.Resources.ProcessSamples[editor.Pid] = [new ProcessResourceSample(editor.Pid, 1, BootUtc, 0.25, 0, 0, 0)];
+        using IDisposable scope = Enter(fixture, AppCapabilities.ProcessList);
+
+        HackProcess process = await HackProcess.GetProcessByIdAsync(42);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(250), process.UserProcessorTime);
+        Assert.Equal(TimeSpan.Zero, process.PrivilegedProcessorTime);
+        Assert.True(process.Responding);
+    }
+
+    [Theory]
+    [InlineData("42 (code-editor) R 1 42 42 0 -1 0 0 0 0 0 150 25 0 0 20 0 1 0", 1500, 250)]
+    [InlineData("7 (my (odd) app) S 1 7 7 0 -1 0 0 0 0 0 3 1 0 0", 30, 10)]
+    [InlineData("7 (short) S 1", 0, 0)]
+    public void ParseStatTimes_counts_fields_after_the_last_parenthesis(string line, int userMs, int systemMs)
+    {
+        (TimeSpan user, TimeSpan system) = HackProcess.ParseStatTimes(line);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(userMs), user);
+        Assert.Equal(TimeSpan.FromMilliseconds(systemMs), system);
+    }
+
+    [Fact]
     public async Task Without_process_list_only_the_own_process_is_visible_like_ps()
     {
         VirtualFileSystemFixture fixture = await CreateSeededAsync();
@@ -363,6 +409,30 @@ public sealed class HackProcessTests
             ServiceControlOutcome outcome = NextOutcome;
             NextOutcome = ServiceControlOutcome.Succeeded;
             return ValueTask.FromResult(new ServiceControlResult(outcome));
+        }
+    }
+
+    /// <summary>A CPU accountant that measures every process with the same times.</summary>
+    private sealed class MeasuredTimes(ProcessCpuTimes times) : ICpuTimeAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetCpuUsage(ProcessId pid, out double coreEquivalents)
+        {
+            coreEquivalents = 0.1;
+            return true;
+        }
+
+        public bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes processTimes)
+        {
+            processTimes = times;
+            return true;
+        }
+
+        public bool TryGetThreadTimes(out MeasuredThreadCpuTimes threadTimes)
+        {
+            threadTimes = default;
+            return false;
         }
     }
 }

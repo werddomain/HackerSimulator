@@ -59,6 +59,8 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     public async ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemResult<FileSystemContentReadHandle> result =
             await _fileSystem.ReadAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Error);
@@ -67,13 +69,19 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
 
     /// <inheritdoc />
     public ValueTask<FileSystemResult<FileSystemDirectorySnapshot>> EnumerateAsync(
-        FileSystemEnumerateRequest request, CancellationToken cancellationToken = default) =>
-        _fileSystem.EnumerateAsync(request, BuildContext(), cancellationToken);
+        FileSystemEnumerateRequest request, CancellationToken cancellationToken = default)
+    {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
+        return _fileSystem.EnumerateAsync(request, BuildContext(), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async ValueTask<FileSystemMutationResult> CreateAsync(
         FileSystemCreateRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.CreateAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;
@@ -83,6 +91,8 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     public async ValueTask<FileSystemMutationResult> WriteAsync(
         FileSystemWriteRequest request, IFileSystemContentSource content, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.WriteAsync(request, content, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;
@@ -92,6 +102,8 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     public async ValueTask<FileSystemMutationResult> MoveAsync(
         FileSystemMoveRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.MoveAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;
@@ -101,6 +113,8 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     public async ValueTask<FileSystemMutationResult> CopyAsync(
         FileSystemCopyRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.CopyAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;
@@ -110,6 +124,8 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     public async ValueTask<FileSystemMutationResult> DeleteAsync(
         FileSystemDeleteRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.DeleteAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;
@@ -117,13 +133,19 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
 
     /// <inheritdoc />
     public ValueTask<FileSystemResult<FileSystemEntrySnapshot>> StatAsync(
-        FileSystemStatRequest request, CancellationToken cancellationToken = default) =>
-        _fileSystem.StatAsync(request, BuildContext(), cancellationToken);
+        FileSystemStatRequest request, CancellationToken cancellationToken = default)
+    {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
+        return _fileSystem.StatAsync(request, BuildContext(), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async ValueTask<FileSystemMutationResult> SetPermissionsAsync(
         FileSystemSetPermissionsRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         FileSystemMutationResult result = await _fileSystem.SetPermissionsAsync(request, BuildContext(), cancellationToken);
         NotifyIfPermissionError(result.Transaction.Error);
         return result;

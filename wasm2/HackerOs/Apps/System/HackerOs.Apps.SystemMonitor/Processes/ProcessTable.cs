@@ -47,6 +47,10 @@ public enum ProcessColumn
 /// <c>/proc/&lt;pid&gt;/status</c> other than <c>measured</c>, ADR 0066).
 /// </param>
 /// <param name="MemoryEstimated">Whether <paramref name="MemoryBytes"/> is simulated (<c>MemSource:</c>).</param>
+/// <param name="Responding">
+/// <see langword="false"/> when the OS reports the process "Not responding" (<c>Responding: 0</c> of
+/// <c>/proc/&lt;pid&gt;/status</c>, ADR 0067, section 4). Display only: nothing is stopped.
+/// </param>
 public sealed record ProcessRow(
     long Pid,
     long? ParentPid,
@@ -60,7 +64,15 @@ public sealed record ProcessRow(
     double ReadPerSecond,
     double WritePerSecond,
     bool CpuEstimated = false,
-    bool MemoryEstimated = false);
+    bool MemoryEstimated = false,
+    bool Responding = true)
+{
+    /// <summary>Text shown in the state column, which the OS's "Not responding" verdict overrides.</summary>
+    public const string NotRespondingText = "Not responding";
+
+    /// <summary>Gets the state column's text: <see cref="NotRespondingText"/> or <see cref="State"/>.</summary>
+    public string DisplayState => Responding ? State : NotRespondingText;
+}
 
 /// <summary>
 /// The state behind the Processes tab, without any UI: filter, sort and multiple selection, with
@@ -248,7 +260,7 @@ public sealed class ProcessTable
         {
             ProcessColumn.Name => Order(rows, static row => row.Name, StringComparer.OrdinalIgnoreCase),
             ProcessColumn.User => Order(rows, static row => row.User, StringComparer.OrdinalIgnoreCase),
-            ProcessColumn.State => Order(rows, static row => row.State, StringComparer.Ordinal),
+            ProcessColumn.State => Order(rows, static row => row.DisplayState, StringComparer.Ordinal),
             ProcessColumn.Cpu => Order(rows, static row => row.CpuPercent, Comparer<double>.Default),
             ProcessColumn.Memory => Order(rows, static row => row.MemoryBytes, Comparer<long>.Default),
             ProcessColumn.DiskRead => Order(rows, static row => row.ReadPerSecond, Comparer<double>.Default),

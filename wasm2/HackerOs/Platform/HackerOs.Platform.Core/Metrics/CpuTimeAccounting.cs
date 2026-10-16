@@ -24,6 +24,13 @@ namespace HackerOs.Platform.Core.Metrics;
 /// for OS processes (services the host declared system apps, and processes the catalog does not
 /// know) and to <c>user</c> for every other app.
 /// </para>
+/// <para>
+/// <b>Measured (ADR 0067).</b> When an <see cref="ICpuTimeAccountant"/> measures, the simulated samples
+/// are ignored: <c>cpu0</c> is the browser's main thread, the one virtual core every process runs on,
+/// with its real <c>user</c> (every <c>utime</c>), <c>system</c> (every <c>stime</c> plus the compositor)
+/// and <c>idle</c>. The other cores of the hardware profile stay idle for the whole uptime until Web
+/// Worker processes (ADR 0070) run on them.
+/// </para>
 /// </remarks>
 public sealed class CpuTimeAccounting : ICpuTimeAccounting
 {
@@ -31,6 +38,7 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     public const int UserHz = 100;
 
     private readonly Func<ProcessRecord, bool> _isSystemProcess;
+    private readonly ICpuTimeAccountant? _measured;
     private readonly Lock _gate = new();
     private readonly double[] _user;
     private readonly double[] _system;
@@ -42,8 +50,13 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     /// Tells whether a process is part of the OS (its time goes to <c>system</c>). Defaults to
     /// "every service": without a catalog, services are the closest match to kernel threads.
     /// </param>
-    public CpuTimeAccounting(VirtualHardwareProfile hardware, Func<ProcessRecord, bool>? isSystemProcess = null)
+    /// <param name="measured">
+    /// Measured CPU time (ADR 0067); when it measures, <c>/proc/stat</c> shows real times instead of
+    /// the simulated ones. <see langword="null"/> or the null accountant keeps the simulation.
+    /// </param>
+    public CpuTimeAccounting(VirtualHardwareProfile hardware, Func<ProcessRecord, bool>? isSystemProcess = null, ICpuTimeAccountant? measured = null)
     {
+        _measured = measured is { IsMeasuring: true } ? measured : null;
         ArgumentNullException.ThrowIfNull(hardware);
         CoreCount = Math.Max(1, (int)Math.Ceiling(hardware.CpuCapacity));
         _isSystemProcess = isSystemProcess ?? (static process => process.Kind == AppKind.Service);
@@ -60,8 +73,9 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     {
         ArgumentNullException.ThrowIfNull(samples);
         ArgumentNullException.ThrowIfNull(processes);
-        if (interval <= TimeSpan.Zero)
+        if (interval <= TimeSpan.Zero || _measured is not null)
         {
+            // Measured: the scheduler tick no longer invents CPU time (ADR 0067).
             return;
         }
 
@@ -89,6 +103,16 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     /// <inheritdoc />
     public IReadOnlyList<CpuTimes> GetCores()
     {
+        if (_measured is not null && _measured.TryGetThreadTimes(out MeasuredThreadCpuTimes thread))
+        {
+            long idleCore = ToUserHz(thread.Elapsed);
+            return
+            [
+                new CpuTimes(ToUserHz(thread.User), 0, ToUserHz(thread.System), ToUserHz(thread.Idle)),
+                .. Enumerable.Repeat(new CpuTimes(0, 0, 0, idleCore), CoreCount - 1)
+            ];
+        }
+
         lock (_gate)
         {
             return
@@ -98,6 +122,8 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
             ];
         }
     }
+
+    private static long ToUserHz(TimeSpan time) => (long)(time.TotalSeconds * UserHz);
 
     /// <summary>
     /// Places <paramref name="usage"/> core-equivalents on the cores, starting with the process's

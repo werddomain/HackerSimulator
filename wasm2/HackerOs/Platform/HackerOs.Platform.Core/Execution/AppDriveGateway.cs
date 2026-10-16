@@ -50,6 +50,8 @@ public sealed class AppDriveGateway : IAppDriveGateway
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         cancellationToken.ThrowIfCancellationRequested();
         FileSystemMount[] sized =
         [

@@ -230,7 +230,8 @@ public partial class SystemMonitorWindow
         rate.ReadPerSecond,
         rate.WritePerSecond,
         CpuEstimated: !IsMeasured(process, "CpuSource"),
-        MemoryEstimated: !IsMeasured(process, "MemSource"));
+        MemoryEstimated: !IsMeasured(process, "MemSource"),
+        Responding: process.Responding);
 
     /// <summary>
     /// Reads a <c>CpuSource:</c>/<c>MemSource:</c> line of <c>/proc/&lt;pid&gt;/status</c> (ADR 0066).

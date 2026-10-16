@@ -152,6 +152,14 @@
 .state-T { color: var(--hos-warning, #d29922); }
 .state-Z, .state-X { color: var(--hos-error, #ff7b72); }
 
+/* ADR 0067: "Not responding" is a verdict, not a scheduler state: louder, like a frozen window title. */
+.state-not-responding {
+    color: var(--hos-error, #ff7b72);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 6px color-mix(in srgb, var(--hos-error, #ff7b72) 45%, transparent);
+}
+
 .proc-empty td {
     text-align: center;
     padding: 24px;

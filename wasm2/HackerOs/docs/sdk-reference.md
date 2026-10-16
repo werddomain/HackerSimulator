@@ -163,7 +163,7 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync`, `CloseMainWindowAsync` ; état, CPU, mémoire, E/S, arguments | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync`, `CloseMainWindowAsync` ; état, CPU, mémoire, E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
 | `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`, `Status`, `StartType` | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
 
 ### Réseau (`HackerOs.AppSdk.Net`)

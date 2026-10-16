@@ -71,7 +71,16 @@
                                 <span class="proc-app">@row.AppId</span>
                             </td>
                             <td class="proc-user" title="@row.User">@DisplayUser(row.User)</td>
-                            <td><span class="state state-@row.StateCode">@row.State</span></td>
+                            <td>
+                                @if (row.Responding)
+                                {
+                                    <span class="state state-@row.StateCode">@row.State</span>
+                                }
+                                else
+                                {
+                                    <span class="state state-not-responding" title="One slice of this process held the thread longer than the OS threshold (Responding: 0 in /proc/&lt;pid&gt;/status). Nothing was stopped.">@ProcessRow.NotRespondingText</span>
+                                }
+                            </td>
                             <td class="num">@Units.Percent(row.CpuPercent)</td>
                             <td class="num">@Units.Bytes(row.MemoryBytes)</td>
                             <td class="num">@Units.Rate(row.ReadPerSecond)</td>

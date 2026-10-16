@@ -33,7 +33,69 @@ public interface ICpuTimeAccountant
     /// <param name="coreEquivalents">The usage in core-equivalents (1.0 = one virtual core fully busy).</param>
     /// <returns><see langword="true"/> when the process is measured; otherwise the simulator applies.</returns>
     bool TryGetCpuUsage(ProcessId pid, out double coreEquivalents);
+
+    /// <summary>
+    /// Gets the cumulative CPU times of <paramref name="pid"/> since it first ran (ADR 0067, section 3):
+    /// the <c>utime</c> and <c>stime</c> of <c>/proc/&lt;pid&gt;/stat</c>, its long tasks and whether it responds.
+    /// </summary>
+    /// <param name="pid">The process to read.</param>
+    /// <param name="times">The measured times.</param>
+    /// <returns><see langword="true"/> when the process is measured; otherwise <c>/proc</c> renders simulated or zero values.</returns>
+    bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes times);
+
+    /// <summary>
+    /// Gets the measured time of the thread that runs app code since the accountant started
+    /// (ADR 0067, section 2): the sum of every process's <c>utime</c>, of every <c>stime</c> plus the
+    /// compositor, and the idle rest. Feeds the real <c>/proc/stat</c>.
+    /// </summary>
+    /// <param name="times">The measured thread times.</param>
+    /// <returns><see langword="true"/> when measuring; otherwise <c>/proc/stat</c> stays simulated.</returns>
+    bool TryGetThreadTimes(out MeasuredThreadCpuTimes times);
 }
+
+/// <summary>
+/// The measured CPU times of one process (ADR 0067), shaped like what Linux keeps in its
+/// <c>task_struct</c> and what <c>System.Diagnostics.Process</c> exposes.
+/// </summary>
+/// <param name="UserTime"><c>utime</c>: time spent in the app's own code.</param>
+/// <param name="SystemTime"><c>stime</c>: time spent in the OS gateways the app called (files, network, clipboard).</param>
+/// <param name="LongTaskCount">Slices longer than 50 ms, the browser's long-task threshold (ADR 0067, section 4).</param>
+/// <param name="LongestSlice">The longest uninterrupted slice the process ever held the thread.</param>
+/// <param name="IsResponding">
+/// <see langword="false"/> once a single slice lasted longer than the unresponsive threshold, until
+/// the process completes a slice under it again.
+/// </param>
+/// <param name="VoluntaryContextSwitches">
+/// Slices completed: each time the process gave the thread back (<c>voluntary_ctxt_switches</c>).
+/// Nothing is ever preempted on the main thread, so there is no involuntary counterpart.
+/// </param>
+public readonly record struct ProcessCpuTimes(
+    TimeSpan UserTime,
+    TimeSpan SystemTime,
+    long LongTaskCount,
+    TimeSpan LongestSlice,
+    bool IsResponding,
+    long VoluntaryContextSwitches = 0)
+{
+    /// <summary>Gets <see cref="UserTime"/> plus <see cref="SystemTime"/>.</summary>
+    public TimeSpan TotalTime => UserTime + SystemTime;
+}
+
+/// <summary>
+/// The measured split of the thread that runs app code (one virtual core while every process runs on
+/// the browser's main thread, ADR 0067, section 3).
+/// </summary>
+/// <param name="User">Sum of every process's <c>utime</c>.</param>
+/// <param name="System">Sum of every process's <c>stime</c> plus <paramref name="Compositor"/>.</param>
+/// <param name="Compositor">Time outside any process frame charged to the session's GUI (Blazor rendering, OS loop).</param>
+/// <param name="Idle">The rest of the wall time since the accountant started.</param>
+/// <param name="Elapsed">Wall time since the accountant started.</param>
+public readonly record struct MeasuredThreadCpuTimes(
+    TimeSpan User,
+    TimeSpan System,
+    TimeSpan Compositor,
+    TimeSpan Idle,
+    TimeSpan Elapsed);
 
 /// <summary>
 /// Measured memory per process (ADR 0066, 0068). Same model as <see cref="ICpuTimeAccountant"/>:
@@ -62,7 +124,17 @@ public interface IMemoryAccountant
 /// <see langword="true"/> when the runtime restored an <see cref="ExecutionContext"/> (start or end
 /// of a continuation, a timer callback, ...) rather than code assigning the frame explicitly.
 /// </param>
-public readonly record struct ExecutionContextSwitch(ProcessId? From, ProcessId? To, bool ThreadContextChanged);
+/// <param name="FromKernel">
+/// <see langword="true"/> when <paramref name="From"/> was inside an OS gateway (its "kernel" sub-frame,
+/// ADR 0067, section 2) when it stopped running here.
+/// </param>
+/// <param name="ToKernel"><see langword="true"/> when <paramref name="To"/> resumes inside an OS gateway.</param>
+public readonly record struct ExecutionContextSwitch(
+    ProcessId? From,
+    ProcessId? To,
+    bool ThreadContextChanged,
+    bool FromKernel = false,
+    bool ToKernel = false);
 
 /// <summary>
 /// Receives every context switch between processes on the thread that runs app code: the common
@@ -85,4 +157,20 @@ public interface IExecutionContextSwitchObserver
     /// <summary>Called when the running process changes on the current thread.</summary>
     /// <param name="contextSwitch">The process left, the process entered, and how.</param>
     void OnContextSwitch(in ExecutionContextSwitch contextSwitch);
+}
+
+/// <summary>
+/// Optional companion of <see cref="IExecutionContextSwitchObserver"/>: receives the changes of
+/// <b>mode</b> of the running process, when it enters or leaves an OS gateway's "kernel" sub-frame
+/// (ADR 0067, section 2). The process does not change, so <see cref="IExecutionContextSwitchObserver"/>
+/// is not called for these.
+/// </summary>
+/// <remarks>Same hot-path rules as <see cref="IExecutionContextSwitchObserver"/>: no allocation, no lock, never throw.</remarks>
+public interface IExecutionModeSwitchObserver
+{
+    /// <summary>Called when the running process enters or leaves kernel mode on the current thread.</summary>
+    /// <param name="process">The running process.</param>
+    /// <param name="toKernel"><see langword="true"/> when it enters an OS gateway, <see langword="false"/> when it returns to its own code.</param>
+    /// <param name="threadContextChanged"><see langword="true"/> when the runtime restored an <see cref="ExecutionContext"/>.</param>
+    void OnModeSwitch(ProcessId process, bool toKernel, bool threadContextChanged);
 }

@@ -52,9 +52,17 @@ public sealed class ResourceAccountingCompositionTests
             Assert.Same(provider.GetRequiredService<ContextSwitchDispatcher>(), installed[0]);
         }
 
-        // Nothing measures yet (chantiers 5-cpu-accounting / 5-memory-accounting): every value
-        // stays simulated whatever the combination.
-        Assert.False(provider.GetRequiredService<ICpuTimeAccountant>().IsMeasuring);
+        // ADR 0067: the CPU measurement is real when built and enabled, and it observes the hook.
+        // Memory is not measured yet (chantier 5-memory-accounting): it stays simulated.
+        bool cpuActive = buildCpu && enabledCpu;
+        ICpuTimeAccountant cpu = provider.GetRequiredService<ICpuTimeAccountant>();
+        Assert.Equal(cpuActive, cpu.IsMeasuring);
+        Assert.Equal(cpuActive, cpu is MeasuredCpuTimeAccountant);
+        if (anyActive)
+        {
+            Assert.Equal(cpuActive ? 1 : 0, provider.GetRequiredService<ContextSwitchDispatcher>().ObserverCount);
+        }
+
         Assert.False(provider.GetRequiredService<IMemoryAccountant>().IsMeasuring);
         Assert.False(ContextSwitchHook.IsInstalled);
     }
@@ -103,6 +111,33 @@ public sealed class ResourceAccountingCompositionTests
         using ServiceProvider provider = services.BuildServiceProvider();
 
         Assert.Same(plan, provider.GetRequiredService<ResourceAccountingPlan>());
+    }
+
+    [Fact]
+    public void The_cpu_measurement_takes_the_configured_threshold_and_feeds_proc_stat()
+    {
+        ServiceCollection services = new();
+        services.AddHackerOsResourceAccounting(
+            ResourceAccountingSettings.Default with { MemoryEnabled = false, UnresponsiveThreshold = TimeSpan.FromMilliseconds(1234) },
+            new ResourceAccountingBuildSupport(true, false),
+            _ => new NoopDisposable());
+        services.AddHackerOsEcosystem();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+
+        MeasuredCpuTimeAccountant accountant = provider.GetRequiredService<MeasuredCpuTimeAccountant>();
+        Assert.Same(accountant, provider.GetRequiredService<ICpuTimeAccountant>());
+        Assert.Equal(TimeSpan.FromMilliseconds(1234), accountant.UnresponsiveThreshold);
+
+        // /proc/stat (ADR 0057) now reads the measured thread: one busy core, the others idle.
+        accountant.OnContextSwitch(new ExecutionContextSwitch(null, ProcessId.FromInt64(7), false));
+        Thread.Sleep(30);
+        accountant.OnContextSwitch(new ExecutionContextSwitch(ProcessId.FromInt64(7), null, false));
+        IReadOnlyList<HackerOs.Simulation.Abstractions.Metrics.CpuTimes> cores =
+            scope.ServiceProvider.GetRequiredService<HackerOs.Simulation.Abstractions.Metrics.ICpuTimeAccounting>().GetCores();
+        Assert.True(cores[0].User >= 2, $"cpu0 user = {cores[0].User}");
+        Assert.All(cores.Skip(1), static core => Assert.Equal(0, core.User + core.System));
     }
 
     [Fact]
