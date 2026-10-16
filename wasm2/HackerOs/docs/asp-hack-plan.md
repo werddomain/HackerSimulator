@@ -160,7 +160,7 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 ### Chantiers
 - [x] `web/2-http-bodies` ([`http-bodies.md`](http-bodies.md))
 - [x] `web/3-listener-dns` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md))
-- [ ] `web/4-browser-html`
+- [x] `web/4-browser-html` ([`browser-html-rendering.md`](browser-html-rendering.md), ADR 0079)
 - [ ] `web/5-static-sites`
 - [ ] `web/6-mvc-core`
 - [ ] `web/7-razor-views`

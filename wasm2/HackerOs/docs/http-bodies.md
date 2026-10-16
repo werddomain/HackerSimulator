@@ -187,7 +187,7 @@ archive) n'est pas écrit dans le terminal : `curl` affiche l'avertissement
    | Type | Rendu |
    |---|---|
    | `application/json`, `+json` | JSON indenté (texte inchangé s'il est invalide) |
-   | `text/html` | Source affichée, comme `view-source:`, jusqu'à l'iframe isolée de `web/4-browser-html` (ADR 0075) |
+   | `text/html` | Rendu dans l'iframe isolée depuis `web/4-browser-html` (ADR 0075, [`browser-html-rendering.md`](browser-html-rendering.md)) ; la source reste visible avec `view-source:` ou le bouton « source » |
    | `text/*`, XML, JavaScript | Texte brut |
    | `image/*` | Image (`data:` URL) sur damier |
    | autre | « This file can't be displayed », avec la commande `curl -O` à utiliser |

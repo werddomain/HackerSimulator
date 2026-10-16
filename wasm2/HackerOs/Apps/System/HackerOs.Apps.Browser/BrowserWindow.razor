@@ -1,5 +1,6 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.Apps.Browser.DevTools
 @using HackerOs.Simulation.Abstractions.Network
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
@@ -15,6 +16,7 @@
         </div>
 
         <div class="address-bar">
+            <span class="address-scheme @SchemeClass" title="@SchemeTitle">@SchemeIcon</span>
             <input id="browser-address-input"
                    type="text"
                    class="address-input"
@@ -27,12 +29,31 @@
 
         <button id="browser-btn-navigate" class="go-btn" @onclick="NavigateToCurrentInputAsync" title="Navigate">Go</button>
 
+        <button id="browser-btn-source" class="nav-btn @(_viewSource ? "toggled" : null)" @onclick="ToggleViewSourceAsync"
+                title="View page source (Ctrl+U)" aria-pressed="@(_viewSource ? "true" : "false")" disabled="@(!CanViewSource)">&lt;/&gt;</button>
+        <button id="browser-btn-devtools" class="nav-btn devtools-toggle @(_devToolsOpen ? "toggled" : null)" @onclick="ToggleDevTools"
+                title="Developer tools (F12)" aria-pressed="@(_devToolsOpen ? "true" : "false")">
+            &#128295;
+            @if (_devTools.ErrorCount > 0)
+            {
+                <span class="devtools-badge">@_devTools.ErrorCount</span>
+            }
+        </button>
         <button id="browser-btn-bookmarks" class="nav-btn" @onclick="ToggleBookmarksAsync" title="Bookmarks">&#9733;</button>
     </div>
 
     <!-- Main Content Area -->
     <div class="browser-content">
+        @if (_alertMessage is not null)
+        {
+            <div class="page-alert" role="alert">
+                <span class="page-alert-origin">@_alertOrigin says</span>
+                <span class="page-alert-message">@_alertMessage</span>
+                <button class="action-btn" @onclick="DismissAlert">OK</button>
+            </div>
+        }
 
+        <div class="browser-view @(ShowsFrame ? "frame-view" : null)">
         @if (_isLoading)
         {
             <div class="browser-loading" role="status" aria-live="polite">
@@ -40,14 +61,22 @@
                 <span class="loading-label">Loading @_currentUrl&hellip;</span>
             </div>
         }
-        else if (_networkError is not null)
+        else if (_error is not null)
         {
-            <div class="browser-error-page" role="alert">
+            <div class="browser-error-page" role="alert" data-error-code="@_error.Code">
                 <div class="error-icon">&#9888;</div>
-                <h1 class="error-title">Cannot Reach This Site</h1>
-                <p class="error-url">@_currentUrl</p>
-                <p class="error-code">@_networkError</p>
-                <p class="error-hint">Check the address for typos or verify the simulated host is reachable.</p>
+                <h1 class="error-title">@_error.Title</h1>
+                <p class="error-url">@_error.Message</p>
+                @if (_error.Hints.Count > 0)
+                {
+                    <ul class="error-hints">
+                        @foreach (string hint in _error.Hints)
+                        {
+                            <li>@hint</li>
+                        }
+                    </ul>
+                }
+                <p class="error-code">@_error.Code</p>
                 <button class="action-btn" @onclick="RefreshAsync">Try Again</button>
             </div>
         }
@@ -55,16 +84,20 @@
         {
             <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" OnSubmit="HandleFormSubmitAsync" />
         }
+        else if (ShowsFrame)
+        {
+            <BrowserPageView @ref="_pageView" Document="_frameDocument" OnRequest="HandleBridgeRequestAsync" OnEvent="HandleBridgeEventAsync" OnEscaped="HandleFrameEscapedAsync" />
+        }
         else if (_currentBody is not null)
         {
-            <ResponseBodyViewer View="_currentBody" StatusCode="_currentStatus" Url="@_finalUrl" />
+            <ResponseBodyViewer View="_currentBody" StatusCode="_currentStatus" Url="@_finalUrl" DownloadedTo="@_downloadedTo" />
         }
         else
         {
             <!-- New-tab placeholder -->
             <div class="browser-new-tab">
                 <h1 class="new-tab-title">HackerOS Browser</h1>
-                <p class="new-tab-subtitle">Type a URL in the address bar to begin browsing the simulated network.</p>
+                <p class="new-tab-subtitle">Type a URL or a path (file:///home/…) in the address bar to begin browsing.</p>
                 <div class="new-tab-bookmarks">
                     @foreach (var (label, url) in DefaultBookmarks)
                     {
@@ -76,6 +109,13 @@
                 </div>
             </div>
         }
+
+        </div>
+
+        @if (_devToolsOpen)
+        {
+            <DevToolsPanel Log="_devTools" OnClose="ToggleDevTools" />
+        }
     </div>
 
     <!-- Status Bar -->
@@ -84,13 +124,13 @@
         {
             <span>Connecting to @_currentUrl&hellip;</span>
         }
-        else if (_networkError is not null)
+        else if (_error is not null)
         {
-            <span class="status-error">@_networkError</span>
+            <span class="status-error">@_error.Code</span>
         }
-        else if (_currentPage is not null || _currentBody is not null)
+        else if (_currentPage is not null || _currentBody is not null || _frameDocument is not null)
         {
-            <span>&#10003; @_finalUrl</span>
+            <span>&#10003; @(string.IsNullOrWhiteSpace(_pageTitle) ? _finalUrl : $"{_pageTitle} — {_finalUrl}")</span>
         }
     </div>
 </div>

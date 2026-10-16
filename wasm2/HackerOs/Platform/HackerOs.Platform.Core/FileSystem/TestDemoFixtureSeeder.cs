@@ -39,6 +39,48 @@ public sealed class TestDemoFixtureSeeder(IFileSystemService fileSystem)
     /// <summary>Content written to the nested fixture file.</summary>
     public const string NestedContent = "# Beta\n\nNested fixture file.\n";
 
+    /// <summary>
+    /// Name of the static HTML site fixture the Browser E2E scenario opens as <c>file://</c>
+    /// (ADR 0075 §4). A sibling of <see cref="FixtureRootName"/> in <c>~/Documents</c>, so the
+    /// File Explorer scenarios that zip the fixture root keep their exact content.
+    /// </summary>
+    public const string SiteDirectoryName = "e2e-site";
+
+    /// <summary>Home page of the site fixture: a style sheet, a script, a link and a cross-origin fetch.</summary>
+    public const string SiteIndexContent = """
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><title>E2E local site</title><link rel="stylesheet" href="style.css"></head>
+        <body>
+        <h1 id="title">Local site</h1>
+        <p id="script-status">script not run</p>
+        <p id="storage-status"></p>
+        <p id="fetch-status">fetch pending</p>
+        <a id="about-link" href="about.html">About</a>
+        <script src="app.js"></script>
+        </body>
+        </html>
+        """;
+
+    /// <summary>Style sheet of the site fixture.</summary>
+    public const string SiteStyleContent = "#title { color: rgb(255, 0, 0); }\n";
+
+    /// <summary>Script of the site fixture: counts visits in <c>localStorage</c> and calls a CORS API.</summary>
+    public const string SiteScriptContent = """
+        document.getElementById("script-status").textContent = "script ran";
+        console.log("e2e-site-loaded");
+        const visits = Number(localStorage.getItem("visits") || "0") + 1;
+        localStorage.setItem("visits", String(visits));
+        document.getElementById("storage-status").textContent = "visits=" + visits;
+        fetch("https://example.hackeros/api/ping")
+            .then((response) => response.json())
+            .then((body) => { document.getElementById("fetch-status").textContent = body.pong ? "pong" : "no pong"; })
+            .catch((error) => { document.getElementById("fetch-status").textContent = "fetch failed: " + error; });
+        """;
+
+    /// <summary>Second page of the site fixture, reached by a link.</summary>
+    public const string SiteAboutContent = "<!DOCTYPE html><html><head><title>About</title></head><body><h1 id=\"about\">About page</h1></body></html>\n";
+
     /// <summary>Creates (or resets) the fixture tree for the given signed-in principal.</summary>
     /// <returns>The absolute virtual path of the seeded fixture root directory.</returns>
     public async Task<string> SeedAsync(AuthenticatedPrincipal principal, CancellationToken cancellationToken = default)
@@ -56,6 +98,13 @@ public sealed class TestDemoFixtureSeeder(IFileSystemService fileSystem)
         await WriteFileAsync($"{root}/{AlphaFileName}", AlphaContent, context, cancellationToken);
         await WriteFileAsync($"{root}/{EditableFileName}", EditableOriginalContent, context, cancellationToken);
         await WriteFileAsync($"{nested}/{NestedFileName}", NestedContent, context, cancellationToken);
+
+        string site = $"/home/{userId}/Documents/{SiteDirectoryName}";
+        await EnsureDirectoryAsync(site, context, cancellationToken);
+        await WriteFileAsync($"{site}/index.html", SiteIndexContent, context, cancellationToken);
+        await WriteFileAsync($"{site}/style.css", SiteStyleContent, context, cancellationToken);
+        await WriteFileAsync($"{site}/app.js", SiteScriptContent, context, cancellationToken);
+        await WriteFileAsync($"{site}/about.html", SiteAboutContent, context, cancellationToken);
 
         return root;
     }

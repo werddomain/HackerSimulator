@@ -80,3 +80,14 @@
 .binary-hint code {
     color: var(--hos-accent, #00e5ff);
 }
+
+.body-viewer-pdf {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    border: none;
+}
+
+.download-path {
+    color: var(--hos-accent, #00e5ff);
+}

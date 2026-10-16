@@ -8,6 +8,15 @@
 
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="9.7.0" />
+    <!-- HTML parser of the page loader (ADR 0075 §2, questionnaire 7). Browser app only. -->
+    <PackageReference Include="AngleSharp" Version="1.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Injected as text into each page's isolated frame, never served to the host (ADR 0075 §3). -->
+    <EmbeddedResource Include="Bridge\PageBridge.js" LogicalName="HackerOs.Apps.Browser.Bridge.PageBridge.js" />
+    <Content Remove="Bridge\PageBridge.js" />
+    <None Remove="Bridge\PageBridge.js" />
   </ItemGroup>
 
   <ItemGroup>

@@ -32,8 +32,25 @@ public sealed class BrowserApp : AppDefinition
     public override string Category => "internet";
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Files (ADR 0075 §4 and §5): <c>file://</c> pages are read in the user's home with the user's
+    /// rights; downloads go to <c>~/Downloads</c> and <c>localStorage</c> to
+    /// <c>~/.local/share/hackeros/browser/storage</c>. The browser is not a system app, so it does not
+    /// ask for <c>filesystem.system.read</c> (a dangerous capability needing an administrator):
+    /// a <c>file://</c> URL outside the home answers <c>ERR_ACCESS_DENIED</c>.
+    /// </remarks>
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.NetworkSimulatedRead, AppCapabilities.NetworkSimulatedWrite];
+    [
+        AppCapabilities.NetworkSimulatedRead,
+        AppCapabilities.NetworkSimulatedWrite,
+        AppCapabilities.FileSystemUserHomeRead,
+        AppCapabilities.FileSystemUserHomeWrite,
+    ];
+
+    /// <inheritdoc />
+    /// <remarks>Opening an <c>.html</c> file shows it as <c>file://</c> (ADR 0075 §4).</remarks>
+    public override IReadOnlyList<FileHandler> FileHandlers =>
+        [new("text/html", [".html", ".htm"], ["open"])];
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

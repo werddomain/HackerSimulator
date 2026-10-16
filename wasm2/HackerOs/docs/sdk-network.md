@@ -121,7 +121,11 @@ résultat est celui d'une machine sans passerelle par défaut.
 
 - **Browser** : plus d'injection ; `HackHttpClient` et un `HackCookieContainer`
   par fenêtre. Une connexion (formulaire `POST` redirigé) arrive directement
-  sur la page cible.
+  sur la page cible. Depuis `web/4-browser-html` (ADR 0075), le navigateur
+  rend le HTML dans une iframe isolée et relaie `fetch`, XHR, liens,
+  formulaires et `document.cookie` par ce même client ; `document.cookie`
+  supprime un cookie expiré avec `HackCookieContainer.Remove` ; détail dans
+  [`browser-html-rendering.md`](browser-html-rendering.md).
 - **`ping`** : quatre `HackPing.SendAsync`, statistiques calculées sur les
   réponses reçues (min/moy/max/écart).
 - **`curl`** : `HackHttpClient.SendAsync` ; `-I` envoie un `HEAD` et affiche

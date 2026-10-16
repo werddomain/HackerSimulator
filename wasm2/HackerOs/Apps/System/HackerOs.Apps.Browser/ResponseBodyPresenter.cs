@@ -18,15 +18,18 @@ public enum ResponseBodyKind
     Json,
 
     /// <summary>
-    /// HTML. Until the isolated frame of ADR 0075 (chantier <c>web/4-browser-html</c>) renders it,
-    /// the browser shows its source, as <c>view-source:</c> would.
+    /// HTML. The browser renders it in its isolated frame (ADR 0075); this view is its source, shown
+    /// for <c>view-source:</c> and the "source" button.
     /// </summary>
     Html,
 
     /// <summary>An image the browser can draw (<c>image/*</c>).</summary>
     Image,
 
-    /// <summary>Anything else: a file the browser offers no view for.</summary>
+    /// <summary>A PDF document, shown by the host browser's PDF viewer (ADR 0075 §5).</summary>
+    Pdf,
+
+    /// <summary>Anything else: a file the browser offers no view for, saved to <c>~/Downloads</c>.</summary>
     Binary
 }
 
@@ -39,7 +42,7 @@ public enum ResponseBodyKind
 /// <param name="MediaType">The <c>type/subtype</c> of the body, lower case.</param>
 /// <param name="Length">Size in bytes.</param>
 /// <param name="Text">Decoded (and for JSON, indented) text for the text kinds; empty otherwise.</param>
-/// <param name="DataUrl">A <c>data:</c> URL of the bytes for <see cref="ResponseBodyKind.Image"/>; empty otherwise.</param>
+/// <param name="DataUrl">A <c>data:</c> URL of the bytes for <see cref="ResponseBodyKind.Image"/> and <see cref="ResponseBodyKind.Pdf"/>; empty otherwise.</param>
 public sealed record ResponseBodyView(ResponseBodyKind Kind, string MediaType, int Length, string Text, string DataUrl);
 
 /// <summary>Chooses how the browser shows a body from its <c>Content-Type</c>, like a real browser.</summary>
@@ -67,6 +70,12 @@ public static class ResponseBodyPresenter
         {
             return new(ResponseBodyKind.Image, mediaType, content.Length, string.Empty,
                 $"data:{mediaType};base64,{Convert.ToBase64String(content)}");
+        }
+
+        if (mediaType == "application/pdf")
+        {
+            return new(ResponseBodyKind.Pdf, mediaType, content.Length, string.Empty,
+                $"data:application/pdf;base64,{Convert.ToBase64String(content)}");
         }
 
         if (!SimulatedMediaTypes.IsText(mediaType))
