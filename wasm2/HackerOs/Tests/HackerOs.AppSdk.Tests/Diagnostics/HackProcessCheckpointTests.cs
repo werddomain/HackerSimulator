@@ -43,19 +43,32 @@ public sealed class HackProcessCheckpointTests
     }
 
     [Fact]
-    public async Task A_checkpoint_past_the_slice_budget_gives_the_thread_back_then_starts_a_new_slice()
+    public void A_checkpoint_past_the_slice_budget_gives_the_thread_back_then_starts_a_new_slice()
     {
         StoppableContext context = new(pid: 32);
         using IDisposable scope = HackExecutionContext.Enter(context);
-        HackProcessSlice.Begin(32);
-        Thread.Sleep(HackProcessSlice.Budget + TimeSpan.FromMilliseconds(5));
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        // Holds the posted continuation, as a busy UI thread would, so the test sees the hand-back.
+        QueueingSynchronizationContext thread = new();
+        SynchronizationContext.SetSynchronizationContext(thread);
+        try
+        {
+            HackProcessSlice.Begin(32);
+            Thread.Sleep(HackProcessSlice.Budget + TimeSpan.FromMilliseconds(5));
 
-        ValueTask yielded = HackProcess.CheckpointAsync();
+            ValueTask yielded = HackProcess.CheckpointAsync();
 
-        Assert.False(yielded.IsCompleted);
-        await yielded;
-        // A new slice began when the thread came back.
-        Assert.True(HackProcess.CheckpointAsync().IsCompletedSuccessfully);
+            Assert.False(yielded.IsCompleted);
+            Assert.Equal(1, thread.Pending);
+            thread.RunPending();
+            Assert.True(yielded.IsCompletedSuccessfully);
+            // A new slice began when the thread came back.
+            Assert.True(HackProcess.CheckpointAsync().IsCompletedSuccessfully);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
     }
 
     [Fact]
@@ -122,6 +135,24 @@ public sealed class HackProcessCheckpointTests
         Assert.Same(request, HackProcess.Current.StopRequest);
         HackProcess.Current.StopRequested -= handler;
         Assert.Equal(0, context.HandlerCount);
+    }
+
+    /// <summary>A thread that runs posted work only when told to.</summary>
+    private sealed class QueueingSynchronizationContext : SynchronizationContext
+    {
+        private readonly Queue<(SendOrPostCallback Callback, object? State)> _queue = new();
+
+        public int Pending => _queue.Count;
+
+        public override void Post(SendOrPostCallback d, object? state) => _queue.Enqueue((d, state));
+
+        public void RunPending()
+        {
+            while (_queue.TryDequeue(out (SendOrPostCallback Callback, object? State) work))
+            {
+                work.Callback(work.State);
+            }
+        }
     }
 
     /// <summary>

@@ -9,6 +9,8 @@
     <!-- ADR 0069: the OS's per-process scheduler stamps the time slice CheckpointAsync reads (HackProcessSlice). -->
     <InternalsVisibleTo Include="HackerOs.Platform.Core" />
     <InternalsVisibleTo Include="HackerOs.AppSdk.Tests" />
+    <!-- Tests that wait for the work deferred on a stop request, as the OS does. -->
+    <InternalsVisibleTo Include="HackerOs.AppSdk.Blazor.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -37,6 +38,8 @@ internal static class FileExplorerZipService
         {
             foreach (FileSystemDirectoryItem item in result.Value.Entries)
             {
+                // ADR 0069: compressing a tree is long work on the UI thread.
+                await HackProcess.CheckpointAsync(cancellationToken);
                 VirtualPath childPath = VirtualPath.Parse(dirPath.Value.TrimEnd('/') + "/" + item.Name.Value);
                 string zipEntryPath = currentZipPath + "/" + item.Name.Value;
 
@@ -96,6 +99,7 @@ internal static class FileExplorerZipService
             using ZipArchive archive = new(ms, ZipArchiveMode.Read);
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
+                await HackProcess.CheckpointAsync(cancellationToken);
                 string entryName = entry.FullName.Replace('\\', '/').TrimStart('/');
                 if (string.IsNullOrEmpty(entryName))
                 {
