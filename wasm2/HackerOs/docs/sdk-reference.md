@@ -33,6 +33,7 @@ Conventions de l'API :
 | `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings` | Apps fenêtrées, dialogues, graphiques. |
 | `Shared/HackerOs.AppSdk.FileView` | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable. |
 | `Shared/HackerOs.AppSdk.Terminal` | `HackerOs.AppSdk.Terminal` | Terminal xterm.js. |
+| `Shared/HackerOs.AppSdk.Web` | `HackerOs.AppSdk.Web.Hosting`, `.Http`, `.Routing`, `.Mvc`, `.Sessions` | Sites internes ASP.Hack façon ASP.NET Core MVC ([`asp-hack-mvc.md`](asp-hack-mvc.md)). |
 | `Shared/HackerOs.AppSdk.Icons` | `HackerOs.AppSdk.Icons` | Icônes. |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | `HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
@@ -236,6 +237,7 @@ Détails : [`system-administration.md`](system-administration.md),
 | `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchFile`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
 | `HackComponentBase` | `AppSdk.Blazor` | Composant enfant d'une fenêtre qui appelle `Hack*` | [`hack-file-api.md`](hack-file-api.md) |
 | `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen` | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
+| `WebAppDefinition` | `AppSdk.Web` | Classe `[AppManifest]` `partial` d'un site : `Urls`, `Configure(HackWebApplicationBuilder)` (services, middlewares, `MapControllers`, `MapGet`...) ; le build génère l'`EntryPoint` (`<Nom>WebHost : HackWebHost`) et la table de routes des contrôleurs (`HackController`, `HackApiController`) | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
 | `ServiceAppBase` | `AppSdk` | `RunCoreAsync(context, sessionCancellationToken)`, `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`) | [guide §5](sdk-developer-guide.md#5-un-service) |
 
 Interfaces qu'un composant fenêtré peut implémenter :

@@ -24,7 +24,8 @@ internal static class TestCommands
         Command<ListenCommand>("listen") with { Capabilities = [AppCapabilities.NetworkListen] },
         Service<TestService>("org.test.ticker"),
         Web<EchoSite>("org.test.intranet", "http://intranet.hack/"),
-        Web<EchoSite>("org.test.wiki", "http://wiki.hack/")
+        Web<EchoSite>("org.test.wiki", "http://wiki.hack/"),
+        Web<MvcSiteWebHost>("org.test.mvc", "http://mvc.hack/")
     ];
 
     /// <summary>Lets every <c>spin</c> stuck in a terminated loopback worker return, so the test run ends cleanly.</summary>
