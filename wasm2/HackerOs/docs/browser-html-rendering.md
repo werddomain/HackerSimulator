@@ -135,6 +135,14 @@ requête : nom, méthode, statut, type, taille, durée, en rouge en cas d'échec
 **Console** liste les messages de la page et du navigateur. Le badge du bouton
 compte les erreurs.
 
+### Fenêtre détachée
+
+Le bouton `⧉` de la barre d'outils déplace l'onglet dans une fenêtre du
+navigateur hôte, hors du bureau, toujours servie par cette fenêtre du
+navigateur de l'OS (chantier `web/10-detached-window`, voir
+[`detached-display-windows.md`](detached-display-windows.md)). L'iframe de la
+page y est recréée et son pont continue de parler à ce navigateur.
+
 ## Utilisation
 
 - Taper `example.hackeros/page.html` ou un chemin (`~/Documents/site/index.html`)
