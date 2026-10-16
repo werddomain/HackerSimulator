@@ -23,6 +23,8 @@
     <!-- ADR 0070, section 5.1 of the plan: every built-in command runs in both modes. -->
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
     <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.ServiceApp\HackerOs.Samples.ServiceApp.csproj" />
+    <!-- ADR 0077/0080: hackwebd runs in the headless OS of these tests. -->
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" />
     <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
   </ItemGroup>
 

@@ -185,6 +185,25 @@ internal sealed class RemoteLoggingGateway(RemoteProcessChannel channel) : IAppL
                 WireCodec.WriteDictionary(writer, "pr", properties);
             }
         });
+
+    /// <summary>
+    /// Posts a daemon log line (ADR 0080, section 3). The path is checked here so a bad call fails in
+    /// the app; the system-app rule is checked by the OS, which drops the line of any other app.
+    /// </summary>
+    public void AppendToLogFile(string relativePath, string line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath.Split('/').Length != 2 || !relativePath.EndsWith(".log", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"'{relativePath}' is not a daemon log path ('<directory>/<file>.log').", nameof(relativePath));
+        }
+
+        channel.Notify(RemoteOps.LogFile, writer =>
+        {
+            writer.WriteString("p", relativePath);
+            writer.WriteString("m", line);
+        });
+    }
 }
 
 /// <summary>

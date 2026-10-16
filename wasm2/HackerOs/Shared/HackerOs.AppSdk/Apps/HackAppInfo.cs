@@ -31,6 +31,12 @@ public sealed record HackAppInfo(
     bool IsHidden,
     IReadOnlyList<HackAppFileHandler> FileHandlers)
 {
+    /// <summary>
+    /// Gets the URLs a web app declares (<c>web.urls</c>, ADR 0073), main address first; empty for
+    /// every other kind. Web Server Manager lists them as read-only "external" sites (ADR 0077 §4).
+    /// </summary>
+    public IReadOnlyList<string> Urls { get; init; } = [];
+
     /// <summary>Builds the public description of a manifest. Called by the platform's catalog gateway.</summary>
     /// <param name="manifest">Validated manifest.</param>
     /// <param name="isSystemApp">Whether the host declares the app as a system app.</param>
@@ -49,7 +55,10 @@ public sealed record HackAppInfo(
             isSystemApp,
             manifest.Presentation.LaunchVisibility == AppLaunchVisibility.Hidden,
             [.. manifest.FileHandlers.Select(static handler =>
-                new HackAppFileHandler(handler.MediaType, [.. handler.Extensions], [.. handler.Actions]))]);
+                new HackAppFileHandler(handler.MediaType, [.. handler.Extensions], [.. handler.Actions]))])
+        {
+            Urls = manifest.Web is { } web ? [.. web.Urls] : []
+        };
     }
 }
 

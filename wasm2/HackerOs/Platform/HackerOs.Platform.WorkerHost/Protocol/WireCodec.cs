@@ -705,6 +705,7 @@ internal static class WireCodec
             }
 
             writer.WriteEndArray();
+            WriteStrings(writer, "u", app.Urls);
             writer.WriteEndObject();
         }
 
@@ -724,7 +725,10 @@ internal static class WireCodec
             app.GetFlag("sys"),
             app.GetFlag("hid"),
             [.. app.GetProperty("fh").EnumerateArray().Select(static handler => new HackAppFileHandler(
-                handler.GetOptionalString("mt"), ReadStrings(handler, "ex"), ReadStrings(handler, "ac")))]))];
+                handler.GetOptionalString("mt"), ReadStrings(handler, "ex"), ReadStrings(handler, "ac")))])
+        {
+            Urls = app.TryGetProperty("u", out _) ? ReadStrings(app, "u") : []
+        })];
 
     public static void WriteServiceResult(Utf8JsonWriter writer, ServiceControlResult result)
     {

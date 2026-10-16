@@ -19,6 +19,9 @@ le legacy (`src/apps/file-explorer.ts`) et la dépasse :
   bureau réel de l'utilisateur (fichiers de l'hôte) ;
 - un **résumé des échecs** à la fin de chaque opération (bandeau et
   notification), avec la raison par élément ; une erreur n'arrête pas les autres.
+- depuis `web/5-static-sites`, **« Publish as a web site… »** dans le menu d'un
+  dossier (`PublishSiteContextMenuProvider`) : ouvre Web Server Manager avec ce
+  dossier comme racine d'un nouveau site ([`static-sites.md`](static-sites.md)).
 
 ## Architecture
 

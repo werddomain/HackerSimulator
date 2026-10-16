@@ -11,8 +11,8 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        // 12 window apps and 64 commands (stress joined with ADR 0070, nslookup with ADR 0074).
-        Assert.Equal(76, catalog.Manifests.Count);
+        // 13 window apps, the hackwebd service (ADR 0077) and 64 commands (stress joined with ADR 0070, nslookup with ADR 0074).
+        Assert.Equal(78, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
         foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup" })
         {
@@ -23,6 +23,8 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Contains("org.hackeros.diagnostic", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.hack-paint", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.terminal", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.hackwebd", catalog.Manifests.Keys);
+        Assert.Contains("org.hackeros.web-server-manager", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.curl", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.ping", catalog.Manifests.Keys);
         Assert.Contains("org.hackeros.commands.nmap", catalog.Manifests.Keys);
@@ -39,14 +41,14 @@ public sealed class BuildKnownLazyAppsTests
         // ADR 0058 section 4: exit ends the shell that ran it, so the console can close the tab.
         Assert.Contains("org.hackeros.commands.exit", catalog.Manifests.Keys);
 
-        // Window/service apps (the launcher-visible desktop suite) stay Visible; terminal
-        // commands are deliberately Hidden — they're invoked by name from the terminal, not
-        // double-clicked from a launcher, and shouldn't clutter it.
+        // Window apps (the launcher-visible desktop suite) stay Visible; terminal commands and
+        // background daemons (hackwebd, ADR 0077) are deliberately Hidden — they're invoked by
+        // name or started at boot, not double-clicked from a launcher, and shouldn't clutter it.
         Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
-            manifest.Kind == AppKind.Terminal ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
+            manifest.Kind is AppKind.Terminal or AppKind.Service ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
         // One assembly per window app, plus the single HackerOs.Commands assembly (ADR 0051).
-        Assert.Equal(13, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Equal(14, BuildKnownLazyAssemblies.Names.Count);
         Assert.Contains("HackerOs.Commands.dll", BuildKnownLazyAssemblies.Names);
     }
 
@@ -89,10 +91,13 @@ public sealed class BuildKnownLazyAppsTests
             "org.hackeros.code-editor",
             "org.hackeros.error-log-viewer",
             "org.hackeros.file-explorer",
+            // ADR 0077: the static web server and its manager (companion service of the same assembly).
+            "org.hackeros.hackwebd",
             "org.hackeros.settings",
             "org.hackeros.system-monitor",
             "org.hackeros.terminal",
             "org.hackeros.text-editor",
+            "org.hackeros.web-server-manager",
         ];
         string[] uninstallable =
         [
