@@ -21,6 +21,7 @@ Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
 | `/proc/net/dev` | octets et paquets de `lo` et `eth0` | **compté** : passerelle réseau des apps |
 | `/proc/mounts` | table des montages | routeur de montages |
 | `HackDriveInfo` | taille et espace libre de `/` | profil matériel, contenu stocké, quota du navigateur |
+| `/proc/hackeros/workers` | Web Workers de l'OS : rôle, état, cœur, mémoire du runtime, âge du battement de cœur, temps occupé, processus (ADR 0070) | **mesuré** : battement de cœur de chaque worker, toutes les 250 ms ([`worker-processes.md`](worker-processes.md)) ; absent quand l'hôte n'a pas de workers |
 
 Un `cat` d'un gros fichier fait monter `rchar` du processus et les secteurs lus
 de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le navigateur
@@ -124,7 +125,13 @@ fournisseur IndexedDB et à `AppExecutionContextFactory`
 Mesure CPU active (ADR 0067) : `CpuTimeAccounting` ignore les échantillons
 simulés et rend sur `cpu0` les vrais temps du thread principal (`user` = somme
 des `utime`, `system` = somme des `stime` plus le compositeur, `idle` = le
-reste) ; les autres cœurs du profil matériel restent `idle`. Voir
+reste) ; les autres cœurs du profil matériel restent `idle`. Avec les Web
+Workers (ADR 0070), le cœur `k` reçoit en plus le temps occupé du worker du
+pool qui porte ce cœur (`cpu0` est donc partagé entre le fil principal et le
+worker du cœur 0), et le `utime` d'un processus dans un worker vient du
+battement de cœur de son worker, plus le temps noyau passé sur le fil principal
+à servir ses appels ; un worker qui ne bat plus compte ce temps comme occupé
+par ses processus (voir [`worker-processes.md`](worker-processes.md)). Voir
 [`cpu-accounting.md`](cpu-accounting.md). Ce qui suit décrit le mode simulé,
 toujours utilisé quand la mesure est coupée.
 

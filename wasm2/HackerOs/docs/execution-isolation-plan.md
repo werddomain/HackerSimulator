@@ -172,18 +172,18 @@ Précisions de mise en œuvre (`rebuild/5-graceful-stop`, détail dans
   l'ADR 0067 pourra le remplacer par la mesure.
 
 ### Web Workers (ADR 0070)
-- [ ] `AppExecutionHost` dans `[AppManifest]` et le générateur de manifeste.
-- [ ] Hôte de processus dans un worker et passerelles distantes, tests de parité.
-- [ ] Pool (un worker par cœur virtuel), réserve dédiée, placement des pipelines.
-- [ ] Battement de cœur, « Not responding » pendant le blocage, terminaison du worker.
-- [ ] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071).
+- [x] `AppExecutionHost` dans `[AppManifest]` et le générateur de manifeste. (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
+- [x] Hôte de processus dans un worker et passerelles distantes, tests de parité. (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
+- [x] Pool (un worker par cœur virtuel), réserve dédiée, placement des pipelines. (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
+- [x] Battement de cœur, « Not responding » pendant le blocage, terminaison du worker. (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
+- [x] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071). (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
 
 ### Apps existantes (section 5.1)
 - [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
 - [x] Temps CPU : `/proc/<pid>/stat` et `status` testés sur une fenêtre (Calculatrice), une commande (`echo`) et un service (service d'exemple) réels, sans modifier leur code (`5-cpu-accounting`).
 - [x] Apps à fenêtre et services avec état : `StopRequested` géré (TextEditor et CodeEditor : brouillon ; FileExplorer : élément en cours puis arrêt propre ; Settings : écriture en cours ; services : `OnStoppingAsync` une fois).
 - [x] Boucles longues de `Apps/` : `CheckpointAsync` (commandes, `FileTransfer`, zip de l'explorateur, corbeille, recherche et parcours du CodeEditor).
-- [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.
+- [x] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes. (`5-worker-processes`, [`worker-processes.md`](worker-processes.md))
 
 ### Hôtes (section 5.2)
 - [x] `build/verify-hosts.sh` : les trois hôtes compilent, se publient et démarrent jusqu'au bureau ; repli sur `/opt/pw-browsers/chromium` pour toutes les suites Playwright (`rebuild/5-host-smoke`).

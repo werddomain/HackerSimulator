@@ -35,6 +35,12 @@ public sealed record HostSmokeSettings(
     public const string ArtifactsVariable = "HACKEROS_SMOKE_ARTIFACTS";
 
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
+    /// <summary>
+    /// Gets whether the host runs commands in Web Workers (ADR 0070): every WebAssembly host, not the
+    /// server, which renders in Interactive Server mode (section 6).
+    /// </summary>
+    public bool ExpectsWorkers => !string.Equals(HostName, "server", StringComparison.Ordinal);
+
     public static HostSmokeSettings? FromEnvironment()
     {
         string? url = Read(UrlVariable);
