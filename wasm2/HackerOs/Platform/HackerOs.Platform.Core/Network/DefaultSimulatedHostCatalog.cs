@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using HackerOs.Platform.Core.Network.Websites;
 using HackerOs.Simulation.Abstractions.Network;
 
 namespace HackerOs.Platform.Core.Network;
@@ -192,6 +193,20 @@ public static class DefaultSimulatedHostCatalog
             LatencyMs:   0,
             Ports: [],
             OsFingerprint: null),
+    ];
+
+    /// <summary>
+    /// Returns the website controllers that serve the default hosts: HackerSearch (the Browser's
+    /// home page and search engine), HackMail, CryptoBank, the darknet market and the hacker forum.
+    /// A new instance per call, so every network composed from it has its own sessions.
+    /// </summary>
+    public static IReadOnlyList<ISimulatedWebsiteController> BuildWebsites() =>
+    [
+        new HackerSearchController(),
+        new HackMailController(),
+        new CryptoBankController(),
+        new DarknetMarketController(),
+        new HackerForumController(),
     ];
 
     // ── Port factory helpers ───────────────────────────────────────────────

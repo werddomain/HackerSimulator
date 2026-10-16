@@ -156,7 +156,8 @@ Ordre, du premier au dernier :
 4. les sites hébergés (`IHostedSiteNameSource.FindSiteAsync`, implémenté par
    `HostedSiteNameSource` depuis `web/5` : hôtes des fichiers `.site` valides et
    activés, [`static-sites.md`](static-sites.md), ADR 0080 §4) ;
-5. le réseau simulé.
+5. le réseau simulé : le catalogue par défaut (`hackersearch.net`, `hackmail.com`...)
+   et les hôtes de test `.hackeros` (ADR 0085).
 
 Les réponses sont gardées 30 s simulées. Un nom en `.hack` n'est **jamais**
 relayé au vrai réseau. Une ligne de `/etc/hosts` vers un hôte simulé envoie la

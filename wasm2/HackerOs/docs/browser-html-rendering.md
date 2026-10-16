@@ -175,8 +175,6 @@ page y est recréée et son pont continue de parler à ce navigateur.
   réponse sont vérifiés.
 - `HttpOnly` n'est pas modélisé côté `document.cookie`.
 - `target="_blank"` ouvre dans le même onglet.
-- HackerSearch n'est pas enregistré à l'exécution : la page d'accueil reste en
-  `ERR_NAME_NOT_RESOLVED` (problème connu, hors de ce chantier).
 
 ## Tests
 
@@ -187,6 +185,10 @@ page y est recréée et son pont continue de parler à ce navigateur.
   page web avec CSS, script, `fetch` et cookie ; sandbox vérifié ; onglet
   Network ; vue source ; XHR et formulaire `POST` ; site local `file://` avec
   `localStorage`, `fetch` CORS, lien et retour ; page d'erreur DNS.
+- `Tests/HackerOs.UI.E2E.Tests/BrowserHomePageTests.cs` : hors mode démo, le
+  navigateur s'ouvre sur HackerSearch et une recherche tapée dans la barre
+  d'adresse affiche ses résultats (ADR 0085 : le catalogue réseau par défaut
+  est branché dans l'OS).
 - Pages de test : `example.hackeros` (`/page.html`, `/form.html`, `/echo`,
   `/api/ping`) dans `SmokeTestNetworkSeed`, et le site
   `~/Documents/e2e-site` du mode démo E2E.
