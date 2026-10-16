@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Read;
 /// Manifest of "read" (ADR 0047, added by ADR 0064). The build generates
 /// <c>manifests/&lt;appId&gt;.json</c> from this class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it assigns the calling shell's variables, like the read builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class ReadApp : AppDefinition
 {
     /// <inheritdoc />

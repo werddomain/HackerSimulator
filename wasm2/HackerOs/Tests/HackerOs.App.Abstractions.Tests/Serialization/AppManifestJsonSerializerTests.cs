@@ -18,6 +18,20 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Execution_round_trips_and_is_omitted_for_a_manifest_written_before_ADR_0070()
+    {
+        AppManifest manifest = CreateManifest() with { Execution = AppExecutionHost.Dedicated };
+
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(AppManifestJsonSerializer.SerializeCanonical(manifest));
+        string legacy = AppManifestJsonSerializer.SerializeCanonical(manifest with { Execution = null });
+
+        Assert.Equal(AppExecutionHost.Dedicated, roundTripped.Execution);
+        Assert.Contains("\"execution\":\"dedicated\"", AppManifestJsonSerializer.SerializeCanonical(manifest), StringComparison.Ordinal);
+        Assert.DoesNotContain("execution", legacy, StringComparison.Ordinal);
+        Assert.Null(AppManifestJsonSerializer.DeserializeStrict(legacy).Execution);
+    }
+
+    [Fact]
     public void Components_round_trip_and_are_omitted_when_none()
     {
         AppManifest manifest = CreateManifest();
@@ -100,7 +114,8 @@ public sealed class AppManifestJsonSerializerTests
         Intents = [new AppIntentDeclarationManifest("hackeros.open", "schemas/open.json")],
         Settings = new AppSettingsSchemaManifest(1, [new AppSettingFieldManifest("theme", AppSettingValueType.Enum, "dark", AppSettingScope.AppUser, AppSettingSensitivity.Public, ["dark", "light"])]),
         FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open", "edit"], 3)],
-        Components = [new AppComponentManifest("hackeros.text-view", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextViewEmbed")]
+        Components = [new AppComponentManifest("hackeros.text-view", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextViewEmbed")],
+        Execution = AppExecutionHost.MainThread
     };
 
     private static readonly Lazy<string> FixturesDirectory = new(() =>

@@ -98,6 +98,20 @@ sous-chaîne, sans tenir compte de la casse.
   ensuite avant de remplacer) ; le dialogue remplit sa fenêtre et la liste
   défile, les boutons du bas ne sont plus coupés.
 
+## Arrêt demandé par l'OS (ADR 0069)
+
+Quand l'OS demande à l'éditeur de s'arrêter (déconnexion, `kill`, « End
+task ») alors que le document est modifié, `OnAppStopRequestedAsync` écrit le
+texte dans un brouillon `HackRecoveryDraft`
+(`~/.local/state/org.hackeros.text-editor/recovery/draft.json`, dossier
+`0700`) avec le chemin du fichier d'origine ; l'OS attend cette écriture avant
+de fermer la fenêtre. Au lancement suivant sans fichier, le brouillon est
+repris (`TakeAsync`) comme un **nouveau** tampon modifié, titré
+« nom (recovered) », et la barre d'état l'indique : il n'écrase jamais le
+fichier d'origine sans que l'utilisateur choisisse où l'enregistrer. Fermer la
+fenêtre soi-même passe toujours par la question « Save changes? » et ne laisse
+pas de brouillon.
+
 ## Décisions
 
 - Le remplacement ne gère pas les expressions régulières (choix par défaut de

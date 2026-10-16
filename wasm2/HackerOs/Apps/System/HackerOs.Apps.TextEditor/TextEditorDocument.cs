@@ -132,6 +132,20 @@ public sealed class TextEditorDocument
         _loadedRevision = newRevision;
     }
 
+    /// <summary>
+    /// Restores the unsaved text of a recovery draft (ADR 0069) as a new, dirty buffer: it is never
+    /// written back over the original file without the user choosing where to save it.
+    /// </summary>
+    /// <param name="content">The recovered text.</param>
+    /// <param name="originalPath">The file the text was being edited from, if any, for the title.</param>
+    public void RestoreDraft(string content, string? originalPath)
+    {
+        ResetToNew();
+        Title = originalPath is null ? "Untitled (recovered)" : $"{ExtractFileName(originalPath)} (recovered)";
+        Content = content;
+        IsDirty = true;
+    }
+
     /// <summary>Returns a display title suffix that shows the dirty marker when needed.</summary>
     public string GetWindowTitle() => IsDirty ? $"• {Title}" : Title;
 

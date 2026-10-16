@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
 
@@ -102,6 +103,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
             {
                 foreach (ZipArchiveEntry entry in entries)
                 {
+                    await HackProcess.CheckpointAsync(cancellationToken);
                     await using Stream content = entry.Open();
                     await content.CopyToAsync(Stream.Null, cancellationToken);
                     if (!quiet)
@@ -123,7 +125,8 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
             int status = 0;
             foreach (ZipArchiveEntry entry in entries)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                // ADR 0069: extracting is long work; give the thread back between entries.
+                await HackProcess.CheckpointAsync(cancellationToken);
                 bool isDirectory = entry.FullName.EndsWith('/');
                 string relative = junk ? HackPath.GetFileName(entry.FullName.TrimEnd('/')) ?? entry.FullName : entry.FullName.TrimEnd('/');
                 if (pipe)

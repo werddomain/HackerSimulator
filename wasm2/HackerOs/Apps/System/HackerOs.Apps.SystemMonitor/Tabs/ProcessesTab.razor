@@ -17,8 +17,28 @@
             }
         </span>
         <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="Details (Enter)">Details</button>
-        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="End the selected processes (Delete)">End task</button>
+        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="Ask the selected processes to stop: SIGTERM, forced after 5 s (Delete)">End task</button>
     </div>
+
+    @* ADR 0069: the row menu adds "Force kill" (SIGKILL) next to the polite "End task" (SIGTERM).
+       The activator is only a positioning anchor; the menu opens at the cursor from a row's right click. *@
+    <MudMenu @ref="_rowMenu" PositionAtCursor="true">
+        <ActivatorContent>
+            <span class="visually-hidden">Process menu</span>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem OnClick="ShowSelectedDetails" Disabled="@(Table.Selected.Count != 1)">
+                <span class="proc-menu-item">Details<span class="proc-menu-key">Enter</span></span>
+            </MudMenuItem>
+            <MudDivider />
+            <MudMenuItem OnClick="EndSelectedAsync">
+                <span class="proc-menu-item">End task<span class="proc-menu-key">SIGTERM · Del</span></span>
+            </MudMenuItem>
+            <MudMenuItem OnClick="ForceKillSelectedAsync">
+                <span class="proc-menu-item proc-menu-danger">Force kill<span class="proc-menu-key">SIGKILL · Shift+Del</span></span>
+            </MudMenuItem>
+        </ChildContent>
+    </MudMenu>
 
     @if (EndTaskReport is { } report)
     {
@@ -49,7 +69,10 @@
                             <th class="sortable @(numeric ? "num" : null) @(Table.SortColumn == column ? "sorted" : null)"
                                 aria-sort="@AriaSort(column)"
                                 @onclick="() => Table.ToggleSort(column)">
-                                @label<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
+                                @label@if (Table.IsEstimated(column))
+                                {
+                                    <span class="est-tag" title="Simulated from the app's resource profile, not measured (CpuSource/MemSource in /proc/&lt;pid&gt;/status)">estimated</span>
+                                }<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
                             </th>
                         }
                     </tr>
@@ -61,14 +84,25 @@
                         <tr class="@(Table.IsSelected(pid) ? "selected" : null)"
                             aria-selected="@(Table.IsSelected(pid) ? "true" : "false")"
                             @onclick="e => Table.Click(pid, e.CtrlKey || e.MetaKey, e.ShiftKey)"
-                            @ondblclick="() => OpenDetail(pid)">
+                            @ondblclick="() => OpenDetail(pid)"
+                            @oncontextmenu="e => OpenRowMenuAsync(e, pid)"
+                            @oncontextmenu:preventDefault="true">
                             <td class="num mono">@row.Pid</td>
                             <td>
                                 <span class="proc-name">@row.Name</span>
                                 <span class="proc-app">@row.AppId</span>
                             </td>
                             <td class="proc-user" title="@row.User">@DisplayUser(row.User)</td>
-                            <td><span class="state state-@row.StateCode">@row.State</span></td>
+                            <td>
+                                @if (row.Responding)
+                                {
+                                    <span class="state state-@row.StateCode">@row.State</span>
+                                }
+                                else
+                                {
+                                    <span class="state state-not-responding" title="One slice of this process held the thread longer than the OS threshold (Responding: 0 in /proc/&lt;pid&gt;/status). Nothing was stopped.">@ProcessRow.NotRespondingText</span>
+                                }
+                            </td>
                             <td class="num">@Units.Percent(row.CpuPercent)</td>
                             <td class="num">@Units.Bytes(row.MemoryBytes)</td>
                             <td class="num">@Units.Rate(row.ReadPerSecond)</td>

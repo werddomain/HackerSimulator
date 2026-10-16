@@ -101,4 +101,27 @@ public sealed class ProcFilesTests
         Assert.Empty(ProcFiles.ParseNetDev("eth0: 1 2 3\n"));
         Assert.Empty(ProcFiles.ParseStat("nonsense\n").Cores);
     }
+
+    [Fact]
+    public void ParseWorkers_reads_the_ceiling_the_pool_and_each_worker()
+    {
+        ProcWorkers workers = ProcFiles.ParseWorkers(
+            "capacity 4\n" +
+            "pool_size 1\n" +
+            "worker role       state          core memory_kb heartbeat_ms busy_ms pids\n" +
+            "1      overflow   running        -    5087      57           38      18\n" +
+            "2      pool       not-responding 0    5189      8974         91      12,14\n" +
+            "3      ready      starting       -    0         -            0       -\n");
+
+        Assert.Equal(4, workers.Capacity);
+        Assert.Equal(1, workers.PoolSize);
+        Assert.Equal(3, workers.Workers.Count);
+        Assert.Equal(new ProcWorker(1, "overflow", "running", null, 5087, 57, 38, [18]) with { ProcessIds = workers.Workers[0].ProcessIds }, workers.Workers[0]);
+        Assert.Equal([18L], workers.Workers[0].ProcessIds);
+        Assert.True(workers.Workers[1].IsNotResponding);
+        Assert.Equal(0, workers.Workers[1].Core);
+        Assert.Equal([12L, 14L], workers.Workers[1].ProcessIds);
+        Assert.Null(workers.Workers[2].HeartbeatMilliseconds);
+        Assert.Empty(workers.Workers[2].ProcessIds);
+    }
 }

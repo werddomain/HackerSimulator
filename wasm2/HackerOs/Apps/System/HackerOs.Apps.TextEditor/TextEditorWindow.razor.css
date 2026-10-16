@@ -376,3 +376,9 @@
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.4; }
 }
+
+/* A recovery draft was restored (ADR 0069). */
+.status-recovered {
+    margin-left: auto;
+    color: var(--hos-accent, #42d392);
+}

@@ -38,17 +38,25 @@ namespace HackerOs.AppSdk.Diagnostics;
 /// push notification (ADR 0056, section 4).
 /// </para>
 /// <para>
-/// Stopping a process is a system call, not a file write: <see cref="KillAsync"/> and
-/// <see cref="CloseMainWindowAsync"/> go through <see cref="IAppProcessGateway"/>, and need
-/// <c>process.manage</c> for any process other than the caller's own.
+/// Stopping a process is a system call, not a file write: <see cref="KillAsync"/>,
+/// <see cref="TerminateAsync"/> and <see cref="CloseMainWindowAsync"/> go through
+/// <see cref="IAppProcessGateway"/>, and need <c>process.manage</c> for any process other than the
+/// caller's own.
+/// </para>
+/// <para>
+/// From inside, a process sees its own stop request through <see cref="Current"/> and gives the
+/// thread back during long work with <see cref="CheckpointAsync"/> (ADR 0069).
 /// </para>
 /// </remarks>
-public sealed class HackProcess
+public sealed partial class HackProcess
 {
     /// <summary>Grace period of <see cref="CloseMainWindowAsync"/> when none is given.</summary>
     public static readonly TimeSpan DefaultCloseTimeout = TimeSpan.FromSeconds(5);
 
     private const string ProcRoot = "/proc";
+
+    /// <summary>Linux's <c>USER_HZ</c>: the unit of <c>utime</c> and <c>stime</c>.</summary>
+    private const int UserHz = 100;
 
     private HackProcess(long id) => Id = id;
 
@@ -91,8 +99,41 @@ public sealed class HackProcess
     /// <summary>Gets the resident memory, in bytes (<c>VmRSS</c>).</summary>
     public long WorkingSet64 { get; private set; }
 
+    /// <summary>
+    /// Gets the private memory, in bytes: the process's own share of the heap (<c>RssAnon</c>),
+    /// without the assemblies it shares with others nor what the OS holds for it, like
+    /// <c>System.Diagnostics.Process.PrivateMemorySize64</c>. When the OS does not measure memory
+    /// (<c>MemSource: simulated</c>, no <c>RssAnon</c> line), it equals <see cref="WorkingSet64"/>.
+    /// </summary>
+    public long PrivateMemorySize64 { get; private set; }
+
     /// <summary>Gets the CPU usage at the last scheduler sample, in percent of one core (can exceed 100 on several cores).</summary>
     public double CpuUsage { get; private set; }
+
+    /// <summary>
+    /// Gets the CPU time the process spent in its own code (<c>utime</c>, field 14 of
+    /// <c>/proc/&lt;pid&gt;/stat</c>), like <c>Process.UserProcessorTime</c>. Measured when the OS
+    /// measures CPU time (ADR 0067, <c>CpuSource: measured</c>), otherwise rebuilt from the simulator.
+    /// Resolution: 10 ms (<c>USER_HZ</c>).
+    /// </summary>
+    public TimeSpan UserProcessorTime { get; private set; }
+
+    /// <summary>
+    /// Gets the CPU time the process spent inside the OS on its behalf (files, network, clipboard:
+    /// <c>stime</c>, field 15), like <c>Process.PrivilegedProcessorTime</c>. Zero when CPU time is simulated.
+    /// </summary>
+    public TimeSpan PrivilegedProcessorTime { get; private set; }
+
+    /// <summary>Gets <see cref="UserProcessorTime"/> plus <see cref="PrivilegedProcessorTime"/>, like <c>Process.TotalProcessorTime</c>.</summary>
+    public TimeSpan TotalProcessorTime => UserProcessorTime + PrivilegedProcessorTime;
+
+    /// <summary>
+    /// Gets whether the process responds, like <c>Process.Responding</c>: <see langword="false"/> after
+    /// one uninterrupted slice of its code held the thread longer than the OS threshold (ADR 0067,
+    /// section 4, <c>Responding: 0</c>). Always <see langword="true"/> when CPU time is not measured.
+    /// The OS only reports it: nothing is stopped.
+    /// </summary>
+    public bool Responding { get; private set; } = true;
 
     /// <summary>Gets the arguments of the process, the first being the program, like <c>argv</c>.</summary>
     public IReadOnlyList<string> Arguments { get; private set; } = [];
@@ -224,18 +265,23 @@ public sealed class HackProcess
         return [.. processes.Where(process => process.ParentId == Id).OrderBy(static process => process.Id)];
     }
 
-    /// <summary>Stops the process immediately, like <c>kill -9</c>; its descendants stop with it.</summary>
+    /// <summary>
+    /// Stops the process immediately, like <c>kill -9</c> (<c>SIGKILL</c>); its descendants stop with
+    /// it. The process gets no <see cref="HackCurrentProcess.StopRequested"/>: its pending
+    /// continuations are dropped and its gateways throw <see cref="HackProcessKilledException"/>.
+    /// </summary>
     /// <param name="cancellationToken">Cancels the request.</param>
     /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
-    public Task KillAsync(CancellationToken cancellationToken = default)
+    public async Task KillAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IAppProcessGateway gateway = HackExecutionContext.Current.Processes;
         try
         {
-            gateway.Kill(ProcessId.FromInt64(Id), ProcessExitReason.Killed);
+            // ADR 0070: the asynchronous form, so a caller running in a worker sees the OS's answer.
+            await gateway.KillAsync(ProcessId.FromInt64(Id), ProcessExitReason.Killed, cancellationToken).ConfigureAwait(false);
         }
         catch (AppGatewayAccessDeniedException exception)
         {
@@ -247,12 +293,13 @@ public sealed class HackProcess
         }
 
         HasExited = true;
-        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Asks the process to close, like clicking the close button of its window, and waits up to
     /// <paramref name="timeout"/> before the OS forces it, like <c>SIGTERM</c> then <c>SIGKILL</c>.
+    /// The process receives <see cref="HackCurrentProcess.StopRequested"/> with
+    /// <see cref="ProcessExitReason.CloseRequested"/>.
     /// </summary>
     /// <param name="timeout">Grace period; <see cref="DefaultCloseTimeout"/> when <see langword="null"/>.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
@@ -260,29 +307,8 @@ public sealed class HackProcess
     /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
-    public async Task<bool> CloseMainWindowAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-    {
-        IAppProcessGateway gateway = HackExecutionContext.Current.Processes;
-        ProcessRecord stopped;
-        try
-        {
-            // The gateway checks the capability inside its task: a denial surfaces on await.
-            stopped = await gateway.StopAsync(
-                ProcessId.FromInt64(Id), timeout ?? DefaultCloseTimeout, ProcessExitReason.CloseRequested, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (AppGatewayAccessDeniedException exception)
-        {
-            throw HackGatewayErrors.ToUnauthorized(exception);
-        }
-        catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
-        {
-            throw Exited(exception);
-        }
-
-        HasExited = true;
-        return stopped.ExitReason != ProcessExitReason.Timeout;
-    }
+    public Task<bool> CloseMainWindowAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
+        StopAsync(timeout ?? DefaultCloseTimeout, ProcessExitReason.CloseRequested, cancellationToken);
 
     /// <inheritdoc />
     public override string ToString() => $"{ProcessName} ({Id.ToString(CultureInfo.InvariantCulture)})";
@@ -320,7 +346,30 @@ public sealed class HackProcess
             Long(fields, "cancelled_write_bytes"));
     }
 
-    /// <summary>Reads status, cmdline, cwd and io; <see langword="false"/> when the process vanished.</summary>
+    /// <summary>
+    /// Parses the <c>utime</c> and <c>stime</c> fields (14 and 15, in <c>USER_HZ</c>) of a
+    /// <c>/proc/&lt;pid&gt;/stat</c> line (<c>proc(5)</c>). The fields are counted after the last
+    /// <c>)</c>, since <c>comm</c> may contain spaces and parentheses.
+    /// </summary>
+    /// <param name="text">File content.</param>
+    /// <returns>The two times; zero for a line too short to hold them.</returns>
+    public static (TimeSpan User, TimeSpan System) ParseStatTimes(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        int close = text.LastIndexOf(')');
+        string[] rest = text[(close + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // rest[0] is field 3 (state), so field n is rest[n - 3].
+        return rest.Length < 13
+            ? (TimeSpan.Zero, TimeSpan.Zero)
+            : (Ticks(rest[11]), Ticks(rest[12]));
+
+        static TimeSpan Ticks(string field) =>
+            long.TryParse(field, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ticks) && ticks > 0
+                ? TimeSpan.FromMilliseconds(ticks * (1000d / UserHz))
+                : TimeSpan.Zero;
+    }
+
+    /// <summary>Reads status, stat, cmdline, cwd and io; <see langword="false"/> when the process vanished.</summary>
     private async Task<bool> TryLoadAsync(DateTimeOffset startTime, CancellationToken cancellationToken)
     {
         string? statusText = await TryReadAsync("status", cancellationToken).ConfigureAwait(false);
@@ -330,6 +379,7 @@ public sealed class HackProcess
         }
 
         IReadOnlyDictionary<string, string> status = ParseStatus(statusText);
+        string? stat = await TryReadAsync("stat", cancellationToken).ConfigureAwait(false);
         string? cmdline = await TryReadAsync("cmdline", cancellationToken).ConfigureAwait(false);
         string? io = await TryReadAsync("io", cancellationToken).ConfigureAwait(false);
         string? cwd = await TryReadLinkAsync("cwd", cancellationToken).ConfigureAwait(false);
@@ -348,7 +398,10 @@ public sealed class HackProcess
         (State, StateCode) = ParseState(Field(status, "State"));
         StartTime = startTime;
         WorkingSet64 = ParseKilobytes(Field(status, "VmRSS"));
+        PrivateMemorySize64 = status.ContainsKey("RssAnon") ? ParseKilobytes(Field(status, "RssAnon")) : WorkingSet64;
         CpuUsage = double.TryParse(Field(status, "Cpu"), NumberStyles.Float, CultureInfo.InvariantCulture, out double cpu) ? cpu : 0;
+        (UserProcessorTime, PrivilegedProcessorTime) = stat is null ? (TimeSpan.Zero, TimeSpan.Zero) : ParseStatTimes(stat);
+        Responding = Field(status, "Responding") != "0";
         Arguments = cmdline is null ? [] : cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
         CommandLine = string.Join(' ', Arguments.Select(static argument => argument.Contains(' ', StringComparison.Ordinal) ? $"\"{argument}\"" : argument));
         WorkingDirectory = cwd;

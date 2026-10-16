@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Export;
 /// Manifest of "export" (ADR 0047). The build generates <c>manifests/&lt;appId&gt;.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it sets the calling shell's variables, like the export builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class ExportApp : AppDefinition
 {
     /// <inheritdoc />

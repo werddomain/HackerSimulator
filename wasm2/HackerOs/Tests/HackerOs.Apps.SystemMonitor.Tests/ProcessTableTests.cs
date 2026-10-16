@@ -133,6 +133,44 @@ public sealed class ProcessTableTests
         return table;
     }
 
+    [Fact]
+    public void Only_columns_with_simulated_values_are_marked_estimated()
+    {
+        // ADR 0066: the discreet "estimated" mark follows CpuSource/MemSource of /proc/<pid>/status.
+        ProcessTable table = new();
+        table.SetRows(
+        [
+            Row(1, "a", "org.a", 1, 1) with { CpuEstimated = false, MemoryEstimated = true },
+            Row(2, "b", "org.b", 1, 1) with { CpuEstimated = false, MemoryEstimated = false }
+        ]);
+
+        Assert.False(table.IsEstimated(ProcessColumn.Cpu));
+        Assert.True(table.IsEstimated(ProcessColumn.Memory));
+        Assert.False(table.IsEstimated(ProcessColumn.DiskRead));
+
+        table.SetRows([Row(1, "a", "org.a", 1, 1) with { CpuEstimated = true }]);
+        Assert.True(table.IsEstimated(ProcessColumn.Cpu));
+        Assert.False(table.IsEstimated(ProcessColumn.Memory));
+    }
+
+    [Fact]
+    public void A_process_that_does_not_respond_shows_it_in_the_state_column_and_sorts_by_it()
+    {
+        // ADR 0067, section 4: display only, from Responding: 0 of /proc/<pid>/status.
+        ProcessTable table = new();
+        table.SetRows(
+        [
+            Row(1, "a", "org.a", 1, 1) with { Responding = false },
+            Row(2, "b", "org.b", 1, 1)
+        ]);
+
+        Assert.Equal("Not responding", table.Rows[0].DisplayState);
+        Assert.Equal("Running", table.Rows[1].DisplayState);
+
+        table.ToggleSort(ProcessColumn.State);
+        Assert.Equal([1, 2], Pids(table));
+    }
+
     private static long[] Pids(ProcessTable table) => [.. table.Visible.Select(static row => row.Pid)];
 
     private static ProcessRow Row(long pid, string name, string appId, double cpu, long memory) =>

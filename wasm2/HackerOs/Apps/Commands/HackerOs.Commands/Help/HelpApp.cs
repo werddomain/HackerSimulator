@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Help;
 /// Manifest of "help" (ADR 0047). The build generates <c>manifests/&lt;appId&gt;.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it lists the calling shell's commands, like the help builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class HelpApp : AppDefinition
 {
     /// <inheritdoc />

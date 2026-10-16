@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
+    <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
   </ItemGroup>
 
 </Project>

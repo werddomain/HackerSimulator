@@ -58,6 +58,7 @@ public sealed class HackProcessTests
         Assert.Equal(Session.ToString(), process.SessionId);
         Assert.Equal(BootUtc.AddSeconds(42), process.StartTime);
         Assert.Equal(3L * 1024 * 1024, process.WorkingSet64);
+        Assert.Equal(3L * 1024 * 1024, process.PrivateMemorySize64); // simulated: no RssAnon, equals VmRSS
         Assert.Equal(25.0, process.CpuUsage, 3);
         Assert.Equal(["text-editor", "/home/alice/my notes.md"], process.Arguments);
         Assert.Equal("text-editor \"/home/alice/my notes.md\"", process.CommandLine);
@@ -68,6 +69,85 @@ public sealed class HackProcessTests
         Assert.False(process.HasExited);
         Assert.Equal(["HOME"], (await process.GetEnvironmentVariablesAsync())!.Keys);
         Assert.Equal([process], processes[0].GetChildren(processes));
+    }
+
+    [Fact]
+    public async Task Processor_times_and_responding_come_from_proc_stat_and_status_when_measured()
+    {
+        // ADR 0067: utime/stime of /proc/<pid>/stat behind the Process-like properties.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(new MeasuredTimes(
+            new ProcessCpuTimes(TimeSpan.FromMilliseconds(1230), TimeSpan.FromMilliseconds(450), 2, TimeSpan.FromSeconds(7), false, 9)));
+        fixture.Processes.Active.AddRange([Process(OwnPid, "org.hackeros.system-monitor"), Process(42, "org.hackeros.text-editor")]);
+        using IDisposable scope = Enter(fixture, AppCapabilities.ProcessList);
+
+        HackProcess process = await HackProcess.GetProcessByIdAsync(42);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(1230), process.UserProcessorTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(450), process.PrivilegedProcessorTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(1680), process.TotalProcessorTime);
+        Assert.False(process.Responding);
+        Assert.Equal("measured", process.Status["CpuSource"]);
+    }
+
+    [Fact]
+    public async Task Simulated_processor_time_is_rebuilt_from_the_simulator_and_the_process_responds()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        ProcessRecord editor = Process(42, "org.hackeros.text-editor");
+        fixture.Processes.Active.AddRange([Process(OwnPid, "org.hackeros.system-monitor"), editor]);
+        fixture.Resources.ProcessSamples[editor.Pid] = [new ProcessResourceSample(editor.Pid, 1, BootUtc, 0.25, 0, 0, 0)];
+        using IDisposable scope = Enter(fixture, AppCapabilities.ProcessList);
+
+        HackProcess process = await HackProcess.GetProcessByIdAsync(42);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(250), process.UserProcessorTime);
+        Assert.Equal(TimeSpan.Zero, process.PrivilegedProcessorTime);
+        Assert.True(process.Responding);
+    }
+
+    [Theory]
+    [InlineData("42 (code-editor) R 1 42 42 0 -1 0 0 0 0 0 150 25 0 0 20 0 1 0", 1500, 250)]
+    [InlineData("7 (my (odd) app) S 1 7 7 0 -1 0 0 0 0 0 3 1 0 0", 30, 10)]
+    [InlineData("7 (short) S 1", 0, 0)]
+    public void ParseStatTimes_counts_fields_after_the_last_parenthesis(string line, int userMs, int systemMs)
+    {
+        (TimeSpan user, TimeSpan system) = HackProcess.ParseStatTimes(line);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(userMs), user);
+        Assert.Equal(TimeSpan.FromMilliseconds(systemMs), system);
+    }
+
+    [Fact]
+    public async Task Measured_memory_gives_WorkingSet64_from_VmRSS_and_PrivateMemorySize64_from_RssAnon()
+    {
+        // ADR 0068, section 2, modeled on System.Diagnostics.Process.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(memoryAccountant: new LayeredMemoryAccountant(
+            new ProcessMemoryUsage(ImageBytes: 40 * 1024, FileBytes: 800 * 1024, AnonymousBytes: 2048 * 1024, KernelBytes: 512 * 1024, AllocatedBytes: 10)));
+        fixture.Processes.Active.Add(Process(OwnPid, "org.hackeros.system-monitor"));
+        using IDisposable scope = Enter(fixture);
+
+        HackProcess own = await HackProcess.GetCurrentProcessAsync();
+
+        Assert.Equal((800L + 2048 + 512) * 1024, own.WorkingSet64);
+        Assert.Equal(2048L * 1024, own.PrivateMemorySize64);
+        Assert.Equal("measured", own.Status["MemSource"]);
+    }
+
+    private sealed class LayeredMemoryAccountant(ProcessMemoryUsage usage) : IMemoryAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage result)
+        {
+            result = usage;
+            return true;
+        }
+
+        public bool TryGetSystemMemory(IReadOnlyList<ProcessRecord> active, out SystemMemoryUsage result)
+        {
+            result = new SystemMemoryUsage(usage.AnonymousBytes, usage.FileBytes, usage.KernelBytes, 1);
+            return true;
+        }
     }
 
     [Fact]
@@ -152,6 +232,31 @@ public sealed class HackProcessTests
 
         Assert.Equal([(42L, false), (42L, false)], gateway.Calls);
         Assert.Equal([TimeSpan.FromSeconds(2), HackProcess.DefaultCloseTimeout], gateway.Timeouts);
+        Assert.Equal([ProcessExitReason.CloseRequested, ProcessExitReason.CloseRequested], gateway.Reasons);
+    }
+
+    [Fact]
+    public async Task TerminateAsync_sends_sigterm_with_a_five_second_grace_and_reports_a_forced_end()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        fixture.Processes.Active.AddRange(
+            [Process(OwnPid, "org.hackeros.system-monitor"), Process(42, "org.hackeros.text-editor"), Process(43, "org.hackeros.calculator")]);
+        RecordingProcessGateway gateway = new() { Denied = { 43 } };
+        using IDisposable scope = Enter(fixture, gateway, AppCapabilities.ProcessList);
+        HackProcess editor = await HackProcess.GetProcessByIdAsync(42);
+        HackProcess calculator = await HackProcess.GetProcessByIdAsync(43);
+
+        gateway.StopReason = ProcessExitReason.Completed;
+        Assert.True(await editor.TerminateAsync());
+        gateway.StopReason = ProcessExitReason.Timeout;
+        Assert.False(await editor.TerminateAsync(TimeSpan.FromSeconds(1)));
+        await Assert.ThrowsAsync<HackUnauthorizedAccessException>(() => calculator.TerminateAsync());
+
+        Assert.Equal([(42L, false), (42L, false)], gateway.Calls);
+        Assert.Equal([HackProcess.DefaultTerminateTimeout, TimeSpan.FromSeconds(1)], gateway.Timeouts);
+        Assert.Equal([ProcessExitReason.Terminated, ProcessExitReason.Terminated], gateway.Reasons);
+        Assert.Equal(TimeSpan.FromSeconds(5), HackProcess.DefaultTerminateTimeout);
+        Assert.True(editor.HasExited);
     }
 
     [Fact]
@@ -269,6 +374,7 @@ public sealed class HackProcessTests
         public HashSet<long> Gone { get; } = [];
         public List<(long Pid, bool Forced)> Calls { get; } = [];
         public List<TimeSpan> Timeouts { get; } = [];
+        public List<ProcessExitReason> Reasons { get; } = [];
         public ProcessExitReason StopReason { get; set; } = ProcessExitReason.CloseRequested;
 
         public ProcessRecord OwnProcess => throw new NotSupportedException();
@@ -286,6 +392,7 @@ public sealed class HackProcessTests
             Check(pid);
             Calls.Add((pid.Value, false));
             Timeouts.Add(timeout);
+            Reasons.Add(reason);
             ProcessRecord stopped = Process(pid.Value, "org.tests.stopped", ProcessState.Stopped);
             return new ProcessRecord(
                 stopped.Pid, stopped.ParentPid, stopped.AppId, stopped.AppInstanceId, stopped.Kind, stopped.UserId, stopped.SessionId,
@@ -363,6 +470,30 @@ public sealed class HackProcessTests
             ServiceControlOutcome outcome = NextOutcome;
             NextOutcome = ServiceControlOutcome.Succeeded;
             return ValueTask.FromResult(new ServiceControlResult(outcome));
+        }
+    }
+
+    /// <summary>A CPU accountant that measures every process with the same times.</summary>
+    private sealed class MeasuredTimes(ProcessCpuTimes times) : ICpuTimeAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetCpuUsage(ProcessId pid, out double coreEquivalents)
+        {
+            coreEquivalents = 0.1;
+            return true;
+        }
+
+        public bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes processTimes)
+        {
+            processTimes = times;
+            return true;
+        }
+
+        public bool TryGetThreadTimes(out MeasuredThreadCpuTimes threadTimes)
+        {
+            threadTimes = default;
+            return false;
         }
     }
 }

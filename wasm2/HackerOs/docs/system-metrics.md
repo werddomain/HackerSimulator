@@ -14,16 +14,69 @@ Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
 
 | Fichier ou API | Mesure | Source |
 | --- | --- | --- |
-| `/proc/stat` | temps CPU cumulé par cœur, en `USER_HZ` | **simulé** : simulateur de ressources |
+| `/proc/stat` | temps CPU cumulé par cœur, en `USER_HZ` | **mesuré** quand la mesure CPU est active (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)), **simulé** sinon : simulateur de ressources |
+| `/proc/<pid>/stat` | `utime` et `stime` d'un processus | **mesuré** au changement de contexte (ADR 0067), sinon reconstruit depuis le simulateur |
 | `/proc/<pid>/io` | octets lus et écrits par un processus | **compté** : service de fichiers et passerelle réseau |
 | `/proc/diskstats` | requêtes, secteurs et temps du disque `hda` | **compté** : transactions IndexedDB du système de fichiers |
 | `/proc/net/dev` | octets et paquets de `lo` et `eth0` | **compté** : passerelle réseau des apps |
 | `/proc/mounts` | table des montages | routeur de montages |
 | `HackDriveInfo` | taille et espace libre de `/` | profil matériel, contenu stocké, quota du navigateur |
+| `/proc/hackeros/workers` | Web Workers de l'OS : rôle, état, cœur, mémoire du runtime, âge du battement de cœur, temps occupé, processus (ADR 0070) | **mesuré** : battement de cœur de chaque worker, toutes les 250 ms ([`worker-processes.md`](worker-processes.md)) ; absent quand l'hôte n'a pas de workers |
 
 Un `cat` d'un gros fichier fait monter `rchar` du processus et les secteurs lus
-de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le CPU reste
-simulé : le navigateur ne mesure pas le CPU par app.
+de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le navigateur
+ne mesure pas le CPU par app : depuis la phase 5, l'OS le chronomètre lui-même
+à chaque changement de contexte (ADR 0067), quand la mesure est active. La
+mémoire mesurée suivra (ADR 0068,
+[`execution-isolation-plan.md`](execution-isolation-plan.md)).
+
+### Deux sources pour le CPU et la mémoire d'un processus (ADR 0066)
+
+| Source | Quand | Indicateur |
+| --- | --- | --- |
+| **simulée** : `IResourceSimulator`, profil `ResourceProfile` de l'app | mesure coupée au build (`HackerOsCpuAccounting`, `HackerOsMemoryAccounting`) ou dans `appsettings.json` (`HackerOs:ResourceAccounting`), mesure pas encore implémentée, processus du contenu de jeu | `CpuSource: simulated`, `MemSource: simulated` ; mention « estimated » dans le gestionnaire de tâches |
+| **mesurée** : `ICpuTimeAccountant`, `IMemoryAccountant` alimentés par le crochet de changement de contexte | mesure livrée et activée, et le comptable répond pour ce processus | `CpuSource: measured`, `MemSource: measured` |
+
+Le fournisseur `/proc` reçoit les deux comptables par `ProcMetricsSources`
+(`CpuAccountant`, `MemoryAccountant`) et retombe sur le simulateur dès qu'un
+comptable ne répond pas. Le chantier `5-accounting-switches` livre les
+interrupteurs, le crochet et les comptables nuls ; le chantier
+`5-memory-accounting` mesure la mémoire (section suivante) ; le chantier
+`5-cpu-accounting` mesure le CPU avec `MeasuredCpuTimeAccountant`
+([`cpu-accounting.md`](cpu-accounting.md)). Détails :
+[`resource-accounting.md`](resource-accounting.md).
+
+### Mémoire mesurée (ADR 0068)
+
+Quand la mesure de la mémoire est livrée et activée, la mémoire d'un processus
+est reconstituée en quatre couches ([`memory-accounting.md`](memory-accounting.md)) :
+
+| Couche | Champ de `/proc/<pid>/status` | Source | Précision |
+| --- | --- | --- | --- |
+| Image | `VmExe`, `RssFile` | taille des assemblies, mesurée par le build de l'hôte (`BuiltInApplications.json`) | exacte |
+| Ressources de l'OS | `VmData` | tampons de flux, presse-papiers, tubes, sockets en vol, coût fixe par fenêtre | exacte |
+| Allocations | `HackAllocBytes` | `GC.GetAllocatedBytesForCurrentThread()` à chaque changement de contexte | exacte |
+| Résidente | `RssAnon` | tas réel réparti après chaque GC au prorata des allocations récentes | **estimation** |
+
+`VmRSS = RssAnon + RssFile + VmData`. `/proc/meminfo` garde `MemTotal` du
+profil matériel et ajoute `AnonPages`, `Mapped` (chaque assembly comptée une
+fois) et `Slab` (part noyau des processus et part du tas allouée par l'OS
+lui-même). Aucune limite, aucun OOM killer.
+
+Règles de calcul (constantes de `MemoryAccountingConstants` et
+`AppNetworkGateway`, couvertes par des tests) :
+
+| Règle | Valeur |
+| --- | --- |
+| Demi-vie du poids d'un processus dans la répartition du tas (`ResidentHalfLife`) | 10 s |
+| Coût fixe d'une fenêtre ouverte (`WindowBytes`) | 512 Kio |
+| Tampons d'une opération réseau en vol (`SocketBufferBytes`) | 144 Kio |
+| Presse-papiers, tubes | 2 octets par caractère tenu |
+| Tampon d'un flux d'écriture | capacité du tampon |
+
+La couche résidente reste une estimation : le runtime ne dit pas à qui
+appartient un objet du tas partagé. Un processus lancé depuis le dernier GC
+n'a pas encore de `RssAnon`.
 
 Les compteurs vivent en mémoire, partent de zéro au démarrage et ne sont jamais
 persistés.
@@ -68,6 +121,19 @@ fournisseur IndexedDB et à `AppExecutionContextFactory`
 ## Comment chaque mesure est prise
 
 ### CPU (`/proc/stat`)
+
+Mesure CPU active (ADR 0067) : `CpuTimeAccounting` ignore les échantillons
+simulés et rend sur `cpu0` les vrais temps du thread principal (`user` = somme
+des `utime`, `system` = somme des `stime` plus le compositeur, `idle` = le
+reste) ; les autres cœurs du profil matériel restent `idle`. Avec les Web
+Workers (ADR 0070), le cœur `k` reçoit en plus le temps occupé du worker du
+pool qui porte ce cœur (`cpu0` est donc partagé entre le fil principal et le
+worker du cœur 0), et le `utime` d'un processus dans un worker vient du
+battement de cœur de son worker, plus le temps noyau passé sur le fil principal
+à servir ses appels ; un worker qui ne bat plus compte ce temps comme occupé
+par ses processus (voir [`worker-processes.md`](worker-processes.md)). Voir
+[`cpu-accounting.md`](cpu-accounting.md). Ce qui suit décrit le mode simulé,
+toujours utilisé quand la mesure est coupée.
 
 Avant ce chantier, rien n'appelait `IResourceSimulator.Tick` dans un hôte réel :
 `status`, `meminfo` et `loadavg` restaient à zéro. `ResourceSamplingService`

@@ -238,4 +238,21 @@ public sealed class TextEditorDocumentTests
         Assert.False(doc.IsDirty);
         Assert.Equal(TextEditorLoadState.Loaded, doc.LoadState);
     }
+
+    [Fact]
+    public void A_restored_draft_is_a_new_dirty_buffer_that_never_overwrites_the_original()
+    {
+        // ADR 0069: the text a stopped editor kept comes back as unsaved work.
+        TextEditorDocument doc = new();
+        doc.BeginLoading(VirtualPath.Parse("/home/alice/notes.txt"));
+        doc.CompleteLoading("old", "text/plain", 3);
+
+        doc.RestoreDraft("recovered text", "/home/alice/notes.txt");
+
+        Assert.Equal("recovered text", doc.Content);
+        Assert.True(doc.IsDirty);
+        Assert.Null(doc.Path);
+        Assert.Null(doc.LoadedRevision);
+        Assert.Equal("notes.txt (recovered)", doc.Title);
+    }
 }

@@ -43,9 +43,20 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private const string NetDirectory = "net";
 
+    /// <summary>HackerOS's own entries (ADR 0071, section 5), like the <c>/proc/sys</c> of a vendor kernel.</summary>
+    private const string HackerOsDirectory = "hackeros";
+
+    private const string WorkersFile = "workers";
+
     private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
     private static readonly string[] NetFiles = ["dev"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "status"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
+
+    /// <summary>Linux's <c>USER_HZ</c>, the unit of <c>utime</c>, <c>stime</c> and <c>starttime</c>.</summary>
+    private const int UserHz = 100;
+
+    /// <summary>Page size behind the <c>rss</c> field of <c>/proc/&lt;pid&gt;/stat</c>.</summary>
+    private const int PageSize = 4096;
 
     private readonly Func<IProcessManager> _processManager;
     private readonly IResourceSimulator _resources;
@@ -129,6 +140,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             [string name] => RenderSystemFile(name),
             [NetDirectory, string name] => RenderNetFile(name),
+            [HackerOsDirectory, WorkersFile] => RenderWorkers(context),
             _ => RenderProcessFile(FindVisible(ParsePid(segments[0])!.Value, context)!, segments[1])
         };
         return ValueTask.FromResult(TextHandle(request.Path, metadata, text));
@@ -157,6 +169,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         {
             [] => RootNames(context),
             [NetDirectory] => NetFiles,
+            [HackerOsDirectory] => [WorkersFile],
             _ => ProcessEntries
         };
 
@@ -199,6 +212,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [NetDirectory, string name] => NetFiles.Contains(name, StringComparer.Ordinal)
                 ? File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc)
                 : null,
+            [HackerOsDirectory] when WorkerPool() is not null =>
+                Directory(path, SystemPrincipal, SystemPrincipal, DirectoryMode, BootTimeUtc),
+            [HackerOsDirectory, WorkersFile] when WorkerPool() is not null =>
+                File(path, SystemPrincipal, SystemPrincipal, PublicFileMode, BootTimeUtc),
             [string pid] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
                 ? Directory(path, Owner(process), Owner(process), DirectoryMode, StartTime(process))
                 : null,
@@ -223,7 +240,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         DateTimeOffset started = StartTime(process);
         return entry switch
         {
-            "status" or "cmdline" => File(path, owner, owner, PublicFileMode, started),
+            "status" or "cmdline" or "stat" => File(path, owner, owner, PublicFileMode, started),
             // io is private like environ (ADR 0057 section 3): the owner, or System authority.
             "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
             "cwd" => Link(path, owner, owner, started,
@@ -257,6 +274,11 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         yield return NetDirectory;
+
+        if (WorkerPool() is not null)
+        {
+            yield return HackerOsDirectory;
+        }
 
         if (SelfLink(Child(MountPath, "self"), context) is not null)
         {
@@ -293,6 +315,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
             : string.Empty,
         "io" => RenderProcessIo(process),
+        "stat" => RenderProcessStat(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
 
@@ -303,9 +326,28 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderStatus(ProcessRecord process)
     {
+        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a game-content
+        // process that runs no code) the simulator's sample applies, exactly as before phase 5.
         ProcessResourceSample? sample = _resources.GetHistory(process.Pid).LastOrDefault();
-        long rssKb = (long)Math.Round((sample?.MemoryUsageBytes ?? 0) / 1024d, MidpointRounding.AwayFromZero);
-        double cpuPercent = (sample?.CpuUsage ?? 0) * 100d;
+        ResourceMeasurementSource cpuSource = ResourceMeasurementSource.Simulated;
+        double cpuUsage = sample?.CpuUsage ?? 0;
+        if (_metrics.CpuAccountant is { } cpuAccountant && cpuAccountant.TryGetCpuUsage(process.Pid, out double measuredCpu))
+        {
+            cpuSource = ResourceMeasurementSource.Measured;
+            cpuUsage = measuredCpu;
+        }
+
+        ResourceMeasurementSource memorySource = ResourceMeasurementSource.Simulated;
+        double memoryBytes = sample?.MemoryUsageBytes ?? 0;
+        ProcessMemoryUsage? measuredMemory = MeasureMemory(process);
+        if (measuredMemory is { } measured)
+        {
+            memorySource = ResourceMeasurementSource.Measured;
+            memoryBytes = measured.ResidentBytes;
+        }
+
+        long rssKb = (long)Math.Round(memoryBytes / 1024d, MidpointRounding.AwayFromZero);
+        double cpuPercent = cpuUsage * 100d;
 
         StringBuilder builder = new();
         AppendField(builder, "Name", ShortName(process.AppId));
@@ -317,8 +359,110 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "Kind", process.Kind.ToString().ToLowerInvariant());
         AppendField(builder, "Session", process.SessionId.ToString());
         AppendField(builder, "VmRSS", $"{rssKb.ToString(CultureInfo.InvariantCulture)} kB");
+        AppendMeasuredMemory(builder, measuredMemory);
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
+        AppendField(builder, "CpuSource", SourceText(cpuSource));
+        AppendField(builder, "MemSource", SourceText(memorySource));
+        if (cpuSource == ResourceMeasurementSource.Measured
+            && _metrics.CpuAccountant!.TryGetProcessTimes(process.Pid, out ProcessCpuTimes times))
+        {
+            // ADR 0067, section 4: only with the measurement, so a host with it off renders exactly
+            // the file it rendered before phase 5.
+            AppendField(builder, "Responding", times.IsResponding ? "1" : "0");
+            AppendField(builder, "LongTasks", times.LongTaskCount.ToString(CultureInfo.InvariantCulture));
+            AppendField(builder, "voluntary_ctxt_switches", times.VoluntaryContextSwitches.ToString(CultureInfo.InvariantCulture));
+            AppendField(builder, "nonvoluntary_ctxt_switches", "0");
+        }
+
         return builder.ToString();
+
+        static string SourceText(ResourceMeasurementSource source) =>
+            source == ResourceMeasurementSource.Measured ? "measured" : "simulated";
+    }
+
+    /// <summary>
+    /// Renders <c>/proc/&lt;pid&gt;/stat</c> (ADR 0067, section 3) in the single-line layout of
+    /// <c>proc(5)</c>: 52 space-separated fields, <c>comm</c> in parentheses. <c>utime</c> (14) and
+    /// <c>stime</c> (15) are in <c>USER_HZ</c>; <c>starttime</c> (22) counts <c>USER_HZ</c> since boot;
+    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages. Fields with no meaning here
+    /// (signals, addresses, page faults of a machine without paging) are <c>0</c>, as the kernel
+    /// prints them for a task it hides them from.
+    /// </summary>
+    /// <remarks>
+    /// Measured (ADR 0067): the accountant's times. Otherwise the times are rebuilt from the
+    /// simulator's bounded history (one sample per second), all as <c>utime</c>.
+    /// </remarks>
+    private string RenderProcessStat(ProcessRecord process)
+    {
+        long utime;
+        long stime;
+        if (_metrics.CpuAccountant is { } accountant && accountant.TryGetProcessTimes(process.Pid, out ProcessCpuTimes times))
+        {
+            utime = ToUserHz(times.UserTime);
+            stime = ToUserHz(times.SystemTime);
+        }
+        else
+        {
+            IReadOnlyList<ProcessResourceSample> history = _resources.GetHistory(process.Pid);
+            utime = (long)Math.Round(history.Sum(static sample => sample.CpuUsage) * UserHz, MidpointRounding.AwayFromZero);
+            stime = 0;
+        }
+
+        // Measured memory (ADR 0068) when it answers for this process, otherwise the simulator's.
+        double memoryBytes = MeasureMemory(process)?.ResidentBytes
+            ?? _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes
+            ?? 0;
+
+        long rssPages = (long)Math.Ceiling(memoryBytes / PageSize);
+        long vsize = rssPages * PageSize;
+        long startTime = Math.Max(0, ToUserHz(StartTime(process) - BootTimeUtc));
+        long ppid = process.ParentPid?.Value ?? 0;
+        long pid = process.Pid.Value;
+        char state = StateText(process.State)[0];
+
+        // Fields 1-52 of proc(5). Order matters: readers split on spaces after the closing parenthesis.
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{pid} ({ShortName(process.AppId)}) {state} {ppid} {pid} {pid} 0 -1 0 "  // 1-9: pid comm state ppid pgrp session tty_nr tpgid flags
+            + $"0 0 0 0 "                                                          // 10-13: minflt cminflt majflt cmajflt
+            + $"{utime} {stime} 0 0 "                                             // 14-17: utime stime cutime cstime
+            + $"20 0 1 0 "                                                         // 18-21: priority nice num_threads itrealvalue
+            + $"{startTime} {vsize} {rssPages} 18446744073709551615 "            // 22-25: starttime vsize rss rsslim
+            + $"0 0 0 0 0 0 0 0 0 0 0 0 0 "                                        // 26-38: startcode .. exit_signal
+            + $"0 0 0 0 0 0 "                                                      // 39-44: processor rt_priority policy delayacct_blkio_ticks guest_time cguest_time
+            + $"0 0 0 0 0 0 0 0\n");                                               // 45-52: start_data .. exit_code
+    }
+
+    private static long ToUserHz(TimeSpan time) => (long)(time.TotalSeconds * UserHz);
+
+    /// <summary>The measured layers of one process (ADR 0068), or <see langword="null"/> when its memory is simulated.</summary>
+    private ProcessMemoryUsage? MeasureMemory(ProcessRecord process) =>
+        _metrics.MemoryAccountant is { IsMeasuring: true } accountant
+        && accountant.TryGetProcessMemory(process, [.. ActiveProcesses()], out ProcessMemoryUsage usage)
+            ? usage
+            : null;
+
+    /// <summary>
+    /// Appends the layer fields of a measured process after <c>VmRSS</c>, in Linux's order (ADR 0068):
+    /// <c>RssAnon</c>, <c>RssFile</c>, <c>VmData</c> (the kernel part), <c>VmExe</c>, then the exact
+    /// allocation counter <c>HackAllocBytes</c>. A simulated process gets none of them, exactly as
+    /// before phase 5.
+    /// </summary>
+    private static void AppendMeasuredMemory(StringBuilder builder, ProcessMemoryUsage? usage)
+    {
+        if (usage is not { } measured)
+        {
+            return;
+        }
+
+        AppendField(builder, "RssAnon", Kilobytes(measured.AnonymousBytes));
+        AppendField(builder, "RssFile", Kilobytes(measured.FileBytes));
+        AppendField(builder, "VmData", Kilobytes(measured.KernelBytes));
+        AppendField(builder, "VmExe", Kilobytes(measured.ImageBytes));
+        AppendField(builder, "HackAllocBytes", measured.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
+
+        static string Kilobytes(long bytes) =>
+            $"{Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture)} kB";
     }
 
     private string RenderSystemFile(string name) => name switch
@@ -332,6 +476,55 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "mounts" => RenderMounts(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc system file.")
     };
+
+    private HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? WorkerPool() => _metrics.Workers?.Invoke();
+
+    /// <summary>
+    /// Renders <c>/proc/hackeros/workers</c> (ADR 0071, section 5): the ceiling and the pool size, then
+    /// one line per Web Worker with its role, state, virtual core, runtime memory, heartbeat age, busy
+    /// time and the processes it hosts (only those the caller may see, like <c>/proc/&lt;pid&gt;</c>).
+    /// </summary>
+    private string RenderWorkers(FileSystemAuthorizationContext context)
+    {
+        HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus pool = WorkerPool()!;
+        HashSet<long> visible = [.. VisibleProcesses(context).Select(static process => process.Pid.Value)];
+        StringBuilder builder = new();
+        builder.Append(CultureInfo.InvariantCulture, $"capacity {pool.Capacity}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"pool_size {pool.PoolSize}\n");
+        builder.Append("worker role       state          core memory_kb heartbeat_ms busy_ms pids\n");
+        foreach (HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot worker in pool.GetWorkers())
+        {
+            long[] pids = [.. worker.ProcessIds.Where(visible.Contains)];
+            builder.Append(CultureInfo.InvariantCulture, $"{worker.Id,-6} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{RoleName(worker.Role),-10} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{StateName(worker.State),-14} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(worker.Core is { } core ? core.ToString(CultureInfo.InvariantCulture) : "-"),-4} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{worker.RuntimeMemoryBytes / 1024,-9} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(worker.LastHeartbeatAgo is { } age ? ((long)age.TotalMilliseconds).ToString(CultureInfo.InvariantCulture) : "-"),-12} ");
+            builder.Append(CultureInfo.InvariantCulture, $"{(long)worker.BusyTime.TotalMilliseconds,-7} ");
+            builder.Append(pids.Length == 0 ? "-" : string.Join(',', pids));
+            builder.Append('\n');
+        }
+
+        return builder.ToString();
+
+        static string RoleName(HackerOs.Simulation.Abstractions.Workers.WorkerRole role) => role switch
+        {
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Pool => "pool",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Overflow => "overflow",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Dedicated => "dedicated",
+            _ => "ready"
+        };
+
+        static string StateName(HackerOs.Simulation.Abstractions.Workers.WorkerState state) => state switch
+        {
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Starting => "starting",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Idle => "idle",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.Running => "running",
+            HackerOs.Simulation.Abstractions.Workers.WorkerState.NotResponding => "not-responding",
+            _ => "terminated"
+        };
+    }
 
     private string RenderNetFile(string name) => name switch
     {
@@ -463,14 +656,58 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     {
         long totalKb = (long)(_hardware.MemoryCapacityBytes / 1024d);
         double usedBytes = _resources.GetSystemHistory().LastOrDefault()?.TotalMemoryUsageBytes ?? 0;
+        SystemMemoryUsage? measured = MeasureSystemMemory(ref usedBytes);
         long freeKb = Math.Max(0, totalKb - (long)Math.Round(usedBytes / 1024d, MidpointRounding.AwayFromZero));
 
         // There is no page cache to reclaim in the simulation, so available memory equals free memory.
+        // Exceeding MemTotal only saturates the graphs: there is no OOM killer (ADR 0068, section 3).
         StringBuilder builder = new();
         AppendMemInfoLine(builder, "MemTotal", totalKb);
         AppendMemInfoLine(builder, "MemFree", freeKb);
         AppendMemInfoLine(builder, "MemAvailable", freeKb);
+        if (measured is { } system)
+        {
+            AppendMemInfoLine(builder, "AnonPages", ToKilobytes(system.AnonymousBytes));
+            AppendMemInfoLine(builder, "Mapped", ToKilobytes(system.MappedBytes));
+            AppendMemInfoLine(builder, "Slab", ToKilobytes(system.KernelBytes));
+        }
+
         return builder.ToString();
+
+        static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>
+    /// When memory is measured (ADR 0068, section 2), replaces the simulated total with the measured
+    /// one (shared images counted once, the OS's own heap included) plus the simulated memory of the
+    /// processes that stay simulated (game content that runs no code).
+    /// </summary>
+    /// <param name="usedBytes">The simulated total, replaced when memory is measured.</param>
+    /// <returns>The measured totals, or <see langword="null"/> when memory is simulated.</returns>
+    private SystemMemoryUsage? MeasureSystemMemory(ref double usedBytes)
+    {
+        if (_metrics.MemoryAccountant is not { IsMeasuring: true } accountant)
+        {
+            return null;
+        }
+
+        ProcessRecord[] active = [.. ActiveProcesses()];
+        if (!accountant.TryGetSystemMemory(active, out SystemMemoryUsage system))
+        {
+            return null;
+        }
+
+        double simulated = 0;
+        foreach (ProcessRecord process in active)
+        {
+            if (!accountant.TryGetProcessMemory(process, active, out _))
+            {
+                simulated += _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes ?? 0;
+            }
+        }
+
+        usedBytes = system.UsedBytes + simulated;
+        return system;
     }
 
     private string RenderCpuInfo()

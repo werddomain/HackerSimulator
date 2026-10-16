@@ -30,7 +30,7 @@ public sealed class TextEditorFileTests(ITestOutputHelper output)
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Headless = true });
 
             await using IBrowserContext context = await browser.NewContextAsync();
@@ -140,7 +140,7 @@ public sealed class TextEditorFileTests(ITestOutputHelper output)
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Headless = true });
 
             await using IBrowserContext context = await browser.NewContextAsync();

@@ -84,4 +84,55 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
 
         Assert.Equal([new AggregationInput(a, true), new AggregationInput(b, false)], inputs);
     }
+
+    [Fact]
+    public void List_lines_may_carry_the_assembly_and_dependency_list_of_the_image()
+    {
+        string a = Path.Combine(_directory, "a.json");
+        string dll = Path.Combine(_directory, "A.dll");
+        string deps = Path.Combine(_directory, "deps.txt");
+
+        IReadOnlyList<AggregationInput> inputs = BuiltInApplicationsAggregator.ParseList([$"true|{a}|{dll}|{deps}", $"|{a}||"]);
+
+        Assert.Equal([new AggregationInput(a, true, dll, deps)], inputs);
+    }
+
+    [Fact]
+    public void Aggregation_sizes_each_app_image_from_its_built_assembly()
+    {
+        // ADR 0068: this very generator assembly stands in for an app: its own file is VmExe, and
+        // HackerOs.App.Abstractions, which it references and finds in the dependency list, is shared.
+        string assembly = typeof(BuiltInApplicationsAggregator).Assembly.Location;
+        string abstractions = typeof(AppManifest).Assembly.Location;
+        string deps = Path.Combine(_directory, "deps.txt");
+        File.WriteAllLines(deps, [abstractions, typeof(object).Assembly.Location]);
+
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate(
+            [new(WriteManifest(typeof(ValidCommandApp), "valid.json"), false, assembly, deps)]);
+
+        AppImage image = BuiltInApplicationsJsonSerializer.DeserializeStrict(result.Json!)[0].Image!;
+        Assert.Equal(new FileInfo(assembly).Length, image.OwnBytes);
+        AppImageAssembly shared = Assert.Single(image.Assemblies, static item => item.Shared && item.Name == "HackerOs.App.Abstractions.dll");
+        Assert.Equal(new FileInfo(abstractions).Length, shared.Bytes);
+        // The runtime (System.Private.CoreLib) is the OS's own, never part of an app image.
+        Assert.DoesNotContain(image.Assemblies, static item => item.Name.StartsWith("System.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_app_without_a_known_assembly_has_no_image()
+    {
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate(
+            [new(WriteManifest(typeof(ValidCommandApp), "valid.json"), false)]);
+
+        Assert.Null(BuiltInApplicationsJsonSerializer.DeserializeStrict(result.Json!)[0].Image);
+    }
+
+    [Theory]
+    [InlineData("System.Text.Json", true)]
+    [InlineData("Microsoft.AspNetCore.Components", true)]
+    [InlineData("netstandard", true)]
+    [InlineData("HackerOs.AppSdk", false)]
+    [InlineData("MudBlazor", false)]
+    public void Runtime_and_framework_assemblies_are_not_part_of_an_image(string name, bool framework) =>
+        Assert.Equal(framework, AppImageInspector.IsFramework(name));
 }

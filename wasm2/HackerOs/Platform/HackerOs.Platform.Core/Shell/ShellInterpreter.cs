@@ -4,6 +4,8 @@ using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 
+using HackerOs.Platform.Core.Execution;
+
 namespace HackerOs.Platform.Core.Shell;
 
 /// <summary>
@@ -35,6 +37,9 @@ public sealed partial class ShellInterpreter
     /// <summary>Exit code of a line that did not parse.</summary>
     public const int SyntaxErrorExitCode = 2;
 
+    /// <summary>Exit code of a command ended by <c>SIGKILL</c> (128 + 9).</summary>
+    internal const int KilledExitCode = 137;
+
     /// <summary>Exit code of an interrupted pipeline (128 + SIGINT).</summary>
     public const int InterruptedExitCode = 130;
 
@@ -46,13 +51,23 @@ public sealed partial class ShellInterpreter
 
     private readonly AppLifecycleOrchestrator _orchestrator;
     private readonly IAppEnablementRegistry _enablement;
+    private readonly IKernelMemoryLedger? _kernelMemory;
 
     /// <summary>Creates an interpreter over the launch mechanism and the installed commands.</summary>
     /// <param name="orchestrator">Starts every command as a child process of the shell.</param>
     /// <param name="catalog">Commands are the catalog's terminal apps, found by name or static alias.</param>
     /// <param name="enablement">An uninstalled command is "not found", like a removed binary (ADR 0048).</param>
-    public ShellInterpreter(AppLifecycleOrchestrator orchestrator, AppCatalog catalog, IAppEnablementRegistry enablement)
+    /// <param name="kernelMemory">
+    /// Optional ledger charged with the bytes waiting in each pipe, against the shell that created it
+    /// (ADR 0068); <see langword="null"/> or not tracking when memory is not measured.
+    /// </param>
+    public ShellInterpreter(
+        AppLifecycleOrchestrator orchestrator,
+        AppCatalog catalog,
+        IAppEnablementRegistry enablement,
+        IKernelMemoryLedger? kernelMemory = null)
     {
+        _kernelMemory = kernelMemory;
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
         Resolver = new ShellCommandResolver(catalog ?? throw new ArgumentNullException(nameof(catalog)));
@@ -269,26 +284,31 @@ public sealed partial class ShellInterpreter
         else
         {
             using CancellationTokenSource pipelineCancellation = CancellationTokenSource.CreateLinkedTokenSource(exec.Token);
-            ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe())];
+            ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe(charge: ChargePipe(exec.Session.ProcessId)))];
             Task<int>[] running = new Task<int>[pipeline.Commands.Count];
-            for (int index = 0; index < pipeline.Commands.Count; index++)
+            // ADR 0070, section 2: every stage of one pipeline goes to the same worker. Each stage
+            // captures the group when it starts, so the scope can close before the stages end.
+            using (ExecutionPlacement.BeginGroup())
             {
-                ShellPipe? input = index == 0 ? null : pipes[index - 1];
-                ShellPipe? output = index == pipeline.Commands.Count - 1 ? null : pipes[index];
-                // Each stage runs in a subshell copy (ADR 0051 section 3): a `cd` or a variable
-                // set inside a pipe is lost when the stage ends.
-                Exec stage = exec with
+                for (int index = 0; index < pipeline.Commands.Count; index++)
                 {
-                    Session = exec.Session.Fork(),
-                    In = input?.Reader ?? exec.In,
-                    Out = output?.Writer ?? exec.Out,
-                    Token = pipelineCancellation.Token,
-                    Control = new ControlState(),
-                    SingleStage = false,
-                    LoopDepth = 0,
-                    CanReturn = false
-                };
-                running[index] = RunStageAsync(stage, pipeline.Commands[index], input, output);
+                    ShellPipe? input = index == 0 ? null : pipes[index - 1];
+                    ShellPipe? output = index == pipeline.Commands.Count - 1 ? null : pipes[index];
+                    // Each stage runs in a subshell copy (ADR 0051 section 3): a `cd` or a variable
+                    // set inside a pipe is lost when the stage ends.
+                    Exec stage = exec with
+                    {
+                        Session = exec.Session.Fork(),
+                        In = input?.Reader ?? exec.In,
+                        Out = output?.Writer ?? exec.Out,
+                        Token = pipelineCancellation.Token,
+                        Control = new ControlState(),
+                        SingleStage = false,
+                        LoopDepth = 0,
+                        CanReturn = false
+                    };
+                    running[index] = RunStageAsync(stage, pipeline.Commands[index], input, output);
+                }
             }
 
             int[] statuses = await Task.WhenAll(running).ConfigureAwait(false);
@@ -753,6 +773,12 @@ public sealed partial class ShellInterpreter
             // A closed output loses the notice, nothing more.
         }
     }
+
+    /// <summary>Opens the kernel-memory charge of a new pipe against the shell's process, when memory is measured.</summary>
+    private KernelMemoryCharge? ChargePipe(ProcessId? shell) =>
+        _kernelMemory is { IsTracking: true } ledger && shell is { } pid
+            ? ledger.Charge(pid, KernelMemoryKind.Pipe)
+            : null;
 
     // ---- Execution state -----------------------------------------------------------------
 

@@ -210,6 +210,18 @@
         ? ThemePreference.Current.MobileThemeId
         : ThemePreference.Current.DesktopThemeId;
 
+    /// <summary>
+    /// ADR 0071, section 2: once the desktop is shown (the session is open and its startup apps were
+    /// launched by the login), the system is started; Web Workers warm up behind it, when idle.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (State.View == EcosystemHostView.Desktop)
+        {
+            BootCoordinator.MarkSystemStarted();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         PlatformPreference.Changed += OnPlatformPreferenceChanged;

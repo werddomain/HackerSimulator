@@ -128,7 +128,7 @@ l'utilisateur (`~/.hackeros/aliases`) reste dans le shell.
 | `alias`, `addalias`, `rmalias`, `unalias` | `org.hackeros.commands.alias` | `filesystem.user-home.*` | `rmalias`/`unalias` = `alias -r`, choisi par `argv[0]`. |
 | `read [-r] [-p p] [nom…]` | `org.hackeros.commands.read` | `shell.control` | ADR 0064 : lit une ligne de l'entrée standard et affecte les champs par `AssignVariable` ([`linux-commands.md`](linux-commands.md)). |
 | `jobs [-lprs]` | `org.hackeros.commands.jobs` | `shell.control` | ADR 0064 : jobs du shell (`IShellSession.Jobs`). |
-| `kill [-SIG] pid\|%job` | `org.hackeros.commands.kill` | `process.manage`, `shell.control` | ADR 0064 : `%n` passe par `IShellSession.KillJob`. |
+| `kill [-SIG] pid\|%job` | `org.hackeros.commands.kill` | `process.manage`, `shell.control` | ADR 0064 : `%n` passe par `IShellSession.KillJob`. ADR 0069 : sans option (ou `-15`, `-TERM`), `SIGTERM` — la cible reçoit `StopRequested` (raison `Terminated`, échéance à 5 s simulées), puis son jeton est annulé, et elle est tuée si elle ne s'est pas terminée ; `-9`/`-KILL` tue tout de suite, sans `StopRequested`. Une commande tuée sort avec `137`, une commande qui s'arrête sur son jeton avec `130`. |
 | `which nom…`, `watch cmd` | `org.hackeros.commands.which`, `…watch` | `shell.control` | ADR 0064 : liste des commandes du shell ; `watch` relance la ligne par `IShellSession.RunAsync`. |
 
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
@@ -172,7 +172,7 @@ disparu.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` et
   `Tests/HackerOs.Commands.Wave5.Tests/Wave5Tests.cs` : `cd`, `clear`, `help`
   avec `FakeShellSession` (`Tests/HackerOs.Tests.Support/`).
-- `Tests/HackerOs.Ecosystem.Tests` : 74 apps intégrées, 62 commandes (depuis l'ADR 0064).
+- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées, 63 commandes (`stress` depuis `rebuild/5-worker-processes`).
 
 ## Liste des tâches
 

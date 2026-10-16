@@ -36,6 +36,8 @@ public static class ProcReader
         string? uptime = await TryReadAsync("/proc/uptime", cancellationToken);
         string? diskStats = await TryReadAsync("/proc/diskstats", cancellationToken);
         string? netDev = await TryReadAsync("/proc/net/dev", cancellationToken);
+        // ADR 0071, section 5: the Web Workers, shown with the cores; absent on the server host.
+        string? workers = await TryReadAsync("/proc/hackeros/workers", cancellationToken);
 
         Dictionary<long, ProcessIoSample> io = [];
         foreach (HackProcess process in processes)
@@ -54,7 +56,8 @@ public static class ProcReader
             uptime is null ? null : ProcFiles.ParseUptime(uptime).Uptime,
             diskStats is null ? [] : ProcFiles.ParseDiskStats(diskStats),
             netDev is null ? [] : ProcFiles.ParseNetDev(netDev),
-            io);
+            io,
+            workers is null ? null : ProcFiles.ParseWorkers(workers));
         return new ProcRefresh(processes, reading);
     }
 

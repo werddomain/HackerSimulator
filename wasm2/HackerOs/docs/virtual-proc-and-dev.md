@@ -52,13 +52,14 @@ Contrats touchés :
 | `/proc/<pid>/cmdline` | fichier `0444` | arguments séparés et terminés par NUL ([`process-environment.md`](process-environment.md)) ; `appId\0` sans entrée d'environnement |
 | `/proc/<pid>/environ` | fichier `0400` | paires `NOM=valeur` terminées par NUL (phase 3) ; vide sans entrée |
 | `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
+| `/proc/<pid>/stat` | fichier `0444` | une ligne au format `proc(5)`, 52 champs ; `utime` et `stime` (14 et 15) en `USER_HZ`, mesurés quand la mesure CPU est active, sinon `utime` reconstruit depuis le simulateur (phase 5, ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) |
 | `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
-| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
+| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB ; avec la mémoire mesurée (ADR 0068), aussi `AnonPages`, `Mapped`, `Slab` |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
 | `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
-| `/proc/stat` | fichier `0444` | lignes `cpu` et `cpuN` en `USER_HZ`, `btime`, `processes`, `procs_running`, `procs_blocked` (phase 4) |
+| `/proc/stat` | fichier `0444` | lignes `cpu` et `cpuN` en `USER_HZ`, `btime`, `processes`, `procs_running`, `procs_blocked` (phase 4) ; temps réels du thread principal sur `cpu0` quand la mesure CPU est active (ADR 0067) |
 | `/proc/diskstats` | fichier `0444` | une ligne pour `hda` (majeur 8, mineur 0), 14 champs (phase 4) |
 | `/proc/net/` | dossier `0555` | contient `dev` |
 | `/proc/net/dev` | fichier `0444` | en-tête du noyau, une ligne pour `lo` et une pour `eth0` (phase 4) |
@@ -77,11 +78,39 @@ Kind:	window
 Session:	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 VmRSS:	3072 kB
 Cpu:	12.5
+CpuSource:	simulated
+MemSource:	simulated
 ```
 
 `Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. `Cpu` est
 un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
-facile à analyser.
+facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
+`Cpu` et `VmRSS` : `measured` quand la mesure de la phase 5 répond pour ce
+processus, `simulated` sinon (mesure coupée, pas encore implémentée, ou
+processus du contenu de jeu) ; voir
+[`resource-accounting.md`](resource-accounting.md).
+
+Quand la mémoire d'un processus est mesurée (ADR 0068,
+[`memory-accounting.md`](memory-accounting.md)), cinq lignes suivent `VmRSS`,
+dans l'ordre de Linux : `RssAnon`, `RssFile`, `VmData` (part noyau), `VmExe`
+en kB, puis `HackAllocBytes` (octets alloués depuis le démarrage du processus,
+sans unité). `VmRSS = RssAnon + RssFile + VmData`. Un processus simulé n'a
+aucune de ces lignes : le format est exactement celui d'avant la phase 5.
+
+Quand le CPU est mesuré (ADR 0067), `Cpu` est l'usage de la dernière seconde
+et quatre lignes suivent `MemSource` :
+
+```text
+Responding:	1
+LongTasks:	3
+voluntary_ctxt_switches:	1520
+nonvoluntary_ctxt_switches:	0
+```
+
+`Responding: 0` signale un processus « Not responding » ; `LongTasks` compte
+ses tranches de plus de 50 ms. Mesure coupée, ces lignes n'apparaissent pas :
+le fichier est exactement celui d'avant la phase 5. Détails :
+[`cpu-accounting.md`](cpu-accounting.md).
 
 Choix de calcul :
 
@@ -142,6 +171,11 @@ proc /proc proc ro 0 0
 - Depuis la phase 4, `ResourceSamplingService` fait avancer le simulateur chaque
   seconde simulée : `status`, `meminfo`, `uptime` et `loadavg` ne restent plus à
   zéro dans un hôte réel.
+
+- `/proc/hackeros/workers` (ADR 0071 §5) n'existe que si l'hôte a des Web
+  Workers : capacité, taille du pool, puis une ligne par worker (rôle, état,
+  cœur, mémoire, âge du battement, temps occupé, PID visibles). Format :
+  [`worker-processes.md`](worker-processes.md#prochackerosworkers).
 
 Visibilité : seuls les processus actifs apparaissent. L'appelant voit toujours
 son propre processus, et les autres avec `process.list` ou l'autorité `System`.

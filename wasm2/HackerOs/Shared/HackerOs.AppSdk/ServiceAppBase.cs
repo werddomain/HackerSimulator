@@ -17,7 +17,12 @@ public enum ServiceStopReason
     Shutdown,
 
     /// <summary>The service or one of its dependencies faulted.</summary>
-    Faulted
+    Faulted,
+
+    /// <summary>
+    /// Another process asked it to stop: <c>kill</c>, "End task", <c>systemctl stop</c> (ADR 0069).
+    /// </summary>
+    Terminated
 }
 
 /// <summary>
@@ -25,7 +30,9 @@ public enum ServiceStopReason
 /// </summary>
 public abstract class ServiceAppBase : AppBase
 {
+    private readonly Lock _stopGate = new();
     private IAppExecutionContext? _context;
+    private Task? _stopping;
 
     /// <summary>Initializes a service application with its validated manifest.</summary>
     /// <param name="manifest">Service application manifest.</param>
@@ -49,6 +56,15 @@ public abstract class ServiceAppBase : AppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
+        lock (_stopGate)
+        {
+            // A new run gets its own stop: OnStoppingAsync runs once per run, not once per instance.
+            _stopping = null;
+        }
+
+        // ADR 0069: the OS's stop request (kill, End task, logout...) runs OnStoppingAsync right
+        // away, before the token is cancelled, and the OS waits for it within the grace period.
+        context.StopRequested += OnStopRequested;
         return RunInScopeAsync(context, sessionCancellationToken);
     }
 
@@ -59,7 +75,44 @@ public abstract class ServiceAppBase : AppBase
     /// <param name="cancellationToken">Enforces the ecosystem shutdown deadline.</param>
     /// <returns>A task representing bounded cleanup.</returns>
     /// <remarks>Runs inside the same ambient context scope as <see cref="RunAsync"/> when the service was started.</remarks>
+    /// <remarks>
+    /// Runs <see cref="OnStoppingAsync"/> once per run: when the OS already announced the stop
+    /// (<see cref="IAppExecutionContext.StopRequested"/>), this call waits for that same cleanup.
+    /// </remarks>
     public async ValueTask StopAsync(ServiceStopReason reason, CancellationToken cancellationToken)
+    {
+        await StopOnceAsync(reason, cancellationToken);
+    }
+
+    /// <summary>Maps the OS's stop reason to the one a service sees.</summary>
+    /// <param name="reason">Reason carried by the stop request.</param>
+    public static ServiceStopReason ToServiceStopReason(HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason) => reason switch
+    {
+        HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Disabled => ServiceStopReason.Disabled,
+        HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Logout => ServiceStopReason.Logout,
+        HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Shutdown => ServiceStopReason.Shutdown,
+        HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Fault => ServiceStopReason.Faulted,
+        _ => ServiceStopReason.Terminated
+    };
+
+    private void OnStopRequested(object? sender, Diagnostics.HackStopRequestedEventArgs e)
+    {
+        // The grace period is simulated time; the cleanup budget follows it in real time.
+        CancellationTokenSource budget = new(e.GracePeriod > TimeSpan.Zero ? e.GracePeriod : TimeSpan.FromSeconds(1));
+        Task cleanup = StopOnceAsync(ToServiceStopReason(e.Reason), budget.Token);
+        _ = cleanup.ContinueWith(_ => budget.Dispose(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        e.Defer(cleanup);
+    }
+
+    private Task StopOnceAsync(ServiceStopReason reason, CancellationToken cancellationToken)
+    {
+        lock (_stopGate)
+        {
+            return _stopping ??= RunStoppingAsync(reason, cancellationToken);
+        }
+    }
+
+    private async Task RunStoppingAsync(ServiceStopReason reason, CancellationToken cancellationToken)
     {
         using IDisposable? scope = _context is null ? null : HackExecutionContext.Enter(_context);
         await OnStoppingAsync(reason, cancellationToken);
@@ -68,7 +121,14 @@ public abstract class ServiceAppBase : AppBase
     private async Task RunInScopeAsync(IAppExecutionContext context, CancellationToken sessionCancellationToken)
     {
         using IDisposable scope = HackExecutionContext.Enter(context);
-        await RunCoreAsync(context, sessionCancellationToken);
+        try
+        {
+            await RunCoreAsync(context, sessionCancellationToken);
+        }
+        finally
+        {
+            context.StopRequested -= OnStopRequested;
+        }
     }
 
     /// <summary>Implements the active service loop.</summary>
@@ -79,7 +139,11 @@ public abstract class ServiceAppBase : AppBase
         IAppExecutionContext context,
         CancellationToken sessionCancellationToken);
 
-    /// <summary>Handles a bounded stop request after session cancellation is raised.</summary>
+    /// <summary>
+    /// Handles a bounded stop request: called once per run, when the OS announces the stop
+    /// (before the session token is cancelled, ADR 0069) or, at the latest, when the ecosystem stops
+    /// the service. A service that holds state finishes or cancels its current operation here.
+    /// </summary>
     /// <param name="reason">Reason the ecosystem requested the stop.</param>
     /// <param name="cancellationToken">Enforces the cleanup deadline.</param>
     /// <returns>A task representing cleanup.</returns>

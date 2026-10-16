@@ -1,5 +1,6 @@
 using System.Text;
 using HackerOs.AppSdk.IO;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Core.Shell;
 
@@ -35,6 +36,7 @@ public sealed class ShellPipe
     private readonly object _sync = new();
     private readonly StringBuilder _buffer = new();
     private readonly int _capacity;
+    private readonly KernelMemoryCharge? _charge;
     private bool _writerClosed;
     private bool _readerClosed;
     private TaskCompletionSource _dataAvailable = NewSignal();
@@ -42,10 +44,15 @@ public sealed class ShellPipe
 
     /// <summary>Creates an empty pipe.</summary>
     /// <param name="capacity">Buffer capacity in characters; asynchronous writes wait beyond it.</param>
-    public ShellPipe(int capacity = DefaultCapacity)
+    /// <param name="charge">
+    /// Optional kernel-memory charge (ADR 0068) kept equal to the bytes waiting in the buffer (two per
+    /// UTF-16 character) and released when the read end closes or the drained write end has closed.
+    /// </param>
+    public ShellPipe(int capacity = DefaultCapacity, KernelMemoryCharge? charge = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
         _capacity = capacity;
+        _charge = charge;
         Writer = new PipeWriter(this);
         Reader = new PipeReader(this);
     }
@@ -63,6 +70,7 @@ public sealed class ShellPipe
         {
             _writerClosed = true;
             _dataAvailable.TrySetResult();
+            UpdateCharge();
         }
     }
 
@@ -74,6 +82,25 @@ public sealed class ShellPipe
             _readerClosed = true;
             _buffer.Clear();
             _spaceAvailable.TrySetResult();
+            _charge?.Dispose();
+        }
+    }
+
+    /// <summary>Keeps the kernel-memory charge equal to the buffered bytes; called under the lock.</summary>
+    private void UpdateCharge()
+    {
+        if (_charge is null)
+        {
+            return;
+        }
+
+        if (_writerClosed && _buffer.Length == 0)
+        {
+            _charge.Dispose();
+        }
+        else
+        {
+            _charge.Resize((long)_buffer.Length * sizeof(char));
         }
     }
 
@@ -98,6 +125,7 @@ public sealed class ShellPipe
 
             _buffer.Append(text);
             _dataAvailable.TrySetResult();
+            UpdateCharge();
         }
     }
 
@@ -125,6 +153,7 @@ public sealed class ShellPipe
                     int count = Math.Min(room, text.Length);
                     _buffer.Append(text.Span[..count]);
                     _dataAvailable.TrySetResult();
+                    UpdateCharge();
                     text = text[count..];
                     if (text.IsEmpty)
                     {
@@ -184,6 +213,7 @@ public sealed class ShellPipe
         string taken = _buffer.ToString(0, count);
         _buffer.Remove(0, count);
         _spaceAvailable.TrySetResult();
+        UpdateCharge();
         return taken;
     }
 

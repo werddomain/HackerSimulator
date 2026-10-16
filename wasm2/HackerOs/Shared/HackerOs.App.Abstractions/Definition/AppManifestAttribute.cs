@@ -8,4 +8,15 @@ namespace HackerOs.App.Abstractions;
 /// instantiated at runtime: hosts only read the generated JSON.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class AppManifestAttribute : Attribute;
+public sealed class AppManifestAttribute : Attribute
+{
+    /// <summary>
+    /// Gets or sets where the OS runs the app (ADR 0070, section 1). Left at
+    /// <see cref="AppExecutionHost.Default"/>, the generator writes the default of the app's kind:
+    /// <see cref="AppExecutionHost.MainThread"/> for a window app, <see cref="AppExecutionHost.Pool"/>
+    /// for a command, <see cref="AppExecutionHost.Dedicated"/> for a service. A command or service that
+    /// needs something a worker cannot offer (the DOM, the calling shell's own state) declares
+    /// <see cref="AppExecutionHost.MainThread"/>, with the reason in a comment.
+    /// </summary>
+    public AppExecutionHost Execution { get; set; } = AppExecutionHost.Default;
+}

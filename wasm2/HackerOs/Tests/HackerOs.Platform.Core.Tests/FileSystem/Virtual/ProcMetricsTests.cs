@@ -64,6 +64,56 @@ public sealed class ProcMetricsTests
     }
 
     [Fact]
+    public void Measured_cpu_time_replaces_the_simulation_on_one_core()
+    {
+        MeasuredThread measured = new(new MeasuredThreadCpuTimes(
+            TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(0.25), TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(10)));
+        CpuTimeAccounting cpu = new(new VirtualHardwareProfile("dual", 2, 1, 1, 1), measured: measured);
+        ProcessRecord busy = Process(4, "org.tests.busy");
+
+        // The scheduler tick no longer invents time: ADR 0067.
+        cpu.Record([new ProcessResourceSample(busy.Pid, 0, BootUtc, 1.5, 0, 0, 0)], [busy], TimeSpan.FromSeconds(1));
+
+        IReadOnlyList<CpuTimes> cores = cpu.GetCores();
+        Assert.Equal(new CpuTimes(150, 0, 50, 800), cores[0]);
+        Assert.Equal(new CpuTimes(0, 0, 0, 1000), cores[1]);
+    }
+
+    [Fact]
+    public void A_null_accountant_keeps_the_simulated_cpu_time()
+    {
+        CpuTimeAccounting cpu = new(new VirtualHardwareProfile("dual", 2, 1, 1, 1), measured: HackerOs.Platform.Core.Processes.Accounting.NullCpuTimeAccountant.Instance);
+        ProcessRecord busy = Process(4, "org.tests.busy");
+
+        cpu.Record([new ProcessResourceSample(busy.Pid, 0, BootUtc, 1.5, 0, 0, 0)], [busy], TimeSpan.FromSeconds(1));
+
+        Assert.Equal(new CpuTimes(100, 0, 0, 0), cpu.GetCores()[0]);
+    }
+
+    private sealed class MeasuredThread(MeasuredThreadCpuTimes thread) : ICpuTimeAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetCpuUsage(ProcessId pid, out double coreEquivalents)
+        {
+            coreEquivalents = 0;
+            return false;
+        }
+
+        public bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes times)
+        {
+            times = default;
+            return false;
+        }
+
+        public bool TryGetThreadTimes(out MeasuredThreadCpuTimes times)
+        {
+            times = thread;
+            return true;
+        }
+    }
+
+    [Fact]
     public void Sampling_service_ticks_the_simulator_once_per_simulated_second()
     {
         global::HackerOs.Platform.Core.Time.ManualSimulationClock clock = new(BootUtc, TimeSpan.FromMilliseconds(100));

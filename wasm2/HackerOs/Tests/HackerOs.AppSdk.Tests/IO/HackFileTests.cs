@@ -1,6 +1,7 @@
 using System.Text;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Tests.Support;
 
 namespace HackerOs.AppSdk.Tests.IO;
@@ -265,6 +266,34 @@ public sealed class HackFileTests
 
         Assert.Equal(1, gateway.WriteCalls);
         Assert.Equal("line 1\nline 2\n", fs.ContentOf("/home/alice/out.txt"));
+    }
+
+    [Fact]
+    public async Task Write_stream_charges_its_buffer_to_the_process_until_it_is_released()
+    {
+        // ADR 0068: the in-memory buffer of a write stream is OS-held memory of the process (VmData).
+        using IDisposable scope = HackTestHost.Enter(out FakeAppFileSystemGateway fs);
+        RecordingKernelMemoryLedger ledger = new();
+        ProcessId pid = ProcessId.FromInt64(7);
+        fs.StreamBufferCharges = () => ledger.Charge(pid, KernelMemoryKind.StreamBuffer);
+
+        await using (HackFileStream read = await HackFile.OpenWriteAsync("seed.txt"))
+        {
+        }
+
+        Assert.Equal(1, ledger.ChargesOpened);
+        await using (HackFileStream stream = await HackFile.OpenWriteAsync("big.bin"))
+        {
+            await stream.WriteAsync(new byte[10_000]);
+            Assert.True(ledger.BytesOf(7, KernelMemoryKind.StreamBuffer) >= 10_000);
+        }
+
+        Assert.Equal(0, ledger.BytesOf(7, KernelMemoryKind.StreamBuffer));
+
+        await using (HackFileStream reader = await HackFile.OpenReadAsync("big.bin"))
+        {
+            Assert.Equal(2, ledger.ChargesOpened); // a read stream holds no OS buffer
+        }
     }
 
     [Fact]

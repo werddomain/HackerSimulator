@@ -25,7 +25,7 @@ de permission restent appliqués exactement comme avant.
 
 | Élément | Emplacement | Rôle |
 |---|---|---|
-| `HackExecutionContext` | `Shared/HackerOs.AppSdk/HackExecutionContext.cs` | Contexte ambiant (`AsyncLocal`) : `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)`. Depuis la phase 3, `WorkingDirectory` est le répertoire du processus (`HackEnvironment`, [`process-environment.md`](process-environment.md)), sauf répertoire fixé par `Enter`. |
+| `HackExecutionContext` | `Shared/HackerOs.AppSdk/HackExecutionContext.cs` | Contexte ambiant (`AsyncLocal`) : `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)`. Depuis la phase 3, `WorkingDirectory` est le répertoire du processus (`HackEnvironment`, [`process-environment.md`](process-environment.md)), sauf répertoire fixé par `Enter`. Depuis la phase 5, son `AsyncLocal` peut porter le crochet de changement de contexte des mesures de ressources, installé à la composition par `HackerOs.Platform.ResourceAccounting` ([`resource-accounting.md`](resource-accounting.md)) ; une portée ouverte empêche de l'installer. |
 | `IAppExecutionContext.HomeDirectory` | `Shared/HackerOs.AppSdk/IAppExecutionContext.cs` | Dossier personnel `/home/<login>` (membre par défaut `/home/{UserId}`, remplacé par la plateforme). Sert à `~` et au répertoire courant par défaut. |
 | `IAppExecutionContext.IsRootElevated` | `Shared/HackerOs.AppSdk/IAppExecutionContext.cs` | Lancement en root complet par `sudo` (ADR 0042), membre par défaut `false`. Ne change pas `HomeDirectory` ; sert à la corbeille de l'utilisateur effectif (`/root/.local/share/Trash`, [`trash.md`](trash.md)). |
 | `HackFile`, `HackDirectory`, `HackPath` | `Shared/HackerOs.AppSdk/IO/` | Façades statiques. `HackPath` est pur, sauf `GetFullPath(path)`. |
@@ -117,6 +117,12 @@ await using HackFileStream flux = await HackFile.OpenWriteAsync("~/rapport.txt")
 await using StreamWriter writer = new(flux);
 await writer.WriteLineAsync("ligne");
 ```
+
+Quand l'OS mesure la mémoire (ADR 0068), le tampon d'un flux d'écriture est
+compté dans la part noyau du processus (`VmData` de `/proc/<pid>/status`)
+jusqu'à la fermeture du flux, par `IAppFileSystemGateway.ChargeStreamBuffer()`
+(méthode par défaut qui ne charge rien : une passerelle de test n'a rien à
+faire). Voir [`memory-accounting.md`](memory-accounting.md).
 
 Le `Flush()` synchrone ne fait rien, et un `Dispose()` synchrone d'un flux qui
 contient des octets non publiés lève `InvalidOperationException` au lieu de les

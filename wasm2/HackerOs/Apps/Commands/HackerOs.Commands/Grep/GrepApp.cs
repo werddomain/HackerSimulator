@@ -35,7 +35,7 @@ public sealed class GrepApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("grep", "grep [-i] [-n] [-v] <pattern> [file...]");
+    public override TerminalCommand? Terminal => new("grep", "grep [-i] [-n] [-v] [-r] <pattern> [file...]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

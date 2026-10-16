@@ -19,6 +19,12 @@ dependency for ordinary use.
 
 ## Current hosts
 
+All three hosts are booted to the desktop by one command,
+`build/verify-hosts.sh` (see [`../building-and-testing.md`](../building-and-testing.md#vérifier-les-trois-hôtes)).
+A host's `Components/App.razor` must link its own scoped-CSS bundle
+(`@Assets["{Project}.styles.css"]`, which imports every referenced library's
+scoped CSS) and declare an icon; the smoke test fails otherwise.
+
 ### 1. `OS/HackerOs.Ecosystem` — the product host
 
 `OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj` is the standalone,
@@ -36,7 +42,10 @@ component tree via `AddInteractiveWebAssemblyRenderMode`. It exists solely
 because a Blazor Web App host gives a better local debugging loop (server-side
 build/reload, `UseWebAssemblyDebugging`) than debugging the standalone WASM PWA
 directly. It references the same app assemblies as `HackerOs.Ecosystem` and
-adds MudBlazor's CDN font/CSS/JS for convenience during development.
+adds MudBlazor's CDN font/CSS/JS for convenience during development. Its
+browser side runs the Ecosystem's `Program.cs`, so it has the same Web Worker
+process pool (ADR 0070, [`../worker-processes.md`](../worker-processes.md));
+`HackerOs.Server` has none and runs every process in the server process.
 
 This host is not a distribution target and is not a dependency of any other
 project — it is expected to remain a permanent developer-facing harness, not a

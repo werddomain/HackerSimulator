@@ -17,7 +17,7 @@ Projet `Shared/HackerOs.App.Abstractions`, dossier `Definition/`, namespace
 
 | Type | Rôle |
 | --- | --- |
-| `AppManifestAttribute` | Marque la classe qui décrit une app. Usage unique, non hérité. |
+| `AppManifestAttribute` | Marque la classe qui décrit une app. Usage unique, non hérité. Propriété nommée `Execution` (ADR 0070) : où l'OS exécute l'app (voir [Hôte d'exécution](#hôte-dexécution-adr-0070)). |
 | `AppDefinition` | Classe de base abstraite : 4 membres obligatoires (`Id`, `Name`, `Kind`, `EntryPoint`) et des membres facultatifs avec valeur par défaut. |
 | `FileHandler`, `TerminalCommand` | Formes courtes de `FileHandlerManifest` et `TerminalCommandManifest`. |
 | `AppDefinitionMapper` | `ToManifest(definition)` convertit une définition en `AppManifest` (schéma version 1). |
@@ -69,6 +69,46 @@ public sealed class TextEditorApp : AppDefinition
   version contre laquelle l'app a été compilée.
 - `osCompatibility` et `update` ne sont pas exposés par `AppDefinition` : ils
   restent absents du manifeste généré.
+- `[AppManifest(Execution = …)]` devient `execution`, toujours écrit, résolu
+  (jamais `default`) : voir la section suivante.
+
+### Hôte d'exécution (ADR 0070)
+
+L'attribut `[AppManifest]` dit **où** l'OS exécute l'app, par sa propriété
+nommée `Execution` (`AppExecutionHost`, `HackerOs.App.Abstractions`) :
+
+| Valeur | Champ `execution` | Où | Défaut de |
+| --- | --- | --- | --- |
+| `MainThread` | `mainThread` | le thread principal du navigateur, avec le bureau | app à fenêtre (la seule valeur permise : elle a besoin du DOM) |
+| `Pool` | `pool` | un worker du pool, un par cœur virtuel ; les étapes d'un même pipeline vont sur le même | commande |
+| `Dedicated` | `dedicated` | un worker à lui, pris au worker prêt (ADR 0071) | service |
+| `Default` | — | laissé tel quel dans l'attribut : le générateur écrit le défaut du genre | — |
+
+```csharp
+// ADR 0070: stays on the main thread: it acts on the calling shell (its working directory),
+// like the cd builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
+public sealed class CdApp : AppDefinition { … }
+```
+
+- Le mappeur lit l'attribut de la classe de définition et écrit la valeur
+  résolue (`AppExecutionHosts.Resolve`) ; une définition sans attribut (tests)
+  reçoit le défaut de son genre.
+- `AppManifest.Execution` est `null` pour un manifeste écrit avant l'ADR 0070 :
+  `AppExecutionHosts.Of(manifest)` donne alors le défaut du genre.
+- Le validateur refuse `pool` ou `dedicated` pour une app à fenêtre
+  (`manifest.execution.window`) et la valeur `default`
+  (`manifest.execution.invalid`) ; le schéma et la liste blanche de
+  `AppManifestJsonSerializer.DeserializeStrict` connaissent `execution`.
+- Une commande ou un service qui a besoin de ce qu'un worker n'offre pas déclare
+  `MainThread`, **avec la raison en commentaire** au-dessus de l'attribut. Dans
+  `HackerOs.Commands` : les built-ins du shell (`cd`, `exit`, `export`,
+  `unset`, `jobs`, `read`, `help`, `which`, `kill`, `sudo`, `watch`) et les
+  commandes plein écran (`nano`, `top`, `htop`) ; le service d'exemple
+  (événements typés). Les 49 autres commandes vont dans le pool.
+- Un hôte sans Web Worker (`HackerOs.Server`) ignore `execution` (ADR 0070 §6).
+
+Détails du mécanisme : [`worker-processes.md`](worker-processes.md).
 
 ### Écart avec le texte de l'ADR
 
@@ -260,7 +300,10 @@ la préparation des ressources et avant les cibles Blazor) :
    le valide, construit le catalogue avec `AppCatalog.Build` (identifiant en
    double, dépendance manquante ou cyclique = `HOSAPP0021`) et écrit
    `obj/<config>/<tfm>/BuiltInApplications.json` seulement si ses octets changent
-   (pas de recompilation inutile) ;
+   (pas de recompilation inutile) ; elle y mesure aussi l'**image** de chaque
+   app (ADR 0068) à partir du chemin de son assembly et de sa liste de
+   dépendances, que `GetHackerOsAppManifests` renvoie (`AssemblyPath`,
+   `DependenciesFile`) ;
 4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
 5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
    retirant d'abord un éventuel doublon écrit à la main).
@@ -273,22 +316,34 @@ générateur n'apparaît pas dans `_framework`.
 ### Format
 
 ```json
-{"schemaVersion":1,"applications":[{"isSystemApp":false,"manifest":{"schemaVersion":1,"id":"org.hackeros.calculator", "...": "..."}}]}
+{"schemaVersion":1,"applications":[{"isSystemApp":false,"manifest":{"schemaVersion":1,"id":"org.hackeros.calculator", "...": "..."},"image":{"assemblies":[{"name":"HackerOs.Apps.Calculator.dll","bytes":17408,"shared":false},{"name":"HackerOs.AppSdk.dll","bytes":400896,"shared":true}]}}]}
 ```
+
+`image` (facultatif, ADR 0068) liste les assemblies que l'app mappe, triées par
+nom, avec leur taille : la sienne (`shared: false`, `VmExe`) et les
+bibliothèques qu'elle référence, directement ou non (`shared: true`), hors
+runtime et framework .NET (`System.*`, `Microsoft.*`). Le calcul est fait par
+`AppImageInspector` (métadonnées seulement, aucun code chargé) ; voir
+[`memory-accounting.md`](memory-accounting.md). Le `manifest.json` versionné
+ne change pas : les tailles ne vivent que dans ce fichier produit à chaque
+build.
 
 `BuiltInApplicationsJsonSerializer` (`HackerOs.App.Abstractions`, à côté
 d'`AppManifestJsonSerializer`) écrit la forme canonique (applications triées par
 identifiant, manifestes canoniques) et relit en mode strict (propriété inconnue
 ou en double, `schemaVersion` autre que 1, `isSystemApp` non booléen = erreur ;
 chaque manifeste passe par `AppManifestJsonSerializer.DeserializeStrict`). Le
-type `BuiltInApplication(IsSystemApp, Manifest)` porte une entrée. Le fichier
+type `BuiltInApplication(IsSystemApp, Manifest, Image)` porte une entrée
+(`Image` vaut `null` quand le champ est absent). Le fichier
 n'est jamais écrit à la main ni versionné.
 
 ### Lecture au démarrage
 
 `BuildKnownLazyApps` lit la ressource `HackerOs.BuiltInApplications.json` et
 construit `Catalog` avec `AppCatalog.BuildFromBuiltInApplications` : le catalogue
-porte les drapeaux système (voir « Apps système » ci-dessous). Seul le
+porte les drapeaux système (voir « Apps système » ci-dessous), et expose
+`BuildKnownLazyApps.Images` (image de chaque app, lue par la mesure de la
+mémoire). Seul le
 JSON est lu : les DLL d'apps restent chargées au premier lancement et les
 classes `AppDefinition` ne sont jamais instanciées au runtime.
 
@@ -315,7 +370,7 @@ système. Rien d'autre.
   `Tests/ManifestGenerator.Fixtures.Host` (une app système, un projet à deux apps,
   un projet qui n'est pas une app, ignoré).
 - `BuildKnownLazyAppsTests` (`HackerOs.Ecosystem.Tests`) : le catalogue contient
-  toutes les apps de l'hôte (74 aujourd'hui : 12 fenêtrées et 62 commandes) ; toutes viennent de la ressource agrégée (aucune ressource
+  toutes les apps de l'hôte (75 aujourd'hui : 12 fenêtrées et 63 commandes, `stress` depuis l'ADR 0070) ; toutes viennent de la ressource agrégée (aucune ressource
   `HackerOs.Ecosystem.Manifests.*`), et la liste de chargement différé est
   exactement celle de leurs assemblies.
 
@@ -379,4 +434,5 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `rebuild/2-builtin-applications` : cible `CollectHackerOsBuiltInApplications`, `BuiltInApplications.json` embarqué, lazy load automatique, `BuildKnownLazyApps` lit le nouveau fichier, `IsSystemApp` transporté.
 - [x] `rebuild/2-system-apps` (ADR 0048) : `AppCatalog.SystemAppIds` et `IsSystemApp`, `AppCatalog.Build(manifests, systemAppIds)` et `BuildFromBuiltInApplications`, `IsSystemApp="true"` posé sur les `ProjectReference` de l'Ecosystem, pont de transition `_HackerOsMarkLegacySystemManifests`, tests.
 - [x] `rebuild/2-app-uninstall` (ADR 0048 §2-6) : désinstallation par `apps.config`, voir [`app-installation.md`](app-installation.md).
+- [x] `rebuild/5-worker-processes` (ADR 0070) : `AppManifestAttribute.Execution`, `AppExecutionHost`, champ `execution` (schéma, liste blanche, validateur, fixture canonique), défauts par genre dans le mappeur, chaque commande et service déclare son hôte ou reçoit le défaut.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

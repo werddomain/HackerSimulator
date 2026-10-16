@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.AppSdk.IO;
 
@@ -24,6 +25,11 @@ namespace HackerOs.AppSdk.IO;
 /// The stream keeps the gateway of the app that opened it, so publishing on disposal never depends
 /// on the ambient context of the code that disposes it.
 /// </para>
+/// <para>
+/// When the OS measures memory (ADR 0068), a write stream's buffer is charged to the app's process
+/// (<c>VmData</c> of <c>/proc/&lt;pid&gt;/status</c>) through
+/// <see cref="IAppFileSystemGateway.ChargeStreamBuffer"/>, until the stream is released.
+/// </para>
 /// </remarks>
 public sealed class HackFileStream : Stream
 {
@@ -34,6 +40,7 @@ public sealed class HackFileStream : Stream
     private readonly FileSystemContentReadHandle? _readHandle;
     private readonly FileSystemContentDescriptor _descriptor;
     private readonly bool _strict;
+    private readonly KernelMemoryCharge _bufferCharge;
     private long _appendBaseLength;
     private bool _dirty;
     private bool _disposed;
@@ -56,6 +63,7 @@ public sealed class HackFileStream : Stream
         _descriptor = descriptor;
         Revision = revision;
         _strict = strict;
+        _bufferCharge = mode == StreamMode.Read ? KernelMemoryCharge.None : gateway.ChargeStreamBuffer();
     }
 
     private enum StreamMode
@@ -222,6 +230,7 @@ public sealed class HackFileStream : Stream
         ThrowIfNotWritable();
         _inner.Write(buffer, offset, count);
         _dirty = true;
+        ChargeBuffer();
     }
 
     /// <inheritdoc />
@@ -230,6 +239,7 @@ public sealed class HackFileStream : Stream
         ThrowIfNotWritable();
         _inner.Write(buffer);
         _dirty = true;
+        ChargeBuffer();
     }
 
     /// <inheritdoc />
@@ -269,6 +279,7 @@ public sealed class HackFileStream : Stream
 
         _inner.SetLength(value);
         _dirty = true;
+        ChargeBuffer();
     }
 
     /// <summary>Does nothing: buffered bytes are published by <see cref="FlushAsync(CancellationToken)"/> or <see cref="DisposeAsync"/>.</summary>
@@ -308,6 +319,7 @@ public sealed class HackFileStream : Stream
             // The appended bytes are now part of the file: start a fresh buffer after them.
             _appendBaseLength = committed.Metadata is FileMetadata file ? file.Length : _appendBaseLength + appended.Length;
             _inner.SetLength(0);
+            ChargeBuffer();
         }
 
         Revision = committed.Metadata.Revision;
@@ -332,6 +344,7 @@ public sealed class HackFileStream : Stream
         finally
         {
             _disposed = true;
+            _bufferCharge.Dispose();
             if (_readHandle is not null)
             {
                 await _readHandle.DisposeAsync().ConfigureAwait(false);
@@ -365,8 +378,18 @@ public sealed class HackFileStream : Stream
         }
 
         _disposed = true;
+        _bufferCharge.Dispose();
         _inner.Dispose();
         base.Dispose(disposing);
+    }
+
+    /// <summary>Keeps the kernel-memory charge equal to the memory the buffer really holds (its capacity).</summary>
+    private void ChargeBuffer()
+    {
+        if (_inner is MemoryStream buffer)
+        {
+            _bufferCharge.Resize(buffer.Capacity);
+        }
     }
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);

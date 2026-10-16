@@ -9,6 +9,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HackerOS</title>
     <base href="/" />
+    <!--
+      Same icon as the standalone PWA (OS/HackerOs.Ecosystem/wwwroot/index.html), served unprefixed
+      from HackerOs.Ecosystem's static web assets. Without a declared icon the browser requests
+      /favicon.ico, which 404s and fails the host smoke test (build/verify-hosts.sh).
+    -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <ResourcePreloader />
     <ImportMap />
 

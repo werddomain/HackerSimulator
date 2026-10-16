@@ -6,7 +6,9 @@ namespace HackerOs.Tools.ManifestGenerator;
 /// <summary>One generated manifest file referenced by a host, with the host's system-app flag.</summary>
 /// <param name="ManifestPath">Full path of the app project's generated manifest.</param>
 /// <param name="IsSystemApp">The <c>IsSystemApp</c> metadata of the host's <c>ProjectReference</c>.</param>
-public sealed record AggregationInput(string ManifestPath, bool IsSystemApp);
+/// <param name="AssemblyPath">The app's built assembly, measured for the image layer (ADR 0068); <see langword="null"/> when unknown.</param>
+/// <param name="DependenciesFile">The app project's dependency list, to resolve the shared assemblies it maps.</param>
+public sealed record AggregationInput(string ManifestPath, bool IsSystemApp, string? AssemblyPath = null, string? DependenciesFile = null);
 
 /// <summary>Result of an aggregation: the document when valid, diagnostics otherwise.</summary>
 /// <param name="Json">Canonical <c>BuiltInApplications.json</c>, or <see langword="null"/> on error.</param>
@@ -39,7 +41,7 @@ public static class BuiltInApplicationsAggregator
 
             if (ManifestFileReader.TryRead(input.ManifestPath, out AppManifest? manifest, out IReadOnlyList<GeneratorDiagnostic> readErrors))
             {
-                applications.Add(new BuiltInApplication(input.IsSystemApp, manifest!));
+                applications.Add(new BuiltInApplication(input.IsSystemApp, manifest!, InspectImage(input)));
             }
             else
             {
@@ -64,16 +66,34 @@ public static class BuiltInApplicationsAggregator
     }
 
     /// <summary>
+    /// Measures an app's image (ADR 0068) when its assembly is known; <see langword="null"/> otherwise,
+    /// and the app's memory then has no image layer.
+    /// </summary>
+    private static AppImage? InspectImage(AggregationInput input)
+    {
+        if (input.AssemblyPath is not { Length: > 0 } assembly || !File.Exists(assembly))
+        {
+            return null;
+        }
+
+        IEnumerable<string> dependencies = input.DependenciesFile is { Length: > 0 } list && File.Exists(list)
+            ? File.ReadAllLines(list)
+            : [];
+        return AppImageInspector.Inspect(assembly, dependencies);
+    }
+
+    /// <summary>
     /// Parses the list file written by the <c>CollectHackerOsBuiltInApplications</c> target: one
-    /// <c>&lt;isSystemApp&gt;|&lt;manifest path&gt;</c> line per manifest (an empty flag means
-    /// <c>false</c>). Duplicate paths (a project
-    /// referenced twice) collapse to one entry, system flag OR-ed.
+    /// <c>&lt;isSystemApp&gt;|&lt;manifest path&gt;[|&lt;assembly path&gt;|&lt;dependency list&gt;]</c>
+    /// line per manifest (an empty flag means <c>false</c>; the last two fields, for the image layer of
+    /// ADR 0068, are optional). Duplicate paths (a project referenced twice) collapse to one entry,
+    /// system flag OR-ed.
     /// </summary>
     /// <param name="lines">File lines.</param>
     /// <returns>The inputs, ordered by path.</returns>
     public static IReadOnlyList<AggregationInput> ParseList(IEnumerable<string> lines)
     {
-        Dictionary<string, bool> byPath = new(StringComparer.Ordinal);
+        Dictionary<string, AggregationInput> byPath = new(StringComparer.Ordinal);
         foreach (string raw in lines)
         {
             string line = raw.Trim();
@@ -89,10 +109,20 @@ public static class BuiltInApplicationsAggregator
             }
 
             bool isSystem = string.Equals(line[..separator].Trim(), "true", StringComparison.OrdinalIgnoreCase);
-            string path = Path.GetFullPath(line[(separator + 1)..].Trim());
-            byPath[path] = byPath.TryGetValue(path, out bool existing) ? existing || isSystem : isSystem;
+            string[] fields = line[(separator + 1)..].Split('|');
+            string path = Path.GetFullPath(fields[0].Trim());
+            string? assembly = fields.Length > 1 && fields[1].Trim() is { Length: > 0 } a ? Path.GetFullPath(a) : null;
+            string? dependencies = fields.Length > 2 && fields[2].Trim() is { Length: > 0 } d ? Path.GetFullPath(d) : null;
+            byPath[path] = byPath.TryGetValue(path, out AggregationInput? existing)
+                ? existing with
+                {
+                    IsSystemApp = existing.IsSystemApp || isSystem,
+                    AssemblyPath = existing.AssemblyPath ?? assembly,
+                    DependenciesFile = existing.DependenciesFile ?? dependencies
+                }
+                : new AggregationInput(path, isSystem, assembly, dependencies);
         }
 
-        return [.. byPath.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new AggregationInput(pair.Key, pair.Value))];
+        return [.. byPath.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value)];
     }
 }

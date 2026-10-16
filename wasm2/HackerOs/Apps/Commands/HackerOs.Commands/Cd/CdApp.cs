@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Cd;
 /// Manifest of "cd" (ADR 0047). The build generates <c>manifests/&lt;appId&gt;.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it acts on the calling shell (its working directory), like the cd builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class CdApp : AppDefinition
 {
     /// <inheritdoc />

@@ -88,6 +88,14 @@ public interface IAppPermissionErrorGateway
 /// </summary>
 public interface IAppFileSystemGateway
 {
+    /// <summary>
+    /// Opens a charge for the in-memory buffer of a write stream (<c>HackFileStream</c>), counted in
+    /// the process's kernel memory when memory is measured (ADR 0068). The stream resizes it as its
+    /// buffer grows and disposes it when it is released.
+    /// </summary>
+    /// <returns>The charge; <see cref="KernelMemoryCharge.None"/> when the OS does not measure memory.</returns>
+    KernelMemoryCharge ChargeStreamBuffer() => KernelMemoryCharge.None;
+
     /// <summary>Opens streamed regular-file content.</summary>
     ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default);
@@ -249,6 +257,18 @@ public interface IAppProcessGateway
     /// <summary>Immediately force-stops one process; requires <see cref="AppCapabilities.ProcessManage"/> unless it is the app's own process.</summary>
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies management of another app's process.</exception>
     ProcessRecord Kill(ProcessId pid, ProcessExitReason reason = ProcessExitReason.Killed);
+
+    /// <summary>
+    /// Asynchronous form of <see cref="Kill"/>, used by <c>HackProcess.KillAsync</c>. A process running
+    /// in a Web Worker (ADR 0070) cannot wait synchronously for the OS: its gateway answers here.
+    /// Defaults to <see cref="Kill"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies management of another app's process.</exception>
+    Task<ProcessRecord> KillAsync(ProcessId pid, ProcessExitReason reason = ProcessExitReason.Killed, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Kill(pid, reason));
+    }
 }
 
 /// <summary>Identifies the stable outcome of one <see cref="IAppIntentGateway.LaunchAsync"/> request.</summary>

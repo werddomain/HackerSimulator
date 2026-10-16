@@ -18,6 +18,10 @@
     <!-- ADR 0048: AppLifecycleOrchestrator.DisableAsync/EnableAsync are internal to the installation
          service; the lifecycle tests still exercise their cascade rules directly. -->
     <InternalsVisibleTo Include="HackerOs.Platform.Core.Tests" />
+    <!-- ADR 0070: the worker host serves a remote process through the same trusted context and
+         reports a closed pipe exactly like a local writer (ShellBrokenPipeException). -->
+    <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost" />
+    <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

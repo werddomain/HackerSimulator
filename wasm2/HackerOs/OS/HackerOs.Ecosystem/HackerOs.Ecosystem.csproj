@@ -29,6 +29,8 @@
     <ProjectReference Include="..\..\Infrastructure\HackerOs.Infrastructure.Browser\HackerOs.Infrastructure.Browser.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
+    <!-- ADR 0070/0071: commands and services in Web Workers; part of the boot set, since every worker loads it. -->
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.WorkerHost\HackerOs.Platform.WorkerHost.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />
@@ -56,5 +58,8 @@
   <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
+
+  <!-- ADR 0066: optional CPU/memory accounting (HackerOsCpuAccounting, HackerOsMemoryAccounting). -->
+  <Import Project="..\..\build\HackerOs.ResourceAccounting.targets" />
 
 </Project>

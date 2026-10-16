@@ -81,6 +81,8 @@ Le détail de chaque API est dans la [référence du SDK](sdk-reference.md).
 | Projet | Contenu |
 |---|---|
 | `HackerOs.Platform.Core` | Services de l'OS, sans interface graphique : catalogue d'apps, cycle de vie et processus, système de fichiers et montages (`/proc`, `/dev`), paramètres en fichiers, journaux, politique et capacités, élévation (`sudo`), sessions, shell `hsh` et son interpréteur, réseau simulé, presse-papiers, notifications, horloge, mesures. Les passerelles du SDK y sont implémentées. |
+| `HackerOs.Platform.ResourceAccounting` | Mesure optionnelle du CPU et de la mémoire par processus (ADR 0066 à 0068) : crochet de changement de contexte sur le frame ambiant, diffuseur vers les mesures, interrupteurs. Dépend de Platform Core ; un hôte ne le référence que si `HackerOsCpuAccounting` ou `HackerOsMemoryAccounting` vaut `true` ([`resource-accounting.md`](resource-accounting.md)). |
+| `HackerOs.Platform.WorkerHost` | Processus sans interface dans des Web Workers (ADR 0070, 0071) : côté OS, le pool de workers (un par cœur virtuel, worker prêt, débordement, workers dédiés), les sessions qui servent les appels sous les mêmes contrôles de capacités, le battement de cœur et l'escalade ; côté worker, le runtime .NET qui exécute la commande ou le service avec des passerelles distantes. Référencé par l'hôte Ecosystem dans le navigateur seulement ([`worker-processes.md`](worker-processes.md)). |
 | `HackerOs.Platform.Blazor` | Interface de l'OS : bureau, menu Démarrer, hôte de fenêtres (`WindowAppRenderer`), dialogues, fenêtre d'approbation des capacités dangereuses, agent d'authentification, chargement différé des apps. |
 | `HackerOs.Windowing.Abstractions`, `.Core`, `.Blazor` | Gestionnaire de fenêtres (état, déplacement, redimensionnement, ancrage). |
 | `HackerOs.Taskbar.Blazor` | Barre des tâches. |
@@ -91,15 +93,16 @@ Le détail de chaque API est dans la [référence du SDK](sdk-reference.md).
 
 `HackerOs.Infrastructure.Browser` : persistance IndexedDB (fichiers en blocs
 dédupliqués, paramètres hérités, catalogue, sessions), sauvegarde et
-restauration, connexion au serveur optionnel, interop navigateur. Tout ce qui
-touche le navigateur est ici.
+restauration, connexion au serveur optionnel, interop navigateur, démarrage des
+Web Workers (`workerHost.js`, `workerBootstrap.js`). Tout ce qui touche le
+navigateur est ici.
 
 ### Apps (`Apps/`)
 
 | Dossier | Contenu |
 |---|---|
 | `Apps/System/` | Les 12 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer. |
-| `Apps/Commands/HackerOs.Commands` | Les 62 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051). |
+| `Apps/Commands/HackerOs.Commands` | Les 63 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 14 qui touchent le shell ou l'écran (ADR 0070). |
 | `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme) ; elles ne sont pas installées dans l'hôte. |
 
 Une app est **système** quand l'hôte la déclare ainsi sur sa `ProjectReference`
@@ -125,7 +128,7 @@ Plus de détails sur les hôtes dans [`old/hosting-model.md`](old/hosting-model.
 | `Tools/HackerOs.Tools.ManifestGenerator` | Génère `manifest.json` depuis la classe `[AppManifest]` de chaque app, vérifie la frontière du SDK et agrège `BuiltInApplications.json` dans l'hôte ([`app-model.md`](app-model.md)). |
 | `Tools/icon-import` | Script Node d'import des bibliothèques d'icônes. |
 | `Samples/HackerOs.Windowing.SampleHost` | Hôte d'exemple du gestionnaire de fenêtres seul. |
-| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, et des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles. |
+| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) et le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
 | `build/HackerOs.Apps.targets` | Cibles MSBuild du modèle d'app (génération, agrégation, frontière du SDK). |
 
 ## Le système simulé
@@ -162,6 +165,10 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
   redirections, `&&`, variables et `$?`. Chaque commande est elle-même un
   processus ([`shell-interpreter.md`](shell-interpreter.md),
   [`shell-host.md`](shell-host.md), [`shell-commands.md`](shell-commands.md)).
+- Dans le navigateur, les commandes et les services tournent dans des
+  **Web Workers** (un par cœur virtuel, plus un worker prêt) : une boucle
+  infinie ne gèle plus l'OS, `kill -9` termine le worker
+  ([`worker-processes.md`](worker-processes.md), `/proc/hackeros/workers`).
 - Une app déclare des **capacités** dans sa définition. Les capacités normales
   sont accordées à la connexion ; une capacité **dangereuse** d'une app non
   système exige l'approbation d'un administrateur

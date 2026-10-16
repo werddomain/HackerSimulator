@@ -55,6 +55,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `ln` | `-s`, `-f`, `-n`, `-v`, `CIBLE [LIEN]`, `CIBLE… DOSSIER` | Liens symboliques par `HackFile.CreateSymbolicLinkAsync` ; le texte de la cible est gardé tel quel. Sans `-s` : `Operation not supported` (pas de liens physiques dans le système de fichiers HackerOS) et le conseil d'utiliser `-s`. |
 | `locate` | `-i -b -c -e`, `-l N` | Pas de base `updatedb` : parcours en direct avec les droits de l'utilisateur, `/proc`, `/dev`, `/sys`, `/run` exclus ; un motif sans joker est cherché partout dans le chemin. Code 1 sans résultat. |
 | `du` | `-a -s -h -c -b`, `-d N` | Blocs de 4 Kio comme ext4 (un par dossier) ; affichage en Kio. |
+| `grep` | `-i -n -v`, `-r`/`-R` (récursif, dossier courant sans fichier), options combinables (`-rn`) | Préfixe le nom du fichier quand il y en a plusieurs ou avec `-r` ; les liens symboliques rencontrés ne sont pas suivis. |
 | `df` | `-h -T -a` | Disques de `HackDriveInfo` (`/dev/hda` sur `/`) ; `-a` ajoute les pseudo-systèmes de `/proc/mounts`. |
 | `zip` | `-r -q -j -d -0…-9` | Vraie archive deflate lisible par tout outil zip ; met à jour une archive existante ; les modes Unix sont stockés dans les attributs externes. |
 | `unzip` | `-l -t -p -o -n -q -j`, `-d DOSSIER`, `[MOTIFS]` | Restaure les modes (`+x`) ; refuse une entrée qui sortirait du dossier (`../`, « zip slip ») ; ne remplace pas un fichier sans `-o`. |
@@ -65,11 +66,12 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 |---|---|---|
 | `top` | `-b`, `-n N`, `-d SECONDES`, `-u USER`, `-o CHAMP` | Plein écran rafraîchi toutes les 3 s ; touches `q`, `M`, `P`, `N`, `T`. CPU depuis deux lectures de `/proc/stat`, mémoire depuis `/proc/meminfo`, processus par `HackProcess`. |
 | `htop` | `-d DIXIÈMES`, `-u USER`, `-t`, `-C` | Barres par cœur, mémoire et swap en couleur, liste défilante avec sélection, arbre (`t`), tri (`P`/`M`/`T`/`N`), recherche (`/`), utilisateur (`u`), `k` tue le processus choisi (`process.manage`), `q` quitte. |
-| `kill` | `-s SIG`, `-SIG`, `-N`, `-l`, `PID` ou `%job` | `KILL` (9) tue tout de suite ; les autres signaux demandent l'arrêt puis forcent après 5 s ; `kill -0 PID` teste l'existence ; `%n` passe par le shell (`shell.control`). |
+| `kill` | `-s SIG`, `-SIG`, `-N`, `-l`, `PID` ou `%job` | `KILL` (9) tue tout de suite, sans prévenir ; les autres signaux demandent l'arrêt (`StopRequested`, raison `Terminated`, ADR 0069) puis forcent après 5 s ; `kill -0 PID` teste l'existence ; `%n` passe par le shell (`shell.control`). |
 | `jobs` | `-l -p -r -s` | Jobs du shell appelant ; les jobs terminés sont montrés une fois. |
 | `systemctl` (`service`) | `list-units`, `list-unit-files`, `status`, `start`, `stop`, `restart`, `enable`, `disable`, `mask`, `unmask`, `is-active`, `is-enabled` | Les apps `Service` du catalogue vues comme des unités `nom.service` ; automatique = `enabled`, manuel = `disabled`, désactivé = `masked`. Agir sur le service d'une autre app demande `services.manage`. `service NOM ACTION` est accepté. |
 | `watch` | `-n SECONDES`, `-t`, `-g`, `-e` | Relance la ligne par `IShellSession.RunAsync` (sous-shell : tubes et variables marchent) et affiche sa dernière sortie en plein écran ; `q` ou Ctrl+C quitte. |
 | `sleep` | `N[smhd]…`, décimaux | Ctrl+C l'interrompt (130). |
+| `stress` | `-c N`, `-t SECONDES`, `--yield` | Comme `stress(1)` : N boucles de calcul sans rendre la main (`--yield` : avec points d'arrêt). Tourne dans un Web Worker : le bureau reste fluide, le cœur passe « not-responding », `kill -9` termine le worker ([`worker-processes.md`](worker-processes.md)). |
 | `whoami` | — | `root` sous `sudo`. |
 | `which` | `NOM…` | `/usr/bin/NOM` pour une commande installée, `/bin/sh` pour le shell ; code 1 sinon. |
 
@@ -97,10 +99,11 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   `sort -k -t -n -r`, `tail -n +N`, `head -c`, `tee`, `chmod +x` puis
   `./script`, modes symboliques, `ln -s` et refus des liens physiques,
   `zip`/`unzip` avec les modes, `whoami`, `basename`, `dirname`, `which`,
-  `du`, `locate`, `jobs` et `kill %1`, `ip`, `top -b`.
+  `du`, `locate`, `jobs` et `kill %1`, `kill PID` et `kill -9 PID` sur un vrai
+  processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail` avec les passerelles factices.
-- `Tests/HackerOs.Ecosystem.Tests` : 74 apps intégrées dont 62 commandes.
+- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées dont 63 commandes (`stress` ajoutée par `rebuild/5-worker-processes`).
 
 ## Liste des tâches
 
@@ -114,3 +117,4 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.
 - [x] Tests et documentation.
+- [x] ADR 0069 (`rebuild/5-graceful-stop`) : `find`, `grep` (et `grep -r`), `du`, `zip`, `unzip`, `locate` appellent `HackProcess.CheckpointAsync` dans leurs boucles ; `kill` envoie `Terminated`.

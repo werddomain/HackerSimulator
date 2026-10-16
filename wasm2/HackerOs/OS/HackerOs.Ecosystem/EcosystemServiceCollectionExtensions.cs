@@ -14,6 +14,8 @@ using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Power;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.WorkerHost.Host;
+using HackerOs.Simulation.Abstractions.Workers;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
@@ -28,6 +30,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
+using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
@@ -160,8 +163,16 @@ public static class EcosystemServiceCollectionExtensions
             new InMemoryTopicMessageBus(provider.GetRequiredService<ICapabilityGrantRepository>()));
 
         // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
-        // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
+        // measured when the ADR 0067 accountant is active, simulated otherwise (fed by
+        // ResourceSamplingService); disk and network bytes are really counted by
         // the persistence, the filesystem service and each app's network gateway.
+        // Optional measured CPU and memory (ADR 0066): AddHackerOsResourceAccounting, called by the
+        // host before this method, may already have registered them. Otherwise both measurements are
+        // off and every per-process figure stays simulated, exactly as before phase 5.
+        services.TryAddSingleton(ResourceAccountingPlan.Disabled);
+        services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
+        services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
+        services.TryAddSingleton<IKernelMemoryLedger>(NullKernelMemoryLedger.Instance);
         services.AddScoped<IProcessIoAccounting, ProcessIoAccounting>();
         services.AddScoped<IBlockDeviceStatistics>(_ => new BlockDeviceStatistics());
         services.AddScoped<INetworkInterfaceStatistics, NetworkInterfaceStatistics>();
@@ -172,7 +183,10 @@ public static class EcosystemServiceCollectionExtensions
             return new CpuTimeAccounting(
                 VirtualHardwareProfile.Default,
                 process => !catalog.Manifests.ContainsKey(process.AppId)
-                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)));
+                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)),
+                CpuAccountant(provider),
+                // ADR 0070, section 2: the pool's workers are the cores of /proc/stat.
+                () => provider.GetService<IWorkerPoolStatus>());
         });
 
         services.AddScoped<IndexedDbFileSystemProvider>(provider => new IndexedDbFileSystemProvider(
@@ -205,7 +219,11 @@ public static class EcosystemServiceCollectionExtensions
                         provider.GetRequiredService<IProcessIoAccounting>(),
                         provider.GetRequiredService<IBlockDeviceStatistics>(),
                         provider.GetRequiredService<INetworkInterfaceStatistics>(),
-                        () => provider.GetRequiredService<IFileSystemMountRouter>()))),
+                        () => provider.GetRequiredService<IFileSystemMountRouter>(),
+                        CpuAccountant(provider),
+                        MemoryAccountant(provider),
+                        // ADR 0071, section 5: /proc/hackeros/workers, on the hosts that have workers.
+                        () => provider.GetService<IWorkerPoolStatus>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -406,6 +424,9 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IndexedDbAppCatalogRepository>();
         services.AddScoped<IPersistentAppCatalogRepository>(provider =>
             provider.GetRequiredService<IndexedDbAppCatalogRepository>());
+        // ADR 0071, section 2: "the system is started", raised by EcosystemBootCoordinator once the
+        // desktop is shown; the worker pool (WebAssembly hosts only) warms up after it.
+        services.TryAddSingleton<SystemStartupSignal>();
         services.AddScoped<EcosystemBootCoordinator>();
 
         services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
@@ -449,7 +470,9 @@ public static class EcosystemServiceCollectionExtensions
                 new AppDriveGateway(
                     () => provider.GetRequiredService<IFileSystemMountRouter>(),
                     VirtualHardwareProfile.Default,
-                    provider.GetRequiredService<IStorageUsageProvider>())),
+                    provider.GetRequiredService<IStorageUsageProvider>()),
+                // ADR 0068: write-stream buffers and sockets in flight, charged to each app's process.
+                provider.GetRequiredService<IKernelMemoryLedger>()),
             // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
             clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
@@ -466,7 +489,9 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
-            new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
+            new HackerOs.Platform.Core.Clipboard.SystemClipboard(
+                provider.GetRequiredService<IEventBus>(),
+                provider.GetRequiredService<IKernelMemoryLedger>()));
         // Shared clipboard with the real machine (ADR 0065), started by App.razor once settings exist.
         // Depends on IJSRuntime through its channel — see this file's IJSRuntime scoping note.
         services.AddScoped<HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardChannel, HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel>();
@@ -506,7 +531,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<IElevationTicketStore>(),
             provider.GetRequiredService<IDangerousCapabilityGate>(),
-            provider.GetRequiredService<LoginEnvironmentProvider>()));
+            provider.GetRequiredService<LoginEnvironmentProvider>(),
+            // ADR 0070: commands and services in Web Workers, on the hosts that have them (the
+            // WebAssembly hosts register it in Program.cs); none on the server (section 6).
+            provider.GetService<IRemoteProcessHost>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.
@@ -530,7 +558,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
-            provider.GetRequiredService<IAppEnablementRegistry>()));
+            provider.GetRequiredService<IAppEnablementRegistry>(),
+            provider.GetRequiredService<IKernelMemoryLedger>()));
         // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
         services.AddScoped<ShellHostService>(provider => new ShellHostService(
             provider.GetRequiredService<ShellInterpreter>(),
@@ -619,4 +648,15 @@ public static class EcosystemServiceCollectionExtensions
         AppCatalogBuildResult result = AppCatalog.Build([]);
         return result.Catalog ?? throw new InvalidOperationException("The empty app catalog must be valid.");
     }
+
+    /// <summary>
+    /// The CPU measurement as <c>/proc</c> reads it: with Web Workers, their processes' times come from
+    /// their heartbeats (ADR 0070, section 5); otherwise the main thread's accountant.
+    /// </summary>
+    private static ICpuTimeAccountant CpuAccountant(IServiceProvider provider) =>
+        (ICpuTimeAccountant?)provider.GetService<WorkerAwareCpuTimeAccountant>() ?? provider.GetRequiredService<ICpuTimeAccountant>();
+
+    /// <summary>The memory measurement as <c>/proc</c> reads it: with Web Workers, each one's runtime heap is counted.</summary>
+    private static IMemoryAccountant MemoryAccountant(IServiceProvider provider) =>
+        (IMemoryAccountant?)provider.GetService<WorkerAwareMemoryAccountant>() ?? provider.GetRequiredService<IMemoryAccountant>();
 }
