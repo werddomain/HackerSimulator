@@ -6,7 +6,7 @@
 
 ---
 
-**Before you start:** read [`wasm2/HackerOs/docs/old/common-pitfalls.md`](wasm2/HackerOs/docs/old/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, and E2E test harness setup. Each one was expensive to re-diagnose from scratch; don't repeat them.
+**Before you start:** read [`wasm2/HackerOs/docs/old/common-pitfalls.md`](wasm2/HackerOs/docs/old/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, E2E test harness setup, and ARIA states bound to `bool` in Razor markup. Each one was expensive to re-diagnose from scratch; don't repeat them.
 
 ---
 

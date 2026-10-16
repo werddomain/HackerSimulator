@@ -34,7 +34,9 @@ public partial class FileViewTreeNode
     [Parameter]
     public int Depth { get; set; } = 1;
 
-    private bool? AriaExpanded => Node.Item.IsDirectory ? Node.IsExpanded : null;
+    // ARIA states are strings: Blazor writes a true bool attribute as aria-expanded="" (invalid) and drops a
+    // false one, so the value is spelled out; a file (not a directory) has no aria-expanded at all.
+    private string? AriaExpanded => Node.Item.IsDirectory ? (Node.IsExpanded ? "true" : "false") : null;
 
     /// <summary>
     /// Roving tabindex (<c>FV-011</c>): only the active node — the selection, or the first root node when

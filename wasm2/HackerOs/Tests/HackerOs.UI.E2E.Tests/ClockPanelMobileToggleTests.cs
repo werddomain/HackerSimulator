@@ -46,11 +46,18 @@ public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
             await mobileOption.ClickAsync();
             output.WriteLine("[test] selected explicit Mobile platform preference.");
 
-            // Selecting Mobile now drives an immediate, live shell swap (MOB-008) — the panel and
-            // the whole Desktop shell it belongs to are torn down as part of that swap, so nothing
-            // further is asserted about the panel itself here; PlatformShellSwitchTests covers the
-            // live (no-reload) swap directly. This test's own focus is that the choice survives a
-            // reload into the same Mobile shell.
+            // Selecting Mobile now drives a live shell swap (MOB-008) — the panel and the whole
+            // Desktop shell it belongs to are torn down as part of that swap, so nothing further is
+            // asserted about the panel itself here; PlatformShellSwitchTests covers the live
+            // (no-reload) swap directly. This test's own focus is that the choice survives a reload
+            // into the same Mobile shell. The swap happens once the choice is written to
+            // ~/.config/hackeros (a settings file on the virtual disk, ADR 0044), which takes a
+            // couple of seconds in the browser; reloading before that would test a write that
+            // never finished, as pulling the plug mid-save would on a real machine. So the
+            // reload waits for the Mobile shell to appear first.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Back" })
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            output.WriteLine("[test] live swap to the Mobile shell done; reloading.");
             await page.ReloadAsync();
 
             // The local profile persists across reload, but the session does not — reload lands
