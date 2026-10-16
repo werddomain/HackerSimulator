@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Sudo;
 /// Manifest of "sudo" (ADR 0047). The build generates <c>manifests/&lt;appId&gt;.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it asks the desktop's authentication agent and runs through the calling shell (RunElevatedAsync).
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class SudoApp : AppDefinition
 {
     /// <inheritdoc />

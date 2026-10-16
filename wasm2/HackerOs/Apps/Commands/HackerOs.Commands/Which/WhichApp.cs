@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Which;
 /// Manifest of "which" (ADR 0047, added by ADR 0064). The build generates
 /// <c>manifests/&lt;appId&gt;.json</c> from this class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it resolves through the calling shell's builtins and PATH, like the type builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class WhichApp : AppDefinition
 {
     /// <inheritdoc />

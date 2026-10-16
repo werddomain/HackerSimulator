@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Watch;
 /// Manifest of "watch" (ADR 0047, added by ADR 0064). The build generates
 /// <c>manifests/&lt;appId&gt;.json</c> from this class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it re-runs command lines through the calling shell and draws on the terminal's full screen.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class WatchApp : AppDefinition
 {
     /// <inheritdoc />

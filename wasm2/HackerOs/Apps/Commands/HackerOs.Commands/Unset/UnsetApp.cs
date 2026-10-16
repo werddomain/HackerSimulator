@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Unset;
 /// Manifest of "unset" (ADR 0047). The build generates <c>manifests/&lt;appId&gt;.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it removes the calling shell's variables, like the unset builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class UnsetApp : AppDefinition
 {
     /// <inheritdoc />

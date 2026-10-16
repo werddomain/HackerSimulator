@@ -49,7 +49,8 @@ public static class AppManifestJsonSerializer
             "components",
             "singleInstancePerUser",
             "autoStart",
-            "supportsBack"
+            "supportsBack",
+            "execution"
         });
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)
@@ -256,6 +257,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
 [JsonSerializable(typeof(AppKind))]
+[JsonSerializable(typeof(AppExecutionHost))]
 [JsonSerializable(typeof(AppLaunchVisibility))]
 [JsonSerializable(typeof(AppSettingValueType))]
 [JsonSerializable(typeof(AppSettingScope))]
