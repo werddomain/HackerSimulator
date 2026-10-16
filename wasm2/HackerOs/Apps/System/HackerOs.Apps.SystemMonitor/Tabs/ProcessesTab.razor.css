@@ -165,3 +165,17 @@
 .proc-menu-danger {
     color: var(--hos-error, #ff8f87);
 }
+
+/* The row menu's activator is only a positioning anchor (opened at the cursor on right click):
+   its accessible name stays for screen readers but takes no room on screen. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
