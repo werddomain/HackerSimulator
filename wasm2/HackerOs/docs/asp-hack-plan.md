@@ -74,7 +74,7 @@ son navigateur :
 |---|---|---|
 | 1 | Nouveau genre d'app `Web` : un site MVC, un site Blazor ou les deux ; chaque app déclare ses URL dans son manifeste. Les sites enregistrés statiquement (actuels) restent pris en charge à côté des sites-processus. | 0073 |
 | 2 | Un site d'app (projet) est **externe** : servi en lecture seule depuis les ressources du projet, sous le nom qu'il déclare. Un site créé par l'utilisateur est **hébergé dans l'OS**, depuis ses fichiers, sur `localhost`. | 0073, 0077 |
-| 3 | Un site n'a jamais accès aux fichiers de l'utilisateur ni du système ; un site MVC peut avoir son dossier privé (`filesystem.private.*`), un site Blazor interactif aucun accès aux fichiers. | 0073 |
+| 3 | Un site n'a aucune capacité `filesystem.*` ; un site Blazor interactif n'a pas accès aux fichiers non plus. | 0073 |
 | 4 | Résolveur DNS de l'OS (service `hackdns`) : `/etc/hosts`, URL des manifestes, sites statiques déclarés, réseau simulé, puis repli sur le relais du serveur s'il est disponible. | 0074 |
 | 5 | `HackHttpListener` (calqué sur `System.Net.HttpListener`), capacité `network.listen`, ports < 1024 réservés à l'administrateur, table des ports à l'écoute, activation à la demande (comme les sockets de systemd), corps HTTP réels (`Content-Type` + octets). | 0074 |
 | 6 | Le navigateur rend du vrai HTML dans une iframe isolée (`sandbox="allow-scripts"`, sans même origine), charge lui-même les sous-ressources par le réseau simulé et relaie `fetch`, `XMLHttpRequest`, liens et formulaires ; `file://` lit les fichiers de l'OS. | 0075 |
@@ -82,7 +82,7 @@ son navigateur :
 | 8 | Deux moteurs de vues : composants `.razor` rendus en HTML (`HtmlRenderer`), et vues `.cshtml` compilées au build par le compilateur Razor avec une classe de base ASP.Hack (après une preuve de faisabilité) ; compilation `.cshtml` dans l'OS plus tard. | 0076 |
 | 9 | Sites statiques déclarés en fichiers (`/etc/hackweb/sites/*.site`), servis par le service `hackwebd`, gérés par l'app « Web Server Manager » façon IIS, qui ne fait que piloter l'OS par le SDK. | 0077 |
 | 10 | Fenêtre détachée : une page s'ouvre dans une fenêtre du navigateur hôte, hors de l'OS ; cette fenêtre est pilotée par l'instance principale (lien d'affichage), sans second OS indépendant. Le même lien servira au deuxième écran. | 0078 |
-| 11 | Un site MVC garde ses données dans son dossier privé d'app (`filesystem.private.*`) ; un site Blazor interactif passe par les API MVC de son site. | 0073 |
+| 11 | Les données d'un site ne sont pas dans les fichiers de l'OS : une base au besoin dans la base locale du navigateur hôte (IndexedDB), nommée d'office d'après l'app par un helper du SDK web ; seuls les cookies, la saisie semi-automatique et les journaux de débogage activés par le site vont dans les fichiers de l'OS (Benoit, 2026-10-16 16:44Z, remplace le dossier privé validé à 16:34Z). | 0073 |
 | 12 | Les sites internes utilisent le domaine `.hack` (`intranet.hack`) ; comme sur un vrai poste, `/etc/hosts` l'emporte toujours. | 0074 |
 
 ## 5. Chantiers

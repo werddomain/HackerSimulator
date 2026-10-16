@@ -56,11 +56,16 @@ charge tels quels, comme sites externes sans processus.
 
 ### 3. Capacités d'un site
 
-- Un site n'obtient jamais `filesystem.user-home.*`, `filesystem.user-selected.*`
-  ni `filesystem.system.*` : le générateur refuse une `WebAppDefinition` qui en
-  demande (`HOSAPP0050`). Il voit ses ressources embarquées et peut demander
-  `filesystem.private.*`, son dossier privé d'app (comme le compte de service
-  d'un vrai serveur web) pour ses données.
+- Un site n'a **aucune** capacité `filesystem.*` : ses données ne sont pas dans
+  le système de fichiers de l'OS. Le générateur refuse une `WebAppDefinition`
+  qui en demande (`HOSAPP0050`). Il voit seulement ses ressources embarquées.
+- S'il a besoin d'une base de données, il utilise la base locale du navigateur
+  hôte (IndexedDB, comme le système de fichiers de l'OS lui-même), par un helper
+  du SDK web qui impose un nom de base dérivé de l'identifiant de l'app
+  (`hackweb.<id>`) : un site ne peut ni choisir ni ouvrir la base d'un autre.
+- Seules les données propres au navigateur vont dans le système de fichiers de
+  l'OS : cookies, saisie semi-automatique, et les journaux d'un site quand le
+  site les active pour le débogage (`/var/log/hackweb/<id>.log`).
 - `network.listen` lui est accordé d'office sur ses propres `Urls` ;
   `network.simulated.read`/`write` sont normales ; `network.real.access` reste
   dangereuse.
@@ -85,7 +90,4 @@ installés par `IAppInstallationService`.
 - Le générateur de manifestes, le schéma et `AppCatalog` connaissent `Web` et
   `web.urls`.
 - Le navigateur devient l'hôte d'affichage des sites Blazor.
-- Un site Blazor n'a pas de `filesystem.private.*` non plus : son code tourne
-  dans le navigateur de l'utilisateur, il garde ses données par les API MVC de
-  son propre site.
 - Les apps existantes ne changent pas.
