@@ -57,10 +57,12 @@ public sealed record FileTransferItemResult(string SourcePath, string Destinatio
 /// <param name="Completed">Sources transferred, in order.</param>
 /// <param name="Skipped">Sources left alone: answered "Skip", or cut and pasted into their own folder.</param>
 /// <param name="Failures">Sources that failed, with the reason.</param>
+/// <param name="Cancelled">Whether the operation stopped early (a stop request of the app, ADR 0069): the sources not done are among <paramref name="Failures"/>.</param>
 public sealed record FileTransferResult(
     IReadOnlyList<FileTransferItemResult> Completed,
     IReadOnlyList<string> Skipped,
-    IReadOnlyList<FileTransferFailure> Failures)
+    IReadOnlyList<FileTransferFailure> Failures,
+    bool Cancelled = false)
 {
     /// <summary>Gets whether no source failed.</summary>
     public bool Succeeded => Failures.Count == 0;

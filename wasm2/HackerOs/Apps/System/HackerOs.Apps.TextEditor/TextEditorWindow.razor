@@ -3,6 +3,8 @@
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.AppSdk
+@using HackerOs.AppSdk.Diagnostics
+@using HackerOs.AppSdk.IO
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -131,6 +133,10 @@
         {
             <span class="status-conflict" role="alert">⚡ Conflict detected – please Save As</span>
         }
+        @if (_recoveryNotice is not null)
+        {
+            <span class="status-recovered" role="status">↺ @_recoveryNotice</span>
+        }
     </div>
 
     <!-- Dirty-close Confirmation Dialog (rendered inline via Mud) -->
@@ -191,6 +197,45 @@
         if (launchFile is { } path)
         {
             await LoadFileAsync(path);
+        }
+        else
+        {
+            await RestoreRecoveryDraftAsync();
+        }
+    }
+
+    // ──────────────────────────── Graceful stop (ADR 0069) ─────────────────────────
+
+    // Shown in the status bar after a recovery draft was restored.
+    private string? _recoveryNotice;
+
+    /// <summary>
+    /// When the OS asks the editor to stop (logout, kill, End task) with unsaved changes, the text is
+    /// kept as a recovery draft instead of being lost with the window; the next plain start offers it
+    /// back. A window the user closes asks about unsaved changes instead and never gets here.
+    /// </summary>
+    protected override Task OnAppStopRequestedAsync(HackStopRequestedEventArgs e) =>
+        _doc.IsDirty
+            // Not the process token: it is cancelled right after this request, and the draft must land.
+            ? HackRecoveryDraft.Open().SaveAsync(_doc.Content, _doc.Path?.Value, CancellationToken.None)
+            : Task.CompletedTask;
+
+    /// <summary>Restores the draft a stopped editor left, as a new unsaved buffer, and removes it.</summary>
+    private async Task RestoreRecoveryDraftAsync()
+    {
+        try
+        {
+            if (await HackRecoveryDraft.Open().TakeAsync(AppContext.CancellationToken) is { } draft)
+            {
+                _doc.RestoreDraft(draft.Content, draft.OriginalPath);
+                _recoveryNotice = draft.OriginalPath is null
+                    ? "Recovered unsaved text from the last session – Save As to keep it"
+                    : $"Recovered unsaved changes to {draft.OriginalPath} – Save As to keep them";
+            }
+        }
+        catch (Exception exception) when (exception is HackIOException or HackUnauthorizedAccessException)
+        {
+            // No readable draft: start empty, as before.
         }
     }
 

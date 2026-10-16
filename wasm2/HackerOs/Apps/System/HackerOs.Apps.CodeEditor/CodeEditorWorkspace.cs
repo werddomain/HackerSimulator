@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -70,7 +71,8 @@ public sealed class CodeEditorWorkspace
         pending.Enqueue(Root);
         while (pending.TryDequeue(out VirtualPath directory))
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            // ADR 0069: one checkpoint per folder of the walk.
+            await HackProcess.CheckpointAsync(cancellationToken);
             FileSystemResult<FileSystemDirectorySnapshot> listing = await _fileSystem.EnumerateAsync(
                 new FileSystemEnumerateRequest(directory, FileSystemLinkBehavior.NoFollow), cancellationToken);
             if (!listing.Succeeded || listing.Value is null)

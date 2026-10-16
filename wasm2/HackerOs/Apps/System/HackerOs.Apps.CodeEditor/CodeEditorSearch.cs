@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.App.Abstractions;
 
 namespace HackerOs.Apps.CodeEditor;
@@ -268,7 +269,9 @@ public sealed class CodeEditorWorkspaceSearch
         bool truncated = listing.Truncated;
         foreach (CodeEditorWorkspaceFile file in listing.Files)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            // ADR 0069: a folder-wide search is long work on the UI thread; let the UI paint and
+            // honor a stop request between files.
+            await HackProcess.CheckpointAsync(cancellationToken);
             if ((!include.IsEmpty && !include.Matches(file)) || exclude.Matches(file))
             {
                 continue;

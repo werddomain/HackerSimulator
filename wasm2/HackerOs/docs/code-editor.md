@@ -65,6 +65,14 @@ de fichiers répond alors `Cancelled`, que `CodeEditorRecoveryStore` et
 la fenêtre ne l'affiche jamais. Avant, ce code brut arrivait dans le bandeau
 d'erreur (« Cancelled ») pendant la frappe.
 
+Arrêt demandé par l'OS (ADR 0069 : déconnexion, `kill`, « End task ») :
+`OnAppStopRequestedAsync` annule l'attente de 1,5 s et écrit tout de suite la
+copie de récupération si un onglet est modifié ; l'OS attend cette écriture
+avant de fermer la fenêtre. La recherche dans le dossier et le parcours du
+dossier appellent `HackProcess.CheckpointAsync` entre deux fichiers ou
+dossiers : la page reste fluide et la recherche s'arrête sur une demande
+d'arrêt.
+
 Entrée dans la boîte Ctrl+P et dans la zone de création de l'explorateur
 agit au relâchement de la touche : l'éditeur reprend le focus quand la boîte
 se ferme, et un traitement à l'appui laisserait la fin de la frappe insérer

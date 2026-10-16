@@ -17,8 +17,28 @@
             }
         </span>
         <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="Details (Enter)">Details</button>
-        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="End the selected processes (Delete)">End task</button>
+        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="Ask the selected processes to stop: SIGTERM, forced after 5 s (Delete)">End task</button>
     </div>
+
+    @* ADR 0069: the row menu adds "Force kill" (SIGKILL) next to the polite "End task" (SIGTERM).
+       The activator is only a positioning anchor; the menu opens at the cursor from a row's right click. *@
+    <MudMenu @ref="_rowMenu" PositionAtCursor="true">
+        <ActivatorContent>
+            <span class="visually-hidden">Process menu</span>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem OnClick="ShowSelectedDetails" Disabled="@(Table.Selected.Count != 1)">
+                <span class="proc-menu-item">Details<span class="proc-menu-key">Enter</span></span>
+            </MudMenuItem>
+            <MudDivider />
+            <MudMenuItem OnClick="EndSelectedAsync">
+                <span class="proc-menu-item">End task<span class="proc-menu-key">SIGTERM · Del</span></span>
+            </MudMenuItem>
+            <MudMenuItem OnClick="ForceKillSelectedAsync">
+                <span class="proc-menu-item proc-menu-danger">Force kill<span class="proc-menu-key">SIGKILL · Shift+Del</span></span>
+            </MudMenuItem>
+        </ChildContent>
+    </MudMenu>
 
     @if (EndTaskReport is { } report)
     {
@@ -64,7 +84,9 @@
                         <tr class="@(Table.IsSelected(pid) ? "selected" : null)"
                             aria-selected="@(Table.IsSelected(pid) ? "true" : "false")"
                             @onclick="e => Table.Click(pid, e.CtrlKey || e.MetaKey, e.ShiftKey)"
-                            @ondblclick="() => OpenDetail(pid)">
+                            @ondblclick="() => OpenDetail(pid)"
+                            @oncontextmenu="e => OpenRowMenuAsync(e, pid)"
+                            @oncontextmenu:preventDefault="true">
                             <td class="num mono">@row.Pid</td>
                             <td>
                                 <span class="proc-name">@row.Name</span>

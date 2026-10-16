@@ -238,6 +238,31 @@
 
     private string GetHomePath() => HackUser.Describe(AppContext).HomeDirectory;
 
+    /// <summary>Copies, moves, imports and trash moves in flight (ADR 0069).</summary>
+    private readonly HashSet<Task> _operations = [];
+
+    /// <summary>
+    /// Records a file operation so a stop request can wait for it: each item moves atomically and
+    /// <see cref="FileTransfer"/> stops between two when the process is asked to stop, so the window
+    /// closes after the current item, with nothing half-copied and the rest reported as not done.
+    /// </summary>
+    private async Task<FileTransferResult> TrackOperation(Task<FileTransferResult> operation)
+    {
+        _operations.Add(operation);
+        try
+        {
+            return await operation;
+        }
+        finally
+        {
+            _operations.Remove(operation);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override Task OnAppStopRequestedAsync(HackStopRequestedEventArgs e) =>
+        _operations.Count == 0 ? Task.CompletedTask : Task.WhenAll(_operations);
+
     protected override void OnAppInitialized()
     {
         base.OnAppInitialized();
@@ -618,12 +643,12 @@
         if (list is null || list.Paths.Count == 0) return;
 
         bool cut = list.Operation == HackClipboardFileOperation.Cut;
-        FileTransferResult result = await FileTransfer.TransferAsync(
+        FileTransferResult result = await TrackOperation(FileTransfer.TransferAsync(
             list.Paths,
             destination.Value,
             cut ? FileTransferMode.Move : FileTransferMode.Copy,
             AskConflictAsync,
-            AppContext.CancellationToken);
+            AppContext.CancellationToken));
 
         if (cut && result.Succeeded)
         {
@@ -675,12 +700,12 @@
 
         if (e.Entries.Count > 0)
         {
-            FileTransferResult moved = await FileTransfer.TransferAsync(
+            FileTransferResult moved = await TrackOperation(FileTransfer.TransferAsync(
                 e.Entries.Select(entry => entry.Path.Value).ToList(),
                 destination.Value,
                 e.Copy ? FileTransferMode.Copy : FileTransferMode.Move,
                 AskConflictAsync,
-                AppContext.CancellationToken);
+                AppContext.CancellationToken));
             completed.AddRange(moved.Completed);
             skipped.AddRange(moved.Skipped);
             failures.AddRange(moved.Failures);
@@ -688,7 +713,7 @@
 
         if (e.HostFiles.Count > 0)
         {
-            FileTransferResult imported = await FileTransfer.ImportAsync(e.HostFiles, destination.Value, AppContext.CancellationToken);
+            FileTransferResult imported = await TrackOperation(FileTransfer.ImportAsync(e.HostFiles, destination.Value, AppContext.CancellationToken));
             completed.AddRange(imported.Completed);
             failures.AddRange(imported.Failures);
         }
@@ -702,8 +727,8 @@
     {
         if (e.Entries.Count == 0) return;
 
-        FileTransferResult result = await FileTransfer.MoveToTrashAsync(
-            e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken);
+        FileTransferResult result = await TrackOperation(FileTransfer.MoveToTrashAsync(
+            e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken));
         ReportTransfer(result, "move to the trash");
         await RefreshAfterTransferAsync();
         if (_trashView is not null && _showTrash)
@@ -792,7 +817,7 @@
                 file.ContentType,
                 (maxBytes, cancellationToken) => Task.FromResult(file.OpenReadStream(maxBytes, cancellationToken))))
             .ToList();
-        FileTransferResult result = await FileTransfer.ImportAsync(files, _fileView.CurrentDirectory.Value, AppContext.CancellationToken);
+        FileTransferResult result = await TrackOperation(FileTransfer.ImportAsync(files, _fileView.CurrentDirectory.Value, AppContext.CancellationToken));
         ReportTransfer(result, "upload");
         await _fileView.RefreshAsync();
     }

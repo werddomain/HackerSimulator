@@ -2,6 +2,7 @@ using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Apps.SystemMonitor.Processes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using MudBlazor;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -9,9 +10,13 @@ namespace HackerOs.Apps.SystemMonitor.Tabs;
 /// The Processes tab (ADR 0058, section 2): sortable columns, a text filter, multiple selection
 /// (click, Ctrl, Shift, Ctrl+A), "End task" on the selection and a detail panel (double click or
 /// Enter). The state lives in <see cref="ProcessTable"/> so it survives a refresh and a tab switch.
+/// A row's context menu (right click) offers Details, "End task" (<c>SIGTERM</c>) and "Force kill"
+/// (<c>SIGKILL</c>, also Shift+Delete), per ADR 0069, section 4.
 /// </summary>
 public partial class ProcessesTab
 {
+    private MudMenu? _rowMenu;
+
     private static readonly (ProcessColumn Column, string Label, bool Numeric)[] Columns =
     [
         (ProcessColumn.Pid, "PID", true),
@@ -36,9 +41,13 @@ public partial class ProcessesTab
     [Parameter]
     public EndTaskReport? EndTaskReport { get; set; }
 
-    /// <summary>Gets or sets the handler that confirms and ends the given processes.</summary>
+    /// <summary>Gets or sets the handler that confirms and ends the given processes ("End task", <c>SIGTERM</c>).</summary>
     [Parameter]
     public EventCallback<IReadOnlyList<ProcessRow>> OnEndTask { get; set; }
+
+    /// <summary>Gets or sets the handler that confirms and kills the given processes ("Force kill", <c>SIGKILL</c>).</summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<ProcessRow>> OnForceKill { get; set; }
 
     /// <summary>Gets or sets the handler that hides the "End task" report.</summary>
     [Parameter]
@@ -50,6 +59,25 @@ public partial class ProcessesTab
     private void OnFilterInput(ChangeEventArgs e) => Table.Filter = e.Value?.ToString() ?? string.Empty;
 
     private Task EndSelectedAsync() => OnEndTask.InvokeAsync(Table.SelectedRows);
+
+    private Task ForceKillSelectedAsync() => OnForceKill.InvokeAsync(Table.SelectedRows);
+
+    /// <summary>
+    /// Opens the row menu at the cursor. A right click on a row outside the selection selects that
+    /// row alone first, like a file manager, so the menu always acts on what is highlighted.
+    /// </summary>
+    private async Task OpenRowMenuAsync(MouseEventArgs e, long pid)
+    {
+        if (!Table.IsSelected(pid))
+        {
+            Table.Click(pid, control: false, shift: false);
+        }
+
+        if (_rowMenu is not null)
+        {
+            await _rowMenu.OpenMenuAsync(e);
+        }
+    }
 
     private void ShowSelectedDetails()
     {
@@ -70,7 +98,7 @@ public partial class ProcessesTab
 
     private void CloseDetail() => Table.DetailPid = null;
 
-    /// <summary>Keyboard of the table: Ctrl+A, Delete, Enter, Escape.</summary>
+    /// <summary>Keyboard of the table: Ctrl+A, Delete (End task), Shift+Delete (Force kill), Enter, Escape.</summary>
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
         bool control = e.CtrlKey || e.MetaKey;
@@ -78,6 +106,9 @@ public partial class ProcessesTab
         {
             case "a" or "A" when control:
                 Table.SelectAll();
+                break;
+            case "Delete" when e.ShiftKey:
+                await ForceKillSelectedAsync();
                 break;
             case "Delete":
                 await EndSelectedAsync();

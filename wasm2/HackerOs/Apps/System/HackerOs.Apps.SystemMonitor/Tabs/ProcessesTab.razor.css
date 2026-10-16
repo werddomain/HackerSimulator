@@ -171,3 +171,36 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* Row menu (ADR 0069): "End task" is SIGTERM, "Force kill" SIGKILL. */
+.proc-menu-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-width: 13rem;
+}
+
+.proc-menu-key {
+    font-family: var(--hos-font-mono, monospace);
+    font-size: 0.75em;
+    opacity: 0.6;
+}
+
+.proc-menu-danger {
+    color: var(--hos-error, #ff8f87);
+}
+
+/* The row menu's activator is only a positioning anchor (opened at the cursor on right click):
+   its accessible name stays for screen readers but takes no room on screen. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

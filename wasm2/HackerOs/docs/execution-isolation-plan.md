@@ -144,10 +144,32 @@ Fait par `rebuild/5-memory-accounting` ([`memory-accounting.md`](memory-accounti
 - [x] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
 
 ### Arrêt propre (ADR 0069)
-- [ ] `StopRequested`, `TerminateAsync`, `ProcessExitReason.Terminated`.
-- [ ] `CheckpointAsync` et son usage dans les commandes longues.
-- [ ] Ordonnanceur par processus, continuations jetées, `HackProcessKilledException`.
-- [ ] « End task » en `SIGTERM`, « Force kill » ajouté.
+- [x] `StopRequested`, `TerminateAsync`, `ProcessExitReason.Terminated`.
+- [x] `CheckpointAsync` et son usage dans les commandes longues.
+- [x] Ordonnanceur par processus, continuations jetées, `HackProcessKilledException`.
+- [x] « End task » en `SIGTERM`, « Force kill » ajouté.
+
+Précisions de mise en œuvre (`rebuild/5-graceful-stop`, détail dans
+[`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069)) :
+
+- Le noyau tient un `ProcessControlBlock` par processus (demande d'arrêt,
+  drapeau « tué », `ProcessTaskScheduler`). Est un `SIGKILL` : `Killed`
+  (`kill -9`, « Force kill ») et `Timeout` (fin du délai de grâce, raison gardée
+  pour ne pas changer `CloseMainWindowAsync`) ; une fenêtre fermée, une
+  déconnexion ou une app désactivée gardent l'accès à l'OS pour leur nettoyage.
+- L'ordonnanceur par processus est installé pour les commandes et les services
+  (point d'entrée lancé par l'orchestrateur), en contexte de synchronisation et
+  en `TaskScheduler` ; les apps à fenêtre restent sur le dispatcher du rendu.
+- `HackStopRequestedEventArgs.Defer(Task)` laisse une app finir un travail
+  avant l'action par défaut ; l'action par défaut de `SIGTERM` pour une app à
+  fenêtre est de fermer sa fenêtre, le processus finit alors avec la raison de
+  la demande (`Terminated`) au lieu d'attendre le délai.
+- Les services et, à la déconnexion ou à l'extinction, les fenêtres reçoivent
+  aussi `StopRequested` (`Logout`, `Shutdown`) ; une fenêtre que l'utilisateur
+  ferme ne le reçoit pas (`IWindowCloseGuard` a déjà posé la question).
+- La tranche de `CheckpointAsync` est un horodatage par thread
+  (`HackProcessSlice`), recommencé par l'ordonnanceur à chaque continuation ;
+  l'ADR 0067 pourra le remplacer par la mesure.
 
 ### Web Workers (ADR 0070)
 - [ ] `AppExecutionHost` dans `[AppManifest]` et le générateur de manifeste.
@@ -159,8 +181,8 @@ Fait par `rebuild/5-memory-accounting` ([`memory-accounting.md`](memory-accounti
 ### Apps existantes (section 5.1)
 - [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
 - [x] Temps CPU : `/proc/<pid>/stat` et `status` testés sur une fenêtre (Calculatrice), une commande (`echo`) et un service (service d'exemple) réels, sans modifier leur code (`5-cpu-accounting`).
-- [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
-- [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
+- [x] Apps à fenêtre et services avec état : `StopRequested` géré (TextEditor et CodeEditor : brouillon ; FileExplorer : élément en cours puis arrêt propre ; Settings : écriture en cours ; services : `OnStoppingAsync` une fois).
+- [x] Boucles longues de `Apps/` : `CheckpointAsync` (commandes, `FileTransfer`, zip de l'explorateur, corbeille, recherche et parcours du CodeEditor).
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.
 
 ### Hôtes (section 5.2)

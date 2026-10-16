@@ -72,6 +72,12 @@ public interface IProcessManager
     /// resolve it. If the deadline elapses first, the process is force-stopped with
     /// <see cref="ProcessExitReason.Timeout"/>.
     /// </summary>
+    /// <remarks>
+    /// ADR 0069: the process first moves to <see cref="ProcessState.Stopping"/>, then receives one
+    /// <see cref="ProcessStopRequest"/> carrying <paramref name="reason"/> and the deadline (raised
+    /// once, even when several stops overlap), then its token is cancelled. Concurrent calls share
+    /// the same outcome.
+    /// </remarks>
     /// <exception cref="KeyNotFoundException">No active process has this PID.</exception>
     Task<ProcessRecord> StopAsync(
         ProcessId pid,
@@ -102,6 +108,17 @@ public interface IProcessManager
     /// <exception cref="KeyNotFoundException">No active process has this PID.</exception>
     CancellationToken GetCancellationToken(ProcessId pid);
 }
+
+/// <summary>
+/// One request to stop a process (ADR 0069, section 1): the <c>SIGTERM</c> the OS delivers before
+/// it cancels the process's token and waits for it to end.
+/// </summary>
+/// <param name="Pid">The process asked to stop.</param>
+/// <param name="Reason">Why it is asked to stop (<see cref="ProcessExitReason.CloseRequested"/>, <see cref="ProcessExitReason.Terminated"/>…).</param>
+/// <param name="RequestedAtUtc">Simulated time of the request.</param>
+/// <param name="Deadline">Simulated time at which the OS forces the process (<c>SIGKILL</c>) if it is still running.</param>
+public sealed record ProcessStopRequest(
+    ProcessId Pid, ProcessExitReason Reason, DateTimeOffset RequestedAtUtc, DateTimeOffset Deadline);
 
 /// <summary>Published whenever a process transitions between lifecycle states.</summary>
 public sealed record ProcessStateChangedEvent(

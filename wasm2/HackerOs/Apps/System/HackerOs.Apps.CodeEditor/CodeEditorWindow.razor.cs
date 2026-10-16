@@ -1013,6 +1013,23 @@ public partial class CodeEditorWindow
         return discard == true && await ClearRecoveryForCloseAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// ADR 0069: when the OS asks the editor to stop (logout, <c>kill</c>, "End task"), the pending
+    /// debounced snapshot is written at once, so the last edits survive in the recovery file the next
+    /// start restores, instead of being lost with the window. Nothing is written when no tab is dirty.
+    /// </summary>
+    protected override async Task OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs e)
+    {
+        _recoveryDebounce?.Cancel();
+        if (_recoveryClearedOnClose || !_session.Documents.Any(document => document.IsDirty))
+        {
+            return;
+        }
+
+        // Not the process token: it is cancelled right after this request, and the snapshot must land.
+        await PersistRecoveryAsync(CancellationToken.None);
+    }
+
     private void ScheduleRecovery()
     {
         // Cancelled, not disposed: a save already running may still be reading its token.

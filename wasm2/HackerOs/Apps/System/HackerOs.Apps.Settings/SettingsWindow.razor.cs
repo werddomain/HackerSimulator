@@ -173,6 +173,17 @@ public partial class SettingsWindow : IAsyncDisposable
 
     private Task ApplyCurrentAsSystemDefaultAsync() => PersistAppearanceAsync(_appearanceSettings, key: null, value: null);
 
+    /// <summary>The settings write in flight, if any (ADR 0069).</summary>
+    private Task? _appearanceWrite;
+
+    /// <summary>
+    /// A stop request (logout, <c>kill</c>, "End task") waits for the settings write in flight: the
+    /// write is one atomic edit of the settings file and runs to its end, so the change the user
+    /// just made is either fully saved or reported, never half applied.
+    /// </summary>
+    protected override Task OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs e) =>
+        _appearanceWrite ?? Task.CompletedTask;
+
     /// <summary>
     /// Writes one changed key to the user layer, or the whole look to the system layer in one edit
     /// (the system default is what every user starts from, and one edit means one administrator
@@ -190,6 +201,9 @@ public partial class SettingsWindow : IAsyncDisposable
         _isSavingAppearance = true;
         StateHasChanged();
 
+        // Not the process token: a stop request must let this one edit finish (see OnAppStopRequestedAsync).
+        TaskCompletionSource written = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _appearanceWrite = written.Task;
         try
         {
             if (_targetLayer == SettingLayer.System || key is null)
@@ -205,12 +219,12 @@ public partial class SettingsWindow : IAsyncDisposable
                         [AnimationsKey] = next.AnimationsEnabled
                     },
                     SettingLayer.System,
-                    AppContext.CancellationToken);
+                    CancellationToken.None);
                 _appearanceMessage = "Saved as the default for every user.";
             }
             else
             {
-                await _appearance.SetAsync(key, value!, SettingLayer.User, AppContext.CancellationToken);
+                await _appearance.SetAsync(key, value!, SettingLayer.User, CancellationToken.None);
             }
         }
         catch (HackSettingLockedException exception)
@@ -228,6 +242,8 @@ public partial class SettingsWindow : IAsyncDisposable
         finally
         {
             _isSavingAppearance = false;
+            _appearanceWrite = null;
+            written.TrySetResult();
         }
 
         _appearanceSettings = ReadAppearance(_appearance);

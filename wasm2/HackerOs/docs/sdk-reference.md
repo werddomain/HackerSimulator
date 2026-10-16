@@ -99,6 +99,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | Membre | Rôle |
 |---|---|
 | `Manifest`, `InstanceId`, `ProcessId`, `SessionId`, `CancellationToken` | Identité de l'instance ; le jeton est annulé à la fermeture, au kill, à la déconnexion. |
+| `StopRequested`, `StopRequest` | Demande d'arrêt (`SIGTERM`, ADR 0069), levée une fois avant l'annulation du jeton : `HackStopRequestedEventArgs` (`Reason`, `Deadline`, `Defer`). Préférer `HackProcess.Current`. Après un kill, chaque passerelle lève `HackProcessKilledException`. |
 | `UserId`, `UserLoginName`, `UserDisplayName`, `HomeDirectory`, `UserAuthority`, `IsRootElevated` | Utilisateur effectif. |
 | `GrantedCapabilities`, `Capabilities` | Capacités accordées à cette instance. |
 | `FileSystem`, `Watch` | Système de fichiers brut (préférer `HackFile`…) et surveillance. |
@@ -138,6 +139,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `HackFileSystemWatcher` | `Created`, `Changed`, `Deleted`, `Renamed`, `Error`, `Filter`, `IncludeSubdirectories`, `StartAsync` | [`hack-file-api.md`](hack-file-api.md) |
 | `HackTrash` | `MoveToTrashAsync`, `GetItemsAsync`, `RestoreAsync`, `DeleteAsync`, `EmptyAsync`, `TrashDirectory` | [`trash.md`](trash.md) |
 | `HackTextContent` | `TryDecode`, `TryReadAsync` (texte ou binaire, comme `file`) | [`text-editor.md`](text-editor.md) |
+| `HackRecoveryDraft` | `Open(name)`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync` : brouillon de travail non enregistré dans `~/.local/state/<appId>/recovery/` (ADR 0069) | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackDriveInfo` | `GetDrivesAsync` : taille et espace libre (comme `df`) | [`system-metrics.md`](system-metrics.md) |
 | Exceptions | `HackIOException`, `HackFileNotFoundException`, `HackDirectoryNotFoundException`, `HackFileConflictException`, `HackUnauthorizedAccessException` | [`hack-file-api.md`](hack-file-api.md) |
 
@@ -163,7 +165,9 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync`, `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
+| `HackProcess.Current` → `HackCurrentProcess` ; `HackProcess.CheckpointAsync` (`.Diagnostics`) | `Id`, `StopToken`, `IsStopRequested`, `StopRequest`, `StopRequested` ; point d'arrêt : lève si l'arrêt est demandé, rend la main au-delà de 8 ms, sinon sans allocation | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
+| `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`, `Status`, `StartType` | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
 
 ### Réseau (`HackerOs.AppSdk.Net`)
@@ -220,10 +224,10 @@ Détails : [`system-administration.md`](system-administration.md),
 
 | Classe | Projet | À surcharger | Document |
 |---|---|---|---|
-| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised` ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchFile`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
+| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchFile`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
 | `HackComponentBase` | `AppSdk.Blazor` | Composant enfant d'une fenêtre qui appelle `Hack*` | [`hack-file-api.md`](hack-file-api.md) |
 | `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen` | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
-| `ServiceAppBase` | `AppSdk` | `RunCoreAsync(context, sessionCancellationToken)`, `OnStoppingAsync(ServiceStopReason, token)` | [guide §5](sdk-developer-guide.md#5-un-service) |
+| `ServiceAppBase` | `AppSdk` | `RunCoreAsync(context, sessionCancellationToken)`, `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`) | [guide §5](sdk-developer-guide.md#5-un-service) |
 
 Interfaces qu'un composant fenêtré peut implémenter :
 

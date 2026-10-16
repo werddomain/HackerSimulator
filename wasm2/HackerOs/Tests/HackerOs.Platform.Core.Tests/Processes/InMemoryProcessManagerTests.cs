@@ -14,7 +14,7 @@ using HackerOs.Simulation.Abstractions.Time;
 
 namespace HackerOs.Platform.Core.Tests.Processes;
 
-public sealed class InMemoryProcessManagerTests
+public sealed partial class InMemoryProcessManagerTests
 {
     [Fact]
     public void Starting_a_process_allocates_a_positive_pid_and_links_the_session_token()

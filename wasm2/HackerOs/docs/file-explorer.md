@@ -88,6 +88,7 @@ Règles :
 | Dossier vers lui-même ou un descendant | Refusé avant toute écriture ; les autres éléments continuent. |
 | Fichiers de l'hôte | Écrits comme une copie (nom de copie si pris), 256 Mio au plus par fichier. |
 | Erreur | Une raison par élément (`permission denied`, `read-only file system`, `no longer exists`…), sans arrêter les autres. |
+| Arrêt demandé (ADR 0069 : jeton annulé, `kill`, « End task », déconnexion) | Entre deux éléments (`HackProcess.CheckpointAsync`, qui rend aussi la main à l'interface) : l'élément en cours, atomique, se termine ; les suivants sont rapportés « stopped before this item » et `FileTransferResult.Cancelled` est vrai. Rien n'est à moitié copié ni perdu en silence. La fenêtre de l'explorateur fait attendre l'OS jusqu'à la fin de l'élément en cours. |
 
 Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 

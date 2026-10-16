@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
@@ -48,7 +49,10 @@ public static class FileTransfer
     /// <param name="destinationDirectory">Existing target directory.</param>
     /// <param name="mode">Copy or move.</param>
     /// <param name="resolveConflict">Used by a move only.</param>
-    /// <param name="cancellationToken">Stops before the next source.</param>
+    /// <param name="cancellationToken">
+    /// Stops before the next source (as does a stop request of the app's process, ADR 0069); the
+    /// sources not done are reported as failures and <see cref="FileTransferResult.Cancelled"/> is set.
+    /// </param>
     public static async Task<FileTransferResult> TransferAsync(
         IReadOnlyList<string> sources,
         string destinationDirectory,
@@ -93,9 +97,14 @@ public static class FileTransfer
         }
 
         FileConflictResolution? appliedToAll = null;
-        foreach (string source in valid)
+        for (int index = 0; index < valid.Count; index++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            string source = valid[index];
+            if (!await ContinueAsync(valid, index, static path => path, outcome, cancellationToken).ConfigureAwait(false))
+            {
+                break;
+            }
+
             try
             {
                 bool sourceIsDirectory = await HackDirectory.ExistsAsync(source, cancellationToken).ConfigureAwait(false);
@@ -172,7 +181,7 @@ public static class FileTransfer
     /// </summary>
     /// <param name="files">Host files.</param>
     /// <param name="destinationDirectory">Existing target directory.</param>
-    /// <param name="cancellationToken">Stops before the next file.</param>
+    /// <param name="cancellationToken">Stops before the next file, like a stop request of the app (ADR 0069).</param>
     public static async Task<FileTransferResult> ImportAsync(
         IReadOnlyList<FileTransferHostFile> files, string destinationDirectory, CancellationToken cancellationToken = default)
     {
@@ -195,9 +204,14 @@ public static class FileTransfer
             return outcome.ToResult();
         }
 
-        foreach (FileTransferHostFile file in files)
+        for (int index = 0; index < files.Count; index++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            FileTransferHostFile file = files[index];
+            if (!await ContinueAsync(files, index, static host => host.Name, outcome, cancellationToken).ConfigureAwait(false))
+            {
+                break;
+            }
+
             if (string.IsNullOrWhiteSpace(file.Name) || file.Name.Contains('/', StringComparison.Ordinal) || file.Name is "." or "..")
             {
                 outcome.Fail(file.Name, "invalid file name");
@@ -235,15 +249,19 @@ public static class FileTransfer
 
     /// <summary>Moves sources to the trash (ADR 0052), as a drop on the Trash view does.</summary>
     /// <param name="sources">Absolute paths.</param>
-    /// <param name="cancellationToken">Stops before the next source.</param>
+    /// <param name="cancellationToken">Stops before the next source, like a stop request of the app (ADR 0069).</param>
     public static async Task<FileTransferResult> MoveToTrashAsync(IReadOnlyList<string> sources, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(sources);
         Outcome outcome = new();
-        foreach (string rawSource in sources)
+        for (int index = 0; index < sources.Count; index++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string source = HackPath.GetFullPath(rawSource);
+            if (!await ContinueAsync(sources, index, static path => path, outcome, cancellationToken).ConfigureAwait(false))
+            {
+                break;
+            }
+
+            string source = HackPath.GetFullPath(sources[index]);
             try
             {
                 HackTrashItem item = await HackTrash.MoveToTrashAsync(source, cancellationToken).ConfigureAwait(false);
@@ -301,6 +319,33 @@ public static class FileTransfer
         string trimmed = path.Length > 1 ? path.TrimEnd('/') : path;
         int slash = trimmed.LastIndexOf('/');
         return slash < 0 || trimmed.Length == 1 ? trimmed : trimmed[(slash + 1)..];
+    }
+
+    /// <summary>
+    /// The checkpoint between two items (ADR 0069): gives the UI the thread back and, when the app
+    /// is asked to stop (or <paramref name="cancellationToken"/> is cancelled), ends the operation
+    /// cleanly. What is done stays done; the items not reached are reported as failures, never lost
+    /// silently.
+    /// </summary>
+    /// <returns><see langword="false"/> when the operation must stop at <paramref name="index"/>.</returns>
+    private static async Task<bool> ContinueAsync<T>(
+        IReadOnlyList<T> items, int index, Func<T, string> name, Outcome outcome, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await HackProcess.CheckpointAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            for (int remaining = index; remaining < items.Count; remaining++)
+            {
+                outcome.Fail(name(items[remaining]), "stopped before this item");
+            }
+
+            outcome.Cancelled = true;
+            return false;
+        }
     }
 
     private static async Task TransferOneAsync(
@@ -378,8 +423,10 @@ public static class FileTransfer
 
         private List<FileTransferFailure> Failures { get; } = [];
 
+        public bool Cancelled { get; set; }
+
         public void Fail(string path, string reason) => Failures.Add(new FileTransferFailure(path, reason));
 
-        public FileTransferResult ToResult() => new(Completed, Skipped, Failures);
+        public FileTransferResult ToResult() => new(Completed, Skipped, Failures, Cancelled);
     }
 }

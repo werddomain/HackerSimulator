@@ -13,6 +13,11 @@ namespace HackerOs.Commands.Kill;
 /// <c>QUIT</c>…) asks the process to stop and forces it after 5 seconds, which is what an app
 /// that does not handle signals does. <c>kill -l</c> lists the signals.
 /// </summary>
+/// <remarks>
+/// ADR 0069: the polite path raises the target's <c>StopRequested</c> with
+/// <see cref="ProcessExitReason.Terminated"/> and a deadline 5 simulated seconds away, then cancels
+/// its token; <c>SIGKILL</c> raises nothing, and the target's leftover continuations are dropped.
+/// </remarks>
 public sealed class KillCommand : TerminalAppBase
 {
     private static readonly string[] SignalNames =
@@ -110,7 +115,8 @@ public sealed class KillCommand : TerminalAppBase
                 }
                 else
                 {
-                    await context.App.Processes.StopAsync(pid, TimeSpan.FromSeconds(5), cancellationToken: cancellationToken);
+                    // SIGTERM (ADR 0069): StopRequested with the reason Terminated, the token, then SIGKILL after 5 s.
+                    await context.App.Processes.StopAsync(pid, TimeSpan.FromSeconds(5), ProcessExitReason.Terminated, cancellationToken);
                 }
             }
             catch (KeyNotFoundException)

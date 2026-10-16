@@ -1,13 +1,15 @@
 using System.Text.RegularExpressions;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
 namespace HackerOs.Commands.Find;
 
 /// <summary>
 /// Implements the <c>find</c> terminal command (`P4-W5-CMD-003`).
-/// Recursively searches for files/directories matching name pattern or type.
+/// Recursively searches for files/directories matching name pattern or type. Each visited entry
+/// is a <see cref="HackProcess.CheckpointAsync"/> (ADR 0069).
 /// </summary>
 public sealed class FindCommand : TerminalAppBase
 {
@@ -45,7 +47,8 @@ public sealed class FindCommand : TerminalAppBase
         string? typeFilter,
         CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested) return;
+        // ADR 0069: a deep tree is long work; give the thread back and honor a stop request.
+        await HackProcess.CheckpointAsync(cancellationToken);
 
         var statReq = new FileSystemStatRequest(VirtualPath.Parse(currentPath));
         var statRes = await context.App.FileSystem.StatAsync(statReq, cancellationToken);

@@ -279,7 +279,9 @@ public sealed class AppExecutionContextFactory
             administration.Permissions,
             administration.ServerConnection,
             administration.SystemPower,
-            administration.StorageDiagnostics);
+            administration.StorageDiagnostics,
+            // ADR 0069: the process manager's block carries the stop request and the kill to the context.
+            (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid));
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);

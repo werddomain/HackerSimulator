@@ -26,6 +26,11 @@ internal sealed class AppAmbientContextBinding
         ArgumentNullException.ThrowIfNull(callback);
         return () =>
         {
+            if (IsKilled)
+            {
+                return;
+            }
+
             using IDisposable? scope = Enter();
             callback();
         };
@@ -37,10 +42,21 @@ internal sealed class AppAmbientContextBinding
         ArgumentNullException.ThrowIfNull(handler);
         return value =>
         {
+            if (IsKilled)
+            {
+                return;
+            }
+
             using IDisposable? scope = Enter();
             handler(value);
         };
     }
+
+    /// <summary>
+    /// A killed process receives no more callbacks (ADR 0069, section 3): its subscriptions and timers
+    /// are silently dropped, like signals sent to a dead PID.
+    /// </summary>
+    private bool IsKilled => _context is AppExecutionContext { IsKilled: true };
 
     private IDisposable? Enter() => _context is { } context ? HackExecutionContext.Enter(context) : null;
 }
