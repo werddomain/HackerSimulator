@@ -107,6 +107,13 @@ public abstract class AppDefinition
 
     /// <summary>Gets static package assets with integrity hashes.</summary>
     public virtual IReadOnlyList<AssetManifest> Assets => [];
+
+    /// <summary>
+    /// Gets the URLs a <see cref="AppKind.Web"/> app answers on, e.g. <c>http://intranet.hack/</c>
+    /// (ADR 0073, section 1): written to <c>web.urls</c>, published by the OS resolver and listened on
+    /// without <c>network.listen</c>. Required for a web app, empty for every other kind.
+    /// </summary>
+    public virtual IReadOnlyList<string> Urls => [];
 }
 
 /// <summary>

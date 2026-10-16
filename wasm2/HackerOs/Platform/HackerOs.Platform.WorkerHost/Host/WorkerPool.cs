@@ -273,6 +273,51 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Finds the web worker (ADR 0074): the one worker every web app runs in, like an IIS
+    /// application pool. The first site takes the ready worker (replaced at once); the next ones join it.
+    /// </summary>
+    internal async Task<WorkerConnection> AcquireWebAsync(CancellationToken cancellationToken)
+    {
+        _watchdog ??= WatchAsync(_lifetime.Token);
+        while (true)
+        {
+            Task changed;
+            WorkerConnection? starting;
+            lock (_gate)
+            {
+                starting = _workers.FirstOrDefault(static worker => worker.Role == WorkerRole.Web && !worker.IsTerminated);
+                if (starting is { IsReady: true })
+                {
+                    return starting;
+                }
+
+                if (starting is null && TakeReadyWorker() is { } ready)
+                {
+                    ready.Role = WorkerRole.Web;
+                    ready.Core = null;
+                    _ = Task.Run(EnsureReadyWorker, CancellationToken.None);
+                    return ready;
+                }
+
+                if (starting is null && LiveCount() < Capacity)
+                {
+                    starting = Create(WorkerRole.Web, null);
+                    _ = LaunchQuietlyAsync(starting);
+                }
+                else if (starting is null)
+                {
+                    NoteSaturated();
+                }
+
+                changed = _changed.Task;
+            }
+
+            Task wait = starting is null ? changed : Task.WhenAny(starting.Ready, changed);
+            await wait.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>Releases a pipeline placement taken by <see cref="AcquireForCommandAsync"/>.</summary>
     internal void Release(Guid? group)
     {
@@ -332,9 +377,10 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     /// <summary>A process placed on <paramref name="worker"/> ended.</summary>
     internal void OnProcessEnded(WorkerConnection worker)
     {
-        if (worker.Role == WorkerRole.Dedicated && worker.ProcessCount == 0)
+        if (worker.Role is WorkerRole.Dedicated or WorkerRole.Web && worker.ProcessCount == 0)
         {
-            // ADR 0070, section 3: a dedicated process that ends frees its worker.
+            // ADR 0070, section 3: a dedicated process that ends frees its worker; the web worker
+            // ends with its last site (ADR 0074).
             lock (_gate)
             {
                 _workers.Remove(worker);

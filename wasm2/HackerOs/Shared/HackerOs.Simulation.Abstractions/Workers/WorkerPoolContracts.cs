@@ -13,7 +13,13 @@ public enum WorkerRole
     Dedicated,
 
     /// <summary>The always-ready worker: runtime loaded, no process yet (ADR 0071, section 1).</summary>
-    Ready
+    Ready,
+
+    /// <summary>
+    /// The one worker shared by every web app (ADR 0074, like an IIS application pool): created
+    /// with the first site, ended when the last one stops.
+    /// </summary>
+    Web
 }
 
 /// <summary>Life-cycle state of one worker, the <c>state</c> column of <c>/proc/hackeros/workers</c>.</summary>

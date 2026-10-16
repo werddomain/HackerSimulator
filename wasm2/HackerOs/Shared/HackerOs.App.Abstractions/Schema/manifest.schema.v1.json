@@ -24,7 +24,7 @@
     "version": { "$ref": "#/$defs/semanticVersion" },
     "publisherId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
     "description": { "type": "string", "minLength": 1 },
-    "kind": { "enum": ["window", "terminal", "service"] },
+    "kind": { "enum": ["window", "terminal", "service", "web"] },
     "entryPoint": {
       "type": "object",
       "additionalProperties": false,
@@ -235,7 +235,21 @@
     "singleInstancePerUser": { "type": "boolean" },
     "autoStart": { "type": "boolean" },
     "supportsBack": { "type": "boolean" },
-    "execution": { "enum": ["mainThread", "pool", "dedicated"] }
+    "execution": { "enum": ["mainThread", "pool", "dedicated", "web"] },
+    "web": {
+      "description": "Web part of a web app (ADR 0073): the URLs the site answers on, published by the OS resolver (ADR 0074).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["urls"],
+      "properties": {
+        "urls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^https?://[a-z0-9.-]+(:[0-9]{1,5})?/([^?#\\s]*/)?$" }
+        }
+      }
+    }
   },
   "allOf": [
     {
@@ -244,6 +258,14 @@
         "properties": { "kind": { "const": "terminal" } }
       },
       "then": { "required": ["terminal"] }
+    },
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "const": "web" } }
+      },
+      "then": { "required": ["web"] },
+      "else": { "not": { "required": ["web"] } }
     },
     {
       "if": {

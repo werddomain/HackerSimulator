@@ -48,6 +48,7 @@ public sealed class CommandParityTests
         new("mv", ["mv notes.txt moved.txt", "mv missing.txt x"]),
         new("nano", ["nano notes.txt"]),
         new("netstat", ["netstat", "netstat -i"]),
+        new("nslookup", ["nslookup example.hackeros", "nslookup nowhere.invalid", "nslookup"]),
         new("nmap", ["nmap example.hackeros", "nmap -p 80-443 -sV 10.0.0.10"]),
         new("ping", ["ping example.hackeros", "ping nowhere.invalid"]),
         new("printf", ["printf '%s-%d\\n' a 1 b 2"]),
@@ -102,7 +103,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(63, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(64, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

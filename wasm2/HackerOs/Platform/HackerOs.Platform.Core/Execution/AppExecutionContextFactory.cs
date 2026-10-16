@@ -48,6 +48,7 @@ public sealed class AppExecutionContextFactory
     private readonly SystemMetricsServices? _metrics;
     private readonly SystemAdministrationGatewayServices? _administration;
     private readonly Clipboard.SystemClipboard _clipboard;
+    private readonly Network.Local.LocalNetworkServices? _localNetwork;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -121,7 +122,8 @@ public sealed class AppExecutionContextFactory
         Func<Shell.ShellHostService>? shellHostProvider = null,
         SystemMetricsServices? metrics = null,
         Clipboard.SystemClipboard? clipboard = null,
-        SystemAdministrationGatewayServices? administration = null)
+        SystemAdministrationGatewayServices? administration = null,
+        Network.Local.LocalNetworkServices? localNetwork = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -143,6 +145,7 @@ public sealed class AppExecutionContextFactory
         _metrics = metrics;
         _administration = administration;
         _clipboard = clipboard ?? new Clipboard.SystemClipboard();
+        _localNetwork = localNetwork;
     }
 
     /// <summary>
@@ -272,7 +275,8 @@ public sealed class AppExecutionContextFactory
                     _metrics?.Network,
                     _metrics?.ProcessIo,
                     process.Pid,
-                    _metrics?.KernelMemory),
+                    _metrics?.KernelMemory,
+                    _localNetwork is null ? null : new Network.Local.LocalNetworkCaller(_localNetwork, manifest, principal, isRootElevated)),
             _metrics?.Drives,
             clipboardGateway,
             administration.SystemSettings,

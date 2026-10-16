@@ -113,6 +113,9 @@ public sealed class WorkerProcessHost
                 case WorkerMessageType.PipeClosed:
                     Find(root)?.Output.Close(root.GetInt32("f"));
                     break;
+                case WorkerMessageType.HttpRequest:
+                    Find(root)?.Channel.Listeners.Deliver(root.GetInt32("sk"), WireCodec.ReadListenerExchange(root.GetProperty("ex")));
+                    break;
             }
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -299,6 +302,7 @@ public sealed class WorkerProcessHost
 
     private void End(WorkerProcess process, RemoteProcessExit exit)
     {
+        process.Channel.Listeners.CloseAll();
         process.Output.Flush();
         process.Output.Abort();
         lock (_gate)
@@ -384,7 +388,8 @@ internal sealed class WorkerProcess
         Pid = pid;
         Control = new ProcessControlBlock(ProcessId.FromInt64(pid));
         Output = new RemoteProcessOutput(pid, host.Post);
-        RemoteProcessChannel channel = new(pid, host.Rpc, Output, Control);
+        RemoteProcessChannel channel = new(pid, host.Rpc, Output, Control, host.Post);
+        Channel = channel;
         Input = inputAttached
             ? new RemoteStandardInput(async (count, cancellationToken) => StandardInputWire.ReadChunk(
                 await channel.CallAsync(RemoteOps.StdinRead, writer => writer.WriteNumber("n", count), cancellationToken).ConfigureAwait(false)))
@@ -400,6 +405,9 @@ internal sealed class WorkerProcess
     public ProcessControlBlock Control { get; }
 
     public RemoteProcessOutput Output { get; }
+
+    /// <summary>Gets the process's line to the OS, with its listening sockets.</summary>
+    public RemoteProcessChannel Channel { get; }
 
     public TextReader Input { get; }
 

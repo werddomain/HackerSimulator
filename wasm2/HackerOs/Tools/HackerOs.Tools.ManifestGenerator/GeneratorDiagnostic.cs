@@ -67,6 +67,12 @@ public static class GeneratorCodes
     /// </summary>
     public const string ForbiddenInjection = "HOSAPP0031";
 
+    /// <summary>
+    /// A web app (ADR 0073, section 3) requests a <c>filesystem.*</c> capability: a site's data lives
+    /// in the host browser's IndexedDB, never in the OS file system.
+    /// </summary>
+    public const string WebFileSystem = "HOSAPP0050";
+
     /// <summary>A manifest file read back during aggregation is missing or not strict schema-v1 JSON.</summary>
     public const string UnreadableManifest = "HOSAPP0020";
 

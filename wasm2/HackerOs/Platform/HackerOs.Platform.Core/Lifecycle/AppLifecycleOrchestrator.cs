@@ -279,9 +279,10 @@ public sealed class AppLifecycleOrchestrator
             return new AppLaunchResult(AppLaunchStatus.Disabled, ErrorCode: "lifecycle.app.disabled");
         }
 
+        // A web site is one process, like a service (ADR 0073): a second activation finds it running.
         bool isImplicitlySingleton =
             (descriptor.Manifest.Kind == AppKind.Window && descriptor.Manifest.SingleInstancePerUser)
-            || descriptor.Manifest.Kind == AppKind.Service;
+            || descriptor.Manifest.Kind is AppKind.Service or AppKind.Web;
         if (isImplicitlySingleton && _processManager.TryGetSingleton(request.AppId, out ProcessRecord existing))
         {
             return new AppLaunchResult(AppLaunchStatus.FocusedExisting, existing);
@@ -388,7 +389,7 @@ public sealed class AppLifecycleOrchestrator
                     // ADR 0051 section 3: the shell reaches only a command granted shell.control.
                     grantedCapabilities.Contains(AppCapabilities.ShellControl) ? request.Shell : null,
                     cancellationToken),
-                AppKind.Service => StartService(descriptor, process, context),
+                AppKind.Service or AppKind.Web => StartService(descriptor, process, context),
                 _ => StartWindow(descriptor, process, context)
             };
         }

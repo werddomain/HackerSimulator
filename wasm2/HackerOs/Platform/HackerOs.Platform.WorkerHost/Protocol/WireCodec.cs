@@ -425,12 +425,118 @@ internal static class WireCodec
         writer.WriteString("h", entry.HostName);
         WriteStrings(writer, "ad", entry.AddressList.Select(static address => address.ToString()));
         WriteStrings(writer, "al", entry.Aliases);
+        writer.WriteNumber("so", (int)entry.Source);
+        if (entry.SourceDetail is { } detail)
+        {
+            writer.WriteString("sd", detail);
+        }
     }
 
     public static HackHostEntry ReadHostEntry(JsonElement element) => new(
         element.GetString("h"),
         [.. ReadStrings(element, "ad").Select(IPAddress.Parse)],
-        ReadStrings(element, "al"));
+        ReadStrings(element, "al"))
+    {
+        Source = element.TryGetProperty("so", out JsonElement source) ? (HackDnsSource)source.GetInt32() : HackDnsSource.Unknown,
+        SourceDetail = element.GetOptionalString("sd")
+    };
+
+    // ---- Listening sockets (ADR 0074, section 2) ------------------------------------------------
+
+    public static void WriteListenerExchange(Utf8JsonWriter writer, string name, HackHttpListenerExchange exchange)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteNumber("x", exchange.Id);
+        writer.WriteString("me", exchange.Method);
+        writer.WriteString("u", exchange.Url.OriginalString);
+        WritePairs(writer, "hd", exchange.Headers);
+        if (exchange.ContentType is { } contentType)
+        {
+            writer.WriteString("ct", contentType);
+        }
+
+        writer.WriteBase64String("bd", exchange.Body);
+        writer.WriteString("ra", exchange.RemoteEndPoint.ToString());
+        writer.WriteString("la", exchange.LocalEndPoint.ToString());
+        writer.WriteEndObject();
+    }
+
+    public static HackHttpListenerExchange ReadListenerExchange(JsonElement element) => new(
+        element.GetInt64("x"),
+        element.GetString("me"),
+        new Uri(element.GetString("u"), UriKind.Absolute),
+        ReadPairs(element.GetProperty("hd")),
+        element.GetOptionalString("ct"),
+        element.GetProperty("bd").GetBytesFromBase64(),
+        IPEndPoint.Parse(element.GetString("ra")),
+        IPEndPoint.Parse(element.GetString("la")));
+
+    public static void WriteListenerReply(Utf8JsonWriter writer, string name, HackHttpListenerReply reply)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteNumber("sc", reply.StatusCode);
+        if (reply.ReasonPhrase is { } reason)
+        {
+            writer.WriteString("rp", reason);
+        }
+
+        WritePairs(writer, "hd", reply.Headers);
+        if (reply.ContentType is { } contentType)
+        {
+            writer.WriteString("ct", contentType);
+        }
+
+        writer.WriteBase64String("b", reply.Body);
+        writer.WriteEndObject();
+    }
+
+    public static HackHttpListenerReply ReadListenerReply(JsonElement element) => new(
+        element.GetInt32("sc"),
+        element.GetOptionalString("rp"),
+        ReadPairs(element.GetProperty("hd")),
+        element.GetOptionalString("ct"),
+        element.GetProperty("b").GetBytesFromBase64());
+
+    public static void WriteListeners(Utf8JsonWriter writer, IReadOnlyList<HackTcpListenerInfo> listeners)
+    {
+        writer.WriteStartArray("ls");
+        foreach (HackTcpListenerInfo listener in listeners)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("ad", listener.Address.ToString());
+            writer.WriteNumber("po", listener.Port);
+            if (listener.ProcessId is { } pid)
+            {
+                writer.WriteNumber("p", pid);
+            }
+
+            if (listener.ProgramName is { } program)
+            {
+                writer.WriteString("pg", program);
+            }
+
+            if (listener.Owner is { } owner)
+            {
+                writer.WriteString("ow", owner);
+            }
+
+            WriteStrings(writer, "px", listener.Prefixes);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+    }
+
+    public static IReadOnlyList<HackTcpListenerInfo> ReadListeners(JsonElement element) =>
+    [
+        .. element.GetProperty("ls").EnumerateArray().Select(static item => new HackTcpListenerInfo(
+            IPAddress.Parse(item.GetString("ad")),
+            item.GetInt32("po"),
+            item.GetOptional("p")?.GetInt64(),
+            item.GetOptionalString("pg"),
+            item.GetOptionalString("ow"),
+            ReadStrings(item, "px")))
+    ];
 
     public static void WritePingReply(Utf8JsonWriter writer, HackPingReply reply)
     {

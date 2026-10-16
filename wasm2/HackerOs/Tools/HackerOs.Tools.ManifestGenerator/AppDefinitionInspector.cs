@@ -182,7 +182,9 @@ public static class AppDefinitionInspector
 
         foreach (ManifestValidationError error in AppManifestValidator.Validate(manifest!).Errors)
         {
-            diagnostics.Add(new(GeneratorCodes.InvalidManifest, subject, $"{error.Path}: {error.Message} ({error.Code})"));
+            // ADR 0073, section 3: a site asking for the file system has its own code.
+            string code = error.Code == "manifest.web.filesystem" ? GeneratorCodes.WebFileSystem : GeneratorCodes.InvalidManifest;
+            diagnostics.Add(new(code, subject, $"{error.Path}: {error.Message} ({error.Code})"));
         }
 
         if (diagnostics.Count > before)

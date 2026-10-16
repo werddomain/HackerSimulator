@@ -134,6 +134,13 @@ public sealed record AppManifest
     /// (<see cref="AppExecutionHosts.Of"/>).
     /// </summary>
     public AppExecutionHost? Execution { get; init; }
+
+    /// <summary>
+    /// Gets the web part of a <see cref="AppKind.Web"/> app (ADR 0073, section 1): the URLs it
+    /// answers on. Required for a web app, forbidden for every other kind; <see langword="null"/>
+    /// (omitted from <c>manifest.json</c>) otherwise, so existing manifests keep their exact bytes.
+    /// </summary>
+    public WebAppManifest? Web { get; init; }
 }
 
 /// <summary>

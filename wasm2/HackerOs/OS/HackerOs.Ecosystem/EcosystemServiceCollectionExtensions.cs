@@ -27,6 +27,7 @@ using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Network;
+using HackerOs.Platform.Core.Network.Local;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
@@ -223,7 +224,9 @@ public static class EcosystemServiceCollectionExtensions
                         CpuAccountant(provider),
                         MemoryAccountant(provider),
                         // ADR 0071, section 5: /proc/hackeros/workers, on the hosts that have workers.
-                        () => provider.GetService<IWorkerPoolStatus>()))),
+                        () => provider.GetService<IWorkerPoolStatus>(),
+                        // ADR 0074, section 2: /proc/net/tcp lists the listening ports.
+                        () => provider.GetService<ListeningPortTable>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -434,6 +437,32 @@ public static class EcosystemServiceCollectionExtensions
             new AppEnablementRegistry(provider.GetRequiredService<AppCatalog>()));
         services.AddSingleton<IAppEnablementRegistry>(provider =>
             provider.GetRequiredService<AppEnablementRegistry>());
+        // ADR 0074: the local half of the network stack, one per session. The table drops the
+        // sockets of dead processes; the simulated localhost's open ports are its system daemons.
+        services.AddScoped<ListeningPortTable>(provider => new ListeningPortTable(
+            pid => provider.GetRequiredService<IProcessManager>().TryGetActive(pid, out _),
+            () => provider.GetRequiredService<ISimulatedNetworkService>().GetHost("127.0.0.1") is { } localhost
+                ? localhost.Ports.Where(static port => port.State == SimulatedPortState.Open).Select(static port => port.PortNumber)
+                : []));
+        services.AddScoped<HackDnsResolver>(provider =>
+        {
+            AppCatalog appCatalog = provider.GetRequiredService<AppCatalog>();
+            IAppEnablementRegistry enablement = provider.GetRequiredService<IAppEnablementRegistry>();
+            return new HackDnsResolver(
+                provider.GetRequiredService<ISimulatedNetworkService>(),
+                provider.GetRequiredService<IFileSystemService>(),
+                provider.GetRequiredService<ISimulationClock>(),
+                // Source 3: the URLs of installed web apps, minus the uninstalled ones.
+                () => appCatalog.Manifests.Values.Where(manifest => manifest.Web is not null && enablement.IsEnabled(manifest.Id)),
+                provider.GetService<IHostedSiteNameSource>());
+        });
+        services.AddScoped<LocalNetworkServices>(provider => new LocalNetworkServices(
+            provider.GetRequiredService<ListeningPortTable>(),
+            provider.GetRequiredService<HackDnsResolver>(),
+            // Lazy: the orchestrator depends on the context factory, which carries these services.
+            new WebAppActivator(
+                () => provider.GetRequiredService<AppLifecycleOrchestrator>(),
+                provider.GetRequiredService<ListeningPortTable>())));
         services.AddScoped<AppExecutionContextFactory>(provider => new AppExecutionContextFactory(
             provider.GetRequiredService<ICapabilityGrantRepository>(),
             provider.GetRequiredService<IFileSystemService>(),
@@ -477,6 +506,7 @@ public static class EcosystemServiceCollectionExtensions
             clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
             // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
+            localNetwork: provider.GetRequiredService<LocalNetworkServices>(),
             administration: new SystemAdministrationGatewayServices(
                 () => provider.GetRequiredService<IOsSettingsService>(),
                 () => provider.GetRequiredService<AppPermissionAdministration>(),

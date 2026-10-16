@@ -18,5 +18,13 @@ public enum AppKind
 
     /// <summary>A non-visual application that runs for the active OS session.</summary>
     [JsonStringEnumMemberName("service")]
-    Service
+    Service,
+
+    /// <summary>
+    /// A web site served by the OS (ADR 0073): a non-visual process that listens on the URLs its
+    /// manifest declares (<see cref="AppManifest.Web"/>), started on demand by the first request
+    /// to one of them (ADR 0074, section 3), and run in the shared web worker.
+    /// </summary>
+    [JsonStringEnumMemberName("web")]
+    Web
 }

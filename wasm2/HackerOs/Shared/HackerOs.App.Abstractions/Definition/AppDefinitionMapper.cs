@@ -34,6 +34,7 @@ public static class AppDefinitionMapper
         Type? mobileEntryPoint = definition.MobileEntryPoint;
         TerminalCommand? terminal = definition.Terminal;
         IReadOnlyList<AppComponent> components = definition.Components;
+        IReadOnlyList<string> urls = definition.Urls;
 
         return new AppManifest
         {
@@ -70,7 +71,11 @@ public static class AppDefinitionMapper
             AutoStart = definition.AutoStart,
             SupportsBack = definition.SupportsBack,
             // ADR 0070, section 1: always written resolved, so the host never guesses a default.
-            Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition))
+            Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition)),
+            // ADR 0073: only a web app has a web part; omitted otherwise so other manifests keep their bytes.
+            Web = definition.Kind == AppKind.Web || urls.Count > 0
+                ? new WebAppManifest([.. urls.Select(WebAppUrls.Normalize)])
+                : null
         };
     }
 

@@ -47,7 +47,105 @@ public interface IAppNetworkGateway
     /// </summary>
     ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
         string hostNameOrAddress, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens an HTTP listening socket on this machine for <paramref name="prefixes"/>
+    /// (<c>http://host:port/path/</c>, ADR 0074 section 2), as <c>HttpListener.Start</c> does. The
+    /// OS records the port in its table of listening ports until the socket is disposed or the
+    /// process ends; requests sent to it are handed to <see cref="IHackHttpListenerSocket.AcceptAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// Needs <c>network.listen</c>, plus <c>network.listen.privileged</c> for a port below 1024;
+    /// a web app may listen on the URLs of its own manifest without either (ADR 0073). Another
+    /// process already listening on the same host and port yields <see cref="HackNetworkError.AddressInUse"/>.
+    /// </remarks>
+    /// <param name="prefixes">Listener prefixes, each ending with <c>/</c>; <c>+</c> and <c>*</c> stand for any host.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    ValueTask<HackNetworkResult<IHackHttpListenerSocket>> ListenHttpAsync(
+        IReadOnlyList<string> prefixes, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This network gateway cannot listen on ports.");
+
+    /// <summary>
+    /// Lists the TCP sockets listening on this machine, as <c>netstat -tlnp</c> and
+    /// <c>IPGlobalProperties.GetActiveTcpListeners</c> see them (ADR 0074, section 2). The process
+    /// of a socket is only named when the caller may see that process, as on Linux.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    ValueTask<IReadOnlyList<HackTcpListenerInfo>> GetTcpListenersAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This network gateway cannot list listening ports.");
 }
+
+/// <summary>
+/// An HTTP listening socket of the OS (ADR 0074, section 2), opened by
+/// <see cref="IAppNetworkGateway.ListenHttpAsync"/>. Apps use it through <see cref="HackHttpListener"/>.
+/// </summary>
+public interface IHackHttpListenerSocket : IAsyncDisposable
+{
+    /// <summary>Gets the prefixes the socket answers, normalized (lower-case host, explicit port when not the default).</summary>
+    IReadOnlyList<string> Prefixes { get; }
+
+    /// <summary>
+    /// Waits for the next request sent to one of <see cref="Prefixes"/>; <see langword="null"/> once
+    /// the socket is closed.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the wait (the socket stays open).</param>
+    ValueTask<HackHttpListenerExchange?> AcceptAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends the reply of an accepted request. Never blocks: the OS takes the bytes and the client
+    /// receives them. A second reply to the same request is ignored, as a closed connection would.
+    /// </summary>
+    /// <param name="exchangeId">The <see cref="HackHttpListenerExchange.Id"/> answered.</param>
+    /// <param name="reply">The status, headers and body.</param>
+    void Respond(long exchangeId, HackHttpListenerReply reply);
+}
+
+/// <summary>One request received by an <see cref="IHackHttpListenerSocket"/>, as it arrived on the wire.</summary>
+/// <param name="Id">Identifier of the exchange, unique on its socket, passed back to <see cref="IHackHttpListenerSocket.Respond"/>.</param>
+/// <param name="Method">HTTP method, upper case.</param>
+/// <param name="Url">Absolute URL requested (scheme, <c>Host</c> header, port, path and query).</param>
+/// <param name="Headers">Request headers, including <c>Host</c> and <c>Cookie</c>.</param>
+/// <param name="ContentType">The body's <c>Content-Type</c>, or <see langword="null"/>.</param>
+/// <param name="Body">Body bytes, empty when there is none.</param>
+/// <param name="RemoteEndPoint">Client address and ephemeral port.</param>
+/// <param name="LocalEndPoint">Address and port the request arrived on.</param>
+public sealed record HackHttpListenerExchange(
+    long Id,
+    string Method,
+    Uri Url,
+    IReadOnlyList<KeyValuePair<string, string>> Headers,
+    string? ContentType,
+    byte[] Body,
+    IPEndPoint RemoteEndPoint,
+    IPEndPoint LocalEndPoint);
+
+/// <summary>The reply of a listening process to one <see cref="HackHttpListenerExchange"/>.</summary>
+/// <param name="StatusCode">Status code, e.g. 200.</param>
+/// <param name="ReasonPhrase">Reason phrase, or <see langword="null"/> for the standard one.</param>
+/// <param name="Headers">Response headers (<c>Set-Cookie</c>, <c>Location</c>…), without <c>Content-Type</c> and <c>Content-Length</c>.</param>
+/// <param name="ContentType">The body's <c>Content-Type</c>, or <see langword="null"/> when there is no body.</param>
+/// <param name="Body">Body bytes, possibly empty.</param>
+public sealed record HackHttpListenerReply(
+    int StatusCode,
+    string? ReasonPhrase,
+    IReadOnlyList<KeyValuePair<string, string>> Headers,
+    string? ContentType,
+    byte[] Body);
+
+/// <summary>One TCP socket in the <c>LISTEN</c> state, as <c>netstat -tlnp</c> prints it.</summary>
+/// <param name="Address">Local address: <c>0.0.0.0</c> for every interface, <c>127.0.0.1</c> for loopback only.</param>
+/// <param name="Port">Local port.</param>
+/// <param name="ProcessId">PID of the owner, or <see langword="null"/> when the caller may not see it (or it is a kernel daemon).</param>
+/// <param name="ProgramName">Program name of the owner (its command name or app name), or <see langword="null"/>.</param>
+/// <param name="Owner">Login name of the owner, or <see langword="null"/>.</param>
+/// <param name="Prefixes">HTTP prefixes served on the socket; empty for a non-HTTP daemon.</param>
+public sealed record HackTcpListenerInfo(
+    IPAddress Address,
+    int Port,
+    long? ProcessId,
+    string? ProgramName,
+    string? Owner,
+    IReadOnlyList<string> Prefixes);
 
 /// <summary>Why a network call failed, independent of the transport that carried it.</summary>
 public enum HackNetworkError
@@ -68,7 +166,10 @@ public enum HackNetworkError
     TooManyRedirects,
 
     /// <summary>The connection broke or timed out on the way (<c>ERR_CONNECTION_FAILED</c>).</summary>
-    ConnectionFailed
+    ConnectionFailed,
+
+    /// <summary>Another process already listens on this address and port (<c>EADDRINUSE</c>).</summary>
+    AddressInUse
 }
 
 /// <summary>Outcome of one <see cref="IAppNetworkGateway"/> call: a value or a <see cref="HackNetworkError"/>.</summary>
@@ -116,6 +217,7 @@ public static class HackNetworkErrorCodes
         HackNetworkError.ConnectionRefused => "ERR_CONNECTION_REFUSED",
         HackNetworkError.TooManyRedirects => "ERR_TOO_MANY_REDIRECTS",
         HackNetworkError.ConnectionFailed => "ERR_CONNECTION_FAILED",
+        HackNetworkError.AddressInUse => "ERR_ADDRESS_IN_USE",
         _ => string.Empty
     };
 }

@@ -44,6 +44,27 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Web_urls_round_trip_in_declared_order_and_are_omitted_for_other_kinds()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Web,
+            Execution = AppExecutionHost.Web,
+            FileHandlers = [],
+            Components = null,
+            Web = new WebAppManifest(["http://intranet.hack:8080/admin/", "http://intranet.hack/"])
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+
+        Assert.Contains("\"execution\":\"web\"", json, StringComparison.Ordinal);
+        Assert.Equal(AppKind.Web, roundTripped.Kind);
+        Assert.Equal(["http://intranet.hack:8080/admin/", "http://intranet.hack/"], roundTripped.Web!.Urls);
+        Assert.DoesNotContain("\"web\":", AppManifestJsonSerializer.SerializeCanonical(CreateManifest()), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DeserializeStrict_rejects_unknown_component_properties()
     {
         string json = AppManifestJsonSerializer.SerializeCanonical(CreateManifest())

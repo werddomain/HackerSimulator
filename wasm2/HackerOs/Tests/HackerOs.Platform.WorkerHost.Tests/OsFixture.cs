@@ -14,6 +14,7 @@ using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Network;
+using HackerOs.Platform.Core.Network.Local;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
@@ -69,7 +70,7 @@ internal sealed class OsFixture : IAsyncDisposable
             () => Manager!, resources, VirtualHardwareProfile.Default, Clock,
             environments: () => Manager?.Environments,
             transactionIdFactory: () => new Guid(_transactionId++, 0, 0, new byte[8]),
-            metrics: new ProcMetricsSources(Workers: () => Pool));
+            metrics: new ProcMetricsSources(Workers: () => Pool, Listeners: () => Ports));
         FileSystemMountRouter router = new(repository,
         [
             new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, proc),
@@ -112,15 +113,25 @@ internal sealed class OsFixture : IAsyncDisposable
         };
 
         AppEnablementRegistry enablement = new(Catalog);
+        // ADR 0074: the local network stack, as the Ecosystem host composes it.
+        InMemorySimulatedNetworkService network = new(SmokeTestNetworkSeed.Hosts, SmokeTestWebsites());
+        Ports = new ListeningPortTable(
+            pid => Manager.TryGetActive(pid, out _),
+            () => network.GetHost("127.0.0.1") is { } localhost
+                ? localhost.Ports.Where(static port => port.State == SimulatedPortState.Open).Select(static port => port.PortNumber)
+                : []);
+        Resolver = new HackDnsResolver(network, fileSystem, Clock, () => Catalog.Manifests.Values.Where(manifest => enablement.IsEnabled(manifest.Id)));
+        LocalNetworkServices localNetwork = new(Ports, Resolver, new WebAppActivator(() => Orchestrator!, Ports));
         AppExecutionContextFactory contextFactory = new(
             _grants, fileSystem, EventBus, topicBus, new InMemoryNotificationQueue(maxEntriesPerUser: 20),
             Diagnostics, Clock, Manager,
             intentDispatcherProvider: () => Dispatcher!,
             logWriter: Log,
-            network: new InMemorySimulatedNetworkService(SmokeTestNetworkSeed.Hosts, SmokeTestWebsites()),
+            network: network,
             appCatalog: new AppCatalogGatewayServices(Catalog, enablement),
             shellHostProvider: () => ShellHost!,
-            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default)));
+            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default)),
+            localNetwork: localNetwork);
 
         if (workers)
         {
@@ -198,6 +209,12 @@ internal sealed class OsFixture : IAsyncDisposable
     public LoopbackWebWorkerRuntime? Runtime { get; }
 
     public WorkerPool? Pool { get; }
+
+    /// <summary>Gets the table of listening ports (ADR 0074).</summary>
+    public ListeningPortTable Ports { get; }
+
+    /// <summary>Gets the resolver hackdns.</summary>
+    public HackDnsResolver Resolver { get; }
 
     public SystemStartupSignal Startup { get; } = new();
 

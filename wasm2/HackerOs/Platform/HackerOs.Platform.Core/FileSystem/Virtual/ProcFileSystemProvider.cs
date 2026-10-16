@@ -49,7 +49,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private const string WorkersFile = "workers";
 
     private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
-    private static readonly string[] NetFiles = ["dev"];
+    private static readonly string[] NetFiles = ["dev", "tcp"];
     private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
 
     /// <summary>Linux's <c>USER_HZ</c>, the unit of <c>utime</c>, <c>stime</c> and <c>starttime</c>.</summary>
@@ -513,6 +513,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Pool => "pool",
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Overflow => "overflow",
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Dedicated => "dedicated",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Web => "web",
             _ => "ready"
         };
 
@@ -529,6 +530,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private string RenderNetFile(string name) => name switch
     {
         "dev" => RenderNetDev(),
+        "tcp" => RenderNetTcp(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc/net file.")
     };
 
@@ -618,6 +620,33 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
                 CultureInfo.InvariantCulture,
                 $"{nic.Name,6}:{nic.ReceiveBytes,8} {nic.ReceivePackets,7} {nic.ReceiveErrors,4} {nic.ReceiveDropped,4} {0,4} {0,5} {0,10} {0,9} "
                 + $"{nic.TransmitBytes,8} {nic.TransmitPackets,7} {nic.TransmitErrors,4} {nic.TransmitDropped,4} {0,4} {0,5} {0,7} {0,10}\n");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Renders <c>/proc/net/tcp</c> (ADR 0074 section 2) in the kernel's layout: one line per socket
+    /// in the <c>LISTEN</c> state (<c>0A</c>), the address as the little-endian hex of the IPv4
+    /// address (<c>0100007F</c> is 127.0.0.1), the port in hex, the owner's uid (0 for root and the
+    /// system daemons, 1000 for a user: HackerOS has no numeric uids) and the socket inode, which
+    /// <c>netstat -p</c> matches against <c>/proc/&lt;pid&gt;/fd</c> on Linux.
+    /// </summary>
+    private string RenderNetTcp()
+    {
+        StringBuilder builder = new();
+        builder.Append("  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
+        IReadOnlyList<HackerOs.Platform.Core.Network.Local.ListeningSocketRow> rows = _metrics.Listeners?.Invoke()?.Snapshot() ?? [];
+        for (int index = 0; index < rows.Count; index++)
+        {
+            HackerOs.Platform.Core.Network.Local.ListeningSocketRow row = rows[index];
+            byte[] octets = row.Address.GetAddressBytes();
+            Array.Reverse(octets);
+            string address = Convert.ToHexString(octets);
+            int uid = row.Owner is null || string.Equals(row.Owner.LoginName, "root", StringComparison.Ordinal) ? 0 : 1000;
+            builder.Append(
+                CultureInfo.InvariantCulture,
+                $"{index,4}: {address}:{row.Port:X4} 00000000:0000 0A 00000000:00000000 00:00000000 00000000 {uid,5} {0,8} {row.Inode} 1 0000000000000000 100 0 0 10 0\n");
         }
 
         return builder.ToString();

@@ -100,6 +100,7 @@ Messages JSON avec un champ `t` :
 | `perm` | Erreur de permission levée par l'OS sur les passerelles du processus. |
 | `ack` | Crédit de sortie : l'OS a écrit `n` caractères. |
 | `epipe` | Le lecteur du flux `f` est parti (tube cassé). |
+| `hreq` | Requête HTTP pour un socket ouvert par `net.listen` dans le worker (`web/3`). |
 
 | Worker → OS | Rôle |
 |---|---|
@@ -113,6 +114,7 @@ Messages JSON avec un champ `t` :
 | `killed` | Accusé d'un `kill`. |
 | `stopdone`, `sstopped` | Fin du traitement d'un `stop` / `sstop`. |
 | `log` | Ligne de diagnostic du worker. |
+| `hres` | Réponse à un `hreq` (`web/3`). |
 
 Chaque `call` est servi sur le fil principal par `RemoteProcessSession` **sous
 le contexte d'exécution du processus** (`HackExecutionContext.Enter` puis
@@ -128,6 +130,7 @@ qu'en local. La sortie a un crédit de 64 Kio en vol ; un fichier régulier de
 | `ready` | Toujours un, une fois le système démarré ; remplacé aussitôt qu'il est pris. |
 | `dedicated` | Prend le worker prêt pour un processus `dedicated` ; libéré à sa fin. |
 | `overflow` | Le worker prêt pris par une commande quand aucun cœur n'est libre ; retiré après 30 s vide. |
+| `web` | Un seul pour tous les sites (`AppKind.Web`, ADR 0073 §1) : le premier site prend le worker prêt, les suivants le partagent ; terminé quand son dernier site s'arrête. Requêtes HTTP par `hreq`/`hres` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)). |
 
 - **Capacité** : `max(2, navigator.hardwareConcurrency)` workers en tout. Au
   plafond, une demande attend qu'un worker se libère et `/var/log/syslog` le
@@ -173,7 +176,7 @@ worker role       state          core memory_kb heartbeat_ms busy_ms pids
 1      ready      idle           -    38912     98           0       -
 ```
 
-Rôles : `pool`, `overflow`, `dedicated`, `ready`. États : `starting`, `idle`,
+Rôles : `pool`, `overflow`, `dedicated`, `ready`, `web`. États : `starting`, `idle`,
 `running`, `not-responding`, `terminated`. Les PID (séparés par des virgules)
 sont filtrés par la visibilité de `/proc` du lecteur.
 
