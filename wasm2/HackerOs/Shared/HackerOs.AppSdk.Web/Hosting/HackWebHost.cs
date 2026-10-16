@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Net;
 using HackerOs.AppSdk.Web.Http;
 using HackerOs.AppSdk.Web.Mvc;
+using HackerOs.AppSdk.Web.Views;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 
 namespace HackerOs.AppSdk.Web.Hosting;
@@ -20,6 +21,7 @@ public abstract class HackWebHost : WebServerAppBase
 {
     private readonly WebAppDefinition _definition;
     private readonly HackControllerRouteTable _routes;
+    private readonly HackViewTable _views;
     private HackWebApplication? _application;
 
     /// <summary>Initializes the site process.</summary>
@@ -27,12 +29,24 @@ public abstract class HackWebHost : WebServerAppBase
     /// <param name="definition">A new instance of the site's definition.</param>
     /// <param name="routes">The controller actions generated for the site's assembly.</param>
     protected HackWebHost(AppManifest manifest, WebAppDefinition definition, HackControllerRouteTable routes)
+        : this(manifest, definition, routes, HackViewTable.Empty)
+    {
+    }
+
+    /// <summary>Initializes the site process with its views.</summary>
+    /// <param name="manifest">The site's validated manifest.</param>
+    /// <param name="definition">A new instance of the site's definition.</param>
+    /// <param name="routes">The controller actions generated for the site's assembly.</param>
+    /// <param name="views">The views generated for the site's assembly (ADR 0083).</param>
+    protected HackWebHost(AppManifest manifest, WebAppDefinition definition, HackControllerRouteTable routes, HackViewTable views)
         : base(manifest)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(routes);
+        ArgumentNullException.ThrowIfNull(views);
         _definition = definition;
         _routes = routes;
+        _views = views;
     }
 
     /// <summary>Gets the running application, once built.</summary>
@@ -42,13 +56,14 @@ public abstract class HackWebHost : WebServerAppBase
     /// <param name="definition">The site definition.</param>
     /// <param name="routes">The generated route table.</param>
     /// <param name="urls">The URLs; the definition's when <see langword="null"/>.</param>
+    /// <param name="views">The generated view table; none when <see langword="null"/>.</param>
     /// <returns>The application, with its pipeline described.</returns>
     /// <exception cref="InvalidOperationException"><see cref="WebAppDefinition.Configure"/> did not call <c>Build</c>.</exception>
-    public static HackWebApplication CreateApplication(WebAppDefinition definition, HackControllerRouteTable routes, IReadOnlyList<string>? urls = null)
+    public static HackWebApplication CreateApplication(WebAppDefinition definition, HackControllerRouteTable routes, IReadOnlyList<string>? urls = null, HackViewTable? views = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(routes);
-        HackWebApplicationBuilder builder = new(definition.Id, definition.Name, urls ?? definition.Urls, routes);
+        HackWebApplicationBuilder builder = new(definition.Id, definition.Name, urls ?? definition.Urls, routes, views ?? HackViewTable.Empty, definition.GetType());
         definition.Configure(builder);
         return builder.Application
             ?? throw new InvalidOperationException($"{definition.GetType().Name}.Configure must call builder.Build().");
@@ -57,7 +72,7 @@ public abstract class HackWebHost : WebServerAppBase
     /// <inheritdoc />
     protected override Task OnListeningAsync(HackHttpListener listener, CancellationToken cancellationToken)
     {
-        HackWebApplication application = CreateApplication(_definition, _routes, Urls);
+        HackWebApplication application = CreateApplication(_definition, _routes, Urls, _views);
         application.UnhandledException += (context, exception) =>
             HackExecutionContext.Current.Logging.Log(
                 DiagnosticSeverity.Error,

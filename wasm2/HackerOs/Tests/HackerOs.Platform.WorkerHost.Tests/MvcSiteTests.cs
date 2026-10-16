@@ -50,6 +50,29 @@ public sealed class MvcSiteTests
         Assert.Equal("visits=1", stranger.Stdout.TrimEnd());
     }
 
+    [Theory]
+    [MemberData(nameof(Modes))]
+    public async Task Razor_views_and_the_embedded_wwwroot_are_served(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+
+        ShellRun page = await os.RunAsync("curl 'http://mvc.hack/home/page?who=neo'").WaitAsync(TimeSpan.FromSeconds(20));
+        ShellRun css = await os.RunAsync("curl -i http://mvc.hack/css/site.css").WaitAsync(TimeSpan.FromSeconds(20));
+        ShellRun forged = await os.RunAsync("curl -i -d x=1 http://mvc.hack/home/go").WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.True(page.ExitCode == 0, page.Stderr);
+        Assert.Contains("<title>mvc</title>", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("<h1>Hello neo</h1>", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("""<form method="post" action="/Home/Go">""", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", page.Stdout, StringComparison.Ordinal);
+        Assert.StartsWith("HTTP/1.1 200", css.Stdout, StringComparison.Ordinal);
+        Assert.Contains("text/css", css.Stdout, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("color: lime", css.Stdout, StringComparison.Ordinal);
+        // Go has [ValidateAntiForgeryToken]: a POST without the form's token is refused (GET is never checked).
+        Assert.StartsWith("HTTP/1.1 400", forged.Stdout, StringComparison.Ordinal);
+        Assert.Contains("anti-forgery", forged.Stdout, StringComparison.Ordinal);
+    }
+
     private static async Task<OsFixture> StartAsync(bool workers)
     {
         OsFixture os = await OsFixture.CreateAsync(workers);

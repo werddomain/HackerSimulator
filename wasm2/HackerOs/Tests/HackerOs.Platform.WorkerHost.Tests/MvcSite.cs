@@ -1,4 +1,5 @@
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Web.Antiforgery;
 using HackerOs.AppSdk.Web.Hosting;
 using HackerOs.AppSdk.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,10 +22,15 @@ public sealed partial class MvcSite : WebAppDefinition
     {
         builder.Services.AddSingleton<MvcCounter>();
         HackWebApplication app = builder.Build();
+        app.UseExceptionPage();
+        app.UseStaticFiles();
         app.UseCookieSession();
         app.MapControllers();
     }
 }
+
+/// <summary>The model of the <c>Page</c> view.</summary>
+public sealed record Greeting(string Who);
 
 /// <summary>A singleton shared by every request of the site.</summary>
 public sealed class MvcCounter
@@ -57,7 +63,11 @@ public sealed class HomeController : HackController
         return Content($"visits={visits}");
     }
 
+    [ValidateAntiForgeryToken]
     public IHackActionResult Go() => RedirectToAction(nameof(Index));
+
+    /// <summary>A Razor view with its layout (web/7, ADR 0083).</summary>
+    public IHackActionResult Page(string? who) => View(new Greeting(who ?? "stranger"));
 
     /// <summary>Counts a first visit then redirects to <see cref="Visits"/>: the second hop carries the session cookie.</summary>
     public IHackActionResult Enter()

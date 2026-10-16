@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization.Metadata;
 using HackerOs.AppSdk.Web.Http;
+using Microsoft.AspNetCore.Components;
 using HackerOs.AppSdk.Web.Routing;
+using HackerOs.AppSdk.Web.Views;
 
 namespace HackerOs.AppSdk.Web.Mvc;
 
@@ -260,12 +262,75 @@ public abstract class HackControllerBase
 }
 
 /// <summary>
-/// A controller of pages (ASP.NET's <c>Controller</c>): <see cref="Json(object?)"/>, and filter hooks
-/// <see cref="OnActionExecuting"/> / <see cref="OnActionExecuted"/>. Views come with chantier
-/// <c>web/7-razor-views</c>; complex parameters are bound from the form (and route, query).
+/// A controller of pages (ASP.NET's <c>Controller</c>): <see cref="View()"/>, <see cref="PartialView()"/>,
+/// <see cref="ViewData"/>, <see cref="Json(object?)"/>, and filter hooks <see cref="OnActionExecuting"/> /
+/// <see cref="OnActionExecuted"/>. Complex parameters are bound from the form (and route, query).
 /// </summary>
 public abstract class HackController : HackControllerBase, IHackActionFilter
 {
+    private HackViewDataDictionary? _viewData;
+
+    /// <summary>Gets the values handed to the view (<c>ViewData["Title"] = "Notes"</c>); the view and its layout read them.</summary>
+    public HackViewDataDictionary ViewData => _viewData ??= new HackViewDataDictionary();
+
+    /// <summary>Renders the view named after the action (<c>Views/&lt;Controller&gt;/&lt;Action&gt;.razor</c>), without model.</summary>
+    [NonAction]
+    public virtual HackViewResult View() => View(viewName: null, model: null);
+
+    /// <summary>Renders the view named after the action with <paramref name="model"/>.</summary>
+    /// <param name="model">The model (<c>@inherits HackView&lt;TModel&gt;</c> in the view).</param>
+    [NonAction]
+    public virtual HackViewResult View(object? model) => View(viewName: null, model);
+
+    /// <summary>Renders a named view (<c>View("Edit")</c>, searched in the controller's folder then <c>Shared/</c>) or a path (<c>~/Views/Notes/Edit.razor</c>).</summary>
+    /// <param name="viewName">The view name or path.</param>
+    [NonAction]
+    public virtual HackViewResult View(string? viewName) => View(viewName, model: null);
+
+    /// <summary>Renders a named view with <paramref name="model"/>.</summary>
+    /// <param name="viewName">The view name or path; the action name when <see langword="null"/>.</param>
+    /// <param name="model">The model.</param>
+    [NonAction]
+    public virtual HackViewResult View(string? viewName, object? model) =>
+        new() { ViewName = viewName, Model = model, ViewData = ViewData };
+
+    /// <summary>Renders a view by type (<c>View&lt;NoteListView&gt;(model)</c>), without lookup.</summary>
+    /// <typeparam name="TView">The view component.</typeparam>
+    /// <param name="model">The model.</param>
+    [NonAction]
+    public virtual HackViewResult View<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TView>(object? model = null)
+        where TView : IComponent =>
+        new() { ViewType = typeof(TView), Model = model, ViewData = ViewData };
+
+    /// <summary>Renders the view named after the action without its layout (an HTML fragment for a script).</summary>
+    [NonAction]
+    public virtual HackViewResult PartialView() => PartialView(viewName: null, model: null);
+
+    /// <summary>Renders the view named after the action without layout, with <paramref name="model"/>.</summary>
+    /// <param name="model">The model.</param>
+    [NonAction]
+    public virtual HackViewResult PartialView(object? model) => PartialView(viewName: null, model);
+
+    /// <summary>Renders a named view without layout.</summary>
+    /// <param name="viewName">The view name or path.</param>
+    [NonAction]
+    public virtual HackViewResult PartialView(string? viewName) => PartialView(viewName, model: null);
+
+    /// <summary>Renders a named view without layout, with <paramref name="model"/>.</summary>
+    /// <param name="viewName">The view name or path; the action name when <see langword="null"/>.</param>
+    /// <param name="model">The model.</param>
+    [NonAction]
+    public virtual HackViewResult PartialView(string? viewName, object? model) =>
+        new() { ViewName = viewName, Model = model, ViewData = ViewData, IsPartial = true };
+
+    /// <summary>Renders a view by type without layout.</summary>
+    /// <typeparam name="TView">The view component.</typeparam>
+    /// <param name="model">The model.</param>
+    [NonAction]
+    public virtual HackViewResult PartialView<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TView>(object? model = null)
+        where TView : IComponent =>
+        new() { ViewType = typeof(TView), Model = model, ViewData = ViewData, IsPartial = true };
+
     /// <summary>JSON, even for a string.</summary>
     /// <param name="data">The value.</param>
     [NonAction]

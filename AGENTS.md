@@ -41,7 +41,7 @@
 
 2.  **Collocated Component Assets — No Inline CSS/JS in Markup:**
     * **MANDATORY:** All CSS and JavaScript for a Blazor component **MUST** live in scoped, collocated files next to that component, not inline in the `.razor` markup. For a component `MyComponent.razor`: styles go in `MyComponent.razor.css`, component-scoped script goes in `MyComponent.razor.js`, and a non-trivial code-behind goes in `MyComponent.razor.cs`.
-    * **PROHIBITED:** inline `style="..."` attributes, `<style>` blocks, `<script>` blocks, and raw JS event attributes directly in `.razor` markup when a scoped file can hold them instead. This is enforced at build time (ADR 0007) — inline styles/scripts fail the build.
+    * **PROHIBITED:** inline `style="..."` attributes, `<style>` blocks, `<script>` blocks, and raw JS event attributes directly in `.razor` markup when a scoped file can hold them instead. This is enforced at build time (ADR 0007) — inline styles/scripts fail the build. The one tolerated form is a bodiless `<script src="...">` reference, which an ASP.Hack view uses to link its own `wwwroot/js` files (ADR 0083).
     * Only truly global styles belong in the shared global CSS (design tokens, resets, fatal boot-error states); everything else stays scoped to its component.
     * This applies only to component markup — root host documents (`OS/HackerOs.Ecosystem/wwwroot/index.html`, `test/test/Components/App.razor`) are the framework bootstrap boundary and are exempt.
 
