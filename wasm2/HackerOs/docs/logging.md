@@ -42,10 +42,18 @@ HostExceptionReporter ───────────────────�
     écrite dans `syslog` au vidage suivant.
   - Vidage toutes les 1 s de temps simulé, dès 100 lignes en attente, à la
     déconnexion (`SessionLoggedOutEvent`) et à `DisposeAsync`. Un seul vidage à
-    la fois ; une seule écriture par fichier et par vidage.
+    la fois par système de fichiers attaché ; une seule écriture par fichier et
+    par vidage.
   - `AttachAsync(IFileSystemService)` est appelé par `EcosystemBootCoordinator`
     juste après `EnsureRootAsync`. Avant, les lignes attendent dans le canal.
     Le rédacteur crée lui-même `/var/log` et `/var/log/apps` s'ils manquent.
+  - Attacher un **autre** système de fichiers abandonne le précédent : son
+    jeton est annulé et les vidages suivants ne l'attendent plus. Sur
+    `HackerOs.Server`, chaque circuit monte le sien ; un rechargement peut
+    couper l'ancien circuit au milieu d'un vidage (appel JS sans réponse), et
+    le démarrage du nouveau circuit restait bloqué derrière, environ une fois
+    sur cinq (trouvé par `build/verify-hosts.sh`). Les lignes du lot abandonné
+    ne restent que dans le tampon mémoire.
   - Un échec d'écriture n'est jamais journalisé dans un fichier : il est noté une
     fois par fichier (catégorie `logging`) dans le tampon mémoire.
 - `FileAuditLog` remplace `BoundedAuditLog` dans la composition ; `Entries` reste
@@ -93,7 +101,8 @@ HostExceptionReporter ───────────────────�
   exemple exact de l'ADR, échappements, propriétés, audit, rejet des lignes étrangères.
 - `.../LogFileWriterTests.cs` : création et modes, vidage périodique et par seuil,
   une écriture par fichier, rotation et archives, lot géant, perte de lignes,
-  échecs non récursifs, déconnexion, arrêt, droits de lecture.
+  échecs non récursifs, déconnexion, arrêt, droits de lecture, nouvel attachement
+  qui n'attend pas un vidage bloqué sur le précédent.
 - `.../LogProducersTests.cs` : `ILogger`, `AppLoggingGateway`, `FileAuditLog`.
 - `Tests/HackerOs.Platform.Core.Tests/Time/SimulationClockDriverTests.cs`.
 - `Tests/HackerOs.Apps.ErrorLogViewer.Tests/` : manifeste et `LogFileReader` sur un

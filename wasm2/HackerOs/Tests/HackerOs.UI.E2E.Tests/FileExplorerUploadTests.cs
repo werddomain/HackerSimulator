@@ -31,7 +31,7 @@ public sealed class FileExplorerUploadTests(ITestOutputHelper output)
         try
         {
             using IPlaywright playwright = await Playwright.CreateAsync();
-            await using IBrowser browser = await playwright.Chromium.LaunchAsync(
+            await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
                 new BrowserTypeLaunchOptions { Headless = true });
 
             await using IBrowserContext context = await browser.NewContextAsync();

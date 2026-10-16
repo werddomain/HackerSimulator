@@ -186,8 +186,8 @@ Précisions de mise en œuvre (`rebuild/5-graceful-stop`, détail dans
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.
 
 ### Hôtes (section 5.2)
-- [ ] `build/verify-hosts.sh` : les trois hôtes compilent, se publient et démarrent jusqu'au bureau.
-- [ ] Parcours avec les mesures coupées au build et par `appsettings.json`.
+- [x] `build/verify-hosts.sh` : les trois hôtes compilent, se publient et démarrent jusqu'au bureau ; repli sur `/opt/pw-browsers/chromium` pour toutes les suites Playwright (`rebuild/5-host-smoke`).
+- [x] Parcours avec les mesures coupées au build et par `appsettings.json` (`CpuSource`/`MemSource` vérifiés pour chaque parcours).
 - [ ] Chaque PR `rebuild/5-*` donne la sortie de la vérification.
 
 ### Fin de phase
