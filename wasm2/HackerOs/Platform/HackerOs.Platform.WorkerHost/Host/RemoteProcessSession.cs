@@ -513,6 +513,17 @@ internal sealed class RemoteProcessSession
                     a.GetString("m"),
                     a.TryGetProperty("pr", out _) ? WireCodec.ReadDictionary(a, "pr") : null);
                 return static _ => { };
+            case RemoteOps.LogFile:
+                try
+                {
+                    c.Logging.AppendToLogFile(a.GetString("p"), a.GetString("m"));
+                }
+                catch (Exception exception) when (exception is UnauthorizedAccessException or ArgumentException)
+                {
+                    // A fire-and-forget line the OS refuses is dropped, like a datagram to a closed syslog socket.
+                }
+
+                return static _ => { };
             case RemoteOps.NotificationPost:
                 c.Notifications.Post(
                     (HackerOs.Simulation.Abstractions.Notifications.NotificationSeverity)a.GetInt32("s"),

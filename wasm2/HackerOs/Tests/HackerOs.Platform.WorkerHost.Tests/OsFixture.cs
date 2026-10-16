@@ -96,15 +96,18 @@ internal sealed class OsFixture : IAsyncDisposable
         Manager = new InMemoryProcessManager(Clock, _sessions, EventBus);
         Log = new LogFileWriter(Clock, new BoundedDiagnosticSink(maxEntries: 1000), EventBus);
 
-        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests];
+        // ADR 0077/0080: hackwebd, a system app of the host as in the Ecosystem build.
+        AppManifest hackwebd = AppDefinitionMapper.ToManifest(new HackerOs.Apps.WebServer.HackWebdApp());
+        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests, hackwebd];
         AppManifest host = HostManifest();
-        Catalog = AppCatalog.Build([host, .. commands]).Catalog!;
+        Catalog = AppCatalog.Build([host, .. commands], [hackwebd.Id]).Catalog!;
         AppDiscoveryResult discovery = AppEntryPointDiscovery.Discover(
             AppCatalog.Build(commands).Catalog!,
             new Dictionary<string, Assembly>(StringComparer.Ordinal)
             {
                 ["HackerOs.Commands.dll"] = typeof(HackerOs.Commands.Cd.CdCommand).Assembly,
-                [TestCommands.AssemblyFile] = typeof(OsFixture).Assembly
+                [TestCommands.AssemblyFile] = typeof(OsFixture).Assembly,
+                ["HackerOs.Apps.WebServer.dll"] = typeof(HackerOs.Apps.WebServer.HackWebdApp).Assembly
             });
         Assert.True(discovery.IsSuccess, string.Join("; ", discovery.Errors.Select(error => error.ToString())));
         Dictionary<string, AppDescriptor> descriptors = new(discovery.Descriptors!, StringComparer.Ordinal)
@@ -120,7 +123,9 @@ internal sealed class OsFixture : IAsyncDisposable
             () => network.GetHost("127.0.0.1") is { } localhost
                 ? localhost.Ports.Where(static port => port.State == SimulatedPortState.Open).Select(static port => port.PortNumber)
                 : []);
-        Resolver = new HackDnsResolver(network, fileSystem, Clock, () => Catalog.Manifests.Values.Where(manifest => enablement.IsEnabled(manifest.Id)));
+        Resolver = new HackDnsResolver(
+            network, fileSystem, Clock, () => Catalog.Manifests.Values.Where(manifest => enablement.IsEnabled(manifest.Id)),
+            new HostedSiteNameSource(fileSystem, Clock));
         LocalNetworkServices localNetwork = new(Ports, Resolver, new WebAppActivator(() => Orchestrator!, Ports));
         AppExecutionContextFactory contextFactory = new(
             _grants, fileSystem, EventBus, topicBus, new InMemoryNotificationQueue(maxEntriesPerUser: 20),

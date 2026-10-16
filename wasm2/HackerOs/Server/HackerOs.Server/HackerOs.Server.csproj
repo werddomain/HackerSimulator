@@ -40,6 +40,7 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

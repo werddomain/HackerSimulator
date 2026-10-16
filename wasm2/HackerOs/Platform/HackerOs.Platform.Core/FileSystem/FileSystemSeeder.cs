@@ -64,6 +64,10 @@ public sealed class FileSystemSeeder(
         await EnsureFileAsync(
             Network.Local.HackDnsResolver.HostsFilePath.Value, Network.Local.HackDnsResolver.DefaultHostsFileContent, 0x01A4, system, cancellationToken);
 
+        // ADR 0077/0080: declarations of the hosted static sites (hackwebd), edited by an administrator.
+        await EnsureDirectoryAsync("/etc/hackweb", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/etc/hackweb/sites", 0x01ED, system, cancellationToken);
+
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);
         await EnsureDirectoryAsync($"{home}/Desktop", 0x01C0, userProvisioning, cancellationToken);

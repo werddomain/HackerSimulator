@@ -153,7 +153,9 @@ Ordre, du premier au dernier :
    change ;
 2. le loopback (`localhost`, `*.localhost`, 127.0.0.0/8) ;
 3. les URL des apps web installées et activées ;
-4. les sites hébergés (`IHostedSiteNameSource`, utilisé par `web/7`) ;
+4. les sites hébergés (`IHostedSiteNameSource.FindSiteAsync`, implémenté par
+   `HostedSiteNameSource` depuis `web/5` : hôtes des fichiers `.site` valides et
+   activés, [`static-sites.md`](static-sites.md), ADR 0080 §4) ;
 5. le réseau simulé.
 
 Les réponses sont gardées 30 s simulées. Un nom en `.hack` n'est **jamais**

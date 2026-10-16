@@ -272,7 +272,11 @@
         _homeDirectory = _initialDirectory;
         _addressInput = homePath;
         _searchFilter = MatchesSearchQuery;
-        _contextMenuProviders = [new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError)];
+        _contextMenuProviders =
+        [
+            new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError),
+            new PublishSiteContextMenuProvider(LaunchWithAsync)
+        ];
         _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(evt =>
         {
             if (_fileView is not null)
