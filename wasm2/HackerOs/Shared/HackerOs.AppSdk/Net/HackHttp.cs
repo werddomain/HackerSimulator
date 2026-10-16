@@ -172,6 +172,23 @@ public sealed class HackCookieContainer
         }
     }
 
+    /// <summary>
+    /// Removes a cookie, as a browser does when a cookie expires (<c>Max-Age=0</c> or an
+    /// <c>Expires</c> date in the past).
+    /// </summary>
+    /// <param name="domain">Host the cookie belongs to.</param>
+    /// <param name="name">Cookie name.</param>
+    /// <returns>Whether a cookie was removed.</returns>
+    public bool Remove(string domain, string name)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+        ArgumentNullException.ThrowIfNull(name);
+        lock (_gate)
+        {
+            return _cookies.Remove((domain.ToLowerInvariant(), name));
+        }
+    }
+
     /// <summary>Gets the cookies sent to <paramref name="uri"/>'s host.</summary>
     public IReadOnlyList<HackCookie> GetCookies(Uri uri)
     {

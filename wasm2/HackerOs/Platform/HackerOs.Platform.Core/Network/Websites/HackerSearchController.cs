@@ -37,7 +37,9 @@ public sealed class HackerSearchController : SimulatedWebsiteControllerBase
         Get("/api/search", req =>
         {
             var query = req.Query.TryGetValue("q", out var q) ? q : "";
-            return SimulatedHttpResponse.Json(BuildSearchResultsJson(query));
+            // A public API: any page may call it with fetch (CORS, ADR 0075 §3).
+            SimulatedHttpResponse response = SimulatedHttpResponse.Json(BuildSearchResultsJson(query));
+            return response with { Headers = response.Headers.SetItem("Access-Control-Allow-Origin", "*") };
         });
         Get("/robots.txt", _ => SimulatedHttpResponse.Text(
             "User-agent: *\nDisallow: /api/\n\n# Crawlers welcome. Hackers too.\n"));

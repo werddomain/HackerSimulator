@@ -23,11 +23,26 @@
                 <img src="@View.DataUrl" alt="@Url" />
             </div>
             break;
+        case ResponseBodyKind.Pdf:
+            <object class="body-viewer-pdf" type="application/pdf" data="@View.DataUrl" aria-label="@Url">
+                <div class="body-viewer-binary" role="note">
+                    <p>This PDF can't be displayed here.</p>
+                    <p class="binary-hint">Use <code>curl -O @Url</code> or <code>wget</code> to save it.</p>
+                </div>
+            </object>
+            break;
         case ResponseBodyKind.Binary:
             <div class="body-viewer-binary" role="note">
                 <div class="binary-icon">&#128190;</div>
-                <p>This file can't be displayed in the browser.</p>
-                <p class="binary-hint">Use <code>curl -O @Url</code> or <code>wget</code> to save it.</p>
+                @if (DownloadedTo is not null)
+                {
+                    <p>Downloaded to <code class="download-path">@DownloadedTo</code></p>
+                }
+                else
+                {
+                    <p>This file can't be displayed in the browser.</p>
+                }
+                <p class="binary-hint">From a terminal: <code>curl -O @Url</code> or <code>wget @Url</code>.</p>
             </div>
             break;
         default:
@@ -45,6 +60,9 @@
 
     /// <summary>URL of the response, for the image's alternative text and the download hint.</summary>
     [Parameter] public string Url { get; set; } = string.Empty;
+
+    /// <summary>Path the browser saved a binary body to, or <see langword="null"/>.</summary>
+    [Parameter] public string? DownloadedTo { get; set; }
 
     private static string FormatSize(int bytes) => bytes switch
     {
