@@ -70,6 +70,8 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     /// <inheritdoc />
     public ValueTask<string?> GetTextAsync(CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardRead);
         return ValueTask.FromResult(_clipboard.Get(_session, SystemClipboard.TextMediaType));
@@ -78,6 +80,8 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     /// <inheritdoc />
     public ValueTask SetTextAsync(string text, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         ArgumentNullException.ThrowIfNull(text);
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardWrite);
@@ -88,6 +92,8 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     /// <inheritdoc />
     public ValueTask<HackClipboardFileList?> GetFileDropListAsync(CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardRead);
         return ValueTask.FromResult(HackClipboardFileList.TryParseGnomeCopiedFiles(
@@ -97,6 +103,8 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     /// <inheritdoc />
     public ValueTask SetFileDropListAsync(HackClipboardFileList files, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         ArgumentNullException.ThrowIfNull(files);
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardWrite);
@@ -113,6 +121,8 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     /// <inheritdoc />
     public ValueTask ClearAsync(CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardWrite);
         _clipboard.Clear(_session);

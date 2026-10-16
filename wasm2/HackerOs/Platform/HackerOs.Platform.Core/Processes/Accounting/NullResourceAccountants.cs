@@ -25,6 +25,20 @@ public sealed class NullCpuTimeAccountant : ICpuTimeAccountant
         coreEquivalents = 0;
         return false;
     }
+
+    /// <inheritdoc />
+    public bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes times)
+    {
+        times = default;
+        return false;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetThreadTimes(out MeasuredThreadCpuTimes times)
+    {
+        times = default;
+        return false;
+    }
 }
 
 /// <summary>

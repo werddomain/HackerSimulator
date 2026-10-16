@@ -89,6 +89,16 @@ public static class ResourceAccountingServiceCollectionExtensions
             IDisposable installation = (hookInstaller ?? ContextSwitchHook.Install)(dispatcher);
             services.AddSingleton(dispatcher);
             services.AddSingleton(new ResourceAccountingHookInstallation(installation));
+            if (plan.CpuActive && ResourceAccountingFeatures.IsCpuAccountingSupported)
+            {
+                // ADR 0067: utime/stime per process, compositor and idle, long tasks and "Not
+                // responding". Registered before any app code runs, so it sees every switch.
+                MeasuredCpuTimeAccountant cpu = new(plan.Settings.UnresponsiveThreshold);
+                services.AddSingleton(new CpuAccountingRegistration(dispatcher.Register(cpu)));
+                services.AddSingleton(cpu);
+                services.AddSingleton<ICpuTimeAccountant>(cpu);
+            }
+
             if (plan.MemoryActive && ResourceAccountingFeatures.IsMemoryAccountingSupported)
             {
                 AddMeasuredMemory(services, dispatcher, images ?? BuildKnownLazyApps.Images);
@@ -99,8 +109,8 @@ public static class ResourceAccountingServiceCollectionExtensions
 #endif
         }
 
-        // A measurement that is off (or, for the CPU, not implemented yet) reads the simulator, and
-        // /proc says "simulated". Registered measurements above win over these.
+        // A measurement that is off reads the simulator, and /proc says "simulated". Registered
+        // measurements above win over these.
         services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
         services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
         services.TryAddSingleton<IKernelMemoryLedger>(NullKernelMemoryLedger.Instance);
@@ -195,3 +205,10 @@ public sealed record ResourceAccountingHookInstallation(IDisposable Installation
 /// </summary>
 /// <param name="Registration">The dispatcher registration of the allocation layer.</param>
 public sealed record MemoryAccountingRegistration(IDisposable Registration);
+
+/// <summary>
+/// The CPU measurement's registration on the context-switch dispatcher, kept alive with the
+/// service provider like the hook itself (ADR 0067).
+/// </summary>
+/// <param name="Registration">The dispatcher registration of <c>MeasuredCpuTimeAccountant</c>.</param>
+public sealed record CpuAccountingRegistration(IDisposable Registration);

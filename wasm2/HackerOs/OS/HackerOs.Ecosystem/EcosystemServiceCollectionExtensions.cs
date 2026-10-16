@@ -161,7 +161,8 @@ public static class EcosystemServiceCollectionExtensions
             new InMemoryTopicMessageBus(provider.GetRequiredService<ICapabilityGrantRepository>()));
 
         // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
-        // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
+        // measured when the ADR 0067 accountant is active, simulated otherwise (fed by
+        // ResourceSamplingService); disk and network bytes are really counted by
         // the persistence, the filesystem service and each app's network gateway.
         // Optional measured CPU and memory (ADR 0066): AddHackerOsResourceAccounting, called by the
         // host before this method, may already have registered them. Otherwise both measurements are
@@ -180,7 +181,8 @@ public static class EcosystemServiceCollectionExtensions
             return new CpuTimeAccounting(
                 VirtualHardwareProfile.Default,
                 process => !catalog.Manifests.ContainsKey(process.AppId)
-                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)));
+                    || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)),
+                provider.GetRequiredService<ICpuTimeAccountant>());
         });
 
         services.AddScoped<IndexedDbFileSystemProvider>(provider => new IndexedDbFileSystemProvider(

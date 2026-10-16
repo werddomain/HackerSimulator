@@ -14,7 +14,7 @@ ce qu'elle affiche, une app tierce ou `ps` peut le lire aussi.
 
 | Onglet | Contenu | Source |
 | --- | --- | --- |
-| Processes | PID, nom, utilisateur, état, CPU, mémoire, lecture et écriture disque par seconde ; tri, filtre, sélection multiple, « End task » (`SIGTERM`), « Force kill » (`SIGKILL`, menu contextuel), détail | `HackProcess` → `/proc/<pid>/status`, `cmdline`, `cwd`, `io` |
+| Processes | PID, nom, utilisateur, état, CPU, mémoire, lecture et écriture disque par seconde ; tri, filtre, sélection multiple, « End task » (`SIGTERM`), « Force kill » (`SIGKILL`, menu contextuel), détail | `HackProcess` → `/proc/<pid>/status`, `stat`, `cmdline`, `cwd`, `io` |
 | Performance | résumé (ancien onglet Overview), graphique du CPU total ou par cœur, graphique de la mémoire, section matériel (ancien onglet « Hardware & System Info ») | `/proc/stat`, `/proc/meminfo`, `/proc/uptime`, `/proc/loadavg`, `/proc/cpuinfo` |
 | Disk | espace occupé et libre de chaque disque ; débits de lecture et d'écriture, temps d'activité, compteurs | `HackDriveInfo`, `/proc/diskstats` |
 | Network | débits reçus et émis par interface, paquets, erreurs, pertes | `/proc/net/dev` |
@@ -85,6 +85,11 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
   détail d'un processus montre les couches (`RssAnon`, `RssFile`, `VmData`,
   `VmExe`, `HackAllocBytes`) dans son `status` complet. L'app n'a pas changé :
   elle lit toujours `HackProcess`.
+- « Not responding » (ADR 0067) : quand `/proc/<pid>/status` porte
+  `Responding: 0` (`HackProcess.Responding` faux), la colonne d'état affiche
+  « Not responding » en rouge à la place de l'état, avec une infobulle ; le tri
+  par état en tient compte. Affichage seulement : rien n'est arrêté, « End
+  task » reste le seul moyen. Voir [`cpu-accounting.md`](cpu-accounting.md).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -145,8 +150,14 @@ await p.KillAsync();                                           // SIGKILL
   (`VmRSS`), `PrivateMemorySize64` (`RssAnon` quand la mémoire est mesurée,
   sinon égal à `WorkingSet64`, ADR 0068), `CpuUsage`, `Arguments`, `CommandLine`, `WorkingDirectory`, `IoCounters`,
   `ReadBytes`, `WriteBytes`, `Status`, `HasExited` ; `GetChildren(liste)`.
+- Temps CPU (ADR 0067, comme `System.Diagnostics.Process`) :
+  `UserProcessorTime` (`utime`), `PrivilegedProcessorTime` (`stime`),
+  `TotalProcessorTime`, lus dans `/proc/<pid>/stat` (résolution 10 ms) ;
+  `Responding` (`Responding:` de `status`, toujours vrai quand le CPU n'est pas
+  mesuré). `ParseStatTimes(texte)` analyse une ligne `stat`. Voir
+  [`cpu-accounting.md`](cpu-accounting.md).
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
-  `StartTime`), `status`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
+  `StartTime`), `status`, `stat`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
   Visibilité de `/proc` : son propre processus, les autres avec
   `process.list`. Lire `/proc` demande `filesystem.system.read`.
 - Action : `KillAsync` (`SIGKILL` : immédiat, descendants compris, pas de

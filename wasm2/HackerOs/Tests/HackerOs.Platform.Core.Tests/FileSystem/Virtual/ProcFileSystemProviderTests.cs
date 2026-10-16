@@ -117,7 +117,75 @@ public sealed class ProcFileSystemProviderTests
         Assert.Contains($"MemSource:\t{(memoryMeasured ? "measured" : "simulated")}\n", status, StringComparison.Ordinal);
     }
 
-    private sealed class FixedCpuAccountant(bool measures, double usage) : ICpuTimeAccountant
+    [Fact]
+    public async Task Measured_status_adds_responding_and_context_switch_fields()
+    {
+        VirtualFileSystemFixture fixture = new(
+            new FixedCpuAccountant(true, 0.5, new ProcessCpuTimes(TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(0.25), 3, TimeSpan.FromSeconds(6), false, 17)));
+        ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
+
+        string status = await fixture.ReadTextAsync("/proc/42/status", fixture.AppContext(42, Read));
+
+        Assert.EndsWith(
+            "CpuSource:\tmeasured\nMemSource:\tsimulated\nResponding:\t0\nLongTasks:\t3\nvoluntary_ctxt_switches:\t17\nnonvoluntary_ctxt_switches:\t0\n",
+            status,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Simulated_status_keeps_the_phase_four_layout()
+    {
+        VirtualFileSystemFixture fixture = new();
+        ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
+
+        string status = await fixture.ReadTextAsync("/proc/42/status", fixture.AppContext(42, Read));
+
+        Assert.EndsWith("MemSource:\tsimulated\n", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("Responding", status, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Stat_has_the_52_fields_of_proc5_with_measured_utime_and_stime()
+    {
+        VirtualFileSystemFixture fixture = new(
+            new FixedCpuAccountant(true, 0.5, new ProcessCpuTimes(TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(0.25), 0, TimeSpan.Zero, true)));
+        ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
+        fixture.Resources.ProcessSamples[process.Pid] = [new ProcessResourceSample(process.Pid, 1, BootUtc, 0.125, 10_000, 0, 0)];
+
+        string stat = await fixture.ReadTextAsync("/proc/42/stat", fixture.AppContext(42, Read));
+
+        Assert.EndsWith("\n", stat, StringComparison.Ordinal);
+        Assert.StartsWith("42 (code-editor) R ", stat, StringComparison.Ordinal);
+        string[] fields = stat.TrimEnd('\n').Split(' ');
+        Assert.Equal(52, fields.Length);
+        Assert.Equal("150", fields[13]); // utime, USER_HZ
+        Assert.Equal("25", fields[14]);  // stime
+        Assert.Equal("1", fields[19]);   // num_threads
+        Assert.Equal("3", fields[23]);   // rss: 10 000 bytes in 4 KiB pages
+    }
+
+    [Fact]
+    public async Task Simulated_stat_rebuilds_utime_from_the_simulator_history()
+    {
+        VirtualFileSystemFixture fixture = new();
+        ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
+        fixture.Resources.ProcessSamples[process.Pid] =
+        [
+            new ProcessResourceSample(process.Pid, 1, BootUtc, 0.5, 0, 0, 0),
+            new ProcessResourceSample(process.Pid, 2, BootUtc, 0.25, 0, 0, 0)
+        ];
+
+        string[] fields = (await fixture.ReadTextAsync("/proc/42/stat", fixture.AppContext(42, Read))).TrimEnd('\n').Split(' ');
+
+        Assert.Equal("75", fields[13]);
+        Assert.Equal("0", fields[14]);
+    }
+
+    private sealed class FixedCpuAccountant(bool measures, double usage, ProcessCpuTimes times = default) : ICpuTimeAccountant
     {
         public bool IsMeasuring => measures;
 
@@ -125,6 +193,18 @@ public sealed class ProcFileSystemProviderTests
         {
             coreEquivalents = usage;
             return measures;
+        }
+
+        public bool TryGetProcessTimes(ProcessId pid, out ProcessCpuTimes processTimes)
+        {
+            processTimes = times;
+            return measures;
+        }
+
+        public bool TryGetThreadTimes(out MeasuredThreadCpuTimes threadTimes)
+        {
+            threadTimes = default;
+            return false;
         }
     }
 

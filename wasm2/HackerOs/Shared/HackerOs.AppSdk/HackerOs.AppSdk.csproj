@@ -14,6 +14,8 @@
     <!-- ADR 0066/0067: only the optional resource-accounting project may install the context-switch
          hook on HackExecutionContext's ambient frame; apps never can. -->
     <InternalsVisibleTo Include="HackerOs.Platform.ResourceAccounting" />
+    <!-- ADR 0067: the OS gateways open the "kernel" sub-frame (stime) with HackExecutionContext.EnterKernel. -->
+    <InternalsVisibleTo Include="HackerOs.Platform.Core" />
   </ItemGroup>
 
   <PropertyGroup>

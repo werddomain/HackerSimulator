@@ -55,6 +55,9 @@ public sealed partial class HackProcess
 
     private const string ProcRoot = "/proc";
 
+    /// <summary>Linux's <c>USER_HZ</c>: the unit of <c>utime</c> and <c>stime</c>.</summary>
+    private const int UserHz = 100;
+
     private HackProcess(long id) => Id = id;
 
     /// <summary>Gets the process identifier (PID).</summary>
@@ -106,6 +109,31 @@ public sealed partial class HackProcess
 
     /// <summary>Gets the CPU usage at the last scheduler sample, in percent of one core (can exceed 100 on several cores).</summary>
     public double CpuUsage { get; private set; }
+
+    /// <summary>
+    /// Gets the CPU time the process spent in its own code (<c>utime</c>, field 14 of
+    /// <c>/proc/&lt;pid&gt;/stat</c>), like <c>Process.UserProcessorTime</c>. Measured when the OS
+    /// measures CPU time (ADR 0067, <c>CpuSource: measured</c>), otherwise rebuilt from the simulator.
+    /// Resolution: 10 ms (<c>USER_HZ</c>).
+    /// </summary>
+    public TimeSpan UserProcessorTime { get; private set; }
+
+    /// <summary>
+    /// Gets the CPU time the process spent inside the OS on its behalf (files, network, clipboard:
+    /// <c>stime</c>, field 15), like <c>Process.PrivilegedProcessorTime</c>. Zero when CPU time is simulated.
+    /// </summary>
+    public TimeSpan PrivilegedProcessorTime { get; private set; }
+
+    /// <summary>Gets <see cref="UserProcessorTime"/> plus <see cref="PrivilegedProcessorTime"/>, like <c>Process.TotalProcessorTime</c>.</summary>
+    public TimeSpan TotalProcessorTime => UserProcessorTime + PrivilegedProcessorTime;
+
+    /// <summary>
+    /// Gets whether the process responds, like <c>Process.Responding</c>: <see langword="false"/> after
+    /// one uninterrupted slice of its code held the thread longer than the OS threshold (ADR 0067,
+    /// section 4, <c>Responding: 0</c>). Always <see langword="true"/> when CPU time is not measured.
+    /// The OS only reports it: nothing is stopped.
+    /// </summary>
+    public bool Responding { get; private set; } = true;
 
     /// <summary>Gets the arguments of the process, the first being the program, like <c>argv</c>.</summary>
     public IReadOnlyList<string> Arguments { get; private set; } = [];
@@ -318,7 +346,30 @@ public sealed partial class HackProcess
             Long(fields, "cancelled_write_bytes"));
     }
 
-    /// <summary>Reads status, cmdline, cwd and io; <see langword="false"/> when the process vanished.</summary>
+    /// <summary>
+    /// Parses the <c>utime</c> and <c>stime</c> fields (14 and 15, in <c>USER_HZ</c>) of a
+    /// <c>/proc/&lt;pid&gt;/stat</c> line (<c>proc(5)</c>). The fields are counted after the last
+    /// <c>)</c>, since <c>comm</c> may contain spaces and parentheses.
+    /// </summary>
+    /// <param name="text">File content.</param>
+    /// <returns>The two times; zero for a line too short to hold them.</returns>
+    public static (TimeSpan User, TimeSpan System) ParseStatTimes(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        int close = text.LastIndexOf(')');
+        string[] rest = text[(close + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // rest[0] is field 3 (state), so field n is rest[n - 3].
+        return rest.Length < 13
+            ? (TimeSpan.Zero, TimeSpan.Zero)
+            : (Ticks(rest[11]), Ticks(rest[12]));
+
+        static TimeSpan Ticks(string field) =>
+            long.TryParse(field, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ticks) && ticks > 0
+                ? TimeSpan.FromMilliseconds(ticks * (1000d / UserHz))
+                : TimeSpan.Zero;
+    }
+
+    /// <summary>Reads status, stat, cmdline, cwd and io; <see langword="false"/> when the process vanished.</summary>
     private async Task<bool> TryLoadAsync(DateTimeOffset startTime, CancellationToken cancellationToken)
     {
         string? statusText = await TryReadAsync("status", cancellationToken).ConfigureAwait(false);
@@ -328,6 +379,7 @@ public sealed partial class HackProcess
         }
 
         IReadOnlyDictionary<string, string> status = ParseStatus(statusText);
+        string? stat = await TryReadAsync("stat", cancellationToken).ConfigureAwait(false);
         string? cmdline = await TryReadAsync("cmdline", cancellationToken).ConfigureAwait(false);
         string? io = await TryReadAsync("io", cancellationToken).ConfigureAwait(false);
         string? cwd = await TryReadLinkAsync("cwd", cancellationToken).ConfigureAwait(false);
@@ -348,6 +400,8 @@ public sealed partial class HackProcess
         WorkingSet64 = ParseKilobytes(Field(status, "VmRSS"));
         PrivateMemorySize64 = status.ContainsKey("RssAnon") ? ParseKilobytes(Field(status, "RssAnon")) : WorkingSet64;
         CpuUsage = double.TryParse(Field(status, "Cpu"), NumberStyles.Float, CultureInfo.InvariantCulture, out double cpu) ? cpu : 0;
+        (UserProcessorTime, PrivilegedProcessorTime) = stat is null ? (TimeSpan.Zero, TimeSpan.Zero) : ParseStatTimes(stat);
+        Responding = Field(status, "Responding") != "0";
         Arguments = cmdline is null ? [] : cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
         CommandLine = string.Join(' ', Arguments.Select(static argument => argument.Contains(' ', StringComparison.Ordinal) ? $"\"{argument}\"" : argument));
         WorkingDirectory = cwd;

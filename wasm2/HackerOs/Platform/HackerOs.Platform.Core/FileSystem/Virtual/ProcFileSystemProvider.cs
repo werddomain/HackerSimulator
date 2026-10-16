@@ -45,7 +45,13 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
     private static readonly string[] NetFiles = ["dev"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "status"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
+
+    /// <summary>Linux's <c>USER_HZ</c>, the unit of <c>utime</c>, <c>stime</c> and <c>starttime</c>.</summary>
+    private const int UserHz = 100;
+
+    /// <summary>Page size behind the <c>rss</c> field of <c>/proc/&lt;pid&gt;/stat</c>.</summary>
+    private const int PageSize = 4096;
 
     private readonly Func<IProcessManager> _processManager;
     private readonly IResourceSimulator _resources;
@@ -223,7 +229,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         DateTimeOffset started = StartTime(process);
         return entry switch
         {
-            "status" or "cmdline" => File(path, owner, owner, PublicFileMode, started),
+            "status" or "cmdline" or "stat" => File(path, owner, owner, PublicFileMode, started),
             // io is private like environ (ADR 0057 section 3): the owner, or System authority.
             "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
             "cwd" => Link(path, owner, owner, started,
@@ -293,6 +299,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
             : string.Empty,
         "io" => RenderProcessIo(process),
+        "stat" => RenderProcessStat(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
 
@@ -340,11 +347,77 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
         AppendField(builder, "CpuSource", SourceText(cpuSource));
         AppendField(builder, "MemSource", SourceText(memorySource));
+        if (cpuSource == ResourceMeasurementSource.Measured
+            && _metrics.CpuAccountant!.TryGetProcessTimes(process.Pid, out ProcessCpuTimes times))
+        {
+            // ADR 0067, section 4: only with the measurement, so a host with it off renders exactly
+            // the file it rendered before phase 5.
+            AppendField(builder, "Responding", times.IsResponding ? "1" : "0");
+            AppendField(builder, "LongTasks", times.LongTaskCount.ToString(CultureInfo.InvariantCulture));
+            AppendField(builder, "voluntary_ctxt_switches", times.VoluntaryContextSwitches.ToString(CultureInfo.InvariantCulture));
+            AppendField(builder, "nonvoluntary_ctxt_switches", "0");
+        }
+
         return builder.ToString();
 
         static string SourceText(ResourceMeasurementSource source) =>
             source == ResourceMeasurementSource.Measured ? "measured" : "simulated";
     }
+
+    /// <summary>
+    /// Renders <c>/proc/&lt;pid&gt;/stat</c> (ADR 0067, section 3) in the single-line layout of
+    /// <c>proc(5)</c>: 52 space-separated fields, <c>comm</c> in parentheses. <c>utime</c> (14) and
+    /// <c>stime</c> (15) are in <c>USER_HZ</c>; <c>starttime</c> (22) counts <c>USER_HZ</c> since boot;
+    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages. Fields with no meaning here
+    /// (signals, addresses, page faults of a machine without paging) are <c>0</c>, as the kernel
+    /// prints them for a task it hides them from.
+    /// </summary>
+    /// <remarks>
+    /// Measured (ADR 0067): the accountant's times. Otherwise the times are rebuilt from the
+    /// simulator's bounded history (one sample per second), all as <c>utime</c>.
+    /// </remarks>
+    private string RenderProcessStat(ProcessRecord process)
+    {
+        long utime;
+        long stime;
+        if (_metrics.CpuAccountant is { } accountant && accountant.TryGetProcessTimes(process.Pid, out ProcessCpuTimes times))
+        {
+            utime = ToUserHz(times.UserTime);
+            stime = ToUserHz(times.SystemTime);
+        }
+        else
+        {
+            IReadOnlyList<ProcessResourceSample> history = _resources.GetHistory(process.Pid);
+            utime = (long)Math.Round(history.Sum(static sample => sample.CpuUsage) * UserHz, MidpointRounding.AwayFromZero);
+            stime = 0;
+        }
+
+        // Measured memory (ADR 0068) when it answers for this process, otherwise the simulator's.
+        double memoryBytes = MeasureMemory(process)?.ResidentBytes
+            ?? _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes
+            ?? 0;
+
+        long rssPages = (long)Math.Ceiling(memoryBytes / PageSize);
+        long vsize = rssPages * PageSize;
+        long startTime = Math.Max(0, ToUserHz(StartTime(process) - BootTimeUtc));
+        long ppid = process.ParentPid?.Value ?? 0;
+        long pid = process.Pid.Value;
+        char state = StateText(process.State)[0];
+
+        // Fields 1-52 of proc(5). Order matters: readers split on spaces after the closing parenthesis.
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{pid} ({ShortName(process.AppId)}) {state} {ppid} {pid} {pid} 0 -1 0 "  // 1-9: pid comm state ppid pgrp session tty_nr tpgid flags
+            + $"0 0 0 0 "                                                          // 10-13: minflt cminflt majflt cmajflt
+            + $"{utime} {stime} 0 0 "                                             // 14-17: utime stime cutime cstime
+            + $"20 0 1 0 "                                                         // 18-21: priority nice num_threads itrealvalue
+            + $"{startTime} {vsize} {rssPages} 18446744073709551615 "            // 22-25: starttime vsize rss rsslim
+            + $"0 0 0 0 0 0 0 0 0 0 0 0 0 "                                        // 26-38: startcode .. exit_signal
+            + $"0 0 0 0 0 0 "                                                      // 39-44: processor rt_priority policy delayacct_blkio_ticks guest_time cguest_time
+            + $"0 0 0 0 0 0 0 0\n");                                               // 45-52: start_data .. exit_code
+    }
+
+    private static long ToUserHz(TimeSpan time) => (long)(time.TotalSeconds * UserHz);
 
     /// <summary>The measured layers of one process (ADR 0068), or <see langword="null"/> when its memory is simulated.</summary>
     private ProcessMemoryUsage? MeasureMemory(ProcessRecord process) =>

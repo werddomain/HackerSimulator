@@ -18,21 +18,25 @@ l'[ADR 0067](adr/0067-measured-cpu-time.md) §1 que les chantiers
   actuel, avec un indicateur : `CpuSource:` / `MemSource:` dans
   `/proc/<pid>/status`, mention « estimated » dans le gestionnaire de tâches.
 
-La mémoire est mesurée depuis le chantier `5-memory-accounting`
+Les deux mesures sont faites. Le CPU par `MeasuredCpuTimeAccountant` (chantier
+`5-cpu-accounting`, [`cpu-accounting.md`](cpu-accounting.md)), la mémoire
+depuis le chantier `5-memory-accounting`
 ([`memory-accounting.md`](memory-accounting.md)) : son `AllocationTracker` est
 un observateur du crochet, et `MeasuredMemoryAccountant` remplace le comptable
-nul. Le CPU lit encore le simulateur jusqu'au chantier `5-cpu-accounting`.
+nul.
 
 ## Architecture
 
 | Élément | Projet | Rôle |
 |---|---|---|
 | `ICpuTimeAccountant`, `IMemoryAccountant`, `ResourceMeasurementSource` | `Shared/HackerOs.Simulation.Abstractions` (`Processes/ResourceAccountingContracts.cs`) | contrats lus par `/proc` ; `TryGet…` faux = valeur simulée |
-| `IExecutionContextSwitchObserver`, `ExecutionContextSwitch` | idem | contrat d'observateur du crochet : processus quitté, processus entré, changement fait par le runtime (`ThreadContextChanged`) |
+| `IExecutionContextSwitchObserver`, `ExecutionContextSwitch` | idem | contrat d'observateur du crochet : processus quitté, processus entré, changement fait par le runtime (`ThreadContextChanged`), et depuis l'ADR 0067 le mode de chacun (`FromKernel`, `ToKernel`) |
+| `IExecutionModeSwitchObserver` | idem | changements de mode (entrée ou sortie d'une passerelle de l'OS) sans changement de processus ; facultatif (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) |
 | `NullCpuTimeAccountant`, `NullMemoryAccountant` | `Platform/HackerOs.Platform.Core` (`Processes/Accounting/`) | implémentations nulles ; Platform Core ne dépend jamais du projet de mesure |
 | `ResourceAccountingPlan`, `ResourceAccountingSettings`, `ResourceAccountingBuildSupport` | idem | décision prise une fois : build × réglage → mesures actives, crochet requis, lignes pour syslog |
 | `HackExecutionContext` (`InstallContextSwitchHook`, interne) | `Shared/HackerOs.AppSdk` | remplace le frame ambiant par un `AsyncLocal<T>(valueChangedHandler)` ; visible seulement du projet de mesure (`InternalsVisibleTo`) |
-| `ContextSwitchHook`, `ContextSwitchDispatcher`, `ResourceAccountingFeatures` | `Platform/HackerOs.Platform.ResourceAccounting` (nouveau) | installation du crochet, diffusion aux mesures, interrupteurs `[FeatureSwitchDefinition]` |
+| `ContextSwitchHook`, `ContextSwitchDispatcher`, `ResourceAccountingFeatures` | `Platform/HackerOs.Platform.ResourceAccounting` (nouveau) | installation du crochet, diffusion aux mesures (changements de processus, et de mode aux observateurs qui les veulent), interrupteurs `[FeatureSwitchDefinition]` |
+| `MeasuredCpuTimeAccountant` | idem | mesure du CPU (ADR 0067), inscrite sur le diffuseur quand `plan.CpuActive` |
 | `ResourceAccountingServiceCollectionExtensions` | `OS/HackerOs.Ecosystem` | lecture de `HackerOs:ResourceAccounting`, composition, `#if HACKEROS_RESOURCE_ACCOUNTING` |
 | `build/HackerOs.ResourceAccounting.targets` | `build/` | propriétés MSBuild, `RuntimeHostConfigurationOption`, référence conditionnelle |
 
@@ -123,16 +127,18 @@ builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
 - Un hôte ou un test qui n'appelle pas `AddHackerOsResourceAccounting` reçoit
   `ResourceAccountingPlan.Disabled` et les comptables nuls.
 
-### Pour les futures mesures
+### Inscrire une mesure
+
+La mesure du CPU est inscrite ainsi, dès la composition (avant tout code
+d'app) ; la mesure de la mémoire inscrit son `AllocationTracker` de la même
+façon :
 
 ```csharp
-// Dans la composition, quand plan.CpuActive :
-services.AddSingleton<ICpuTimeAccountant>(provider =>
-{
-    MeasuredCpuTimeAccountant accountant = new(...);
-    provider.GetRequiredService<ContextSwitchDispatcher>().Register(accountant); // IExecutionContextSwitchObserver
-    return accountant;
-});
+// Dans AddHackerOsResourceAccounting, quand plan.CpuActive :
+MeasuredCpuTimeAccountant cpu = new(plan.Settings.UnresponsiveThreshold);
+services.AddSingleton(new CpuAccountingRegistration(dispatcher.Register(cpu)));
+services.AddSingleton(cpu);
+services.AddSingleton<ICpuTimeAccountant>(cpu);
 ```
 
 `AddHackerOsResourceAccounting` enregistre les comptables nuls (et
@@ -203,7 +209,7 @@ composants et les cinq rappels ci-dessus.
   moment où aucune portée n'est ouverte ; les tests de l'Ecosystem passent un
   installateur factice pour couvrir toutes les combinaisons sans toucher au
   crochet du processus de test.
-- **Source par processus.** `TryGetCpuUsage` / `TryGetResidentBytes` répondent
+- **Source par processus.** `TryGetCpuUsage` / `TryGetProcessMemory` répondent
   processus par processus : les processus du contenu de jeu, qui n'exécutent
   pas de code, resteront simulés même mesure active (ADR 0066 §4).
 - **Lecture manuelle de la configuration** (pas de liaison par réflexion) :

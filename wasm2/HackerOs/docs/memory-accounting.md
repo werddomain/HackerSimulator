@@ -199,7 +199,7 @@ au shell, aux passerelles de fichiers et de réseau.
   toutes les apps des géants identiques ; ces assemblies sont l'OS.
 - **Lecture paresseuse, pas d'échantillonneur.** La répartition se fait quand
   quelqu'un lit `/proc` ; personne ne lit, aucun travail. Le
-  `ResourceSamplingService` n'est pas touché (le chantier CPU s'en sert).
+  `ResourceSamplingService` n'est pas touché (il nourrit toujours le CPU simulé ; la mesure CPU, ADR 0067, ne s'en sert pas non plus : voir [`cpu-accounting.md`](cpu-accounting.md)).
 - **Contrat `IMemoryAccountant` élargi.** `TryGetResidentBytes(pid)` devient
   `TryGetProcessMemory(process, active, …)` et `TryGetSystemMemory(active, …)` :
   le comptable a besoin du type d'app (fenêtre) et de l'id (image), et de la

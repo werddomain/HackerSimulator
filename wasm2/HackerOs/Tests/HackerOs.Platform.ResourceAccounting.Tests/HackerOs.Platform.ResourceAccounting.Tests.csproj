@@ -21,7 +21,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.ResourceAccounting\HackerOs.Platform.ResourceAccounting.csproj" />
     <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
+    <!-- Section 5.1 of the execution-isolation plan: /proc/<pid>/stat and status measured on real
+         apps of each family, without changing their code (window, command, service). -->
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
     <ProjectReference Include="..\..\Apps\Commands\HackerOs.Commands\HackerOs.Commands.csproj" />
+    <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.ServiceApp\HackerOs.Samples.ServiceApp.csproj" />
   </ItemGroup>
 
 </Project>

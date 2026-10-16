@@ -100,6 +100,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <inheritdoc />
     public async ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHostEntry> result = await ResolveCoreAsync(hostName, cancellationToken).ConfigureAwait(false);
         _meter.Dns(hostName, result.Value?.AddressList.Count ?? 0, result.Succeeded);
@@ -109,6 +111,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <inheritdoc />
     public async ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(IPAddress address, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHostEntry> result = await ReverseLookupCoreAsync(address, cancellationToken).ConfigureAwait(false);
         // A PTR query asks for "<octets>.in-addr.arpa".
@@ -120,6 +124,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
         string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackPingReply> result = await PingCoreAsync(hostNameOrAddress, timeout, cancellationToken).ConfigureAwait(false);
         _meter.Echo(result.Succeeded && result.Value!.Status == HackIPStatus.Success);
@@ -130,6 +136,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
         HackHttpRequest request, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHttpResponse> result = await SendCoreAsync(request, cancellationToken).ConfigureAwait(false);
         _meter.Http(request, result);
@@ -140,6 +148,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
         string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<IReadOnlyList<HackPortProbeResult>> result =
             await ProbeTcpCoreAsync(hostNameOrAddress, firstPort, lastPort, cancellationToken).ConfigureAwait(false);
@@ -151,6 +161,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
         string hostNameOrAddress, CancellationToken cancellationToken = default)
     {
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
         using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackOsFingerprint?> result =
             await DetectOperatingSystemCoreAsync(hostNameOrAddress, cancellationToken).ConfigureAwait(false);
