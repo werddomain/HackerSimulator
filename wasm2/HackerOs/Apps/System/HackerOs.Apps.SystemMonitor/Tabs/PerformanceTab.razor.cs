@@ -28,6 +28,27 @@ public partial class PerformanceTab
 
     private ProcMemInfo? Memory => Metrics.Latest?.Memory;
 
+    /// <summary>Gets the Web Workers (ADR 0071, section 5), shown next to the cores; none on a host without them.</summary>
+    private ProcWorkers? Workers => Metrics.Latest?.Workers;
+
+    private static string RoleText(ProcWorker worker) => worker.Role switch
+    {
+        "pool" => worker.Core is { } core ? $"core {core}" : "pool",
+        "overflow" => "overflow core",
+        "dedicated" => "dedicated",
+        "ready" => "ready",
+        string other => other
+    };
+
+    private static string StateText(ProcWorker worker) => worker.State switch
+    {
+        "not-responding" => "Not responding",
+        "running" => "Running",
+        "idle" => "Idle",
+        "starting" => "Starting…",
+        string other => other
+    };
+
     private int CoreCount => Metrics.Latest?.Stat?.Cores.Count is > 0 and int cores ? cores : Math.Max(1, CpuInfo.Count);
 
     private string LoadText => Metrics.Latest?.Load is { } load

@@ -58,6 +58,7 @@ public sealed class CommandParityTests
         new("seq", ["seq 5", "seq -s , 2 2 10", "seq -w 8 11"]),
         new("sleep", ["sleep 2 && echo awake"], UsesClock: true),
         new("sort", ["sort words.txt", "sort -r -u words.txt", "sort -n numbers.txt", "sort -t, -k2 table.csv"]),
+        new("stress", ["stress -c 1 -t 0", "stress --yield -t 0", "stress --bogus"]),
         new("sudo", ["sudo echo hi"]),
         new("systemctl", ["systemctl list-units", "systemctl status org.test.ticker", "systemctl is-active org.test.ticker"]),
         new("tail", ["tail -n 2 notes.txt", "tail -c 6 notes.txt", "seq 20 | tail -n 3"]),
@@ -101,7 +102,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(62, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(63, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]
