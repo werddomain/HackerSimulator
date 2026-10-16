@@ -60,6 +60,12 @@ celle du legacy, avec le vert d'accent de HackerOS. Le style du cadre est dans
 | Ctrl+L | Efface l'écran et garde la ligne en cours. |
 | Ctrl+D | Ligne vide : `exit`. Sinon : efface le caractère sous le curseur. |
 
+La copie lève un vrai événement `copy` (`document.execCommand("copy")`) au lieu
+d'écrire `navigator.clipboard` : le pont du presse-papiers de l'OS la reçoit
+comme une copie native (origine `GuestNative`) et ne l'envoie à la vraie machine
+que si `/etc/hackeros/clipboard.config` le permet ([`clipboard.md`](clipboard.md),
+ADR 0065).
+
 Chrome se réserve Ctrl+W, Ctrl+N et Ctrl+T (fermer l'onglet, nouvelle
 fenêtre, nouvel onglet) tant que HackerOS n'est pas installé en PWA : ces
 touches n'atteignent alors pas le terminal.
