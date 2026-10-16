@@ -35,6 +35,7 @@ public static class AppDefinitionMapper
         TerminalCommand? terminal = definition.Terminal;
         IReadOnlyList<AppComponent> components = definition.Components;
         IReadOnlyList<string> urls = definition.Urls;
+        Type? blazorRoot = definition.BlazorRoot;
 
         return new AppManifest
         {
@@ -73,8 +74,11 @@ public static class AppDefinitionMapper
             // ADR 0070, section 1: always written resolved, so the host never guesses a default.
             Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition)),
             // ADR 0073: only a web app has a web part; omitted otherwise so other manifests keep their bytes.
-            Web = definition.Kind == AppKind.Web || urls.Count > 0
-                ? new WebAppManifest([.. urls.Select(WebAppUrls.Normalize)])
+            Web = definition.Kind == AppKind.Web || urls.Count > 0 || blazorRoot is not null
+                ? new WebAppManifest(
+                    [.. urls.Select(WebAppUrls.Normalize)],
+                    // ADR 0084: omitted without a Blazor root, so MVC-only sites keep their bytes.
+                    blazorRoot is null ? null : new WebBlazorManifest(AssemblyFileName(blazorRoot), TypeName(blazorRoot)))
                 : null
         };
     }

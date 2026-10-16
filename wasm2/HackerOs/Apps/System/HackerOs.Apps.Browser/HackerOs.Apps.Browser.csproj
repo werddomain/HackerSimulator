@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
+    <!-- ADR 0084: Blazor sites drawn in the page area (HackWebSiteView, IHackWebSiteHost). -->
+    <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Web.Blazor\HackerOs.AppSdk.Web.Blazor.csproj" />
   </ItemGroup>
 
 </Project>

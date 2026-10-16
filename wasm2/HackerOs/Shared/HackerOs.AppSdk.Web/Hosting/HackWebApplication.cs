@@ -175,6 +175,23 @@ public sealed class HackWebApplication : IAsyncDisposable
         return endpoint;
     }
 
+    /// <summary>
+    /// Maps <c>GET</c> and <c>HEAD</c> on <paramref name="pattern"/> after every other route
+    /// (ASP.NET Core's <c>MapFallback</c>): the Blazor host page of ADR 0084 uses it.
+    /// </summary>
+    /// <param name="pattern">Route template (<c>/{**path}</c>).</param>
+    /// <param name="handler">The handler.</param>
+    /// <param name="displayName">A name for logs and the exception page.</param>
+    public HackEndpoint MapFallback(string pattern, HackRequestDelegate handler, string? displayName = null)
+    {
+        ArgumentNullException.ThrowIfNull(pattern);
+        ArgumentNullException.ThrowIfNull(handler);
+        HackEndpoint endpoint = new(
+            HackRoutePattern.Parse(pattern), ["GET", "HEAD"], handler, displayName ?? $"GET {pattern} (fallback)", HackBlazorSiteEndpoints.FallbackOrder);
+        _endpoints.Add(endpoint);
+        return endpoint;
+    }
+
     /// <summary>Maps <c>GET</c> on <paramref name="pattern"/> (<c>app.MapGet("/health", () =&gt; HackResults.Ok("up"))</c>).</summary>
     public HackEndpoint MapGet(string pattern, Func<IHackActionResult> handler) => MapMethods(pattern, ["GET"], Wrap(handler));
 

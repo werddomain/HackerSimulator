@@ -228,8 +228,10 @@ session en mémoire d'ASP.NET Core).
   s'enregistre dans `builder.Services` ; le builder enregistre déjà
   `HackWebJsonOptions`, `HackMvcOptions`, `HackLinkGenerator` et le magasin de
   sessions.
-- **Blazor (`web/9`).** Un site Blazor n'utilise pas les contrôleurs ; il peut
-  utiliser `HackWebApplication` pour ses routes de données (`MapGet`...).
+- **Blazor (`web/9`, [`blazor-sites.md`](blazor-sites.md)).** Un site Blazor
+  déclare son composant racine par `BlazorRoot` ; `HackWebHost` sert alors la
+  page hôte et `blazor.boot.json` en repli après les routes de l'app, qui garde
+  `HackWebApplication` pour ses routes de données (`MapGet`, contrôleurs d'API).
 
 ## Tests
 

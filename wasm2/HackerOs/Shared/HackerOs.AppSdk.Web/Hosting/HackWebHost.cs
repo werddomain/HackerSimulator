@@ -50,8 +50,12 @@ public abstract class HackWebHost : WebServerAppBase
         ArgumentNullException.ThrowIfNull(routes);
         HackWebApplicationBuilder builder = new(definition.Id, definition.Name, urls ?? definition.Urls, routes);
         definition.Configure(builder);
-        return builder.Application
+        HackWebApplication application = builder.Application
             ?? throw new InvalidOperationException($"{definition.GetType().Name}.Configure must call builder.Build().");
+        // ADR 0084 section 2: a site with a Blazor root also answers as a Blazor WebAssembly site,
+        // after its own routes.
+        HackBlazorSiteEndpoints.Map(application, definition);
+        return application;
     }
 
     /// <inheritdoc />

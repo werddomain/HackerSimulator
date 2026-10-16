@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" />
+    <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.BlazorSite\HackerOs.Samples.BlazorSite.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,6 +57,7 @@
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Terminal.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.TextEditor.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.WebServer.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Samples.BlazorSite.dll" />
   </ItemGroup>
 
   <!-- ADR 0066: optional CPU/memory accounting (HackerOsCpuAccounting, HackerOsMemoryAccounting). -->

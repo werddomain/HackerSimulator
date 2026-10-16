@@ -1,6 +1,7 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.AppSdk.Blazor.Display
+@using HackerOs.AppSdk.Web.Blazor.Sites
 @using HackerOs.Apps.Browser.DevTools
 @using HackerOs.Simulation.Abstractions.Network
 @using Microsoft.AspNetCore.Components.Web
@@ -65,11 +66,7 @@
             </div>
         }
 
-        @if (_surface is null)
-        {
-            @PageContent
-        }
-        else
+        @if (_surface is not null)
         {
             <div class="browser-view">
                 <div class="browser-detached" role="status">
@@ -83,6 +80,32 @@
                 </div>
             </div>
         }
+
+        @*
+            The page area, always rendered at this one place of the tree (ADR 0084 §7): the portal
+            moves its element into the detached window (ADR 0078 §3) and back, so a Blazor site
+            keeps its components and their state across a detach.
+        *@
+        <DisplaySurfaceContent Surface="_surface">
+            <div class="page-host @(_surface is null ? null : "browser-root surface-page")">
+                @if (_surface is not null)
+                {
+                    <div class="surface-toolbar">
+                        <span class="address-scheme @SchemeClass" title="@SchemeTitle">@SchemeIcon</span>
+                        <span id="surface-address" class="surface-address" title="@_finalUrl">
+                            @if (!string.IsNullOrWhiteSpace(_pageTitle))
+                            {
+                                <span class="surface-title">@_pageTitle</span>
+                            }
+                            <span class="surface-url">@_finalUrl</span>
+                        </span>
+                        <button id="surface-btn-refresh" class="nav-btn" @onclick="RefreshAsync" title="Refresh (F5)">&#8635;</button>
+                        <button id="surface-btn-reattach" class="nav-btn" @onclick="ReattachAsync" title="Bring the page back into HackerOS">&#8690; Reattach</button>
+                    </div>
+                }
+                @PageContent
+            </div>
+        </DisplaySurfaceContent>
 
         @if (_devToolsOpen)
         {
@@ -107,34 +130,10 @@
     </div>
 </div>
 
-@if (_surface is not null)
-{
-    @* The detached window (ADR 0078 §3): rendered here, shown in the surface. *@
-    <DisplaySurfaceContent Surface="_surface">
-        <div class="browser-root surface-page">
-            <div class="surface-toolbar">
-                <span class="address-scheme @SchemeClass" title="@SchemeTitle">@SchemeIcon</span>
-                <span id="surface-address" class="surface-address" title="@_finalUrl">
-                    @if (!string.IsNullOrWhiteSpace(_pageTitle))
-                    {
-                        <span class="surface-title">@_pageTitle</span>
-                    }
-                    <span class="surface-url">@_finalUrl</span>
-                </span>
-                <button id="surface-btn-refresh" class="nav-btn" @onclick="RefreshAsync" title="Refresh (F5)">&#8635;</button>
-                <button id="surface-btn-reattach" class="nav-btn" @onclick="ReattachAsync" title="Bring the page back into HackerOS">&#8690; Reattach</button>
-            </div>
-            <div class="browser-content">
-                @PageContent
-            </div>
-        </div>
-    </DisplaySurfaceContent>
-}
-
 @code {
     // The page area, drawn either in the window or in the detached surface (ADR 0078 §3).
     private RenderFragment PageContent => @<text>
-        <div class="browser-view @(ShowsFrame ? "frame-view" : null)">
+        <div class="browser-view @(ShowsFrame || ShowsSite ? "frame-view" : null)">
         @if (_isLoading)
         {
             <div class="browser-loading" role="status" aria-live="polite">
@@ -164,6 +163,13 @@
         else if (_currentPage is not null)
         {
             <SimulatedPageRenderer Page="_currentPage" OnNavigate="HandleInPageNavigationAsync" OnSubmit="HandleFormSubmitAsync" />
+        }
+        else if (ShowsSite)
+        {
+            @* A Blazor site (ADR 0084 §4): its root component, drawn here as the site's renderer process. *@
+            <HackWebSiteView @ref="_siteView" Process="_site!" Url="_siteUrl!" Cookies="_cookies"
+                             OnLocationChanged="HandleSiteLocationChangedAsync" OnNavigate="HandleSiteNavigateAsync"
+                             OnTitleChanged="HandleSiteTitleChangedAsync" OnFaulted="HandleSiteFaultedAsync" />
         }
         else if (ShowsFrame)
         {

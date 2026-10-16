@@ -129,6 +129,20 @@
     position: relative;
 }
 
+/* The portal's element and the page host fill the content area, above the developer tools. */
+.browser-content ::deep .surface-content {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+}
+
+.page-host {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 /* An HTML page fills the whole area, like a real browser viewport (ADR 0075). */
 .browser-view.frame-view {
     display: flex;

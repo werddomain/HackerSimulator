@@ -39,7 +39,7 @@ HackerOs.Platform.Blazor.lib.module.js (initialiseur JS, avant Blazor) :
 | Fichier | Rôle |
 |---|---|
 | `Shared/HackerOs.AppSdk.Blazor/Display/DisplaySurfaceContracts.cs` | Contrat public : `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceOptions`, `DisplaySurfaceOpenResult`, `DisplaySurfaceOpenStatus`, `DisplaySurfaceState`. |
-| `Shared/HackerOs.AppSdk.Blazor/Display/DisplaySurfaceContent.razor(.cs,.css)` | Portail : rend son contenu ici, puis déplace son élément dans la surface ; le rend avant d'être supprimé. |
+| `Shared/HackerOs.AppSdk.Blazor/Display/DisplaySurfaceContent.razor(.cs,.css)` | Portail : rend son contenu ici, puis déplace son élément dans la surface ; le rend avant d'être supprimé. `Surface` est facultatif (ADR 0084 §7) : sans surface ouverte, le contenu reste en place, ce qui permet de le rendre une seule fois et de garder son état au détachement. |
 | `Platform/HackerOs.Platform.Blazor/Display/DisplaySurfaceService.cs` | Implémentation : ouvre, suit et ferme les surfaces ; publie la notification « fenêtre bloquée ». |
 | `Platform/HackerOs.Platform.Blazor/wwwroot/displaySurfaces.js` | `window.open`, document de la surface (`<base>`, styles recopiés et tenus à jour, apparence héritée de l'ancre), déplacement du contenu, événements `resize`/`focus`/`blur`/fermeture, messages remis à la fenêtre principale. |
 | `Platform/HackerOs.Platform.Blazor/wwwroot/displaySurfaceRelay.js` | Chargé dans la surface : poster un message « depuis » la surface. |
@@ -172,8 +172,10 @@ navigateur.
   suivis ensuite. Un changement de thème met à jour les variables du thème à la
   prochaine ouverture.
 - Sur mobile, le navigateur hôte ouvre la fenêtre comme un onglet.
-- Les sites Blazor de l'ADR 0073 §4 ne sont pas encore détachables : la preuve
-  est faite, le branchement viendra avec `web/9-blazor-sites`.
+- Les sites Blazor (ADR 0084, [`blazor-sites.md`](blazor-sites.md)) se
+  détachent comme les autres pages et gardent leur état : la zone de page est
+  rendue une seule fois à travers `DisplaySurfaceContent`, dont le portail
+  déplace le DOM sans recréer les composants.
 
 ## Tests
 

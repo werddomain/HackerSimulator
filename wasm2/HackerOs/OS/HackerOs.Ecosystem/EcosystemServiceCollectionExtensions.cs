@@ -41,6 +41,8 @@ using HackerOs.Platform.Blazor.Dialogs;
 using HackerOs.Platform.Blazor.Display;
 using HackerOs.Platform.Blazor.Security;
 using HackerOs.Platform.Blazor.Shell;
+using HackerOs.Platform.Blazor.Sites;
+using HackerOs.AppSdk.Web.Blazor.Sites;
 using HackerOs.Platform.Blazor.Windows;
 using HackerOs.Simulation.Abstractions;
 using HackerOs.Windowing.Core;
@@ -643,6 +645,18 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<AppCatalog>(),
                 provider.GetRequiredService<IAppEnablementRegistry>(),
                 orchestrator.EnsureDescriptorAsync);
+        });
+        // Blazor sites (ADR 0084): the browser asks the OS to start a site's renderer process.
+        services.AddScoped<IHackWebSiteHost>(provider =>
+        {
+            AppLifecycleOrchestrator orchestrator = provider.GetRequiredService<AppLifecycleOrchestrator>();
+            return new HackWebSiteHost(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                provider.GetRequiredService<ISessionService>(),
+                orchestrator.EnsureDescriptorAsync,
+                orchestrator.StartAuxiliaryAsync,
+                orchestrator.StopAsync);
         });
         services.AddSingleton<IWindowAppFrameworkLifecycle>(NullWindowAppFrameworkLifecycle.Instance);
         // Scoped, not Singleton: on the server host these back live desktop/window state for one

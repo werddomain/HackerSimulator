@@ -71,6 +71,22 @@ public sealed partial class Wave4NetworkTests
     }
 
     [Fact]
+    public async Task HackHttpClient_resolves_relative_uris_against_its_base_address()
+    {
+        EnterApp(new GrantAllCapabilityChecker());
+        using HackHttpClient client = new() { BaseAddress = new Uri("https://hackmail.com/") };
+
+        HackHttpResponse relative = await client.GetAsync("login");
+        HackHttpResponse absolute = await client.GetAsync("https://hackmail.com/login");
+        ArgumentException missingBase = await Assert.ThrowsAsync<ArgumentException>(() => new HackHttpClient().GetAsync("login"));
+
+        Assert.Equal(new Uri("https://hackmail.com/login"), relative.RequestUri);
+        Assert.Equal(absolute.StatusCode, relative.StatusCode);
+        Assert.Equal(absolute.ReadAsString(), relative.ReadAsString());
+        Assert.NotNull(missingBase);
+    }
+
+    [Fact]
     public async Task HackHttpClient_unknown_host_throws_name_resolution_error_with_browser_code()
     {
         EnterApp(new GrantAllCapabilityChecker());

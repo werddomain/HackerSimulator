@@ -22,6 +22,12 @@ namespace HackerOs.Simulation.Abstractions.Processes;
 /// Variables applied over the inherited environment (the parent's, copied at creation; empty for a
 /// root process). The platform passes the login environment for a root process.
 /// </param>
+/// <param name="Auxiliary">
+/// Whether the process is an auxiliary of its app rather than the app's instance (ADR 0084,
+/// section 3): the renderer of a Blazor site, as <c>chrome --type=renderer</c> is to its browser. An
+/// auxiliary process is never found by <see cref="IProcessManager.TryGetSingleton"/>, so a web app's
+/// on-demand activation still starts its site when only renderers run.
+/// </param>
 public sealed record ProcessStartRequest(
     ProcessId? ParentPid,
     string AppId,
@@ -32,7 +38,8 @@ public sealed record ProcessStartRequest(
     ResourceProfile ResourceProfile,
     IReadOnlyList<string>? Arguments = null,
     VirtualPath? WorkingDirectory = null,
-    IReadOnlyDictionary<string, string>? Environment = null);
+    IReadOnlyDictionary<string, string>? Environment = null,
+    bool Auxiliary = false);
 
 /// <summary>
 /// Creates, tracks, and terminates processes in memory, per ADR 0012. All state transitions are

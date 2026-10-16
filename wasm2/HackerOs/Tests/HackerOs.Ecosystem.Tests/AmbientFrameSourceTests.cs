@@ -32,7 +32,9 @@ public sealed partial class AmbientFrameSourceTests
     {
         "WindowAppBase",
         "HackComponentBase",
-        "HackEmbeddableComponent"
+        "HackEmbeddableComponent",
+        // The layout base of a Blazor site (ADR 0084) derives from HackComponentBase in the SDK.
+        "HackSiteLayoutBase"
     };
 
     private static readonly HashSet<string> PlainComponentBases = new(StringComparer.Ordinal)

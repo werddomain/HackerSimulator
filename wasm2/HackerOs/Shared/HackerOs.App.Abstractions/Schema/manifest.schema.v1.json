@@ -247,6 +247,16 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^https?://[a-z0-9.-]+(:[0-9]{1,5})?/([^?#\\s]*/)?$" }
+        },
+        "blazor": {
+          "description": "Root component of the site's interactive Blazor part (ADR 0084), in the entry-point assembly.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assembly", "type"],
+          "properties": {
+            "assembly": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "minLength": 1 }
+          }
         }
       }
     }

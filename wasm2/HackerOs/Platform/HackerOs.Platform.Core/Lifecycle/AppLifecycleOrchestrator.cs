@@ -403,6 +403,78 @@ public sealed class AppLifecycleOrchestrator
     }
 
     /// <summary>
+    /// Starts an auxiliary process of a web app (ADR 0084, section 3): the renderer of its Blazor
+    /// part, drawn by the OS browser. Like <c>chrome --type=renderer</c>, it is a child of the
+    /// browser's process, carries the site's app id and the caller's identity, and holds the
+    /// capabilities granted to the site minus <c>network.listen</c> (client code listens on nothing).
+    /// It is not the site's instance: on-demand activation (ADR 0074 §3) still starts the site, and
+    /// stopping it (task manager, <c>kill</c>) ends only this renderer.
+    /// </summary>
+    /// <param name="appId">The web app whose component is rendered.</param>
+    /// <param name="principal">The user of the browser tab.</param>
+    /// <param name="parentPid">The browser window's process.</param>
+    /// <param name="arguments"><c>argv</c> after the app name (<c>--type=renderer</c>, the URL).</param>
+    /// <param name="cancellationToken">Cancels the load of the app's assembly.</param>
+    /// <returns>The launch: the process and its context, or why it did not start.</returns>
+    public async Task<AppLaunchResult> StartAuxiliaryAsync(
+        string appId,
+        AuthenticatedPrincipal principal,
+        ProcessId parentPid,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        ArgumentNullException.ThrowIfNull(principal);
+        ArgumentNullException.ThrowIfNull(arguments);
+        (AppDescriptor? descriptor, string? error) = await EnsureDescriptorAsync(appId, cancellationToken).ConfigureAwait(false);
+        if (descriptor is null)
+        {
+            return new AppLaunchResult(AppLaunchStatus.NotFound, ErrorCode: "lifecycle.app.not-found", ErrorMessage: error);
+        }
+
+        if (descriptor.Manifest.Kind != AppKind.Web)
+        {
+            return new AppLaunchResult(AppLaunchStatus.NotFound, ErrorCode: "lifecycle.auxiliary.not-web", ErrorMessage: $"'{appId}' is not a web app.");
+        }
+
+        if (!_enablement.IsEnabled(appId))
+        {
+            return new AppLaunchResult(AppLaunchStatus.Disabled, ErrorCode: "lifecycle.app.disabled");
+        }
+
+        HashSet<string> granted = ComputeGrantedCapabilities(descriptor.Manifest, principal);
+        granted.Remove(AppCapabilities.NetworkListen);
+        granted.Remove(AppCapabilities.NetworkListenPrivileged);
+        ProcessRecord process = _processManager.Start(new ProcessStartRequest(
+            parentPid,
+            appId,
+            AppInstanceId.FromGuid(Guid.NewGuid()),
+            AppKind.Web,
+            principal.UserId,
+            principal.SessionId,
+            ToResourceProfile(descriptor.Manifest.Resources),
+            [appId, .. arguments],
+            Auxiliary: true));
+        IAppExecutionContext context = _contextFactory.Create(
+            descriptor.Manifest, principal, process, granted, process.AppInstanceId.Value);
+
+        // Tracked like a window: no run task, stopped by StopAsync (a SIGTERM closes it at once).
+        lock (_sync)
+        {
+            _running[process.Pid] = new RunningInstance(descriptor, context, ServiceInstance: null, RunTask: null);
+        }
+
+        if (context is AppExecutionContext trusted)
+        {
+            ProcessId pid = process.Pid;
+            trusted.Control.StopRequested += request => _ = StopAsync(pid, request.Reason);
+        }
+
+        ProcessRecord running = _processManager.MarkRunning(process.Pid);
+        return new AppLaunchResult(AppLaunchStatus.Launched, running, context);
+    }
+
+    /// <summary>
     /// Starts every enabled <see cref="AppKind.Service"/> app in catalog activation order, per
     /// `P1-APP-005`. Intended to run once per new session.
     /// </summary>
