@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
 
@@ -65,7 +66,8 @@ public sealed class LocateCommand(AppManifest manifest) : TerminalAppBase(manife
         directories.Push("/");
         while (directories.Count > 0 && found < limit)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            // ADR 0069: locate walks the whole disk; give the thread back between directories.
+            await HackProcess.CheckpointAsync(cancellationToken);
             string directory = directories.Pop();
             if (!visited.Add(directory) || Pruned.Contains(directory))
             {

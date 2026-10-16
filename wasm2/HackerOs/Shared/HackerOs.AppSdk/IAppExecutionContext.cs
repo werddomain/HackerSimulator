@@ -83,6 +83,26 @@ public interface IAppExecutionContext
     /// </summary>
     CancellationToken CancellationToken { get; }
 
+    /// <summary>
+    /// Raised once when the OS asks the process to stop (<c>SIGTERM</c>, ADR 0069, section 1), after
+    /// it moved to <c>Stopping</c> and before <see cref="CancellationToken"/> is cancelled. The data
+    /// carries the reason and the simulated deadline at which the OS kills the process. Defaults to
+    /// an event that is never raised so existing implementations keep compiling; the trusted platform
+    /// factory overrides it. Apps read it through <c>HackProcess.Current.StopRequested</c>.
+    /// </summary>
+    event EventHandler<Diagnostics.HackStopRequestedEventArgs>? StopRequested
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>
+    /// Gets the stop request this process already received, or <see langword="null"/> (ADR 0069), for
+    /// code that subscribes to <see cref="StopRequested"/> after the fact. Defaults to
+    /// <see langword="null"/>; the trusted platform factory overrides it.
+    /// </summary>
+    Diagnostics.HackStopRequestedEventArgs? StopRequest => null;
+
     /// <summary>Gets a capability checker scoped to this app/user, exposing no other app's grants.</summary>
     ICapabilityChecker Capabilities { get; }
 

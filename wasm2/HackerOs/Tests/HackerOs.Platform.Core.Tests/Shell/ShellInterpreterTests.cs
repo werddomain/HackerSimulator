@@ -733,7 +733,9 @@ public sealed partial class ShellInterpreterTests
                 new HackerOs.Commands.Basename.BasenameApp(), new HackerOs.Commands.Dirname.DirnameApp(), new HackerOs.Commands.Zip.ZipApp(),
                 new HackerOs.Commands.Unzip.UnzipApp(), new HackerOs.Commands.Du.DuApp(), new HackerOs.Commands.Locate.LocateApp(),
                 new HackerOs.Commands.Jobs.JobsApp(), new HackerOs.Commands.Kill.KillApp(), new HackerOs.Commands.Which.WhichApp(),
-                new HackerOs.Commands.Sleep.SleepApp(), new HackerOs.Commands.Ip.IpApp(), new HackerOs.Commands.Top.TopApp()
+                new HackerOs.Commands.Sleep.SleepApp(), new HackerOs.Commands.Ip.IpApp(), new HackerOs.Commands.Top.TopApp(),
+                // ADR 0069: grep -r checkpoints between files.
+                new HackerOs.Commands.Grep.GrepApp()
             }.Select(AppDefinitionMapper.ToManifest)
         ];
 

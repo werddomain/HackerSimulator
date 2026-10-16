@@ -57,6 +57,27 @@ public sealed class WindowAppBaseTests
     }
 
     [Fact]
+    public async Task A_stop_request_reaches_the_app_hook_and_the_os_waits_for_its_work()
+    {
+        // ADR 0069: the window closes only after the app's draft is written.
+        TestExecutionContext context = new(CreateManifest(AppKind.Window));
+        TestWindowApp app = CreateWindowApp(context: context);
+        app.InvokeInitialized();
+        TaskCompletionSource draft = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        app.StopWork = draft.Task;
+        HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs request = new(
+            ProcessExitReason.Terminated, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(5));
+
+        context.RaiseStopRequested(request);
+        Task deferred = request.WhenDeferredWorkEndedAsync();
+
+        Assert.Same(request, app.HeardRequest);
+        Assert.False(deferred.IsCompleted);
+        draft.SetResult();
+        await deferred.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void Window_base_rejects_a_non_window_manifest()
     {
         TestWindowApp app = CreateWindowApp(AppKind.Service);
@@ -279,6 +300,16 @@ public sealed class WindowAppBaseTests
             string title, string content, string? defaultValue = null, string? placeholder = null) =>
             base.TextInput(title, content, defaultValue, placeholder);
 
+        public Task StopWork { get; set; } = Task.CompletedTask;
+
+        public HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs? HeardRequest { get; private set; }
+
+        protected override Task OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs e)
+        {
+            HeardRequest = e;
+            return StopWork;
+        }
+
         protected override Task OnAppAfterRenderAsync(bool firstRender)
         {
             AfterRenderCalled = firstRender;
@@ -375,7 +406,18 @@ public sealed class WindowAppBaseTests
 
     private sealed class TestExecutionContext(AppManifest manifest) : IAppExecutionContext
     {
+        private EventHandler<HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs>? _stopRequested;
+
         public FakePermissionErrorGateway PermissionErrorsGateway { get; } = new();
+
+        public event EventHandler<HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs>? StopRequested
+        {
+            add => _stopRequested += value;
+            remove => _stopRequested -= value;
+        }
+
+        public void RaiseStopRequested(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs request) =>
+            _stopRequested?.Invoke(this, request);
 
         public AppManifest Manifest { get; } = manifest;
 

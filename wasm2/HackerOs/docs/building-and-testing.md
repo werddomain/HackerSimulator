@@ -64,6 +64,8 @@ recompiler : voir [`resource-accounting.md`](resource-accounting.md).
 |---|---|---|
 | `NU1902` sur `Microsoft.Build.Tasks.Git` traité en erreur | avis de sécurité NuGet sur une dépendance de build | `export NuGetAudit=false` (ou `-p:NuGetAudit=false`) |
 | `NU1301` sur la source `local-nupkg` | `Samples/HackerOs.Windowing.SampleHost/nuget.config` cite un dossier local absent ; sous Linux, son chemin `..\..\artifacts\local-nupkg` est lu littéralement | `mkdir -p artifacts/local-nupkg 'Samples/HackerOs.Windowing.SampleHost/..\..\artifacts\local-nupkg'` (dossiers vides, ignorés par git) |
+| Page blanche de `test/test` ou de `HackerOs.Server` lancé avec `dotnet run --no-build --urls …` (journal : « Static Web Assets are not enabled ») | sans profil de lancement, l'hôte démarre en `Production` et ne sert pas les actifs des projets référencés hors d'une publication | `ASPNETCORE_ENVIRONMENT=Development` |
+| `IOException … being used by another process` dans `obj/…/compressed/` d'Ecosystem | `test/test` et `HackerOs.Server` compilés en même temps : ils partagent Ecosystem | compiler la solution une fois, puis lancer les hôtes avec `--no-build` |
 
 ## Lancer l'OS
 

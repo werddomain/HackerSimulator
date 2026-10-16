@@ -1,4 +1,5 @@
 using HackerOs.AppSdk.IO;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Core.Tests.Shell;
 
@@ -171,6 +172,57 @@ public sealed partial class ShellInterpreterTests
 
         Assert.Equal("[1]+  Running                 sleep 30 &\n", jobs.Stdout);
         Assert.Equal("143\n", killed.Stdout);
+    }
+
+    [Fact]
+    public async Task Kill_terminates_a_live_process_and_kill_9_kills_it()
+    {
+        // ADR 0069, section 4: kill (SIGTERM) stops it politely, kill -9 (SIGKILL) at once.
+        Fixture fixture = await Fixture.CreateAsync();
+
+        long sleeping = await StartSleepAsync(fixture);
+        Output terminated = await fixture.RunAsync($"kill {sleeping}; echo $?; kill -0 {sleeping}; echo $?");
+        long stubborn = await StartSleepAsync(fixture);
+        Output killed = await fixture.RunAsync($"kill -9 {stubborn}; echo $?; kill -0 {stubborn}; echo $?");
+
+        Assert.Equal("0\n1\n", terminated.Stdout);
+        Assert.Equal("0\n1\n", killed.Stdout);
+        // sleep honors its token: it ends by itself within the grace period. kill -9 gives it no chance.
+        Assert.NotEqual(ProcessExitReason.Timeout, fixture.Manager.GetHistory().Last(r => r.Pid.Value == sleeping).ExitReason);
+        Assert.Equal(ProcessExitReason.Killed, fixture.Manager.GetHistory().Last(r => r.Pid.Value == stubborn).ExitReason);
+
+        static async Task<long> StartSleepAsync(Fixture fixture)
+        {
+            HashSet<long> before = [.. fixture.Manager.GetActiveProcesses().Select(static p => p.Pid.Value)];
+            await fixture.RunAsync("sleep 30 &");
+            for (int attempt = 0; attempt < 400; attempt++)
+            {
+                if (fixture.Manager.GetActiveProcesses().FirstOrDefault(p => p.AppId.EndsWith(".sleep", StringComparison.Ordinal) && !before.Contains(p.Pid.Value)) is { } process)
+                {
+                    return process.Pid.Value;
+                }
+
+                await Task.Delay(5);
+            }
+
+            throw new TimeoutException("sleep did not start.");
+        }
+    }
+
+    [Fact]
+    public async Task Grep_r_searches_a_tree_and_names_each_file()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        await fixture.MakeDirectoryAsync("/home/alice/src");
+        await fixture.MakeDirectoryAsync("/home/alice/src/lib");
+        await fixture.WriteFileAsync("/home/alice/src/main.c", "int main() { return 0; }\n");
+        await fixture.WriteFileAsync("/home/alice/src/lib/util.c", "int helper() { return 1; }\nvoid nothing() {}\n");
+
+        Output recursive = await fixture.RunAsync("grep -r return src");
+        Output here = await fixture.RunAsync("cd src && grep -rn nothing");
+
+        Assert.Equal("src/lib/util.c:int helper() { return 1; }\nsrc/main.c:int main() { return 0; }\n", recursive.Stdout);
+        Assert.Equal("lib/util.c:2:void nothing() {}\n", here.Stdout);
     }
 
     [Fact]

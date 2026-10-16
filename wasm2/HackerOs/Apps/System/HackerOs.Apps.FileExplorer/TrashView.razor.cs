@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.IO;
 using Microsoft.AspNetCore.Components;
@@ -86,6 +87,8 @@ public partial class TrashView
         {
             foreach (HackTrashItem item in items)
             {
+                // ADR 0069: each item is restored atomically; a stop request ends the loop between two.
+                await HackProcess.CheckpointAsync();
                 restored.Add(await HackTrash.RestoreAsync(item));
             }
         });
@@ -112,6 +115,7 @@ public partial class TrashView
         {
             foreach (HackTrashItem item in items)
             {
+                await HackProcess.CheckpointAsync();
                 await HackTrash.DeleteAsync(item);
             }
         });
@@ -139,6 +143,11 @@ public partial class TrashView
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             _error = exception.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            // The app was asked to stop (ADR 0069): the items done so far stay done, the rest stay in the trash.
+            _error = "Stopped: the remaining items were left untouched.";
         }
         finally
         {

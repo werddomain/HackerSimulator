@@ -257,6 +257,7 @@ le thème choisi par l'utilisateur :
 | `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync` | Dialogues de fichiers de l'OS (capacités `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select`) ; le résultat porte le chemin choisi (`Resource.Path`, `Resources`). |
 | `MessageBox`, `TextInput` | Boîte de message et saisie de texte. |
 | `OnPermissionErrorRaised` | Surcharger pour afficher soi-même une erreur de permission (mettre `ErrorHandled = true`) au lieu de la notification de l'OS. |
+| `OnAppStopRequestedAsync(e)` | L'OS demande l'arrêt (`kill`, « End task », déconnexion ; ADR 0069) : finir ou annuler l'opération en cours, écrire un brouillon des modifications non enregistrées (`HackRecoveryDraft`). La fenêtre se ferme quand la tâche renvoyée se termine, au plus tard à `e.Deadline`. |
 
 Le composant peut aussi implémenter :
 
@@ -393,6 +394,14 @@ commande qui agit sur son shell comme `cd` ou `export`, capacité
 outils GNU. Voir [`shell-commands.md`](shell-commands.md) et
 [`shell-interpreter.md`](shell-interpreter.md).
 
+Une boucle longue (parcours d'arborescence, gros fichier ligne à ligne) appelle
+`await HackProcess.CheckpointAsync(cancellationToken)` à chaque tour (ADR
+0069) : elle rend la main au-delà de 8 ms, ce qui garde l'OS fluide, et
+s'arrête dès que `kill` le demande. Sans arrêt demandé et dans sa tranche,
+l'appel ne coûte qu'une lecture d'horloge. Une commande arrêtée sur son jeton
+sort avec `130` ; une commande tuée (`kill -9`, ou délai de 5 s dépassé) avec
+`137`, et ses continuations en attente ne s'exécutent plus.
+
 ## 5. Un service
 
 Un service tourne en arrière-plan pendant la session, sans fenêtre. Il observe
@@ -444,6 +453,12 @@ public sealed class CleanupService(AppManifest manifest) : ServiceAppBase(manife
     }
 }
 ```
+
+`OnStoppingAsync(reason, token)` est appelé une seule fois, dès que l'OS
+demande l'arrêt (ADR 0069), avant l'annulation du jeton :
+`ServiceStopReason.Terminated` pour `kill`, « End task » ou `systemctl stop`,
+`Logout`, `Shutdown` ou `Disabled` sinon. C'est là qu'un service qui tient un
+état termine ou annule son opération en cours.
 
 Le service apparaît dans l'onglet Services du gestionnaire de tâches et dans
 `/proc`. Il communique avec les autres apps par les sujets du bus
@@ -557,6 +572,7 @@ Le projet de tests référence le projet de l'app et `HackerOs.Tests.Support`
 - [ ] `manifest.json` (ou `manifests/*.json`) régénéré est committé.
 - [ ] Pas de CSS ni de JavaScript en ligne ; styles sur les jetons `--hos-*`.
 - [ ] Les erreurs de permission et de fichier sont gérées et affichées.
+- [ ] Une demande d'arrêt ne perd rien en silence (`OnAppStopRequestedAsync`, `OnStoppingAsync`) et les boucles longues appellent `HackProcess.CheckpointAsync` (ADR 0069).
 - [ ] Des tests couvrent la logique de l'app.
 - [ ] L'app fonctionne avec le seul hôte Ecosystem, sans serveur.
 - [ ] Un document décrit l'app sous `docs/`, ajouté à l'index [`README.md`](README.md).

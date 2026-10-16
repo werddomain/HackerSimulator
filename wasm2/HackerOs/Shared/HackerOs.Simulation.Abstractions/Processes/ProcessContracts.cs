@@ -102,7 +102,13 @@ public enum ProcessExitReason
     /// The active UI platform changed (docs/mobile-interface-platform-plan.md §6.3, <c>MOB-008</c>) and
     /// this UI instance does not carry over to the new shell.
     /// </summary>
-    PlatformChanged
+    PlatformChanged,
+
+    /// <summary>
+    /// Another process asked this one to stop (<c>SIGTERM</c> from <c>kill</c> or the task
+    /// manager's "End task", ADR 0069) and it ended within its grace period.
+    /// </summary>
+    Terminated
 }
 
 /// <summary>Reports the self-assessed health of a long-running <see cref="AppKind.Service"/> process.</summary>

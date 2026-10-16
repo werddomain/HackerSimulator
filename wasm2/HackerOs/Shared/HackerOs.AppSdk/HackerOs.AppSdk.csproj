@@ -6,6 +6,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- ADR 0069: the OS's per-process scheduler stamps the time slice CheckpointAsync reads (HackProcessSlice). -->
+    <InternalsVisibleTo Include="HackerOs.Platform.Core" />
+    <InternalsVisibleTo Include="HackerOs.AppSdk.Tests" />
+    <!-- Tests that wait for the work deferred on a stop request, as the OS does. -->
+    <InternalsVisibleTo Include="HackerOs.AppSdk.Blazor.Tests" />
     <!-- ADR 0066/0067: only the optional resource-accounting project may install the context-switch
          hook on HackExecutionContext's ambient frame; apps never can. -->
     <InternalsVisibleTo Include="HackerOs.Platform.ResourceAccounting" />

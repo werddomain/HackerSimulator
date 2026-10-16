@@ -8,7 +8,9 @@ namespace HackerOs.Platform.Core.Processes;
 
 /// <summary>
 /// In-memory <see cref="IProcessManager"/> implementing the ADR 0012 process lifecycle,
-/// cancellation, bounded stop, kill/child-cleanup, and bounded history retention.
+/// cancellation, bounded stop, kill/child-cleanup, and bounded history retention, plus the stop
+/// request, deadline and kill escalation of ADR 0069 through one <see cref="ProcessControlBlock"/>
+/// per process.
 /// </summary>
 public sealed class InMemoryProcessManager : IProcessManager
 {
@@ -89,7 +91,7 @@ public sealed class InMemoryProcessManager : IProcessManager
                 exitCode: null,
                 exitReason: null);
 
-            _active[pid] = new Entry(record, tokenSource);
+            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid));
             _eventBus.Publish(new ProcessStateChangedEvent(pid, ProcessState.Created, ProcessState.Starting, now));
             return record;
         }
@@ -140,6 +142,14 @@ public sealed class InMemoryProcessManager : IProcessManager
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0069, section 1, in this order: the process moves to <see cref="ProcessState.Stopping"/>,
+    /// its <see cref="ProcessControlBlock.StopRequested"/> is raised once (reason and deadline on the
+    /// simulation clock), its token is cancelled, then the manager waits until the deadline. Past it,
+    /// the process is killed: <see cref="ProcessExitReason.Timeout"/>, and its control block refuses
+    /// any further continuation or gateway call (section 3). Overlapping stops share one outcome and
+    /// keep the first request's reason and deadline.
+    /// </remarks>
     public async Task<ProcessRecord> StopAsync(
         ProcessId pid,
         TimeSpan timeout,
@@ -151,10 +161,23 @@ public sealed class InMemoryProcessManager : IProcessManager
         lock (_gate)
         {
             entry = GetActiveEntry(pid);
-            stopSignal = new TaskCompletionSource<ProcessRecord>(TaskCreationOptions.RunContinuationsAsynchronously);
-            entry.StopSignal = stopSignal;
+            // A second stop joins the first one instead of orphaning its waiter.
+            stopSignal = entry.StopSignal ??= new TaskCompletionSource<ProcessRecord>(TaskCreationOptions.RunContinuationsAsynchronously);
             TransitionToStopping(entry);
-            entry.TokenSource.Cancel();
+            DateTimeOffset now = _clock.UtcNow;
+            entry.Control.TryRequestStop(new ProcessStopRequest(pid, reason, now, now + timeout));
+        }
+
+        // SIGTERM: delivered outside the lock, since the process's handlers may call back into the OS.
+        entry.Control.RaiseStopRequested();
+
+        lock (_gate)
+        {
+            // A handler may have ended the process already, which disposed its token source.
+            if (_active.TryGetValue(pid, out Entry? current) && ReferenceEquals(current, entry))
+            {
+                entry.TokenSource.Cancel();
+            }
         }
 
         Task delay = _clock.DelayAsync(timeout, cancellationToken);
@@ -182,7 +205,7 @@ public sealed class InMemoryProcessManager : IProcessManager
         lock (_gate)
         {
             Entry entry = GetActiveEntry(pid);
-            KillDescendants(pid);
+            KillDescendants(pid, IsSignalKill(reason));
             return ForceTerminal(entry, reason);
         }
     }
@@ -232,6 +255,20 @@ public sealed class InMemoryProcessManager : IProcessManager
         }
     }
 
+    /// <summary>
+    /// Gets the control block of one active process (ADR 0069): its stop request, killed flag and
+    /// scheduler. The execution context keeps it after the process ends.
+    /// </summary>
+    /// <param name="pid">An active process.</param>
+    /// <exception cref="KeyNotFoundException">No active process has this PID.</exception>
+    public ProcessControlBlock GetControlBlock(ProcessId pid)
+    {
+        lock (_gate)
+        {
+            return GetActiveEntry(pid).Control;
+        }
+    }
+
     /// <inheritdoc />
     public CancellationToken GetCancellationToken(ProcessId pid)
     {
@@ -241,7 +278,8 @@ public sealed class InMemoryProcessManager : IProcessManager
         }
     }
 
-    private void KillDescendants(ProcessId parentPid)
+    /// <summary>Ends every active descendant of a process; with <paramref name="signalKill"/>, as killed (ADR 0069).</summary>
+    private void KillDescendants(ProcessId parentPid, bool signalKill)
     {
         List<ProcessId> children = [.. _active.Values
             .Where(e => e.Record.ParentPid == parentPid)
@@ -251,7 +289,12 @@ public sealed class InMemoryProcessManager : IProcessManager
         {
             if (_active.TryGetValue(childPid, out Entry? childEntry))
             {
-                KillDescendants(childPid);
+                KillDescendants(childPid, signalKill);
+                if (signalKill)
+                {
+                    childEntry.Control.MarkKilled();
+                }
+
                 ForceTerminal(childEntry, ProcessExitReason.DependencyStop);
             }
         }
@@ -300,8 +343,25 @@ public sealed class InMemoryProcessManager : IProcessManager
         return updated;
     }
 
-    private ProcessRecord ForceTerminal(Entry entry, ProcessExitReason reason) =>
-        Finish(entry, ProcessState.Stopped, exitCode: null, reason);
+    private ProcessRecord ForceTerminal(Entry entry, ProcessExitReason reason)
+    {
+        if (IsSignalKill(reason))
+        {
+            // Before the terminal event: whatever reacts to it (closing the windows) already finds
+            // the process cut off from the OS.
+            entry.Control.MarkKilled();
+        }
+
+        return Finish(entry, ProcessState.Stopped, exitCode: null, reason);
+    }
+
+    /// <summary>
+    /// Tells whether a forced end is a <c>SIGKILL</c> (ADR 0069, section 3): <c>kill -9</c>, "Force
+    /// kill", or the end of a grace period. Other forced ends (window closed, logout, app disabled)
+    /// keep the OS reachable for the process's own cleanup, as before.
+    /// </summary>
+    private static bool IsSignalKill(ProcessExitReason reason) =>
+        reason is ProcessExitReason.Killed or ProcessExitReason.Timeout;
 
     private void AddHistory(ProcessRecord record)
     {
@@ -316,10 +376,11 @@ public sealed class InMemoryProcessManager : IProcessManager
         ? entry
         : throw new KeyNotFoundException($"No active process with PID '{pid}'.");
 
-    private sealed class Entry(ProcessRecord record, CancellationTokenSource tokenSource)
+    private sealed class Entry(ProcessRecord record, CancellationTokenSource tokenSource, ProcessControlBlock control)
     {
         public ProcessRecord Record { get; set; } = record;
         public CancellationTokenSource TokenSource { get; } = tokenSource;
+        public ProcessControlBlock Control { get; } = control;
         public TaskCompletionSource<ProcessRecord>? StopSignal { get; set; }
     }
 }

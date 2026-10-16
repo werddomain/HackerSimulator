@@ -184,6 +184,48 @@ public sealed class FileTransferTests
         return new FileTransferHostFile(name, bytes.Length, "text/plain", (_, _) => Task.FromResult<Stream>(new MemoryStream(bytes)));
     }
 
+    [Fact]
+    public async Task A_stopped_transfer_keeps_what_is_done_and_reports_the_rest()
+    {
+        // ADR 0069: the app was asked to stop while the first item moved; it ends after it.
+        using IDisposable scope = Enter(out FakeAppFileSystemGateway fs);
+        fs.WithDirectory(Home + "/out").WithFile(Home + "/out/a.txt", "old")
+            .WithFile(Home + "/a.txt", "A").WithFile(Home + "/b.txt", "B").WithFile(Home + "/c.txt", "C");
+        using CancellationTokenSource stop = new();
+
+        FileTransferResult result = await FileTransfer.TransferAsync(
+            [Home + "/a.txt", Home + "/b.txt", Home + "/c.txt"],
+            Home + "/out",
+            FileTransferMode.Move,
+            conflict =>
+            {
+                stop.Cancel();
+                return Task.FromResult(new FileConflictResolution(FileConflictChoice.Replace));
+            },
+            stop.Token);
+
+        Assert.True(result.Cancelled);
+        Assert.Equal("A", fs.ContentOf(Home + "/out/a.txt"));
+        Assert.Equal([Home + "/b.txt", Home + "/c.txt"], result.Failures.Select(static failure => failure.Path));
+        Assert.All(result.Failures, failure => Assert.Equal("stopped before this item", failure.Reason));
+        Assert.True(fs.Exists(Home + "/b.txt") && !fs.Exists(Home + "/out/b.txt"));
+    }
+
+    [Fact]
+    public async Task Trash_moves_and_imports_stop_cleanly_too()
+    {
+        using IDisposable scope = Enter(out FakeAppFileSystemGateway fs);
+        fs.WithFile(Home + "/a.txt", "A");
+        using CancellationTokenSource stop = new();
+        await stop.CancelAsync();
+
+        FileTransferResult trashed = await FileTransfer.MoveToTrashAsync([Home + "/a.txt"], stop.Token);
+
+        Assert.True(trashed.Cancelled);
+        Assert.Empty(trashed.Completed);
+        Assert.True(fs.Exists(Home + "/a.txt"));
+    }
+
     private static IDisposable Enter(out FakeAppFileSystemGateway fileSystem)
     {
         fileSystem = new FakeAppFileSystemGateway().WithDirectory(Home);

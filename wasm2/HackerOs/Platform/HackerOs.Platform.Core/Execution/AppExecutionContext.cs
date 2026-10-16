@@ -7,6 +7,7 @@ using HackerOs.AppSdk.Shell;
 using HackerOs.AppSdk.Net;
 using HackerOs.AppSdk.Settings;
 using HackerOs.AppSdk.Clipboard;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -56,8 +57,12 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppPermissionAdministrationGateway? permissionAdministration = null,
         IAppServerConnectionGateway? serverConnection = null,
         IAppSystemPowerGateway? systemPower = null,
-        IAppStorageDiagnosticsGateway? storageDiagnostics = null)
+        IAppStorageDiagnosticsGateway? storageDiagnostics = null,
+        Processes.ProcessControlBlock? control = null)
     {
+        // ADR 0069: a context built without the process manager's block (tests) is never stopped or killed.
+        Control = control ?? new Processes.ProcessControlBlock(processId);
+        Control.StopRequested += OnStopRequested;
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         InstanceId = instanceId;
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -98,19 +103,19 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     }
 
     /// <inheritdoc />
-    public IAppSystemSettingsGateway SystemSettings { get; }
+    public IAppSystemSettingsGateway SystemSettings { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppPermissionAdministrationGateway PermissionAdministration { get; }
+    public IAppPermissionAdministrationGateway PermissionAdministration { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppServerConnectionGateway ServerConnection { get; }
+    public IAppServerConnectionGateway ServerConnection { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppSystemPowerGateway SystemPower { get; }
+    public IAppSystemPowerGateway SystemPower { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppStorageDiagnosticsGateway StorageDiagnostics { get; }
+    public IAppStorageDiagnosticsGateway StorageDiagnostics { get => Guarded(field); }
 
     /// <inheritdoc />
     public string UserLoginName { get; }
@@ -119,22 +124,22 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public string UserDisplayName { get; }
 
     /// <inheritdoc />
-    public IAppCatalogGateway Catalog { get; }
+    public IAppCatalogGateway Catalog { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppManagementGateway AppManagement { get; }
+    public IAppManagementGateway AppManagement { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppNetworkGateway Network { get; }
+    public IAppNetworkGateway Network { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppDriveGateway Drives { get; }
+    public IAppDriveGateway Drives { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppClipboardGateway Clipboard { get; }
+    public IAppClipboardGateway Clipboard { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppEnvironmentGateway Environment { get; }
+    public IAppEnvironmentGateway Environment { get => Guarded(field); }
 
     /// <inheritdoc />
     public bool IsRootElevated { get; }
@@ -170,35 +175,35 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public ICapabilityChecker Capabilities { get; }
 
     /// <inheritdoc />
-    public IAppFileSystemGateway FileSystem { get; }
+    public IAppFileSystemGateway FileSystem { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppEventGateway Events { get; }
+    public IAppEventGateway Events { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppNotificationGateway Notifications { get; }
+    public IAppNotificationGateway Notifications { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppLoggingGateway Logging { get; }
+    public IAppLoggingGateway Logging { get => Guarded(field); }
 
 
     /// <inheritdoc />
-    public IAppClockGateway Clock { get; }
+    public IAppClockGateway Clock { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppProcessGateway Processes { get; }
+    public IAppProcessGateway Processes { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppIntentGateway Intents { get; }
+    public IAppIntentGateway Intents { get => Guarded(field); }
 
     /// <inheritdoc />
-    public IAppFileSystemWatchGateway Watch { get; }
+    public IAppFileSystemWatchGateway Watch { get => Guarded(field); }
 
     /// <inheritdoc />
     public IAppPermissionErrorGateway PermissionErrors { get; }
 
     /// <inheritdoc />
-    public IAppServiceControlGateway Services { get; }
+    public IAppServiceControlGateway Services { get => Guarded(field); }
 
     /// <inheritdoc />
     public OneShotElevationGrantSet OneShotElevation { get; }
@@ -208,14 +213,70 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// Bound by <see cref="AppExecutionContextFactory"/> right after construction, because the
     /// gateway needs this context (the shell's parent process); unsupported until then.
     /// </remarks>
-    public IAppShellHostGateway ShellHost { get; internal set; } = UnsupportedShellHostGateway.Instance;
+    public IAppShellHostGateway ShellHost { get => Guarded(field); internal set; } = UnsupportedShellHostGateway.Instance;
 
     /// <inheritdoc />
     /// <remarks>
     /// Bound by <c>AppLifecycleOrchestrator</c> when the launch request carries streams (a shell
     /// started the instance, ADR 0064); detached otherwise.
     /// </remarks>
-    public IAppConsoleGateway Console { get; internal set; } = DetachedAppConsoleGateway.Instance;
+    public IAppConsoleGateway Console { get => Guarded(field); internal set; } = DetachedAppConsoleGateway.Instance;
+
+    /// <summary>
+    /// Gets the kernel-side block of this instance's process (ADR 0069): stop request, killed flag and
+    /// scheduler. It outlives the process, so leftover code of a killed process still finds it.
+    /// </summary>
+    internal Processes.ProcessControlBlock Control { get; }
+
+    /// <summary>Gets whether the OS killed this instance's process.</summary>
+    internal bool IsKilled => Control.IsKilled;
+
+    /// <inheritdoc />
+    public event EventHandler<HackStopRequestedEventArgs>? StopRequested;
+
+    /// <inheritdoc />
+    public HackStopRequestedEventArgs? StopRequest { get; private set; }
+
+    /// <summary>
+    /// Every OS gateway refuses a killed process (ADR 0069, section 3): its leftover code is cut off,
+    /// like the threads of a Linux process after <c>SIGKILL</c>. Identity, the token and the
+    /// permission-error channel stay readable, for the OS's own cleanup.
+    /// </summary>
+    private T Guarded<T>(T gateway)
+    {
+        Control.ThrowIfKilled();
+        return gateway;
+    }
+
+    /// <summary>
+    /// Delivers the OS's stop request to the app (ADR 0069, section 1), inside the app's own ambient
+    /// context so the handlers can use the SDK. A handler that throws is logged and does not keep the
+    /// others from running.
+    /// </summary>
+    private void OnStopRequested(ProcessStopRequest request)
+    {
+        HackStopRequestedEventArgs args = new(request.Reason, request.RequestedAtUtc, request.Deadline);
+        StopRequest = args;
+        if (StopRequested is not { } handlers)
+        {
+            return;
+        }
+
+        using IDisposable scope = HackExecutionContext.Enter(this);
+        foreach (EventHandler<HackStopRequestedEventArgs> handler in handlers.GetInvocationList().Cast<EventHandler<HackStopRequestedEventArgs>>())
+        {
+            try
+            {
+                handler(this, args);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logging.Log(
+                    HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                    $"A StopRequested handler threw {exception.GetType().Name}: {exception.Message}");
+            }
+        }
+    }
 
     /// <summary>Shell host of a context whose factory has no shell service (tests, legacy hosts).</summary>
     internal sealed class UnsupportedShellHostGateway : IAppShellHostGateway
