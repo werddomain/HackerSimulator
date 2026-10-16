@@ -65,6 +65,32 @@ function themeFor(host) {
 }
 
 /**
+ * Copies the terminal selection through a real `copy` event instead of navigator.clipboard, so the
+ * OS clipboard bridge (hostClipboard.js, ADR 0065) sees it like any native copy: the text becomes the
+ * HackerOS clipboard entry (origin GuestNative) and reaches the host only when
+ * /etc/hackeros/clipboard.config allows guest-to-host sharing. Writing navigator.clipboard directly
+ * would skip both. The capture listener puts the text in the event, the bridge reads it in the bubble
+ * phase on window.
+ */
+function copyAsNativeCopy(text) {
+  const fill = (event) => {
+    if (event.clipboardData) {
+      event.clipboardData.setData("text/plain", text);
+      event.preventDefault();
+    }
+  };
+
+  document.addEventListener("copy", fill, { capture: true, once: true });
+  try {
+    document.execCommand("copy");
+  } catch {
+    // No copy event could be raised: nothing is copied, as with a refused native copy.
+  } finally {
+    document.removeEventListener("copy", fill, { capture: true });
+  }
+}
+
+/**
  * Browser shortcuts the terminal must leave alone so the surrounding UI still gets them:
  * the console's tab shortcuts (TerminalTabs, ADR 0058 section 4) and the clipboard ones.
  * Returning false from xterm's custom key handler lets the event bubble untouched.
@@ -152,8 +178,8 @@ export function createTerminal(host, dotNet, options) {
     // Ctrl+C copies when text is selected (and sends ^C otherwise); Ctrl+Shift+C always copies.
     if (event.ctrlKey && !event.altKey && key === "c" && (event.shiftKey || terminal.hasSelection())) {
       const selection = terminal.getSelection();
-      if (selection && navigator.clipboard) {
-        navigator.clipboard.writeText(selection).catch(() => {});
+      if (selection) {
+        copyAsNativeCopy(selection);
       }
 
       terminal.clearSelection();

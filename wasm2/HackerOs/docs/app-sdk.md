@@ -24,10 +24,10 @@ API publiques, la [référence du SDK](sdk-reference.md).
 | Projet | Contenu |
 |---|---|
 | `Shared/HackerOs.AppSdk` | `IAppExecutionContext` et ses passerelles, façades statiques `Hack*`, classes de base des points d'entrée (`TerminalAppBase`…). |
-| `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement…). |
+| `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement, graphiques, composants intégrables `HackEmbeddedComponent<T>`…). |
 | `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
 | `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
-| `Shared/HackerOs.AppSdk.Terminal` | Panneau de terminal (`TerminalPanel`), qui héberge un shell par `HackShell`, et console à onglets (`TerminalTabs`). |
+| `Shared/HackerOs.AppSdk.Terminal` | Terminal xterm.js (`TerminalPanel`, ADR 0061), qui héberge un shell par `HackShell`, et console à onglets (`TerminalTabs`). |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
 Toute bibliothèque `Shared/HackerOs.AppSdk` ou `Shared/HackerOs.AppSdk.*` est
@@ -180,7 +180,9 @@ Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 `Services`, `PermissionErrors`, `Environment`, `Catalog` et `AppManagement`
 (ADR 0056, `4-sdk-user-and-apps`), `Network` (`4-sdk-network`), `ShellHost`
 (`4-sdk-shell-host`), `Drives` (ADR 0057, `4-proc-metrics`),
-`Clipboard` (ADR 0056 §12, `4-file-explorer`).
+`Clipboard` (ADR 0056 §12, `4-file-explorer`), `SystemSettings`,
+`PermissionAdministration`, `ServerConnection`, `SystemPower` et
+`StorageDiagnostics` (`4-sdk-system-admin`), `Console` (ADR 0064).
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
@@ -361,6 +363,26 @@ un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
 l'app associée avec ce chemin : une app de document lit son fichier initial là
 (voir [`text-editor.md`](text-editor.md)).
 
+### API ajoutées après la phase 4 (ADR 0061 à 0065)
+
+Ces API suivent les mêmes règles (façade ou passerelle, capacité déclarée dans
+le `[AppManifest]`) ; leur détail est dans la
+[référence du SDK](sdk-reference.md) et dans le document de chaque chantier.
+
+| API | Rôle | Capacité | Document |
+|---|---|---|---|
+| `HackConsole`, passerelle `IAppExecutionContext.Console` (`IAppConsoleGateway`) | Flux standard d'une instance : ceux du shell qui l'a lancée par son nom, `/dev/null` depuis le bureau | — | [`shell-interpreter.md`](shell-interpreter.md#apps-lancées-par-leur-nom) |
+| `IShellSession` : `GetVariable`, `AssignVariable`, `RunAsync`, `Jobs`, `KillJob` ; `IHackShell.NeedsMoreInput` | Built-ins `read`, `watch`, `jobs`, `kill %n` écrits comme des commandes ordinaires ; invite de continuation | `shell.control` ; `shell.host` | [`shell-commands.md`](shell-commands.md), [`shell-host.md`](shell-host.md) |
+| `IFullScreenTerminalSession` (`TerminalExecutionContext.FullScreen`), `TerminalInputReader` | Écran alternatif (`nano`, `top`, `htop`) et entrée standard du terminal | — | [`terminal-emulator.md`](terminal-emulator.md) |
+| `HackFile.CreateSymbolicLinkAsync` | `ln -s` | droits du chemin | [`hack-file-api.md`](hack-file-api.md) |
+| `AppDefinition.Components` (`AppComponent`), `HackEmbeddedComponent<T>`, `HackEmbeddableComponent`, `HackComponentContracts`, `IHackTerminal` | Composant d'une app affiché par une autre, par contrat (`hackeros.terminal`) | celles de l'app qui affiche le composant (CodeEditor déclare `shell.host` pour le terminal embarqué) | [`embedded-components.md`](embedded-components.md) |
+| `HackClipboard` partagé avec l'hôte ; `BrowserClipboard` `[Obsolete]` | Le texte copié part vers la vraie machine selon `clipboard.config` | `clipboard.read`, `clipboard.write` | [`clipboard.md`](clipboard.md) |
+
+Aucune de ces API ne donne accès à un service interne : les apps qui les
+utilisent (Terminal, CodeEditor, Diagnostic, FileExplorer, `HackerOs.Commands`)
+passent la vérification de la frontière sans exception (voir
+[Vérification finale](#vérification-finale-de-la-phase-4-2026-10-16)).
+
 ## Décisions
 
 - Codes `HOSAPP0030` et `HOSAPP0031` au lieu de `HOSAPP0002` et `HOSAPP0003`,
@@ -383,6 +405,33 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
   passerelles de `AppContext` directement (`AppContext.Catalog`,
   `AppContext.AppManagement`) : ses gestionnaires d'événements ne sont pas dans
   le contexte ambiant.
+
+## Vérification finale de la phase 4 (2026-10-16)
+
+Repasse de `rebuild/4-sdk-boundary-final` sur `rebuild/base` après les PR #115
+à #122 (xterm.js, éditeur de code, composants intégrables, shell POSIX et
+commandes Linux, presse-papiers partagé avec l'hôte) :
+
+- `dotnet build HackerOs.sln` : 0 avertissement, 0 erreur, aucun diagnostic
+  `HOSAPP0002`, `HOSAPP0003`, `HOSAPP0030`, `HOSAPP0031` ni `HOSSDK0001`.
+- Aucun projet de `Apps/` ni bibliothèque `HackerOs.AppSdk*` ne référence
+  `Platform.Core`, `Platform.Blazor`, `Infrastructure.*` ou `Server.*`. Aucun
+  reste du mécanisme d'exemption hors de l'historique des documents.
+- Injections dans `Apps/` : uniquement `IJSRuntime` (import du module de
+  l'app), `MudBlazor.IDialogService`, et des types du SDK.
+  `SdkBoundarySourceTests` parcourt tous les `.csproj` de `Apps/`, donc aussi
+  `HackerOs.Apps.Terminal` et les nouvelles commandes.
+- Capacités : chaque app et commande ajoutée ou modifiée déclare celles des API
+  qu'elle appelle (par exemple `systemctl` : `services.manage` ; `htop` :
+  `process.manage` ; `jobs`, `read`, `watch` : `shell.control` ; Terminal et
+  CodeEditor : `shell.host`).
+- Aucun appel d'API `[Obsolete]` (`BrowserClipboard`,
+  `Get/SetFileReferencesAsync`) dans `Apps/`.
+- Corrigé : la copie du terminal (Ctrl+C sur une sélection, Ctrl+Shift+C)
+  écrivait `navigator.clipboard` directement, hors du presse-papiers de l'OS et
+  sans respecter `clipboard.config` (ADR 0065). Elle lève désormais un vrai
+  événement `copy` que le pont reçoit comme une copie native
+  ([`terminal-emulator.md`](terminal-emulator.md)).
 
 ## Liste des tâches du chantier `rebuild/4-sdk-boundary`
 
@@ -429,3 +478,12 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
 - [x] Supprimer l'option `--boundary-exempt` du générateur et la sévérité `warning` de `GeneratorDiagnostic`.
 - [x] Remplacer les tests de la liste par `Build_targets_have_no_exemption_mechanism` et `No_app_or_sdk_project_overrides_its_boundary_role` ; le test `IJSRuntime` couvre toutes les apps.
 - [x] Ce document, le plan (phase 4 cochée) et l'index à jour.
+
+### Vérification finale (2026-10-16)
+
+- [x] Build de la solution sans diagnostic de frontière ni avertissement ; références de `Apps/` et du SDK vérifiées.
+- [x] Aucun reste du mécanisme d'exemption ; `SdkBoundarySourceTests` couvre les apps ajoutées depuis #113.
+- [x] Injections et capacités des apps et commandes ajoutées par les PR #115 à #122.
+- [x] Usages d'API `[Obsolete]` dans `Apps/` : aucun.
+- [x] Copie du terminal passée par le pont du presse-papiers (ADR 0065), bundle xterm régénéré.
+- [x] Suites `Tests/*.Tests` hors E2E vertes ; liens de `docs/` vérifiés par script ; index et plan à jour.

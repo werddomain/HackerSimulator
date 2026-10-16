@@ -26,6 +26,7 @@ Read these first regardless of what you're about to work on.
 | [`hosting-model.md`](hosting-model.md) | The three host projects (Ecosystem PWA, `test/test` debug harness, optional Server) and how they relate. |
 | [`implementation-status.md`](implementation-status.md) | The current, authoritative state of the migration — what's built, what's open, test counts. |
 | [`webassembly-debugging.md`](webassembly-debugging.md) | How to run and debug the WASM host locally. |
+| [`e2e-test-demo-mode.md`](e2e-test-demo-mode.md) | `--test-demo` switch of the `test/test` host: the button that seeds the deterministic files used by the E2E suites. |
 | [`common-pitfalls.md`](common-pitfalls.md) | Recurring mistakes already made once in this codebase — static-asset routing, manifest/schema drift, IndexedDB versioning, E2E harness setup. Read before touching any of those. |
 
 ## Building an app on HackerOS
@@ -50,6 +51,7 @@ against the public SDK, without needing to touch platform internals.
 | [`theming.md`](theming.md) | Shared theme catalog, runtime scope, semantic tokens, persistence, and the checklist for adding a theme. |
 | [`localization.md`](localization.md) | Globalization/localization architecture. |
 | [`accessibility.md`](accessibility.md) | WCAG 2.2 AA checklist and accessibility evidence. |
+| [`Human-test-needed-p2-GATE-003.md`](Human-test-needed-p2-GATE-003.md) | Manual accessibility and screenshot checks still required for gate `P2-GATE-003`. |
 | [`samples/service-app.md`](samples/service-app.md) | Worked example of a non-visual background service app. |
 
 ## Working on the HackerOS platform core
@@ -83,6 +85,7 @@ itself — filesystem, settings, security, window runtime, storage.
 | [`terminal-full-screen.md`](terminal-full-screen.md) | The full-screen/alternate-screen contract used by Nano and similar commands. |
 | [`code-editor.md`](code-editor.md) | Multi-tab source editing over the virtual filesystem. |
 | [`user-code-compilation-execution-plan.md`](user-code-compilation-execution-plan.md) | Proposal (French, not implemented): hybrid client/server C# compilation and execution for user-authored ecosystem apps. |
+| [`web-project-type-plan.md`](web-project-type-plan.md) | Proposal (French, not implemented): a "Web" project type (hosted ASP.NET/Blazor, WebAssembly or Server). |
 | [`system-monitor.md`](system-monitor.md) | Process/CPU/memory monitoring architecture. |
 | [`mobile-interface-platform-plan.md`](mobile-interface-platform-plan.md) | Mobile interface platform plan (French). |
 | [`window-taskbar-export-plan.md`](window-taskbar-export-plan.md) | Window/taskbar system extraction plan (French). |
@@ -175,6 +178,7 @@ has diverged from the original plan in places.
 | Doc | What it's for |
 | --- | --- |
 | [`integration-task-list.md`](integration-task-list.md) | The original exhaustive execution plan, kept as background/history — see the caveat above. |
+| [`progress-and-plan-2026-08-17.md`](progress-and-plan-2026-08-17.md) | Progress snapshot and prioritized action plan as of 2026-08-17 (French). |
 | [`integration-audit-remediation.md`](integration-audit-remediation.md) | Remediation handoff from the 2026-08-03 integration audit. |
 | [`phase-2-acceptance.md`](phase-2-acceptance.md) | Phase 2 acceptance and exit-gate evidence. |
 | [`migration/rules.md`](migration/rules.md) | The standard operating procedure used for porting each legacy feature. |
