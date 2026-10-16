@@ -118,8 +118,10 @@ Déroulé :
    blobs et les sauvegardes du serveur vont dans un dossier jetable : le
    `Server/HackerOs.Server/hackeros.db` suivi par git n'est jamais modifié.
 3. `Tests/HackerOs.HostSmoke.Tests` ouvre l'hôte dans Chromium (contexte
-   neuf) : création du profil, rechargement et écran « Sign in », bureau,
-   Terminal avec `ps` puis `cat /proc/self/status` (valeurs de `CpuSource:` et
+   neuf) : création du profil, rechargement et écran « Sign in », bureau
+   (styles scopés appliqués à la barre des tâches, puis au cadre des fenêtres :
+   `display: flex` calculé, sinon le bundle `{Projet}.styles.css` de l'hôte
+   manque), Terminal avec `ps` puis `cat /proc/self/status` (valeurs de `CpuSource:` et
    `MemSource:` vérifiées), System Monitor (le processus du terminal est
    listé), fermeture de chaque fenêtre. Toute erreur de la console ou de la
    page fait échouer le parcours, comme toute ligne `fail:` ou « Unhandled

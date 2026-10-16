@@ -52,12 +52,14 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
             await SignInAsync(page, firstVisit: false);
             AssertNoErrors(errors, "sign-in after reload");
+            await AssertScopedStylesAppliedAsync(page, ".taskbar-container", "taskbar (HackerOs.Taskbar.Blazor)");
 
             await OpenAppAsync(page, "Terminal");
             // Read the rendered rows, but click the screen: xterm.js stacks it over the rows.
             ILocator rows = page.Locator("[data-terminal-panel] .xterm-rows").First;
             ILocator screen = page.Locator("[data-terminal-panel] .xterm-screen").First;
             await WaitForTerminalTextAsync(rows, text => PromptPattern().IsMatch(text), "the shell prompt");
+            await AssertScopedStylesAppliedAsync(page, ".window-chrome", "window chrome (HackerOs.Windowing.Blazor)");
 
             await RunCommandAsync(page, screen, "ps");
             string psOutput = await WaitForTerminalTextAsync(
@@ -203,6 +205,22 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
                 await Task.Delay(100);
             }
         }
+    }
+
+    /// <summary>
+    /// Fails when a component's scoped CSS (CSS isolation) did not reach the page. The probed
+    /// elements are a <c>&lt;footer&gt;</c> and a <c>&lt;header&gt;</c>, <c>display: block</c> by
+    /// default, that only their scoped stylesheet turns into <c>flex</c>: a host that forgets its
+    /// <c>{Project}.styles.css</c> bundle (HackerOs.Server did) renders an unstyled desktop
+    /// without any console error.
+    /// </summary>
+    private async Task AssertScopedStylesAppliedAsync(IPage page, string selector, string what)
+    {
+        ILocator element = page.Locator(selector).First;
+        await element.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+        string display = await element.EvaluateAsync<string>("e => getComputedStyle(e).display");
+        Assert.True(display == "flex", $"Scoped styles of the {what} are not applied: '{selector}' has display '{display}', expected 'flex'.");
+        Log($"scoped styles applied: {what}.");
     }
 
     private static void AssertSource(string status, string field, string? expected)
