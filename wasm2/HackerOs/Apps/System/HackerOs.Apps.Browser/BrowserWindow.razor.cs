@@ -12,6 +12,9 @@ using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Display;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Net.Hosting;
+using HackerOs.AppSdk.Web.Blazor.Sites;
+using HackerOs.AppSdk.Web.Hosting;
 using HackerOs.Simulation.Abstractions.Network;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -40,6 +43,13 @@ namespace HackerOs.Apps.Browser;
 /// in a display surface through <see cref="DisplaySurfaceContent"/>, still navigated and served by
 /// this window. Launched with <c>--detached</c> (see <c>HackBrowser.OpenDetachedAsync</c>), the
 /// window detaches before its first navigation.
+/// </para>
+/// <para>
+/// A Blazor site (ADR 0084) is recognised by its host page: the browser reads its
+/// <c>blazor.boot.json</c>, asks the OS for a renderer process (<see cref="IHackWebSiteHost"/>) and
+/// draws the site's root component in the page area with <see cref="HackWebSiteView"/>. Links
+/// within the site change the address without a request; back and forward between two addresses
+/// of the site stay in the site; the address bar and Reload make a real request.
 /// </para>
 /// </remarks>
 public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
@@ -85,6 +95,11 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private BrowserPageView? _pageView;
     private FrameSource? _frameSource;
 
+    // ── Blazor site (ADR 0084) ───────────────────────────────────────────
+    private IHackWebSiteProcess? _site;
+    private Uri? _siteUrl;
+    private HackWebSiteView? _siteView;
+
     // ── Detached window (ADR 0078 §3) ────────────────────────────────────
     private IDisplaySurfaceService? _surfaces;
     private IDisplaySurface? _surface;
@@ -106,6 +121,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private bool CanViewSource => _currentBody is { Kind: ResponseBodyKind.Html };
     private bool CanDetach => _surfaces is not null && !_detaching;
     private bool ShowsFrame => !_isLoading && _error is null && _currentPage is null && _frameDocument is not null && !_viewSource;
+    private bool ShowsSite => !_isLoading && _error is null && _site is { HasExited: false } && _siteUrl is not null && !_viewSource;
 
     private string SchemeIcon => _documentUrl?.Scheme switch
     {
@@ -127,6 +143,10 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     /// <summary>The session's detached windows (ADR 0078); part of the Blazor SDK contracts.</summary>
     [Inject]
     private IDisplaySurfaceService DisplaySurfaces { get; set; } = default!;
+
+    /// <summary>Starts the renderer of a Blazor site (ADR 0084); part of the Blazor SDK contracts.</summary>
+    [Inject]
+    private IHackWebSiteHost SiteHost { get; set; } = default!;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -215,14 +235,26 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         string method = "GET",
         byte[]? body = null,
         string? contentType = null,
-        bool download = false)
+        bool download = false,
+        bool reload = false)
     {
+        // Back or forward between two addresses of the live Blazor site (ADR 0084 §5): the site
+        // follows the address, no request. Reload, the address bar and links make a real one.
+        if (mode == HistoryMode.Traverse && !reload && method == "GET" && !download
+            && ShowsSite && _siteView?.Site is { } live && live.Navigation.IsWithinSite(url))
+        {
+            FollowPageHistory(url, replace: false, traverse: true);
+            return;
+        }
+
         _navigation?.Cancel();
         _navigation?.Dispose();
         _navigation = new CancellationTokenSource();
         CancellationToken cancellationToken = _navigation.Token;
         Uri? referrer = _documentUrl;
 
+        // Leaving the document ends the site's renderer; a reload starts a new one (ADR 0084 §3).
+        await StopSiteAsync();
         _devTools.Clear();
         _currentUrl = BrowserUrl.ToDisplayString(url);
         _urlInputValue = BrowserUrl.ToDisplayString(url, _viewSource);
@@ -317,8 +349,134 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
 
         if (_currentBody.Kind == ResponseBodyKind.Html)
         {
+            // The host page of a Blazor site loads blazor.hack.js: the site is drawn, not the page (ADR 0084 §3).
+            if (HackBlazorSiteEndpoints.IsHostPage(_currentBody.Text) && await TryStartSiteAsync(response.Url, cancellationToken))
+            {
+                return;
+            }
+
             await ShowHtmlAsync(response.Url, _currentBody.Text, referrer, cancellationToken);
         }
+    }
+
+    // ── Blazor site (ADR 0084) ───────────────────────────────────────────
+
+    /// <summary>
+    /// Reads the site's <c>blazor.boot.json</c> and asks the OS for its renderer. Returns
+    /// <see langword="false"/> when the host page must be shown as an HTML page instead (no
+    /// platform, no boot manifest); a site that exists but cannot start gets the browser's error page.
+    /// </summary>
+    private async Task<bool> TryStartSiteAsync(Uri pageUrl, CancellationToken cancellationToken)
+    {
+        Uri bootUrl = new(new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/"), HackBlazorBootManifest.BootPath);
+        BrowserFetchResult fetched = await _loader.SendAsync(
+            new BrowserRequest("GET", bootUrl, [new("Accept", "application/json")]), NetworkRequestKind.Other, cancellationToken);
+        HackBlazorBootManifest? boot = null;
+        if (fetched.Response is { IsSuccessStatusCode: true } bootResponse)
+        {
+            try
+            {
+                boot = JsonSerializer.Deserialize(bootResponse.Body, HackBlazorBootJsonContext.Default.HackBlazorBootManifest);
+            }
+            catch (JsonException exception)
+            {
+                _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error, $"blazor.boot.json is not valid: {exception.Message}", BrowserUrl.ToDisplayString(bootUrl)));
+            }
+        }
+
+        if (boot is null || string.IsNullOrWhiteSpace(boot.AppId))
+        {
+            _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error,
+                "Failed to start the Blazor site: _framework/blazor.boot.json could not be read.", BrowserUrl.ToDisplayString(pageUrl)));
+            return false;
+        }
+
+        HackWebSiteStart start = await SiteHost.StartAsync(new HackWebSiteStartRequest(pageUrl, boot, AppContext), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (start.Process is not { } process)
+        {
+            _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error, $"Failed to start the Blazor site: {start.Error}", BrowserUrl.ToDisplayString(pageUrl)));
+            _error = BrowserErrorPages.ForSiteNotStarted(pageUrl, start.Error ?? "The site did not start.");
+            return true;
+        }
+
+        _site = process;
+        _siteUrl = pageUrl;
+        _pageTitle = process.AppName;
+        process.Exited += OnSiteExited;
+        _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Log,
+            $"Blazor site {boot.AppId} started: renderer process {process.ProcessId} ({boot.RootComponent}).", "browser"));
+        return true;
+    }
+
+    /// <summary>Ends the site's renderer, when there is one; <paramref name="faulted"/> records a crash.</summary>
+    private async Task StopSiteAsync(bool faulted = false)
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        _site = null;
+        _siteUrl = null;
+        site.Exited -= OnSiteExited;
+        await site.StopAsync(faulted);
+    }
+
+    /// <summary>The site changed the tab's address (a link, <c>NavigateTo</c>): the history follows, the document stays.</summary>
+    private Task HandleSiteLocationChangedAsync(Uri url, bool replace)
+    {
+        FollowPageHistory(url, replace);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The site asks for a navigation of the browser (another site, <c>forceLoad</c>).</summary>
+    private Task HandleSiteNavigateAsync(Uri url, bool replace)
+    {
+        _viewSource = false;
+        return NavigateAsync(url, replace ? HistoryMode.Replace : HistoryMode.Push);
+    }
+
+    private Task HandleSiteTitleChangedAsync(string title)
+    {
+        _pageTitle = title;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A component of the site threw (ADR 0084 §4): the renderer ends in fault and the tab shows "Aw, Snap!".</summary>
+    private async Task HandleSiteFaultedAsync(Exception exception)
+    {
+        Uri? url = _siteUrl;
+        _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error, exception.ToString(), url is null ? string.Empty : BrowserUrl.ToDisplayString(url)));
+        await StopSiteAsync(faulted: true);
+        ShowSiteCrash(url, killed: false);
+    }
+
+    /// <summary>The OS ended the renderer (task manager, <c>kill</c>): same page as a crash. Arrives outside any Blazor event.</summary>
+    private void OnSiteExited() => _ = InvokeAsync(() =>
+    {
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
+        if (_site is not { HasExited: true } site)
+        {
+            return;
+        }
+
+        Uri? url = _siteUrl;
+        _site = null;
+        _siteUrl = null;
+        site.Exited -= OnSiteExited;
+        _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error,
+            $"The renderer process {site.ProcessId} of this site was terminated.", url is null ? string.Empty : BrowserUrl.ToDisplayString(url)));
+        ShowSiteCrash(url, killed: true);
+    });
+
+    private void ShowSiteCrash(Uri? url, bool killed)
+    {
+        _currentPage = null;
+        _frameDocument = null;
+        _error = BrowserErrorPages.ForRendererCrash(url, killed);
+        StateHasChanged();
     }
 
     /// <summary>Composes an HTML document and writes it in the isolated frame (ADR 0075 §1–§3).</summary>
@@ -395,7 +553,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     {
         if (_historyPos >= 0)
         {
-            await NavigateAsync(_history[_historyPos], HistoryMode.Traverse);
+            await NavigateAsync(_history[_historyPos], HistoryMode.Traverse, reload: true);
         }
         else if (_currentUrl.Length > 0)
         {
@@ -737,13 +895,18 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
             navigation.Download);
     }
 
-    /// <summary>A same-document navigation (fragment, <c>pushState</c>): the address changes, the page stays.</summary>
-    private void FollowPageHistory(Uri url, bool replace)
+    /// <summary>A same-document navigation (fragment, <c>pushState</c>, a Blazor site's link): the address changes, the page stays.</summary>
+    private void FollowPageHistory(Uri url, bool replace, bool traverse = false)
     {
         _documentUrl = url;
         _finalUrl = BrowserUrl.ToDisplayString(url);
         _urlInputValue = _finalUrl;
-        UpdateHistory(url, replace ? HistoryMode.Replace : HistoryMode.Push);
+        if (_site is not null)
+        {
+            _siteUrl = url;
+        }
+
+        UpdateHistory(url, traverse ? HistoryMode.Traverse : replace ? HistoryMode.Replace : HistoryMode.Push);
         StateHasChanged();
     }
 
@@ -863,6 +1026,9 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _navigation?.Cancel();
         _navigation?.Dispose();
         _devTools.Changed -= OnDevToolsChanged;
+
+        // The site's renderer ends with its tab.
+        await StopSiteAsync();
 
         // The detached window belongs to this tab: it closes with it.
         if (_surface is { } surface)

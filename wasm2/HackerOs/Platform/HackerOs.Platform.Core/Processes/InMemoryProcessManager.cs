@@ -91,7 +91,7 @@ public sealed class InMemoryProcessManager : IProcessManager
                 exitCode: null,
                 exitReason: null);
 
-            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid));
+            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid)) { IsAuxiliary = request.Auxiliary };
             _eventBus.Publish(new ProcessStateChangedEvent(pid, ProcessState.Created, ProcessState.Starting, now));
             return record;
         }
@@ -231,7 +231,8 @@ public sealed class InMemoryProcessManager : IProcessManager
     {
         lock (_gate)
         {
-            Entry? match = _active.Values.FirstOrDefault(e => e.Record.AppId == appId);
+            // ADR 0084 section 3: a renderer is not the site; only the app's own instance counts.
+            Entry? match = _active.Values.FirstOrDefault(e => e.Record.AppId == appId && !e.IsAuxiliary);
             process = match?.Record!;
             return match is not null;
         }
@@ -382,5 +383,8 @@ public sealed class InMemoryProcessManager : IProcessManager
         public CancellationTokenSource TokenSource { get; } = tokenSource;
         public ProcessControlBlock Control { get; } = control;
         public TaskCompletionSource<ProcessRecord>? StopSignal { get; set; }
+
+        /// <summary>Whether the process is an auxiliary of its app (<see cref="ProcessStartRequest.Auxiliary"/>).</summary>
+        public bool IsAuxiliary { get; init; }
     }
 }

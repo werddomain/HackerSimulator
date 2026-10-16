@@ -259,6 +259,16 @@ public static partial class AppManifestValidator
             }
         }
 
+        if (manifest.Web?.Blazor is { } blazor)
+        {
+            // ADR 0084, section 1: lazy loading fetches the entry-point assembly only, as for components.
+            RequireText(blazor.Type, "web.blazor.type", errors);
+            if (!string.Equals(blazor.Assembly, manifest.EntryPoint?.Assembly, StringComparison.Ordinal))
+            {
+                AddError(errors, "manifest.web.blazor.assembly", "web.blazor.assembly", $"The Blazor root '{blazor.Type}' must live in the app's entry-point assembly.");
+            }
+        }
+
         foreach (string capability in manifest.Capabilities)
         {
             if (capability.StartsWith("filesystem.", StringComparison.Ordinal))

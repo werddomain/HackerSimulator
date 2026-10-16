@@ -216,7 +216,13 @@ public static class AppManifestJsonSerializer
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
                 case "web":
-                    ValidateObject(property.Value, $"{path}.web", ["urls"]);
+                    ValidateObject(property.Value, $"{path}.web", ["urls", "blazor"]);
+                    if (property.Value.ValueKind == JsonValueKind.Object
+                        && property.Value.TryGetProperty("blazor", out JsonElement blazor))
+                    {
+                        ValidateObject(blazor, $"{path}.web.blazor", ["assembly", "type"]);
+                    }
+
                     break;
                 default:
                     break;
@@ -264,6 +270,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
 [JsonSerializable(typeof(WebAppManifest))]
+[JsonSerializable(typeof(WebBlazorManifest))]
 [JsonSerializable(typeof(AppKind))]
 [JsonSerializable(typeof(AppExecutionHost))]
 [JsonSerializable(typeof(AppLaunchVisibility))]

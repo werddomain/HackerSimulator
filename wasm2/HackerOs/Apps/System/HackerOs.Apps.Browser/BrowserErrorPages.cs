@@ -56,6 +56,34 @@ public static class BrowserErrorPages
         };
     }
 
+    /// <summary>The code of the page shown when a Blazor site's renderer crashed (ADR 0084 §4), Chromium's for a crashed renderer.</summary>
+    public const string RendererCrashed = "STATUS_ACCESS_VIOLATION";
+
+    /// <summary>The code of the page shown when the OS ended a Blazor site's renderer, Chromium's for a killed renderer.</summary>
+    public const string RendererKilled = "RESULT_CODE_KILLED";
+
+    /// <summary>The code of the page shown when a Blazor site exists but its renderer did not start.</summary>
+    public const string SiteNotStarted = "ERR_SITE_NOT_STARTED";
+
+    /// <summary>Chromium's "Aw, Snap!" page: the site's renderer crashed or was ended (ADR 0084 §4).</summary>
+    /// <param name="url">The page's URL.</param>
+    /// <param name="killed">Whether the OS ended the renderer rather than the site crashing.</param>
+    public static BrowserErrorView ForRendererCrash(Uri? url, bool killed) => new(
+        "Aw, Snap!",
+        "Something went wrong while displaying this webpage.",
+        killed ? RendererKilled : RendererCrashed,
+        ["Reload the page.", killed ? "The site's renderer process was terminated." : "The developer tools console shows the exception."]);
+
+    /// <summary>The OS refused to start the site's renderer (ADR 0084 §3): the reason, and what to check.</summary>
+    /// <param name="url">The page's URL.</param>
+    /// <param name="reason">Why the renderer did not start.</param>
+    public static BrowserErrorView ForSiteNotStarted(Uri url, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+        return new("This site can't be displayed", $"{url.Host} is a Blazor site, but its renderer did not start: {reason}", SiteNotStarted,
+            ["Check that the site's app is installed and that blazor.boot.json names it.", "Reload the page."]);
+    }
+
     /// <summary>Describes an error status that came with no body to show.</summary>
     public static BrowserErrorView ForHttpStatus(int statusCode, Uri url)
     {

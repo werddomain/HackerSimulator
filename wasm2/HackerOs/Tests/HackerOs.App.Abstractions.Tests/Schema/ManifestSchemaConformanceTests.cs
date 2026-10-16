@@ -20,7 +20,8 @@ public sealed class ManifestSchemaConformanceTests
         "terminal.valid.json",
         "service.valid.json",
         "window-multi-platform.valid.json",
-        "web.valid.json"
+        "web.valid.json",
+        "web-blazor.valid.json"
     };
 
     public static TheoryData<string> InvalidFixtureNames => new()

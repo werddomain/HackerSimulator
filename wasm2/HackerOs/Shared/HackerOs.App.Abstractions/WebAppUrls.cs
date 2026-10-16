@@ -12,7 +12,19 @@ namespace HackerOs.App.Abstractions;
 /// Normalized by <see cref="WebAppUrls.Normalize"/>: lower-case scheme and host, explicit path ending
 /// with <c>/</c>, default port omitted.
 /// </param>
-public sealed record WebAppManifest(IReadOnlyList<string> Urls);
+/// <param name="Blazor">
+/// The root component of the site's interactive Blazor part (ADR 0084), or <see langword="null"/>
+/// when the site has none; omitted from <c>manifest.json</c> then.
+/// </param>
+public sealed record WebAppManifest(IReadOnlyList<string> Urls, WebBlazorManifest? Blazor = null);
+
+/// <summary>
+/// The <c>web.blazor</c> part of a web app's manifest (ADR 0084, section 1): where the root component
+/// of its interactive Blazor part is.
+/// </summary>
+/// <param name="Assembly">Assembly file name, the entry point's (<c>HackerOs.Sites.Intranet.dll</c>).</param>
+/// <param name="Type">Full name of the root component type.</param>
+public sealed record WebBlazorManifest(string Assembly, string Type);
 
 /// <summary>
 /// One parsed HTTP binding: what an <c>HttpListener</c> prefix or a web app URL names (ADR 0074,

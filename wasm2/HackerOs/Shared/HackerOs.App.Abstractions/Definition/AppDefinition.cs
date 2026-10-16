@@ -114,6 +114,14 @@ public abstract class AppDefinition
     /// without <c>network.listen</c>. Required for a web app, empty for every other kind.
     /// </summary>
     public virtual IReadOnlyList<string> Urls => [];
+
+    /// <summary>
+    /// Gets the root component of a <see cref="AppKind.Web"/> app's interactive Blazor part
+    /// (ADR 0073, section 4; ADR 0084), or <see langword="null"/> when the site has none. Written to
+    /// <c>web.blazor</c>; the OS browser draws it in its page area. It must live in the entry-point
+    /// assembly (the one lazy loading fetches).
+    /// </summary>
+    public virtual Type? BlazorRoot => null;
 }
 
 /// <summary>

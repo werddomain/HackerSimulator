@@ -66,6 +66,19 @@ public sealed class AppDefinitionMapperTests
     }
 
     [Fact]
+    public void ToManifest_BlazorRoot_MapsToWebBlazor()
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new BlazorSiteApp(), "1.0.0");
+        AppManifest mvcOnly = AppDefinitionMapper.ToManifest(new MvcSiteApp(), "1.0.0");
+
+        Assert.Equal(new WebBlazorManifest("HackerOs.App.Abstractions.Tests.dll", typeof(FakeEmbed).FullName!), manifest.Web!.Blazor);
+        Assert.Equal(["http://blazor.hack/"], manifest.Web.Urls);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+        Assert.Null(mvcOnly.Web!.Blazor);
+        Assert.DoesNotContain("\"blazor\":", AppManifestJsonSerializer.SerializeCanonical(mvcOnly), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToManifest_DesktopOnly_ProducesEntryPointForm()
     {
         AppManifest manifest = AppDefinitionMapper.ToManifest(new MinimalWindowApp());
@@ -183,6 +196,20 @@ public sealed class AppDefinitionMapperTests
         public override AppKind Kind => AppKind.Window;
         public override Type EntryPoint => typeof(FakeWindow);
         public override IReadOnlyList<AppComponent> Components => [new("hackeros.tests-view", typeof(FakeEmbed))];
+    }
+
+    private class MvcSiteApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.site";
+        public override string Name => "Site";
+        public override AppKind Kind => AppKind.Web;
+        public override Type EntryPoint => typeof(FakeCommand);
+        public override IReadOnlyList<string> Urls => ["http://blazor.hack/"];
+    }
+
+    private sealed class BlazorSiteApp : MvcSiteApp
+    {
+        public override Type? BlazorRoot => typeof(FakeEmbed);
     }
 
     [AppManifest]

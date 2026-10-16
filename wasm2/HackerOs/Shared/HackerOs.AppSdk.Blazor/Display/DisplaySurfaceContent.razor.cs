@@ -9,6 +9,9 @@ namespace HackerOs.AppSdk.Blazor.Display;
 /// cascading values, same app context, same event handlers); only its DOM lives in the surface.
 /// </summary>
 /// <remarks>
+/// Without a surface (<see cref="Surface"/> is <see langword="null"/>) the content simply renders
+/// here: an owner that always renders its content through this component keeps the content's
+/// components, and their state, when it detaches and reattaches (ADR 0084 §7).
 /// Changing <see cref="Surface"/> moves the content to the new surface. Removing the component
 /// gives the content back before the renderer deletes it. When the surface ends (closed by the
 /// user, lost), the content is moved back here, under the anchor: the owner normally reacts to
@@ -19,9 +22,9 @@ public sealed partial class DisplaySurfaceContent : IAsyncDisposable
     private ElementReference _content;
     private IDisplaySurface? _mounted;
 
-    /// <summary>The surface that shows the content.</summary>
-    [Parameter, EditorRequired]
-    public IDisplaySurface Surface { get; set; } = default!;
+    /// <summary>The surface that shows the content, or <see langword="null"/> to show it here.</summary>
+    [Parameter]
+    public IDisplaySurface? Surface { get; set; }
 
     /// <summary>The content to show in the surface.</summary>
     [Parameter]
@@ -41,7 +44,7 @@ public sealed partial class DisplaySurfaceContent : IAsyncDisposable
         }
 
         _mounted = Surface;
-        if (Surface.State == DisplaySurfaceState.Open)
+        if (Surface is { State: DisplaySurfaceState.Open })
         {
             await Surface.MountAsync(_content);
         }

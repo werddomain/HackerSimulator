@@ -49,6 +49,8 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" IsSystemApp="true" />
     <!-- ADR 0077/0080: hackwebd and Web Server Manager (system apps: hackwebd needs network.listen.privileged). -->
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" IsSystemApp="true" />
+    <!-- ADR 0084: the sample Blazor site (http://blazor-sample.hack/), drawn by the browser's page area. -->
+    <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.BlazorSite\HackerOs.Samples.BlazorSite.csproj" />
     <!--
       ADR 0051: every built-in terminal command is in one project (one assembly, lazy-loaded as a
       whole). cd/pwd/clear/help are now part of it; the terminal still intercepts those names until

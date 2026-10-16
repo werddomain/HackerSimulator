@@ -299,6 +299,20 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_keeps_the_blazor_root_in_the_entry_point_assembly()
+    {
+        AppManifest manifest = CreateWebManifest();
+        string assembly = manifest.EntryPoint!.Assembly;
+        AppManifest inEntry = manifest with { Web = manifest.Web! with { Blazor = new WebBlazorManifest(assembly, "Intranet.App") } };
+        AppManifest elsewhere = manifest with { Web = manifest.Web! with { Blazor = new WebBlazorManifest("Other.dll", "Intranet.App") } };
+        AppManifest noType = manifest with { Web = manifest.Web! with { Blazor = new WebBlazorManifest(assembly, "") } };
+
+        Assert.True(AppManifestValidator.Validate(inEntry).IsValid);
+        Assert.Contains(AppManifestValidator.Validate(elsewhere).Errors, error => error.Code == "manifest.web.blazor.assembly");
+        Assert.False(AppManifestValidator.Validate(noType).IsValid);
+    }
+
+    [Fact]
     public void Validate_forbids_file_system_capabilities_for_web_apps()
     {
         AppManifest manifest = CreateWebManifest() with { Capabilities = [AppCapabilities.FileSystemUserSelectedRead] };

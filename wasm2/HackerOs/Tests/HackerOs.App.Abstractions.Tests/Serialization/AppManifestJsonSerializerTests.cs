@@ -65,6 +65,27 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Web_blazor_round_trips_and_rejects_unknown_properties()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Web,
+            Execution = AppExecutionHost.Web,
+            FileHandlers = [],
+            Components = null,
+            Web = new WebAppManifest(["http://intranet.hack/"], new WebBlazorManifest("Intranet.dll", "Intranet.App"))
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+        string extra = json.Replace("\"blazor\":{", "\"blazor\":{\"extra\":1,", StringComparison.Ordinal);
+
+        Assert.Contains("\"blazor\":{\"assembly\":\"Intranet.dll\",\"type\":\"Intranet.App\"}", json, StringComparison.Ordinal);
+        Assert.Equal(manifest.Web.Blazor, roundTripped.Web!.Blazor);
+        Assert.Throws<JsonException>(() => AppManifestJsonSerializer.DeserializeStrict(extra));
+    }
+
+    [Fact]
     public void DeserializeStrict_rejects_unknown_component_properties()
     {
         string json = AppManifestJsonSerializer.SerializeCanonical(CreateManifest())

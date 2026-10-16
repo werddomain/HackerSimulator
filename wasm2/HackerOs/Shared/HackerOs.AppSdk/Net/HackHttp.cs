@@ -256,6 +256,14 @@ public sealed class HackHttpClient : IDisposable
     /// <summary>Gets the cookie container read and filled by every exchange.</summary>
     public HackCookieContainer Cookies { get; }
 
+    /// <summary>
+    /// Gets or sets the base address a relative request URI is resolved against, as
+    /// <c>HttpClient.BaseAddress</c>: <c>GetAsync("api/notes")</c> with <c>http://intranet.hack/</c>
+    /// requests <c>http://intranet.hack/api/notes</c>. <see langword="null"/> (the default) accepts
+    /// absolute URIs only. A Blazor site's client (ADR 0084, section 6) is set to the site's address.
+    /// </summary>
+    public Uri? BaseAddress { get; set; }
+
     /// <summary>Gets the headers added to every request.</summary>
     public IDictionary<string, string> DefaultRequestHeaders { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["User-Agent"] = "HackerOS/1.0" };
@@ -370,11 +378,16 @@ public sealed class HackHttpClient : IDisposable
     /// <summary>Marks the client disposed; the cookie container stays usable by its other owners.</summary>
     public void Dispose() => _disposed = true;
 
-    private static Uri ParseUri(string requestUri)
+    private Uri ParseUri(string requestUri)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestUri);
         if (!Uri.TryCreate(requestUri, UriKind.Absolute, out Uri? uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            && (BaseAddress is null || !Uri.TryCreate(BaseAddress, requestUri, out uri)))
+        {
+            throw new ArgumentException($"'{requestUri}' is not an absolute http or https URI.", nameof(requestUri));
+        }
+
+        if (uri is null || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             throw new ArgumentException($"'{requestUri}' is not an absolute http or https URI.", nameof(requestUri));
         }

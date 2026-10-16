@@ -11,8 +11,9 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        // 13 window apps, the hackwebd service (ADR 0077) and 64 commands (stress joined with ADR 0070, nslookup with ADR 0074).
-        Assert.Equal(78, catalog.Manifests.Count);
+        // 13 window apps, the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084) and 64 commands
+        // (stress joined with ADR 0070, nslookup with ADR 0074).
+        Assert.Equal(79, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
         foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup" })
         {
@@ -42,13 +43,15 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Contains("org.hackeros.commands.exit", catalog.Manifests.Keys);
 
         // Window apps (the launcher-visible desktop suite) stay Visible; terminal commands and
-        // background daemons (hackwebd, ADR 0077) are deliberately Hidden — they're invoked by
+        // background daemons (hackwebd, ADR 0077) and web sites (started on demand by a request,
+        // ADR 0073; the sample Blazor site, ADR 0084) are deliberately Hidden — they're invoked by
         // name or started at boot, not double-clicked from a launcher, and shouldn't clutter it.
         Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
-            manifest.Kind is AppKind.Terminal or AppKind.Service ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
+            manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
-        // One assembly per window app, plus the single HackerOs.Commands assembly (ADR 0051).
-        Assert.Equal(14, BuildKnownLazyAssemblies.Names.Count);
+        // One assembly per window app, the sample Blazor site, plus the single HackerOs.Commands assembly (ADR 0051).
+        Assert.Equal(15, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Contains("HackerOs.Samples.BlazorSite.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Commands.dll", BuildKnownLazyAssemblies.Names);
     }
 
@@ -106,6 +109,8 @@ public sealed class BuildKnownLazyAppsTests
             "org.hackeros.diagnostic",
             "org.hackeros.hack-paint",
             "org.hackeros.icon-viewer",
+            // ADR 0084: the sample Blazor site, installed so the browser has a site to draw.
+            "org.hackeros.samples.blazor-site",
         ];
 
         // ADR 0048 §1 table: every command is a system app, like coreutils.

@@ -73,6 +73,7 @@ plateforme et ne référencent jamais `Platform.*` ni `Infrastructure.*`
 | `HackerOs.AppSdk.Icons` | Bibliothèques d'icônes et composant `HackerIcon`. |
 | `HackerOs.AppSdk.Terminal` | Émulateur de terminal xterm.js (`TerminalPanel`, `TerminalTabs`). |
 | `HackerOs.AppSdk.Web` | ASP.Hack : sites internes façon ASP.NET Core MVC (pipeline, routage, contrôleurs, session ; [`asp-hack-mvc.md`](asp-hack-mvc.md)). |
+| `HackerOs.AppSdk.Web.Blazor` | Sites Blazor interactifs : routeur, navigation, vue de site dessinée par le navigateur ([`blazor-sites.md`](blazor-sites.md)). |
 | `HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel pour le mobile. |
 
 Le détail de chaque API est dans la [référence du SDK](sdk-reference.md).
@@ -104,7 +105,7 @@ navigateur est ici.
 |---|---|
 | `Apps/System/` | Les 13 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
 | `Apps/Commands/HackerOs.Commands` | Les 63 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 14 qui touchent le shell ou l'écran (ADR 0070). |
-| `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme) ; elles ne sont pas installées dans l'hôte. |
+| `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme, site Blazor) ; elles ne sont pas installées dans l'hôte, sauf `HackerOs.Samples.BlazorSite` (`http://blazor-sample.hack/`), app cachée installée pour que le navigateur puisse la servir (ADR 0084). |
 
 Une app est **système** quand l'hôte la déclare ainsi sur sa `ProjectReference`
 (`IsSystemApp="true"`) : elle n'est pas désinstallable et reçoit d'office ses
