@@ -39,7 +39,12 @@ public sealed partial class AppLifecycleOrchestratorTests
     }
 
     [Fact]
-    public async Task A_busy_loop_that_checkpoints_gives_the_thread_back_and_stops_on_sigterm()
+    public Task A_busy_loop_that_checkpoints_gives_the_thread_back_and_stops_on_sigterm() =>
+        // Off xUnit's synchronization context: its few shared workers would spend the spin on the
+        // slices of this test instead of the tests running beside it.
+        Task.Run(BusyLoopStopsOnSigtermAsync);
+
+    private static async Task BusyLoopStopsOnSigtermAsync()
     {
         StopProbe.Reset();
         Fixture fixture = new(ProbeManifest("org.hackeros.cruncher", typeof(CheckpointingTerminalApp)));

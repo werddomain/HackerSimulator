@@ -56,6 +56,12 @@ public abstract class ServiceAppBase : AppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
+        lock (_stopGate)
+        {
+            // A new run gets its own stop: OnStoppingAsync runs once per run, not once per instance.
+            _stopping = null;
+        }
+
         // ADR 0069: the OS's stop request (kill, End task, logout...) runs OnStoppingAsync right
         // away, before the token is cancelled, and the OS waits for it within the grace period.
         context.StopRequested += OnStopRequested;

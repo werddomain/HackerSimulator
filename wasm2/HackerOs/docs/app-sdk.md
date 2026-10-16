@@ -276,12 +276,53 @@ Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
 
 | API | Passerelle | Capacité | Remplace | Document |
 |---|---|---|---|---|
-| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `CloseMainWindowAsync`), `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `TerminateAsync`, `CloseMainWindowAsync`, `Current`, `CheckpointAsync`), `HackCurrentProcess`, `HackStopRequestedEventArgs`, `HackProcessKilledException`, `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
 | `HackServiceController` (`GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`), `HackServiceControllerStatus` | `Catalog` (liste), `/proc` (état), `Services` (`IAppServiceControlGateway`) | aucune pour lister ; `services.manage` (dangereuse) pour agir sur le service d'une autre app ou lire son type de démarrage | `AppCatalog` filtré sur `AppKind.Service`, orchestrateur | [`task-manager.md`](task-manager.md) |
 
 Les données d'un processus viennent de `/proc`, exactement ce que `ps` lit ; il
 n'y a pas d'abonnement aux événements de processus : un gestionnaire de tâches
 relit `/proc` chaque seconde.
+
+### Arrêt propre et points d'arrêt (ADR 0069)
+
+Quand l'OS arrête un processus poliment (`kill`, « End task »,
+`CloseMainWindowAsync`, déconnexion, extinction), il le passe à `Stopping`,
+lève **une fois** `StopRequested`, annule son jeton, puis attend jusqu'à
+l'échéance (horloge simulée) avant de le tuer. `kill -9` et « Force kill » ne
+préviennent pas.
+
+| API | Rôle |
+|---|---|
+| `HackProcess.Current` (`HackCurrentProcess` : `Id`, `StopToken`, `IsStopRequested`, `StopRequest`, `StopRequested`) | Le processus courant vu de l'intérieur, sur le modèle de `IHostApplicationLifetime.ApplicationStopping`. Aussi `IAppExecutionContext.StopRequested` / `StopRequest`. |
+| `HackStopRequestedEventArgs` (`Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)`) | Raison (`CloseRequested`, `Terminated`, `Logout`, `Shutdown`…) et échéance ; `Defer` demande à l'OS d'attendre un travail (brouillon, étape en cours) avant son action par défaut, jamais au-delà de l'échéance. |
+| `HackProcess.CheckpointAsync(token)` | Point d'arrêt volontaire : lève `OperationCanceledException` si l'arrêt est demandé ; rend la main (`Task.Yield`) quand la tranche courante dépasse 8 ms ; sinon retourne tout de suite, sans allocation. |
+| `HackProcess.TerminateAsync(timeout)` | `SIGTERM` d'un autre processus (raison `Terminated`, 5 s par défaut), sous `process.manage` ; `true` si le processus s'est terminé seul. |
+| `HackProcessKilledException` | Levée par toute passerelle appelée pour un processus tué (dérive de `OperationCanceledException`). |
+| `WindowAppBase.OnAppStopRequestedAsync(e)` | Crochet d'une app à fenêtre ; la fenêtre se ferme quand la tâche renvoyée se termine (action par défaut de `SIGTERM`). Pas appelé quand l'utilisateur ferme la fenêtre : `IWindowCloseGuard` s'en charge. |
+| `ServiceAppBase.OnStoppingAsync` | Appelé une seule fois, dès `StopRequested` (`ServiceStopReason.Terminated` pour `kill`/« End task »/`systemctl stop`), et au plus tard à l'arrêt par l'OS. |
+| `HackRecoveryDraft` (`Open`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync`) | Brouillon de récupération dans `~/.local/state/<appId>/recovery/` (dossier `0700`), à écrire sur `StopRequested` et à proposer au démarrage suivant. |
+
+Escalade (ADR 0069 §3) : délai passé, le processus est tué (`Timeout`) ;
+l'ordonnanceur de son processus (`ProcessTaskScheduler`, installé pour les
+commandes et les services) jette ses continuations, ses abonnements et
+minuteries ne sont plus rappelés, et ses passerelles lèvent
+`HackProcessKilledException`. Les apps à fenêtre restent sur le dispatcher du
+rendu : leurs fenêtres sont fermées.
+
+Ce que font les apps existantes (section 5.1 du
+[plan de la phase 5](execution-isolation-plan.md)) :
+
+| App | Sur `StopRequested` | Boucles longues avec `CheckpointAsync` |
+|---|---|---|
+| TextEditor | brouillon `HackRecoveryDraft` si le document est modifié ; restauré au démarrage suivant comme nouveau tampon non enregistré | — |
+| CodeEditor | instantané de récupération écrit tout de suite (au lieu d'attendre l'anti-rebond de 1,5 s) | recherche dans le dossier, parcours du dossier |
+| FileExplorer | attend l'élément en cours ; `FileTransfer` s'arrête entre deux éléments (atomiques) et rapporte les autres « stopped before this item » (`FileTransferResult.Cancelled`) | copie, déplacement, import, corbeille, zip, extraction, restauration de la corbeille |
+| Settings | attend l'écriture de réglage en cours, qui n'utilise plus le jeton du processus | — |
+| Services (`SampleTickerService`) | `OnStoppingAsync` (une fois) | — |
+| `HackerOs.Commands` | jeton annulé : sortie 130 ; tuée : 137 | `find`, `grep` (dont `-r`), `du`, `zip`, `unzip`, `locate` |
+
+HackPaint n'a pas d'enregistrement : rien à garder. Les autres apps n'ont ni
+état non enregistré ni boucle longue.
 
 ### Graphiques (ADR 0058 §2)
 
