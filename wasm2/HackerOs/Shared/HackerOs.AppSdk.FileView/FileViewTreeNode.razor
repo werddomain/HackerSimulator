@@ -6,7 +6,7 @@
     expansion (lazy-loading children on first expand); the row itself uses the same select/activate/
     rename/context-menu handlers as FileViewDetails/FileViewIcons — a node doesn't know it's in a tree.
 *@
-<li role="treeitem" aria-level="@Depth" aria-selected="@Node.Item.IsSelected" aria-expanded="@AriaExpanded">
+<li role="treeitem" aria-level="@Depth" aria-selected="@(Node.Item.IsSelected ? "true" : "false")" aria-expanded="@AriaExpanded">
     <div class="file-view-tree-row @(Node.Item.IsSelected ? "selected" : null) @(Node.Item.IsCut ? "cut" : null)"
          data-drop-target="@(Node.Item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
          data-item-path="@Node.Item.FullPath.Value"

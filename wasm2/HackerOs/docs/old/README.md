@@ -27,7 +27,7 @@ Read these first regardless of what you're about to work on.
 | [`implementation-status.md`](implementation-status.md) | The current, authoritative state of the migration — what's built, what's open, test counts. |
 | [`webassembly-debugging.md`](webassembly-debugging.md) | How to run and debug the WASM host locally. |
 | [`e2e-test-demo-mode.md`](e2e-test-demo-mode.md) | `--test-demo` switch of the `test/test` host: the button that seeds the deterministic files used by the E2E suites. |
-| [`common-pitfalls.md`](common-pitfalls.md) | Recurring mistakes already made once in this codebase — static-asset routing, manifest/schema drift, IndexedDB versioning, E2E harness setup. Read before touching any of those. |
+| [`common-pitfalls.md`](common-pitfalls.md) | Recurring mistakes already made once in this codebase — static-asset routing, manifest/schema drift, IndexedDB versioning, E2E harness setup, ARIA states bound to `bool`. Read before touching any of those. |
 
 ## Building an app on HackerOS
 

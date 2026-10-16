@@ -23,10 +23,10 @@
                     </p>
                     <div class="layer-options" role="radiogroup" aria-label="Settings layer">
                         <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.User)"
-                                aria-checked="@(_targetLayer == SettingLayer.User)"
+                                aria-checked="@(_targetLayer == SettingLayer.User ? "true" : "false")"
                                 @onclick="() => SelectLayer(SettingLayer.User)">Only me</button>
                         <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.System)"
-                                aria-checked="@(_targetLayer == SettingLayer.System)"
+                                aria-checked="@(_targetLayer == SettingLayer.System ? "true" : "false")"
                                 @onclick="() => SelectLayer(SettingLayer.System)">All users (system default)</button>
                     </div>
                     @if (_targetLayer == SettingLayer.System)
@@ -48,7 +48,7 @@
                         {
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
-                                    aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
                                     disabled="@IsBlocked(DesktopThemeKey)"
                                     @onclick="() => ChangeDesktopTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
@@ -67,7 +67,7 @@
                         {
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
-                                    aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
                                     disabled="@IsBlocked(MobileThemeKey)"
                                     @onclick="() => ChangeMobileTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
@@ -88,7 +88,7 @@
                             {
                                 <button type="button"
                                         class="@AccentOptionClass(accentId)"
-                                        aria-pressed="@(accentId == _appearanceSettings.AccentId)"
+                                        aria-pressed="@(accentId == _appearanceSettings.AccentId ? "true" : "false")"
                                         disabled="@IsBlocked(AccentKey)"
                                         @onclick="() => ChangeAccent(accentId)">
                                     <span class="accent-swatch" aria-hidden="true"></span>

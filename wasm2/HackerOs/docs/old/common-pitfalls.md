@@ -2,9 +2,9 @@
 
 Recurring mistakes this codebase has already made at least once, each expensive
 to re-diagnose from scratch. Read this before touching static web assets,
-`AppManifest`, the IndexedDB schema, or an E2E test harness. Every entry below
-was found and fixed for real in this project; treat a fresh occurrence as a
-regression, not a surprise.
+`AppManifest`, the IndexedDB schema, an E2E test harness, or ARIA attributes in
+Razor markup. Every entry below was found and fixed for real in this project;
+treat a fresh occurrence as a regression, not a surprise.
 
 ## 1. A referenced Blazor WASM "app" project's static assets are unprefixed, not `_content/{Project}/...`
 
@@ -155,3 +155,22 @@ failures but the same tests pass individually, that's resource contention in
 the environment, not a bug in the app — filter E2E projects out of routine
 solution-wide test runs (`--filter "FullyQualifiedName!~E2E.Tests&
 FullyQualifiedName!~Pwa.E2E"`) and run them separately.
+
+## 7. Never bind an ARIA state attribute straight to a `bool`
+
+Blazor renders a `bool` attribute value the HTML way: `true` writes the
+attribute with an **empty** value and `false` drops it. That is right for
+`disabled` or `checked`, but wrong for ARIA states, whose values are the
+strings `"true"`/`"false"`: `aria-checked="@isOn"` renders `aria-checked=""`
+(invalid, so axe reports `aria-required-attr` on a `role="radio"`) and nothing
+at all when off (a toggle button that loses `aria-pressed` is no longer a
+toggle for a screen reader). `HackerOs.UI.E2E.Tests` caught this in Settings,
+the Code Editor and the App Launcher (fixed on `rebuild/5-ui-a11y-mkdir`,
+2026-10-16, 37 attributes).
+
+**Rule:** spell the value out — `aria-pressed="@(isOn ? "true" : "false")"`,
+or a `string?` property when the attribute must disappear in some states
+(`FileViewTreeNode.AriaExpanded`: `null` for a file, which has no
+`aria-expanded`). This applies to `aria-checked`, `aria-selected`,
+`aria-pressed`, `aria-expanded`, `aria-invalid`, `aria-busy`,
+`aria-multiselectable`, and every other `true`/`false` ARIA state.

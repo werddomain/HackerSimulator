@@ -88,14 +88,14 @@
             <button type="button" id="code-activity-explorer"
                     class="activity-button @(_sidebarVisible && _view == SideView.Explorer ? "is-active" : null)"
                     title="Explorer (Ctrl+Shift+E)" aria-label="Explorer"
-                    aria-pressed="@(_sidebarVisible && _view == SideView.Explorer)"
+                    aria-pressed="@(_sidebarVisible && _view == SideView.Explorer ? "true" : "false")"
                     @onclick="() => ToggleView(SideView.Explorer)">
                 <HackerIcon Library="IconLibrary.Lucide" Name="files" Size="22" />
             </button>
             <button type="button" id="code-activity-search"
                     class="activity-button @(_sidebarVisible && _view == SideView.Search ? "is-active" : null)"
                     title="Search (Ctrl+Shift+F)" aria-label="Search"
-                    aria-pressed="@(_sidebarVisible && _view == SideView.Search)"
+                    aria-pressed="@(_sidebarVisible && _view == SideView.Search ? "true" : "false")"
                     @onclick="() => ToggleView(SideView.Search)">
                 <HackerIcon Library="IconLibrary.Lucide" Name="search" Size="22" />
             </button>
@@ -103,7 +103,7 @@
             <button type="button" id="code-toggle-terminal"
                     class="activity-button @(_showPanel && _dockView == DockView.Terminal ? "is-active" : null)"
                     title="Toggle Terminal (Ctrl+`)" aria-label="Terminal"
-                    aria-pressed="@(_showPanel && _dockView == DockView.Terminal)"
+                    aria-pressed="@(_showPanel && _dockView == DockView.Terminal ? "true" : "false")"
                     @onclick="ToggleTerminalPanel">
                 <HackerIcon Library="IconLibrary.Lucide" Name="terminal" Size="22" />
             </button>
@@ -153,7 +153,7 @@
                              title="@(document.Path?.Value ?? document.Title)"
                              @onmouseup="args => OnTabMouseUpAsync(args, document.Id)">
                             <button class="tab-select"
-                                    aria-pressed="@active"
+                                    aria-pressed="@(active ? "true" : "false")"
                                     @onclick="() => ActivateDocumentAsync(document.Id)">
                                 <HackerIcon Library="IconLibrary.Lucide" Name="file-code" Size="14" />
                                 <span class="tab-name">@document.Title</span>
@@ -231,7 +231,7 @@
                 <header class="panel-header">
                     <nav class="dock-tabs" aria-label="Panel views">
                         <button type="button" id="code-dock-status" class="dock-tab @(_dockView == DockView.Status ? "is-active" : null)"
-                                aria-pressed="@(_dockView == DockView.Status)" @onclick="() => ShowDockView(DockView.Status)">
+                                aria-pressed="@(_dockView == DockView.Status ? "true" : "false")" @onclick="() => ShowDockView(DockView.Status)">
                             Status
                             @if (_statusLog.Any(entry => entry.IsError))
                             {
@@ -239,11 +239,11 @@
                             }
                         </button>
                         <button type="button" id="code-dock-terminal" class="dock-tab @(_dockView == DockView.Terminal ? "is-active" : null)"
-                                aria-pressed="@(_dockView == DockView.Terminal)" @onclick="() => ShowDockView(DockView.Terminal)">
+                                aria-pressed="@(_dockView == DockView.Terminal ? "true" : "false")" @onclick="() => ShowDockView(DockView.Terminal)">
                             Terminal
                         </button>
                         <button type="button" id="code-dock-problems" class="dock-tab @(_dockView == DockView.Problems ? "is-active" : null)"
-                                aria-pressed="@(_dockView == DockView.Problems)" @onclick="() => ShowDockView(DockView.Problems)">
+                                aria-pressed="@(_dockView == DockView.Problems ? "true" : "false")" @onclick="() => ShowDockView(DockView.Problems)">
                             Problems
                             <span class="dock-badge">0</span>
                         </button>
@@ -256,7 +256,7 @@
                                 <div class="terminal-tab-shell @(tab.Id == _activeTerminalTabId ? "is-active" : null)" @key="tab.Id">
                                     <button class="terminal-tab-select"
                                             title="@(tab.Terminal?.WorkingDirectory ?? tab.Options.WorkingDirectory)"
-                                            aria-pressed="@(tab.Id == _activeTerminalTabId)"
+                                            aria-pressed="@(tab.Id == _activeTerminalTabId ? "true" : "false")"
                                             @onclick="() => ActivateTerminalTab(tab.Id)">
                                         <HackerIcon Library="IconLibrary.Lucide" Name="terminal" Size="13" />
                                         <span>@tab.Number: @tab.Label</span>
@@ -332,7 +332,7 @@
         </div>
     </div>
 
-    <footer class="statusbar" aria-label="Code editor status">
+    <footer class="statusbar" role="group" aria-label="Code editor status">
         <span class="status-left">
             @if (_workspace is not null)
             {

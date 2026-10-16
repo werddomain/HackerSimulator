@@ -102,7 +102,7 @@
                             <nav class="category-list" aria-label="Application categories">
                                 <button type="button"
                                         class="category-button @(string.IsNullOrEmpty(_selectedCategory) ? "is-active" : null)"
-                                        aria-pressed="@string.IsNullOrEmpty(_selectedCategory)"
+                                        aria-pressed="@(string.IsNullOrEmpty(_selectedCategory) ? "true" : "false")"
                                         @onclick="() => SelectCategory(null)">
                                     All
                                 </button>
@@ -111,7 +111,7 @@
                                     bool isSelected = StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, category);
                                     <button type="button"
                                             class="category-button @(isSelected ? "is-active" : null)"
-                                            aria-pressed="@isSelected"
+                                            aria-pressed="@(isSelected ? "true" : "false")"
                                             @onclick="() => SelectCategory(category)">
                                         @FormatCategory(category)
                                     </button>
@@ -143,7 +143,7 @@
                                     <div id="@GetOptionId(app)"
                                          class="app-row @(isSelected ? "is-focused" : null)"
                                          role="row"
-                                         aria-selected="@isSelected"
+                                         aria-selected="@(isSelected ? "true" : "false")"
                                          @onmouseenter="() => SetSelectedIndex(currentIndex)">
                                         <div class="app-launch-cell" role="gridcell">
                                             <button type="button"
@@ -164,7 +164,7 @@
                                                     class="pin-toggle @(isPinned ? "is-pinned" : null)"
                                                     disabled="@(!CanManagePins)"
                                                     aria-label="@(isPinned ? $"Unpin {app.Name} from Start menu" : $"Pin {app.Name} to Start menu")"
-                                                    aria-pressed="@isPinned"
+                                                    aria-pressed="@(isPinned ? "true" : "false")"
                                                     title="@(isPinned ? "Unpin from Start menu" : "Pin to Start menu")"
                                                     @onclick="() => TogglePinAsync(app.Id)">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="@(isPinned ? "pin-off" : "pin")" Size="16" Title="" />

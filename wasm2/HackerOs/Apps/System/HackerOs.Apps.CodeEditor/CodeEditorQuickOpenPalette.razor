@@ -40,7 +40,7 @@
                     int index = i;
                     <li class="quick-open-item @(index == _selected ? "is-selected" : null)"
                         role="option"
-                        aria-selected="@(index == _selected)"
+                        aria-selected="@(index == _selected ? "true" : "false")"
                         @onmouseenter="() => _selected = index"
                         @onclick="() => PickAsync(file)">
                         <HackerIcon Library="IconLibrary.Lucide" Name="file-code" Size="15" />

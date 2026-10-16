@@ -227,11 +227,12 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
   2026-10-16 (après `dotnet build HackerOs.sln -c Release`, une suite à la
   fois) :
   - `HackerOs.E2E.Tests` : 16/16 ;
-  - `HackerOs.UI.E2E.Tests` : 8/10. Deux échecs de l'app, pas du harnais :
-    violations axe (`color-contrast` dans le lanceur et l'explorateur,
-    `aria-required-attr` dans Paramètres et le Code Editor,
-    `aria-prohibited-attr` dans le Code Editor) et bouton « Back » du shell
-    mobile absent après le rechargement de `ClockPanelMobileToggleTests` ;
+  - `HackerOs.UI.E2E.Tests` : 10/10 depuis `rebuild/5-ui-a11y-mkdir`
+    (2026-10-16 : contraste de `--hos-text-muted` du thème HackerOS, états
+    ARIA écrits en `"true"`/`"false"`, voir
+    [`old/common-pitfalls.md`](old/common-pitfalls.md) §7 ; le test du choix
+    Mobile attend la bascule avant de recharger, car l'écriture du réglage
+    dans `~/.config/hackeros` prend environ 2 s dans le navigateur) ;
   - `HackerOs.Pwa.E2E.Tests` : 0/5, le conteneur n'a pas d'IPv6 et la suite
     se lie volontairement à `[::1]` (le service worker refuse
     `127.0.0.1` et `localhost`) : `SocketException : Address family not

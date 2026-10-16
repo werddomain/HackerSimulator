@@ -49,7 +49,7 @@
                 {
                     <tr class="@(_selected.Contains(item.Name) ? "selected" : null)"
                         tabindex="0"
-                        aria-selected="@_selected.Contains(item.Name)"
+                        aria-selected="@(_selected.Contains(item.Name) ? "true" : "false")"
                         @onclick="args => Select(item, args)"
                         @ondblclick="() => RestoreAsync([item])"
                         @onkeydown="args => OnRowKeyDownAsync(item, args)">

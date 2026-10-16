@@ -10,7 +10,7 @@
 *@
 <div class="file-view-icons"
      role="listbox"
-     aria-multiselectable="@Owner.AllowMultiSelect"
+     aria-multiselectable="@(Owner.AllowMultiSelect ? "true" : "false")"
      @ref="_gridElement"
      @onmousedown="OnGridMouseDownAsync"
      @onmousemove="OnGridMouseMove"
@@ -21,7 +21,7 @@
         <div role="option"
              @key="item.FullPath.Value"
              data-item-path="@item.FullPath.Value"
-             aria-selected="@item.IsSelected"
+             aria-selected="@(item.IsSelected ? "true" : "false")"
              class="file-view-tile @(item.IsSelected ? "selected" : null) @(item.IsCut ? "cut" : null)"
              data-drop-target="@(item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
              tabindex="@(IsTabStop(item) ? 0 : -1)"
