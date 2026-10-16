@@ -27,7 +27,9 @@ internal sealed class VirtualFileSystemFixture
     internal static readonly VirtualHardwareProfile Hardware =
         new("test-rig", cpuCapacity: 1.5, memoryCapacityBytes: 4L * 1024 * 1024 * 1024, 1, 1);
 
-    internal VirtualFileSystemFixture()
+    /// <param name="cpuAccountant">Optional measured CPU (ADR 0066); absent, <c>/proc</c> reads the simulator.</param>
+    /// <param name="memoryAccountant">Optional measured memory (ADR 0066); absent, <c>/proc</c> reads the simulator.</param>
+    internal VirtualFileSystemFixture(ICpuTimeAccountant? cpuAccountant = null, IMemoryAccountant? memoryAccountant = null)
     {
         Clock = new ManualSimulationClock(BootUtc, TimeSpan.FromMilliseconds(100));
         Root = new MutationCountingProvider(new InMemoryFileSystemRepository());
@@ -38,7 +40,7 @@ internal sealed class VirtualFileSystemFixture
             Hardware,
             Clock,
             environments: () => Environments,
-            metrics: new ProcMetricsSources(Cpu, ProcessIo, Disk, Network, () => Router!));
+            metrics: new ProcMetricsSources(Cpu, ProcessIo, Disk, Network, () => Router!, cpuAccountant, memoryAccountant));
         Dev = new DevFileSystemProvider(Clock);
         Router = new FileSystemMountRouter(Root,
         [
@@ -87,9 +89,11 @@ internal sealed class VirtualFileSystemFixture
     internal FileSystemSeeder Seeder { get; }
 
     /// <summary>Seeds the clean profile, then forgets the seeding writes so tests count only their own.</summary>
-    internal static async Task<VirtualFileSystemFixture> CreateSeededAsync()
+    internal static async Task<VirtualFileSystemFixture> CreateSeededAsync(
+        ICpuTimeAccountant? cpuAccountant = null,
+        IMemoryAccountant? memoryAccountant = null)
     {
-        VirtualFileSystemFixture fixture = new();
+        VirtualFileSystemFixture fixture = new(cpuAccountant, memoryAccountant);
         await fixture.Seeder.SeedAsync("alice", "users");
         fixture.Root.ResetCounts();
         return fixture;

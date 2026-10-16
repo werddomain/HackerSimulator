@@ -57,4 +57,7 @@
     <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
   </ItemGroup>
 
+  <!-- ADR 0066: optional CPU/memory accounting (HackerOsCpuAccounting, HackerOsMemoryAccounting). -->
+  <Import Project="..\..\build\HackerOs.ResourceAccounting.targets" />
+
 </Project>

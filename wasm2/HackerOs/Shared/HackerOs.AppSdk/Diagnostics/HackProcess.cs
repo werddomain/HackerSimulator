@@ -91,6 +91,14 @@ public sealed class HackProcess
     /// <summary>Gets the resident memory, in bytes (<c>VmRSS</c>).</summary>
     public long WorkingSet64 { get; private set; }
 
+    /// <summary>
+    /// Gets the private memory, in bytes: the process's own share of the heap (<c>RssAnon</c>),
+    /// without the assemblies it shares with others nor what the OS holds for it, like
+    /// <c>System.Diagnostics.Process.PrivateMemorySize64</c>. When the OS does not measure memory
+    /// (<c>MemSource: simulated</c>, no <c>RssAnon</c> line), it equals <see cref="WorkingSet64"/>.
+    /// </summary>
+    public long PrivateMemorySize64 { get; private set; }
+
     /// <summary>Gets the CPU usage at the last scheduler sample, in percent of one core (can exceed 100 on several cores).</summary>
     public double CpuUsage { get; private set; }
 
@@ -348,6 +356,7 @@ public sealed class HackProcess
         (State, StateCode) = ParseState(Field(status, "State"));
         StartTime = startTime;
         WorkingSet64 = ParseKilobytes(Field(status, "VmRSS"));
+        PrivateMemorySize64 = status.ContainsKey("RssAnon") ? ParseKilobytes(Field(status, "RssAnon")) : WorkingSet64;
         CpuUsage = double.TryParse(Field(status, "Cpu"), NumberStyles.Float, CultureInfo.InvariantCulture, out double cpu) ? cpu : 0;
         Arguments = cmdline is null ? [] : cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
         CommandLine = string.Join(' ', Arguments.Select(static argument => argument.Contains(' ', StringComparison.Ordinal) ? $"\"{argument}\"" : argument));

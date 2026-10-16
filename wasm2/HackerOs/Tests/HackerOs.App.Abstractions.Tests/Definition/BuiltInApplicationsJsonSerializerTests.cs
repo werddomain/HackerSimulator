@@ -30,6 +30,40 @@ public sealed class BuiltInApplicationsJsonSerializerTests
     }
 
     [Fact]
+    public void The_optional_image_round_trips_with_sorted_assemblies()
+    {
+        // ADR 0068: the host build sizes each app's assemblies; a document without them stays valid.
+        AppImage image = new([new("Zeta.dll", 10, Shared: true), new("App.dll", 2_048, Shared: false)]);
+        string json = BuiltInApplicationsJsonSerializer.SerializeCanonical(
+        [
+            new BuiltInApplication(false, Manifest("org.hackeros.tests.alpha"), image),
+            new BuiltInApplication(false, Manifest("org.hackeros.tests.beta"))
+        ]);
+
+        Assert.Contains("\"image\":{\"assemblies\":[{\"name\":\"App.dll\",\"bytes\":2048,\"shared\":false},{\"name\":\"Zeta.dll\",\"bytes\":10,\"shared\":true}]}", json, StringComparison.Ordinal);
+        IReadOnlyList<BuiltInApplication> read = BuiltInApplicationsJsonSerializer.DeserializeStrict(json);
+        Assert.Equal(2_048, read[0].Image!.OwnBytes);
+        Assert.Equal(10, read[0].Image!.SharedBytes);
+        Assert.Equal(2_058, read[0].Image!.TotalBytes);
+        Assert.Null(read[1].Image);
+        Assert.Equal(json, BuiltInApplicationsJsonSerializer.SerializeCanonical(read));
+    }
+
+    [Theory]
+    [InlineData("""{"assemblies":[{"name":"A.dll","bytes":-1,"shared":false}]}""")]
+    [InlineData("""{"assemblies":[{"name":"","bytes":1,"shared":false}]}""")]
+    [InlineData("""{"assemblies":[{"name":"A.dll","bytes":1}]}""")]
+    [InlineData("""{"assemblies":[{"name":"A.dll","bytes":1,"shared":false,"extra":1}]}""")]
+    [InlineData("""{"files":[]}""")]
+    public void A_malformed_image_is_rejected(string image)
+    {
+        string valid = BuiltInApplicationsJsonSerializer.SerializeCanonical([new BuiltInApplication(false, Manifest("org.hackeros.tests.alpha"))]);
+        string json = valid.Replace("}}]}", "}," + "\"image\":" + image + "}]}", StringComparison.Ordinal);
+
+        Assert.Throws<JsonException>(() => BuiltInApplicationsJsonSerializer.DeserializeStrict(json));
+    }
+
+    [Fact]
     public void Empty_document_is_valid() =>
         Assert.Empty(BuiltInApplicationsJsonSerializer.DeserializeStrict(BuiltInApplicationsJsonSerializer.SerializeCanonical([])));
 

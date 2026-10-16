@@ -30,7 +30,8 @@ public sealed class MinimalAppExecutionContext(
     string? homeDirectory = null,
     IAppEnvironmentGateway? environment = null,
     bool isRootElevated = false,
-    IAppClipboardGateway? clipboard = null) : IAppExecutionContext
+    IAppClipboardGateway? clipboard = null,
+    ProcessId? processId = null) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
     public Guid InstanceId { get; } = Guid.NewGuid();
@@ -39,7 +40,7 @@ public sealed class MinimalAppExecutionContext(
     public IReadOnlySet<string> GrantedCapabilities { get; } =
         new HashSet<string>(manifest.Capabilities, StringComparer.Ordinal);
     public SessionId SessionId { get; } = sessionId ?? SessionId.FromGuid(Guid.NewGuid());
-    public ProcessId ProcessId { get; } = ProcessId.FromInt64(1);
+    public ProcessId ProcessId { get; } = processId ?? ProcessId.FromInt64(1);
     public CancellationToken CancellationToken => CancellationToken.None;
 
     public ICapabilityChecker Capabilities =>

@@ -1,5 +1,6 @@
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Metrics;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Core.FileSystem.Virtual;
 
@@ -16,12 +17,24 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// Lazily resolves the mount table behind <c>/proc/mounts</c>. Lazy because the router owns this
 /// very provider: resolving it eagerly would close a construction cycle.
 /// </param>
+/// <param name="CpuAccountant">
+/// Measured CPU per process (ADR 0066, 0067), behind <c>Cpu</c> and <c>CpuSource</c> of
+/// <c>/proc/&lt;pid&gt;/status</c>; missing or not measuring, the simulated value applies.
+/// </param>
+/// <param name="MemoryAccountant">
+/// Measured memory per process (ADR 0066, 0068), behind <c>VmRSS</c>, the layer fields
+/// (<c>RssAnon</c>, <c>RssFile</c>, <c>VmData</c>, <c>VmExe</c>, <c>HackAllocBytes</c>) and
+/// <c>MemSource</c> of <c>/proc/&lt;pid&gt;/status</c>, and the measured lines of
+/// <c>/proc/meminfo</c>; missing or not measuring, the simulated value applies.
+/// </param>
 public sealed record ProcMetricsSources(
     ICpuTimeAccounting? Cpu = null,
     IProcessIoAccounting? ProcessIo = null,
     IBlockDeviceStatistics? Disk = null,
     INetworkInterfaceStatistics? Network = null,
-    Func<IFileSystemMountRouter>? Mounts = null);
+    Func<IFileSystemMountRouter>? Mounts = null,
+    ICpuTimeAccountant? CpuAccountant = null,
+    IMemoryAccountant? MemoryAccountant = null);
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>

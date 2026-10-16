@@ -408,6 +408,7 @@
 
         DialogParameters parameters = new()
         {
+            { nameof(OpenWithDialog.OwnerAppContext), AppContext },
             { nameof(OpenWithDialog.FilePath), fullPath },
             { nameof(OpenWithDialog.AvailableApps), candidates }
         };
@@ -714,7 +715,11 @@
     /// <summary>The "Replace / Keep both / Skip" window; closing it skips the item.</summary>
     private async Task<FileConflictResolution> AskConflictAsync(FileTransferConflict conflict)
     {
-        DialogParameters parameters = new() { { nameof(FileConflictDialog.Conflict), conflict } };
+        DialogParameters parameters = new()
+        {
+            { nameof(FileConflictDialog.OwnerAppContext), AppContext },
+            { nameof(FileConflictDialog.Conflict), conflict }
+        };
         IDialogReference dialog = await MudDialogService.ShowAsync<FileConflictDialog>("Name conflict", parameters);
         DialogResult? result = await dialog.Result;
         return result is { Canceled: false, Data: FileConflictResolution resolution }
@@ -942,6 +947,7 @@
 
         DialogParameters parameters = new()
         {
+            { nameof(FilePropertiesDialog.OwnerAppContext), AppContext },
             { nameof(FilePropertiesDialog.EntryName), item.FileName },
             { nameof(FilePropertiesDialog.Path), item.FullPath.Value },
             { nameof(FilePropertiesDialog.Metadata), item.Metadata }
@@ -962,6 +968,7 @@
 
         DialogParameters parameters = new()
         {
+            { nameof(OpenWithDialog.OwnerAppContext), AppContext },
             { nameof(OpenWithDialog.FilePath), item.FullPath.Value },
             { nameof(OpenWithDialog.AvailableApps), windowApps }
         };

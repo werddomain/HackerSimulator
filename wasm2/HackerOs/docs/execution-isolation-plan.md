@@ -124,20 +124,23 @@ Ordre :
 - [x] Écrire ce plan et les ADR 0066 à 0070 (2026-10-16).
 
 ### Mesure optionnelle (ADR 0066)
-- [ ] Propriétés MSBuild, `.targets` et référence conditionnelle.
-- [ ] `appsettings.json` des trois hôtes et lecture à la composition.
-- [ ] Retour au simulateur, `CpuSource`/`MemSource`, mention « estimated ».
-- [ ] Tests des quatre combinaisons, sans crochet quand c'est coupé.
+Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-accounting.md)).
+- [x] Propriétés MSBuild, `.targets` et référence conditionnelle.
+- [x] `appsettings.json` des trois hôtes et lecture à la composition.
+- [x] Retour au simulateur, `CpuSource`/`MemSource`, mention « estimated ».
+- [x] Tests des quatre combinaisons, sans crochet quand c'est coupé.
+- [x] Crochet commun de changement de contexte (`AsyncLocal` avec rappel, contrat d'observateur `IExecutionContextSwitchObserver`, diffuseur), installé seulement si une mesure est active.
 
 ### CPU (ADR 0067)
-- [ ] Crochet de changement de contexte et comptage `utime`/`stime`/compositeur.
+- [ ] Comptage `utime`/`stime`/compositeur sur le crochet de changement de contexte (crochet livré par `5-accounting-switches`).
 - [ ] `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`.
 - [ ] Long tasks, « Not responding », `Responding:` et colonne du gestionnaire de tâches.
 - [ ] Test de surcoût.
 
 ### Mémoire (ADR 0068)
-- [ ] Couches image, ressources de l'OS, allocations, résident.
-- [ ] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
+Fait par `rebuild/5-memory-accounting` ([`memory-accounting.md`](memory-accounting.md)).
+- [x] Couches image, ressources de l'OS, allocations, résident.
+- [x] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
 
 ### Arrêt propre (ADR 0069)
 - [ ] `StopRequested`, `TerminateAsync`, `ProcessExitReason.Terminated`.
@@ -153,7 +156,7 @@ Ordre :
 - [ ] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071).
 
 ### Apps existantes (section 5.1)
-- [ ] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test).
+- [x] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test `AmbientFrameSourceTests`, `5-accounting-switches`).
 - [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
 - [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
 - [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.

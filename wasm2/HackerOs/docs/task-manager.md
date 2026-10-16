@@ -47,10 +47,11 @@ l'ADR 0055 est retirée de `build/HackerOs.Apps.targets`.
 | `Processes/EndTaskRunner.cs` | arrêt d'une sélection, refus signalés processus par processus |
 | `Tabs/*.razor` | un composant par onglet et le panneau de détail, chacun avec son CSS isolé |
 
-Les composants des onglets qui appellent le SDK (`ProcessesTab`,
-`ProcessDetailPanel`, `ServicesTab`) héritent de `HackComponentBase` : leurs
+Tous les composants des onglets héritent de `HackComponentBase` : leurs
 gestionnaires d'événements s'exécutent dans le contexte ambiant de l'app
-(ADR 0043).
+(ADR 0043). `PerformanceTab`, `DiskTab` et `NetworkTab`, qui n'appellent pas le
+SDK, y sont passés en phase 5 pour que leur temps soit compté à l'app et non au
+compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-existantes)).
 
 ## Fonctionnement
 
@@ -73,6 +74,17 @@ gestionnaires d'événements s'exécutent dans le contexte ambiant de l'app
 
 ### Processus
 
+- Mention « estimated » (ADR 0066) : l'en-tête des colonnes CPU et Memory porte
+  une petite étiquette en pointillés tant qu'une ligne au moins vient du
+  simulateur (`CpuSource:` / `MemSource:` de `/proc/<pid>/status` différent de
+  `measured`, lus dans `HackProcess.Status`). Son infobulle le dit. Voir
+  [`resource-accounting.md`](resource-accounting.md). Avec la mémoire mesurée
+  (ADR 0068, [`memory-accounting.md`](memory-accounting.md)), la colonne
+  Memory montre `VmRSS` mesuré pour toutes les apps intégrées et l'étiquette
+  disparaît de cette colonne dès que toutes les lignes sont mesurées ; le
+  détail d'un processus montre les couches (`RssAnon`, `RssFile`, `VmData`,
+  `VmExe`, `HackAllocBytes`) dans son `status` complet. L'app n'a pas changé :
+  elle lit toujours `HackProcess`.
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -116,8 +128,9 @@ await p.KillAsync();
 ```
 
 - Propriétés : `Id`, `ParentId`, `ProcessName`, `AppId`, `Kind`, `UserId`,
-  `UserName`, `SessionId`, `State`, `StateCode`, `StartTime`, `WorkingSet64`,
-  `CpuUsage`, `Arguments`, `CommandLine`, `WorkingDirectory`, `IoCounters`,
+  `UserName`, `SessionId`, `State`, `StateCode`, `StartTime`, `WorkingSet64`
+  (`VmRSS`), `PrivateMemorySize64` (`RssAnon` quand la mémoire est mesurée,
+  sinon égal à `WorkingSet64`, ADR 0068), `CpuUsage`, `Arguments`, `CommandLine`, `WorkingDirectory`, `IoCounters`,
   `ReadBytes`, `WriteBytes`, `Status`, `HasExited` ; `GetChildren(liste)`.
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
   `StartTime`), `status`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.

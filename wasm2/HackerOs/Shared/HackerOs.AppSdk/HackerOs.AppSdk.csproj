@@ -5,6 +5,12 @@
     <ProjectReference Include="..\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- ADR 0066/0067: only the optional resource-accounting project may install the context-switch
+         hook on HackExecutionContext's ambient frame; apps never can. -->
+    <InternalsVisibleTo Include="HackerOs.Platform.ResourceAccounting" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

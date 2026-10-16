@@ -136,7 +136,7 @@ public sealed class SampleTickerServiceTests
 
     // ──────────────────────────── Test Mocks / Stubs ─────────────────────────────
 
-    private sealed class TestExecutionContext : IAppExecutionContext
+    internal sealed class TestExecutionContext : IAppExecutionContext
     {
         public TestExecutionContext(AppManifest manifest, InMemoryEventBus eventBus, InMemoryTopicMessageBus topicBus)
         {

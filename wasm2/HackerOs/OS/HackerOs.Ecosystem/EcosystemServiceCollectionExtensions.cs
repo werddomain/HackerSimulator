@@ -28,6 +28,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
+using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
@@ -162,6 +163,13 @@ public static class EcosystemServiceCollectionExtensions
         // Measurements of ADR 0057, in memory, from zero at each start, never persisted. CPU time is
         // simulated (fed by ResourceSamplingService); disk and network bytes are really counted by
         // the persistence, the filesystem service and each app's network gateway.
+        // Optional measured CPU and memory (ADR 0066): AddHackerOsResourceAccounting, called by the
+        // host before this method, may already have registered them. Otherwise both measurements are
+        // off and every per-process figure stays simulated, exactly as before phase 5.
+        services.TryAddSingleton(ResourceAccountingPlan.Disabled);
+        services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
+        services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
+        services.TryAddSingleton<IKernelMemoryLedger>(NullKernelMemoryLedger.Instance);
         services.AddScoped<IProcessIoAccounting, ProcessIoAccounting>();
         services.AddScoped<IBlockDeviceStatistics>(_ => new BlockDeviceStatistics());
         services.AddScoped<INetworkInterfaceStatistics, NetworkInterfaceStatistics>();
@@ -205,7 +213,9 @@ public static class EcosystemServiceCollectionExtensions
                         provider.GetRequiredService<IProcessIoAccounting>(),
                         provider.GetRequiredService<IBlockDeviceStatistics>(),
                         provider.GetRequiredService<INetworkInterfaceStatistics>(),
-                        () => provider.GetRequiredService<IFileSystemMountRouter>()))),
+                        () => provider.GetRequiredService<IFileSystemMountRouter>(),
+                        provider.GetRequiredService<ICpuTimeAccountant>(),
+                        provider.GetRequiredService<IMemoryAccountant>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -449,7 +459,9 @@ public static class EcosystemServiceCollectionExtensions
                 new AppDriveGateway(
                     () => provider.GetRequiredService<IFileSystemMountRouter>(),
                     VirtualHardwareProfile.Default,
-                    provider.GetRequiredService<IStorageUsageProvider>())),
+                    provider.GetRequiredService<IStorageUsageProvider>()),
+                // ADR 0068: write-stream buffers and sockets in flight, charged to each app's process.
+                provider.GetRequiredService<IKernelMemoryLedger>()),
             // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
             clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
@@ -466,7 +478,9 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
-            new HackerOs.Platform.Core.Clipboard.SystemClipboard(provider.GetRequiredService<IEventBus>()));
+            new HackerOs.Platform.Core.Clipboard.SystemClipboard(
+                provider.GetRequiredService<IEventBus>(),
+                provider.GetRequiredService<IKernelMemoryLedger>()));
         // Shared clipboard with the real machine (ADR 0065), started by App.razor once settings exist.
         // Depends on IJSRuntime through its channel — see this file's IJSRuntime scoping note.
         services.AddScoped<HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardChannel, HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel>();
@@ -530,7 +544,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),
             provider.GetRequiredService<AppCatalog>(),
-            provider.GetRequiredService<IAppEnablementRegistry>()));
+            provider.GetRequiredService<IAppEnablementRegistry>(),
+            provider.GetRequiredService<IKernelMemoryLedger>()));
         // Shells hosted by terminal emulators through HackShell (ADR 0056 section 7, shell.host).
         services.AddScoped<ShellHostService>(provider => new ShellHostService(
             provider.GetRequiredService<ShellInterpreter>(),
