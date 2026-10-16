@@ -260,7 +260,10 @@ la préparation des ressources et avant les cibles Blazor) :
    le valide, construit le catalogue avec `AppCatalog.Build` (identifiant en
    double, dépendance manquante ou cyclique = `HOSAPP0021`) et écrit
    `obj/<config>/<tfm>/BuiltInApplications.json` seulement si ses octets changent
-   (pas de recompilation inutile) ;
+   (pas de recompilation inutile) ; elle y mesure aussi l'**image** de chaque
+   app (ADR 0068) à partir du chemin de son assembly et de sa liste de
+   dépendances, que `GetHackerOsAppManifests` renvoie (`AssemblyPath`,
+   `DependenciesFile`) ;
 4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
 5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
    retirant d'abord un éventuel doublon écrit à la main).
@@ -273,22 +276,34 @@ générateur n'apparaît pas dans `_framework`.
 ### Format
 
 ```json
-{"schemaVersion":1,"applications":[{"isSystemApp":false,"manifest":{"schemaVersion":1,"id":"org.hackeros.calculator", "...": "..."}}]}
+{"schemaVersion":1,"applications":[{"isSystemApp":false,"manifest":{"schemaVersion":1,"id":"org.hackeros.calculator", "...": "..."},"image":{"assemblies":[{"name":"HackerOs.Apps.Calculator.dll","bytes":17408,"shared":false},{"name":"HackerOs.AppSdk.dll","bytes":400896,"shared":true}]}}]}
 ```
+
+`image` (facultatif, ADR 0068) liste les assemblies que l'app mappe, triées par
+nom, avec leur taille : la sienne (`shared: false`, `VmExe`) et les
+bibliothèques qu'elle référence, directement ou non (`shared: true`), hors
+runtime et framework .NET (`System.*`, `Microsoft.*`). Le calcul est fait par
+`AppImageInspector` (métadonnées seulement, aucun code chargé) ; voir
+[`memory-accounting.md`](memory-accounting.md). Le `manifest.json` versionné
+ne change pas : les tailles ne vivent que dans ce fichier produit à chaque
+build.
 
 `BuiltInApplicationsJsonSerializer` (`HackerOs.App.Abstractions`, à côté
 d'`AppManifestJsonSerializer`) écrit la forme canonique (applications triées par
 identifiant, manifestes canoniques) et relit en mode strict (propriété inconnue
 ou en double, `schemaVersion` autre que 1, `isSystemApp` non booléen = erreur ;
 chaque manifeste passe par `AppManifestJsonSerializer.DeserializeStrict`). Le
-type `BuiltInApplication(IsSystemApp, Manifest)` porte une entrée. Le fichier
+type `BuiltInApplication(IsSystemApp, Manifest, Image)` porte une entrée
+(`Image` vaut `null` quand le champ est absent). Le fichier
 n'est jamais écrit à la main ni versionné.
 
 ### Lecture au démarrage
 
 `BuildKnownLazyApps` lit la ressource `HackerOs.BuiltInApplications.json` et
 construit `Catalog` avec `AppCatalog.BuildFromBuiltInApplications` : le catalogue
-porte les drapeaux système (voir « Apps système » ci-dessous). Seul le
+porte les drapeaux système (voir « Apps système » ci-dessous), et expose
+`BuildKnownLazyApps.Images` (image de chaque app, lue par la mesure de la
+mémoire). Seul le
 JSON est lu : les DLL d'apps restent chargées au premier lancement et les
 classes `AppDefinition` ne sont jamais instanciées au runtime.
 

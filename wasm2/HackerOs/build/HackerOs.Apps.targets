@@ -14,8 +14,8 @@
                                     HOSAPP0030 for an app, HOSSDK0001 for an SDK library. There is
                                     no exemption: the temporary list of ADR 0055 §6 was removed by
                                     the 4-sdk-boundary-final chantier.
-      GetHackerOsAppManifests       query target used by hosts: the manifest files of this project
-                                    and the name of its assembly.
+      GetHackerOsAppManifests       query target used by hosts: the manifest files of this project,
+                                    the name and path of its assembly and its dependency list.
 
     Host projects ($(HackerOsAppHost) == true, today only OS/HackerOs.Ecosystem):
       CollectHackerOsBuiltInApplications
@@ -24,6 +24,7 @@
                                     IsSystemApp metadata) into BuiltInApplications.json, embeds it as
                                     HackerOs.BuiltInApplications.json and marks each app assembly
                                     BlazorWebAssemblyLazyLoad. Installing an app = one ProjectReference.
+                                    Each entry also carries the app's image (assembly sizes, ADR 0068).
   -->
 
   <PropertyGroup>
@@ -139,6 +140,8 @@
       <_HackerOsAppManifestOutput Include="@(_HackerOsAppManifestLine)"
                                   AssemblyName="$(AssemblyName)"
                                   AssemblyFileName="$(TargetFileName)"
+                                  AssemblyPath="$(TargetPath)"
+                                  DependenciesFile="$(_HackerOsManifestDependencies)"
                                   AppProject="$(MSBuildProjectFullPath)" />
     </ItemGroup>
   </Target>
@@ -233,8 +236,11 @@
       <_HackerOsBuiltInApplicationsList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-builtin-applications.txt'))</_HackerOsBuiltInApplicationsList>
     </PropertyGroup>
     <ItemGroup>
-      <!-- "<IsSystemApp>|<path>"; an empty flag (metadata not set) means false. -->
-      <_HackerOsBuiltInListLine Include="@(_HackerOsBuiltInManifest->'%(IsSystemApp)|%(Identity)')" />
+      <!--
+        "<IsSystemApp>|<manifest>|<assembly>|<dependency list>"; an empty flag (metadata not set)
+        means false. The assembly and its dependency list size the app's image (ADR 0068).
+      -->
+      <_HackerOsBuiltInListLine Include="@(_HackerOsBuiltInManifest->'%(IsSystemApp)|%(Identity)|%(AssemblyPath)|%(DependenciesFile)')" />
       <_HackerOsLazyAssembly Include="@(_HackerOsBuiltInManifest->'%(AssemblyFileName)'->Distinct())" />
     </ItemGroup>
     <WriteLinesToFile File="$(_HackerOsBuiltInApplicationsList)"

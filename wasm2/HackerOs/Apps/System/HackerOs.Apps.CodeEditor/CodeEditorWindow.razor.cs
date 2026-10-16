@@ -188,6 +188,8 @@ public partial class CodeEditorWindow
     [JSInvokable]
     public async Task OnEditorChanged(string documentId, string content)
     {
+        // A JavaScript callback runs outside the app's ambient frame (ADR 0043, 0067): enter it first.
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
         CodeEditorDocument? document = FindDocument(documentId);
         if (document is null)
         {
@@ -212,6 +214,8 @@ public partial class CodeEditorWindow
     [JSInvokable]
     public Task OnDirtyChanged(string documentId, bool dirty)
     {
+        // A JavaScript callback runs outside the app's ambient frame (ADR 0043, 0067): enter it first.
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
         if (FindDocument(documentId) is { } document)
         {
             _dirtyReports[document.Id] = dirty;
@@ -226,6 +230,8 @@ public partial class CodeEditorWindow
     [JSInvokable]
     public Task OnCursorChanged(int line, int column, int selectedLength)
     {
+        // A JavaScript callback runs outside the app's ambient frame (ADR 0043, 0067): enter it first.
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
         _cursorStatus?.Update(line, column, selectedLength);
         return Task.CompletedTask;
     }
@@ -234,6 +240,8 @@ public partial class CodeEditorWindow
     [JSInvokable]
     public async Task OnShortcut(string name)
     {
+        // A JavaScript callback runs outside the app's ambient frame (ADR 0043, 0067): enter it first.
+        using IDisposable scope = HackExecutionContext.Enter(AppContext);
         switch (name)
         {
             case "save": await SaveActiveAsync(); break;

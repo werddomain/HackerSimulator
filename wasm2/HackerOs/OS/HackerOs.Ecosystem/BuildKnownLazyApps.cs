@@ -19,6 +19,14 @@ public static class BuildKnownLazyApps
     /// <summary>Gets the validated immutable catalog used for lazy descriptor discovery.</summary>
     public static AppCatalog Catalog { get; } = CreateCatalog();
 
+    /// <summary>
+    /// Gets the executable image of each built-in app, by app id: the assembly sizes the host build
+    /// measured (ADR 0068, image layer). An app missing here has no image layer.
+    /// </summary>
+    public static IReadOnlyDictionary<string, AppImage> Images { get; } = Applications
+        .Where(static application => application.Image is not null)
+        .ToDictionary(static application => application.Manifest.Id, static application => application.Image!, StringComparer.Ordinal);
+
     private static AppCatalog CreateCatalog()
     {
         if (Applications.Count == 0)

@@ -225,9 +225,10 @@ public sealed class AppExecutionContextFactory
                 isRootElevated,
                 _fileSystem,
                 _clock);
-        AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId);
+        AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
-        AppFileSystemGateway fileSystem = new(_fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise);
+        AppFileSystemGateway fileSystem = new(
+            _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory);
         AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
 
         AppExecutionContext context = new(
@@ -270,7 +271,8 @@ public sealed class AppExecutionContextFactory
                     _proxy,
                     _metrics?.Network,
                     _metrics?.ProcessIo,
-                    process.Pid),
+                    process.Pid,
+                    _metrics?.KernelMemory),
             _metrics?.Drives,
             clipboardGateway,
             administration.SystemSettings,
@@ -395,7 +397,12 @@ public sealed record AppCatalogGatewayServices(
 /// <param name="Network">Interface counters charged with each app's traffic (<c>/proc/net/dev</c>).</param>
 /// <param name="ProcessIo">Per-process I/O accounting charged with each app's traffic (<c>/proc/&lt;pid&gt;/io</c>).</param>
 /// <param name="Drives">Drive information behind <see cref="IAppExecutionContext.Drives"/>; shared by every context.</param>
+/// <param name="KernelMemory">
+/// Ledger charged with the memory the OS holds for each app (write-stream buffers, sockets in
+/// flight; ADR 0068); <see langword="null"/> or not tracking when memory is not measured.
+/// </param>
 public sealed record SystemMetricsServices(
     INetworkInterfaceStatistics? Network = null,
     IProcessIoAccounting? ProcessIo = null,
-    HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null);
+    HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null,
+    IKernelMemoryLedger? KernelMemory = null);

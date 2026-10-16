@@ -35,6 +35,29 @@ ligne interdits, manifestes régénérés, frontière du SDK) : voir
 [`project-overview.md`](project-overview.md#règles-vérifiées-au-build). Un
 `manifest.json` d'app modifié par le build est un changement à committer.
 
+### Mesure des ressources (ADR 0066)
+
+Deux propriétés MSBuild choisissent le code de mesure livré par les hôtes
+(`build/HackerOs.ResourceAccounting.targets`, importé par les trois hôtes) :
+
+| Propriété | Défaut | Effet à `false` |
+|---|---|---|
+| `HackerOsCpuAccounting` | `true` | mesure du temps CPU (ADR 0067) coupée ; option d'exécution `HackerOs.ResourceAccounting.Cpu.IsSupported=false` |
+| `HackerOsMemoryAccounting` | `true` | mesure de la mémoire (ADR 0068) coupée ; option `HackerOs.ResourceAccounting.Memory.IsSupported=false` |
+
+Les deux à `false` : `HackerOs.Platform.ResourceAccounting` n'est plus
+référencé, son code n'est pas dans le binaire.
+
+```bash
+dotnet build HackerOs.sln -p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false
+```
+
+En ligne de commande (ou dans un `Directory.Build.props`), la propriété vaut
+pour tout le graphe ; dans le seul `.csproj` de `test/test` ou du serveur, elle
+ne coupe que l'option d'exécution de cet hôte. Au démarrage, la section
+`HackerOs:ResourceAccounting` de `appsettings.json` coupe une mesure sans
+recompiler : voir [`resource-accounting.md`](resource-accounting.md).
+
 ### Conteneur Linux : contournements connus
 
 | Symptôme | Cause | Contournement |
@@ -103,6 +126,7 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
 ## Tâches de ce document
 
 - [x] Prérequis et installation de .NET dans un conteneur.
+- [x] Propriétés `HackerOsCpuAccounting` et `HackerOsMemoryAccounting` (ADR 0066).
 - [x] Build de la solution et contournements Linux connus.
 - [x] Lancement des trois hôtes et publication de la PWA.
 - [x] Suites de tests, filtrage, outils de test des apps, état connu.

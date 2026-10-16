@@ -303,9 +303,28 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderStatus(ProcessRecord process)
     {
+        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a game-content
+        // process that runs no code) the simulator's sample applies, exactly as before phase 5.
         ProcessResourceSample? sample = _resources.GetHistory(process.Pid).LastOrDefault();
-        long rssKb = (long)Math.Round((sample?.MemoryUsageBytes ?? 0) / 1024d, MidpointRounding.AwayFromZero);
-        double cpuPercent = (sample?.CpuUsage ?? 0) * 100d;
+        ResourceMeasurementSource cpuSource = ResourceMeasurementSource.Simulated;
+        double cpuUsage = sample?.CpuUsage ?? 0;
+        if (_metrics.CpuAccountant is { } cpuAccountant && cpuAccountant.TryGetCpuUsage(process.Pid, out double measuredCpu))
+        {
+            cpuSource = ResourceMeasurementSource.Measured;
+            cpuUsage = measuredCpu;
+        }
+
+        ResourceMeasurementSource memorySource = ResourceMeasurementSource.Simulated;
+        double memoryBytes = sample?.MemoryUsageBytes ?? 0;
+        ProcessMemoryUsage? measuredMemory = MeasureMemory(process);
+        if (measuredMemory is { } measured)
+        {
+            memorySource = ResourceMeasurementSource.Measured;
+            memoryBytes = measured.ResidentBytes;
+        }
+
+        long rssKb = (long)Math.Round(memoryBytes / 1024d, MidpointRounding.AwayFromZero);
+        double cpuPercent = cpuUsage * 100d;
 
         StringBuilder builder = new();
         AppendField(builder, "Name", ShortName(process.AppId));
@@ -317,8 +336,44 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "Kind", process.Kind.ToString().ToLowerInvariant());
         AppendField(builder, "Session", process.SessionId.ToString());
         AppendField(builder, "VmRSS", $"{rssKb.ToString(CultureInfo.InvariantCulture)} kB");
+        AppendMeasuredMemory(builder, measuredMemory);
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
+        AppendField(builder, "CpuSource", SourceText(cpuSource));
+        AppendField(builder, "MemSource", SourceText(memorySource));
         return builder.ToString();
+
+        static string SourceText(ResourceMeasurementSource source) =>
+            source == ResourceMeasurementSource.Measured ? "measured" : "simulated";
+    }
+
+    /// <summary>The measured layers of one process (ADR 0068), or <see langword="null"/> when its memory is simulated.</summary>
+    private ProcessMemoryUsage? MeasureMemory(ProcessRecord process) =>
+        _metrics.MemoryAccountant is { IsMeasuring: true } accountant
+        && accountant.TryGetProcessMemory(process, [.. ActiveProcesses()], out ProcessMemoryUsage usage)
+            ? usage
+            : null;
+
+    /// <summary>
+    /// Appends the layer fields of a measured process after <c>VmRSS</c>, in Linux's order (ADR 0068):
+    /// <c>RssAnon</c>, <c>RssFile</c>, <c>VmData</c> (the kernel part), <c>VmExe</c>, then the exact
+    /// allocation counter <c>HackAllocBytes</c>. A simulated process gets none of them, exactly as
+    /// before phase 5.
+    /// </summary>
+    private static void AppendMeasuredMemory(StringBuilder builder, ProcessMemoryUsage? usage)
+    {
+        if (usage is not { } measured)
+        {
+            return;
+        }
+
+        AppendField(builder, "RssAnon", Kilobytes(measured.AnonymousBytes));
+        AppendField(builder, "RssFile", Kilobytes(measured.FileBytes));
+        AppendField(builder, "VmData", Kilobytes(measured.KernelBytes));
+        AppendField(builder, "VmExe", Kilobytes(measured.ImageBytes));
+        AppendField(builder, "HackAllocBytes", measured.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
+
+        static string Kilobytes(long bytes) =>
+            $"{Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture)} kB";
     }
 
     private string RenderSystemFile(string name) => name switch
@@ -463,14 +518,58 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     {
         long totalKb = (long)(_hardware.MemoryCapacityBytes / 1024d);
         double usedBytes = _resources.GetSystemHistory().LastOrDefault()?.TotalMemoryUsageBytes ?? 0;
+        SystemMemoryUsage? measured = MeasureSystemMemory(ref usedBytes);
         long freeKb = Math.Max(0, totalKb - (long)Math.Round(usedBytes / 1024d, MidpointRounding.AwayFromZero));
 
         // There is no page cache to reclaim in the simulation, so available memory equals free memory.
+        // Exceeding MemTotal only saturates the graphs: there is no OOM killer (ADR 0068, section 3).
         StringBuilder builder = new();
         AppendMemInfoLine(builder, "MemTotal", totalKb);
         AppendMemInfoLine(builder, "MemFree", freeKb);
         AppendMemInfoLine(builder, "MemAvailable", freeKb);
+        if (measured is { } system)
+        {
+            AppendMemInfoLine(builder, "AnonPages", ToKilobytes(system.AnonymousBytes));
+            AppendMemInfoLine(builder, "Mapped", ToKilobytes(system.MappedBytes));
+            AppendMemInfoLine(builder, "Slab", ToKilobytes(system.KernelBytes));
+        }
+
         return builder.ToString();
+
+        static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>
+    /// When memory is measured (ADR 0068, section 2), replaces the simulated total with the measured
+    /// one (shared images counted once, the OS's own heap included) plus the simulated memory of the
+    /// processes that stay simulated (game content that runs no code).
+    /// </summary>
+    /// <param name="usedBytes">The simulated total, replaced when memory is measured.</param>
+    /// <returns>The measured totals, or <see langword="null"/> when memory is simulated.</returns>
+    private SystemMemoryUsage? MeasureSystemMemory(ref double usedBytes)
+    {
+        if (_metrics.MemoryAccountant is not { IsMeasuring: true } accountant)
+        {
+            return null;
+        }
+
+        ProcessRecord[] active = [.. ActiveProcesses()];
+        if (!accountant.TryGetSystemMemory(active, out SystemMemoryUsage system))
+        {
+            return null;
+        }
+
+        double simulated = 0;
+        foreach (ProcessRecord process in active)
+        {
+            if (!accountant.TryGetProcessMemory(process, active, out _))
+            {
+                simulated += _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes ?? 0;
+            }
+        }
+
+        usedBytes = system.UsedBytes + simulated;
+        return system;
     }
 
     private string RenderCpuInfo()

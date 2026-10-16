@@ -293,10 +293,15 @@ lancée du bureau, l'app écrit dans `/dev/null`. Voir
 
 Les façades `Hack*` savent quelle app les appelle grâce à un contexte ambiant
 que l'OS ouvre autour du cycle de vie, des gestionnaires d'événements
-(`@onclick`…) et du rendu de `WindowAppBase`. Un **composant enfant** qui
-appelle `Hack*` hérite de `HackComponentBase` : il reçoit le même contexte en
-cascade. Une méthode `[JSInvokable]` ou un rappel de minuterie .NET (hors
-`AppContext.Clock`) ouvre le contexte lui-même :
+(`@onclick`…) et du rendu de `WindowAppBase`. **Tout composant enfant** hérite
+de `HackComponentBase` : il reçoit le même contexte en cascade. Depuis la
+phase 5, c'est vrai même s'il n'appelle pas `Hack*` : le temps du code exécuté
+hors contexte est compté au compositeur, pas à l'app (ADR 0067), et un test
+(`AmbientFrameSourceTests`) le vérifie pour les apps de `Apps/`. Un dialogue
+MudBlazor, rendu hors de la fenêtre, reçoit le contexte de la fenêtre en
+paramètre (voir `FileExplorerDialogBase`). Une méthode `[JSInvokable]` ou un
+rappel de minuterie .NET (hors `AppContext.Clock`) ouvre le contexte lui-même,
+dès sa première instruction :
 
 ```csharp
 using (HackExecutionContext.Enter(AppContext))

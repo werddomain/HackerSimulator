@@ -276,7 +276,7 @@ Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
 
 | API | Passerelle | Capacité | Remplace | Document |
 |---|---|---|---|---|
-| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `TerminateAsync`, `CloseMainWindowAsync`, `Current`, `CheckpointAsync`), `HackCurrentProcess`, `HackStopRequestedEventArgs`, `HackProcessKilledException`, `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `KillAsync`, `TerminateAsync`, `CloseMainWindowAsync`, `Current`, `CheckpointAsync` ; `WorkingSet64` lit `VmRSS`, `PrivateMemorySize64` lit `RssAnon`, ADR 0068), `HackCurrentProcess`, `HackStopRequestedEventArgs`, `HackProcessKilledException`, `HackProcessState`, `HackProcessIoCounters` | lecture : `IAppExecutionContext.FileSystem` sur `/proc` ; action : `IAppExecutionContext.Processes` (`IAppProcessGateway`) | `filesystem.system.read` pour lire `/proc` ; `process.list` (normale) pour voir les autres processus ; `process.manage` (dangereuse) pour arrêter un autre processus | `IProcessManager`, `AppLifecycleOrchestrator`, `IEventBus` | [`task-manager.md`](task-manager.md) |
 | `HackServiceController` (`GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`), `HackServiceControllerStatus` | `Catalog` (liste), `/proc` (état), `Services` (`IAppServiceControlGateway`) | aucune pour lister ; `services.manage` (dangereuse) pour agir sur le service d'une autre app ou lire son type de démarrage | `AppCatalog` filtré sur `AppKind.Service`, orchestrateur | [`task-manager.md`](task-manager.md) |
 
 Les données d'un processus viennent de `/proc`, exactement ce que `ps` lit ; il
@@ -445,7 +445,10 @@ passent la vérification de la frontière sans exception (voir
 - Un composant enfant qui n'hérite pas de `HackComponentBase` appelle les
   passerelles de `AppContext` directement (`AppContext.Catalog`,
   `AppContext.AppManagement`) : ses gestionnaires d'événements ne sont pas dans
-  le contexte ambiant.
+  le contexte ambiant. *Phase 5 :* les panneaux de Settings (`InstalledAppsPanel`,
+  `AppPermissionsPanel`) héritent désormais de `HackComponentBase` et reçoivent
+  le contexte en cascade, comme tous les composants de `Apps/`
+  ([`resource-accounting.md`](resource-accounting.md#apps-existantes)).
 
 ## Vérification finale de la phase 4 (2026-10-16)
 

@@ -46,13 +46,23 @@ public sealed partial class ShellInterpreter
 
     private readonly AppLifecycleOrchestrator _orchestrator;
     private readonly IAppEnablementRegistry _enablement;
+    private readonly IKernelMemoryLedger? _kernelMemory;
 
     /// <summary>Creates an interpreter over the launch mechanism and the installed commands.</summary>
     /// <param name="orchestrator">Starts every command as a child process of the shell.</param>
     /// <param name="catalog">Commands are the catalog's terminal apps, found by name or static alias.</param>
     /// <param name="enablement">An uninstalled command is "not found", like a removed binary (ADR 0048).</param>
-    public ShellInterpreter(AppLifecycleOrchestrator orchestrator, AppCatalog catalog, IAppEnablementRegistry enablement)
+    /// <param name="kernelMemory">
+    /// Optional ledger charged with the bytes waiting in each pipe, against the shell that created it
+    /// (ADR 0068); <see langword="null"/> or not tracking when memory is not measured.
+    /// </param>
+    public ShellInterpreter(
+        AppLifecycleOrchestrator orchestrator,
+        AppCatalog catalog,
+        IAppEnablementRegistry enablement,
+        IKernelMemoryLedger? kernelMemory = null)
     {
+        _kernelMemory = kernelMemory;
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
         Resolver = new ShellCommandResolver(catalog ?? throw new ArgumentNullException(nameof(catalog)));
@@ -269,7 +279,7 @@ public sealed partial class ShellInterpreter
         else
         {
             using CancellationTokenSource pipelineCancellation = CancellationTokenSource.CreateLinkedTokenSource(exec.Token);
-            ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe())];
+            ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe(charge: ChargePipe(exec.Session.ProcessId)))];
             Task<int>[] running = new Task<int>[pipeline.Commands.Count];
             for (int index = 0; index < pipeline.Commands.Count; index++)
             {
@@ -753,6 +763,12 @@ public sealed partial class ShellInterpreter
             // A closed output loses the notice, nothing more.
         }
     }
+
+    /// <summary>Opens the kernel-memory charge of a new pipe against the shell's process, when memory is measured.</summary>
+    private KernelMemoryCharge? ChargePipe(ProcessId? shell) =>
+        _kernelMemory is { IsTracking: true } ledger && shell is { } pid
+            ? ledger.Charge(pid, KernelMemoryKind.Pipe)
+            : null;
 
     // ---- Execution state -----------------------------------------------------------------
 

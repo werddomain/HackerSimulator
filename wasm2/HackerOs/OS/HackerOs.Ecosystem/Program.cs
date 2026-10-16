@@ -27,6 +27,10 @@ builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
 builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
     BuildKnownLazyApps.Catalog,
     provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
+// ADR 0066: optional measured CPU/memory, decided once from HackerOs:ResourceAccounting in
+// appsettings.json and what the build compiled in. Must precede AddHackerOsEcosystem, and runs before
+// any app code so the context-switch hook can be installed.
+builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
 builder.Services.AddHackerOsEcosystem(
     BuildKnownLazyApps.Catalog,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,

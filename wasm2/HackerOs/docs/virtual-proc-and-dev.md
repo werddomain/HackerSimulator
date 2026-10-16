@@ -54,7 +54,7 @@ Contrats touchés :
 | `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
 | `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
-| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
+| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB ; avec la mémoire mesurée (ADR 0068), aussi `AnonPages`, `Mapped`, `Slab` |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
 | `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
@@ -77,11 +77,24 @@ Kind:	window
 Session:	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 VmRSS:	3072 kB
 Cpu:	12.5
+CpuSource:	simulated
+MemSource:	simulated
 ```
 
 `Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. `Cpu` est
 un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
-facile à analyser.
+facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
+`Cpu` et `VmRSS` : `measured` quand la mesure de la phase 5 répond pour ce
+processus, `simulated` sinon (mesure coupée, pas encore implémentée, ou
+processus du contenu de jeu) ; voir
+[`resource-accounting.md`](resource-accounting.md).
+
+Quand la mémoire d'un processus est mesurée (ADR 0068,
+[`memory-accounting.md`](memory-accounting.md)), cinq lignes suivent `VmRSS`,
+dans l'ordre de Linux : `RssAnon`, `RssFile`, `VmData` (part noyau), `VmExe`
+en kB, puis `HackAllocBytes` (octets alloués depuis le démarrage du processus,
+sans unité). `VmRSS = RssAnon + RssFile + VmData`. Un processus simulé n'a
+aucune de ces lignes : le format est exactement celui d'avant la phase 5.
 
 Choix de calcul :
 

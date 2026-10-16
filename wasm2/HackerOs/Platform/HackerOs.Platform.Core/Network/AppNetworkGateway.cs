@@ -47,12 +47,22 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     private const int ProxyTimeoutSeconds = 10;
     private const int ProbeTimeoutSeconds = 5;
 
+    /// <summary>
+    /// Memory the OS holds for one network operation in flight (ADR 0068): the default Linux TCP
+    /// receive buffer (<c>tcp_rmem</c>, 128 KiB) plus the default send buffer (<c>tcp_wmem</c>,
+    /// 16 KiB). Charged to the app's process for the duration of the call, as a socket's buffers
+    /// live from <c>socket()</c> to <c>close()</c>.
+    /// </summary>
+    public const long SocketBufferBytes = (128 + 16) * 1024;
+
     private readonly ISimulatedNetworkService _network;
     private readonly ICapabilityChecker _capabilities;
     private readonly string _appId;
     private readonly IServerConnectionService? _serverConnection;
     private readonly IProxyClient? _proxy;
     private readonly NetworkTrafficMeter _meter;
+    private readonly IKernelMemoryLedger? _kernelMemory;
+    private readonly ProcessId? _pid;
     private int _echoSequence;
 
     /// <summary>Initializes the gateway of one app instance.</summary>
@@ -64,6 +74,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <param name="statistics">Optional interface counters behind <c>/proc/net/dev</c> (ADR 0057).</param>
     /// <param name="processIo">Optional per-process I/O accounting, charged with this app's traffic.</param>
     /// <param name="pid">Process of this app instance, the one <paramref name="processIo"/> charges.</param>
+    /// <param name="kernelMemory">Optional ledger charged with the buffers of each operation in flight (ADR 0068).</param>
     public AppNetworkGateway(
         ISimulatedNetworkService network,
         ICapabilityChecker capabilities,
@@ -72,8 +83,11 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         IProxyClient? proxy = null,
         INetworkInterfaceStatistics? statistics = null,
         IProcessIoAccounting? processIo = null,
-        ProcessId? pid = null)
+        ProcessId? pid = null,
+        IKernelMemoryLedger? kernelMemory = null)
     {
+        _kernelMemory = kernelMemory;
+        _pid = pid;
         _network = network ?? throw new ArgumentNullException(nameof(network));
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
@@ -86,6 +100,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <inheritdoc />
     public async ValueTask<HackNetworkResult<HackHostEntry>> ResolveAsync(string hostName, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHostEntry> result = await ResolveCoreAsync(hostName, cancellationToken).ConfigureAwait(false);
         _meter.Dns(hostName, result.Value?.AddressList.Count ?? 0, result.Succeeded);
         return result;
@@ -94,6 +109,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     /// <inheritdoc />
     public async ValueTask<HackNetworkResult<HackHostEntry>> ReverseLookupAsync(IPAddress address, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHostEntry> result = await ReverseLookupCoreAsync(address, cancellationToken).ConfigureAwait(false);
         // A PTR query asks for "<octets>.in-addr.arpa".
         _meter.Dns($"{address}.in-addr.arpa", result.Succeeded ? 1 : 0, result.Succeeded);
@@ -104,6 +120,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackPingReply>> PingAsync(
         string hostNameOrAddress, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackPingReply> result = await PingCoreAsync(hostNameOrAddress, timeout, cancellationToken).ConfigureAwait(false);
         _meter.Echo(result.Succeeded && result.Value!.Status == HackIPStatus.Success);
         return result;
@@ -113,6 +130,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackHttpResponse>> SendAsync(
         HackHttpRequest request, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackHttpResponse> result = await SendCoreAsync(request, cancellationToken).ConfigureAwait(false);
         _meter.Http(request, result);
         return result;
@@ -122,6 +140,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<IReadOnlyList<HackPortProbeResult>>> ProbeTcpAsync(
         string hostNameOrAddress, int firstPort, int lastPort, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<IReadOnlyList<HackPortProbeResult>> result =
             await ProbeTcpCoreAsync(hostNameOrAddress, firstPort, lastPort, cancellationToken).ConfigureAwait(false);
         _meter.Probe(result, Math.Max(1, lastPort - firstPort + 1));
@@ -132,11 +151,18 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     public async ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
         string hostNameOrAddress, CancellationToken cancellationToken = default)
     {
+        using KernelMemoryCharge socket = OpenSocket();
         HackNetworkResult<HackOsFingerprint?> result =
             await DetectOperatingSystemCoreAsync(hostNameOrAddress, cancellationToken).ConfigureAwait(false);
         _meter.Fingerprint(result.Succeeded);
         return result;
     }
+
+    /// <summary>Charges the socket buffers of one operation to the app's process while it is in flight.</summary>
+    private KernelMemoryCharge OpenSocket() =>
+        _kernelMemory is { IsTracking: true } ledger && _pid is { } pid
+            ? ledger.Charge(pid, KernelMemoryKind.Socket, SocketBufferBytes)
+            : KernelMemoryCharge.None;
 
     // ── Simulated network ─────────────────────────────────────────────────
 

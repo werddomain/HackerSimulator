@@ -6,6 +6,7 @@ using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Processes;
+using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.Diagnostics;
@@ -30,6 +31,7 @@ public sealed class EcosystemBootCoordinator
     private readonly SimulationClockDriver? _clockDriver;
     private readonly AppInstallationService? _installation;
     private readonly ResourceSamplingService? _resourceSampling;
+    private readonly ResourceAccountingPlan? _resourceAccounting;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="logWriter">
@@ -47,6 +49,11 @@ public sealed class EcosystemBootCoordinator
     /// Scheduler tick started with the clock, so <c>/proc/stat</c>, <c>status</c> and
     /// <c>loadavg</c> move (ADR 0057). Optional for headless tests.
     /// </param>
+    /// <param name="resourceAccounting">
+    /// Resource accounting decided at composition (ADR 0066); its notices (state of each measurement,
+    /// settings ignored because the build left a measurement out) are written to
+    /// <c>/var/log/syslog</c> at boot. Optional for headless tests.
+    /// </param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -60,7 +67,8 @@ public sealed class EcosystemBootCoordinator
         IFileSystemService? fileSystem = null,
         SimulationClockDriver? clockDriver = null,
         AppInstallationService? installation = null,
-        ResourceSamplingService? resourceSampling = null)
+        ResourceSamplingService? resourceSampling = null,
+        ResourceAccountingPlan? resourceAccounting = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -76,6 +84,7 @@ public sealed class EcosystemBootCoordinator
         _clockDriver = clockDriver;
         _installation = installation;
         _resourceSampling = resourceSampling;
+        _resourceAccounting = resourceAccounting;
     }
 
     /// <summary>
@@ -95,6 +104,7 @@ public sealed class EcosystemBootCoordinator
         _clockDriver?.Start();
         _resourceSampling?.Start();
         await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
+        WriteResourceAccountingNotices();
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
@@ -142,6 +152,20 @@ public sealed class EcosystemBootCoordinator
             $"boot: storage ready, policy revision {policyRevision}, {catalog.Count} apps in catalog, {users.Count} local users");
 
         return new EcosystemBootResult(users, policyRevision, catalog.Count);
+    }
+
+    /// <summary>Writes the resource-accounting decisions of ADR 0066 to <c>/var/log/syslog</c>, like boot parameters in <c>dmesg</c>.</summary>
+    private void WriteResourceAccountingNotices()
+    {
+        if (_logWriter is null || _resourceAccounting is null)
+        {
+            return;
+        }
+
+        foreach (string notice in _resourceAccounting.Notices)
+        {
+            _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, ResourceAccountingPlan.LogCategory, notice);
+        }
     }
 
     /// <summary>
