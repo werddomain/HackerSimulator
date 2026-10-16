@@ -28,6 +28,7 @@ public sealed class AppDefinitionMapperTests
         Assert.False(manifest.SingleInstancePerUser);
         Assert.False(manifest.AutoStart);
         Assert.False(manifest.SupportsBack);
+        Assert.Equal(AppExecutionHost.MainThread, manifest.Execution);
         Assert.Equal(AppResourceProfileManifest.None, manifest.Resources);
         Assert.Null(manifest.Settings);
         Assert.Empty(manifest.Dependencies);
@@ -38,6 +39,19 @@ public sealed class AppDefinitionMapperTests
         Assert.Null(manifest.OsCompatibility);
         Assert.Null(manifest.Update);
         Assert.Equal(new AppSdkCompatibilityManifest("1.0.0"), manifest.SdkCompatibility);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    [Theory]
+    [InlineData(typeof(UnmarkedServiceApp), AppExecutionHost.Dedicated)]
+    [InlineData(typeof(DefaultCommandApp), AppExecutionHost.Pool)]
+    [InlineData(typeof(MainThreadCommandApp), AppExecutionHost.MainThread)]
+    [InlineData(typeof(DedicatedCommandApp), AppExecutionHost.Dedicated)]
+    public void ToManifest_Execution_ResolvesTheAttributeOrTheKindDefault(Type definitionType, AppExecutionHost expected)
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest((AppDefinition)Activator.CreateInstance(definitionType)!, "1.0.0");
+
+        Assert.Equal(expected, manifest.Execution);
         Assert.True(AppManifestValidator.Validate(manifest).IsValid);
     }
 
@@ -172,6 +186,44 @@ public sealed class AppDefinitionMapperTests
     }
 
     [AppManifest]
+    private sealed class UnmarkedServiceApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.service";
+        public override string Name => "Service";
+        public override AppKind Kind => AppKind.Service;
+        public override Type EntryPoint => typeof(FakeCommand);
+    }
+
+    [AppManifest]
+    private sealed class DefaultCommandApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.default-cmd";
+        public override string Name => "default-cmd";
+        public override AppKind Kind => AppKind.Terminal;
+        public override Type EntryPoint => typeof(FakeCommand);
+        public override TerminalCommand? Terminal => new("default-cmd", "default-cmd");
+    }
+
+    [AppManifest(Execution = AppExecutionHost.MainThread)]
+    private sealed class MainThreadCommandApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.main-cmd";
+        public override string Name => "main-cmd";
+        public override AppKind Kind => AppKind.Terminal;
+        public override Type EntryPoint => typeof(FakeCommand);
+        public override TerminalCommand? Terminal => new("main-cmd", "main-cmd");
+    }
+
+    [AppManifest(Execution = AppExecutionHost.Dedicated)]
+    private sealed class DedicatedCommandApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.dedicated-cmd";
+        public override string Name => "dedicated-cmd";
+        public override AppKind Kind => AppKind.Terminal;
+        public override Type EntryPoint => typeof(FakeCommand);
+        public override TerminalCommand? Terminal => new("dedicated-cmd", "dedicated-cmd");
+    }
+
     private sealed class MinimalWindowApp : AppDefinition
     {
         public override string Id => "org.hackeros.tests.minimal";

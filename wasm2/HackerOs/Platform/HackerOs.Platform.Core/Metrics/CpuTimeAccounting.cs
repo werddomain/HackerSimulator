@@ -39,6 +39,7 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
 
     private readonly Func<ProcessRecord, bool> _isSystemProcess;
     private readonly ICpuTimeAccountant? _measured;
+    private readonly Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? _workers;
     private readonly Lock _gate = new();
     private readonly double[] _user;
     private readonly double[] _system;
@@ -54,8 +55,13 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     /// Measured CPU time (ADR 0067); when it measures, <c>/proc/stat</c> shows real times instead of
     /// the simulated ones. <see langword="null"/> or the null accountant keeps the simulation.
     /// </param>
-    public CpuTimeAccounting(VirtualHardwareProfile hardware, Func<ProcessRecord, bool>? isSystemProcess = null, ICpuTimeAccountant? measured = null)
+    public CpuTimeAccounting(
+        VirtualHardwareProfile hardware,
+        Func<ProcessRecord, bool>? isSystemProcess = null,
+        ICpuTimeAccountant? measured = null,
+        Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? workers = null)
     {
+        _workers = workers;
         _measured = measured is { IsMeasuring: true } ? measured : null;
         ArgumentNullException.ThrowIfNull(hardware);
         CoreCount = Math.Max(1, (int)Math.Ceiling(hardware.CpuCapacity));
@@ -105,11 +111,27 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     {
         if (_measured is not null && _measured.TryGetThreadTimes(out MeasuredThreadCpuTimes thread))
         {
-            long idleCore = ToUserHz(thread.Elapsed);
+            long elapsed = ToUserHz(thread.Elapsed);
+            long[] user = new long[CoreCount];
+            long[] system = new long[CoreCount];
+            user[0] = ToUserHz(thread.User);
+            system[0] = ToUserHz(thread.System);
+            // ADR 0070, section 2: the pool's workers are the machine's cores; the worker of core k
+            // runs on cpu k (core 0 shares it with the browser's main thread, the desktop).
+            foreach (HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot worker in _workers?.Invoke()?.GetWorkers() ?? [])
+            {
+                if (worker.Core is { } core && core < CoreCount
+                    && worker.Role == HackerOs.Simulation.Abstractions.Workers.WorkerRole.Pool)
+                {
+                    user[core] += ToUserHz(worker.BusyTime);
+                }
+            }
+
             return
             [
-                new CpuTimes(ToUserHz(thread.User), 0, ToUserHz(thread.System), ToUserHz(thread.Idle)),
-                .. Enumerable.Repeat(new CpuTimes(0, 0, 0, idleCore), CoreCount - 1)
+                // user + system + idle stays the elapsed time of each core (ADR 0067, section 3).
+                .. Enumerable.Range(0, CoreCount).Select(core => new CpuTimes(
+                    user[core], 0, system[core], Math.Max(0, elapsed - user[core] - system[core])))
             ];
         }
 

@@ -14,6 +14,8 @@ using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Power;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.WorkerHost.Host;
+using HackerOs.Simulation.Abstractions.Workers;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
@@ -182,7 +184,9 @@ public static class EcosystemServiceCollectionExtensions
                 VirtualHardwareProfile.Default,
                 process => !catalog.Manifests.ContainsKey(process.AppId)
                     || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)),
-                provider.GetRequiredService<ICpuTimeAccountant>());
+                CpuAccountant(provider),
+                // ADR 0070, section 2: the pool's workers are the cores of /proc/stat.
+                () => provider.GetService<IWorkerPoolStatus>());
         });
 
         services.AddScoped<IndexedDbFileSystemProvider>(provider => new IndexedDbFileSystemProvider(
@@ -216,8 +220,10 @@ public static class EcosystemServiceCollectionExtensions
                         provider.GetRequiredService<IBlockDeviceStatistics>(),
                         provider.GetRequiredService<INetworkInterfaceStatistics>(),
                         () => provider.GetRequiredService<IFileSystemMountRouter>(),
-                        provider.GetRequiredService<ICpuTimeAccountant>(),
-                        provider.GetRequiredService<IMemoryAccountant>()))),
+                        CpuAccountant(provider),
+                        MemoryAccountant(provider),
+                        // ADR 0071, section 5: /proc/hackeros/workers, on the hosts that have workers.
+                        () => provider.GetService<IWorkerPoolStatus>()))),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -418,6 +424,9 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IndexedDbAppCatalogRepository>();
         services.AddScoped<IPersistentAppCatalogRepository>(provider =>
             provider.GetRequiredService<IndexedDbAppCatalogRepository>());
+        // ADR 0071, section 2: "the system is started", raised by EcosystemBootCoordinator once the
+        // desktop is shown; the worker pool (WebAssembly hosts only) warms up after it.
+        services.TryAddSingleton<SystemStartupSignal>();
         services.AddScoped<EcosystemBootCoordinator>();
 
         services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
@@ -522,7 +531,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<IElevationTicketStore>(),
             provider.GetRequiredService<IDangerousCapabilityGate>(),
-            provider.GetRequiredService<LoginEnvironmentProvider>()));
+            provider.GetRequiredService<LoginEnvironmentProvider>(),
+            // ADR 0070: commands and services in Web Workers, on the hosts that have them (the
+            // WebAssembly hosts register it in Program.cs); none on the server (section 6).
+            provider.GetService<IRemoteProcessHost>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.
@@ -636,4 +648,15 @@ public static class EcosystemServiceCollectionExtensions
         AppCatalogBuildResult result = AppCatalog.Build([]);
         return result.Catalog ?? throw new InvalidOperationException("The empty app catalog must be valid.");
     }
+
+    /// <summary>
+    /// The CPU measurement as <c>/proc</c> reads it: with Web Workers, their processes' times come from
+    /// their heartbeats (ADR 0070, section 5); otherwise the main thread's accountant.
+    /// </summary>
+    private static ICpuTimeAccountant CpuAccountant(IServiceProvider provider) =>
+        (ICpuTimeAccountant?)provider.GetService<WorkerAwareCpuTimeAccountant>() ?? provider.GetRequiredService<ICpuTimeAccountant>();
+
+    /// <summary>The memory measurement as <c>/proc</c> reads it: with Web Workers, each one's runtime heap is counted.</summary>
+    private static IMemoryAccountant MemoryAccountant(IServiceProvider provider) =>
+        (IMemoryAccountant?)provider.GetService<WorkerAwareMemoryAccountant>() ?? provider.GetRequiredService<IMemoryAccountant>();
 }

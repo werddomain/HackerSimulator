@@ -2,8 +2,8 @@ namespace HackerOs.App.Abstractions;
 
 /// <summary>
 /// Converts an <see cref="AppDefinition"/> into the schema-version-1 <see cref="AppManifest"/>
-/// (ADR 0047 §1). Pure and deterministic: it only reads the definition's getters and the entry-point
-/// types' names, never loads or activates anything.
+/// (ADR 0047 §1). Pure and deterministic: it only reads the definition's getters, its
+/// <see cref="AppManifestAttribute"/> and the entry-point types' names, never loads or activates anything.
 /// </summary>
 public static class AppDefinitionMapper
 {
@@ -68,9 +68,20 @@ public static class AppDefinitionMapper
                     component.Contract, AssemblyFileName(component.Type), TypeName(component.Type)))],
             SingleInstancePerUser = definition.SingleInstancePerUser,
             AutoStart = definition.AutoStart,
-            SupportsBack = definition.SupportsBack
+            SupportsBack = definition.SupportsBack,
+            // ADR 0070, section 1: always written resolved, so the host never guesses a default.
+            Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition))
         };
     }
+
+    /// <summary>
+    /// Reads <see cref="AppManifestAttribute.Execution"/> from the definition's class, or
+    /// <see langword="null"/> when the class is not marked (a definition built by hand in a test).
+    /// </summary>
+    private static AppExecutionHost? DeclaredExecution(AppDefinition definition) =>
+        Attribute.GetCustomAttribute(definition.GetType(), typeof(AppManifestAttribute), inherit: false) is AppManifestAttribute attribute
+            ? attribute.Execution
+            : null;
 
     /// <summary>
     /// Formats an App Abstractions assembly version as the <c>major.minor.0</c> SDK minimum version

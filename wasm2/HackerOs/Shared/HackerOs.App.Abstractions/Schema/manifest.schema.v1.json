@@ -234,7 +234,8 @@
     },
     "singleInstancePerUser": { "type": "boolean" },
     "autoStart": { "type": "boolean" },
-    "supportsBack": { "type": "boolean" }
+    "supportsBack": { "type": "boolean" },
+    "execution": { "enum": ["mainThread", "pool", "dedicated"] }
   },
   "allOf": [
     {

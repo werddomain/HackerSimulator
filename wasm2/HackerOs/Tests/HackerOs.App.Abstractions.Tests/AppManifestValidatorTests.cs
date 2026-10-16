@@ -235,6 +235,35 @@ public sealed class AppManifestValidatorTests
         Assert.False(AppManifestValidator.Validate(manifest).IsValid);
     }
 
+    [Theory]
+    [InlineData(AppKind.Window, AppExecutionHost.MainThread, true)]
+    [InlineData(AppKind.Window, AppExecutionHost.Pool, false)]
+    [InlineData(AppKind.Window, AppExecutionHost.Dedicated, false)]
+    [InlineData(AppKind.Service, AppExecutionHost.Dedicated, true)]
+    [InlineData(AppKind.Service, AppExecutionHost.MainThread, true)]
+    [InlineData(AppKind.Service, AppExecutionHost.Default, false)]
+    public void Validate_checks_the_execution_host_against_the_kind(AppKind kind, AppExecutionHost execution, bool valid)
+    {
+        AppManifest manifest = CreateValidManifest() with { Kind = kind, Execution = execution, FileHandlers = [], Components = null };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Equal(valid, !result.Errors.Any(error => error.Code.StartsWith("manifest.execution.", StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData(AppKind.Window, null, AppExecutionHost.MainThread)]
+    [InlineData(AppKind.Terminal, null, AppExecutionHost.Pool)]
+    [InlineData(AppKind.Service, null, AppExecutionHost.Dedicated)]
+    [InlineData(AppKind.Terminal, AppExecutionHost.MainThread, AppExecutionHost.MainThread)]
+    public void Effective_execution_host_falls_back_to_the_kind_default(AppKind kind, AppExecutionHost? declared, AppExecutionHost expected)
+    {
+        AppManifest manifest = CreateValidManifest() with { Kind = kind, Execution = declared };
+
+        Assert.Equal(expected, AppExecutionHosts.Of(manifest));
+        Assert.Equal(expected != AppExecutionHost.MainThread, AppExecutionHosts.IsWorker(expected));
+    }
+
     private static AppManifest CreateValidManifest() => new()
     {
         Id = "org.hackeros.text-editor",

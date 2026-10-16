@@ -418,6 +418,13 @@ public sealed partial class ShellInterpreter
         switch (launch.Status)
         {
             case AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting:
+                if (launch.ExitCode == KilledExitCode
+                    && launch.Process?.ExitReason is ProcessExitReason.Killed or ProcessExitReason.Timeout)
+                {
+                    // Like bash for a job ended by SIGKILL (kill -9, or its worker was terminated, ADR 0070).
+                    await error.WriteLineAsync("Killed").ConfigureAwait(false);
+                }
+
                 return StageOutcome.Completed(launch.ExitCode ?? 0, denials, elevation is not null);
             case AppLaunchStatus.NotFound:
                 await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);

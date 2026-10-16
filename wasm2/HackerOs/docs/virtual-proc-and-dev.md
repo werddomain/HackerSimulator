@@ -172,6 +172,11 @@ proc /proc proc ro 0 0
   seconde simulée : `status`, `meminfo`, `uptime` et `loadavg` ne restent plus à
   zéro dans un hôte réel.
 
+- `/proc/hackeros/workers` (ADR 0071 §5) n'existe que si l'hôte a des Web
+  Workers : capacité, taille du pool, puis une ligne par worker (rôle, état,
+  cœur, mémoire, âge du battement, temps occupé, PID visibles). Format :
+  [`worker-processes.md`](worker-processes.md#prochackerosworkers).
+
 Visibilité : seuls les processus actifs apparaissent. L'appelant voit toujours
 son propre processus, et les autres avec `process.list` ou l'autorité `System`.
 Un PID invisible répond `NotFound`.

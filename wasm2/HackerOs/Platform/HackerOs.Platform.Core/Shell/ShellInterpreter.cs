@@ -4,6 +4,8 @@ using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 
+using HackerOs.Platform.Core.Execution;
+
 namespace HackerOs.Platform.Core.Shell;
 
 /// <summary>
@@ -34,6 +36,9 @@ public sealed partial class ShellInterpreter
 
     /// <summary>Exit code of a line that did not parse.</summary>
     public const int SyntaxErrorExitCode = 2;
+
+    /// <summary>Exit code of a command ended by <c>SIGKILL</c> (128 + 9).</summary>
+    internal const int KilledExitCode = 137;
 
     /// <summary>Exit code of an interrupted pipeline (128 + SIGINT).</summary>
     public const int InterruptedExitCode = 130;
@@ -281,24 +286,29 @@ public sealed partial class ShellInterpreter
             using CancellationTokenSource pipelineCancellation = CancellationTokenSource.CreateLinkedTokenSource(exec.Token);
             ShellPipe[] pipes = [.. Enumerable.Range(0, pipeline.Commands.Count - 1).Select(_ => new ShellPipe(charge: ChargePipe(exec.Session.ProcessId)))];
             Task<int>[] running = new Task<int>[pipeline.Commands.Count];
-            for (int index = 0; index < pipeline.Commands.Count; index++)
+            // ADR 0070, section 2: every stage of one pipeline goes to the same worker. Each stage
+            // captures the group when it starts, so the scope can close before the stages end.
+            using (ExecutionPlacement.BeginGroup())
             {
-                ShellPipe? input = index == 0 ? null : pipes[index - 1];
-                ShellPipe? output = index == pipeline.Commands.Count - 1 ? null : pipes[index];
-                // Each stage runs in a subshell copy (ADR 0051 section 3): a `cd` or a variable
-                // set inside a pipe is lost when the stage ends.
-                Exec stage = exec with
+                for (int index = 0; index < pipeline.Commands.Count; index++)
                 {
-                    Session = exec.Session.Fork(),
-                    In = input?.Reader ?? exec.In,
-                    Out = output?.Writer ?? exec.Out,
-                    Token = pipelineCancellation.Token,
-                    Control = new ControlState(),
-                    SingleStage = false,
-                    LoopDepth = 0,
-                    CanReturn = false
-                };
-                running[index] = RunStageAsync(stage, pipeline.Commands[index], input, output);
+                    ShellPipe? input = index == 0 ? null : pipes[index - 1];
+                    ShellPipe? output = index == pipeline.Commands.Count - 1 ? null : pipes[index];
+                    // Each stage runs in a subshell copy (ADR 0051 section 3): a `cd` or a variable
+                    // set inside a pipe is lost when the stage ends.
+                    Exec stage = exec with
+                    {
+                        Session = exec.Session.Fork(),
+                        In = input?.Reader ?? exec.In,
+                        Out = output?.Writer ?? exec.Out,
+                        Token = pipelineCancellation.Token,
+                        Control = new ControlState(),
+                        SingleStage = false,
+                        LoopDepth = 0,
+                        CanReturn = false
+                    };
+                    running[index] = RunStageAsync(stage, pipeline.Commands[index], input, output);
+                }
             }
 
             int[] statuses = await Task.WhenAll(running).ConfigureAwait(false);

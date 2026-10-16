@@ -1,0 +1,691 @@
+using System.Text.Json;
+using System.Threading.Channels;
+using HackerOs.App.Abstractions;
+using HackerOs.AppSdk;
+using HackerOs.AppSdk.Diagnostics;
+using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Processes;
+using HackerOs.Platform.Core.Shell;
+using HackerOs.Platform.WorkerHost.Protocol;
+using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Processes;
+
+namespace HackerOs.Platform.WorkerHost.Host;
+
+/// <summary>
+/// The OS side of one process running in a worker (ADR 0070, section 4): it serves the process's
+/// remote calls through its trusted <see cref="IAppExecutionContext"/>, writes its output to the
+/// shell's streams, feeds its standard input, and carries its stop request, interruption and kill to
+/// the worker (ADR 0069).
+/// </summary>
+/// <remarks>
+/// Every call is served inside the process's ambient frame, in the kernel sub-frame: the time the
+/// OS spends serving it is the process's <c>stime</c>, like a system call (ADR 0067, section 2).
+/// </remarks>
+internal sealed class RemoteProcessSession
+{
+    /// <summary>A regular file up to this size goes to the worker in the first answer of a read.</summary>
+    public const long InlineReadLimit = 16L * 1024 * 1024;
+
+    private const int ChunkSize = 64 * 1024;
+
+    private readonly WorkerConnection _worker;
+    private readonly IAppExecutionContext _context;
+    private readonly ProcessControlBlock? _control;
+    private readonly TextReader _input;
+    private readonly TextWriter _output;
+    private readonly TextWriter _error;
+    private readonly Channel<(int Stream, string Text)> _outputQueue = Channel.CreateUnbounded<(int, string)>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Task _outputPump;
+    private readonly TaskCompletionSource<RemoteProcessExit> _exit = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _stopWorkDone = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _serviceStopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Lock _gate = new();
+    private readonly Dictionary<int, CancellationTokenSource> _calls = [];
+    private readonly Dictionary<int, FileSystemContentReadHandle> _reads = [];
+    private int _nextReadHandle;
+    private bool _stdoutClosed;
+    private bool _stderrClosed;
+    private bool _killAcknowledged;
+
+    public RemoteProcessSession(
+        WorkerConnection worker,
+        RemoteProcessLaunch launch,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        bool inputAttached)
+    {
+        _worker = worker;
+        Launch = launch;
+        _context = launch.Context;
+        _control = launch.Control;
+        _input = input;
+        _output = output;
+        _error = error;
+        InputAttached = inputAttached;
+        Pid = launch.Context.ProcessId.Value;
+        _outputPump = PumpOutputAsync();
+    }
+
+    /// <summary>Gets the process.</summary>
+    public long Pid { get; }
+
+    /// <summary>Gets what the OS handed to the worker.</summary>
+    public RemoteProcessLaunch Launch { get; }
+
+    /// <summary>Gets whether the process reads a real standard input (a pipe or the terminal).</summary>
+    public bool InputAttached { get; }
+
+    /// <summary>Gets the task that ends when the process has ended and all its output is written.</summary>
+    public Task<RemoteProcessExit> Exit => _exit.Task;
+
+    /// <summary>Gets whether the process has ended (or its worker was terminated).</summary>
+    public bool HasEnded => _exit.Task.IsCompleted;
+
+    /// <summary>Gets whether the worker confirmed it dropped the process after a kill.</summary>
+    public bool KillAcknowledged
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _killAcknowledged;
+            }
+        }
+    }
+
+    /// <summary>Gets the task the worker completes when <c>OnStoppingAsync</c> of a hosted service returned.</summary>
+    public Task ServiceStopped => _serviceStopped.Task;
+
+    /// <summary>Hooks the process's stop request, permission errors and kill to the worker.</summary>
+    public void Attach()
+    {
+        _context.StopRequested += OnStopRequested;
+        _context.PermissionErrors.PermissionDenied += OnPermissionDenied;
+        if (_context.StopRequest is { } already)
+        {
+            OnStopRequested(_context, already);
+        }
+
+        _control?.Killed.ContinueWith(
+            static (_, state) => ((RemoteProcessSession)state!).OnKilled(),
+            this,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    /// <summary>Ctrl+C: cancels the process token in the worker.</summary>
+    public void Interrupt()
+    {
+        if (!HasEnded)
+        {
+            _worker.Post(WorkerMessage.Create(WorkerMessageType.Interrupt, writer => writer.WriteNumber("p", Pid)));
+        }
+    }
+
+    /// <summary>Asks a hosted service to run its <c>OnStoppingAsync</c>.</summary>
+    public async Task StopServiceAsync(ServiceStopReason reason, CancellationToken cancellationToken)
+    {
+        if (HasEnded)
+        {
+            return;
+        }
+
+        _worker.Post(WorkerMessage.Create(WorkerMessageType.ServiceStop, writer =>
+        {
+            writer.WriteNumber("p", Pid);
+            writer.WriteNumber("r", (int)reason);
+        }));
+        await Task.WhenAny(_serviceStopped.Task, _exit.Task).WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Handles the <c>exit</c> message: waits for the output already received, then ends.</summary>
+    public async Task OnExitAsync(RemoteProcessExit exit)
+    {
+        _outputQueue.Writer.TryComplete();
+        await _outputPump.ConfigureAwait(false);
+        End(exit);
+    }
+
+    /// <summary>
+    /// Ends the process because its worker is gone (terminated, or crashed): <c>SIGKILL</c> semantics,
+    /// whatever it was doing (ADR 0070, section 5).
+    /// </summary>
+    public void Abandon()
+    {
+        _outputQueue.Writer.TryComplete();
+        End(new RemoteProcessExit(RemoteProcessExitStatus.Killed));
+    }
+
+    /// <summary>Queues output text in arrival order.</summary>
+    public void OnOutput(int stream, string text) => _outputQueue.Writer.TryWrite((stream, text));
+
+    /// <summary>The work deferred on the stop request has ended in the worker.</summary>
+    public void OnStopDone() => _stopWorkDone.TrySetResult();
+
+    /// <summary>The service's <c>OnStoppingAsync</c> returned in the worker.</summary>
+    public void OnServiceStopped() => _serviceStopped.TrySetResult();
+
+    /// <summary>The worker dropped the process after a kill: it still answers.</summary>
+    public void OnKillAcknowledged()
+    {
+        lock (_gate)
+        {
+            _killAcknowledged = true;
+        }
+    }
+
+    /// <summary>Abandons a call whose token the worker cancelled.</summary>
+    public void OnCancel(int id)
+    {
+        CancellationTokenSource? call;
+        lock (_gate)
+        {
+            _calls.Remove(id, out call);
+        }
+
+        call?.Cancel();
+    }
+
+    /// <summary>Serves one call and posts its answer.</summary>
+    public async Task OnCallAsync(int id, string operation, JsonElement arguments)
+    {
+        using CancellationTokenSource cancellation = new();
+        lock (_gate)
+        {
+            _calls[id] = cancellation;
+        }
+
+        string reply;
+        try
+        {
+            Action<Utf8JsonWriter> value = await ServeAsync(operation, arguments, cancellation.Token).ConfigureAwait(false);
+            reply = WorkerMessage.Create(WorkerMessageType.Result, writer =>
+            {
+                writer.WriteNumber("i", id);
+                writer.WriteStartObject("v");
+                value(writer);
+                writer.WriteEndObject();
+            });
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            reply = WorkerMessage.Create(WorkerMessageType.Result, writer =>
+            {
+                writer.WriteNumber("i", id);
+                RemoteErrors.Write(writer, exception);
+            });
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                _calls.Remove(id);
+            }
+        }
+
+        _worker.Post(reply);
+    }
+
+    /// <summary>Serves one call that has no answer; a failure is logged, as nobody waits for it.</summary>
+    public async Task OnNotifyAsync(string operation, JsonElement arguments)
+    {
+        try
+        {
+            await ServeAsync(operation, arguments, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _worker.Log($"pid {Pid}: {operation} failed: {exception.Message}");
+        }
+    }
+
+    private void End(RemoteProcessExit exit)
+    {
+        _context.StopRequested -= OnStopRequested;
+        _context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
+        List<FileSystemContentReadHandle> reads;
+        List<CancellationTokenSource> calls;
+        lock (_gate)
+        {
+            reads = [.. _reads.Values];
+            _reads.Clear();
+            calls = [.. _calls.Values];
+            _calls.Clear();
+        }
+
+        foreach (FileSystemContentReadHandle read in reads)
+        {
+            _ = read.DisposeAsync();
+        }
+
+        foreach (CancellationTokenSource call in calls)
+        {
+            call.Cancel();
+        }
+
+        _stopWorkDone.TrySetResult();
+        _serviceStopped.TrySetResult();
+        _exit.TrySetResult(exit);
+    }
+
+    private void OnStopRequested(object? sender, HackStopRequestedEventArgs e)
+    {
+        // The OS waits for the work the app defers in the worker, within the grace period.
+        e.Defer(_stopWorkDone.Task);
+        _worker.Post(WorkerMessage.Create(WorkerMessageType.Stop, writer =>
+        {
+            writer.WriteNumber("p", Pid);
+            writer.WriteNumber("r", (int)e.Reason);
+            WireCodec.WriteTime(writer, "ra", e.RequestedAt);
+            WireCodec.WriteTime(writer, "dl", e.Deadline);
+        }));
+    }
+
+    private void OnPermissionDenied(object? sender, AppPermissionErrorEventArgs e) =>
+        _worker.Post(WorkerMessage.Create(WorkerMessageType.PermissionDenied, writer =>
+        {
+            writer.WriteNumber("p", Pid);
+            WireCodec.WriteError(writer, "err", e.Error);
+        }));
+
+    /// <summary>
+    /// <c>SIGKILL</c> (ADR 0069, section 3): step 3 asks the worker to drop the process; if the
+    /// worker does not answer, step 4 terminates it (<see cref="WorkerConnection.EnsureKilledAsync"/>).
+    /// </summary>
+    private void OnKilled()
+    {
+        if (HasEnded)
+        {
+            return;
+        }
+
+        _worker.Post(WorkerMessage.Create(WorkerMessageType.Kill, writer => writer.WriteNumber("p", Pid)));
+        _ = _worker.EnsureKilledAsync(this);
+    }
+
+    private async Task PumpOutputAsync()
+    {
+        await foreach ((int stream, string text) in _outputQueue.Reader.ReadAllAsync().ConfigureAwait(false))
+        {
+            bool closed;
+            lock (_gate)
+            {
+                closed = stream == 1 ? _stdoutClosed : _stderrClosed;
+            }
+
+            if (!closed)
+            {
+                try
+                {
+                    await (stream == 1 ? _output : _error).WriteAsync(text).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is ShellBrokenPipeException or ObjectDisposedException)
+                {
+                    // ADR 0050, section 4: the reader went away; the next write in the worker fails.
+                    lock (_gate)
+                    {
+                        if (stream == 1)
+                        {
+                            _stdoutClosed = true;
+                        }
+                        else
+                        {
+                            _stderrClosed = true;
+                        }
+                    }
+
+                    _worker.Post(WorkerMessage.Create(WorkerMessageType.PipeClosed, writer =>
+                    {
+                        writer.WriteNumber("p", Pid);
+                        writer.WriteNumber("f", stream);
+                    }));
+                }
+            }
+
+            _worker.Post(WorkerMessage.Create(WorkerMessageType.OutputAck, writer =>
+            {
+                writer.WriteNumber("p", Pid);
+                writer.WriteNumber("n", text.Length);
+            }));
+        }
+    }
+
+    /// <summary>Runs one operation through the process's own gateways and returns the writer of its value.</summary>
+    private async Task<Action<Utf8JsonWriter>> ServeAsync(string operation, JsonElement a, CancellationToken cancellationToken)
+    {
+        using IDisposable frame = HackExecutionContext.Enter(_context);
+        using HackExecutionContext.KernelScope kernel = HackExecutionContext.EnterKernel();
+        IAppExecutionContext c = _context;
+        switch (operation)
+        {
+            case RemoteOps.FsRead:
+                return await ReadAsync(WireCodec.ReadRead(a), cancellationToken).ConfigureAwait(false);
+            case RemoteOps.FsReadChunk:
+                return await ReadChunkAsync(a.GetInt32("h"), a.GetInt32("n"), cancellationToken).ConfigureAwait(false);
+            case RemoteOps.FsReadClose:
+                CloseRead(a.GetInt32("h"));
+                return static _ => { };
+            case RemoteOps.FsEnumerate:
+            {
+                FileSystemResult<FileSystemDirectorySnapshot> result = await c.FileSystem.EnumerateAsync(WireCodec.ReadEnumerate(a), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteResult(writer, result, WireCodec.WriteDirectory);
+            }
+            case RemoteOps.FsStat:
+            {
+                FileSystemResult<FileSystemEntrySnapshot> result = await c.FileSystem.StatAsync(WireCodec.ReadStat(a), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteResult(writer, result, static (w, snapshot) => WireCodec.WriteSnapshot(w, "en", snapshot));
+            }
+            case RemoteOps.FsCreate:
+                return Mutation(await c.FileSystem.CreateAsync(WireCodec.ReadCreate(a), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsWrite:
+            {
+                (FileSystemWriteRequest request, FileSystemContentDescriptor descriptor, byte[] content) = WireCodec.ReadWrite(a);
+                return Mutation(await c.FileSystem.WriteAsync(request, new BytesContentSource(descriptor, content), cancellationToken).ConfigureAwait(false));
+            }
+            case RemoteOps.FsMove:
+                return Mutation(await c.FileSystem.MoveAsync(WireCodec.ReadMove(a), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsCopy:
+                return Mutation(await c.FileSystem.CopyAsync(WireCodec.ReadCopy(a), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsDelete:
+                return Mutation(await c.FileSystem.DeleteAsync(WireCodec.ReadDelete(a), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsSetPermissions:
+                return Mutation(await c.FileSystem.SetPermissionsAsync(WireCodec.ReadSetPermissions(a), cancellationToken).ConfigureAwait(false));
+
+            case RemoteOps.StdinRead:
+            {
+                char[] buffer = new char[Math.Clamp(a.GetInt32("n"), 1, ChunkSize)];
+                int read = await _input.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+                string? text = read == 0 ? null : new string(buffer, 0, read);
+                return writer =>
+                {
+                    if (text is null)
+                    {
+                        writer.WriteBoolean("eof", true);
+                    }
+                    else
+                    {
+                        writer.WriteString("d", text);
+                    }
+                };
+            }
+
+            case RemoteOps.EnvSetDirectory:
+                c.Environment.SetCurrentDirectory(WireCodec.ReadPath(a, "p"));
+                return static _ => { };
+            case RemoteOps.EnvSetVariable:
+                c.Environment.SetVariable(a.GetString("n"), a.GetOptionalString("v"));
+                return static _ => { };
+            case RemoteOps.Log:
+                c.Logging.Log(
+                    (HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity)a.GetInt32("s"),
+                    a.GetString("m"),
+                    a.TryGetProperty("pr", out _) ? WireCodec.ReadDictionary(a, "pr") : null);
+                return static _ => { };
+            case RemoteOps.NotificationPost:
+                c.Notifications.Post(
+                    (HackerOs.Simulation.Abstractions.Notifications.NotificationSeverity)a.GetInt32("s"),
+                    a.GetString("ti"),
+                    a.GetString("m"),
+                    a.GetOptional("ac") is { } actions
+                        ? [.. WireCodec.ReadPairs(actions).Select(static pair => new HackerOs.Simulation.Abstractions.Notifications.NotificationAction(pair.Key, pair.Value))]
+                        : null,
+                    a.GetOptional("ex") is { } expiry ? TimeSpan.FromTicks(expiry.GetInt64()) : null);
+                return static _ => { };
+            case RemoteOps.ClockDelay:
+                await c.Clock.DelayAsync(TimeSpan.FromTicks(a.GetInt64("d")), cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+
+            case RemoteOps.ProcessStop:
+            {
+                ProcessRecord stopped = await c.Processes.StopAsync(
+                    ProcessId.FromInt64(a.GetInt64("pid")), TimeSpan.FromTicks(a.GetInt64("to")),
+                    (ProcessExitReason)a.GetInt32("r"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteProcess(writer, "pr", stopped);
+            }
+            case RemoteOps.ProcessKill:
+            {
+                ProcessRecord killed = await c.Processes.KillAsync(
+                    ProcessId.FromInt64(a.GetInt64("pid")), (ProcessExitReason)a.GetInt32("r"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteProcess(writer, "pr", killed);
+            }
+
+            case RemoteOps.NetResolve:
+            {
+                var result = await c.Network.ResolveAsync(a.GetString("h"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteHostEntry);
+            }
+            case RemoteOps.NetReverse:
+            {
+                var result = await c.Network.ReverseLookupAsync(System.Net.IPAddress.Parse(a.GetString("ad")), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteHostEntry);
+            }
+            case RemoteOps.NetPing:
+            {
+                var result = await c.Network.PingAsync(a.GetString("h"), TimeSpan.FromTicks(a.GetInt64("to")), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WritePingReply);
+            }
+            case RemoteOps.NetHttp:
+            {
+                var result = await c.Network.SendAsync(WireCodec.ReadHttpRequest(a), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteHttpResponse);
+            }
+            case RemoteOps.NetTcp:
+            {
+                var result = await c.Network.ProbeTcpAsync(a.GetString("h"), a.GetInt32("f"), a.GetInt32("l"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WritePortProbes);
+            }
+            case RemoteOps.NetOs:
+            {
+                var result = await c.Network.DetectOperatingSystemAsync(a.GetString("h"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteFingerprint);
+            }
+
+            case RemoteOps.CatalogInstalled:
+            {
+                var apps = await c.Catalog.GetInstalledAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteApps(writer, apps);
+            }
+            case RemoteOps.CatalogHandlers:
+            {
+                var apps = await c.Catalog.GetHandlersAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteApps(writer, apps);
+            }
+            case RemoteOps.ServiceStart:
+                return ServiceResult(await c.Services.StartAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.ServiceStop:
+                return ServiceResult(await c.Services.StopAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.ServiceGetMode:
+            {
+                ServiceStartMode mode = await c.Services.GetStartModeAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => writer.WriteNumber("m", (int)mode);
+            }
+            case RemoteOps.ServiceSetMode:
+                return ServiceResult(await c.Services.SetStartModeAsync(a.GetString("id"), (ServiceStartMode)a.GetInt32("m"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.Drives:
+            {
+                var drives = await c.Drives.GetDrivesAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteDrives(writer, drives);
+            }
+            case RemoteOps.IntentLaunch:
+            {
+                AppIntentLaunchResult result = await c.Intents.LaunchAsync(a.GetString("id"), WireCodec.ReadStrings(a, "ar"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteLaunchResult(writer, result);
+            }
+            case RemoteOps.IntentOpenFile:
+            {
+                AppIntentOpenFileResult result = await c.Intents.OpenFileAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteOpenFileResult(writer, result);
+            }
+            case RemoteOps.ClipboardGetText:
+            {
+                string? text = await c.Clipboard.GetTextAsync(cancellationToken).ConfigureAwait(false);
+                return writer =>
+                {
+                    if (text is not null)
+                    {
+                        writer.WriteString("tx", text);
+                    }
+                };
+            }
+            case RemoteOps.ClipboardSetText:
+                await c.Clipboard.SetTextAsync(a.GetString("tx"), cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+            case RemoteOps.ClipboardGetFiles:
+            {
+                var files = await c.Clipboard.GetFileDropListAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteClipboardFiles(writer, files);
+            }
+            case RemoteOps.ClipboardSetFiles:
+                await c.Clipboard.SetFileDropListAsync(WireCodec.ReadClipboardFiles(a)!, cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+            case RemoteOps.ClipboardClear:
+                await c.Clipboard.ClearAsync(cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+            default:
+                throw new NotSupportedException($"Unknown remote operation '{operation}'.");
+        }
+    }
+
+    private static Action<Utf8JsonWriter> Mutation(FileSystemMutationResult result) => writer => WireCodec.WriteMutation(writer, result);
+
+    private static Action<Utf8JsonWriter> ServiceResult(ServiceControlResult result) => writer => WireCodec.WriteServiceResult(writer, result);
+
+    /// <summary>
+    /// <c>open(2)</c> + first <c>read(2)</c>: the whole content of a regular file up to
+    /// <see cref="InlineReadLimit"/>, otherwise the first chunk and a handle for the rest.
+    /// </summary>
+    private async Task<Action<Utf8JsonWriter>> ReadAsync(FileSystemReadRequest request, CancellationToken cancellationToken)
+    {
+        FileSystemResult<FileSystemContentReadHandle> result = await _context.FileSystem.ReadAsync(request, cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            FileSystemError error = result.Error!;
+            return writer =>
+            {
+                writer.WriteBoolean("ok", false);
+                WireCodec.WriteError(writer, "err", error);
+            };
+        }
+
+        FileSystemContentReadHandle handle = result.Value!;
+        int limit = handle.Entry.Metadata is FileMetadata { Length: <= InlineReadLimit } file
+            ? (int)Math.Max(file.Length + 1, 1)
+            : ChunkSize;
+        (byte[] bytes, bool endOfStream) = await ReadUpToAsync(handle.Content, limit, untilEnd: handle.Entry.Metadata is FileMetadata { Length: <= InlineReadLimit }, cancellationToken).ConfigureAwait(false);
+        int? id = null;
+        if (endOfStream)
+        {
+            await handle.DisposeAsync().ConfigureAwait(false);
+        }
+        else
+        {
+            lock (_gate)
+            {
+                id = ++_nextReadHandle;
+                _reads[id.Value] = handle;
+            }
+        }
+
+        return writer =>
+        {
+            writer.WriteBoolean("ok", true);
+            WireCodec.WriteSnapshot(writer, "en", handle.Entry);
+            WireCodec.WriteDescriptor(writer, "d", handle.Descriptor);
+            writer.WriteBase64String("b", bytes);
+            writer.WriteBoolean("eof", endOfStream);
+            if (id is { } value)
+            {
+                writer.WriteNumber("h", value);
+            }
+        };
+    }
+
+    private async Task<Action<Utf8JsonWriter>> ReadChunkAsync(int id, int count, CancellationToken cancellationToken)
+    {
+        FileSystemContentReadHandle? handle;
+        lock (_gate)
+        {
+            _reads.TryGetValue(id, out handle);
+        }
+
+        if (handle is null)
+        {
+            return static writer =>
+            {
+                writer.WriteBase64String("b", ReadOnlySpan<byte>.Empty);
+                writer.WriteBoolean("eof", true);
+            };
+        }
+
+        (byte[] bytes, bool endOfStream) = await ReadUpToAsync(handle.Content, Math.Clamp(count, 1, 4 * ChunkSize), untilEnd: false, cancellationToken).ConfigureAwait(false);
+        if (endOfStream)
+        {
+            CloseRead(id);
+        }
+
+        return writer =>
+        {
+            writer.WriteBase64String("b", bytes);
+            writer.WriteBoolean("eof", endOfStream);
+        };
+    }
+
+    private void CloseRead(int id)
+    {
+        FileSystemContentReadHandle? handle;
+        lock (_gate)
+        {
+            _reads.Remove(id, out handle);
+        }
+
+        if (handle is not null)
+        {
+            _ = handle.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Reads at most <paramref name="limit"/> bytes. With <paramref name="untilEnd"/>, keeps reading
+    /// to the end of a file whose size is known (its length plus one byte proves the end).
+    /// </summary>
+    private static async Task<(byte[] Bytes, bool EndOfStream)> ReadUpToAsync(Stream content, int limit, bool untilEnd, CancellationToken cancellationToken)
+    {
+        using MemoryStream copy = new();
+        byte[] buffer = new byte[Math.Min(limit, ChunkSize)];
+        while (true)
+        {
+            int wanted = untilEnd ? buffer.Length : (int)Math.Min(buffer.Length, limit - copy.Length);
+            if (wanted <= 0)
+            {
+                return (copy.ToArray(), false);
+            }
+
+            int read = await content.ReadAsync(buffer.AsMemory(0, wanted), cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                return (copy.ToArray(), true);
+            }
+
+            copy.Write(buffer, 0, read);
+            if (!untilEnd && copy.Length >= limit)
+            {
+                return (copy.ToArray(), false);
+            }
+        }
+    }
+
+    /// <summary>The bytes a worker process wrote, as the content source of a write.</summary>
+    private sealed class BytesContentSource(FileSystemContentDescriptor descriptor, byte[] content) : IFileSystemContentSource
+    {
+        public FileSystemContentDescriptor Descriptor => descriptor;
+
+        public long? Length => content.Length;
+
+        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Stream>(new MemoryStream(content, writable: false));
+    }
+}

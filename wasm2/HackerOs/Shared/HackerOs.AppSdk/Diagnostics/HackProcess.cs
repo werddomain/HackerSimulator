@@ -274,13 +274,14 @@ public sealed partial class HackProcess
     /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
-    public Task KillAsync(CancellationToken cancellationToken = default)
+    public async Task KillAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IAppProcessGateway gateway = HackExecutionContext.Current.Processes;
         try
         {
-            gateway.Kill(ProcessId.FromInt64(Id), ProcessExitReason.Killed);
+            // ADR 0070: the asynchronous form, so a caller running in a worker sees the OS's answer.
+            await gateway.KillAsync(ProcessId.FromInt64(Id), ProcessExitReason.Killed, cancellationToken).ConfigureAwait(false);
         }
         catch (AppGatewayAccessDeniedException exception)
         {
@@ -292,7 +293,6 @@ public sealed partial class HackProcess
         }
 
         HasExited = true;
-        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -139,6 +139,35 @@ public sealed record ProcNetDevice(
     long TransmitErrors,
     long TransmitDropped);
 
+/// <summary>One Web Worker of <c>/proc/hackeros/workers</c> (ADR 0071, section 5).</summary>
+/// <param name="Id">Worker number.</param>
+/// <param name="Role"><c>pool</c>, <c>overflow</c>, <c>dedicated</c> or <c>ready</c>.</param>
+/// <param name="State"><c>starting</c>, <c>idle</c>, <c>running</c>, <c>not-responding</c> or <c>terminated</c>.</param>
+/// <param name="Core">The virtual core a pool worker embodies, or <see langword="null"/>.</param>
+/// <param name="MemoryKilobytes">Managed heap of its .NET runtime.</param>
+/// <param name="HeartbeatMilliseconds">Age of its last heartbeat, or <see langword="null"/> before the first.</param>
+/// <param name="BusyMilliseconds">CPU time its thread spent running processes.</param>
+/// <param name="ProcessIds">The visible processes it hosts.</param>
+public sealed record ProcWorker(
+    int Id,
+    string Role,
+    string State,
+    int? Core,
+    long MemoryKilobytes,
+    long? HeartbeatMilliseconds,
+    long BusyMilliseconds,
+    IReadOnlyList<long> ProcessIds)
+{
+    /// <summary>Gets whether its thread is stuck (no heartbeat for longer than the threshold).</summary>
+    public bool IsNotResponding => State == "not-responding";
+}
+
+/// <summary>The Web Workers of the machine, from <c>/proc/hackeros/workers</c> (ADR 0071, section 5).</summary>
+/// <param name="Capacity">The ceiling (<c>navigator.hardwareConcurrency</c>, at least 2).</param>
+/// <param name="PoolSize">Workers of the pool: one per virtual core.</param>
+/// <param name="Workers">Every live worker.</param>
+public sealed record ProcWorkers(int Capacity, int PoolSize, IReadOnlyList<ProcWorker> Workers);
+
 /// <summary>
 /// Parsers of the system files of <c>/proc</c> the task manager reads (ADR 0057, section 8). They
 /// follow the Linux layouts, so they would read a real <c>/proc</c> too, and they tolerate a
@@ -340,4 +369,48 @@ public static class ProcFiles
 
     private static double Double(string[] fields, int index) =>
         index < fields.Length && double.TryParse(fields[index], NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ? value : 0;
+
+    /// <summary>
+    /// Parses <c>/proc/hackeros/workers</c>: <c>capacity N</c>, <c>pool_size N</c>, a header line, then
+    /// one line per worker (<c>id role state core memory_kb heartbeat_ms busy_ms pids</c>, <c>-</c> for none).
+    /// </summary>
+    public static ProcWorkers ParseWorkers(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        int capacity = 0;
+        int poolSize = 0;
+        List<ProcWorker> workers = [];
+        foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string[] fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (fields is ["capacity", string value])
+            {
+                capacity = ParseInt(value);
+            }
+            else if (fields is ["pool_size", string pool])
+            {
+                poolSize = ParseInt(pool);
+            }
+            else if (fields.Length >= 8 && int.TryParse(fields[0], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int id))
+            {
+                workers.Add(new ProcWorker(
+                    id,
+                    fields[1],
+                    fields[2],
+                    fields[3] == "-" ? null : ParseInt(fields[3]),
+                    ParseLong(fields[4]),
+                    fields[5] == "-" ? null : ParseLong(fields[5]),
+                    ParseLong(fields[6]),
+                    fields[7] == "-" ? [] : [.. fields[7].Split(',').Select(ParseLong)]));
+            }
+        }
+
+        return new ProcWorkers(capacity, poolSize, workers);
+
+        static int ParseInt(string value) =>
+            int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int parsed) ? parsed : 0;
+
+        static long ParseLong(string value) =>
+            long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out long parsed) ? parsed : 0;
+    }
 }

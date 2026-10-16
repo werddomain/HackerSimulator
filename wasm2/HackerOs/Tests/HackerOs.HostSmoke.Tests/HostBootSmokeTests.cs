@@ -77,6 +77,9 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             Log($"/proc/self/status read ({Sources(status)}).");
             AssertNoErrors(errors, "terminal");
 
+            await CheckWorkersAsync(page, screen, rows, settings);
+            AssertNoErrors(errors, "workers");
+
             await OpenAppAsync(page, "System Monitor");
             ILocator filter = page.GetByLabel("Filter processes");
             await filter.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -102,6 +105,56 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     /// that keeps its session across a reload (the server host's circuit can) may go straight to
     /// the desktop; that is accepted.
     /// </summary>
+    /// <summary>
+    /// ADR 0070/0071 (plan section 5.2): on a WebAssembly host, commands run in Web Workers — a
+    /// pipeline works, <c>/proc/hackeros/workers</c> lists the pool, and a command stuck in a loop
+    /// (<c>stress</c>) leaves the desktop responsive, shows "not-responding" and dies on
+    /// <c>kill -9</c> and on <c>kill</c> (escalation after the grace period). On the server host,
+    /// which has no Web Worker (section 6), the file does not exist and commands still run.
+    /// </summary>
+    private async Task CheckWorkersAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
+    {
+        await RunCommandAsync(page, screen, "clear; seq 30 | grep 1 | wc -l");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^\s*12\s*$", RegexOptions.Multiline), "the pipeline's count");
+        Log("pipeline ran.");
+
+        await RunCommandAsync(page, screen, "clear; cat /proc/hackeros/workers");
+        if (!settings.ExpectsWorkers)
+        {
+            await WaitForTerminalTextAsync(rows, text => text.Contains("No such file", StringComparison.Ordinal), "no worker on this host");
+            Log("no Web Worker on this host (ADR 0070, section 6).");
+            return;
+        }
+
+        string workers = await WaitForTerminalTextAsync(
+            rows, text => text.Contains("pool_size", StringComparison.Ordinal) && Regex.IsMatch(text, @"^\d+\s+pool\s", RegexOptions.Multiline),
+            "/proc/hackeros/workers with a pool worker");
+        Log($"workers:\n{workers.Trim()}");
+
+        // A command that never yields, in the background: the desktop must keep answering.
+        await RunCommandAsync(page, screen, "clear; stress -t 600 &");
+        await WaitForTerminalTextAsync(rows, text => text.Contains("dispatching hogs", StringComparison.Ordinal), "stress started");
+        Stopwatch answered = Stopwatch.StartNew();
+        await RunCommandAsync(page, screen, "echo still-responsive");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^still-responsive\s*$", RegexOptions.Multiline), "an echo while stress spins");
+        Log($"echo answered in {answered.ElapsedMilliseconds} ms while stress spins.");
+        await Task.Delay(6_500); // past the 5 s unresponsive threshold
+        await RunCommandAsync(page, screen, "clear; cat /proc/hackeros/workers");
+        await WaitForTerminalTextAsync(rows, text => text.Contains("not-responding", StringComparison.Ordinal), "a not-responding worker");
+        await RunCommandAsync(page, screen, "clear; kill -9 %1");
+        await WaitForTerminalTextAsync(rows, text => text.Contains("Killed", StringComparison.Ordinal), "Killed after kill -9");
+        Log("kill -9 ended the stuck command.");
+
+        // SIGTERM is never delivered to a stuck worker: the OS terminates it after the grace period.
+        await RunCommandAsync(page, screen, "clear; stress -t 600 &");
+        await WaitForTerminalTextAsync(rows, text => text.Contains("dispatching hogs", StringComparison.Ordinal), "stress started again");
+        await RunCommandAsync(page, screen, "kill %1; sleep 7; jobs");
+        await WaitForTerminalTextAsync(
+            rows, text => text.Contains("Terminated", StringComparison.Ordinal) || text.Contains("Killed", StringComparison.Ordinal),
+            "the job ended after kill");
+        Log("kill (SIGTERM) ended the stuck command after the grace period.");
+    }
+
     private async Task SignInAsync(IPage page, bool firstVisit)
     {
         ILocator onboarding = page.GetByRole(AriaRole.Heading, new() { Name = "Create administrator" });
@@ -336,7 +389,14 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         }
     }
 
-    private void Log(string message) => output.WriteLine($"[smoke] {message}");
+    private void Log(string message)
+    {
+        // One prefix per line: verify-hosts.sh keeps only the lines that carry it.
+        foreach (string line in message.Split('\n'))
+        {
+            output.WriteLine($"[smoke] {line}");
+        }
+    }
 
     /// <summary>The end of an hsh prompt: <c>$</c> or <c>#</c> at the end of a rendered line.</summary>
     [GeneratedRegex(@"[$#]\s*$", RegexOptions.Multiline)]

@@ -153,6 +153,20 @@ Chaque ligne s'exécute sous le contexte ambiant du shell : `sudo` et les
 commandes ont le shell pour parent. Le jeton de la ligne est lié à celui du
 processus `hsh` : tuer le shell (ou son terminal) arrête la ligne.
 
+### Commandes dans des Web Workers (ADR 0070)
+
+Le shell lui-même (`hsh`, son interpréteur, ses tubes et ses redirections)
+reste sur le fil principal. Chaque commande externe dont le manifeste dit
+`pool` ou `dedicated` y est lancée par `AppLifecycleOrchestrator` dans un Web
+Worker, avec des passerelles distantes : ses flux standard passent par messages
+et ses appels reviennent à l'OS. Toutes les étapes d'un pipeline sont placées
+sur le même worker (`ExecutionPlacement.BeginGroup`). Les commandes intégrées
+(`cd`, `export`, `jobs`, `kill`, `read`…) et celles qui pilotent le shell ou
+l'écran (`sudo`, `nano`, `top`, `watch`…) restent sur le fil principal : `kill`
+répond même quand un worker est bloqué. Une commande tuée (code 137, raison
+`Killed` ou `Timeout`) fait écrire « Killed » sur la sortie d'erreur, comme
+`bash`. Voir [`worker-processes.md`](worker-processes.md).
+
 ### Fin d'un shell
 
 `DisposeAsync` tue d'abord les commandes encore en cours (raison

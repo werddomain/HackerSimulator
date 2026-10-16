@@ -122,6 +122,11 @@ les apps intégrées) ou s'il a exécuté du code sous son frame (le shell, une
 app installée au runtime). Les autres (contenu de jeu sans code) restent
 simulés, comme le veut l'ADR 0066 §4.
 
+Un processus dans un Web Worker (ADR 0070) reçoit en plus, en `RssAnon`, sa part
+de la mémoire du runtime de son worker (répartie entre les processus du
+worker) et ses allocations mesurées dans le worker ; `/proc/meminfo` compte
+le runtime de chaque worker. Voir [`worker-processes.md`](worker-processes.md).
+
 ## Constantes
 
 Définies dans `MemoryAccountingConstants` et `AppNetworkGateway`, rappelées

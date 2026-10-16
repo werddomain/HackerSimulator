@@ -192,6 +192,27 @@ public static partial class AppManifestValidator
         }
     }
 
+    /// <summary>
+    /// ADR 0070, section 1: a window app needs the DOM and only runs on the main thread; the
+    /// <c>default</c> placeholder of the attribute is never a manifest value.
+    /// </summary>
+    private static void ValidateExecution(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Execution is not { } execution)
+        {
+            return;
+        }
+
+        if (!Enum.IsDefined(execution) || execution == AppExecutionHost.Default)
+        {
+            AddError(errors, "manifest.execution.invalid", "execution", "Execution must be mainThread, pool or dedicated.");
+        }
+        else if (manifest.Kind == AppKind.Window && execution != AppExecutionHost.MainThread)
+        {
+            AddError(errors, "manifest.execution.window", "execution", "Window apps run on the main thread: they need the DOM.");
+        }
+    }
+
     private static void ValidateKindSpecificFields(AppManifest manifest, List<ManifestValidationError> errors)
     {
         if (manifest.Kind == AppKind.Terminal)
@@ -227,6 +248,7 @@ public static partial class AppManifestValidator
             AddError(errors, "manifest.supportsBack.forbidden", "supportsBack", "Only window apps can declare Back navigation support.");
         }
 
+        ValidateExecution(manifest, errors);
         ValidateComponents(manifest, errors);
 
         foreach (FileHandlerManifest handler in manifest.FileHandlers)

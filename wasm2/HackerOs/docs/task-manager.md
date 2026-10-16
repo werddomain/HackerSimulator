@@ -90,6 +90,10 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
   « Not responding » en rouge à la place de l'état, avec une infobulle ; le tri
   par état en tient compte. Affichage seulement : rien n'est arrêté, « End
   task » reste le seul moyen. Voir [`cpu-accounting.md`](cpu-accounting.md).
+  Pour un processus dans un Web Worker (ADR 0070), l'état apparaît **pendant**
+  le blocage : son worker ne bat plus depuis 5 s, et le reste de l'interface
+  continue de répondre ; « End task » puis « Force kill » terminent le worker
+  ([`worker-processes.md`](worker-processes.md)).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -293,3 +297,10 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
 - [x] « Force kill » (`SIGKILL`) dans le menu contextuel des lignes et sur Maj+Suppr, avec sa propre confirmation.
 - [x] Sélection signalée en parallèle, rapport dans l'ordre de la sélection (`EndTaskRunner`, `EndTaskMode`).
 - [x] Tests : `EndTaskTests`, `HackProcessTests.TerminateAsync_*`.
+
+## Chantier `rebuild/5-worker-processes` (ADR 0070, 0071)
+
+- [x] `Metrics/ProcFiles.cs` lit `/proc/hackeros/workers` (`ProcWorkers`, `ProcWorker`, `ParseWorkers`) ; `ProcReader` le lit s'il existe.
+- [x] Onglet Performance : section « Workers » (capacité, taille du pool, une carte par worker avec rôle, état, cœur, mémoire, processus) ; « Not responding » en rouge.
+- [x] « Not responding » visible pendant le blocage d'une commande dans un worker ; « Force kill » termine le worker.
+- [x] Tests : `ProcFilesTests` (`ParseWorkers`).

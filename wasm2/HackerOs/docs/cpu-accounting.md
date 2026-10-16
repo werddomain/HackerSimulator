@@ -90,6 +90,12 @@ comptable : `user + system + idle` vaut toujours le temps écoulé.
 - Sur le thread principal, l'état n'est visible qu'**après coup**, à la fin de
   la tranche : rien d'autre ne s'exécute pendant. Une boucle infinie gèle
   encore l'OS ; seul un Web Worker (ADR 0070) l'isole.
+- Dans un Web Worker (commandes et services, [`worker-processes.md`](worker-processes.md)),
+  le worker mesure les tranches de ses processus avec le même crochet et les
+  envoie dans son battement de cœur (250 ms) ; l'OS les ajoute au temps noyau
+  passé à servir leurs appels. Un worker sans battement depuis 5 s met ses
+  processus **Not responding pendant** le blocage, et ce temps compte comme
+  occupé (ADR 0072 §6).
 
 ### Coût
 
@@ -127,7 +133,7 @@ bool responding = editor.Responding;               // false : « Not responding 
 |---|---|---|
 | `/proc/<pid>/stat` | `utime`, `stime` mesurés (champs 14 et 15, `USER_HZ`) | `utime` reconstruit depuis l'historique borné du simulateur (un échantillon par seconde), `stime` à `0` |
 | `/proc/<pid>/status` | `Cpu` = usage de la dernière seconde, `CpuSource: measured`, puis `Responding`, `LongTasks`, `voluntary_ctxt_switches`, `nonvoluntary_ctxt_switches` | exactement le fichier d'avant : `Cpu` simulé, `CpuSource: simulated`, sans les quatre champs |
-| `/proc/stat` | `cpu0` = le thread principal (`user`, `system` = `stime` + compositeur, `idle`) ; les autres cœurs du profil matériel restent `idle` jusqu'aux processus en worker (ADR 0070) | temps simulé (ADR 0057) |
+| `/proc/stat` | `cpu0` = le thread principal (`user`, `system` = `stime` + compositeur, `idle`) ; le cœur `k` ajoute le temps occupé du worker du pool qui le porte (ADR 0070, [`worker-processes.md`](worker-processes.md)) ; sans worker, les autres cœurs restent `idle` | temps simulé (ADR 0057) |
 
 Un processus qui n'a encore rien exécuté (ou un processus du contenu de jeu,
 qui n'exécute pas de code) n'est pas mesuré : il garde ses valeurs simulées.

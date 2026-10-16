@@ -6,7 +6,8 @@ namespace HackerOs.Commands.Jobs;
 /// Manifest of "jobs" (ADR 0047, added by ADR 0064). The build generates
 /// <c>manifests/&lt;appId&gt;.json</c> from this class; it is never instantiated at runtime.
 /// </summary>
-[AppManifest]
+// ADR 0070: stays on the main thread: it lists the calling shell's jobs, like the jobs builtin of bash.
+[AppManifest(Execution = AppExecutionHost.MainThread)]
 public sealed class JobsApp : AppDefinition
 {
     /// <inheritdoc />

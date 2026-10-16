@@ -324,6 +324,33 @@ Ce que font les apps existantes (section 5.1 du
 HackPaint n'a pas d'enregistrement : rien à garder. Les autres apps n'ont ni
 état non enregistré ni boucle longue.
 
+### Processus dans des Web Workers (ADR 0070 et 0071)
+
+Une commande ou un service peut tourner dans un Web Worker au lieu du fil
+principal. L'app le déclare dans son manifeste — rien d'autre ne change dans
+son code :
+
+```csharp
+[AppManifest(Execution = AppExecutionHost.Dedicated)] // ou Pool, MainThread
+public sealed class MyServiceApp : AppDefinition { ... }
+```
+
+| Valeur | Effet |
+|---|---|
+| `Default` (omise) | Commande → `Pool`, service → `Dedicated`, fenêtre → `MainThread` (ADR 0070 §1). |
+| `Pool` | Un worker par cœur virtuel ; les étapes d'un pipeline partagent le même worker. |
+| `Dedicated` | Un worker à soi (le worker prêt, remplacé aussitôt). |
+| `MainThread` | Reste sur le fil principal ; à commenter (raison) dans la définition. |
+
+Dans un worker, `IAppExecutionContext` est servi par des passerelles distantes
+qui envoient chaque appel à l'OS, où **les mêmes vérifications de capacités**
+s'appliquent ; `stdin`/`stdout`/`stderr` passent par messages. `StopRequested`,
+`CheckpointAsync`, les codes 130/137 et `OnStoppingAsync` se comportent comme
+sur le fil principal. Ce qui n'est pas disponible dans un worker (événements
+typés, abonnements de fichiers, hôte de shell, administration, page HTTP du
+navigateur simulé) lève `NotSupportedException` : une app qui en a besoin
+déclare `MainThread`. Détails : [`worker-processes.md`](worker-processes.md).
+
 ### Graphiques (ADR 0058 §2)
 
 `HackLineChart` (`HackerOs.AppSdk.Blazor.Charts`) trace en SVG natif une ou
