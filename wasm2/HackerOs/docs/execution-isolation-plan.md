@@ -3,7 +3,7 @@
 **Statut :** plan validé avec Benoit le 2026-10-16. Il prolonge
 [`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md) (phases 1 à 4,
 fusionnées dans `main` par la PR #114) et lève l'exclusion « isolation
-d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0070.
+d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0071.
 
 ## 1. Objet
 
@@ -40,6 +40,10 @@ d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0070.
 4. **Le SDK ne change pas pour les apps existantes.** Une app gagne la mesure
    sans changer une ligne ; une commande ne sait pas si elle tourne dans un
    worker.
+5. **Les apps existantes suivent chaque nouveauté dans le même chantier.**
+   Chaque chantier fait l'inventaire des apps, commandes et services de
+   `Apps/` concernés et les migre avant sa PR (section 5.1) : ce n'est pas
+   laissé à un chantier ultérieur.
 
 ## 4. Registre des décisions
 
@@ -51,7 +55,8 @@ d'exécution » de sa section 9. Les décisions sont dans les ADR 0066 à 0070.
 | 4 | Mémoire en quatre couches : image, ressources de l'OS, allocations par tranche, tas réel réparti après chaque GC ; pas de limite. Le comptage du marshaling est écarté. | 0068 |
 | 5 | `StopRequested` (raison, échéance), `CheckpointAsync`, `TerminateAsync`, `ProcessExitReason.Terminated` ; escalade en quatre étapes ; « End task » devient `SIGTERM`, « Force kill » est ajouté. | 0069 |
 | 6 | Modèle hybride : apps à fenêtre sur le thread principal, commandes dans un pool d'un worker par cœur virtuel, services dans un worker dédié avec une réserve ; passerelles distantes ; battement de cœur ; seul un worker muet est terminé. | 0070 |
-| 7 | `HackerOs.Server` : mesures coupées par défaut, pas de worker, jusqu'à un ADR propre à cet hôte. | 0066, 0067, 0070 |
+| 7 | Une fois le système démarré, toujours au moins un worker prêt ; il sert aux processus dédiés et au débordement du pool quand aucun worker n'est libre ; plafond `navigator.hardwareConcurrency` ; `/proc/hackeros/workers`. | 0071 |
+| 8 | `HackerOs.Server` : mesures coupées par défaut, pas de worker, jusqu'à un ADR propre à cet hôte. | 0066, 0067, 0070 |
 
 ## 5. Chantiers
 
@@ -63,8 +68,17 @@ Chaque branche part de `rebuild/base` et sa PR vise `rebuild/base`.
 | `rebuild/5-cpu-accounting` | ADR 0067 : comptage `utime`/`stime`, compositeur, `/proc/<pid>/stat`, `/proc/stat` réel, `HackProcess.*ProcessorTime`, long tasks, « Not responding » et `Responding:`, test de surcoût (< 5 %). | `5-accounting-switches` |
 | `rebuild/5-memory-accounting` | ADR 0068 : quatre couches, champs de `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`. | `5-accounting-switches` |
 | `rebuild/5-graceful-stop` | ADR 0069 : `StopRequested`, `CheckpointAsync`, `TerminateAsync`, `Terminated`, ordonnanceur par processus et `HackProcessKilledException`, « End task » poli et « Force kill », `CheckpointAsync` dans les commandes longues. | — |
-| `rebuild/5-worker-processes` | ADR 0070 : `AppExecutionHost` dans le manifeste, `HackerOs.Platform.WorkerHost`, passerelles distantes et tests de parité, pool et réserve, battement de cœur, escalade étape 4, d'abord pour `HackerOs.Commands`. | les quatre autres |
+| `rebuild/5-worker-processes` | ADR 0070 et 0071 : worker toujours prêt après le boot, débordement et plafond, `/proc/hackeros/workers`, `AppExecutionHost` dans le manifeste, `HackerOs.Platform.WorkerHost`, passerelles distantes et tests de parité, pool et réserve, battement de cœur, escalade étape 4, d'abord pour `HackerOs.Commands`. | les quatre autres |
 | `rebuild/5-final` | Vérification de bout en bout, `system-metrics.md`, `task-manager.md`, `app-sdk.md`, `sdk-reference.md`, index, cette liste à jour. | tous |
+
+### 5.1 Ce que chaque chantier fait pour les apps existantes
+
+| Chantier | Migration des apps existantes |
+|---|---|
+| `5-accounting-switches` | Vérifier que tout le code des apps passe par un frame ambiant (`WindowAppBase`, `HackComponentBase`, `TerminalAppBase`, `ServiceAppBase`) ; ajouter un test qui échoue si une app de `Apps/` exécute du code hors frame, faute de quoi son temps irait au compositeur. |
+| `5-cpu-accounting`, `5-memory-accounting` | Aucune modification de code d'app ; le générateur de manifeste fournit la taille des assemblies (couche image) pour **toutes** les apps ; tests de `/proc/<pid>/stat` et `status` sur un échantillon de chaque famille (fenêtre, commande, service). |
+| `5-graceful-stop` | Chaque app à fenêtre et chaque service qui tient un état (éditeurs, explorateur pendant une copie, Paramètres, services) réagit à `StopRequested` : finit ou annule proprement son opération en cours, sans perte silencieuse (un éditeur avec des modifications non enregistrées garde un brouillon de récupération). Toute boucle longue de `Apps/` (commandes, copie récursive de l'explorateur, recherche du CodeEditor, zip) appelle `CheckpointAsync`. |
+| `5-worker-processes` | Chaque commande de `HackerOs.Commands` et chaque service déclare son `AppExecutionHost` (ou reçoit le bon défaut) ; les tests de parité exécutent **toutes** les commandes intégrées dans les deux modes ; une app qui ne peut pas tourner en worker reste en `MainThread`, avec la raison en commentaire. |
 
 Ordre :
 
@@ -110,6 +124,13 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
 - [ ] Hôte de processus dans un worker et passerelles distantes, tests de parité.
 - [ ] Pool (un worker par cœur virtuel), réserve dédiée, placement des pipelines.
 - [ ] Battement de cœur, « Not responding » pendant le blocage, terminaison du worker.
+- [ ] Worker toujours prêt après le boot, débordement du pool, plafond, `/proc/hackeros/workers` (ADR 0071).
+
+### Apps existantes (section 5.1)
+- [ ] Toutes les apps de `Apps/` exécutent leur code dans un frame ambiant (test).
+- [ ] Apps à fenêtre et services avec état : `StopRequested` géré.
+- [ ] Boucles longues de `Apps/` : `CheckpointAsync`.
+- [ ] Commandes et services : `AppExecutionHost` déclaré, parité testée pour toutes les commandes.
 
 ### Fin de phase
 - [ ] Vérification finale et documentation à jour (`rebuild/5-final`).
@@ -127,6 +148,7 @@ Fait par `rebuild/5-accounting-switches` ([`resource-accounting.md`](resource-ac
   [0067](adr/0067-measured-cpu-time.md),
   [0068](adr/0068-measured-process-memory.md),
   [0069](adr/0069-graceful-stop-and-checkpoints.md),
-  [0070](adr/0070-worker-hosted-processes.md).
+  [0070](adr/0070-worker-hosted-processes.md),
+  [0071](adr/0071-always-ready-worker.md).
 - [`system-metrics.md`](system-metrics.md), [`task-manager.md`](task-manager.md),
   [`app-sdk.md`](app-sdk.md).
