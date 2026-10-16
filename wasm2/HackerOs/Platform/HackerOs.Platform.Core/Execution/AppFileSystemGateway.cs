@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Time;
 
 namespace HackerOs.Platform.Core.Execution;
@@ -26,16 +27,29 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
     private readonly IReadOnlyList<string> _groupIds;
     private readonly FileSystemSelectedResourceHandle? _selectedHandle;
     private readonly Action<FileSystemError>? _notifyPermissionError;
+    private readonly IKernelMemoryLedger? _kernelMemory;
 
     /// <summary>Initializes a filesystem gateway bound to one app operation context.</summary>
+    /// <param name="fileSystem">The trusted filesystem service.</param>
+    /// <param name="clock">Simulation clock stamping each authorization context.</param>
+    /// <param name="operationContext">Who the app is: id, user, process, capabilities.</param>
+    /// <param name="groupIds">The user's group ids, for permission checks.</param>
+    /// <param name="selectedHandle">Optional file-picker handle granting access to one resource.</param>
+    /// <param name="notifyPermissionError">Optional callback raised for every permission refusal.</param>
+    /// <param name="kernelMemory">
+    /// Optional ledger charged with the buffers of the app's write streams (ADR 0068); without it, or
+    /// when it is not tracking, <see cref="ChargeStreamBuffer"/> returns <see cref="KernelMemoryCharge.None"/>.
+    /// </param>
     public AppFileSystemGateway(
         IFileSystemService fileSystem,
         ISimulationClock clock,
         AppOperationContext operationContext,
         IReadOnlyList<string> groupIds,
         FileSystemSelectedResourceHandle? selectedHandle = null,
-        Action<FileSystemError>? notifyPermissionError = null)
+        Action<FileSystemError>? notifyPermissionError = null,
+        IKernelMemoryLedger? kernelMemory = null)
     {
+        _kernelMemory = kernelMemory;
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _operationContext = operationContext ?? throw new ArgumentNullException(nameof(operationContext));
@@ -43,6 +57,12 @@ public sealed class AppFileSystemGateway : IAppFileSystemGateway
         _selectedHandle = selectedHandle;
         _notifyPermissionError = notifyPermissionError;
     }
+
+    /// <inheritdoc />
+    public KernelMemoryCharge ChargeStreamBuffer() =>
+        _kernelMemory is { IsTracking: true } ledger && _operationContext.ProcessId is > 0 and long pid
+            ? ledger.Charge(ProcessId.FromInt64(pid), KernelMemoryKind.StreamBuffer)
+            : KernelMemoryCharge.None;
 
     private FileSystemAuthorizationContext BuildContext() =>
         new(_operationContext, _groupIds, _clock.UtcNow, _selectedHandle);

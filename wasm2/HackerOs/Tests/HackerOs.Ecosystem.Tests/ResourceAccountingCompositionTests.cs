@@ -1,5 +1,6 @@
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.ResourceAccounting;
+using HackerOs.Platform.ResourceAccounting.Memory;
 using HackerOs.Simulation.Abstractions.Processes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,18 +53,17 @@ public sealed class ResourceAccountingCompositionTests
             Assert.Same(provider.GetRequiredService<ContextSwitchDispatcher>(), installed[0]);
         }
 
-        // ADR 0067: the CPU measurement is real when built and enabled, and it observes the hook.
-        // Memory is not measured yet (chantier 5-memory-accounting): it stays simulated.
+        // ADR 0067 and 0068: each measurement is real exactly when it is built and enabled, and
+        // each one then rides the hook as one observer of the dispatcher.
         bool cpuActive = buildCpu && enabledCpu;
+        bool memoryActive = buildMemory && enabledMemory;
         ICpuTimeAccountant cpu = provider.GetRequiredService<ICpuTimeAccountant>();
         Assert.Equal(cpuActive, cpu.IsMeasuring);
         Assert.Equal(cpuActive, cpu is MeasuredCpuTimeAccountant);
-        if (anyActive)
-        {
-            Assert.Equal(cpuActive ? 1 : 0, provider.GetRequiredService<ContextSwitchDispatcher>().ObserverCount);
-        }
-
-        Assert.False(provider.GetRequiredService<IMemoryAccountant>().IsMeasuring);
+        Assert.Equal(memoryActive, provider.GetRequiredService<IMemoryAccountant>().IsMeasuring);
+        Assert.Equal(memoryActive, provider.GetRequiredService<IKernelMemoryLedger>().IsTracking);
+        Assert.Equal(memoryActive, provider.GetService<AllocationTracker>() is not null);
+        Assert.Equal((cpuActive ? 1 : 0) + (memoryActive ? 1 : 0), provider.GetService<ContextSwitchDispatcher>()?.ObserverCount ?? 0);
         Assert.False(ContextSwitchHook.IsInstalled);
     }
 
@@ -96,6 +96,7 @@ public sealed class ResourceAccountingCompositionTests
         Assert.Same(ResourceAccountingPlan.Disabled, provider.GetRequiredService<ResourceAccountingPlan>());
         Assert.Same(NullCpuTimeAccountant.Instance, provider.GetRequiredService<ICpuTimeAccountant>());
         Assert.Same(NullMemoryAccountant.Instance, provider.GetRequiredService<IMemoryAccountant>());
+        Assert.Same(NullKernelMemoryLedger.Instance, provider.GetRequiredService<IKernelMemoryLedger>());
     }
 
     [Fact]

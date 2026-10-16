@@ -55,7 +55,7 @@ Contrats touchés :
 | `/proc/<pid>/stat` | fichier `0444` | une ligne au format `proc(5)`, 52 champs ; `utime` et `stime` (14 et 15) en `USER_HZ`, mesurés quand la mesure CPU est active, sinon `utime` reconstruit depuis le simulateur (phase 5, ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) |
 | `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
-| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB |
+| `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB ; avec la mémoire mesurée (ADR 0068), aussi `AnonPages`, `Mapped`, `Slab` |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
 | `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
@@ -89,6 +89,13 @@ facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
 processus, `simulated` sinon (mesure coupée, pas encore implémentée, ou
 processus du contenu de jeu) ; voir
 [`resource-accounting.md`](resource-accounting.md).
+
+Quand la mémoire d'un processus est mesurée (ADR 0068,
+[`memory-accounting.md`](memory-accounting.md)), cinq lignes suivent `VmRSS`,
+dans l'ordre de Linux : `RssAnon`, `RssFile`, `VmData` (part noyau), `VmExe`
+en kB, puis `HackAllocBytes` (octets alloués depuis le démarrage du processus,
+sans unité). `VmRSS = RssAnon + RssFile + VmData`. Un processus simulé n'a
+aucune de ces lignes : le format est exactement celui d'avant la phase 5.
 
 Quand le CPU est mesuré (ADR 0067), `Cpu` est l'usage de la dernière seconde
 et quatre lignes suivent `MemSource` :

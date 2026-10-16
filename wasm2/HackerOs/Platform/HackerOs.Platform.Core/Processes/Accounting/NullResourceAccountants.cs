@@ -58,9 +58,36 @@ public sealed class NullMemoryAccountant : IMemoryAccountant
     public bool IsMeasuring => false;
 
     /// <inheritdoc />
-    public bool TryGetResidentBytes(ProcessId pid, out long bytes)
+    public bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage usage)
     {
-        bytes = 0;
+        usage = default;
         return false;
     }
+
+    /// <inheritdoc />
+    public bool TryGetSystemMemory(IReadOnlyList<ProcessRecord> active, out SystemMemoryUsage usage)
+    {
+        usage = default;
+        return false;
+    }
+}
+
+/// <summary>
+/// Kernel-memory ledger of a host whose memory measurement is off (ADR 0066, section 4): every charge
+/// is <see cref="KernelMemoryCharge.None"/>, so the OS services that buffer for processes pay nothing.
+/// </summary>
+public sealed class NullKernelMemoryLedger : IKernelMemoryLedger
+{
+    /// <summary>Gets the shared instance (the ledger is stateless).</summary>
+    public static NullKernelMemoryLedger Instance { get; } = new();
+
+    private NullKernelMemoryLedger()
+    {
+    }
+
+    /// <inheritdoc />
+    public bool IsTracking => false;
+
+    /// <inheritdoc />
+    public KernelMemoryCharge Charge(ProcessId pid, KernelMemoryKind kind, long bytes = 0) => KernelMemoryCharge.None;
 }

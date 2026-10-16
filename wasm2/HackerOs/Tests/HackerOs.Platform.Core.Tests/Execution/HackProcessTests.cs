@@ -58,6 +58,7 @@ public sealed class HackProcessTests
         Assert.Equal(Session.ToString(), process.SessionId);
         Assert.Equal(BootUtc.AddSeconds(42), process.StartTime);
         Assert.Equal(3L * 1024 * 1024, process.WorkingSet64);
+        Assert.Equal(3L * 1024 * 1024, process.PrivateMemorySize64); // simulated: no RssAnon, equals VmRSS
         Assert.Equal(25.0, process.CpuUsage, 3);
         Assert.Equal(["text-editor", "/home/alice/my notes.md"], process.Arguments);
         Assert.Equal("text-editor \"/home/alice/my notes.md\"", process.CommandLine);
@@ -114,6 +115,39 @@ public sealed class HackProcessTests
 
         Assert.Equal(TimeSpan.FromMilliseconds(userMs), user);
         Assert.Equal(TimeSpan.FromMilliseconds(systemMs), system);
+    }
+
+    [Fact]
+    public async Task Measured_memory_gives_WorkingSet64_from_VmRSS_and_PrivateMemorySize64_from_RssAnon()
+    {
+        // ADR 0068, section 2, modeled on System.Diagnostics.Process.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(memoryAccountant: new LayeredMemoryAccountant(
+            new ProcessMemoryUsage(ImageBytes: 40 * 1024, FileBytes: 800 * 1024, AnonymousBytes: 2048 * 1024, KernelBytes: 512 * 1024, AllocatedBytes: 10)));
+        fixture.Processes.Active.Add(Process(OwnPid, "org.hackeros.system-monitor"));
+        using IDisposable scope = Enter(fixture);
+
+        HackProcess own = await HackProcess.GetCurrentProcessAsync();
+
+        Assert.Equal((800L + 2048 + 512) * 1024, own.WorkingSet64);
+        Assert.Equal(2048L * 1024, own.PrivateMemorySize64);
+        Assert.Equal("measured", own.Status["MemSource"]);
+    }
+
+    private sealed class LayeredMemoryAccountant(ProcessMemoryUsage usage) : IMemoryAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage result)
+        {
+            result = usage;
+            return true;
+        }
+
+        public bool TryGetSystemMemory(IReadOnlyList<ProcessRecord> active, out SystemMemoryUsage result)
+        {
+            result = new SystemMemoryUsage(usage.AnonymousBytes, usage.FileBytes, usage.KernelBytes, 1);
+            return true;
+        }
     }
 
     [Fact]

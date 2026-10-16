@@ -2,6 +2,7 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Tests.Support;
 
@@ -19,6 +20,15 @@ public sealed class FakeAppFileSystemGateway : IAppFileSystemGateway
     {
         _entries["/"] = Entry.NewDirectory();
     }
+
+    /// <summary>
+    /// Gets or sets what <see cref="ChargeStreamBuffer"/> returns: <see langword="null"/> (the default)
+    /// answers <see cref="KernelMemoryCharge.None"/>, like a host that does not measure memory.
+    /// </summary>
+    public Func<KernelMemoryCharge>? StreamBufferCharges { get; set; }
+
+    /// <inheritdoc />
+    public KernelMemoryCharge ChargeStreamBuffer() => StreamBufferCharges?.Invoke() ?? KernelMemoryCharge.None;
 
     /// <summary>Seeds a directory (and any missing ancestors) at revision 1.</summary>
     public FakeAppFileSystemGateway WithDirectory(string path)

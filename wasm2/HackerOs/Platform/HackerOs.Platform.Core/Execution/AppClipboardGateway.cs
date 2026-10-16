@@ -2,6 +2,7 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Clipboard;
 using HackerOs.Platform.Core.Clipboard;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Platform.Core.Execution;
@@ -16,13 +17,19 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
     private readonly SystemClipboard _clipboard;
     private readonly ICapabilityChecker _capabilities;
     private readonly SessionId _session;
+    private readonly ProcessId? _owner;
     private readonly AppAmbientContextBinding _ambient = new();
     private readonly Lock _gate = new();
     private EventHandler? _changed;
 
     /// <summary>Creates the gateway for one app instance of <paramref name="session"/>.</summary>
-    public AppClipboardGateway(SystemClipboard clipboard, ICapabilityChecker capabilities, SessionId session)
+    /// <param name="clipboard">The OS clipboard.</param>
+    /// <param name="capabilities">Capability checker bound to the app and its user.</param>
+    /// <param name="session">The app's session, the only clipboard it reaches.</param>
+    /// <param name="owner">The app's process, charged with what it copies when memory is measured (ADR 0068).</param>
+    public AppClipboardGateway(SystemClipboard clipboard, ICapabilityChecker capabilities, SessionId session, ProcessId? owner = null)
     {
+        _owner = owner;
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         _session = session;
@@ -78,7 +85,7 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
         ArgumentNullException.ThrowIfNull(text);
         cancellationToken.ThrowIfCancellationRequested();
         _capabilities.Require(AppCapabilities.ClipboardWrite);
-        _clipboard.SetText(_session, text);
+        _clipboard.SetText(_session, text, owner: _owner);
         return ValueTask.CompletedTask;
     }
 
@@ -107,7 +114,7 @@ internal sealed class AppClipboardGateway : IAppClipboardGateway
             VirtualPath.Parse(path);
         }
 
-        _clipboard.SetFileDropList(_session, files);
+        _clipboard.SetFileDropList(_session, files, _owner);
         return ValueTask.CompletedTask;
     }
 

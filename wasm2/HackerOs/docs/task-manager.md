@@ -78,7 +78,13 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
   une petite étiquette en pointillés tant qu'une ligne au moins vient du
   simulateur (`CpuSource:` / `MemSource:` de `/proc/<pid>/status` différent de
   `measured`, lus dans `HackProcess.Status`). Son infobulle le dit. Voir
-  [`resource-accounting.md`](resource-accounting.md).
+  [`resource-accounting.md`](resource-accounting.md). Avec la mémoire mesurée
+  (ADR 0068, [`memory-accounting.md`](memory-accounting.md)), la colonne
+  Memory montre `VmRSS` mesuré pour toutes les apps intégrées et l'étiquette
+  disparaît de cette colonne dès que toutes les lignes sont mesurées ; le
+  détail d'un processus montre les couches (`RssAnon`, `RssFile`, `VmData`,
+  `VmExe`, `HackAllocBytes`) dans son `status` complet. L'app n'a pas changé :
+  elle lit toujours `HackProcess`.
 - « Not responding » (ADR 0067) : quand `/proc/<pid>/status` porte
   `Responding: 0` (`HackProcess.Responding` faux), la colonne d'état affiche
   « Not responding » en rouge à la place de l'état, avec une infobulle ; le tri
@@ -127,8 +133,9 @@ await p.KillAsync();
 ```
 
 - Propriétés : `Id`, `ParentId`, `ProcessName`, `AppId`, `Kind`, `UserId`,
-  `UserName`, `SessionId`, `State`, `StateCode`, `StartTime`, `WorkingSet64`,
-  `CpuUsage`, `Arguments`, `CommandLine`, `WorkingDirectory`, `IoCounters`,
+  `UserName`, `SessionId`, `State`, `StateCode`, `StartTime`, `WorkingSet64`
+  (`VmRSS`), `PrivateMemorySize64` (`RssAnon` quand la mémoire est mesurée,
+  sinon égal à `WorkingSet64`, ADR 0068), `CpuUsage`, `Arguments`, `CommandLine`, `WorkingDirectory`, `IoCounters`,
   `ReadBytes`, `WriteBytes`, `Status`, `HasExited` ; `GetChildren(liste)`.
 - Temps CPU (ADR 0067, comme `System.Diagnostics.Process`) :
   `UserProcessorTime` (`utime`), `PrivilegedProcessorTime` (`stime`),

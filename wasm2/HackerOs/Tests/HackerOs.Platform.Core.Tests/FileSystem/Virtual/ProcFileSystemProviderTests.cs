@@ -104,7 +104,7 @@ public sealed class ProcFileSystemProviderTests
     {
         VirtualFileSystemFixture fixture = await CreateSeededAsync(
             new FixedCpuAccountant(cpuMeasured, 0.5),
-            new FixedMemoryAccountant(memoryMeasured, 8 * 1024 * 1024));
+            new FixedMemoryAccountant(memoryMeasured, new ProcessMemoryUsage(0, 0, 8 * 1024 * 1024, 0, 0)));
         ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
         fixture.Processes.Active.Add(process);
         fixture.Resources.ProcessSamples[process.Pid] = [new ProcessResourceSample(process.Pid, 1, BootUtc, 0.125, 1024 * 1024, 0, 0)];
@@ -208,13 +208,92 @@ public sealed class ProcFileSystemProviderTests
         }
     }
 
-    private sealed class FixedMemoryAccountant(bool measures, long resident) : IMemoryAccountant
+    [Fact]
+    public async Task Status_lists_the_measured_memory_layers_after_VmRSS()
     {
-        public bool IsMeasuring => measures;
+        // ADR 0068: VmRSS = RssAnon + RssFile + kernel part, then the layers in Linux's order.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(
+            memoryAccountant: new FixedMemoryAccountant(true, new ProcessMemoryUsage(
+                ImageBytes: 40 * 1024, FileBytes: 1200 * 1024, AnonymousBytes: 3000 * 1024, KernelBytes: 512 * 1024, AllocatedBytes: 123_456_789)));
+        ProcessRecord process = Process(42, "org.hackeros.text-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
 
-        public bool TryGetResidentBytes(ProcessId pid, out long bytes)
+        string status = await fixture.ReadTextAsync("/proc/42/status", fixture.AppContext(42, Read));
+
+        Assert.Contains(
+            "VmRSS:\t4712 kB\n" +
+            "RssAnon:\t3000 kB\n" +
+            "RssFile:\t1200 kB\n" +
+            "VmData:\t512 kB\n" +
+            "VmExe:\t40 kB\n" +
+            "HackAllocBytes:\t123456789\n" +
+            "Cpu:\t",
+            status,
+            StringComparison.Ordinal);
+        Assert.Contains("MemSource:\tmeasured\n", status, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Status_of_a_simulated_process_has_no_layer_fields_even_when_memory_is_measured()
+    {
+        // ADR 0066, section 4: a process the accountant does not measure (game content) keeps the old format.
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(memoryAccountant: new FixedMemoryAccountant(false, default));
+        fixture.Processes.Active.Add(Process(42, "org.game.daemon"));
+
+        string status = await fixture.ReadTextAsync("/proc/42/status", fixture.AppContext(42, Read));
+
+        Assert.DoesNotContain("RssAnon", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("HackAllocBytes", status, StringComparison.Ordinal);
+        Assert.Contains("MemSource:\tsimulated\n", status, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Meminfo_adds_the_measured_lines_and_keeps_simulated_processes_in_the_total()
+    {
+        // ADR 0068, section 2: MemTotal from the hardware; used = measured (images once, OS heap
+        // included) + the simulated memory of processes that stay simulated.
+        ProcessRecord measured = Process(42, "org.hackeros.text-editor", kind: AppKind.Window);
+        ProcessRecord simulated = Process(43, "org.game.daemon");
+        VirtualFileSystemFixture fixture = await CreateSeededAsync(
+            memoryAccountant: new FixedMemoryAccountant(
+                true,
+                default,
+                new SystemMemoryUsage(AnonymousBytes: 100L * 1024 * 1024, MappedBytes: 20L * 1024 * 1024, KernelBytes: 4L * 1024 * 1024, MeasuredProcesses: 1),
+                measuredPid: 42));
+        fixture.Processes.Active.Add(measured);
+        fixture.Processes.Active.Add(simulated);
+        fixture.Resources.ProcessSamples[simulated.Pid] = [new ProcessResourceSample(simulated.Pid, 1, BootUtc, 0, 4L * 1024 * 1024, 0, 0)];
+        fixture.Resources.SystemSamples.Add(new SystemResourceSample(1, BootUtc, 0, 3L * 1024 * 1024 * 1024, 0, 0));
+
+        string meminfo = await fixture.ReadTextAsync("/proc/meminfo", fixture.AppContext(null, Read));
+
+        Assert.Equal(
+            "MemTotal:        4194304 kB\n" +
+            "MemFree:         4063232 kB\n" +
+            "MemAvailable:    4063232 kB\n" +
+            "AnonPages:        102400 kB\n" +
+            "Mapped:            20480 kB\n" +
+            "Slab:               4096 kB\n",
+            meminfo);
+    }
+
+    private sealed class FixedMemoryAccountant(
+        bool measures,
+        ProcessMemoryUsage usage,
+        SystemMemoryUsage system = default,
+        long? measuredPid = null) : IMemoryAccountant
+    {
+        public bool IsMeasuring => true;
+
+        public bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage result)
         {
-            bytes = resident;
+            result = usage;
+            return measuredPid is { } pid ? process.Pid.Value == pid : measures;
+        }
+
+        public bool TryGetSystemMemory(IReadOnlyList<ProcessRecord> active, out SystemMemoryUsage result)
+        {
+            result = system;
             return measures;
         }
     }

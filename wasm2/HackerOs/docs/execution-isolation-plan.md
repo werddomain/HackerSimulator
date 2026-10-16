@@ -139,8 +139,9 @@ Fait par `rebuild/5-cpu-accounting` ([`cpu-accounting.md`](cpu-accounting.md)).
 - [x] Test de surcoût.
 
 ### Mémoire (ADR 0068)
-- [ ] Couches image, ressources de l'OS, allocations, résident.
-- [ ] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
+Fait par `rebuild/5-memory-accounting` ([`memory-accounting.md`](memory-accounting.md)).
+- [x] Couches image, ressources de l'OS, allocations, résident.
+- [x] `/proc/<pid>/status`, `/proc/meminfo`, `PrivateMemorySize64`.
 
 ### Arrêt propre (ADR 0069)
 - [ ] `StopRequested`, `TerminateAsync`, `ProcessExitReason.Terminated`.

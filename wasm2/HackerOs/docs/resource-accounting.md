@@ -18,10 +18,12 @@ l'[ADR 0067](adr/0067-measured-cpu-time.md) §1 que les chantiers
   actuel, avec un indicateur : `CpuSource:` / `MemSource:` dans
   `/proc/<pid>/status`, mention « estimated » dans le gestionnaire de tâches.
 
-La mesure du CPU est faite par `MeasuredCpuTimeAccountant` (chantier
-`5-cpu-accounting`, [`cpu-accounting.md`](cpu-accounting.md)). La mémoire n'est
-pas encore mesurée : même active, elle lit le simulateur et `/proc` affiche
-`MemSource: simulated` jusqu'au chantier `5-memory-accounting`.
+Les deux mesures sont faites. Le CPU par `MeasuredCpuTimeAccountant` (chantier
+`5-cpu-accounting`, [`cpu-accounting.md`](cpu-accounting.md)), la mémoire
+depuis le chantier `5-memory-accounting`
+([`memory-accounting.md`](memory-accounting.md)) : son `AllocationTracker` est
+un observateur du crochet, et `MeasuredMemoryAccountant` remplace le comptable
+nul.
 
 ## Architecture
 
@@ -128,25 +130,30 @@ builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
 ### Inscrire une mesure
 
 La mesure du CPU est inscrite ainsi, dès la composition (avant tout code
-d'app), et la mesure de la mémoire suivra le même modèle :
+d'app) ; la mesure de la mémoire inscrit son `AllocationTracker` de la même
+façon :
 
 ```csharp
 // Dans AddHackerOsResourceAccounting, quand plan.CpuActive :
 MeasuredCpuTimeAccountant cpu = new(plan.Settings.UnresponsiveThreshold);
-services.AddSingleton(new ResourceAccountingObserverRegistration(dispatcher.Register(cpu)));
+services.AddSingleton(new CpuAccountingRegistration(dispatcher.Register(cpu)));
 services.AddSingleton(cpu);
 services.AddSingleton<ICpuTimeAccountant>(cpu);
 ```
 
-`AddHackerOsResourceAccounting` enregistre les comptables nuls par
-`TryAddSingleton` : une mesure enregistrée avant eux les remplace.
+`AddHackerOsResourceAccounting` enregistre les comptables nuls (et
+`NullKernelMemoryLedger`) par `TryAddSingleton` : une mesure enregistrée avant
+eux les remplace. La mémoire le fait déjà (`AddMeasuredMemory`, sous
+`ResourceAccountingFeatures.IsMemoryAccountingSupported`).
 
 ### Lecture
 
 - `/proc/<pid>/status` : `Cpu` et `VmRSS` prennent la valeur mesurée quand le
   comptable répond, sinon celle du simulateur ; `CpuSource:` et `MemSource:`
   valent `measured` ou `simulated`
-  ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)).
+  ([`virtual-proc-and-dev.md`](virtual-proc-and-dev.md)). Une mémoire mesurée
+  ajoute ses couches après `VmRSS`, et `/proc/meminfo` ses lignes
+  ([`memory-accounting.md`](memory-accounting.md)).
 - Gestionnaire de tâches : l'en-tête des colonnes CPU et Memory porte une
   étiquette `estimated` (petite, en pointillés, monospace) tant qu'une ligne
   au moins est simulée. L'app lit `HackProcess.Status` : le SDK ne change pas.
@@ -202,7 +209,7 @@ composants et les cinq rappels ci-dessus.
   moment où aucune portée n'est ouverte ; les tests de l'Ecosystem passent un
   installateur factice pour couvrir toutes les combinaisons sans toucher au
   crochet du processus de test.
-- **Source par processus.** `TryGetCpuUsage` / `TryGetResidentBytes` répondent
+- **Source par processus.** `TryGetCpuUsage` / `TryGetProcessMemory` répondent
   processus par processus : les processus du contenu de jeu, qui n'exécutent
   pas de code, resteront simulés même mesure active (ADR 0066 §4).
 - **Lecture manuelle de la configuration** (pas de liaison par réflexion) :

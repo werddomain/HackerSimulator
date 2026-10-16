@@ -1,5 +1,6 @@
 using HackerOs.AppSdk.Clipboard;
 using HackerOs.Simulation.Abstractions.Events;
+using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Platform.Core.Clipboard;
@@ -27,6 +28,8 @@ public sealed class SystemClipboard : IDisposable
     private readonly Lock _gate = new();
     private readonly Dictionary<SessionId, SystemClipboardEntry> _selections = [];
     private readonly Dictionary<SessionId, long> _sequences = [];
+    private readonly Dictionary<SessionId, KernelMemoryCharge> _charges = [];
+    private readonly IKernelMemoryLedger? _ledger;
     private readonly IDisposable? _logoutSubscription;
 
     /// <summary>Creates an empty clipboard.</summary>
@@ -34,8 +37,14 @@ public sealed class SystemClipboard : IDisposable
     /// When supplied, a session's clipboard is emptied at its logout, as the X server drops the
     /// selections of a closed desktop session.
     /// </param>
-    public SystemClipboard(IEventBus? eventBus = null)
+    /// <param name="ledger">
+    /// When supplied and tracking (memory measured, ADR 0068), the content an app puts on the
+    /// clipboard is charged to its process until it is replaced or cleared, as an X11 selection lives
+    /// in its owner's memory.
+    /// </param>
+    public SystemClipboard(IEventBus? eventBus = null, IKernelMemoryLedger? ledger = null)
     {
+        _ledger = ledger;
         _logoutSubscription = eventBus?.Subscribe<SessionLoggedOutEvent>(logout => Clear(logout.SessionId));
     }
 
@@ -83,10 +92,11 @@ public sealed class SystemClipboard : IDisposable
     /// <param name="session">Owning session.</param>
     /// <param name="text">Copied text.</param>
     /// <param name="origin">Who put the text there; <see cref="SystemClipboardOrigin.Guest"/> for an app.</param>
-    public void SetText(SessionId session, string text, SystemClipboardOrigin origin = SystemClipboardOrigin.Guest)
+    /// <param name="owner">The process that copied, charged with the content's memory (ADR 0068); <see langword="null"/> for the OS or the host.</param>
+    public void SetText(SessionId session, string text, SystemClipboardOrigin origin = SystemClipboardOrigin.Guest, ProcessId? owner = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        SetTargets(session, new Dictionary<string, string>(StringComparer.Ordinal) { [TextMediaType] = text }, origin);
+        SetTargets(session, new Dictionary<string, string>(StringComparer.Ordinal) { [TextMediaType] = text }, origin, owner);
     }
 
     /// <summary>
@@ -95,14 +105,15 @@ public sealed class SystemClipboard : IDisposable
     /// </summary>
     /// <param name="session">Owning session.</param>
     /// <param name="files">Files cut or copied.</param>
-    public void SetFileDropList(SessionId session, HackClipboardFileList files)
+    /// <param name="owner">The process that copied, charged with the content's memory (ADR 0068).</param>
+    public void SetFileDropList(SessionId session, HackClipboardFileList files, ProcessId? owner = null)
     {
         ArgumentNullException.ThrowIfNull(files);
         SetTargets(session, new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [HackClipboardFileList.GnomeCopiedFilesMediaType] = files.ToGnomeCopiedFiles(),
             [TextMediaType] = files.ToText()
-        }, SystemClipboardOrigin.Guest);
+        }, SystemClipboardOrigin.Guest, owner);
     }
 
     /// <summary>
@@ -112,8 +123,9 @@ public sealed class SystemClipboard : IDisposable
     /// <param name="session">Owning session.</param>
     /// <param name="targets">Content per MIME type; copied, so later changes to the dictionary are not seen.</param>
     /// <param name="origin">Who put the content there.</param>
+    /// <param name="owner">The process that copied, charged with the content's memory (ADR 0068).</param>
     /// <exception cref="ArgumentException">A media type is empty or a content is <see langword="null"/>.</exception>
-    public void SetTargets(SessionId session, IReadOnlyDictionary<string, string> targets, SystemClipboardOrigin origin)
+    public void SetTargets(SessionId session, IReadOnlyDictionary<string, string> targets, SystemClipboardOrigin origin, ProcessId? owner = null)
     {
         ArgumentNullException.ThrowIfNull(targets);
         Dictionary<string, string> copy = new(StringComparer.Ordinal);
@@ -133,12 +145,19 @@ public sealed class SystemClipboard : IDisposable
             return;
         }
 
+        KernelMemoryCharge? charge = owner is { } pid && _ledger is { IsTracking: true } ledger
+            ? ledger.Charge(pid, KernelMemoryKind.Clipboard, ContentBytes(copy))
+            : null;
+        KernelMemoryCharge? previous;
         lock (_gate)
         {
             long sequence = _sequences.GetValueOrDefault(session) + 1;
             _sequences[session] = sequence;
             _selections[session] = new SystemClipboardEntry(copy, sequence, origin);
+            previous = SwapCharge(session, charge);
         }
+
+        previous?.Dispose();
 
         Changed?.Invoke(this, session);
     }
@@ -148,6 +167,7 @@ public sealed class SystemClipboard : IDisposable
     public void Clear(SessionId session)
     {
         bool removed;
+        KernelMemoryCharge? previous;
         lock (_gate)
         {
             removed = _selections.Remove(session);
@@ -155,7 +175,11 @@ public sealed class SystemClipboard : IDisposable
             {
                 _sequences[session] = _sequences.GetValueOrDefault(session) + 1;
             }
+
+            previous = SwapCharge(session, null);
         }
+
+        previous?.Dispose();
 
         if (removed)
         {
@@ -165,6 +189,30 @@ public sealed class SystemClipboard : IDisposable
 
     /// <inheritdoc />
     public void Dispose() => _logoutSubscription?.Dispose();
+
+    /// <summary>Bytes the content occupies: UTF-16 text, two bytes per character, every target included.</summary>
+    private static long ContentBytes(Dictionary<string, string> targets)
+    {
+        long characters = 0;
+        foreach ((string mediaType, string content) in targets)
+        {
+            characters += mediaType.Length + content.Length;
+        }
+
+        return characters * sizeof(char);
+    }
+
+    /// <summary>Replaces a session's charge under the lock; the caller disposes the returned previous one outside it.</summary>
+    private KernelMemoryCharge? SwapCharge(SessionId session, KernelMemoryCharge? charge)
+    {
+        _charges.Remove(session, out KernelMemoryCharge? previous);
+        if (charge is not null)
+        {
+            _charges[session] = charge;
+        }
+
+        return previous;
+    }
 }
 
 /// <summary>One clipboard content: its formats, the sequence number of the change that set it and its origin.</summary>

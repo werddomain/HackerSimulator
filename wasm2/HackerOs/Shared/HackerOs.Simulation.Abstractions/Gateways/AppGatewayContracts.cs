@@ -88,6 +88,14 @@ public interface IAppPermissionErrorGateway
 /// </summary>
 public interface IAppFileSystemGateway
 {
+    /// <summary>
+    /// Opens a charge for the in-memory buffer of a write stream (<c>HackFileStream</c>), counted in
+    /// the process's kernel memory when memory is measured (ADR 0068). The stream resizes it as its
+    /// buffer grows and disposes it when it is released.
+    /// </summary>
+    /// <returns>The charge; <see cref="KernelMemoryCharge.None"/> when the OS does not measure memory.</returns>
+    KernelMemoryCharge ChargeStreamBuffer() => KernelMemoryCharge.None;
+
     /// <summary>Opens streamed regular-file content.</summary>
     ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default);

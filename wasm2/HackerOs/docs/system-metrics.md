@@ -40,10 +40,42 @@ Le fournisseur `/proc` reçoit les deux comptables par `ProcMetricsSources`
 (`CpuAccountant`, `MemoryAccountant`) et retombe sur le simulateur dès qu'un
 comptable ne répond pas. Le chantier `5-accounting-switches` livre les
 interrupteurs, le crochet et les comptables nuls ; le chantier
-`5-cpu-accounting` livre `MeasuredCpuTimeAccountant`
-([`cpu-accounting.md`](cpu-accounting.md)) ; la mémoire reste `simulated`
-jusqu'au chantier `5-memory-accounting`. Détails :
+`5-memory-accounting` mesure la mémoire (section suivante) ; le chantier
+`5-cpu-accounting` mesure le CPU avec `MeasuredCpuTimeAccountant`
+([`cpu-accounting.md`](cpu-accounting.md)). Détails :
 [`resource-accounting.md`](resource-accounting.md).
+
+### Mémoire mesurée (ADR 0068)
+
+Quand la mesure de la mémoire est livrée et activée, la mémoire d'un processus
+est reconstituée en quatre couches ([`memory-accounting.md`](memory-accounting.md)) :
+
+| Couche | Champ de `/proc/<pid>/status` | Source | Précision |
+| --- | --- | --- | --- |
+| Image | `VmExe`, `RssFile` | taille des assemblies, mesurée par le build de l'hôte (`BuiltInApplications.json`) | exacte |
+| Ressources de l'OS | `VmData` | tampons de flux, presse-papiers, tubes, sockets en vol, coût fixe par fenêtre | exacte |
+| Allocations | `HackAllocBytes` | `GC.GetAllocatedBytesForCurrentThread()` à chaque changement de contexte | exacte |
+| Résidente | `RssAnon` | tas réel réparti après chaque GC au prorata des allocations récentes | **estimation** |
+
+`VmRSS = RssAnon + RssFile + VmData`. `/proc/meminfo` garde `MemTotal` du
+profil matériel et ajoute `AnonPages`, `Mapped` (chaque assembly comptée une
+fois) et `Slab` (part noyau des processus et part du tas allouée par l'OS
+lui-même). Aucune limite, aucun OOM killer.
+
+Règles de calcul (constantes de `MemoryAccountingConstants` et
+`AppNetworkGateway`, couvertes par des tests) :
+
+| Règle | Valeur |
+| --- | --- |
+| Demi-vie du poids d'un processus dans la répartition du tas (`ResidentHalfLife`) | 10 s |
+| Coût fixe d'une fenêtre ouverte (`WindowBytes`) | 512 Kio |
+| Tampons d'une opération réseau en vol (`SocketBufferBytes`) | 144 Kio |
+| Presse-papiers, tubes | 2 octets par caractère tenu |
+| Tampon d'un flux d'écriture | capacité du tampon |
+
+La couche résidente reste une estimation : le runtime ne dit pas à qui
+appartient un objet du tas partagé. Un processus lancé depuis le dernier GC
+n'a pas encore de `RssAnon`.
 
 Les compteurs vivent en mémoire, partent de zéro au démarrage et ne sont jamais
 persistés.
