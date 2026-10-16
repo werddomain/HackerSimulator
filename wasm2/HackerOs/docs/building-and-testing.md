@@ -86,6 +86,96 @@ Au premier démarrage, l'OS demande de créer le profil administrateur local,
 puis affiche le bureau. Les données vivent dans l'IndexedDB du navigateur :
 effacer les données du site remet la machine à neuf.
 
+## Vérifier les trois hôtes
+
+Une commande compile, lance et parcourt les trois hôtes
+([`execution-isolation-plan.md`](execution-isolation-plan.md), section 5.2) :
+
+```bash
+build/verify-hosts.sh                 # tout : build, publications, cinq parcours
+build/verify-hosts.sh --skip-build    # réutilise les sorties déjà compilées
+build/verify-hosts.sh --only server,test-host
+```
+
+Prérequis : SDK .NET 10 (`~/.dotnet` est ajouté au `PATH` s'il existe),
+`python3` (serveur statique de la PWA publiée), `curl`, `setsid`, et un
+Chromium que Playwright peut lancer (dans un conteneur cloud,
+`/opt/pw-browsers/chromium` est pris automatiquement, voir
+[Chromium pour Playwright](#chromium-pour-playwright)). Le script applique
+lui-même les contournements Linux ci-dessus, compile une seule fois puis lance
+les hôtes avec `--no-build`, et pose `ASPNETCORE_ENVIRONMENT=Development` pour
+les hôtes lancés par `dotnet run` ([`old/common-pitfalls.md`](old/common-pitfalls.md) §4).
+
+Déroulé :
+
+1. `dotnet build` (Debug) d'`OS/HackerOs.Ecosystem`, `test/test`,
+   `Server/HackerOs.Server` et `Tests/HackerOs.HostSmoke.Tests` ;
+   `dotnet publish` (Release) d'Ecosystem, deux fois (réglages par défaut,
+   puis mesures coupées au build).
+2. Pour chaque parcours, l'hôte démarre sur un port libre de `127.0.0.1` dans
+   son propre groupe de processus : Ecosystem publié derrière un serveur
+   statique Python, les deux autres par `dotnet run --no-build`. La base, les
+   blobs et les sauvegardes du serveur vont dans un dossier jetable : le
+   `Server/HackerOs.Server/hackeros.db` suivi par git n'est jamais modifié.
+3. `Tests/HackerOs.HostSmoke.Tests` ouvre l'hôte dans Chromium (contexte
+   neuf) : création du profil, rechargement et écran « Sign in », bureau,
+   Terminal avec `ps` puis `cat /proc/self/status` (valeurs de `CpuSource:` et
+   `MemSource:` vérifiées), System Monitor (le processus du terminal est
+   listé), fermeture de chaque fenêtre. Toute erreur de la console ou de la
+   page fait échouer le parcours, comme toute ligne `fail:` ou « Unhandled
+   exception » du journal de l'hôte (erreurs d'un circuit `InteractiveServer`,
+   invisibles côté navigateur).
+4. L'hôte est arrêté (SIGTERM au groupe, SIGKILL après 15 s), puis le
+   parcours suivant commence. Le script sort avec un code non nul au moindre
+   échec et affiche une ligne par étape :
+
+```text
+== HackerOS host verification (9d26a77) ==
+build HackerOs.Ecosystem         PASS
+build test                       PASS
+build HackerOs.Server            PASS
+build HackerOs.HostSmoke.Tests   PASS
+publish ecosystem                PASS
+publish ecosystem-build-off      PASS
+ecosystem                        PASS  23s
+ecosystem-build-off              PASS  21s
+ecosystem-settings-off           PASS  21s
+test-host                        PASS  38s
+server                           PASS  34s
+RESULT: PASS
+```
+
+| Parcours | Hôte | Mesures (ADR 0066) | `CpuSource:` / `MemSource:` attendus |
+|---|---|---|---|
+| `ecosystem` | PWA publiée | build et réglage par défaut | `measured` |
+| `ecosystem-build-off` | PWA publiée avec `-p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false` | coupées au build ; aucun `HackerOs.Platform.ResourceAccounting*` ne doit être publié | `simulated` |
+| `ecosystem-settings-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `Enabled: false` pour `Cpu` et `Memory` | coupées au démarrage | `simulated` |
+| `test-host` | `test/test` | réglage de l'hôte (activées) | `measured` |
+| `server` | `HackerOs.Server` (`InteractiveServer`) | réglage de l'hôte (coupées) | `simulated` |
+
+Sur un arbre sans les interrupteurs de l'ADR 0066
+(`build/HackerOs.ResourceAccounting.targets`, section
+`HackerOs:ResourceAccounting` d'`appsettings.json`), les deux parcours `-off`
+sont marqués `SKIP` et les sources ne sont pas vérifiées.
+
+Journaux, publications et captures d'écran des échecs :
+`artifacts/verify-hosts/` (ignoré par git). Sans `HACKEROS_SMOKE_URL`, que
+pose le script, le test de démarrage est marqué « skipped » : un
+`dotnet test HackerOs.sln` n'en dépend pas. Pour le lancer contre un hôte
+démarré à la main :
+
+```bash
+HACKEROS_SMOKE_URL=http://127.0.0.1:5000 dotnet test Tests/HackerOs.HostSmoke.Tests \
+  --logger "console;verbosity=detailed"
+```
+
+Variables facultatives : `HACKEROS_SMOKE_HOST` (nom affiché),
+`HACKEROS_SMOKE_EXPECT_CPU_SOURCE` / `HACKEROS_SMOKE_EXPECT_MEM_SOURCE`
+(valeur attendue dans `/proc/self/status`), `HACKEROS_SMOKE_ARTIFACTS`
+(dossier des captures).
+
+Chaque PR `rebuild/5-*` colle la sortie de `build/verify-hosts.sh`.
+
 ## Tester
 
 ```bash
@@ -97,6 +187,7 @@ dotnet test HackerOs.sln
 | `Tests/*.Tests` (hors E2E) | Tests unitaires et de composants (xUnit, bUnit), un projet par projet de code. Rapides, sans navigateur. |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | Builds MSBuild réels des projets `Tests/ManifestGenerator.Fixtures.*` : génération, agrégation, frontière du SDK. Plus lents. |
 | `Tests/HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests` | Playwright contre l'OS lancé dans Chromium. Pièges connus : [`old/common-pitfalls.md`](old/common-pitfalls.md) §4 à §6. |
+| `Tests/HackerOs.HostSmoke.Tests` | Démarrage d'un hôte déjà lancé, piloté par `build/verify-hosts.sh` (voir plus haut) ; « skipped » sans `HACKEROS_SMOKE_URL`. |
 
 Tester un seul projet ou un seul test :
 
@@ -104,6 +195,20 @@ Tester un seul projet ou un seul test :
 dotnet test Tests/HackerOs.AppSdk.Tests
 dotnet test Tests/HackerOs.Platform.Core.Tests --filter "FullyQualifiedName~ShellInterpreterTests"
 ```
+
+### Chromium pour Playwright
+
+Chaque version de `Microsoft.Playwright` attend une révision précise de
+Chromium (ou Google Chrome pour `Channel = "chrome"`). Toutes les suites
+lancent le navigateur par `ChromiumLauncher` (`Tests/HackerOs.E2E.Support`) :
+
+1. `HACKEROS_CHROMIUM_EXECUTABLE`, s'il est posé, est utilisé tel quel ;
+2. sinon, le lancement prévu par le test ;
+3. s'il échoue, nouvel essai avec `$PLAYWRIGHT_BROWSERS_PATH/chromium` puis
+   `/opt/pw-browsers/chromium` (le lien des conteneurs cloud), sans canal.
+
+Dans un conteneur cloud, **ne jamais lancer `playwright install`** : la
+révision fournie sous `/opt/pw-browsers` sert de repli.
 
 Pour tester une app sans OS, `Tests/HackerOs.Tests.Support` fournit
 `MinimalAppExecutionContext` et des passerelles factices (fichiers, horloge,

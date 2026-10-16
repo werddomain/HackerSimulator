@@ -11,7 +11,7 @@
 # it, and prints one summary line per step. Exit code 0 only when every step passed.
 #
 # Runs (names usable with --only):
-#   ecosystem               published PWA, default build and settings
+#   ecosystem               published PWA, default build and settings (measurements on)
 #   ecosystem-build-off     published with -p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false
 #   ecosystem-settings-off  default publish, wwwroot/appsettings.json switching both measurements off
 #   test-host               test/test (Blazor Web App, InteractiveWebAssembly)
@@ -188,6 +188,16 @@ PY
 HAS_SWITCHES=0
 [[ -f "$ACCOUNTING_TARGETS" ]] && HAS_SWITCHES=1
 
+# Expected CpuSource:/MemSource: values in /proc/self/status (ADR 0066 to 0068): measured by
+# default on the WebAssembly hosts, simulated on HackerOs.Server (switched off in its
+# appsettings.json) and in both "-off" runs. Empty means "not checked" (tree without ADR 0066).
+DEFAULT_SOURCE=""
+SERVER_SOURCE=""
+if [[ $HAS_SWITCHES -eq 1 ]]; then
+    DEFAULT_SOURCE=measured
+    SERVER_SOURCE=simulated
+fi
+
 build_step() { # build_step LABEL LOGFILE COMMAND...
     local label="$1" logfile="$2"; shift 2
     log "$label"
@@ -231,7 +241,7 @@ else
     }
 
     if wanted ecosystem; then
-        serve_published ecosystem "$OUT/publish/ecosystem" "" ""
+        serve_published ecosystem "$OUT/publish/ecosystem" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
     fi
 
     if wanted ecosystem-build-off; then
@@ -272,7 +282,7 @@ PY
     # Server/HackerOs.Server/hackeros.db is never touched.
     if wanted test-host; then
         port="$(free_port)"
-        verify_run test-host "http://127.0.0.1:$port" "$LOGS/test-host.host.log" "" "" \
+        verify_run test-host "http://127.0.0.1:$port" "$LOGS/test-host.host.log" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE" \
             env ASPNETCORE_ENVIRONMENT=Development \
             dotnet run --project test/test/test.csproj -c Debug --no-build --no-launch-profile --urls "http://127.0.0.1:$port"
     fi
@@ -280,7 +290,7 @@ PY
     if wanted server; then
         port="$(free_port)"
         data="$OUT/server-data"; rm -rf "$data"; mkdir -p "$data"
-        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "" "" \
+        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "$SERVER_SOURCE" "$SERVER_SOURCE" \
             env ASPNETCORE_ENVIRONMENT=Development \
                 ConnectionStrings__HackerOsDb="Data Source=$data/hackeros.db" \
                 BlobStorage__Root="$data/blobs" ServerBackup__Root="$data/backups" \
