@@ -75,6 +75,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `zip` | `-r -q -j -d -0…-9` | Vraie archive deflate lisible par tout outil zip ; met à jour une archive existante ; les modes Unix sont stockés dans les attributs externes. |
 | `unzip` | `-l -t -p -o -n -q -j`, `-d DOSSIER`, `[MOTIFS]` | Restaure les modes (`+x`) ; refuse une entrée qui sortirait du dossier (`../`, « zip slip ») ; ne remplace pas un fichier sans `-o`. |
 | `xdg-open` | `FICHIER`, `DOSSIER` ou `URI` (un seul argument) | Comme freedesktop (ADR 0096 §3) : un chemin s'ouvre avec son association (un dossier dans le gestionnaire de fichiers, `inode/directory`), une URI avec le gestionnaire de son schéma (`x-scheme-handler/<schéma>`, le navigateur pour `http`/`https`, le fichier pour `file://`). Rend la main dès l'envoi. Codes de `xdg-open` : 0 envoyé, 1 ligne de commande, 3 aucune app, 4 fichier absent ou échec ; plusieurs apps sans défaut donnent 4 et la liste des candidates (un terminal n'a pas de sélecteur et l'OS ne devine pas). `apps.launch`. |
+| `xdg-mime` | `query default TYPE`, `query filetype FICHIER`, `default APP TYPE…` | Comme freedesktop (ADR 0121 §5) : `query default` affiche l'app qui ouvre ce type pour cet utilisateur (rien sans défaut) ; `default` écrit le choix de l'utilisateur dans `~/.config/hackeros/file-associations.json` (un `.desktop` final est ignoré ; l'app doit déclarer le type) ; `query filetype` donne `inode/directory`, le type de média déclaré pour l'extension, l'extension, ou `application/octet-stream`. Seule l'action `open`. Codes : 0, 1 ligne de commande ou cible invalide, 2 fichier absent, 4 refus. `file-associations.read`, `filesystem.user-home.write`. |
 
 ## Processus et services
 
@@ -138,8 +139,8 @@ Plus de place : une écriture refusée affiche `No space left on device`
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`), `hackbackup` avec les passerelles factices.
 - `Tests/HackerOs.Commands.Tests/XdgOpenCommandTests.cs` : chemin relatif, dossier, fichier absent, aucune app, plusieurs apps, URI, schéma inconnu, ligne de commande, refus (`v3/4`). Le scénario de parité (`CommandParityTests`) compare la commande dans un Web Worker et sur le fil principal.
-- `Tests/HackerOs.Ecosystem.Tests` : 85 apps intégrées dont 68 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`, `localectl` par `v3/12`).
-- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch` ; `LocalizedCommandsTests` et `LocalizedCommandsMzTests` exécutent des commandes avec `LANG=fr_FR.UTF-8` (`mkdir`, `rm`, `seq`, `sleep`, `printf`, `test`, `sudo`, `xdg-open`…), vérifient les mêmes clés en anglais et en français et la description et l'usage français des 68 commandes générés dans `localization/`. `NanoCommandTests` dessine les barres de `nano` en français, `LocalizationShellTests` (WorkerHost) passe par le vrai shell.
+- `Tests/HackerOs.Ecosystem.Tests` : 87 apps intégrées dont 70 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`, `localectl` par `v3/12`, `xdg-mime` par `v3/4b`, `passwd` par `v3/8`).
+- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch` ; `LocalizedCommandsTests` et `LocalizedCommandsMzTests` exécutent des commandes avec `LANG=fr_FR.UTF-8` (`mkdir`, `rm`, `seq`, `sleep`, `printf`, `test`, `sudo`, `xdg-open`…), vérifient les mêmes clés en anglais et en français et la description et l'usage français des 70 commandes générés dans `localization/`. `NanoCommandTests` dessine les barres de `nano` en français, `LocalizationShellTests` (WorkerHost) passe par le vrai shell.
 
 ## Liste des tâches
 
@@ -156,6 +157,7 @@ Plus de place : une écriture refusée affiche `No space left on device`
 - [x] Messages des commandes en anglais et en français, description et usage traduits (`v3/12`).
 - [x] `ausearch` (`v3/8-settings-security`, ADR 0100).
 - [x] `xdg-open` (`v3/4-intents`, ADR 0096).
+- [x] `xdg-mime` (`v3/4b`, ADR 0121).
 - [x] Tests et documentation.
 - [x] ADR 0069 (`rebuild/5-graceful-stop`) : `find`, `grep` (et `grep -r`), `du`, `zip`, `unzip`, `locate` appellent `HackProcess.CheckpointAsync` dans leurs boucles ; `kill` envoie `Terminated`.
 - [x] `hackbackup` et messages `ENOSPC`/`EFBIG` (`v3/7-storage-backup`, ADR 0099).

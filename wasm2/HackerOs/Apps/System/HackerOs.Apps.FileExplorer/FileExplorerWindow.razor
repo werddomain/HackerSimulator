@@ -529,16 +529,52 @@
         {
             { nameof(OpenWithDialog.OwnerAppContext), AppContext },
             { nameof(OpenWithDialog.FilePath), fullPath },
-            { nameof(OpenWithDialog.AvailableApps), candidates }
+            { nameof(OpenWithDialog.AvailableApps), candidates },
+            { nameof(OpenWithDialog.Extension), ExtensionOf(fullPath) }
         };
 
         IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
         DialogResult? dialogResult = await dialog.Result;
 
-        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is HackAppInfo selectedApp)
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is OpenWithChoice choice)
         {
-            await LaunchWithAsync(selectedApp.Id, fullPath);
+            await RememberChoiceAsync(choice, fullPath);
+            await LaunchWithAsync(choice.App.Id, fullPath);
         }
+    }
+
+    /// <summary>
+    /// Writes the user's "Always use" choice as their default for the file's extension (ADR 0121,
+    /// section 4), like the "Always use for this file type" box of a desktop's "Open with".
+    /// </summary>
+    private async Task RememberChoiceAsync(OpenWithChoice choice, string fullPath)
+    {
+        if (!choice.AlwaysUse || ExtensionOf(fullPath) is not { } extension)
+        {
+            return;
+        }
+
+        HackDefaultHandlerStatus status;
+        try
+        {
+            status = await AppContext.Catalog.SetUserDefaultHandlerAsync(extension, "open", choice.App.Id, AppContext.CancellationToken);
+        }
+        catch (AppGatewayAccessDeniedException)
+        {
+            status = HackDefaultHandlerStatus.WriteFailed;
+        }
+
+        if (status != HackDefaultHandlerStatus.Changed)
+        {
+            ReportError(L["Error.RememberFailed", extension]);
+        }
+    }
+
+    /// <summary>The lowercase extension of a path (<c>.md</c>), or <see langword="null"/> when it has none.</summary>
+    private static string? ExtensionOf(string fullPath)
+    {
+        string extension = System.IO.Path.GetExtension(fullPath);
+        return extension.Length > 1 ? extension.ToLowerInvariant() : null;
     }
 
     private async Task LaunchWithAsync(string appId, string fullPath)
@@ -1116,15 +1152,17 @@
         {
             { nameof(OpenWithDialog.OwnerAppContext), AppContext },
             { nameof(OpenWithDialog.FilePath), item.FullPath.Value },
-            { nameof(OpenWithDialog.AvailableApps), windowApps }
+            { nameof(OpenWithDialog.AvailableApps), windowApps },
+            { nameof(OpenWithDialog.Extension), item.IsDirectory ? null : ExtensionOf(item.FullPath.Value) }
         };
 
         IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
         DialogResult? result = await dialog.Result;
 
-        if (result is not null && !result.Canceled && result.Data is HackAppInfo selectedApp)
+        if (result is not null && !result.Canceled && result.Data is OpenWithChoice choice)
         {
-            await LaunchWithAsync(selectedApp.Id, item.FullPath.Value);
+            await RememberChoiceAsync(choice, item.FullPath.Value);
+            await LaunchWithAsync(choice.App.Id, item.FullPath.Value);
         }
     }
 

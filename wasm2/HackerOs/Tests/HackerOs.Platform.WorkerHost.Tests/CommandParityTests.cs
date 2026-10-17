@@ -82,6 +82,8 @@ public sealed class CommandParityTests
         new("which", ["which ls", "which -a cd nope"]),
         new("whoami", ["whoami"]),
         new("xdg-open", ["xdg-open missing.txt", "xdg-open", "xdg-open notes.txt", "xdg-open docs", "xdg-open nope://thing"]),
+        new("xdg-mime", ["xdg-mime", "xdg-mime query filetype notes.txt", "xdg-mime query filetype docs", "xdg-mime query filetype missing.txt",
+            "xdg-mime default org.example.missing text/plain", "xdg-mime query default x-scheme-handler/https"]),
         new("zip", ["zip -q notes.zip notes.txt words.txt", "zip -r docs.zip docs", "unzip -l docs.zip"])
     ];
 
@@ -108,7 +110,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(69, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(70, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

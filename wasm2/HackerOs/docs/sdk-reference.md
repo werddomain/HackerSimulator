@@ -83,7 +83,7 @@ Détails : [`app-model.md`](app-model.md).
 | `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `SendIntentAsync` |
 | `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement` |
 | `DialogFileOpen`, `DialogFileSave`, `DialogFolderSelect` | `dialogs.file-open`, `.file-save`, `.folder-select` | normale | dialogues de fichiers (fenêtres seulement) |
-| `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers |
+| `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers ; avec `filesystem.user-home.write`, choix propre à l'utilisateur (ADR 0121) |
 | `FileAssociationsWrite` | `file-associations.write` | **dangereuse** | changer les associations de la machine |
 | `ProcessList` | `process.list` | normale | voir les processus des autres apps |
 | `ProcessManage` | `process.manage` | **dangereuse** | arrêter les processus des autres apps |
@@ -210,7 +210,7 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `EditFileAsync(path)`, `RevealFileAsync(path)`, `OpenUriAsync(uri, appId)`, `ShowSettingsAsync(appId)`, `SendIntentAsync(intentId, payloadJson, targetAppId, rememberChoice)`, `Changed` ; `HackAppInfo` (avec `Capabilities`), `HackOpenFileResult` (`FellBackToOpen`), `HackIntentResult` (`HackIntentStatus`), `HackAppLaunchException` | lecture et `ShowSettingsAsync` : aucune ; le reste : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2), [`app-intents.md`](app-intents.md) |
+| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `EditFileAsync(path)`, `RevealFileAsync(path)`, `OpenUriAsync(uri, appId)`, `ShowSettingsAsync(appId)`, `SendIntentAsync(intentId, payloadJson, targetAppId, rememberChoice)`, `GetDefaultHandlersAsync()`, `SetDefaultHandlerAsync(target, appId, action)`, `ResetDefaultHandlerAsync(target, action)` (ADR 0121), `Changed` ; `HackFileAssociation`, `HackFileAssociationLayer`, `HackDefaultHandlerStatus`, `HackAppInfo` (avec `Capabilities`), `HackOpenFileResult` (`FellBackToOpen`), `HackIntentResult` (`HackIntentStatus`), `HackAppLaunchException` | lecture et `ShowSettingsAsync` : aucune ; défauts : `file-associations.read` (et `filesystem.user-home.write` pour écrire) ; le reste : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2), [`app-intents.md`](app-intents.md), [`user-file-associations.md`](user-file-associations.md) |
 | `HackBrowser` | `OpenAsync(url)`, `OpenDetachedAsync(url)` (fenêtre détachée, ADR 0078) ; `AppId`, `DetachedArgument` (`--detached`) | `apps.launch` | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackAppManagement` | `GetAllAsync`, `UninstallAsync`, `ReinstallAsync` ; `HackInstallScope`, `HackAppInstallState` | `apps.manage` | [`app-installation.md`](app-installation.md) |
 
@@ -476,6 +476,7 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
 - [x] `HackUserAccounts`, `users.manage`, `ITerminalInputMode` et `ReadSecretLineAsync` (`passwd`, ADR 0120).
 - [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
+- [x] Défauts propres à l'utilisateur (ADR 0121, `v3/4b`) : `HackApps.GetDefaultHandlersAsync`, `SetDefaultHandlerAsync`, `ResetDefaultHandlerAsync`.
 - [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
 - [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).
 - [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).

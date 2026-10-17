@@ -53,6 +53,22 @@ public sealed class WireCodecIntentTests
         Assert.Equal(delivery.Arguments, copy.Arguments);
     }
 
+    [Fact]
+    public void Default_handlers_keep_target_action_app_and_layer()
+    {
+        // ADR 0121: cat.defaults carries both layers to xdg-mime in a worker.
+        HackerOs.AppSdk.Apps.HackFileAssociation[] rows =
+        [
+            new(".md", "open", "org.hackeros.code-editor", HackerOs.AppSdk.Apps.HackFileAssociationLayer.User),
+            new("x-scheme-handler/https", "open", "org.hackeros.browser", HackerOs.AppSdk.Apps.HackFileAssociationLayer.System)
+        ];
+
+        IReadOnlyList<HackerOs.AppSdk.Apps.HackFileAssociation> copy = RoundTrip(
+            writer => WireCodec.WriteAssociations(writer, rows), WireCodec.ReadAssociations);
+
+        Assert.Equal(rows, copy);
+    }
+
     private static T RoundTrip<T>(Action<Utf8JsonWriter> write, Func<JsonElement, T> read)
     {
         using MemoryStream buffer = new();

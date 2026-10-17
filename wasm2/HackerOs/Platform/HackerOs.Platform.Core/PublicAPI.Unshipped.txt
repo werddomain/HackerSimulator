@@ -1,6 +1,33 @@
 #nullable enable
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Passwords.get -> System.Func<HackerOs.Platform.Core.Sessions.LocalPasswordService!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Passwords.init -> void
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Action.get -> string!
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Action.init -> void
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.AppId.get -> string!
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.AppId.init -> void
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.ConfiguredFileAssociation(string! Target, string! Action, string! AppId, HackerOs.Platform.Core.Intents.FileAssociationLayer Layer) -> void
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Layer.get -> HackerOs.Platform.Core.Intents.FileAssociationLayer
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Layer.init -> void
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Target.get -> string!
+HackerOs.Platform.Core.Intents.ConfiguredFileAssociation.Target.init -> void
+HackerOs.Platform.Core.Intents.FileAssociationLayer
+HackerOs.Platform.Core.Intents.FileAssociationLayer.System = 0 -> HackerOs.Platform.Core.Intents.FileAssociationLayer
+HackerOs.Platform.Core.Intents.FileAssociationLayer.User = 1 -> HackerOs.Platform.Core.Intents.FileAssociationLayer
+HackerOs.Platform.Core.Intents.FileAssociationResolver.FileAssociationResolver(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Platform.Core.Settings.IOsSettingsService! settings, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService? fileSystem) -> void
+HackerOs.Platform.Core.Intents.FileAssociationResolver.GetConfiguredDefaultsAsync(HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? user, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Intents.ConfiguredFileAssociation!>!>
+HackerOs.Platform.Core.Intents.FileAssociationResolver.GetHandlerAppIdsAsync(HackerOs.App.Abstractions.VirtualPath path, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? user, string? mediaType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Intents.FileHandlerCandidates!>
+HackerOs.Platform.Core.Intents.FileAssociationResolver.ResolveAsync(HackerOs.App.Abstractions.OpenFileIntent! intent, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? user, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Intents.FileHandlerResolution!>
+HackerOs.Platform.Core.Intents.FileAssociationResolver.ResolveSchemeAsync(string! scheme, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? user, string? preferredAppId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Intents.FileHandlerResolution!>
+HackerOs.Platform.Core.Intents.FileAssociationResolver.SetUserDefaultAsync(HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! user, string! target, string! action, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus>
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.AppCannotHandle = 4 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.AppNotFound = 3 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.Changed = 0 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.FileInvalid = 5 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.InvalidAction = 2 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.InvalidTarget = 1 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
+HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus.WriteFailed = 6 -> HackerOs.Platform.Core.Intents.UserDefaultHandlerChangeStatus
 HackerOs.Platform.Core.Sessions.InMemoryLocalUserRepository.SetCredentialAsync(HackerOs.Simulation.Abstractions.Sessions.LocalUserId id, HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential? credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Sessions.LocalUser!>
 HackerOs.Platform.Core.Sessions.LocalPasswordService
 HackerOs.Platform.Core.Sessions.LocalPasswordService.ChangeOwnPasswordAsync(HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

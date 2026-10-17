@@ -387,4 +387,10 @@
   <data name="View.Tree" xml:space="preserve">
     <value>Vue en arborescence</value>
   </data>
+  <data name="OpenWith.AlwaysUse" xml:space="preserve">
+    <value>Toujours utiliser cette app pour les fichiers {0}</value>
+  </data>
+  <data name="Error.RememberFailed" xml:space="preserve">
+    <value>L'app n'a pas été enregistrée comme app par défaut des fichiers {0}.</value>
+  </data>
 </root>

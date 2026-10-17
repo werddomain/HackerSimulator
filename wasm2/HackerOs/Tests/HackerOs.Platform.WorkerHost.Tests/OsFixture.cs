@@ -162,7 +162,7 @@ internal sealed class OsFixture : IAsyncDisposable
         ShellHost = new ShellHostService(Interpreter, Manager, new RefusingElevationService());
         Dispatcher = new AppIntentDispatcher(
             Orchestrator, Catalog, enablement,
-            new FileAssociationResolver(Catalog, enablement, new OsSettingsService(fileSystem, _sessions, Clock)),
+            new FileAssociationResolver(Catalog, enablement, new OsSettingsService(fileSystem, _sessions, Clock), fileSystem),
             _grants, fileSystem);
     }
 

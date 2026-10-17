@@ -732,6 +732,28 @@ internal static class WireCodec
             Capabilities = app.TryGetProperty("cp", out _) ? ReadStrings(app, "cp") : []
         })];
 
+    /// <summary>Writes the default handlers of <c>cat.defaults</c> (ADR 0121).</summary>
+    public static void WriteAssociations(Utf8JsonWriter writer, IReadOnlyList<HackFileAssociation> associations)
+    {
+        writer.WriteStartArray("fa");
+        foreach (HackFileAssociation association in associations)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("t", association.Target);
+            writer.WriteString("a", association.Action);
+            writer.WriteString("id", association.AppId);
+            writer.WriteNumber("l", (int)association.Layer);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+    }
+
+    /// <summary>Reads what <see cref="WriteAssociations"/> wrote.</summary>
+    public static IReadOnlyList<HackFileAssociation> ReadAssociations(JsonElement element) =>
+        [.. element.GetProperty("fa").EnumerateArray().Select(static row => new HackFileAssociation(
+            row.GetString("t"), row.GetString("a"), row.GetString("id"), (HackFileAssociationLayer)row.GetInt32("l")))];
+
     public static void WriteServiceResult(Utf8JsonWriter writer, ServiceControlResult result)
     {
         writer.WriteNumber("oc", (int)result.Outcome);

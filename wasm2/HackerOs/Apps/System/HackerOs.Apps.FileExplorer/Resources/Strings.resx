@@ -387,4 +387,10 @@
   <data name="View.Tree" xml:space="preserve">
     <value>Tree View</value>
   </data>
+  <data name="OpenWith.AlwaysUse" xml:space="preserve">
+    <value>Always use this app for {0} files</value>
+  </data>
+  <data name="Error.RememberFailed" xml:space="preserve">
+    <value>The app was not saved as your default for {0} files.</value>
+  </data>
 </root>

@@ -414,6 +414,12 @@
   <data name="org.hackeros.commands.whoami.Terminal.Usage" xml:space="preserve">
     <value>whoami</value>
   </data>
+  <data name="org.hackeros.commands.xdg-mime.Description" xml:space="preserve">
+    <value>Consulte et choisit les applications par défaut de l'utilisateur pour les types de fichiers et les schémas d'URI</value>
+  </data>
+  <data name="org.hackeros.commands.xdg-mime.Terminal.Usage" xml:space="preserve">
+    <value>xdg-mime query { default &lt;type&gt; | filetype &lt;fichier&gt; } | default &lt;id-app&gt; &lt;type&gt;...</value>
+  </data>
   <data name="org.hackeros.commands.xdg-open.Description" xml:space="preserve">
     <value>Ouvre un fichier, un dossier ou une URI dans l'application préférée de l'utilisateur</value>
   </data>

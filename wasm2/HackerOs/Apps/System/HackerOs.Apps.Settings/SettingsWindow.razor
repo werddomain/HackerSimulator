@@ -161,23 +161,7 @@
             </MudTabPanel>
 
             <MudTabPanel Text="@L["Tab.FileAssociations"]" Icon="@Icons.Material.Filled.Extension">
-                <div class="setting-group">
-                    <h4>@L["FileAssociations.Title"]</h4>
-                    <p class="setting-desc">@L["FileAssociations.Description"]</p>
-                    <div class="associations-list">
-                        @if (_fileHandlers.Count == 0)
-                        {
-                            <div class="assoc-row"><span>@L["FileAssociations.Empty"]</span></div>
-                        }
-                        else
-                        {
-                            @foreach ((string extension, string appName) in _fileHandlers)
-                            {
-                                <div class="assoc-row"><span>@extension</span> <strong>@appName</strong></div>
-                            }
-                        }
-                    </div>
-                </div>
+                <FileAssociationsPanel />
             </MudTabPanel>
 
             <MudTabPanel Text="@L["Tab.CapabilityGrants"]" Icon="@Icons.Material.Filled.Security">
