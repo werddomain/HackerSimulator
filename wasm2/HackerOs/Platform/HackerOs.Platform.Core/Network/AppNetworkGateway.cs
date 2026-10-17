@@ -32,11 +32,12 @@ namespace HackerOs.Platform.Core.Network;
 /// gateway.
 /// </para>
 /// <para>
-/// What the proxy can relay is unchanged from the commands that used it directly before: GET (with
-/// body) and HEAD, a single-port TCP connect probe, and a timed HEAD standing in for an ICMP echo,
-/// which a browser cannot send. DNS, OS detection, port ranges and every method with a body stay
-/// simulation-only. Inside the simulated network, any method travels with its headers and body
-/// (ADR 0074, section 1).
+/// What the relay carries (ADR 0102): any HTTP method with its headers and body, a single-port TCP
+/// connect probe, a timed HEAD standing in for an ICMP echo (which a browser cannot send), and TCP
+/// streams and connected UDP sockets on the ports the server's operator allows. DNS, OS detection
+/// and port ranges stay simulation-only. Inside the simulated network, any method travels with its
+/// headers and body (ADR 0074, section 1); the simulated network has no raw TCP or UDP sockets, so
+/// a simulated or local target refuses a socket connection.
 /// </para>
 /// <para>
 /// This is also the one place network traffic of an app passes through, where ADR 0057 counts the
@@ -276,6 +277,91 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         return ValueTask.FromResult(listeners);
     }
 
+    /// <inheritdoc />
+    public ValueTask<HackNetworkResult<IHackSocket>> ConnectTcpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
+        ConnectAsync(ProxyProtocol.Tcp, hostNameOrAddress, port, cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<HackNetworkResult<IHackSocket>> ConnectUdpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
+        ConnectAsync(ProxyProtocol.Udp, hostNameOrAddress, port, cancellationToken);
+
+    /// <summary>
+    /// Opens a TCP or connected UDP socket (ADR 0102 §2, §3). The simulated network has no raw
+    /// sockets, so a target it knows (or this machine) refuses; an unknown target goes to the
+    /// optional relay, which only exists for an app holding <c>network.real.access</c>.
+    /// </summary>
+    private async ValueTask<HackNetworkResult<IHackSocket>> ConnectAsync(
+        ProxyProtocol protocol, string hostNameOrAddress, int port, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostNameOrAddress);
+        ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // ADR 0067: time spent in the gateway is the caller's stime (kernel sub-frame).
+        using HackerOs.AppSdk.HackExecutionContext.KernelScope kernel = HackerOs.AppSdk.HackExecutionContext.EnterKernel();
+        // A socket carries arbitrary bytes both ways: it is a write, like an HTTP POST.
+        _capabilities.Require(AppCapabilities.NetworkSimulatedWrite);
+
+        bool udp = protocol == ProxyProtocol.Udp;
+        Route route = await RouteAsync(hostNameOrAddress, cancellationToken).ConfigureAwait(false);
+        if (route.IsLocal || route.Host is not null)
+        {
+            _meter.ConnectFailed(udp);
+            return HackNetworkResult<IHackSocket>.Failure(
+                HackNetworkError.ConnectionRefused,
+                $"{hostNameOrAddress}:{port}: connection refused (the simulated network carries no raw {(udp ? "UDP" : "TCP")} sockets)");
+        }
+
+        if (!CanRelay(hostNameOrAddress) || await TryOpenRealRouteAsync(cancellationToken).ConfigureAwait(false) is not { } real)
+        {
+            return HackNetworkResult<IHackSocket>.Failure(HackNetworkError.HostNotFound);
+        }
+
+        // The socket's buffers are charged to the process for as long as it stays open.
+        KernelMemoryCharge buffers = OpenSocket();
+        try
+        {
+            IProxyStreamChannel channel = await _proxy!.OpenStreamAsync(
+                real.ServerBaseUrl, real.AccessToken, protocol, new ProxyStreamRequest(hostNameOrAddress, port, _appId), cancellationToken)
+                .ConfigureAwait(false);
+            // The handshake: a SYN out and a SYN-ACK back (a UDP "connect" sends nothing).
+            if (!udp)
+            {
+                _meter.Segment(0, outbound: true, udp: false);
+                _meter.Segment(0, outbound: false, udp: false);
+            }
+
+            return HackNetworkResult<IHackSocket>.Success(new RelayedSocket(channel, _meter, buffers));
+        }
+        catch (ProxyStreamException refused)
+        {
+            buffers.Dispose();
+            _meter.ConnectFailed(udp);
+            return HackNetworkResult<IHackSocket>.Failure(ToNetworkError(refused.ErrorCode), refused.Message);
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException or System.Net.WebSockets.WebSocketException)
+        {
+            buffers.Dispose();
+            _meter.ConnectFailed(udp);
+            return HackNetworkResult<IHackSocket>.Failure(HackNetworkError.ConnectionFailed, exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// What an app sees of a relay refusal: a policy refusal (port, address range) is a firewall
+    /// REJECT, a missing server grant or a disabled relay is no route at all.
+    /// </summary>
+    private static HackNetworkError ToNetworkError(string errorCode) => errorCode switch
+    {
+        ProxyErrorCode.ConnectionRefused or ProxyErrorCode.BlockedPort or ProxyErrorCode.BlockedAddress => HackNetworkError.ConnectionRefused,
+        ProxyErrorCode.HostUnreachable => HackNetworkError.HostUnreachable,
+        ProxyErrorCode.GrantMissing or ProxyErrorCode.RelayDisabled or ProxyErrorCode.SimulatedDomainBlocked => HackNetworkError.HostNotFound,
+        _ => HackNetworkError.ConnectionFailed
+    };
+
     /// <summary>Gets the short program name of an app (its last dotted segment, 15 characters), as <c>comm</c>.</summary>
     /// <param name="appId">The app id.</param>
     public static string ProgramName(string appId)
@@ -406,7 +492,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         if (first is { IsLocal: false, Host: null })
         {
             // Unknown to every source of hackdns: only the optional relay may still know it.
-            return (method is SimulatedHttpMethods.Get or SimulatedHttpMethods.Head && CanRelay(request.RequestUri.Host)
+            return (CanRelay(request.RequestUri.Host)
                 ? await SendRealAsync(request, method, cancellationToken).ConfigureAwait(false)
                 : HackNetworkResult<HackHttpResponse>.Failure(HackNetworkError.HostNotFound), false);
         }
@@ -936,23 +1022,23 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
             return HackNetworkResult<HackHttpResponse>.Failure(HackNetworkError.HostNotFound);
         }
 
-        bool includeBody = method == SimulatedHttpMethods.Get;
+        // ADR 0102 §1: the body travels with the request; only HEAD answers without one.
+        bool includeBody = method != SimulatedHttpMethods.Head;
         try
         {
             ProxyHttpResponse response = await _proxy!.ExecuteHttpRequestAsync(
                 route.ServerBaseUrl,
                 route.AccessToken,
-                new ProxyHttpRequest(
+                ProxyHttpRequest.Create(
                     Guid.NewGuid(),
-                    ProxyProtocol.Http,
                     request.RequestUri.AbsoluteUri,
                     method,
                     [.. request.Headers.Select(header => new ProxyHeader(header.Key, header.Value))],
-                    null,
-                    0,
+                    request.Content?.Bytes.ToArray(),
+                    request.Content?.ContentType,
                     ProxyTimeoutSeconds,
                     _appId,
-                    IncludeBody: includeBody),
+                    includeBody),
                 cancellationToken).ConfigureAwait(false);
 
             byte[] content = includeBody && response.BodyBase64 is not null ? Convert.FromBase64String(response.BodyBase64) : [];

@@ -6,7 +6,8 @@ namespace HackerOs.AppSdk.Net;
 /// The network stack of the OS as one app instance sees it (ADR 0056, section 6): name
 /// resolution, echo requests, HTTP exchanges and TCP port probes. Reached through
 /// <see cref="IAppExecutionContext.Network"/>; apps normally use the <see cref="HackDns"/>,
-/// <see cref="HackPing"/>, <see cref="HackHttpClient"/> and <see cref="HackTcpClient"/> facades.
+/// <see cref="HackPing"/>, <see cref="HackHttpClient"/>, <see cref="HackTcpClient"/> and
+/// <see cref="HackUdpClient"/> facades.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,7 +18,7 @@ namespace HackerOs.AppSdk.Net;
 /// </para>
 /// <para>
 /// Capabilities: <c>network.simulated.read</c> for resolution, ping, GET, HEAD and probes;
-/// <c>network.simulated.write</c> for any other HTTP method. A missing capability throws
+/// <c>network.simulated.write</c> for any other HTTP method and for a TCP or UDP socket. A missing capability throws
 /// <c>AppGatewayAccessDeniedException</c>; network failures are returned as a result, never thrown.
 /// </para>
 /// </remarks>
@@ -73,6 +74,62 @@ public interface IAppNetworkGateway
     /// <param name="cancellationToken">Cancels the call.</param>
     ValueTask<IReadOnlyList<HackTcpListenerInfo>> GetTcpListenersAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This network gateway cannot list listening ports.");
+
+    /// <summary>
+    /// Opens a TCP connection to <paramref name="hostNameOrAddress"/>:<paramref name="port"/>, as
+    /// <c>TcpClient.ConnectAsync</c> does (ADR 0102 §2). Apps use it through
+    /// <see cref="HackTcpClient.ConnectAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// Needs <c>network.simulated.write</c> (a stream carries arbitrary bytes both ways). The
+    /// simulated network has no raw byte streams: a simulated or local target answers
+    /// <see cref="HackNetworkError.ConnectionRefused"/>. A target outside it is reached through the
+    /// optional server's relay when the app holds <c>network.real.access</c>; otherwise it is
+    /// <see cref="HackNetworkError.HostNotFound"/>.
+    /// </remarks>
+    /// <param name="hostNameOrAddress">Target host name or IP literal.</param>
+    /// <param name="port">Target port, 1–65535.</param>
+    /// <param name="cancellationToken">Cancels the connect.</param>
+    ValueTask<HackNetworkResult<IHackSocket>> ConnectTcpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This network gateway cannot open TCP connections.");
+
+    /// <summary>
+    /// Opens a "connected" UDP socket to one destination, as <c>UdpClient.Connect</c> does
+    /// (ADR 0102 §3): each send is one datagram, no broadcast or multicast. Apps use it through
+    /// <see cref="HackUdpClient"/>.
+    /// </summary>
+    /// <remarks>Same capabilities and routes as <see cref="ConnectTcpAsync"/>.</remarks>
+    /// <param name="hostNameOrAddress">Target host name or IP literal.</param>
+    /// <param name="port">Target port, 1–65535.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    ValueTask<HackNetworkResult<IHackSocket>> ConnectUdpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This network gateway cannot open UDP sockets.");
+}
+
+/// <summary>
+/// A connected socket of the OS: a TCP stream or a "connected" UDP socket (ADR 0102), opened by
+/// <see cref="IAppNetworkGateway.ConnectTcpAsync"/> or <see cref="IAppNetworkGateway.ConnectUdpAsync"/>.
+/// Disposing it closes the connection (a TCP FIN), as <c>close(2)</c>.
+/// </summary>
+public interface IHackSocket : IAsyncDisposable
+{
+    /// <summary>Gets the address and port the socket is connected to.</summary>
+    IPEndPoint RemoteEndPoint { get; }
+
+    /// <summary>Sends bytes on a TCP stream, or exactly one datagram on a UDP socket.</summary>
+    /// <param name="data">The bytes; a UDP datagram carries at most 65 507.</param>
+    /// <param name="cancellationToken">Cancels the send.</param>
+    /// <exception cref="System.Net.Sockets.SocketException">The connection is closed or was reset.</exception>
+    ValueTask SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Waits for the next bytes (TCP, any amount) or the next datagram (UDP); <see langword="null"/>
+    /// once the peer closed the connection, the socket went idle too long, or it was disposed.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the wait (the socket stays open).</param>
+    ValueTask<byte[]?> ReceiveAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -247,5 +304,13 @@ internal sealed class UnsupportedAppNetworkGateway : IAppNetworkGateway
 
     public ValueTask<HackNetworkResult<HackOsFingerprint?>> DetectOperatingSystemAsync(
         string hostNameOrAddress, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(Reason);
+
+    public ValueTask<HackNetworkResult<IHackSocket>> ConnectTcpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(Reason);
+
+    public ValueTask<HackNetworkResult<IHackSocket>> ConnectUdpAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException(Reason);
 }

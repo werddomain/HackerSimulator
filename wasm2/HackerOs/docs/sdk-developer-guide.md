@@ -509,7 +509,7 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Ouvrir une page dans le navigateur, ou dans une fenêtre détachée | `HackBrowser.OpenAsync`, `HackBrowser.OpenDetachedAsync` | `apps.launch` |
 | Afficher une partie de sa fenêtre dans une fenêtre détachée | `IDisplaySurfaceService` (injecté) et `<DisplaySurfaceContent>` | aucune |
 | Presse-papiers | `HackClipboard` | `clipboard.read` / `.write` |
-| Réseau simulé (et réel si l'OS l'autorise) | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | `network.simulated.*`, `network.real.access` (dangereuse) |
+| Réseau simulé (et réel si l'OS l'autorise) | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | `network.simulated.*`, `network.real.access` (dangereuse) |
 | Processus et services | `HackProcess`, `HackServiceController` | `process.list`, `process.manage`, `services.manage` |
 | Héberger un shell (terminal, éditeur de code) | `HackShell.StartAsync` | `shell.host` (dangereuse) |
 | Temps simulé, minuteries | `AppContext.Clock` | aucune |

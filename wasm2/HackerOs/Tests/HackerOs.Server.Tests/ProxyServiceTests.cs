@@ -53,8 +53,13 @@ public sealed class ProxyServiceTests : IDisposable
             _db,
             new FakeProxyAddressResolver(IPAddress.Parse("93.184.216.34")),
             _connectionPin,
-            _tcpConnector);
+            _tcpConnector,
+            policy: TestPolicy);
     }
+
+    /// <summary>The default policy, with the test app granted network.real.access (ADR 0102 §4).</summary>
+    internal static ProxyRelayPolicy TestPolicy { get; } =
+        ProxyRelayPolicy.From(new ProxyOptions { GrantedApps = ["org.hackeros.test"] });
 
     public void Dispose() => _db.Dispose();
 
@@ -114,7 +119,19 @@ public sealed class ProxyServiceTests : IDisposable
         Assert.Equal(DeviceId, policy.DeviceId);
         Assert.Equal(8, policy.MaxConcurrentRequests);
         Assert.Contains("http", policy.AllowedProtocols);
+        Assert.Contains("tcp", policy.AllowedProtocols);
+        Assert.Contains("udp", policy.AllowedProtocols);
         Assert.Empty(policy.OperatorWeakeningWarnings);
+        Assert.True(policy.Enabled);
+        Assert.Equal([80, 443], policy.HttpPorts!);
+        Assert.Equal([80, 443], policy.TcpPorts!);
+        Assert.Equal([53, 123], policy.UdpPorts!);
+        Assert.False(policy.AllowAllPorts);
+        Assert.False(policy.AllowPrivateNetworks);
+        Assert.True(policy.QuotasEnabled);
+        Assert.Equal(10 * 1024 * 1024, policy.MaxRequestBytes);
+        Assert.Equal(4, policy.MaxStreamsPerDevice);
+        Assert.Equal(300, policy.StreamIdleTimeoutSeconds);
     }
 
     [Fact]
@@ -295,7 +312,7 @@ public sealed class ProxyServiceTests : IDisposable
         var proxy = new ProxyService(
             _factory, _audit, _db,
             new FakeProxyAddressResolver(IPAddress.Parse("10.0.0.5")),
-            _connectionPin, _tcpConnector);
+            _connectionPin, _tcpConnector, policy: TestPolicy);
 
         var ex = await Assert.ThrowsAsync<ProxyRequestException>(() =>
             proxy.ExecuteTcpProbeAsync(AccountId, DeviceId,
@@ -357,15 +374,25 @@ public sealed class FakeHttpMessageHandler(IProxyConnectionPinAccessor connectio
     public IPAddress? ObservedPin { get; private set; }
     public byte[] ResponseBody { get; set; } = [];
 
-    protected override Task<HttpResponseMessage> SendAsync(
+    /// <summary>Scripted responses served before the default 200 (redirect tests).</summary>
+    public Queue<HttpResponseMessage> ScriptedResponses { get; } = new();
+
+    /// <summary>Every request seen: method, URI, body bytes (null without content) and Content-Type.</summary>
+    public List<(string Method, Uri Uri, byte[]? Body, string? ContentType)> Requests { get; } = [];
+
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         SendCount++;
         ObservedPin = connectionPin.Address;
-        return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        byte[]? body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+        Requests.Add((request.Method.Method, request.RequestUri!, body, request.Content?.Headers.ContentType?.ToString()));
+        if (ScriptedResponses.TryDequeue(out var scripted))
+            return scripted;
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(ResponseBody)
-        });
+        };
     }
 }
 

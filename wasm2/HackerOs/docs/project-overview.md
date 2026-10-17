@@ -116,7 +116,7 @@ capacités dangereuses. Liste et règles : [`app-model.md`](app-model.md#apps-sy
 |---|---|
 | `OS/HackerOs.Ecosystem` | **L'hôte livré** : PWA Blazor WebAssembly autonome (`wwwroot/index.html`, service worker), sans serveur. Il référence les apps et agrège leurs manifestes dans `BuiltInApplications.json` au build. Tout doit fonctionner avec lui seul, hors ligne. |
 | `test/test` | Blazor Web App de débogage : rend le même arbre de composants en `InteractiveWebAssembly` pour profiter du débogueur. Pas une cible de distribution. |
-| `Server/HackerOs.Server` | Serveur ASP.NET Core **optionnel** : synchronisation, comptes, relais HTTP/TCP/UDP vers le vrai réseau. Il sert aussi l'interface en `InteractiveServer` (ADR 0027), en mode mono-utilisateur. Aucune app ne doit en dépendre. |
+| `Server/HackerOs.Server` | Serveur ASP.NET Core **optionnel** : synchronisation, comptes, relais HTTP/TCP/UDP vers le vrai réseau ([`server-network-relay.md`](server-network-relay.md), politique et quotas dans `appsettings.json`). Il sert aussi l'interface en `InteractiveServer` (ADR 0027), en mode mono-utilisateur. Aucune app ne doit en dépendre. |
 | `Server/HackerOs.Server.Contracts` | Contrats partagés entre le serveur et le client. |
 
 Plus de détails sur les hôtes dans [`old/hosting-model.md`](old/hosting-model.md)

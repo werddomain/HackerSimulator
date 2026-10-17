@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Server.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -46,12 +47,24 @@ public sealed class HackerOsBearerHandler : AuthenticationHandler<HackerOsBearer
     /// <inheritdoc />
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // Extract the bearer token from the Authorization header.
+        // Extract the bearer token from the Authorization header. A browser WebSocket cannot set
+        // that header, so the relay's stream routes (ADR 0102 §2, §3) also accept it as the
+        // access_token query parameter, as SignalR does — and only those routes.
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
-        if (authHeader is null || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        string token;
+        if (authHeader is not null && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader["Bearer ".Length..].Trim();
+        }
+        else if (IsStreamRoute(Request) && Request.Query[ProxyStreamRoutes.AccessTokenParameter].ToString() is { Length: > 0 } queryToken)
+        {
+            token = queryToken;
+        }
+        else
+        {
             return AuthenticateResult.NoResult();
+        }
 
-        var token = authHeader["Bearer ".Length..].Trim();
         if (string.IsNullOrEmpty(token))
             return AuthenticateResult.Fail("Empty bearer token.");
 
@@ -72,6 +85,10 @@ public sealed class HackerOsBearerHandler : AuthenticationHandler<HackerOsBearer
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
         return AuthenticateResult.Success(ticket);
     }
+
+    private static bool IsStreamRoute(HttpRequest request) =>
+        request.Path.Equals("/" + ProxyStreamRoutes.TcpPath, StringComparison.OrdinalIgnoreCase)
+        || request.Path.Equals("/" + ProxyStreamRoutes.UdpPath, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>

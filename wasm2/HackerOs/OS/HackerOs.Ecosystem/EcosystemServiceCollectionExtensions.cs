@@ -530,7 +530,8 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IServerConnectionService>(),
                     () => provider.GetRequiredService<IFileSystemSyncService>(),
                     () => provider.GetRequiredService<IGrantsSyncService>(),
-                    () => provider.GetRequiredService<IFileAssociationsSyncService>()),
+                    () => provider.GetRequiredService<IFileAssociationsSyncService>(),
+                    () => provider.GetRequiredService<IProxyClient>()),
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));

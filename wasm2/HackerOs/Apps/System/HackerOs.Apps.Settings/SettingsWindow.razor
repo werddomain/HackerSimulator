@@ -152,7 +152,8 @@
                     <h4>Optional Server</h4>
                     <p class="setting-desc">
                         Connecting a device to an optional HackerOS server enables real network
-                        access for apps like Terminal's <code>curl</code>/<code>ping</code>. Local
+                        access for apps like Terminal's <code>curl</code>/<code>ping</code>, through
+                        the server's relay. Local
                         storage remains the source of truth either way — connecting is never
                         required for normal use.
                     </p>
@@ -175,6 +176,7 @@
                                 </div>
                             }
                         </div>
+                        <ServerRelayPolicyPanel />
                         <div class="server-connection-actions">
                             <button class="btn-secondary" disabled="@(_isConnecting || _isSyncing)" @onclick="SyncNowAsync">
                                 @(_isSyncing ? "Syncing..." : "Sync now")

@@ -41,6 +41,42 @@ public enum HackSyncDirection
 public sealed record HackSyncConflict(HackSyncDomain Domain, string Path);
 
 /// <summary>
+/// The network relay policy of the connected server (ADR 0102 §5), as <c>GET /api/proxy/policy</c>
+/// reports it and Settings &gt; Server Connection shows it.
+/// </summary>
+/// <param name="Enabled">Whether the server relays at all.</param>
+/// <param name="HttpPorts">Ports an HTTP request may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="TcpPorts">Ports a TCP connection may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="UdpPorts">Ports a UDP socket may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="AllowAllPorts">Whether every port is allowed.</param>
+/// <param name="AllowPrivateNetworks">Whether the server's local network is reachable.</param>
+/// <param name="QuotasEnabled">Whether the limits below apply.</param>
+/// <param name="MaxRequestBytes">Largest request body.</param>
+/// <param name="MaxResponseBytes">Largest response body.</param>
+/// <param name="MaxConcurrentRequests">Requests in flight at once for this device.</param>
+/// <param name="MaxStreams">TCP/UDP sockets open at once for this device.</param>
+/// <param name="OpenStreams">TCP/UDP sockets this device has open now.</param>
+/// <param name="StreamIdleTimeout">How long a socket may stay silent before the server closes it.</param>
+/// <param name="GrantedApps">Apps the server lets use the relay on its own (ADR 0102 §4).</param>
+/// <param name="Warnings">The settings that weaken the server's defaults, one sentence each.</param>
+public sealed record HackServerRelayPolicy(
+    bool Enabled,
+    IReadOnlyList<int> HttpPorts,
+    IReadOnlyList<int> TcpPorts,
+    IReadOnlyList<int> UdpPorts,
+    bool AllowAllPorts,
+    bool AllowPrivateNetworks,
+    bool QuotasEnabled,
+    long MaxRequestBytes,
+    long MaxResponseBytes,
+    int MaxConcurrentRequests,
+    int MaxStreams,
+    int OpenStreams,
+    TimeSpan StreamIdleTimeout,
+    IReadOnlyList<string> GrantedApps,
+    IReadOnlyList<string> Warnings);
+
+/// <summary>
 /// The server refused a request or could not be reached while the user asked for it (connect,
 /// create an account, synchronize). Never raised merely because no server is configured.
 /// </summary>
@@ -95,4 +131,13 @@ public interface IAppServerConnectionGateway
     /// <summary>Gets the records the last synchronization could not merge.</summary>
     /// <param name="cancellationToken">Cancels the read.</param>
     ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the network relay policy of the connected server (ADR 0102 §5);
+    /// <see langword="null"/> when the device is not connected.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackServerConnectionException">The server could not be reached.</exception>
+    ValueTask<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This server connection gateway cannot read the relay policy.");
 }
