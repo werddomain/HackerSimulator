@@ -40,7 +40,7 @@ Sur `web/base` au 2026-10-17 (phase 5 et phase web fusionnées) :
 | Apps à fenêtre | Toujours sur le fil principal (pas de DOM dans un worker). Une boucle dans une fenêtre gèle le bureau ; « Not responding » ne s'affiche qu'après la fin de la tranche. | ADR 0070 §1, ADR 0067 §4 |
 | `HackerOs.Server` | Mesures coupées par défaut, pas de worker : `AppExecutionHost` est ignoré, une ligne dans `/var/log/syslog`, pas de `/proc/hackeros`. | ADR 0066 §3, ADR 0067 §6, ADR 0070 §6, ADR 0072 §7 |
 | Cross-origin | Aucun hôte n'envoie `Cross-Origin-Opener-Policy` ni `Cross-Origin-Embedder-Policy` ; `crossOriginIsolated` est faux, donc pas de `SharedArrayBuffer`, pas de `performance.measureUserAgentSpecificMemory()`, `performance.now()` arrondi. Les échanges avec les workers passent par `postMessage` (crédit de 64 Kio par flux). | ADR 0072 §2 |
-| Trimming | `PublishTrimmed=False` : le coût d'un worker en dépend. Le point appartient à la migration wasm v3, pas à ce plan. | `/mnt/project-files/wasm-v3/wasm-v3-remaining-work.md` n° 12 |
+| Trimming | `PublishTrimmed=False` : le coût d'un worker en dépend. Le point appartient à la migration wasm v3, pas à ce plan. Fait par `v3/14` (2026-10-17, [`trimmed-publish.md`](trimmed-publish.md)) : 50,9 → 26,5 Mio de WebAssembly. | `/mnt/project-files/wasm-v3/wasm-v3-remaining-work.md` n° 12 |
 
 ## 3. Principes
 

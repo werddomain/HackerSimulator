@@ -51,13 +51,12 @@ public static class AppEntryPointDiscovery
     /// which is fundamentally reflection-based and cannot be statically analyzed for trimming. This
     /// is a bounded, explicit reflection boundary: only assemblies the host itself passes in
     /// <paramref name="hostAssemblies"/> are consulted, matching the apps the host references
-    /// (ADR 0047, 0048). A future host publish step (Phase 2/6) must add matching trim root
-    /// descriptors for every referenced app's entry-point type; see the Problem Register entry
-    /// linked from `P1-GATE-004` in `integration-task-list.md` until that exists.
+    /// (ADR 0047, 0048). A trimmed host publish keeps every such assembly whole through the root
+    /// descriptor the build generates from its manifests (ADR 0106 §2, ADR 0113).
     /// </remarks>
     [RequiresUnreferencedCode(
-        "Resolves manifest entry-point types by name from an explicit host assembly list; the " +
-        "eventual host publish step must add matching trim root descriptors (see P1-GATE-004).")]
+        "Resolves manifest entry-point types by name from an explicit host assembly list; a trimmed host " +
+        "keeps those assemblies whole through its generated root descriptor (ADR 0113).")]
     public static AppDiscoveryResult Discover(
         AppCatalog catalog,
         IReadOnlyDictionary<string, Assembly> hostAssemblies,

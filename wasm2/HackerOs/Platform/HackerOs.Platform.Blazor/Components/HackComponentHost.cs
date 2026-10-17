@@ -76,11 +76,11 @@ public sealed class HackComponentHost : IHackComponentHost
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026",
-        Justification = "Component types come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Component types come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2072",
-        Justification = "Component types come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Component types come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private async Task<HackComponentResolution> ResolveProviderAsync(
         string contract, string appId, AppComponentManifest component, CancellationToken cancellationToken)
     {

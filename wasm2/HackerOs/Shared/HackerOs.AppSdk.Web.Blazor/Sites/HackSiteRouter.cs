@@ -59,7 +59,7 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026",
-        Justification = "Pages come from an installed app's assembly, which the host keeps whole (PublishTrimmed is off).")]
+        Justification = "Pages come from an installed app's assembly, which a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     protected override void OnParametersSet()
     {
         ArgumentNullException.ThrowIfNull(AppAssembly);
@@ -121,7 +121,7 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2072",
-        Justification = "Layouts come from an installed app's assembly, which the host keeps whole (PublishTrimmed is off).")]
+        Justification = "Layouts come from an installed app's assembly, which a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
         string path = _site is null ? "/" : "/" + _site.Navigation.ToBaseRelativePath(_site.Navigation.Uri);
@@ -152,7 +152,7 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2067",
-        Justification = "Layouts come from an installed app's assembly, which the host keeps whole (PublishTrimmed is off).")]
+        Justification = "Layouts come from an installed app's assembly, which a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private static void RenderInLayouts(RenderTreeBuilder builder, Type? layout, RenderFragment body)
     {
         if (layout is null)
@@ -173,7 +173,7 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2070",
-        Justification = "Pages come from an installed app's assembly, which the host keeps whole (PublishTrimmed is off).")]
+        Justification = "Pages come from an installed app's assembly, which a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private static void RenderPage(
         RenderTreeBuilder builder, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type page, HackRouteValueDictionary values)
     {
@@ -225,7 +225,7 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026",
-        Justification = "Pages come from an installed app's assembly, which the host keeps whole (PublishTrimmed is off).")]
+        Justification = "Pages come from an installed app's assembly, which a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private void IndexRoutes(Assembly assembly)
     {
         _routes.Clear();

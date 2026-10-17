@@ -7,7 +7,13 @@
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
-    <PublishTrimmed>False</PublishTrimmed>
+    <!--
+      ADR 0106, ADR 0113: Release publish trims the framework and the other trimmable libraries
+      (TrimMode=partial leaves untrimmable packages whole). Every HackerOS assembly and every app is
+      kept whole by build/HackerOs.Apps.targets; build/publish-trimmed.sh publishes and tests it.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <!--
       ADR 0047: aggregates the generated manifests of every referenced app into
       BuiltInApplications.json and lazy-loads their assemblies (build/HackerOs.Apps.targets).

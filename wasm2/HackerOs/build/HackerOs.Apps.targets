@@ -34,6 +34,8 @@
                                     HackerOs.BuiltInApplications.json and marks each app assembly
                                     BlazorWebAssemblyLazyLoad. Installing an app = one ProjectReference.
                                     Each entry also carries the app's image (assembly sizes, ADR 0068).
+                                    It also writes HackerOs.TrimmerRoots.xml, the ILLink roots of those
+                                    apps (TrimmerRootDescriptor), for a trimmed publish (ADR 0106).
   -->
 
   <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' != 'true'">
@@ -62,6 +64,12 @@
     <HackerOsAppProject Condition="'$(HackerOsAppProject)' == '' and '$(HackerOsAppHost)' != 'true'">true</HackerOsAppProject>
     <HackerOsAppProject Condition="'$(HackerOsAppProject)' == ''">false</HackerOsAppProject>
     <HackerOsSdkLibrary Condition="'$(HackerOsSdkLibrary)' == ''">false</HackerOsSdkLibrary>
+    <!--
+      ADR 0106 §4: an app built elsewhere is trimmed when a host publishes it, so its build runs the
+      trim analysis, as every shipping project of this repository does (Directory.Build.props).
+    -->
+    <IsTrimmable Condition="'$(IsTrimmable)' == '' and '$(HackerOsAppProject)' == 'true'">true</IsTrimmable>
+    <EnableTrimAnalyzer Condition="'$(EnableTrimAnalyzer)' == '' and '$(HackerOsAppProject)' == 'true'">true</EnableTrimAnalyzer>
     <_HackerOsManifestGeneratorPath>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'tools', 'generator', 'HackerOs.Tools.ManifestGenerator.dll'))</_HackerOsManifestGeneratorPath>
   </PropertyGroup>
 
@@ -395,6 +403,7 @@
     <PropertyGroup>
       <_HackerOsBuiltInApplicationsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuiltInApplications.json'))</_HackerOsBuiltInApplicationsFile>
       <_HackerOsBuiltInApplicationsList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-builtin-applications.txt'))</_HackerOsBuiltInApplicationsList>
+      <_HackerOsTrimmerRootsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'HackerOs.TrimmerRoots.xml'))</_HackerOsTrimmerRootsFile>
     </PropertyGroup>
     <ItemGroup>
       <!--
@@ -409,7 +418,7 @@
                       Overwrite="true"
                       WriteOnlyWhenDifferent="true" />
 
-    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; aggregate --project &quot;$(MSBuildProjectFullPath)&quot; --apps &quot;$(_HackerOsBuiltInApplicationsList)&quot; --output &quot;$(_HackerOsBuiltInApplicationsFile)&quot;"
+    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; aggregate --project &quot;$(MSBuildProjectFullPath)&quot; --apps &quot;$(_HackerOsBuiltInApplicationsList)&quot; --output &quot;$(_HackerOsBuiltInApplicationsFile)&quot; --trimmer-roots &quot;$(_HackerOsTrimmerRootsFile)&quot;"
           StandardOutputImportance="low"
           IgnoreExitCode="true"
           Condition="'$(DesignTimeBuild)' != 'true'">
@@ -426,7 +435,33 @@
       <!-- Remove first: a host may still list a migrated app by hand during the transition. -->
       <BlazorWebAssemblyLazyLoad Remove="@(_HackerOsLazyAssembly)" />
       <BlazorWebAssemblyLazyLoad Include="@(_HackerOsLazyAssembly)" />
-      <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList)" />
+      <!--
+        ADR 0106 §2: the OS reaches an app's entry point, components and site root only by the names
+        in its manifest, so a trimmed publish would drop the lazy-loaded app assemblies whole. The
+        generator writes their roots next to BuiltInApplications.json; ILLink reads them through
+        TrimmerRootDescriptor (ignored by an untrimmed publish).
+      -->
+      <TrimmerRootDescriptor Include="$(_HackerOsTrimmerRootsFile)" Condition="Exists('$(_HackerOsTrimmerRootsFile)')" />
+      <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList);$(_HackerOsTrimmerRootsFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    ADR 0113 (adjusts ADR 0106 §1-2): a trimmed publish of a host keeps every HackerOS assembly
+    whole (platform, SDK, browser infrastructure, apps from this repository or from packages) and
+    trims the framework and the other trimmable libraries. Their code hands its own records to
+    JavaScript interop and reflection-based JSON (IJSRuntime arguments are params object[], which
+    the trim analyzer cannot follow): a member-level trim removes properties and constructor
+    parameter names only serialization reads, with no build warning, for under 1 MB.
+    The apps of other names are kept whole by HackerOs.TrimmerRoots.xml.
+  -->
+  <Target Name="_HackerOsRootHackerOsAssemblies"
+          BeforeTargets="PrepareForILLink"
+          DependsOnTargets="_ComputeManagedAssemblyToLink"
+          Condition="'$(HackerOsAppHost)' == 'true' and '$(PublishTrimmed)' == 'true'">
+    <ItemGroup>
+      <TrimmerRootAssembly Include="@(ManagedAssemblyToLink->'%(Filename)')"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('HackerOs.', StringComparison.Ordinal))" />
     </ItemGroup>
   </Target>
 
@@ -465,6 +500,12 @@
     <ItemGroup>
       <FileWrites Include="$(_HackerOsPackageTargetsFile)" />
       <TfmSpecificPackageFile Include="@(_HackerOsPackManifest)" PackagePath="hackeros/manifests/%(Filename)%(Extension)" />
+      <!--
+        ADR 0104/0111: the translated manifest texts (localization/<culture>.json, resolved next to
+        manifests/ by the host's aggregation) travel with the manifests.
+      -->
+      <_HackerOsPackLocalization Include="$(MSBuildProjectDirectory)/localization/**/*.json" />
+      <TfmSpecificPackageFile Include="@(_HackerOsPackLocalization)" PackagePath="hackeros/localization/%(RecursiveDir)%(Filename)%(Extension)" />
       <TfmSpecificPackageFile Include="$(_HackerOsPackageTargetsFile)" PackagePath="buildTransitive/$(PackageId).targets" />
     </ItemGroup>
   </Target>

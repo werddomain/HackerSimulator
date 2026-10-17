@@ -116,8 +116,8 @@ public static class Program
     }
 
     /// <summary>
-    /// <c>aggregate --project &lt;host csproj&gt; --apps &lt;list file&gt; --output &lt;json&gt;</c>. The output is
-    /// rewritten only when its bytes change, so the host does not recompile needlessly.
+    /// <c>aggregate --project &lt;host csproj&gt; --apps &lt;list file&gt; --output &lt;json&gt; [--trimmer-roots &lt;xml&gt;]</c>.
+    /// The outputs are rewritten only when their bytes change, so the host does not recompile needlessly.
     /// </summary>
     private static int Aggregate(IReadOnlyDictionary<string, string> options)
     {
@@ -135,6 +135,12 @@ public static class Program
         }
 
         ManifestWriter.WriteIfChanged(output, result.Json);
+        // ADR 0106 §2: the trimmer roots of the same apps, for a trimmed publish of the host.
+        if (options.TryGetValue("trimmer-roots", out string? trimmerRoots) && !string.IsNullOrWhiteSpace(trimmerRoots))
+        {
+            ManifestWriter.WriteIfChanged(Path.GetFullPath(trimmerRoots), result.TrimmerRoots!);
+        }
+
         Console.WriteLine($"HackerOS built-in applications: {inputs.Count} app(s) -> {output}");
         return 0;
     }
@@ -191,7 +197,7 @@ public static class Program
     {
         Console.WriteLine("HackerOS manifest generator (ADR 0047)");
         Console.WriteLine("  generate --assembly <app.dll> --project <app.csproj> --stamp <file> [--dependencies <list file>]");
-        Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json>");
+        Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json> [--trimmer-roots <roots.xml>]");
         Console.WriteLine("  validate <manifest.json>");
     }
 }

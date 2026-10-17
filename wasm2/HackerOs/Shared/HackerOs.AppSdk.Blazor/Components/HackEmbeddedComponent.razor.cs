@@ -90,7 +90,7 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2072",
-        Justification = "Component types come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Component types come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private void BuildProvider(RenderTreeBuilder builder)
     {
         if (_resolution?.ComponentType is not { } componentType)

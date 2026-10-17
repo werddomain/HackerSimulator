@@ -93,7 +93,9 @@ sauf s'il déclare `HackerOsAppHost=true` (un hôte). Différences avec le dép�
 Quand un projet d'app est empaqueté, la cible `_HackerOsPackageAppManifests`
 (branchée sur `TargetsForTfmSpecificContentInPackage`) ajoute :
 
-- ses manifestes générés sous `hackeros/manifests/` ;
+- ses manifestes générés sous `hackeros/manifests/` et leurs traductions
+  (`localization/<culture>.json`, ADR 0104) sous `hackeros/localization/` (ajouté
+  par `v3/14` : sans elles, un hôte en paquets échouait en `HOSAPP0040`) ;
 - `buildTransitive/<PackageId>.targets`, qui les déclare en éléments
   `HackerOsPackagedApp` :
 
@@ -158,6 +160,12 @@ Le paquet est produit avec les deux mesures de ressources compilées
 | `hackeros-service` | service démarré à la connexion (`ServiceAppBase`, horloge simulée) | idem |
 | `hackeros-site` | site ASP.Hack (`WebAppDefinition`, `wwwroot/` embarqué) | `HackerOs.AppSdk.Web`, `HackerOs.App.Build` |
 | `hackeros-host` | hôte Blazor WebAssembly : `Program.cs`, `index.html`, `appsettings.json`, les apps de base en paquets (système comme dans l'Ecosystem) | `HackerOs.Ecosystem.Host`, `HackerOs.App.Build`, `HackerOs.Apps.*`, `HackerOs.Commands` |
+
+Les modèles d'app partent avec `IsTrimmable=true` ; `hackeros-host` publie en
+Release trimmée (`PublishTrimmed=true`, `TrimMode=partial`) et
+`HackerOs.App.Build` garde entiers les paquets `HackerOs.*` et chaque app
+installée, active l'analyse de trimming dans un projet d'app qui ne la règle
+pas (ADR 0106 §4, ADR 0113, [`trimmed-publish.md`](trimmed-publish.md)).
 
 Paramètres des modèles d'app : `--appId` (défaut `com.example.my-app`) et
 `--publisherId` (défaut `pub.example`) ; le nom du projet (`-n`) devient
