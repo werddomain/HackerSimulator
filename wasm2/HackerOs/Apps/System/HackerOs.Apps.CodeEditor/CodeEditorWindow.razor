@@ -80,7 +80,7 @@
                 <MudMenuItem OnClick="@(() => CycleTabAsync(-1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>@L["Menu.Go.PreviousEditor"]</span><kbd>Ctrl+Shift+Tab</kbd></span></MudMenuItem>
             </ChildContent>
         </MudMenu>
-        <span class="menubar-title">@WindowTitle()</span>
+        <span class="menubar-title">@WindowTitle</span>
     </header>
 
     <div class="workbench-body">

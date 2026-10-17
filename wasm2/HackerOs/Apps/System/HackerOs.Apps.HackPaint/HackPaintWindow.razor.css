@@ -138,25 +138,7 @@
     flex-shrink: 0;
 }
 
-/* ADR 0103 §1: document title, busy state and file errors. */
-.paint-titlebar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.3rem 0.75rem;
-    border-bottom: 1px solid var(--hos-border-subtle, #27343a);
-    background: var(--hos-bg-base, #101417);
-    font-family: var(--hos-font-mono, monospace);
-    font-size: 0.82rem;
-}
-
-.paint-title {
-    color: var(--hos-text-primary, #f4f7f8);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
+/* ADR 0103 §1: busy state and file errors; the document title is the window's (ADR 0117 §4). */
 .paint-busy {
     color: var(--hos-accent, #42d392);
     animation: paint-busy-pulse 1.2s ease-in-out infinite;

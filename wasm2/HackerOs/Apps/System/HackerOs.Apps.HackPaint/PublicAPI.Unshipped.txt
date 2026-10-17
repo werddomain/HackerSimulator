@@ -1,1 +1,2 @@
 #nullable enable
+override HackerOs.Apps.HackPaint.HackPaintWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!

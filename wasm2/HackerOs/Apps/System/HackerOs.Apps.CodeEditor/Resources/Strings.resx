@@ -612,15 +612,6 @@
   <data name="Terminals.New" xml:space="preserve">
     <value>New Terminal</value>
   </data>
-  <data name="Title.Document" xml:space="preserve">
-    <value>{0} - Code Editor</value>
-  </data>
-  <data name="Title.DocumentFolder" xml:space="preserve">
-    <value>{0} - {1} - Code Editor</value>
-  </data>
-  <data name="Title.Folder" xml:space="preserve">
-    <value>{0} - Code Editor</value>
-  </data>
   <data name="Watermark.FindInFolder" xml:space="preserve">
     <value>Find in Folder</value>
   </data>

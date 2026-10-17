@@ -31,9 +31,11 @@ images du système de fichiers simulé.
   dans un bandeau, chemin du fichier dans la barre d'état.
 - Raccourcis : Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Maj+S, Ctrl+Z, Ctrl+Y (le module
   JS empêche le navigateur de les prendre).
-- Titre affiché dans l'app : `nom.png — Hack Paint`, précédé de `*` quand
-  l'image a des changements non enregistrés. Le SDK n'offre pas encore de
-  changer le titre de la fenêtre ; l'éditeur de code fait de même.
+- Titre de la fenêtre : `nom.png — Hack Paint`, précédé de `*` quand l'image a
+  des changements non enregistrés, posé par `SetWindowTitleAsync` (ADR 0117 §4)
+  et affiché par le gestionnaire de fenêtres (barre de titre, barre des tâches,
+  `` Alt+` ``). Il n'est plus répété dans l'app ; « ouverture… /
+  enregistrement… » s'affiche dans la barre d'état.
 - Fermer avec des changements non enregistrés demande confirmation
   (`IWindowCloseGuard`, boîte Oui/Non).
 - Ouverture par l'explorateur : Hack Paint déclare `FileHandlers` pour les cinq
@@ -73,6 +75,8 @@ que des codes d'erreur. Le titre garde le nom de produit « Hack Paint » ; seul
 - [x] Ouvrir (dialogue, explorateur, argument de lancement), décoder par le navigateur.
 - [x] Enregistrer, Enregistrer sous, PNG et JPEG avec qualité.
 - [x] Titre avec `*`, confirmation à la fermeture.
+- [x] Titre posé dans la fenêtre par le SDK 1.1 (chantier `v3.1/3-window-title`, E2E
+  `HackPaintWindowTitleTests`).
 - [x] `FileHandlers` et association par défaut `edit` des images.
 - [x] Tests (`HackerOs.Apps.HackPaint.Tests`) : en-têtes des cinq formats,
   fichiers tronqués, limites, format d'enregistrement, suivi des changements, titre.

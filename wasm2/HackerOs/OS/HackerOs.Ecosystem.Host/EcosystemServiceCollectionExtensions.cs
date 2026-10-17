@@ -778,6 +778,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped(provider => new WindowAppEventDispatcher(
             provider.GetRequiredService<WindowRuntime>(),
             provider.GetService<IWindowClientAreaProbe>()));
+        // ADR 0117: each rendered window app gets a gateway bound to its own window (title).
+        services.AddScoped<AppWindowGatewayFactory>();
         services.AddScoped(provider => new WindowKeyboardCommands(
             provider.GetRequiredService<WindowRuntime>(),
             provider.GetService<IOsSettingsService>(),

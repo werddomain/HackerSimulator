@@ -6,13 +6,6 @@
 @implements IWindowCloseGuard
 
 <div class="@RootClass" @ref="_root" tabindex="-1" @onkeydown="HandleKeyDownAsync">
-    <header class="paint-titlebar">
-        <span class="paint-title" id="paint-title">@WindowTitle</span>
-        @if (_busyMessage is not null)
-        {
-            <span class="paint-busy" role="status">@_busyMessage</span>
-        }
-    </header>
     <div class="paint-toolbar" role="toolbar" aria-label="@L["Toolbar.AriaLabel"]">
         <div class="tool-group" aria-label="@L["Group.File"]">
             <button id="paint-btn-new" class="paint-btn" title="@L["Button.New.Tooltip"]" disabled="@IsBusy" @onclick="NewDocumentAsync">@L["Button.New"]</button>
@@ -56,6 +49,10 @@
         </div>
     </div>
     <div class="paint-statusbar">
+        @if (_busyMessage is not null)
+        {
+            <span class="paint-busy" role="status">@_busyMessage</span>
+        }
         <span>@L["Status.Canvas", _state.Width, _state.Height]</span>
         <span>@L["Status.Tool", L[_state.CropMode ? "Tool.Crop" : _state.PanMode ? "Tool.Pan" : "Tool.Brush"]]</span>
         <span id="paint-path">@(_path?.Value ?? L["Status.NotSaved"])</span>

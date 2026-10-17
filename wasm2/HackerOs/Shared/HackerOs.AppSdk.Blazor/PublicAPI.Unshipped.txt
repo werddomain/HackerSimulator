@@ -1,1 +1,8 @@
 #nullable enable
+HackerOs.AppSdk.Blazor.IAppWindowGateway
+HackerOs.AppSdk.Blazor.IAppWindowGateway.SetTitleAsync(string? title, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+HackerOs.AppSdk.Blazor.IAppWindowGateway.Title.get -> string!
+HackerOs.AppSdk.Blazor.WindowAppBase.SetWindowTitleAsync(string? title, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Blazor.WindowAppBase.WindowTitle.get -> string!
+HackerOs.AppSdk.Blazor.IAppWindowGateway.DefaultTitle.get -> string!
+HackerOs.AppSdk.Blazor.WindowAppBase.FormatWindowTitle(string? document, bool modified = false) -> string!

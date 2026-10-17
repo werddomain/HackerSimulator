@@ -279,6 +279,7 @@ le thème choisi par l'utilisateur :
 | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp` | Cycle de vie. Les méthodes Blazor (`OnInitializedAsync`…) sont scellées : on surcharge celles-ci. |
 | `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync` | Dialogues de fichiers de l'OS (capacités `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select`) ; le résultat porte le chemin choisi (`Resource.Path`, `Resources`). |
 | `MessageBox`, `TextInput` | Boîte de message et saisie de texte. |
+| `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle` | Titre de la fenêtre (ADR 0117, SDK 1.1) : l'app écrit tout le titre, par convention `document — App` avec `*` en tête si le document est modifié ; `null` rend le nom de l'app. Voir ci-dessous. |
 | `OnPermissionErrorRaised` | Surcharger pour afficher soi-même une erreur de permission (mettre `ErrorHandled = true`) au lieu de la notification de l'OS. |
 | `OnAppStopRequestedAsync(e)` | L'OS demande l'arrêt (`kill`, « End task », déconnexion ; ADR 0069) : finir ou annuler l'opération en cours, écrire un brouillon des modifications non enregistrées (`HackRecoveryDraft`). La fenêtre se ferme quand la tâche renvoyée se termine, au plus tard à `e.Deadline`. |
 
@@ -306,6 +307,15 @@ public override WindowOptions? Window => new()
 {
     DefaultWidth = 720, DefaultHeight = 520, MinWidth = 480, MinHeight = 360,
 };
+```
+
+Le titre se pose depuis l'app (SDK 1.1, ADR 0117). Le poser dans
+`OnAppInitialized[Async]` l'affiche avec la fenêtre ; le reposer après chaque
+rendu le garde à jour (redemander le même titre ne fait rien) :
+
+```csharp
+protected override Task OnAppAfterRenderAsync(bool firstRender) =>
+    SetWindowTitleAsync(FormatWindowTitle(_fileName, _isDirty)).AsTask(); // « *notes.txt — Mon app »
 ```
 
 Sans déclaration, la fenêtre fait 800×560 avec un minimum de 360×240.

@@ -296,8 +296,32 @@
         });
     }
 
+    /// <summary>
+    /// The window title (ADR 0117 §4): the current folder's name, <c>Documents — File Explorer</c>;
+    /// <c>/</c> for the root and the trash's name while it is shown.
+    /// </summary>
+    private string FolderWindowTitle
+    {
+        get
+        {
+            if (_showTrash)
+            {
+                return FormatWindowTitle(L["Places.Trash"]);
+            }
+
+            string path = _state.CurrentPath.TrimEnd('/');
+            return FormatWindowTitle(path.Length == 0 ? "/" : path[(path.LastIndexOf('/') + 1)..]);
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Every navigation ends in a render: the window title follows it here.</remarks>
+    protected override Task OnAppAfterRenderAsync(bool firstRender) => SetWindowTitleAsync(FolderWindowTitle).AsTask();
+
     protected override async Task OnAppInitializedAsync()
     {
+        // ADR 0117 §2: named after its folder before the window is first shown.
+        await SetWindowTitleAsync(FolderWindowTitle);
         _downloader = new BrowserFileDownloader(JSRuntime);
         // Another window (or app) may cut or copy at any time: follow the session clipboard.
         AppContext.Clipboard.Changed += OnClipboardChanged;

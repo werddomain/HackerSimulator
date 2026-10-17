@@ -64,6 +64,17 @@ public sealed class WindowLaunchCoordinator
     }
 
     /// <summary>
+    /// Gets the title a new window of <paramref name="manifest"/> gets, and the one an empty title
+    /// restores (ADR 0117 §1): the app's name in the desktop language.
+    /// </summary>
+    /// <param name="manifest">The app's manifest.</param>
+    public string DefaultTitle(AppManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return _title(manifest);
+    }
+
+    /// <summary>
     /// Creates a desktop window for a newly launched process, or restores and focuses the
     /// existing window returned by a single-instance launch.
     /// </summary>
