@@ -69,6 +69,11 @@ FileSystemService.WriteAsync(path)
   redémarrage sur un lien, chemin qui traverse un montage.
 - Les suites E2E (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`) exercent
   `resolvePath` dans un vrai navigateur à chaque démarrage.
+- Effet de bord sur les tests UI : le système de fichiers plus rapide a révélé
+  une course dans `E2ESupport.SelectFileExplorerEntryAsync` (le clic sur une
+  ligne arrivait pendant le rechargement de la liste après une navigation, qui
+  efface la sélection). L'aide clique de nouveau tant que la ligne n'est pas
+  restée sélectionnée.
 
 ## Liste des tâches
 
