@@ -1,7 +1,8 @@
 @namespace HackerOs.Windowing.Blazor
 @using HackerOs.Windowing.Core
+@inject IServiceProvider LocalizationServices
 
-<main class="single-surface-area" aria-label="Application surface">
+<main class="single-surface-area" aria-label="@L["Surface.Application"]">
     @if (Primary is not null)
     {
         <WindowHost @key="Primary.Id"
@@ -88,4 +89,8 @@
             await OnGesture.InvokeAsync(new MaximizeWindowCommand(primary));
         }
     }
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

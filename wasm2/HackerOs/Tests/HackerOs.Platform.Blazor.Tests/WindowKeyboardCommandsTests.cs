@@ -177,6 +177,20 @@ public sealed class WindowKeyboardCommandsTests
         Assert.Equal(WindowVisualState.Maximized, runtime.Windows[0].VisualState);
     }
 
+    [Fact]
+    public void The_window_menu_speaks_English_by_default_and_the_session_language_once_set()
+    {
+        (WindowRuntime runtime, WindowKeyboardCommands english) = Create(out WindowId[] ids, 1);
+        Assert.Equal(
+            ["Maximize", "Minimize", "Move", "Resize", "Snap left", "Snap right", "Full screen (Linux keys)", "Close"],
+            english.GetMenuItems(ids[0]).Select(item => item.Label));
+
+        WindowKeyboardCommands french = new(runtime, locale: Localization.TestLocalization.CreateSessionLocale("fr_FR.UTF-8"));
+        Assert.Equal(
+            ["Agrandir", "Réduire", "Déplacer", "Redimensionner", "Ancrer à gauche", "Ancrer à droite", "Plein écran (touches Linux)", "Fermer"],
+            french.GetMenuItems(ids[0]).Select(item => item.Label));
+    }
+
     private static (WindowRuntime Runtime, WindowKeyboardCommands Commands) Create(out WindowId[] ids, int count)
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));

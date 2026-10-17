@@ -1,13 +1,14 @@
 @namespace HackerOs.MobileShell.Blazor
+@inject IServiceProvider LocalizationServices
 
-<div class="mobile-recent-backdrop" role="dialog" aria-label="@Options.Title" @onclick="HandleDismiss">
+<div class="mobile-recent-backdrop" role="dialog" aria-label="@Title" @onclick="HandleDismiss">
     <div class="mobile-recent-panel" @onclick:stopPropagation="true">
         <header class="mobile-recent-header">
-            <span class="mobile-recent-title">@Options.Title</span>
+            <span class="mobile-recent-title">@Title</span>
         </header>
         @if (Items.Count == 0)
         {
-            <p class="mobile-recent-empty">@Options.EmptyMessage</p>
+            <p class="mobile-recent-empty">@(Options.EmptyMessage ?? L["Recent.Empty"])</p>
         }
         else
         {
@@ -33,7 +34,7 @@
                         </button>
                         <button type="button"
                                 class="mobile-recent-close"
-                                aria-label="@($"{Options.CloseLabelPrefix} {item.Title}")"
+                                aria-label="@CloseLabel(item)"
                                 @onclick="() => HandleClose(item)">
                             <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="16" Title="" />
                         </button>
@@ -70,4 +71,14 @@
     private Task HandleClose(MobileRecentItem item) => OnClose.InvokeAsync(item.Id);
 
     private Task HandleDismiss() => OnDismiss.InvokeAsync();
+
+    private string Title => Options.Title ?? L["Recent.Title"];
+
+    private string CloseLabel(MobileRecentItem item) => Options.CloseLabelPrefix is { } prefix
+        ? $"{prefix} {item.Title}"
+        : L["Recent.Close", item.Title];
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

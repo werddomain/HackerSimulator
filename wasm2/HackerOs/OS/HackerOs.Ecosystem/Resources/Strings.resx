@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Boot.Validating" xml:space="preserve">
+    <value>Validating local ecosystem</value>
+  </data>
+  <data name="Common.Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Correlation" xml:space="preserve">
+    <value>Correlation: {0}</value>
+  </data>
+  <data name="Fatal.BoundaryTitle" xml:space="preserve">
+    <value>HackerOS encountered an error</value>
+  </data>
+  <data name="Fatal.Recorded" xml:space="preserve">
+    <value>The failure was recorded without exposing sensitive details.</value>
+  </data>
+  <data name="Fatal.Title" xml:space="preserve">
+    <value>HackerOS could not start</value>
+  </data>
+  <data name="Login.Rejected" xml:space="preserve">
+    <value>The local credentials were not accepted.</value>
+  </data>
+  <data name="Login.Submit" xml:space="preserve">
+    <value>Start session</value>
+  </data>
+  <data name="Login.Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login.User" xml:space="preserve">
+    <value>Local user</value>
+  </data>
+  <data name="Progress.Completed" xml:space="preserve">
+    <value>Completed startup steps</value>
+  </data>
+  <data name="Progress.Label" xml:space="preserve">
+    <value>Session startup progress</value>
+  </data>
+  <data name="Progress.Step.EnsureDataIntegrity" xml:space="preserve">
+    <value>Ensure data integrity</value>
+  </data>
+  <data name="Progress.Step.LoadingProfile" xml:space="preserve">
+    <value>Loading Profile</value>
+  </data>
+  <data name="Progress.Step.StartingSession" xml:space="preserve">
+    <value>Starting Session</value>
+  </data>
+  <data name="Progress.Subtitle" xml:space="preserve">
+    <value>Session initialization in progress</value>
+  </data>
+  <data name="Recovery.Body" xml:space="preserve">
+    <value>Startup remains paused to protect persisted data.</value>
+  </data>
+  <data name="Recovery.Label" xml:space="preserve">
+    <value>Recovery environment</value>
+  </data>
+  <data name="Recovery.Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Recovery.Title" xml:space="preserve">
+    <value>Local storage is unavailable</value>
+  </data>
+  <data name="Setup.ConfirmPassword" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="Setup.DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Setup.Intro" xml:space="preserve">
+    <value>Initialize this local HackerOS profile.</value>
+  </data>
+  <data name="Setup.LoginName" xml:space="preserve">
+    <value>Login name</value>
+  </data>
+  <data name="Setup.PasswordRules" xml:space="preserve">
+    <value>Passwords must match and contain at least eight characters.</value>
+  </data>
+  <data name="Setup.ReservedLogin" xml:space="preserve">
+    <value>'{0}' is reserved for the system services.</value>
+  </data>
+  <data name="Setup.Submit" xml:space="preserve">
+    <value>Create local profile</value>
+  </data>
+  <data name="Setup.Title" xml:space="preserve">
+    <value>Create administrator</value>
+  </data>
+  <data name="Update.Ready" xml:space="preserve">
+    <value>A HackerOS update is ready.</value>
+  </data>
+  <data name="Update.Restart" xml:space="preserve">
+    <value>Restart to update</value>
+  </data>
+</root>

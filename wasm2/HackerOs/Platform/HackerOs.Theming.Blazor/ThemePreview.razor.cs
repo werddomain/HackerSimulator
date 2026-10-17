@@ -1,5 +1,7 @@
 using HackerOs.Theming.Abstractions;
 using Microsoft.AspNetCore.Components;
+using HackerOs.Theming.Blazor.Localization;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Theming.Blazor;
@@ -43,6 +45,15 @@ public partial class ThemePreview : ComponentBase, IAsyncDisposable
     /// <summary>Gets or sets the JS runtime used to set user theme tokens.</summary>
     [Inject]
     private IJSRuntime JavaScript { get; set; } = default!;
+
+    /// <summary>Gets or sets the services the optional localizer is resolved from (ADR 0104).</summary>
+    [Inject]
+    private IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>Gets the package's texts: the host's language when it localizes, English otherwise.</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(Services);
+
+    private IStringLocalizer? _localizer;
 
     /// <summary>Gets the validated, attribute-safe render state for the current parameters.</summary>
     private ThemeRenderState RenderState => _renderState;

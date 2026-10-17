@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Navigation.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Navigation.Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Navigation.Label" xml:space="preserve">
+    <value>System navigation</value>
+  </data>
+  <data name="Navigation.Recent" xml:space="preserve">
+    <value>Recent</value>
+  </data>
+  <data name="Recent.Close" xml:space="preserve">
+    <value>Close {0}</value>
+  </data>
+  <data name="Recent.Empty" xml:space="preserve">
+    <value>No recent apps</value>
+  </data>
+  <data name="Recent.Title" xml:space="preserve">
+    <value>Recent</value>
+  </data>
+</root>

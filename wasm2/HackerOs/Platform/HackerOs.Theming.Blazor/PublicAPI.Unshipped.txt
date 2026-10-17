@@ -36,3 +36,5 @@ override HackerOs.Theming.Blazor.ThemeScope.OnAfterRenderAsync(bool firstRender)
 override HackerOs.Theming.Blazor.ThemeScope.OnParametersSet() -> void
 ~override HackerOs.Theming.Blazor.ThemePreview.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Theming.Blazor.ThemeScope.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Theming.Blazor.Localization.PackageStringLocalizer
+static HackerOs.Theming.Blazor.Localization.PackageStringLocalizer.Resolve<TResource>(System.IServiceProvider? services) -> Microsoft.Extensions.Localization.IStringLocalizer!

@@ -66,6 +66,13 @@ public interface ITaskbarStatusSource
     /// <summary>Gets the current time to render in the taskbar clock.</summary>
     DateTimeOffset UtcNow { get; }
 
+    /// <summary>
+    /// Gets the culture the clock is formatted with (its long time pattern), e.g. the session's
+    /// <c>LC_TIME</c> culture (ADR 0104). Hosts that do not localize keep the invariant
+    /// <c>HH:mm:ss</c>.
+    /// </summary>
+    System.Globalization.CultureInfo FormatCulture => System.Globalization.CultureInfo.InvariantCulture;
+
     /// <summary>Raised when the status has changed and the taskbar should re-render.</summary>
     event Action? Changed;
 }
@@ -104,6 +111,9 @@ public sealed record TaskbarOptions
     /// <summary>Gets the short glyph shown in the launcher trigger.</summary>
     public string LauncherMark { get; init; } = "H_";
 
-    /// <summary>Gets the label shown next to the launcher trigger.</summary>
-    public string LauncherLabel { get; init; } = "Applications";
+    /// <summary>
+    /// Gets the label shown next to the launcher trigger, or <see langword="null"/> (the default)
+    /// for the taskbar's own localized "Applications".
+    /// </summary>
+    public string? LauncherLabel { get; init; }
 }

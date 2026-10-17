@@ -38,3 +38,17 @@ these contracts typically sit alongside. See `HackerOs.Windowing.SampleHost`
 in the source repository for a complete, minimal host that uses only these
 packages, including sample `ITaskbarWindowSource`/`ITaskbarCommandDispatcher`/
 `ITaskbarLauncher`/`ITaskbarStatusSource` implementations.
+
+## Localization
+
+The package's texts (accessible labels, the launcher label and the window states) live in `Resources/Strings.resx`
+(English) and `Resources/Strings.fr.resx` (French), read through
+`HackerOs.Theming.Blazor.Localization.PackageStringLocalizer` (ADR 0104): a host that
+registers an `IStringLocalizer<T>` (HackerOS registers its session-language
+`SessionStringLocalizer<T>`) gets its language; a host without localization gets English.
+
+`TaskbarOptions.LauncherLabel` overrides the package's "Applications" when set; left `null` it
+is localized. The clock is formatted with the long time pattern (`"T"`) of
+`ITaskbarStatusSource.FormatCulture`: a default interface member returning the invariant culture
+(`HH:mm:ss`), which HackerOS implements with the session's `LC_TIME` culture (`9:00:00 AM` in
+`en-US`, `09:00:00` in `fr-FR`).
