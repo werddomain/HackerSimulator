@@ -185,15 +185,17 @@ fois ; hors ligne, un écran explique qu'il faut se reconnecter une fois. Voir
 
 ## Montées de version IndexedDB (ADR 0099 §4)
 
-Voir [`building-and-testing.md`](building-and-testing.md#fixtures-indexeddb-des-versions-précédentes-adr-0099-4).
+Vidages des versions 2 et 3 dans `Tests/fixtures/indexeddb/` (la version 1 n'a jamais été committée, ADR 0110 §1), test E2E `IndexedDbUpgradeFixtureTests` et procédure : voir
+[`building-and-testing.md`](building-and-testing.md#fixtures-de-montée-de-version-indexeddb).
 
 ## Décisions
 
+- Les précisions ci-dessous sont consignées dans
+  l'[ADR 0110](adr/0110-backup-and-storage-implementation-adjustments.md).
 - **Une fusion redémarre aussi.** L'ADR 0099 décrit le redémarrage pour le
   remplacement ; la fusion le fait aussi, parce que l'OS en marche garde en
   mémoire des chemins, des réglages et des comptes que la restauration vient
-  de changer sous lui. Précision, pas changement de décision : pas de nouvel
-  ADR.
+  de changer sous lui.
 - **L'entrée de restauration attend hors de la base** : un remplacement
   écrase `/var/log/auth.log` lui-même. Elle est écrite au démarrage suivant.
 - **`hackbackup` exige `sudo`** au lieu d'ouvrir la demande graphique, comme
@@ -224,6 +226,10 @@ Voir [`building-and-testing.md`](building-and-testing.md#fixtures-indexeddb-des-
 - `Tests/HackerOs.Commands.Wave5.Tests/HackbackupCommandTests.cs` : usage,
   root exigé, création, fusion par défaut, remplacement, archive refusée,
   hôte sans sauvegarde.
+- `Tests/HackerOs.UI.E2E.Tests/LowStorageSpaceTests.cs` : quota de Chromium abaissé
+  (`Storage.overrideQuotaForOrigin`) à 3 % de libre ; la notification arrive,
+  l'action « Open Diagnostic » est là, et l'administrateur se reconnecte après
+  un rechargement (le système écrit encore dans la réserve).
 - `Tests/HackerOs.App.Abstractions.Tests/AppCapabilitiesTests.cs` :
   `system.backup` dangereuse.
 
@@ -239,5 +245,6 @@ Voir [`building-and-testing.md`](building-and-testing.md#fixtures-indexeddb-des-
 - [x] Onglet *Backup* de Paramètres et commande `hackbackup`.
 - [x] Actions de notification qui lancent une app.
 - [x] Cache PWA abîmé : vidage et rechargement une fois, écran hors ligne.
-- [x] Fixtures IndexedDB v1 à v3 et test de montée de version.
+- [x] Fixtures IndexedDB v2 et v3 (pas de v1, ADR 0110) et test de montée de version.
+- [x] Test E2E du quota (`LowStorageSpaceTests` : notification, réserve de root).
 - [x] Tests unitaires et documentation.
