@@ -61,7 +61,7 @@ plateforme et ne référencent jamais `Platform.*` ni `Infrastructure.*`
 | `HackerOs.App.Abstractions` | Modèle d'app : `AppDefinition` et `[AppManifest]`, `AppManifest` et son validateur, `AppKind`, catalogue des capacités `AppCapabilities`, intentions, plateformes, sérialisation canonique des manifestes. |
 | `HackerOs.Simulation.Abstractions` | Contrats du système simulé : système de fichiers (`VirtualPath`, requêtes et résultats), passerelles d'app (`IAppFileSystemGateway`, `IAppEventGateway`, `IAppLoggingGateway`…), processus, sessions, paramètres, réseau, notifications, horloge, mesures. |
 | `HackerOs.Theming.Abstractions` | Contrats du thème (jetons, apparence). |
-| `HackerOs.Game.Abstractions` | Contrats du domaine de jeu. |
+| `HackerOs.Game.Abstractions` | Ébauche de contrats du domaine de jeu, à retirer : le jeu vit dans un autre dépôt qui utilise cet écosystème ([ADR 0092](adr/0092-game-in-a-separate-repository.md), chantier `v3/2-game-removal` du [plan de fin de migration](wasm-v3-completion-plan.md)). |
 
 ### SDK des apps (`Shared/HackerOs.AppSdk*`)
 
