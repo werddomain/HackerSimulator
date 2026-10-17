@@ -140,6 +140,10 @@ await appearance.SetManyAsync(values, SettingLayer.System);        // /etc/hacke
 - Documents ouverts : `appearance`, `ui-platform-preference`, `security`,
   `policy`, `clipboard` (ADR 0065) (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
   `ArgumentException`.
+- Dans `appearance`, `desktopThemeId` et `mobileThemeId` sont des chaînes
+  libres depuis `v3/11` (ADR 0103) : l'id d'un thème intégré ou d'un fichier
+  `.theme` de `/etc/hackeros/themes/` ou `~/.config/hackeros/themes/` ; un id
+  inconnu donne le thème par défaut (voir [`theme-editor.md`](theme-editor.md)).
 - Aucune capacité : les droits des fichiers décident (D16). La couche
   utilisateur est écrite par l'OS au nom de l'utilisateur de la session ; la
   couche système avec les droits de fichiers de l'app appelante, donc `sudo`

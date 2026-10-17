@@ -397,6 +397,24 @@ Détails : [`file-explorer.md`](file-explorer.md).
 | `HackerIcon` (`AppSdk.Icons`) | `Library` (`IconLibrary` : `Bootstrap`, `FontAwesome`, `Lucide`, `SimpleIcons`), `Name`, `Icon`, `Size`, `Title` ; voir [`old/icon-library.md`](old/icon-library.md). |
 | `VirtualKeyboard`, `VirtualKeyboardHost` (`AppSdk.VirtualKeyboard`) | `Options` (`VirtualKeyboardOptions` : rangées modificateurs, symboles, flèches, libellés), `OnKeyPressed` (`VirtualKeyPressedEvent`), `IsKeyboardVisible`, `ChildContent`. |
 
+## Thèmes (`HackerOs.Theming.Abstractions`)
+
+Pour lire ou écrire un thème utilisateur (ADR 0103, détail dans
+[`theme-editor.md`](theme-editor.md)) :
+
+| Type | Membres |
+|---|---|
+| `ThemeTokenCatalog` | `All`, `InGroup(ThemeTokenGroup)`, `TryGet(name, out ThemeTokenDefinition)` : les 68 jetons `--hos-*` modifiables |
+| `ThemeTokenDefinition` | `Name`, `Type` (`Color`, `Length`, `Duration`, `FontFamily`, `Number`), `Group`, `Label`, `Description`, `Example`, `RgbCompanion` |
+| `ThemeTokenValidator` | `TryValidate(type ou nom, valeur, out normalisée, out erreur)`, `TryGetRgbTriplet`, `ToHexColor` |
+| `ThemeFile` | `Parse(texte, origine, chemin)` → `ThemeFileParseResult` (thème + diagnostics), `Serialize(UserTheme)`, `IsValidId`, `Extension` (`.theme`), `MediaType` |
+| `UserTheme` | `Id`, `Name`, `BaseThemeId`, `Platforms`, `Tokens`, `Origin`, `SourcePath`, `Supports`, `ToCssProperties` |
+| `UserThemeLibrary` | `SystemDirectory`, `GetUserDirectory(home)`, `GetUserThemePath(home, id)`, `Build`, `LoadAsync(listFiles, readFile, home)` |
+| `ResolvedTheme` | `Resolve(id, plateforme, thèmes)` → `BaseThemeId`, `UserTheme`, `IsFallback` |
+
+`ThemeScope` et `ThemePreview` (`HackerOs.Theming.Blazor`) prennent un
+paramètre `Tokens` appliqué par-dessus le thème de base.
+
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
@@ -410,3 +428,4 @@ Détails : [`file-explorer.md`](file-explorer.md).
 - [x] Base `HackWebDb`, journal de débogage d'un site, passerelle `WebDatabase`, bases des sites dans `HackStorageDiagnostics` (`web/12`).
 - [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
 - [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
+- [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
