@@ -243,4 +243,59 @@ public sealed class WebRouteGeneratorTests
         Assert.DoesNotContain("NotAView", table);
         Assert.Contains("HackWebGeneratedRoutes.Views)", output.SyntaxTrees.Single(tree => tree.FilePath.EndsWith("WebHost.g.cs", StringComparison.Ordinal)).ToString());
     }
+
+    [Fact]
+    public void Cshtml_views_are_listed_with_the_class_names_of_the_compiler_mvc_mode()
+    {
+        (ImmutableArray<Diagnostic> diagnostics, Compilation output) = Run("""
+            [AppManifest]
+            public sealed partial class Intranet : WebAppDefinition
+            {
+                public override string Id => "org.example.intranet";
+                public override string Name => "Intranet";
+                public override IReadOnlyList<string> Urls => ["http://intranet.hack/"];
+            }
+
+            namespace AspNetCoreGeneratedDocument { internal sealed class Views_Home_Index { } internal sealed class Views__ViewStart { } internal sealed class Views_My_Dir_1_a_b { } }
+            namespace Custom.Admin { internal sealed class Views_Admin_Dashboard { } }
+            namespace Custom.Area.Deep { internal sealed class Views_Area_Deep_Card { } }
+            namespace Own { internal sealed class Views_Area_Own { } }
+            """,
+            new RazorFile("Views/Home/Index.cshtml", "@model string\n<h1>hi</h1>"),
+            new RazorFile("Views/_ViewStart.cshtml", "@{ Layout = \"_Layout\"; }"),
+            new RazorFile("Views/_ViewImports.cshtml", "@using System"),
+            new RazorFile("Views/My-Dir/1 a.b.cshtml"),
+            new RazorFile("Views/Admin/_ViewImports.cshtml", "@namespace Custom.Admin"),
+            new RazorFile("Views/Admin/Dashboard.cshtml"),
+            new RazorFile("Views/Area/_ViewImports.cshtml", "@namespace Custom.Area"),
+            new RazorFile("Views/Area/Deep/Card.cshtml"),
+            new RazorFile("Views/Area/Own.cshtml", "@namespace Own"),
+            new RazorFile("_ViewImports.cshtml", "@inherits HackRazorPage<TModel>"));
+
+        Assert.Empty(diagnostics);
+        Assert.Empty(output.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        string table = output.SyntaxTrees.Single(tree => tree.FilePath.EndsWith("HackWebGeneratedRoutes.g.cs", StringComparison.Ordinal)).ToString();
+        Assert.Contains("""new("Home/Index", typeof(global::AspNetCoreGeneratedDocument.Views_Home_Index))""", table);
+        Assert.Contains("""new("_ViewStart", typeof(global::AspNetCoreGeneratedDocument.Views__ViewStart))""", table);
+        Assert.Contains("""new("My-Dir/1 a.b", typeof(global::AspNetCoreGeneratedDocument.Views_My_Dir_1_a_b))""", table);
+        Assert.Contains("""new("Admin/Dashboard", typeof(global::Custom.Admin.Views_Admin_Dashboard))""", table);
+        Assert.Contains("""new("Area/Deep/Card", typeof(global::Custom.Area.Deep.Views_Area_Deep_Card))""", table);
+        Assert.Contains("""new("Area/Own", typeof(global::Own.Views_Area_Own))""", table);
+        Assert.DoesNotContain("_ViewImports", table);
+    }
+
+    [Fact]
+    public void A_razor_and_a_cshtml_view_at_the_same_path_are_an_error()
+    {
+        (ImmutableArray<Diagnostic> diagnostics, _) = Run("""
+            namespace AspNetCoreGeneratedDocument { internal sealed class Views_Home_Index { } }
+            namespace Example.Intranet_Site.Views.Home { public sealed class Index : Microsoft.AspNetCore.Components.ComponentBase { } }
+            public sealed class HomeController : HackController { public IHackActionResult Index() => View(); }
+            """,
+            new RazorFile("Views/Home/Index.cshtml"),
+            new RazorFile("Views/Home/Index.razor"));
+
+        Diagnostic duplicate = Assert.Single(diagnostics, diagnostic => diagnostic.Id == "HOSWEB0008");
+        Assert.Contains("Views/Home/Index", duplicate.GetMessage(System.Globalization.CultureInfo.InvariantCulture));
+    }
 }

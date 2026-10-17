@@ -2,7 +2,9 @@
 
 Chantier `web/7-razor-views` de la phase web. Décisions : [ADR 0076](adr/0076-asp-hack-mvc.md)
 §5 à §7 et [ADR 0083](adr/0083-asp-hack-razor-views.md). Socle : [`asp-hack-mvc.md`](asp-hack-mvc.md)
-(pipeline, routage, contrôleurs). Plan : [`asp-hack-plan.md`](asp-hack-plan.md).
+(pipeline, routage, contrôleurs). Plan : [`asp-hack-plan.md`](asp-hack-plan.md). Les vues
+`.cshtml`, qui partagent ce moteur et se mêlent aux vues `.razor`, sont décrites dans
+[`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md) (`web/8`, ADR 0086).
 
 ## Objet
 
@@ -115,7 +117,8 @@ Générateur : HackWebGeneratedRoutes.Views, passé par <Nom>WebHost ; build : w
   ASP.NET MVC : `View("texte")` est un **nom de vue** ; pour un modèle `string`,
   écrire `View(viewName: null, model: texte)` ou utiliser une classe de modèle.
 - **`ViewData`.** `HackViewDataDictionary` (clés sans casse, `Title`) partagé
-  par le contrôleur, la vue, ses partials et ses layouts.
+  par le contrôleur, la vue, ses partials et ses layouts. Une clé absente se lit
+  `null` (`web/8`, ADR 0086), comme `ViewData["x"]` dans ASP.NET.
 - **Layout.** `@layout _Layout` dans la vue (ou dans `_Imports.razor` du
   dossier) ; un layout peut avoir son propre `@layout` (imbrication). Le layout
   se rend **après** la vue : il voit `ViewData["Title"]` et les sections. La

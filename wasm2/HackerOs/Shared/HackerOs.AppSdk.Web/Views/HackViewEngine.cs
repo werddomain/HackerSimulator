@@ -12,10 +12,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace HackerOs.AppSdk.Web.Views;
 
 /// <summary>
-/// Finds and renders the views of a site (ASP.NET's <c>IViewEngine</c> and <c>IView</c>, ADR 0083):
+/// Finds and renders the views of a site (ASP.NET's <c>IViewEngine</c> and <c>IView</c>, ADR 0083 and 0086):
 /// a name is looked up in the generated <see cref="HackViewTable"/>, from <c>Views/&lt;Controller&gt;/</c>
-/// then <c>Views/Shared/</c>; the view is rendered to HTML by Blazor's <c>HtmlRenderer</c> (static,
-/// no interactivity), then each layout is rendered around the HTML of what it wraps.
+/// then <c>Views/Shared/</c>; a <c>.razor</c> view is rendered to HTML by Blazor's <c>HtmlRenderer</c>
+/// (static, no interactivity), a <c>.cshtml</c> page runs after its <c>_ViewStart.cshtml</c> files; then
+/// each layout, of either kind, is rendered around the HTML of what it wraps.
 /// </summary>
 /// <remarks>
 /// The view renders <em>before</em> its layout, in a pass of its own, as ASP.NET MVC executes a
@@ -37,8 +38,8 @@ public sealed class HackViewEngine
     public HackViewTable Views { get; }
 
     /// <summary>
-    /// Finds a view by name: <c>Index</c> is searched as <c>Views/&lt;Controller&gt;/Index.razor</c>, then
-    /// <c>Views/Shared/Index.razor</c>; a path (<c>~/Views/Notes/Edit.razor</c>, <c>/Views/Notes/Edit</c>) is taken as is.
+    /// Finds a view by name: <c>Index</c> is searched as <c>Views/&lt;Controller&gt;/Index</c> (<c>.razor</c> or
+    /// <c>.cshtml</c>), then <c>Views/Shared/Index</c>; a path (<c>~/Views/Notes/Edit.cshtml</c>, <c>/Views/Notes/Edit</c>) is taken as is.
     /// </summary>
     /// <param name="context">The action context (its controller names the folder).</param>
     /// <param name="name">The view name or path.</param>
@@ -57,9 +58,12 @@ public sealed class HackViewEngine
                 path = path["Views/".Length..];
             }
 
-            if (path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
+            foreach (string extension in (string[])[".razor", ".cshtml"])
             {
-                path = path[..^".razor".Length];
+                if (path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                {
+                    path = path[..^extension.Length];
+                }
             }
 
             candidates.Add(path);
@@ -75,7 +79,7 @@ public sealed class HackViewEngine
             candidates.Add($"Shared/{name}");
         }
 
-        searchedLocations = [.. candidates.Select(candidate => $"/Views/{candidate}.razor")];
+        searchedLocations = [.. candidates.SelectMany(candidate => (string[])[$"/Views/{candidate}.razor", $"/Views/{candidate}.cshtml"])];
         foreach (string candidate in candidates)
         {
             if (Views.Find(candidate) is HackViewDescriptor view)
@@ -124,12 +128,24 @@ public sealed class HackViewEngine
         await using HtmlRenderer renderer = new(services, loggers);
         return await renderer.Dispatcher.InvokeAsync(async () =>
         {
-            HackViewContext viewContext = new(context, this, model, viewData, isPartial)
+            HackViewContext viewContext = new(context, this, model, viewData, isPartial) { Renderer = renderer };
+            string html;
+            if (IsPage(viewType))
             {
-                Layout = isPartial ? null : LayoutOf(viewType)
-            };
+                // A .cshtml view: its _ViewStart files run first and give Layout its initial value (ADR 0086 §5).
+                string? layout = isPartial ? null : await RunViewStartsAsync(viewType, viewContext).ConfigureAwait(true);
+                html = await RenderPageAsync(viewType, viewContext, model, body: null, layout).ConfigureAwait(true);
+                if (isPartial)
+                {
+                    viewContext.Layout = null;
+                }
+            }
+            else
+            {
+                viewContext.Layout = isPartial ? null : LayoutOf(viewType);
+                html = await RenderPassAsync(renderer, viewType, viewContext, body: null).ConfigureAwait(true);
+            }
 
-            string html = await RenderPassAsync(renderer, viewType, viewContext, body: null).ConfigureAwait(false);
             if (isPartial)
             {
                 return html;
@@ -140,6 +156,15 @@ public sealed class HackViewEngine
             HashSet<Type> applied = [];
             while (viewContext.Layout is Type layout && applied.Add(layout))
             {
+                if (IsPage(layout))
+                {
+                    // A .cshtml layout writes sections as HTML: those a .razor view defined are rendered first.
+                    viewContext.Layout = null;
+                    await MaterializeSectionsAsync(renderer, viewContext).ConfigureAwait(true);
+                    html = await RenderPageAsync(layout, viewContext, viewContext.Model, body: html, layout: null).ConfigureAwait(true);
+                    continue;
+                }
+
                 viewContext.Layout = LayoutOf(layout);
                 bool bodyRendered = false;
                 string inner = html;
@@ -149,7 +174,7 @@ public sealed class HackViewEngine
                     builder.AddMarkupContent(0, inner);
                 };
 
-                html = await RenderPassAsync(renderer, layout, viewContext, body).ConfigureAwait(false);
+                html = await RenderPassAsync(renderer, layout, viewContext, body).ConfigureAwait(true);
                 if (!bodyRendered)
                 {
                     throw new InvalidOperationException($"The layout '{layout.Name}' did not render the body: write @Body where the page goes.");
@@ -161,7 +186,7 @@ public sealed class HackViewEngine
             {
                 throw new InvalidOperationException(
                     $"The following sections have been defined but have not been rendered by the layout: '{string.Join("', '", unrendered)}'. " +
-                    "Add <HackRenderSection Name=\"...\" Required=\"false\" /> to the layout.");
+                    "Add <HackRenderSection Name=\"...\" Required=\"false\" /> (or @RenderSection(\"...\", required: false) in a .cshtml) to the layout.");
             }
 
             return html;
@@ -169,18 +194,112 @@ public sealed class HackViewEngine
     }
 
     /// <summary>
+    /// Renders a partial view of either kind inside a page (<c>Html.PartialAsync</c>): same request, view
+    /// data and renderer, its own model, no layout.
+    /// </summary>
+    /// <param name="viewContext">The context of the page asking.</param>
+    /// <param name="name">The partial's name or path.</param>
+    /// <param name="model">The partial's model.</param>
+    /// <returns>The HTML.</returns>
+    internal static async Task<string> RenderPartialAsync(HackViewContext viewContext, string name, object? model)
+    {
+        HackViewDescriptor view = viewContext.FindPartial(name);
+        EnsureModelType(view.ViewType, model);
+        HackViewContext partialContext = viewContext.ForPartial(model);
+        return view.Kind == HackViewKind.RazorPage
+            ? await viewContext.Engine.RenderPageAsync(view.ViewType, partialContext, model, body: null, layout: null).ConfigureAwait(true)
+            : await RenderPassAsync(viewContext.Renderer!, view.ViewType, partialContext, body: null).ConfigureAwait(true);
+    }
+
+    /// <summary>Renders a Razor component inside a <c>.cshtml</c> page (<c>Component.InvokeAsync&lt;T&gt;</c>), with the page's context cascaded.</summary>
+    /// <param name="viewContext">The context of the page asking.</param>
+    /// <param name="component">The component.</param>
+    /// <param name="parameters">Its parameters.</param>
+    /// <returns>The HTML.</returns>
+    internal static Task<string> RenderComponentAsync(
+        HackViewContext viewContext,
+        [DynamicallyAccessedMembers(HackViewTypes.Component)] Type component,
+        IReadOnlyDictionary<string, object?>? parameters) =>
+        RenderPassAsync(viewContext.Renderer!, component, viewContext, body: null, parameters);
+
+    /// <summary>
+    /// Runs a <c>.cshtml</c> page and returns its HTML; its <c>Layout</c> (a view name) then becomes the
+    /// context's layout, resolved like a view name.
+    /// </summary>
+    internal async Task<string> RenderPageAsync(
+        [DynamicallyAccessedMembers(HackViewTypes.Component)] Type pageType,
+        HackViewContext viewContext,
+        object? model,
+        string? body,
+        string? layout)
+    {
+        EnsureModelType(pageType, model);
+        HackRazorPage page = (HackRazorPage)Activator.CreateInstance(pageType)!;
+        page.Path = Views.Find(pageType)?.ToString() ?? pageType.FullName ?? pageType.Name;
+        string html = await page.RenderAsync(pageType, viewContext, model, body, layout).ConfigureAwait(true);
+        viewContext.Layout = string.IsNullOrEmpty(page.Layout) ? null : FindLayout(viewContext, page.Layout, page.Path).ViewType;
+        return html;
+    }
+
+    private HackViewDescriptor FindLayout(HackViewContext viewContext, string name, string pagePath) =>
+        FindView(viewContext.ActionContext, name, out IReadOnlyList<string> searched) ?? throw new InvalidOperationException(
+            $"The layout view '{name}' of '{pagePath}' could not be located. The following locations were searched:{Environment.NewLine}{string.Join(Environment.NewLine, searched)}");
+
+    /// <summary>
+    /// Runs the <c>_ViewStart.cshtml</c> files of <c>Views/</c> and of each folder down to the view's
+    /// (ASP.NET's order: the outermost first); their output is discarded, their <c>Layout</c> is kept.
+    /// </summary>
+    /// <returns>The layout the view starts chose, or <see langword="null"/>.</returns>
+    private async Task<string?> RunViewStartsAsync(Type viewType, HackViewContext viewContext)
+    {
+        string? path = Views.Find(viewType)?.Path;
+        if (path is null)
+        {
+            return null;
+        }
+
+        string? layout = null;
+        string[] folders = path.Split('/')[..^1];
+        for (int depth = 0; depth <= folders.Length; depth++)
+        {
+            string candidate = depth == 0 ? "_ViewStart" : $"{string.Join('/', folders[..depth])}/_ViewStart";
+            if (Views.Find(candidate) is { Kind: HackViewKind.RazorPage } viewStart)
+            {
+                HackRazorPage page = (HackRazorPage)Activator.CreateInstance(viewStart.ViewType)!;
+                page.Path = viewStart.ToString();
+                await page.RenderAsync(viewStart.ViewType, viewContext, viewContext.Model, body: null, layout).ConfigureAwait(true);
+                layout = page.Layout;
+            }
+        }
+
+        return layout;
+    }
+
+    /// <summary>Renders to HTML the sections a <c>.razor</c> view defined, for a <c>.cshtml</c> layout.</summary>
+    private static async Task MaterializeSectionsAsync(HtmlRenderer renderer, HackViewContext viewContext)
+    {
+        foreach (KeyValuePair<string, RenderFragment> section in viewContext.FragmentSections)
+        {
+            string html = await RenderPassAsync(renderer, typeof(HackFragmentHost), viewContext, section.Value).ConfigureAwait(true);
+            viewContext.SetSectionHtml(section.Key, html);
+        }
+    }
+
+    private static bool IsPage(Type viewType) => typeof(HackRazorPage).IsAssignableFrom(viewType);
+
+    /// <summary>
     /// Checks that <paramref name="model"/> suits the view, like ASP.NET MVC's "The model item passed into
     /// the ViewDataDictionary is of type X, but this ViewDataDictionary instance requires a model item of type Y".
     /// </summary>
     /// <param name="viewType">The view component.</param>
     /// <param name="model">The model.</param>
-    /// <exception cref="InvalidOperationException">The view derives from <c>HackView&lt;TModel&gt;</c> with another model type.</exception>
+    /// <exception cref="InvalidOperationException">The view derives from <c>HackView&lt;TModel&gt;</c> or <c>HackRazorPage&lt;TModel&gt;</c> with another model type.</exception>
     public static void EnsureModelType(Type viewType, object? model)
     {
         ArgumentNullException.ThrowIfNull(viewType);
         for (Type? type = viewType; type is not null; type = type.BaseType)
         {
-            if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(HackView<>))
+            if (!type.IsGenericType || (type.GetGenericTypeDefinition() != typeof(HackView<>) && type.GetGenericTypeDefinition() != typeof(HackRazorPage<>)))
             {
                 continue;
             }
@@ -208,11 +327,12 @@ public sealed class HackViewEngine
         HtmlRenderer renderer,
         [DynamicallyAccessedMembers(HackViewTypes.Component)] Type component,
         HackViewContext viewContext,
-        RenderFragment? body)
+        RenderFragment? body,
+        IReadOnlyDictionary<string, object?>? componentParameters = null)
     {
         ParameterView parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
         {
-            [nameof(HackViewHost.Pass)] = new HackViewPass(component, viewContext, body)
+            [nameof(HackViewHost.Pass)] = new HackViewPass(component, viewContext, body, componentParameters)
         });
         HtmlRootComponent root = await renderer.RenderComponentAsync<HackViewHost>(parameters).ConfigureAwait(false);
         return root.ToHtmlString();
@@ -224,7 +344,8 @@ public sealed class HackViewEngine
 internal sealed class HackViewPass(
     [DynamicallyAccessedMembers(HackViewTypes.Component)] Type component,
     HackViewContext viewContext,
-    RenderFragment? body)
+    RenderFragment? body,
+    IReadOnlyDictionary<string, object?>? parameters = null)
 {
     [DynamicallyAccessedMembers(HackViewTypes.Component)]
     public Type Component { get; } = component;
@@ -232,6 +353,9 @@ internal sealed class HackViewPass(
     public HackViewContext ViewContext { get; } = viewContext;
 
     public RenderFragment? Body { get; } = body;
+
+    /// <summary>Gets the parameters of a component rendered by <c>Component.InvokeAsync</c>.</summary>
+    public IReadOnlyDictionary<string, object?>? Parameters { get; } = parameters;
 }
 
 /// <summary>
@@ -271,6 +395,58 @@ internal sealed class HackViewHost : IComponent
             builder.AddComponentParameter(1, nameof(HackLayout.Body), Pass.Body);
         }
 
+        foreach (KeyValuePair<string, object?> parameter in Pass.Parameters ?? new Dictionary<string, object?>())
+        {
+            builder.AddComponentParameter(2, parameter.Key, parameter.Value);
+        }
+
         builder.CloseComponent();
+    }
+}
+
+/// <summary>Renders a section's fragment alone, to turn it into HTML for a <c>.cshtml</c> layout.</summary>
+internal sealed class HackFragmentHost : IComponent
+{
+    private RenderHandle _handle;
+
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    public void Attach(RenderHandle renderHandle) => _handle = renderHandle;
+
+    public Task SetParametersAsync(ParameterView parameters)
+    {
+        parameters.SetParameterProperties(this);
+        _handle.Render(builder => builder.AddContent(0, Body));
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// A <c>.cshtml</c> partial inside a <c>.razor</c> view (<c>&lt;HackPartial Name="_Card" /&gt;</c>): the page
+/// runs while the component initializes, then its HTML is written as markup.
+/// </summary>
+internal sealed class HackRazorPagePartial : ComponentBase
+{
+    private string? _html;
+
+    [Parameter]
+    public HackViewDescriptor View { get; set; } = default!;
+
+    [Parameter]
+    public HackViewContext Context { get; set; } = default!;
+
+    [Parameter]
+    public object? Model { get; set; }
+
+    protected override async Task OnInitializedAsync() =>
+        _html = await Context.Engine.RenderPageAsync(View.ViewType, Context, Model, body: null, layout: null).ConfigureAwait(true);
+
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+        if (_html is not null)
+        {
+            builder.AddMarkupContent(0, _html);
+        }
     }
 }

@@ -73,6 +73,22 @@ public sealed class MvcSiteTests
         Assert.Contains("anti-forgery", forged.Stdout, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [MemberData(nameof(Modes))]
+    public async Task Cshtml_views_with_view_start_and_layout_are_served(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+
+        ShellRun page = await os.RunAsync("curl 'http://mvc.hack/home/classic?who=trinity'").WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.True(page.ExitCode == 0, page.Stderr);
+        Assert.Contains("<title>classic</title>", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("<h1>Hello trinity</h1>", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("""<form action="/Home/Go" method="post">""", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", page.Stdout, StringComparison.Ordinal);
+        Assert.Contains("""<script src="/js/classic.js"></script>""", page.Stdout, StringComparison.Ordinal);
+    }
+
     private static async Task<OsFixture> StartAsync(bool workers)
     {
         OsFixture os = await OsFixture.CreateAsync(workers);

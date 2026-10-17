@@ -1,0 +1,5 @@
+@{ Layout = "_CshtmlLayout"; }
+<section class="inner">@RenderBody()</section>
+@section Scripts {
+    @RenderSection("Scripts", required: false)<script src="/js/inner.js"></script>
+}

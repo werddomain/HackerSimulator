@@ -1,0 +1,2 @@
+@model Note
+<li class="card @(Model.Done ? "done" : null)" data-id="@Model.Id">@Model.Title</li>

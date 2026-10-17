@@ -163,7 +163,7 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [x] `web/5-static-sites` ([`static-sites.md`](static-sites.md), ADR 0080)
 - [x] `web/6-mvc-core` ([`asp-hack-mvc.md`](asp-hack-mvc.md), ADR 0082)
 - [x] `web/7-razor-views` ([`asp-hack-razor-views.md`](asp-hack-razor-views.md), ADR 0083)
-- [ ] `web/8-cshtml-views`
+- [x] `web/8-cshtml-views` ([`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md), ADR 0086 : preuve réussie, pas de moteur interprété)
 - [x] `web/9-blazor-sites` ([`blazor-sites.md`](blazor-sites.md), ADR 0084)
 - [x] `web/10-detached-window` ([`detached-display-windows.md`](detached-display-windows.md), ADR 0081)
 - [ ] `web/11-sample-final`
