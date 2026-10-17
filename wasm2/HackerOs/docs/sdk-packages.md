@@ -93,7 +93,9 @@ sauf s'il déclare `HackerOsAppHost=true` (un hôte). Différences avec le dép�
 Quand un projet d'app est empaqueté, la cible `_HackerOsPackageAppManifests`
 (branchée sur `TargetsForTfmSpecificContentInPackage`) ajoute :
 
-- ses manifestes générés sous `hackeros/manifests/` ;
+- ses manifestes générés sous `hackeros/manifests/` et leurs traductions
+  (`localization/<culture>.json`, ADR 0104) sous `hackeros/localization/` (ajouté
+  par `v3/14` : sans elles, un hôte en paquets échouait en `HOSAPP0040`) ;
 - `buildTransitive/<PackageId>.targets`, qui les déclare en éléments
   `HackerOsPackagedApp` :
 

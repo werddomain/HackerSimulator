@@ -366,7 +366,8 @@ la préparation des ressources et avant les cibles Blazor) :
    ADR 0113, [`trimmed-publish.md`](trimmed-publish.md)).
 
 Les apps installées en **paquet** (ADR 0098 §2) suivent le même chemin : chaque
-paquet d'app contient ses manifestes sous `hackeros/manifests/` et un fichier
+paquet d'app contient ses manifestes sous `hackeros/manifests/` (leurs traductions
+sous `hackeros/localization/`) et un fichier
 `buildTransitive/<PackageId>.targets` qui les déclare en éléments
 `HackerOsPackagedApp` (métadonnées `PackageId`, `AssemblyFileName`,
 `AssemblyPath`). La cible `_HackerOsCollectPackagedAppManifests` les ajoute à

@@ -500,6 +500,12 @@
     <ItemGroup>
       <FileWrites Include="$(_HackerOsPackageTargetsFile)" />
       <TfmSpecificPackageFile Include="@(_HackerOsPackManifest)" PackagePath="hackeros/manifests/%(Filename)%(Extension)" />
+      <!--
+        ADR 0104/0111: the translated manifest texts (localization/<culture>.json, resolved next to
+        manifests/ by the host's aggregation) travel with the manifests.
+      -->
+      <_HackerOsPackLocalization Include="$(MSBuildProjectDirectory)/localization/**/*.json" />
+      <TfmSpecificPackageFile Include="@(_HackerOsPackLocalization)" PackagePath="hackeros/localization/%(RecursiveDir)%(Filename)%(Extension)" />
       <TfmSpecificPackageFile Include="$(_HackerOsPackageTargetsFile)" PackagePath="buildTransitive/$(PackageId).targets" />
     </ItemGroup>
   </Target>
