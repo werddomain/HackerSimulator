@@ -22,6 +22,7 @@
                         OnToggleMaximize="OnToggleMaximize"
                         OnClose="OnClose"
                         OnBack="OnBack"
+                        OnWindowMenu="OnWindowMenu"
                         OnGesture="OnGesture">
                 @if (WindowContent is not null)
                 {
@@ -72,6 +73,10 @@
     /// <summary>Gets or sets the Back request callback.</summary>
     [Parameter]
     public EventCallback<WindowId> OnBack { get; set; }
+
+    /// <summary>Gets or sets the window menu request callback (ADR 0095 §3).</summary>
+    [Parameter]
+    public EventCallback<WindowMenuRequest> OnWindowMenu { get; set; }
 
     /// <summary>Gets or sets the pointer gesture command callback.</summary>
     [Parameter]

@@ -314,6 +314,7 @@ public static partial class AppManifestValidator
         }
 
         ValidateExecution(manifest, errors);
+        ValidateWindow(manifest, errors);
         ValidateWeb(manifest, errors);
         ValidateComponents(manifest, errors);
 
@@ -331,6 +332,57 @@ public static partial class AppManifestValidator
 
             ValidateUniqueValues(handler.Extensions, "fileHandlers.extensions", errors);
             ValidateUniqueValues(handler.Actions, "fileHandlers.actions", errors);
+        }
+    }
+
+    /// <summary>
+    /// Checks the declared window sizes of ADR 0095 §2: only a window app has a window, every size is
+    /// positive, the window opens no smaller than its minimum and no larger than its maximum.
+    /// </summary>
+    private static void ValidateWindow(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Window is not { } window)
+        {
+            return;
+        }
+
+        if (manifest.Kind != AppKind.Window)
+        {
+            AddError(errors, "manifest.window.forbidden", "window", "Only window apps can declare window sizes.");
+            return;
+        }
+
+        bool sizesValid = true;
+        foreach ((int? value, string field) in new (int?, string)[]
+        {
+            (window.DefaultWidth, "window.defaultWidth"),
+            (window.DefaultHeight, "window.defaultHeight"),
+            (window.MinWidth, "window.minWidth"),
+            (window.MinHeight, "window.minHeight"),
+            (window.MaxWidth, "window.maxWidth"),
+            (window.MaxHeight, "window.maxHeight")
+        })
+        {
+            if (value is <= 0)
+            {
+                AddError(errors, "manifest.window.size.invalid", field, "Window sizes must be positive.");
+                sizesValid = false;
+            }
+        }
+
+        if (!sizesValid)
+        {
+            return;
+        }
+
+        if (window.MinWidth > window.DefaultWidth || window.MinHeight > window.DefaultHeight)
+        {
+            AddError(errors, "manifest.window.minimum.exceedsDefault", "window", "The minimum window size cannot be larger than the default size.");
+        }
+
+        if (window.DefaultWidth > window.MaxWidth || window.DefaultHeight > window.MaxHeight)
+        {
+            AddError(errors, "manifest.window.default.exceedsMaximum", "window", "The default window size cannot be larger than the maximum size.");
         }
     }
 

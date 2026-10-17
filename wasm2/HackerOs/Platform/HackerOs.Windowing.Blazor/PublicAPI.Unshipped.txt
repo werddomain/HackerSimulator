@@ -100,3 +100,18 @@ override HackerOs.Windowing.Blazor.WindowSurface.OnParametersSet() -> void
 ~override HackerOs.Windowing.Blazor.WindowChrome.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Windowing.Blazor.WindowHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Windowing.Blazor.WindowSurface.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Windowing.Blazor.DesktopArea.OnWindowMenu.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Blazor.WindowMenuRequest!>
+HackerOs.Windowing.Blazor.DesktopArea.OnWindowMenu.set -> void
+HackerOs.Windowing.Blazor.WindowHost.OnWindowMenu.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Blazor.WindowMenuRequest!>
+HackerOs.Windowing.Blazor.WindowHost.OnWindowMenu.set -> void
+HackerOs.Windowing.Blazor.WindowChrome.OnWindowMenu.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Blazor.WindowMenuRequest!>
+HackerOs.Windowing.Blazor.WindowChrome.OnWindowMenu.set -> void
+HackerOs.Windowing.Blazor.WindowChrome.ReportGestureCompletedAsync(string! mode) -> System.Threading.Tasks.Task!
+HackerOs.Windowing.Blazor.WindowMenuRequest
+HackerOs.Windowing.Blazor.WindowMenuRequest.ClientX.get -> double?
+HackerOs.Windowing.Blazor.WindowMenuRequest.ClientX.init -> void
+HackerOs.Windowing.Blazor.WindowMenuRequest.ClientY.get -> double?
+HackerOs.Windowing.Blazor.WindowMenuRequest.ClientY.init -> void
+HackerOs.Windowing.Blazor.WindowMenuRequest.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Blazor.WindowMenuRequest.WindowId.init -> void
+HackerOs.Windowing.Blazor.WindowMenuRequest.WindowMenuRequest(HackerOs.Windowing.Abstractions.WindowId WindowId, double? ClientX, double? ClientY) -> void

@@ -36,6 +36,16 @@ public sealed class WindowSampleApp : AppDefinition
     public override bool SingleInstancePerUser => true;
 
     /// <inheritdoc />
+    /// <remarks>ADR 0095 §2: opens at 720×520 and cannot be made smaller than 480×360.</remarks>
+    public override WindowOptions Window => new()
+    {
+        DefaultWidth = 720,
+        DefaultHeight = 520,
+        MinWidth = 480,
+        MinHeight = 360,
+    };
+
+    /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(
         BaselineCpuWeight: 0.02,
         BurstCpuWeight: 0.1,

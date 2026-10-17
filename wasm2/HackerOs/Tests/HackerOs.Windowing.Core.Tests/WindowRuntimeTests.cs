@@ -143,6 +143,54 @@ public sealed class WindowRuntimeTests
         Assert.True(Assert.Single(runtime.Windows).IsFocused);
     }
 
+    [Fact]
+    public void Completing_a_resize_reports_the_final_bounds_once()
+    {
+        // ADR 0095 §1: intermediate resizes of a gesture are facts, the end of the gesture is one more.
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowRuntimeState initial = CreateState(1);
+        runtime.Apply(new CreateWindowCommand(initial));
+        List<IReadOnlyList<WindowEvent>> batches = [];
+        runtime.EventsApplied += batches.Add;
+
+        runtime.Apply(new ResizeWindowCommand(initial.Id, new WindowBounds(20, 30, 700, 500)));
+        runtime.Apply(new ResizeWindowCommand(initial.Id, new WindowBounds(20, 30, 720, 510)));
+        IReadOnlyList<WindowEvent> completed = runtime.Apply(new CompleteWindowResizeCommand(initial.Id));
+
+        Assert.Equal(3, batches.Count);
+        WindowResizeCompletedEvent end = Assert.IsType<WindowResizeCompletedEvent>(Assert.Single(completed));
+        Assert.Equal(new WindowBounds(20, 30, 720, 510), end.Bounds);
+    }
+
+    [Fact]
+    public void Minimizing_a_background_window_keeps_the_focus_where_it_is()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowRuntimeState first = CreateState(1);
+        WindowRuntimeState second = CreateState(2);
+        runtime.Apply(new CreateWindowCommand(first));
+        runtime.Apply(new CreateWindowCommand(second));
+
+        IReadOnlyList<WindowEvent> events = runtime.Apply(new MinimizeWindowCommand(first.Id));
+
+        Assert.IsType<WindowVisualStateChangedEvent>(Assert.Single(events));
+        Assert.Equal(second.Id, Assert.Single(runtime.Windows, window => window.IsFocused).Id);
+    }
+
+    [Fact]
+    public void A_minimum_larger_than_the_work_area_is_kept_and_the_window_overflows()
+    {
+        // ADR 0095 §2: the declared minimum wins on a small screen, as on a real one.
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 400, 300));
+        WindowRuntimeState initial = CreateState(1, constraints: new WindowConstraints(true, 480, 360));
+
+        runtime.Apply(new CreateWindowCommand(initial));
+
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.Equal(new WindowBounds(0, 0, 480, 360), window.Bounds);
+        Assert.Equal(new WindowBounds(0, 0, 400, 300), runtime.WorkArea);
+    }
+
     private static WindowRuntimeState CreateState(
         int seed,
         WindowModality modality = WindowModality.Modeless,

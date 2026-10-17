@@ -55,6 +55,11 @@ export function attachWindowGestures(root, dotNetReference) {
             if (target.hasPointerCapture(finishEvent.pointerId)) {
                 target.releasePointerCapture(finishEvent.pointerId);
             }
+
+            // ADR 0095 §1: the end of the gesture is reported once, after the last pointer delta,
+            // so an app hears about the final size only.
+            invocationQueue = invocationQueue.then(() =>
+                dotNetReference.invokeMethodAsync("ReportGestureCompletedAsync", mode));
         };
 
         target.addEventListener("pointermove", onPointerMove);

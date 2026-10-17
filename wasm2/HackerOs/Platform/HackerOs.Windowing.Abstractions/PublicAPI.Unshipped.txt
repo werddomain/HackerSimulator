@@ -161,3 +161,13 @@ override HackerOs.Windowing.Abstractions.WindowId.ToString() -> string!
 override HackerOs.Windowing.Abstractions.WindowOwnerId.ToString() -> string!
 static HackerOs.Windowing.Abstractions.WindowId.FromGuid(System.Guid value) -> HackerOs.Windowing.Abstractions.WindowId
 static HackerOs.Windowing.Abstractions.WindowOwnerId.FromGuid(System.Guid value) -> HackerOs.Windowing.Abstractions.WindowOwnerId
+HackerOs.Windowing.Abstractions.CompleteWindowResizeCommand
+HackerOs.Windowing.Abstractions.CompleteWindowResizeCommand.CompleteWindowResizeCommand(HackerOs.Windowing.Abstractions.WindowId WindowId) -> void
+HackerOs.Windowing.Abstractions.CompleteWindowResizeCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.CompleteWindowResizeCommand.WindowId.init -> void
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent.Bounds.get -> HackerOs.Windowing.Abstractions.WindowBounds
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent.Bounds.init -> void
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent.WindowId.init -> void
+HackerOs.Windowing.Abstractions.WindowResizeCompletedEvent.WindowResizeCompletedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, HackerOs.Windowing.Abstractions.WindowBounds Bounds) -> void

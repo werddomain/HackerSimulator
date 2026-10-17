@@ -15,7 +15,7 @@ namespace HackerOs.AppSdk.Blazor;
 /// Component lifecycle overrides are sealed so framework setup cannot be skipped.
 /// Apps use the corresponding <c>OnApp*</c> hooks instead.
 /// </remarks>
-public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender
+public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender, IWindowAppEventTarget
 {
     private Guid? _boundInstanceId;
     private bool _permissionErrorHandlerAttached;

@@ -235,6 +235,20 @@
     "singleInstancePerUser": { "type": "boolean" },
     "autoStart": { "type": "boolean" },
     "supportsBack": { "type": "boolean" },
+    "window": {
+      "description": "Window sizes of a window app in CSS pixels (ADR 0095 §2). Omitted: 800x560, minimum 360x240, no maximum, resizable.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaultWidth": { "type": "integer", "minimum": 1 },
+        "defaultHeight": { "type": "integer", "minimum": 1 },
+        "minWidth": { "type": "integer", "minimum": 1 },
+        "minHeight": { "type": "integer", "minimum": 1 },
+        "maxWidth": { "type": "integer", "minimum": 1 },
+        "maxHeight": { "type": "integer", "minimum": 1 },
+        "resizable": { "type": "boolean" }
+      }
+    },
     "execution": { "enum": ["mainThread", "pool", "dedicated", "web"] },
     "web": {
       "description": "Web part of a web app (ADR 0073): the URLs the site answers on, published by the OS resolver (ADR 0074).",
@@ -283,6 +297,13 @@
         "properties": { "kind": { "not": { "const": "window" } } }
       },
       "then": { "not": { "required": ["fileHandlers"] } }
+    },
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "not": { "const": "window" } } }
+      },
+      "then": { "not": { "required": ["window"] } }
     },
     {
       "description": "Exactly one of entryPoint (legacy, single-platform) or platform (MOB-003, multi-platform) must be present. See docs/mobile-interface-platform-plan.md §4.3.",

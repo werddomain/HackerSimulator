@@ -9,3 +9,5 @@ HackerOs.Windowing.Core.WindowRuntime.IsInteractionBlocked(HackerOs.Windowing.Ab
 HackerOs.Windowing.Core.WindowRuntime.StateChanged -> System.Action?
 HackerOs.Windowing.Core.WindowRuntime.WindowRuntime(HackerOs.Windowing.Abstractions.WindowBounds workArea) -> void
 HackerOs.Windowing.Core.WindowRuntime.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
+HackerOs.Windowing.Core.WindowRuntime.EventsApplied -> System.Action<System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowEvent!>!>?
+HackerOs.Windowing.Core.WindowRuntime.WorkArea.get -> HackerOs.Windowing.Abstractions.WindowBounds

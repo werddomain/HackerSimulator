@@ -28,6 +28,7 @@ public sealed class AppDefinitionMapperTests
         Assert.False(manifest.SingleInstancePerUser);
         Assert.False(manifest.AutoStart);
         Assert.False(manifest.SupportsBack);
+        Assert.Null(manifest.Window);
         Assert.Equal(AppExecutionHost.MainThread, manifest.Execution);
         Assert.Equal(AppResourceProfileManifest.None, manifest.Resources);
         Assert.Null(manifest.Settings);
@@ -179,6 +180,24 @@ public sealed class AppDefinitionMapperTests
         Assert.Equal(AttributeTargets.Class, usage.ValidOn);
         Assert.False(usage.AllowMultiple);
         Assert.False(usage.Inherited);
+    }
+
+    [Fact]
+    public void ToManifest_copies_the_declared_window_sizes()
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new SizedWindowApp(), "1.0.0");
+
+        Assert.Equal(new WindowOptions { DefaultWidth = 360, DefaultHeight = 520, MinWidth = 360, MinHeight = 520, Resizable = false }, manifest.Window);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    private sealed class SizedWindowApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.sized";
+        public override string Name => "Sized";
+        public override AppKind Kind => AppKind.Window;
+        public override Type EntryPoint => typeof(FakeWindow);
+        public override WindowOptions Window => new() { DefaultWidth = 360, DefaultHeight = 520, MinWidth = 360, MinHeight = 520, Resizable = false };
     }
 
     private sealed class FakeWindow;
