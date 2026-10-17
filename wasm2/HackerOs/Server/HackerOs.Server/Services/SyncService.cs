@@ -15,6 +15,14 @@ public interface ISyncService
     Task<PushResponse> PushAsync(Guid accountId, Guid deviceId, PushRequest request, CancellationToken ct);
     Task<ResolveSyncConflictResponse> ResolveConflictAsync(
         Guid accountId, ResolveSyncConflictRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Deletes every record whose latest revision is a tombstone received more than
+    /// <see cref="SyncService.TombstoneRetention"/> before <paramref name="nowUtc"/> (ADR 0101
+    /// section 1), with all its older revisions. A device offline for longer resynchronizes fully.
+    /// </summary>
+    /// <returns>The number of records purged.</returns>
+    Task<int> PurgeExpiredTombstonesAsync(DateTimeOffset nowUtc, CancellationToken ct);
 }
 
 /// <inheritdoc />
@@ -243,6 +251,46 @@ public sealed class SyncService : ISyncService
             ct);
 
         return new ResolveSyncConflictResponse(true, null, finalRevision);
+    }
+
+    /// <summary>How long a tombstone is kept (ADR 0101 section 1, deferred decision 7).</summary>
+    public static readonly TimeSpan TombstoneRetention = TimeSpan.FromDays(90);
+
+    /// <inheritdoc />
+    public async Task<int> PurgeExpiredTombstonesAsync(DateTimeOffset nowUtc, CancellationToken ct)
+    {
+        DateTimeOffset threshold = nowUtc - TombstoneRetention;
+
+        // The row holding the highest sequence is never deleted: the next sequence is computed as
+        // max + 1, and reusing a number a device's cursor already passed would hide new records.
+        long? highestSequence = await _db.SyncRecords.MaxAsync(r => (long?)r.ServerSequence, ct);
+
+        // Only tombstone rows are candidates; the date is compared in memory because SQLite cannot
+        // translate DateTimeOffset comparisons.
+        var candidates = (await _db.SyncRecords
+                .Where(r => r.IsTombstone)
+                .Select(r => new { r.RecordId, r.Domain, r.Revision, r.ServerReceivedUtc, r.ServerSequence })
+                .ToListAsync(ct))
+            .Where(r => r.ServerReceivedUtc < threshold && r.ServerSequence != highestSequence)
+            .ToList();
+
+        int purged = 0;
+        foreach (var candidate in candidates)
+        {
+            // Purged only if that tombstone is still the latest revision (not resurrected since).
+            var rows = await _db.SyncRecords
+                .Where(r => r.RecordId == candidate.RecordId && r.Domain == candidate.Domain)
+                .ToListAsync(ct);
+            if (rows.Count == 0 || rows.Max(r => r.Revision) != candidate.Revision)
+                continue;
+
+            _db.SyncRecords.RemoveRange(rows);
+            purged++;
+        }
+
+        if (purged > 0)
+            await _db.SaveChangesAsync(ct);
+        return purged;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

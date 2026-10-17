@@ -276,4 +276,17 @@ public sealed class HackTrashTests
         Assert.Equal(5, log.Entries.Count);
         Assert.Contains("Moved '/home/alice/a.txt' to the trash as 'a.txt'.", log.Entries.Select(e => e.Message));
     }
+
+    [Fact]
+    public void A_trashinfo_written_by_the_sync_says_the_file_was_deleted_on_another_device()
+    {
+        string content = HackTrashInfo.Format("/home/alice/note.txt", new DateTimeOffset(2026, 10, 17, 8, 0, 0, TimeSpan.Zero))
+            + "X-HackerOS-Origin=deleted-on-another-device\nX-HackerOS-Device=0f3c\n";
+
+        HackTrashInfo info = HackTrashInfo.Parse(content)!;
+
+        Assert.Equal("/home/alice/note.txt", info.OriginalPath);
+        Assert.True(info.DeletedOnAnotherDevice);
+        Assert.False(HackTrashInfo.Parse(HackTrashInfo.Format("/home/alice/a.txt", DateTimeOffset.Now))!.DeletedOnAnotherDevice);
+    }
 }

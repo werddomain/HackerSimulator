@@ -121,7 +121,7 @@ public sealed class FileSystemSyncServiceTests
 
         // Every pushed record conflicts (the fake reports a conflict for all of them), including the
         // seeder's standard directories alongside the file this test cares about.
-        Assert.Contains("note.txt", service.UnresolvedConflicts);
+        Assert.Contains(await service.GetConflictsAsync(), conflict => conflict.RelativePath == "note.txt");
         SyncRecordEnvelope envelope = Assert.Single(syncClient.PushCalls[0].Records, r =>
         {
             FileSystemSyncPayload payload = System.Text.Json.JsonSerializer.Deserialize(
@@ -130,10 +130,12 @@ public sealed class FileSystemSyncServiceTests
         });
         Assert.Null(await recordState.GetAsync(SyncDomain.FileSystem, envelope.RecordId));
 
-        // A conflicted record is retried (never silently dropped) on the next push.
+        // ADR 0101 section 2: a conflicted file is frozen until the user chooses, so the next push
+        // neither resends it nor drops the conflict.
         syncClient.ConflictEveryRecord = false;
         await service.PushAsync();
-        Assert.Equal(2, syncClient.PushCalls.Count);
+        Assert.DoesNotContain(syncClient.PushCalls.Skip(1).SelectMany(call => call.Records), r => r.RecordId == envelope.RecordId);
+        Assert.Contains(await service.GetConflictsAsync(), conflict => conflict.RelativePath == "note.txt");
     }
 
     [Fact]
@@ -499,36 +501,6 @@ public sealed class FileSystemSyncServiceTests
             int start = chunkIndex * ChunkSizeBytes;
             int length = Math.Min(ChunkSizeBytes, content.Length - start);
             return Task.FromResult(content[start..(start + length)]);
-        }
-    }
-
-    private sealed class InMemorySyncCursorRepository : ISyncCursorRepository
-    {
-        private readonly Dictionary<string, string?> _cursors = [];
-
-        public ValueTask<string?> GetCursorAsync(string domain, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(_cursors.GetValueOrDefault(domain));
-
-        public ValueTask SetCursorAsync(string domain, string? cursor, CancellationToken cancellationToken = default)
-        {
-            _cursors[domain] = cursor;
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    private sealed class InMemorySyncRecordStateRepository : ISyncRecordStateRepository
-    {
-        private readonly Dictionary<(string Domain, Guid RecordId), SyncRecordTrackingState> _state = [];
-
-        public ValueTask<SyncRecordTrackingState?> GetAsync(
-            string domain, Guid recordId, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(_state.GetValueOrDefault((domain, recordId)));
-
-        public ValueTask SetAsync(
-            string domain, Guid recordId, long revision, string contentHash, CancellationToken cancellationToken = default)
-        {
-            _state[(domain, recordId)] = new SyncRecordTrackingState(revision, contentHash);
-            return ValueTask.CompletedTask;
         }
     }
 }

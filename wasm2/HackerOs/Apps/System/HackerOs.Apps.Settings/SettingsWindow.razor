@@ -223,6 +223,81 @@
                 </div>
             </MudTabPanel>
 
+            <MudTabPanel Text="Synchronization" Icon="@Icons.Material.Filled.Sync">
+                <div class="setting-group">
+                    <h4>Synchronization</h4>
+                    <p class="setting-desc">
+                        While this device is connected to a server, your home folder, file associations
+                        and granted capabilities synchronize by themselves every @FormatInterval(_syncStatus.Interval),
+                        when you sign in, and a few seconds after you change a file. A file deleted on
+                        another device lands in your trash here, so it can be restored.
+                    </p>
+
+                    <div class="server-connection-status @(_syncStatus.IsOnline ? "connected" : "disconnected")">
+                        <div class="info-line"><span>Automatic sync:</span> <strong>@SyncStateLabel</strong></div>
+                        <div class="info-line">
+                            <span>Last sync:</span>
+                            <strong>
+                                @(_syncStatus.LastSyncAt is { } lastSync
+                                    ? $"{lastSync.ToLocalTime():g} ({_syncStatus.LastSent} sent, {_syncStatus.LastReceived} received)"
+                                    : "never")
+                            </strong>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_syncStatus.LastError))
+                        {
+                            <div class="info-line sync-conflict-warning"><span>Last error:</span> <strong>@_syncStatus.LastError</strong></div>
+                        }
+                    </div>
+
+                    <label class="sync-pause-toggle">
+                        <input id="sync-paused" type="checkbox" checked="@_syncStatus.IsPaused"
+                               disabled="@(!_syncStatus.IsActive || _isSyncing)"
+                               @onchange="args => SetSyncPausedAsync(args.Value is true)" />
+                        <span>Pause my synchronization on this device (manual sync still works)</span>
+                    </label>
+
+                    <div class="server-connection-actions">
+                        <button class="btn-secondary" disabled="@(!_connectionState.IsConnected || _isSyncing)" @onclick="SyncNowAsync">
+                            @(_isSyncing ? "Syncing..." : "Sync now")
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(_syncStatusMessage))
+                    {
+                        <p class="setting-desc">@_syncStatusMessage</p>
+                    }
+                </div>
+
+                <div class="setting-group">
+                    <h4>Conflicts</h4>
+                    @if (_conflicts.Count == 0)
+                    {
+                        <p class="setting-desc">No conflict: every synchronized file agrees with your other devices.</p>
+                    }
+                    else
+                    {
+                        <p class="setting-desc">
+                            These files changed both here and on another device. They stay as they are here
+                            and are neither sent nor replaced until you choose which version to keep.
+                        </p>
+                        <ul class="sync-conflict-list">
+                            @foreach (HackerOs.AppSdk.Administration.HackSyncConflict conflict in _conflicts)
+                            {
+                                <li @key="conflict.Path">
+                                    <code>~/@conflict.Path</code>
+                                    @if (conflict.DetectedAt is { } detectedAt)
+                                    {
+                                        <span class="sync-conflict-date">since @detectedAt.ToLocalTime().ToString("g")</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <div class="server-connection-actions">
+                            <button class="btn-secondary" @onclick="ShowConflictsAsync">Resolve...</button>
+                        </div>
+                    }
+                </div>
+            </MudTabPanel>
+
             <MudTabPanel Text="About System" Icon="@Icons.Material.Filled.Info">
                 <div class="system-info-box">
                     <div class="info-line"><span>OS Version:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>

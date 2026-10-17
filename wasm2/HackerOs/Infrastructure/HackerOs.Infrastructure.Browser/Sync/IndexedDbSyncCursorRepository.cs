@@ -50,10 +50,34 @@ public sealed class IndexedDbSyncCursorRepository : ISyncCursorRepository, IAsyn
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Stored in the same store as the cursors, under the key <c>&lt;domain&gt;#pulledAt</c>, so the
+    /// schema needs no new store (ADR 0101 section 1).
+    /// </remarks>
+    public async ValueTask<DateTimeOffset?> GetLastPulledAtAsync(string domain, CancellationToken cancellationToken = default)
+    {
+        string? value = await GetCursorAsync(PulledAtKey(domain), cancellationToken).ConfigureAwait(false);
+        return DateTimeOffset.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind, out DateTimeOffset pulledAt)
+            ? pulledAt
+            : null;
+    }
+
+    /// <inheritdoc />
+    public ValueTask SetLastPulledAtAsync(string domain, DateTimeOffset pulledAtUtc, CancellationToken cancellationToken = default) =>
+        SetCursorAsync(PulledAtKey(domain), pulledAtUtc.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture), cancellationToken);
+
+    /// <inheritdoc />
     public ValueTask DisposeAsync() => _adapter.DisposeAsync();
 
     private ValueTask EnsureOpenAsync(CancellationToken cancellationToken) =>
         _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken);
+
+    private static string PulledAtKey(string domain)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(domain);
+        return domain + "#pulledAt";
+    }
 
     private sealed record SyncCursorRecord(
         [property: JsonPropertyName("domain")] string Domain,

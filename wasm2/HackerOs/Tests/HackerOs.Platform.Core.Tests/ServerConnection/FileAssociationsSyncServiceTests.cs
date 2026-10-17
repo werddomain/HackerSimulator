@@ -5,6 +5,7 @@ using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Tests.Settings;
 using HackerOs.Server.Contracts.Sync;
 using HackerOs.Simulation.Abstractions;
+using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.ServerConnection;
 using HackerOs.Simulation.Abstractions.Sync;
 
@@ -137,6 +138,65 @@ public sealed class FileAssociationsSyncServiceTests
     }
 
     [Fact]
+    public async Task PushAsync_FileDeletedAfterSync_SendsATombstoneOnce()
+    {
+        var settings = new FakeSettingsDocumentService();
+        settings.Seed("{\"associations\":[]}");
+        var syncClient = new FakeSyncClient();
+        var service = CreateService(settings, syncClient, Connected);
+        await service.PushAsync();
+
+        await settings.DeleteAsync();
+        await service.PushAsync();
+        await service.PushAsync();
+
+        Assert.Equal(2, syncClient.PushCalls.Count);
+        SyncRecordEnvelope tombstone = Assert.Single(syncClient.PushCalls[1].Records);
+        Assert.True(tombstone.IsTombstone);
+        Assert.Null(tombstone.PayloadJson);
+        Assert.Equal(2, tombstone.Revision);
+    }
+
+    [Fact]
+    public async Task PushAsync_FileNeverSynchronized_SendsNoTombstone()
+    {
+        var settings = new FakeSettingsDocumentService();
+        var syncClient = new FakeSyncClient();
+        var service = CreateService(settings, syncClient, Connected);
+
+        await service.PushAsync();
+
+        Assert.Empty(syncClient.PushCalls);
+    }
+
+    [Fact]
+    public async Task PullAsync_Tombstone_RestoresTheDefaultAssociations()
+    {
+        var settings = new FakeSettingsDocumentService();
+        settings.Seed("{\"schemaVersion\":1,\"associations\":[{\"extension\":\".txt\",\"appId\":\"org.example\",\"actions\":[\"open\"]}]}");
+        var syncClient = new FakeSyncClient
+        {
+            PullResponses = new Queue<PullResponse>(
+            [
+                new PullResponse(
+                    SyncDomain.FileAssociations,
+                    [new SyncRecordEnvelope(ComputeExpectedRecordId(), SyncDomain.FileAssociations, 1, Connected.AccountId, Guid.NewGuid(),
+                        3, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "hash", IsTombstone: true, PayloadJson: null)],
+                    NextCursor: "3",
+                    HasMore: false,
+                    DateTimeOffset.UtcNow)
+            ])
+        };
+        var service = CreateService(settings, syncClient, Connected);
+
+        await service.PullAsync();
+        await service.PushAsync();
+
+        Assert.Equal(FileAssociationSettingsDocuments.DefaultContent, settings.CurrentContent());
+        Assert.Empty(syncClient.PushCalls); // The restored defaults are not sent back.
+    }
+
+    [Fact]
     public async Task PullAsync_WhenDisconnected_NeverCallsSyncClient()
     {
         var settings = new FakeSettingsDocumentService();
@@ -213,36 +273,6 @@ public sealed class FileAssociationsSyncServiceTests
             throw new NotSupportedException("Not exercised by these tests.");
     }
 
-    private sealed class InMemorySyncCursorRepository : ISyncCursorRepository
-    {
-        private readonly Dictionary<string, string?> _cursors = [];
-
-        public ValueTask<string?> GetCursorAsync(string domain, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(_cursors.GetValueOrDefault(domain));
-
-        public ValueTask SetCursorAsync(string domain, string? cursor, CancellationToken cancellationToken = default)
-        {
-            _cursors[domain] = cursor;
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    private sealed class InMemorySyncRecordStateRepository : ISyncRecordStateRepository
-    {
-        private readonly Dictionary<(string Domain, Guid RecordId), SyncRecordTrackingState> _state = [];
-
-        public ValueTask<SyncRecordTrackingState?> GetAsync(
-            string domain, Guid recordId, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(_state.GetValueOrDefault((domain, recordId)));
-
-        public ValueTask SetAsync(
-            string domain, Guid recordId, long revision, string contentHash, CancellationToken cancellationToken = default)
-        {
-            _state[(domain, recordId)] = new SyncRecordTrackingState(revision, contentHash);
-            return ValueTask.CompletedTask;
-        }
-    }
-
     /// <summary>Real OS settings service over an in-memory filesystem, seeded as root.</summary>
     private sealed class FakeSettingsDocumentService
     {
@@ -254,6 +284,23 @@ public sealed class FileAssociationsSyncServiceTests
             _harness.WriteAsRootAsync(Path, content).GetAwaiter().GetResult();
 
         public string? CurrentContent() => _harness.ReadAsync(Path).GetAwaiter().GetResult();
+
+        /// <summary>Deletes the file, like an administrator running <c>rm</c>.</summary>
+        public async Task DeleteAsync()
+        {
+            FileSystemAuthorizationContext root = new(
+                new AppOperationContext
+                {
+                    AppId = "org.hackeros.shell",
+                    UserId = "system",
+                    UserAuthority = AppAuthority.System,
+                    GrantedCapabilities = new HashSet<string>(AppCapabilities.All, StringComparer.Ordinal),
+                    IsSystemOperation = true
+                },
+                ["system"],
+                DateTimeOffset.UtcNow);
+            await new SyncFileOperations(_harness.FileSystem, root).DeleteRecursiveAsync(VirtualPath.Parse(Path), CancellationToken.None);
+        }
 
         private static string Path => FileAssociationSettingsDocuments.File.Resolve(null).Value;
     }

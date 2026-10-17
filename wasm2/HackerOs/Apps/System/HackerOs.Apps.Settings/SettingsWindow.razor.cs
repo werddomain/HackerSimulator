@@ -64,6 +64,8 @@ public partial class SettingsWindow : IAsyncDisposable
     private bool _isSyncing;
     private string? _syncStatusMessage;
     private int _conflictCount;
+    private HackSyncStatus _syncStatus = HackSyncStatus.Inactive;
+    private IReadOnlyList<HackSyncConflict> _conflicts = [];
 
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
 
@@ -255,7 +257,7 @@ public partial class SettingsWindow : IAsyncDisposable
         try
         {
             _connectionState = await HackServerConnection.GetStateAsync(AppContext, AppContext.CancellationToken);
-            _conflictCount = (await HackServerConnection.GetConflictsAsync(AppContext, AppContext.CancellationToken)).Count;
+            await RefreshSyncAsync();
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException)
         {
@@ -329,20 +331,11 @@ public partial class SettingsWindow : IAsyncDisposable
 
         try
         {
-            // ADR 0030: push before pull, so a concurrent edit is flagged as a conflict before the
-            // pull runs. User settings are home files (ADR 0044), so they travel with this domain;
-            // the appearance document's watch refreshes this window when the pull changed them.
-            await HackServerConnection.SyncAsync(AppContext, HackSyncDomain.FileSystem, HackSyncDirection.Push, AppContext.CancellationToken);
-            await HackServerConnection.SyncAsync(AppContext, HackSyncDomain.FileSystem, HackSyncDirection.Pull, AppContext.CancellationToken);
-
-            // ADR 0031: grants are pull-only.
-            await HackServerConnection.SyncAsync(AppContext, HackSyncDomain.Grants, HackSyncDirection.Pull, AppContext.CancellationToken);
-
-            // ADR 0033: FileAssociations domain (the AppCatalog domain is retired by ADR 0048).
-            await HackServerConnection.SyncAsync(AppContext, HackSyncDomain.FileAssociations, HackSyncDirection.Push, AppContext.CancellationToken);
-            await HackServerConnection.SyncAsync(AppContext, HackSyncDomain.FileAssociations, HackSyncDirection.Pull, AppContext.CancellationToken);
-
-            _conflictCount = (await HackServerConnection.GetConflictsAsync(AppContext, AppContext.CancellationToken)).Count;
+            // ADR 0101 section 4: one complete pass in the OS's order (FileSystem push then pull, so a
+            // concurrent edit is caught as a conflict first; Grants pull; FileAssociations). User
+            // settings are home files (ADR 0044), so they travel with the FileSystem domain.
+            _syncStatus = await HackServerConnection.SyncNowAsync(AppContext, AppContext.CancellationToken);
+            await RefreshSyncAsync();
             _syncStatusMessage = _conflictCount > 0
                 ? $"Last synced {DateTimeOffset.Now:t} ({_conflictCount} file conflict(s))"
                 : $"Last synced {DateTimeOffset.Now:t}";
@@ -355,6 +348,43 @@ public partial class SettingsWindow : IAsyncDisposable
         {
             _isSyncing = false;
         }
+    }
+
+    /// <summary>Reads the periodic-sync state and the pending conflicts (ADR 0101).</summary>
+    private async Task RefreshSyncAsync()
+    {
+        _syncStatus = await HackServerConnection.GetSyncStatusAsync(AppContext, AppContext.CancellationToken);
+        _conflicts = await HackServerConnection.GetConflictsAsync(AppContext, AppContext.CancellationToken);
+        _conflictCount = _conflicts.Count;
+    }
+
+    private string SyncStateLabel =>
+        !_connectionState.IsConnected ? "off (not connected to a server)"
+        : !_syncStatus.IsActive ? "inactive"
+        : _syncStatus.IsPaused ? "paused"
+        : _syncStatus.IsOnline ? "running"
+        : "waiting for the server";
+
+    private static string FormatInterval(TimeSpan interval) =>
+        interval.TotalMinutes is 1 ? "minute" : $"{interval.TotalMinutes:0} minutes";
+
+    private async Task SetSyncPausedAsync(bool paused)
+    {
+        try
+        {
+            await HackServerConnection.SetSyncPausedAsync(AppContext, paused, AppContext.CancellationToken);
+            await RefreshSyncAsync();
+            _syncStatus = _syncStatus with { IsPaused = paused };
+        }
+        catch (Exception exception) when (exception is HackServerConnectionException or UnauthorizedAccessException or IOException)
+        {
+            _syncStatusMessage = $"Could not change the setting: {exception.Message}";
+        }
+    }
+
+    private async Task ShowConflictsAsync()
+    {
+        await HackServerConnection.ShowConflictsAsync(AppContext, AppContext.CancellationToken);
     }
 
     private async Task RebootAsync()
