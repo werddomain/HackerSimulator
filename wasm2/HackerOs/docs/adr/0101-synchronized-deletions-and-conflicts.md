@@ -2,10 +2,9 @@
 
 ## Statut
 
-**Proposé** le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/9-sync`).
-Tout est accepté sauf le §2 (forme de la résolution des conflits), qui applique
-le choix recommandé en attendant la réponse de Benoit à la question posée dans
-le fil du chantier `v3/1-adr`.
+Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/9-sync`). Le
+§2 suit la réponse de Benoit du 2026-10-17 : demander tout de suite à
+l'utilisateur quelle version garder.
 
 - **Complète :** [ADR 0025](0025-record-synchronization-envelope-and-conflict-model.md)
   (enveloppe, pierres tombales, table des conflits) et
@@ -52,18 +51,31 @@ le fil du chantier `v3/1-adr`.
 - `FileAssociationsSyncService` pousse aussi une pierre tombale si
   `/etc/hackeros/file-associations.json` est supprimé.
 
-### 2. Conflits : garder les deux copies (choix recommandé, question ouverte)
+### 2. Conflits : l'utilisateur choisit tout de suite
 
-- Un conflit sur un fichier ne bloque rien et ne perd rien, comme Syncthing : la
-  version du serveur prend le chemin d'origine et la version locale est
-  renommée `<nom>.sync-conflict-<AAAAMMJJ-HHMMSS>-<appareil>.<ext>` dans le même
-  dossier.
-- Une notification signale le conflit. **Paramètres → Synchronisation** liste
-  les conflits ouverts avec trois choix : « Garder la mienne », « Garder celle de
-  l'autre appareil », « Garder les deux » ; le choix appelle
-  `ResolveConflictAsync` (`ClientWins`, `ServerWins`, ou rien côté serveur pour
-  les deux) et supprime ou garde la copie renommée.
-- Les conflits ouverts sont enregistrés dans
+Choix de Benoit du 2026-10-17 (« Demander tout de suite »).
+
+- Quand une synchro trouve un conflit sur un fichier (modifié des deux côtés,
+  ou modifié ici et supprimé sur l'autre appareil), l'OS **ouvre tout de suite
+  un dialogue** pour l'utilisateur concerné, s'il est connecté, sinon à sa
+  prochaine connexion. Le dialogue montre le chemin, la date et l'appareil de
+  chaque version, leur taille, et pour un fichier texte un aperçu des deux.
+- Trois choix par fichier :
+  - **Garder la mienne** : `ResolveConflictAsync(ClientWins)` ; la version
+    locale est envoyée.
+  - **Garder celle de l'autre appareil** : `ServerWins` ; la version locale va à
+    la corbeille (ADR 0052), donc on peut la récupérer.
+  - **Garder les deux** : la version du serveur prend le chemin d'origine et la
+    version locale est renommée `<nom>.sync-conflict-<AAAAMMJJ-HHMMSS>-<appareil>.<ext>`
+    dans le même dossier, puis envoyée comme un nouveau fichier.
+- Plusieurs conflits arrivés ensemble sont dans un seul dialogue, avec un choix
+  par fichier et « Appliquer à tous ».
+- **Le fichier reste figé** jusqu'à la réponse : il garde sa version locale,
+  reste modifiable sur cet appareil, mais n'est ni envoyé ni remplacé par la
+  synchro. « Plus tard » ferme le dialogue sans choisir ; le conflit reste en
+  attente, signalé par une notification et listé dans **Paramètres →
+  Synchronisation**, et le dialogue revient à la connexion suivante.
+- Les conflits en attente sont enregistrés dans
   `~/.local/state/hackeros/sync-conflicts.json` (état local, jamais synchronisé,
   ADR 0044), donc gardés après un rechargement.
 - Les domaines où le serveur fait autorité (accords, ADR 0025) se résolvent
@@ -101,10 +113,12 @@ le fil du chantier `v3/1-adr`.
 ## Conséquences
 
 - `v3/9` modifie les deux services de synchro du client, ajoute le service
-  périodique, la page de Paramètres, l'enregistrement des conflits et des tests
+  périodique, le dialogue de conflit, la page de Paramètres,
+  l'enregistrement des conflits et des tests
   client et serveur (suppression propagée, pierre tombale reçue mise à la
-  corbeille, conflit des deux côtés, reprise après rechargement, appareil
-  hors ligne plus de 90 jours).
+  corbeille, dialogue de conflit et ses trois choix, fichier figé tant qu'il
+  n'y a pas de réponse, reprise après rechargement, appareil hors ligne plus de
+  90 jours).
 - Le serveur purge les pierres tombales de plus de 90 jours.
 - La doc de connexion au serveur et de synchro (`system-administration.md`,
   `trash.md`, `settings-files.md`) est mise à jour.

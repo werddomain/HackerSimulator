@@ -2,9 +2,9 @@
 
 ## Statut
 
-**Proposé** le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/5-services`). Tout est accepté sauf le §4 (qui peut démarrer au boot),
-qui applique le choix recommandé en attendant la réponse de Benoit à la question
-posée dans le fil du chantier `v3/1-adr`.
+Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/5-services`).
+Le §4 suit la réponse de Benoit du 2026-10-17 : seules les apps système
+démarrent au boot.
 
 - **Complète :** ADR 0056 (`HackServiceController`), ADR 0064 (`systemctl`),
   ADR 0069 (arrêt demandé), ADR 0048 (désinstallation), ADR 0049 §5.4

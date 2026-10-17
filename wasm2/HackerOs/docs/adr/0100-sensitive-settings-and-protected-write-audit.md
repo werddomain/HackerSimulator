@@ -2,12 +2,9 @@
 
 ## Statut
 
-**Proposé** le 2026-10-17 (chantier `v3/1-adr`, pour le chantier
-`v3/8-settings-security`). Les §1, §3 et §4 sont acceptés ; le §2 (chiffrement)
-applique le choix recommandé en attendant la réponse de Benoit à la question
-posée dans le fil du chantier `v3/1-adr`. Cet ADR passe « Accepté » avec la
-réponse, sans autre changement si elle confirme la recommandation, sinon par un
-ADR qui le remplace pour le §2.
+Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/8-settings-security`).
+Le §2 suit la réponse de Benoit du 2026-10-17 : un trousseau par utilisateur,
+chiffré par une clé tirée de son mot de passe.
 
 - **Complète :** [ADR 0044](0044-settings-as-files.md) (réglages en fichiers,
   accès par les permissions), [ADR 0045](0045-logs-as-files.md) (journaux en
@@ -60,7 +57,7 @@ ADR qui le remplace pour le §2.
   de réglages masquent pareil. La sauvegarde complète de l'ADR 0099, réservée à
   root, garde tout.
 
-### 2. Chiffrement : un trousseau par utilisateur, déverrouillé à la connexion (choix recommandé, question ouverte)
+### 2. Chiffrement : un trousseau par utilisateur, déverrouillé à la connexion (choix de Benoit)
 
 - Les valeurs `SecretReference` (mots de passe d'un site, jetons d'API, clés)
   sont stockées dans un **trousseau** chiffré, comme gnome-keyring :

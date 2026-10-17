@@ -2,10 +2,9 @@
 
 ## Statut
 
-**Proposé** le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/11-apps`).
-Tout est accepté sauf le §2.4 (thèmes limités aux jetons, sans CSS libre), qui
-applique le choix recommandé en attendant la réponse de Benoit à la question
-posée dans le fil du chantier `v3/1-adr`.
+Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/11-apps`).
+Le §2.4 suit la réponse de Benoit du 2026-10-17 : un thème ne contient que des
+jetons vérifiés.
 
 - **Complète :** [ADR 0041](0041-shared-theme-catalog-and-scoped-tokens.md)
   (catalogue de thèmes, jetons CSS, thèmes « données seulement ») pour les
@@ -97,7 +96,7 @@ et la documentation des jetons ; elle ne reprend pas le CSS libre (§2.4).
   `style.setProperty` sur son élément racine, via un petit module JS de
   `HackerOs.Theming.Blazor` (pas de `style="…"` dans le balisage, ADR 0007).
 
-#### 2.4 Pas de CSS libre (choix recommandé, question ouverte)
+#### 2.4 Pas de CSS libre (choix de Benoit)
 
 Un thème ne contient que des jetons vérifiés : ni CSS libre, ni police ou image
 distante, ni script. C'est la règle « données seulement » de l'ADR 0041 §5

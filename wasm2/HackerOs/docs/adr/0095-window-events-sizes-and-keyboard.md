@@ -2,9 +2,9 @@
 
 ## Statut
 
-**Proposé** le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/3-window-model`). Tout est accepté sauf le §3 (jeux de touches par défaut),
-qui applique le choix recommandé en attendant la réponse de Benoit à la question
-posée dans le fil du chantier `v3/1-adr`.
+Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/3-window-model`).
+Le §3 suit la réponse de Benoit du 2026-10-17 : touches Linux quand le clavier
+est verrouillé, plus un jeu de remplacement toujours actif.
 
 - **Complète :** [ADR 0009](0009-window-runtime-strategy.md) (gestionnaire de
   fenêtres en C#, « les commandes clavier restent en C# », critère 6 de la preuve
