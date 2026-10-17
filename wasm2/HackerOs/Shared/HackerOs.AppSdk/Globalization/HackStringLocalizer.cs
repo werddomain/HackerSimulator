@@ -196,3 +196,18 @@ public static class HackLocalization
         return root.Length == 0 ? $"{ResourcesFolder}.{relative}" : $"{root}.{ResourcesFolder}.{relative}";
     }
 }
+
+/// <summary>
+/// An <see cref="IStringLocalizer{T}"/> that always answers in English, for components rendered
+/// outside any HackerOS session (component tests, previews):
+/// <c>services.AddSingleton(typeof(IStringLocalizer&lt;&gt;), typeof(EnglishStringLocalizer&lt;&gt;))</c>.
+/// </summary>
+/// <typeparam name="TResource">The type whose <c>Resources/&lt;Type&gt;.resx</c> holds the texts.</typeparam>
+public sealed class EnglishStringLocalizer<TResource> : HackStringLocalizer, IStringLocalizer<TResource>
+{
+    /// <summary>Creates the localizer.</summary>
+    public EnglishStringLocalizer()
+        : base(HackLocalization.GetResourceManager(typeof(TResource)), static () => HackLocale.DefaultLanguage)
+    {
+    }
+}

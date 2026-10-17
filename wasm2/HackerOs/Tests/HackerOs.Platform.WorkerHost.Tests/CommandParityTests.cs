@@ -25,6 +25,7 @@ public sealed class CommandParityTests
         new("curl", ["curl http://example.hackeros/", "curl -I http://example.hackeros/", "curl http://nowhere.invalid/"]),
         new("cut", ["cut -d, -f2 table.csv", "cut -c1-3 notes.txt"]),
         new("df", ["df", "df -h -T"]),
+        new("localectl", ["localectl", "localectl list-locales", "localectl set-locale LANG=xx_YY.UTF-8", "localectl set-locale LANG=fr_FR.UTF-8", "localectl bogus"]),
         new("hackbackup", ["hackbackup", "hackbackup create", "hackbackup restore --bogus"]),
         new("diff", ["diff notes.txt notes.txt", "diff -u notes.txt numbers.txt"]),
         new("dirname", ["dirname /a/b/c /d"]),
@@ -106,7 +107,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(67, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(68, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]
