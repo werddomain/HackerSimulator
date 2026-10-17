@@ -6,11 +6,11 @@
     holding network.real.access reach, as GET /api/proxy/policy reports it. Read-only: the policy
     lives in the server's appsettings.json, under HackerOs:Proxy.
 *@
-<section class="relay-policy" aria-label="Network relay policy">
-    <h5>Network relay</h5>
+<section class="relay-policy" aria-label="@L["Relay.AriaLabel"]">
+    <h5>@L["Relay.Title"]</h5>
     @if (_isLoading)
     {
-        <p class="setting-desc">Reading the server's relay policy...</p>
+        <p class="setting-desc">@L["Relay.Loading"]</p>
     }
     else if (_error is not null)
     {
@@ -18,26 +18,26 @@
     }
     else if (_policy is null)
     {
-        <p class="setting-desc">The relay policy is not available on this host.</p>
+        <p class="setting-desc">@L["Relay.Unavailable"]</p>
     }
     else if (!_policy.Enabled)
     {
-        <p class="relay-off">The server's operator turned the relay off: apps have no route to the real network.</p>
+        <p class="relay-off">@L["Relay.Off"]</p>
     }
     else
     {
         <dl class="relay-grid">
-            <dt>HTTP ports</dt>
+            <dt>@L["Relay.HttpPorts"]</dt>
             <dd>@Ports(_policy.HttpPorts)</dd>
-            <dt>TCP ports</dt>
+            <dt>@L["Relay.TcpPorts"]</dt>
             <dd>@Ports(_policy.TcpPorts)</dd>
-            <dt>UDP ports</dt>
+            <dt>@L["Relay.UdpPorts"]</dt>
             <dd>@Ports(_policy.UdpPorts)</dd>
-            <dt>Private networks</dt>
-            <dd>@(_policy.AllowPrivateNetworks ? "Reachable" : "Blocked")</dd>
-            <dt>Quotas</dt>
+            <dt>@L["Relay.PrivateNetworks"]</dt>
+            <dd>@(_policy.AllowPrivateNetworks ? L["Relay.Reachable"] : L["Relay.Blocked"])</dd>
+            <dt>@L["Relay.Quotas"]</dt>
             <dd>@Quotas(_policy)</dd>
-            <dt>Granted apps</dt>
+            <dt>@L["Relay.GrantedApps"]</dt>
             <dd>@string.Join(", ", _policy.GrantedApps)</dd>
         </dl>
         @foreach (string warning in _policy.Warnings)

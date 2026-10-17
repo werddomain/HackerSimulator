@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Column.File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+  <data name="Column.Level" xml:space="preserve">
+    <value>Niveau</value>
+  </data>
+  <data name="Column.Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Column.Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Column.Timestamp" xml:space="preserve">
+    <value>Horodatage (UTC)</value>
+  </data>
+  <data name="Error.ALogFile" xml:space="preserve">
+    <value>un fichier journal</value>
+  </data>
+  <data name="Error.CannotRead" xml:space="preserve">
+    <value>Impossible de lire {0} : {1}.</value>
+  </data>
+  <data name="Error.CannotTruncate" xml:space="preserve">
+    <value>Impossible de vider {0}.</value>
+  </data>
+  <data name="Error.CannotTruncateCode" xml:space="preserve">
+    <value>Impossible de vider {0} : {1}.</value>
+  </data>
+  <data name="Error.TruncateNeedsAdmin" xml:space="preserve">
+    <value>Vider {0} demande l'approbation d'un administrateur. Approuvez la demande, puis appuyez de nouveau sur Vider.</value>
+  </data>
+  <data name="Header.Subtitle" xml:space="preserve">
+    <value>journaux du système et des apps</value>
+  </data>
+  <data name="Status.Entries" xml:space="preserve">
+    <value>{0} entrées dans {1} fichier(s)</value>
+  </data>
+  <data name="Status.Unparsed" xml:space="preserve">
+    <value>{0} · {1} ligne(s) non reconnue(s)</value>
+  </data>
+  <data name="Tab.AllLogs" xml:space="preserve">
+    <value>Tous les journaux</value>
+  </data>
+  <data name="Tab.Errors" xml:space="preserve">
+    <value>Erreurs</value>
+  </data>
+  <data name="Tab.Info" xml:space="preserve">
+    <value>Infos</value>
+  </data>
+  <data name="Tab.Warnings" xml:space="preserve">
+    <value>Avertissements</value>
+  </data>
+  <data name="Table.Empty" xml:space="preserve">
+    <value>Aucune entrée de journal.</value>
+  </data>
+  <data name="Table.Truncated" xml:space="preserve">
+    <value>Affichage des {0} entrées les plus récentes sur {1}. Utilisez tail ou grep dans un terminal pour le reste.</value>
+  </data>
+  <data name="Toolbar.AllLogs" xml:space="preserve">
+    <value>Tous les journaux</value>
+  </data>
+  <data name="Toolbar.Archives" xml:space="preserve">
+    <value>Archives (.1 – .5)</value>
+  </data>
+  <data name="Toolbar.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Toolbar.Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Toolbar.Truncate" xml:space="preserve">
+    <value>Vider</value>
+  </data>
+  <data name="Toolbar.Truncate.Title" xml:space="preserve">
+    <value>Vider le journal sélectionné (demande l'approbation d'un administrateur)</value>
+  </data>
+</root>

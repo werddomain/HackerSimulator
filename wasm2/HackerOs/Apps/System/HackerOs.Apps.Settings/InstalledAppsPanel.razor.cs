@@ -1,8 +1,10 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
@@ -36,6 +38,11 @@ public partial class InstalledAppsPanel : IDisposable
     /// </summary>
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the Settings process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <summary>
     /// Gets or sets the one app to show, on its page in Settings (ADR 0096, section 4): only its row,
@@ -89,7 +96,7 @@ public partial class InstalledAppsPanel : IDisposable
         catch (Exception exception) when (exception is UnauthorizedAccessException or AppGatewayAccessDeniedException)
         {
             _apps = [];
-            _message = "Settings is not allowed to manage apps (capability apps.manage).";
+            _message = L["Apps.Error.NotAllowed"];
         }
     }
 
@@ -101,18 +108,18 @@ public partial class InstalledAppsPanel : IDisposable
         closure.Where(id => _apps?.FirstOrDefault(entry => entry.App.Id == id)?.App.Kind == HackerOs.App.Abstractions.AppKind.Web);
 
     /// <summary>The result line after an uninstall: which processes were stopped, and which had to be forced.</summary>
-    private static string? DescribeStopped(HackUninstallReport report)
+    private string? DescribeStopped(HackUninstallReport report)
     {
         if (report.StoppedProcesses.Count == 0)
         {
             return null;
         }
 
-        string stopped = string.Join(", ", report.StoppedProcesses.Select(static p => $"{p.Name} (PID {p.Pid})"));
+        string stopped = string.Join(", ", report.StoppedProcesses.Select(p => L["Apps.ProcessItem", p.Name, p.Pid].Value));
         IReadOnlyList<HackRunningProcessInfo> forced = report.ForcedProcesses;
         return forced.Count == 0
-            ? $"Stopped: {stopped}."
-            : $"Stopped: {stopped}. Forced after their grace period: {string.Join(", ", forced.Select(static p => $"{p.Name} (PID {p.Pid})"))}.";
+            ? L["Apps.Stopped", stopped]
+            : L["Apps.StoppedAndForced", stopped, string.Join(", ", forced.Select(p => L["Apps.ProcessItem", p.Name, p.Pid].Value))];
     }
 
     private static string RowClass(HackAppInstallInfo entry) =>
@@ -199,12 +206,12 @@ public partial class InstalledAppsPanel : IDisposable
         }
         catch (AppGatewayAccessDeniedException)
         {
-            _message = "Settings is not allowed to manage apps (capability apps.manage).";
+            _message = L["Apps.Error.NotAllowed"];
             return false;
         }
         catch (UnauthorizedAccessException)
         {
-            _message = "No administrator authenticated: /etc/hackeros/apps.config was not changed.";
+            _message = L["Apps.Error.NoAdmin"];
             return false;
         }
         catch (InvalidOperationException exception)
@@ -214,7 +221,7 @@ public partial class InstalledAppsPanel : IDisposable
         }
         catch (IOException exception)
         {
-            _message = $"Could not write apps.config: {exception.Message}";
+            _message = L["Apps.Error.CannotWrite", exception.Message];
             return false;
         }
         finally

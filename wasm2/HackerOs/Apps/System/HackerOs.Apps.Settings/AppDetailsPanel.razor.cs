@@ -2,8 +2,10 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.ServiceProcess;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
@@ -35,6 +37,11 @@ public sealed partial class AppDetailsPanel
 
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the Settings process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
@@ -80,21 +87,21 @@ public sealed partial class AppDetailsPanel
         {
             HackServiceController[] services = await HackServiceController.GetServicesAsync(Context.CancellationToken);
             _service = services.FirstOrDefault(service => service.ServiceName == AppId);
-            _serviceMessage = _service is null ? "The service is not available for this user." : null;
+            _serviceMessage = _service is null ? L["Details.ServiceUnavailable"].Value : null;
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or InvalidOperationException or NotSupportedException)
         {
-            _serviceMessage = $"The service state cannot be read: {exception.Message}";
+            _serviceMessage = L["Details.ServiceError", exception.Message];
         }
     }
 
-    private Task StartServiceAsync() => RunServiceAsync(service => service.StartAsync(Context.CancellationToken), "Service started.");
+    private Task StartServiceAsync() => RunServiceAsync(service => service.StartAsync(Context.CancellationToken), L["Details.ServiceStarted"]);
 
-    private Task StopServiceAsync() => RunServiceAsync(service => service.StopAsync(Context.CancellationToken), "Service stopped.");
+    private Task StopServiceAsync() => RunServiceAsync(service => service.StopAsync(Context.CancellationToken), L["Details.ServiceStopped"]);
 
     private Task ChangeStartModeAsync(ChangeEventArgs e) =>
         Enum.TryParse(e.Value?.ToString(), out ServiceStartMode mode)
-            ? RunServiceAsync(service => service.SetStartTypeAsync(mode, Context.CancellationToken), $"Start mode: {mode}.")
+            ? RunServiceAsync(service => service.SetStartTypeAsync(mode, Context.CancellationToken), L["Details.StartModeSet", StartModeLabel(mode)])
             : Task.CompletedTask;
 
     private async Task RunServiceAsync(Func<HackServiceController, Task> action, string success)
@@ -120,30 +127,52 @@ public sealed partial class AppDetailsPanel
         }
     }
 
-    private static string KindLabel(AppKind kind) => kind switch
+    private string KindLabel(AppKind kind) => kind switch
     {
-        AppKind.Window => "window app",
-        AppKind.Terminal => "command",
-        AppKind.Service => "service",
-        AppKind.Web => "web site",
+        AppKind.Window => L["Details.Kind.Window"],
+        AppKind.Terminal => L["Details.Kind.Terminal"],
+        AppKind.Service => L["Details.Kind.Service"],
+        AppKind.Web => L["Details.Kind.Web"],
         _ => kind.ToString()
     };
 
-    private static string StateLabel(HackPermissionState state) => state switch
+    private string StateLabel(HackPermissionState state) => state switch
     {
-        HackPermissionState.System => "system",
-        HackPermissionState.Allowed => "allowed",
-        HackPermissionState.Pending => "pending",
-        _ => $"refused ({state})"
+        HackPermissionState.System => L["Details.Permission.System"],
+        HackPermissionState.Allowed => L["Details.Permission.Allowed"],
+        HackPermissionState.Pending => L["Details.Permission.Pending"],
+        HackPermissionState.DeniedByUser => L["Details.Permission.Refused", L["Permissions.State.DeniedByUser"].Value],
+        HackPermissionState.DeniedByAdministrator => L["Details.Permission.Refused", L["Permissions.State.DeniedByAdministrator"].Value],
+        HackPermissionState.BlockedByPolicy => L["Details.Permission.Refused", L["Permissions.State.BlockedByPolicy"].Value],
+        _ => L["Details.Permission.Refused", state.ToString()]
+    };
+
+    /// <summary>A service start mode as shown in the list (the option's value stays the enum name).</summary>
+    private string StartModeLabel(ServiceStartMode mode) => mode switch
+    {
+        ServiceStartMode.Automatic => L["StartMode.Automatic"],
+        ServiceStartMode.Manual => L["StartMode.Manual"],
+        ServiceStartMode.Disabled => L["StartMode.Disabled"],
+        _ => mode.ToString()
+    };
+
+    /// <summary>A service controller status, translated.</summary>
+    private string ServiceStatusLabel(HackServiceControllerStatus status) => status switch
+    {
+        HackServiceControllerStatus.Running => L["Details.ServiceStatus.Running"],
+        HackServiceControllerStatus.Stopped => L["Details.ServiceStatus.Stopped"],
+        HackServiceControllerStatus.StartPending => L["Details.ServiceStatus.StartPending"],
+        HackServiceControllerStatus.StopPending => L["Details.ServiceStatus.StopPending"],
+        _ => status.ToString()
     };
 
     /// <summary>A handler as a reader sees it: <c>x-scheme-handler/https</c> becomes "https: links".</summary>
-    private static string DescribeHandler(HackAppFileHandler handler)
+    private string DescribeHandler(HackAppFileHandler handler)
     {
         if (handler.MediaType is { } mediaType
             && mediaType.StartsWith(AppIntentIds.SchemeHandlerMediaTypePrefix, StringComparison.OrdinalIgnoreCase))
         {
-            return $"{mediaType[AppIntentIds.SchemeHandlerMediaTypePrefix.Length..]}: links";
+            return L["Details.Links", mediaType[AppIntentIds.SchemeHandlerMediaTypePrefix.Length..]];
         }
 
         string extensions = string.Join(" ", handler.Extensions);

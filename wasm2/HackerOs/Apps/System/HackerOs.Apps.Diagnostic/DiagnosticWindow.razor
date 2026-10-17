@@ -1,5 +1,7 @@
 @using HackerOs.AppSdk.Administration
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Globalization
+@using Microsoft.Extensions.Localization
 @using Microsoft.JSInterop
 @inherits WindowAppBase
 @inject IJSRuntime JS
@@ -7,38 +9,44 @@
 <div class="diag-container">
     <header class="diag-header">
         <div class="diag-title-area">
-            <span class="diag-title">IndexedDB Diagnostic Inspector</span>
+            <span class="diag-title">@L["Header.Title"]</span>
             @if (_snapshot is not null)
             {
-                <span class="diag-badge">DB: @_snapshot.DatabaseName v@_snapshot.DatabaseVersion</span>
-                <span class="diag-badge diag-badge-info">@_snapshot.ResolvedPaths.Count Virtual Paths Resolved</span>
+                <span class="diag-badge">@L["Header.Database", _snapshot.DatabaseName, _snapshot.DatabaseVersion]</span>
+                <span class="diag-badge diag-badge-info">@L["Header.ResolvedPaths", _snapshot.ResolvedPaths.Count]</span>
             }
         </div>
         <div class="diag-actions">
             <button class="diag-btn" @onclick="RefreshAsync" disabled="@_isLoading">
-                <span>⟳ Refresh</span>
+                <span>⟳ @L["Toolbar.Refresh"]</span>
             </button>
             <button class="diag-btn diag-btn-accent" @onclick="CopyToClipboardAsync" disabled="@(_snapshot is null)">
-                <span>📋 Copy JSON to Clipboard</span>
+                <span>📋 @L["Toolbar.Copy"]</span>
             </button>
             <button class="diag-btn diag-btn-primary" @onclick="ExportJsonFileAsync" disabled="@(_snapshot is null)">
-                <span>💾 Save JSON File</span>
+                <span>💾 @L["Toolbar.Save"]</span>
             </button>
             <button class="diag-btn" @onclick="DownloadJsonAsync" disabled="@(_snapshot is null)">
-                <span>⬇ Download JSON</span>
+                <span>⬇ @L["Toolbar.Download"]</span>
             </button>
         </div>
     </header>
 
     <div class="diag-notice-banner">
-        💡 <span class="diag-notice-highlight">HackerOS Architecture Note:</span> File metadata is stored in <code>fsEntries</code> (inodes) while directory hierarchy links mapping <code>(parentId, name)</code> to <code>entryId</code> reside in <code>fsLinks</code>. Absolute <code>filePath</code> is dynamically resolved below by traversing directory link trees.
+        💡 <span class="diag-notice-highlight">@L["Notice.Title"]</span>
+        @LocalizedMarkup.Format(L["Notice.Text"],
+            LocalizedMarkup.Code("fsEntries"),
+            LocalizedMarkup.Code("(parentId, name)"),
+            LocalizedMarkup.Code("entryId"),
+            LocalizedMarkup.Code("fsLinks"),
+            LocalizedMarkup.Code("filePath"))
     </div>
 
     <div class="diag-body">
         @if (_isLoading)
         {
             <div class="diag-content">
-                <p>Loading IndexedDB snapshot...</p>
+                <p>@L["Loading"]</p>
             </div>
         }
         else if (_loadError is not null)
@@ -59,10 +67,10 @@
                     </button>
                 }
 
-                <div class="diag-sidebar-heading" title="Browser databases of web sites (hackweb.*), outside the OS database and files">Website databases</div>
+                <div class="diag-sidebar-heading" title="@L["Sites.Heading.Title"]">@L["Sites.Heading"]</div>
                 @if (_sites.Count == 0)
                 {
-                    <div class="diag-sidebar-empty">@(_sitesError ?? "No site has a database yet.")</div>
+                    <div class="diag-sidebar-empty">@(_sitesError ?? L["Sites.Empty"])</div>
                 }
                 @foreach (HackWebSiteDatabaseInfo entry in _sites)
                 {
@@ -78,10 +86,9 @@
                 @if (SelectedSite is { } site)
                 {
                     <div class="diag-store-header">
-                        <div class="diag-store-name">@site.Name (version @site.Version)</div>
+                        <div class="diag-store-name">@L["Site.Name", site.Name, site.Version]</div>
                         <div class="diag-store-purpose">
-                            Browser database of the web site <code>@site.AppId</code> (ADR 0088): IndexedDB of the host browser,
-                            not stored in the HackerOS files. @site.RecordCount records, about @FormatSize(site.SizeBytes).
+                            @LocalizedMarkup.Format(L["Site.Purpose"], LocalizedMarkup.Code(site.AppId), site.RecordCount.ToString("N0", Formats), FormatSize(site.SizeBytes))
                         </div>
                     </div>
 
@@ -89,8 +96,8 @@
                         <table class="diag-table">
                             <thead>
                                 <tr>
-                                    <th>Object store</th>
-                                    <th>Records</th>
+                                    <th>@L["Column.ObjectStore"]</th>
+                                    <th>@L["Column.Records"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -108,28 +115,28 @@
                     <div class="diag-site-actions">
                         @if (_confirmDelete)
                         {
-                            <span class="diag-site-warning" role="alert">Delete every record of @site.AppId? The site starts again with an empty database.</span>
-                            <button class="diag-btn diag-btn-danger" @onclick="DeleteSiteAsync">Delete</button>
-                            <button class="diag-btn" @onclick="() => _confirmDelete = false">Cancel</button>
+                            <span class="diag-site-warning" role="alert">@L["Site.ConfirmDelete", site.AppId]</span>
+                            <button class="diag-btn diag-btn-danger" @onclick="DeleteSiteAsync">@L["Site.Delete"]</button>
+                            <button class="diag-btn" @onclick="() => _confirmDelete = false">@L["Common.Cancel"]</button>
                         }
                         else
                         {
-                            <button class="diag-btn diag-btn-danger" @onclick="() => _confirmDelete = true">🗑 Clear this database</button>
+                            <button class="diag-btn diag-btn-danger" @onclick="() => _confirmDelete = true">🗑 @L["Site.Clear"]</button>
                         }
                     </div>
                 }
                 else if (SelectedStore is { } activeStore)
                 {
                     <div class="diag-store-header">
-                        <div class="diag-store-name">@activeStore.Name (@activeStore.RecordCount records)</div>
+                        <div class="diag-store-name">@L["Store.Header", activeStore.Name, activeStore.RecordCount]</div>
                         <div class="diag-store-purpose">@activeStore.Purpose</div>
                     </div>
 
                     <div class="diag-filter-bar">
-                        <input type="text" class="diag-search-input" placeholder="Search records..."
-                               @bind="_searchFilter" @bind:event="oninput" aria-label="Search store records" />
+                        <input type="text" class="diag-search-input" placeholder="@L["Search.Placeholder"]"
+                               @bind="_searchFilter" @bind:event="oninput" aria-label="@L["Search.AriaLabel"]" />
                         <button class="diag-btn" @onclick="ToggleRawJsonView">
-                            <span>@(_showRawJson ? "📊 Table View" : "📄 Raw JSON")</span>
+                            <span>@(_showRawJson ? "📊 " + L["View.Table"] : "📄 " + L["View.Raw"])</span>
                         </button>
                     </div>
 
@@ -143,11 +150,11 @@
                             <table class="diag-table">
                                 <thead>
                                     <tr>
-                                        <th>Resolved Virtual Path</th>
-                                        <th>Entry ID</th>
-                                        <th>Kind</th>
-                                        <th>Owner ID</th>
-                                        <th>Content Hash</th>
+                                        <th>@L["Column.ResolvedPath"]</th>
+                                        <th>@L["Column.EntryId"]</th>
+                                        <th>@L["Column.Kind"]</th>
+                                        <th>@L["Column.OwnerId"]</th>
+                                        <th>@L["Column.ContentHash"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -171,9 +178,9 @@
                             <table class="diag-table">
                                 <thead>
                                     <tr>
-                                        <th>Parent Directory ID</th>
-                                        <th>Child Name</th>
-                                        <th>Child Entry ID</th>
+                                        <th>@L["Column.ParentId"]</th>
+                                        <th>@L["Column.ChildName"]</th>
+                                        <th>@L["Column.ChildEntryId"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>

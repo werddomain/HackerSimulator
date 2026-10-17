@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using HackerOs.AppSdk;
@@ -5,7 +6,9 @@ using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Interop;
 using HackerOs.AppSdk.Clipboard;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Diagnostic;
 
@@ -42,6 +45,13 @@ public partial class DiagnosticWindow : IAsyncDisposable
     private string? _sitesError;
     private string? _selectedSiteName;
     private bool _confirmDelete;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The inspector's texts in the language of its own process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext.FormatCulture;
 
     private HackWebSiteDatabaseInfo? SelectedSite =>
         _selectedSiteName is null ? null : _sites.FirstOrDefault(site => site.Name == _selectedSiteName);
@@ -83,11 +93,11 @@ public partial class DiagnosticWindow : IAsyncDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            _loadError = "This app was not granted system.storage.inspect: an administrator must approve it.";
+            _loadError = L["Error.NotGranted"];
         }
         catch (Exception exception) when (exception is NotSupportedException or IOException or InvalidOperationException or Microsoft.JSInterop.JSException)
         {
-            _loadError = $"Failed to load IndexedDB: {exception.Message}";
+            _loadError = L["Error.LoadFailed", exception.Message];
         }
 
         await LoadSitesAsync();
@@ -106,7 +116,7 @@ public partial class DiagnosticWindow : IAsyncDisposable
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or InvalidOperationException or Microsoft.JSInterop.JSException)
         {
             _sites = [];
-            _sitesError = $"Website databases unavailable: {exception.Message}";
+            _sitesError = L["Error.SitesUnavailable", exception.Message];
         }
     }
 
@@ -135,24 +145,24 @@ public partial class DiagnosticWindow : IAsyncDisposable
         try
         {
             await HackStorageDiagnostics.DeleteWebSiteDatabaseAsync(site.Name, AppContext.CancellationToken);
-            ShowToast($"{site.Name} deleted.");
+            ShowToast(L["Toast.Deleted", site.Name]);
             _selectedSiteName = null;
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or ArgumentException or NotSupportedException or InvalidOperationException or Microsoft.JSInterop.JSException)
         {
-            ShowToast($"Delete failed: {exception.Message}");
+            ShowToast(L["Toast.DeleteFailed", exception.Message]);
         }
 
         await LoadSitesAsync();
         StateHasChanged();
     }
 
-    /// <summary>Formats a size as the browser's storage settings do: B, KB, MB.</summary>
-    private static string FormatSize(long bytes) => bytes switch
+    /// <summary>Formats a size as the browser's storage settings do: B, KB, MB (o, Ko, Mo in French).</summary>
+    private string FormatSize(long bytes) => bytes switch
     {
-        < 1024 => $"{bytes} B",
-        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
-        _ => $"{bytes / (1024.0 * 1024):0.#} MB",
+        < 1024 => L["Size.Bytes", bytes.ToString(Formats)],
+        < 1024 * 1024 => L["Size.KB", (bytes / 1024.0).ToString("0.#", Formats)],
+        _ => L["Size.MB", (bytes / (1024.0 * 1024)).ToString("0.#", Formats)],
     };
 
     private void ToggleRawJsonView() => _showRawJson = !_showRawJson;
@@ -167,11 +177,11 @@ public partial class DiagnosticWindow : IAsyncDisposable
         try
         {
             await HackClipboard.SetTextAsync(_snapshot.ToExportJson(), AppContext.CancellationToken);
-            ShowToast("IndexedDB JSON Dump copied to Clipboard!");
+            ShowToast(L["Toast.Copied"]);
         }
         catch (UnauthorizedAccessException exception)
         {
-            ShowToast($"Copy failed: {exception.Message}");
+            ShowToast(L["Toast.CopyFailed", exception.Message]);
         }
     }
 
@@ -184,7 +194,7 @@ public partial class DiagnosticWindow : IAsyncDisposable
 
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(_snapshot.ToExportJson()), writable: false);
         await _downloader.DownloadFileFromStreamAsync(DumpFileName(), stream);
-        ShowToast("IndexedDB JSON Dump downloaded.");
+        ShowToast(L["Toast.Downloaded"]);
     }
 
     private async Task ExportJsonFileAsync()
@@ -196,11 +206,11 @@ public partial class DiagnosticWindow : IAsyncDisposable
 
         SaveFileDialogResult result = await SaveFileAsync(new SaveFileDialogRequest
         {
-            Title = "Export IndexedDB JSON Dump",
+            Title = L["Dialog.ExportTitle"],
             InitialDirectory = HackerOs.App.Abstractions.VirtualPath.Parse(HackEnvironment.GetFolderPath(HackSpecialFolder.UserProfile)),
             SuggestedFileName = DumpFileName(),
             DefaultExtension = ".json",
-            Filters = [new FileDialogFilter("JSON Files", [".json"], ["application/json"])],
+            Filters = [new FileDialogFilter(L["Dialog.JsonFilter"], [".json"], ["application/json"])],
             ConfirmOverwrite = true
         });
 
@@ -212,11 +222,11 @@ public partial class DiagnosticWindow : IAsyncDisposable
         try
         {
             await HackFile.WriteAllTextAsync(result.Resource.Path.Value, _snapshot.ToExportJson(), AppContext.CancellationToken);
-            ShowToast($"Exported JSON to {result.Resource.Path.Value}");
+            ShowToast(L["Toast.Exported", result.Resource.Path.Value]);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShowToast($"Export failed: {exception.Message}");
+            ShowToast(L["Toast.ExportFailed", exception.Message]);
         }
     }
 

@@ -5,13 +5,13 @@
     <header class="sysmon-header">
         <div class="sysmon-brand">
             <span class="sysmon-glyph" aria-hidden="true">&#x25A3;</span>
-            <span class="sysmon-title">Task Manager</span>
-            <span class="sysmon-subtitle">reading /proc</span>
+            <span class="sysmon-title">@L["Header.Title"]</span>
+            <span class="sysmon-subtitle">@L["Header.Subtitle"]</span>
         </div>
         <div class="sysmon-status">
             <span class="sysmon-pulse @StatusClass" title="@StatusTitle">@StatusText</span>
-            <button class="sysmon-btn" @onclick="TogglePause" title="Stop or resume the 1-second refresh">@(_paused ? "Resume" : "Pause")</button>
-            <button class="sysmon-btn" @onclick="RefreshNowAsync" title="Read /proc now">Refresh</button>
+            <button class="sysmon-btn" @onclick="TogglePause" title="@L["Toolbar.Pause.Title"]">@(_paused ? L["Toolbar.Resume"] : L["Toolbar.Pause"])</button>
+            <button class="sysmon-btn" @onclick="RefreshNowAsync" title="@L["Toolbar.Refresh.Title"]">@L["Toolbar.Refresh"]</button>
         </div>
     </header>
 
@@ -22,7 +22,7 @@
 
     <div class="sysmon-body">
         <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" KeepPanelsAlive="false" Class="sysmon-tabs" TabPanelsClass="sysmon-panel">
-            <MudTabPanel Text="Processes" Icon="@Icons.Material.Filled.List">
+            <MudTabPanel Text="@L["Tab.Processes"]" Icon="@Icons.Material.Filled.List">
                 <ProcessesTab Table="_table"
                               Processes="_processes"
                               EndTaskReport="_endTaskReport"
@@ -30,16 +30,16 @@
                               OnForceKill="ForceKillAsync"
                               OnDismissReport="DismissEndTaskReport" />
             </MudTabPanel>
-            <MudTabPanel Text="Performance" Icon="@Icons.Material.Filled.ShowChart">
+            <MudTabPanel Text="@L["Tab.Performance"]" Icon="@Icons.Material.Filled.ShowChart">
                 <PerformanceTab Metrics="_metrics" CpuInfo="_cpuInfo" ProcessCount="_processes.Count" />
             </MudTabPanel>
-            <MudTabPanel Text="Disk" Icon="@Icons.Material.Filled.Storage">
+            <MudTabPanel Text="@L["Tab.Disk"]" Icon="@Icons.Material.Filled.Storage">
                 <DiskTab Metrics="_metrics" Drives="_drives" />
             </MudTabPanel>
-            <MudTabPanel Text="Network" Icon="@Icons.Material.Filled.Lan">
+            <MudTabPanel Text="@L["Tab.Network"]" Icon="@Icons.Material.Filled.Lan">
                 <NetworkTab Metrics="_metrics" />
             </MudTabPanel>
-            <MudTabPanel Text="Services" Icon="@Icons.Material.Filled.SettingsSuggest">
+            <MudTabPanel Text="@L["Tab.Services"]" Icon="@Icons.Material.Filled.SettingsSuggest">
                 <ServicesTab Processes="_processes" />
             </MudTabPanel>
         </MudTabs>

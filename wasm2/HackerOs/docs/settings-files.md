@@ -181,6 +181,21 @@ synchro périodique, la suspend pour l'utilisateur (`paused` dans
 attente avec un bouton qui ouvre le dialogue de conflit. L'onglet « Installed Apps » écrit les fichiers `apps.config`
 (voir [`app-installation.md`](app-installation.md)).
 
+L'onglet « Langue » (ADR 0104, `LanguagePanel`) n'utilise pas `HackSettings` :
+la locale est un fichier systemd. Il montre la langue, `LANG`, les
+surcharges `LC_MESSAGES`/`LC_ALL` et un exemple de formats de la session (lus
+dans l'environnement du processus Paramètres), puis propose « Suivre la langue
+du système » ou une des `HackLocale.AvailableLocales`. Choisir une locale écrit
+`LANG=<locale>` dans `~/.config/locale.conf` (`HackLocale.FormatLocaleConf`,
+`~/.config` créé au besoin) ; « Suivre la langue du système » retire `LANG` et
+supprime le fichier s'il ne contient rien d'autre (un `LC_TIME` est gardé).
+Le changement s'applique à la prochaine connexion, ce que le panneau affiche.
+`/etc/locale.conf` est montré en lecture seule avec l'indication
+`sudo localectl set-locale`. L'app déclare pour cela
+`filesystem.user-home.read` et `filesystem.user-home.write`. Il n'y a pas de
+bouton « Se déconnecter » : le SDK n'expose pas la déconnexion aux apps.
+Tests : `Tests/HackerOs.Apps.Settings.Tests/LanguagePanelTests.cs`.
+
 ## Migration
 
 `SettingsStoreToFilesMigration` lit l'ancien magasin une seule fois :
