@@ -12,6 +12,7 @@ Error Log Viewer les lisent avec les droits de fichier ordinaires.
 |---|---|---|
 | `/var/log/syslog` | `ILogger<T>` de la plateforme, démarrage (`kernel`), pannes de l'hôte (`ecosystem-host`), lignes perdues (`logging`) | `system:system 0644` |
 | `/var/log/auth.log` | `IAuditLog` (`session.login`, `session.elevate`, `capability.*` de l'ADR 0049…) | `system:system 0600` |
+| `/var/log/audit.log` | Audit des créations, écritures, renommages, copies, suppressions et `chmod` sous `/etc`, `/bin` et `/var` (sauf `/var/log`), au format d'`auditd` (ADR 0100 §3, [`sensitive-settings.md`](sensitive-settings.md)) ; `ausearch` le filtre | `system:system 0600` |
 | `/var/log/apps/<appId>.log` | `IAppExecutionContext.Logging` de l'app | `system:system 0644` |
 | `/var/log/<démon>/<fichier>.log` | `IAppLoggingGateway.AppendToLogFile` d'une **app système** seulement, ligne écrite telle quelle (ADR 0080 §3) ; par exemple `/var/log/hackweb/error.log` de `hackwebd` ([`static-sites.md`](static-sites.md)) | `system:system 0644` |
 | `/var/log/hackweb/<appId>.log` | Journal de débogage d'un **site** (app `Web`) qui l'active par `builder.Logging.EnableDebugLog()` : `ILogger<T>`, requêtes, exceptions, par `IAppLoggingGateway.AppendToSiteDebugLog` (ADR 0088 §5, [`asp-hack-site-data.md`](asp-hack-site-data.md)) | `system:system 0644` |
@@ -33,7 +34,7 @@ HostExceptionReporter ───────────────────�
   message ne soit jamais relu comme un bloc de propriétés. Dans ce bloc, les
   clés et valeurs échappent en plus `,`, `=` et `}`. Les espaces d'une source
   deviennent `_`.
-- `LogFileTarget` : `Syslog`, `AuthLog`, `ForApp(appId)`, avec chemin et mode.
+- `LogFileTarget` : `Syslog`, `AuthLog`, `AuditLog` (ADR 0100), `ForApp(appId)`, avec chemin et mode.
 - `LogRotationPolicy` : `MaxFileBytes` = 1 Mio, `MaxArchives` = 5. Rotation à
   la `logrotate` (`.5` supprimé, `.4`→`.5` … `<f>`→`.1`, nouveau `<f>` vide).
   Un fichier vide ne tourne jamais : un lot plus gros que 1 Mio est écrit entier.
@@ -88,6 +89,11 @@ HostExceptionReporter ───────────────────�
 - `LogFileReader` liste `syslog` puis `apps/*.log` (et les archives `.1` à `.5`
   si la case « Archives » est cochée), lit et analyse avec `LogLineFormat.TryParse`,
   et compte les lignes étrangères. Il ne lit jamais `auth.log` (`sudo cat` pour ça).
+- `audit.log` et ses archives (ADR 0100) sont listés pour un administrateur ou
+  une session élevée seulement (`LogSource.RequiresRoot`) et ne sont pas lus
+  par la vue « tous les journaux ». Chaque ligne `type=PATH` est analysée par
+  `AuditLineFormat` : un refus devient un avertissement, une écriture réussie
+  une information, avec l'app comme source.
 - Suivi en direct par `AppContext.Watch` sur `/var/log` et `/var/log/apps`.
 - « Truncate » vide le journal sélectionné (jamais une archive). Pour un
   utilisateur ordinaire c'est refusé, la fenêtre propose l'approbation

@@ -70,6 +70,7 @@ public static class AppDefinitionMapper
                     component.Contract, AssemblyFileName(component.Type), TypeName(component.Type)))],
             SingleInstancePerUser = definition.SingleInstancePerUser,
             AutoStart = definition.AutoStart,
+            ServiceStartup = definition.ServiceStartup,
             SupportsBack = definition.SupportsBack,
             // ADR 0095 §2: omitted when undeclared, so manifests of apps using the defaults keep their bytes.
             Window = definition.Window,

@@ -16,6 +16,15 @@ public sealed record SettingsFileReadResult(string? Content, long? Revision, Fil
 {
     /// <summary>Gets whether the file exists and was read.</summary>
     public bool Exists => Content is not null;
+
+    /// <summary>
+    /// Gets whether the read was refused by a permission check (mode bits, capability, authority):
+    /// for a private settings file, the reader sees its keys masked (ADR 0100 section 1).
+    /// </summary>
+    public bool IsDenied => Error?.Code is FileSystemErrorCode.PermissionDenied
+        or FileSystemErrorCode.CapabilityDenied
+        or FileSystemErrorCode.AuthorityDenied
+        or FileSystemErrorCode.ProtectedEntry;
 }
 
 /// <summary>
@@ -80,11 +89,32 @@ public static class SettingsTextFile
     /// </param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns><see langword="null"/> on success, otherwise the error that stopped the write.</returns>
-    public static async ValueTask<FileSystemError?> EditAsync(
+    public static ValueTask<FileSystemError?> EditAsync(
         IAppFileSystemGateway fileSystem,
         VirtualPath path,
         Func<string?, string> edit,
         bool createIfMissing = true,
+        CancellationToken cancellationToken = default) =>
+        EditAsync(fileSystem, path, edit, createIfMissing, DefaultFileMode, cancellationToken);
+
+    /// <summary>
+    /// Same as <see cref="EditAsync(IAppFileSystemGateway, VirtualPath, Func{string?, string}, bool, CancellationToken)"/>,
+    /// creating a missing file with <paramref name="fileMode"/>: <see cref="SettingsPrivateFiles.PrivateFileMode"/>
+    /// (<c>0600</c>) for a private settings file (ADR 0100 section 1).
+    /// </summary>
+    /// <param name="fileSystem">Authorized gateway of the acting app/user.</param>
+    /// <param name="path">Absolute file path.</param>
+    /// <param name="edit">Receives the current content and returns the new content.</param>
+    /// <param name="createIfMissing">When <see langword="false"/>, a missing file is not created.</param>
+    /// <param name="fileMode">Unix mode of a created file.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns><see langword="null"/> on success, otherwise the error that stopped the write.</returns>
+    public static async ValueTask<FileSystemError?> EditAsync(
+        IAppFileSystemGateway fileSystem,
+        VirtualPath path,
+        Func<string?, string> edit,
+        bool createIfMissing,
+        ushort fileMode,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -105,7 +135,7 @@ public static class SettingsTextFile
                     return new FileSystemError(FileSystemOperation.Write, FileSystemErrorCode.NotFound, path);
                 }
 
-                FileSystemError? created = await CreateFileAsync(fileSystem, path, cancellationToken).ConfigureAwait(false);
+                FileSystemError? created = await CreateFileAsync(fileSystem, path, fileMode, cancellationToken).ConfigureAwait(false);
                 if (created is not null)
                 {
                     return created;
@@ -215,6 +245,7 @@ public static class SettingsTextFile
     private static async ValueTask<FileSystemError?> CreateFileAsync(
         IAppFileSystemGateway fileSystem,
         VirtualPath path,
+        ushort fileMode,
         CancellationToken cancellationToken)
     {
         FileSystemError? directory = await EnsureDirectoryAsync(fileSystem, GetParent(path), cancellationToken).ConfigureAwait(false);
@@ -224,7 +255,7 @@ public static class SettingsTextFile
         }
 
         FileSystemMutationResult created = await fileSystem.CreateAsync(
-                new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(DefaultFileMode)),
+                new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(fileMode)),
                 cancellationToken)
             .ConfigureAwait(false);
         return created.Succeeded || created.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists

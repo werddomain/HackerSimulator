@@ -26,6 +26,8 @@ migration, en lecture seule.
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
 | Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |
 | Partage du presse-papiers avec l'hôte (clé `sharing`, ADR 0065, voir [`clipboard.md`](clipboard.md)) | `/etc/hackeros/clipboard.config` | `~/.config/hackeros/clipboard.config` |
+| Synchro périodique (ADR 0101 §4, voir [`synchronization.md`](synchronization.md)) | `/etc/hackeros/sync.config` (`intervalMinutes`, lu seulement ici) | `~/.config/hackeros/sync.config` (`paused`) |
+| Conflits de synchro en attente (ADR 0101 §2) | aucune | `~/.local/state/hackeros/sync-conflicts.json` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).
@@ -34,6 +36,16 @@ Au premier démarrage, `/etc/hackeros/` reçoit des fichiers par défaut
 commentés (mode `0644`, propriétaire `root`). Comme ces fichiers listent toutes
 les clés, l'origine affichée d'une valeur de l'OS est « système » et non
 « intégrée » tant que personne n'a rien changé.
+
+### Clés sensibles (ADR 0100)
+
+Un document qui déclare des clés non publiques (`SettingSensitivity` `Private`,
+`SecretReference` ou `Restricted`) range ces clés dans un fichier compagnon
+`<doc>.private.config` en mode `0600`, à côté de `<doc>.config`, dans chaque
+couche. Quand l'appelant ne peut pas lire le fichier privé, la clé est rendue
+« masquée » au lieu de faire échouer la lecture. Les secrets vont dans le
+trousseau de connexion. Les documents de l'OS n'acceptent que des clés
+publiques. Détails : [`sensitive-settings.md`](sensitive-settings.md).
 
 ## Architecture
 
@@ -159,7 +171,10 @@ système demande l'approbation administrateur ; un refus affiche un message au
 lieu d'une erreur. L'apparence passe par `HackSettings.OpenSystemAsync`
 (chantier `4-sdk-system-admin`). « Synchroniser » pousse et tire le système de
 fichiers, tire les permissions, pousse et tire les associations, puis relit
-l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
+l'apparence. L'onglet « Synchronization » (ADR 0101) montre l'état de la
+synchro périodique, la suspend pour l'utilisateur (`paused` dans
+`~/.config/hackeros/sync.config`), lance un passage et liste les conflits en
+attente avec un bouton qui ouvre le dialogue de conflit. L'onglet « Installed Apps » écrit les fichiers `apps.config`
 (voir [`app-installation.md`](app-installation.md)).
 
 ## Migration
@@ -210,6 +225,8 @@ Dans `Tests/HackerOs.Platform.Core.Tests/Settings/` :
   isolement entre apps, notification de changement ;
 - `SettingsStoreToFilesMigrationTests` : fichiers par défaut, copie unique,
   copie par utilisateur, magasin illisible.
+- `SensitiveSettingsTests` : fichiers privés, masquage, clés mal placées,
+  `Restricted`, secrets dans le trousseau (ADR 0100).
 
 ## Liste des tâches
 

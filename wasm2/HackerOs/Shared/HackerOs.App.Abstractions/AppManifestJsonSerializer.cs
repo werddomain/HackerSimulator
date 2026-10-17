@@ -63,6 +63,7 @@ public static class AppManifestJsonSerializer
             "components",
             "singleInstancePerUser",
             "autoStart",
+            "serviceStartup",
             "supportsBack",
             "window",
             "execution",

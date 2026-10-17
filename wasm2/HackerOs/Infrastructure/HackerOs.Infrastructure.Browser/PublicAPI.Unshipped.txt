@@ -131,8 +131,10 @@ HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel.DisposeAsync
 HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel.SetDirectionsAsync(bool guestToHost, bool hostToGuest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel.SyncGuestTextAsync(string? text, bool writeToHost, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher
+HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.DecryptAesGcmAsync(byte[]! key, byte[]! nonce, byte[]! sealedData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]?>
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.DeriveKeyAsync(string! password, byte[]! salt, int iterations, int keyLengthBytes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]!>
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.EncryptAesGcmAsync(byte[]! key, byte[]! nonce, byte[]! plaintext, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]!>
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.WebCryptoPasswordHasher(Microsoft.JSInterop.IJSRuntime! runtime) -> void
 HackerOs.Infrastructure.Browser.Policy.IndexedDbCapabilityGrantRepository
 HackerOs.Infrastructure.Browser.Policy.IndexedDbCapabilityGrantRepository.DisposeAsync() -> System.Threading.Tasks.ValueTask
@@ -218,13 +220,17 @@ HackerOs.Infrastructure.Browser.Storage.BrowserStorageStatus.UsageBytes.init -> 
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.GetCursorAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.GetLastPulledAtAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.DateTimeOffset?>
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.IndexedDbSyncCursorRepository(Microsoft.JSInterop.IJSRuntime! runtime) -> void
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.SetCursorAsync(string! domain, string? cursor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncCursorRepository.SetLastPulledAtAsync(string! domain, System.DateTimeOffset pulledAtUtc, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.GetAsync(string! domain, System.Guid recordId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState?>
 HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.IndexedDbSyncRecordStateRepository(Microsoft.JSInterop.IJSRuntime! runtime) -> void
-HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.SetAsync(string! domain, System.Guid recordId, long revision, string! contentHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.ListAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord!>!>
+HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.RemoveAsync(string! domain, System.Guid recordId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Sync.IndexedDbSyncRecordStateRepository.SetAsync(string! domain, System.Guid recordId, HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState! state, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.WebData.WebSiteDatabaseInterop
 HackerOs.Infrastructure.Browser.WebData.WebSiteDatabaseInterop.DeleteAsync(string! databaseName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.WebData.WebSiteDatabaseInterop.DisposeAsync() -> System.Threading.Tasks.ValueTask

@@ -365,6 +365,7 @@ override HackerOs.Apps.SystemMonitor.SystemMonitorApp.SingleInstancePerUser.get 
 override HackerOs.Apps.SystemMonitor.SystemMonitorWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.SystemMonitor.Tabs.ProcessDetailPanel.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Apps.SystemMonitor.Tabs.ServicesTab.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Apps.SystemMonitor.Tabs.ServicesTab.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 static HackerOs.Apps.SystemMonitor.Metrics.ProcFiles.ParseCpuInfo(string! text) -> System.Collections.Generic.IReadOnlyList<HackerOs.Apps.SystemMonitor.Metrics.ProcCpuInfoEntry!>!
 static HackerOs.Apps.SystemMonitor.Metrics.ProcFiles.ParseDiskStats(string! text) -> System.Collections.Generic.IReadOnlyList<HackerOs.Apps.SystemMonitor.Metrics.ProcDiskStat!>!
 static HackerOs.Apps.SystemMonitor.Metrics.ProcFiles.ParseLoadAverage(string! text) -> HackerOs.Apps.SystemMonitor.Metrics.ProcLoadAverage!

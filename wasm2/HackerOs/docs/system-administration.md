@@ -70,6 +70,17 @@ la synchronisation ne fait rien. Les erreurs réseau deviennent
 accordées, avertissements), ou `null` sans serveur ; Paramètres l'affiche
 dans sa section du serveur ([`server-network-relay.md`](server-network-relay.md)).
 
+ADR 0101 (chantier `v3/9-sync`) : `GetConflictsAsync` lit les conflits en
+attente enregistrés dans `~/.local/state/hackeros/sync-conflicts.json`
+(`HackSyncConflict` porte `DetectedAt`) ; `ShowConflictsAsync` ouvre le
+dialogue de conflit de l'OS ; `GetSyncStatusAsync` rend un `HackSyncStatus`
+(synchro périodique active, suspendue, en ligne, dernier passage, envoyés,
+reçus, dernière erreur, intervalle) ; `SetSyncPausedAsync` suspend ou reprend
+la synchro de l'utilisateur (`~/.config/hackeros/sync.config`) ;
+`SyncNowAsync` lance un passage complet. Les suppressions, les conflits et la
+synchro périodique sont décrits dans
+[`synchronization.md`](synchronization.md).
+
 ### Alimentation (`system.power`)
 
 `HackSystem.RebootAsync` et `HackSystem.FactoryResetAsync` demandent toujours

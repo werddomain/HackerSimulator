@@ -22,6 +22,7 @@ const HackerOs.App.Abstractions.AppCapabilities.FileSystemUserHomeRead = "filesy
 const HackerOs.App.Abstractions.AppCapabilities.FileSystemUserHomeWrite = "filesystem.user-home.write" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.FileSystemUserSelectedRead = "filesystem.user-selected.read" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.FileSystemUserSelectedWrite = "filesystem.user-selected.write" -> string!
+const HackerOs.App.Abstractions.AppCapabilities.KeyringReadAll = "keyring.read-all" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.NetworkListen = "network.listen" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.NetworkListenPrivileged = "network.listen.privileged" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.NetworkRealAccess = "network.real.access" -> string!
@@ -187,6 +188,8 @@ HackerOs.App.Abstractions.AppManifest.SchemaVersion.get -> int
 HackerOs.App.Abstractions.AppManifest.SchemaVersion.init -> void
 HackerOs.App.Abstractions.AppManifest.SdkCompatibility.get -> HackerOs.App.Abstractions.AppSdkCompatibilityManifest!
 HackerOs.App.Abstractions.AppManifest.SdkCompatibility.init -> void
+HackerOs.App.Abstractions.AppManifest.ServiceStartup.get -> HackerOs.App.Abstractions.AppServiceStartup?
+HackerOs.App.Abstractions.AppManifest.ServiceStartup.init -> void
 HackerOs.App.Abstractions.AppManifest.Settings.get -> HackerOs.App.Abstractions.AppSettingsSchemaManifest?
 HackerOs.App.Abstractions.AppManifest.Settings.init -> void
 HackerOs.App.Abstractions.AppManifest.SingleInstancePerUser.get -> bool
@@ -301,6 +304,9 @@ HackerOs.App.Abstractions.AppSdkCompatibilityManifest.MaximumVersion.get -> stri
 HackerOs.App.Abstractions.AppSdkCompatibilityManifest.MaximumVersion.init -> void
 HackerOs.App.Abstractions.AppSdkCompatibilityManifest.MinimumVersion.get -> string!
 HackerOs.App.Abstractions.AppSdkCompatibilityManifest.MinimumVersion.init -> void
+HackerOs.App.Abstractions.AppServiceStartup
+HackerOs.App.Abstractions.AppServiceStartup.Boot = 1 -> HackerOs.App.Abstractions.AppServiceStartup
+HackerOs.App.Abstractions.AppServiceStartup.Login = 0 -> HackerOs.App.Abstractions.AppServiceStartup
 HackerOs.App.Abstractions.AppSettingFieldManifest
 HackerOs.App.Abstractions.AppSettingFieldManifest.AllowedValues.get -> System.Collections.Generic.IReadOnlyList<string!>?
 HackerOs.App.Abstractions.AppSettingFieldManifest.AllowedValues.init -> void
@@ -833,6 +839,7 @@ virtual HackerOs.App.Abstractions.AppDefinition.MobileEntryPoint.get -> System.T
 virtual HackerOs.App.Abstractions.AppDefinition.PublisherId.get -> string!
 virtual HackerOs.App.Abstractions.AppDefinition.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 virtual HackerOs.App.Abstractions.AppDefinition.SdkCompatibility.get -> HackerOs.App.Abstractions.AppSdkCompatibilityManifest?
+virtual HackerOs.App.Abstractions.AppDefinition.ServiceStartup.get -> HackerOs.App.Abstractions.AppServiceStartup?
 virtual HackerOs.App.Abstractions.AppDefinition.Settings.get -> HackerOs.App.Abstractions.AppSettingsSchemaManifest?
 virtual HackerOs.App.Abstractions.AppDefinition.SingleInstancePerUser.get -> bool
 virtual HackerOs.App.Abstractions.AppDefinition.SupportsBack.get -> bool
@@ -885,3 +892,5 @@ virtual HackerOs.App.Abstractions.AppDefinition.Window.get -> HackerOs.App.Abstr
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.WebBlazorManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.WebBlazorManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableInt32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int?>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.WindowOptions.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.WindowOptions>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppServiceStartup.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppServiceStartup>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableAppServiceStartup.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppServiceStartup?>

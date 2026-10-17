@@ -791,6 +791,21 @@ public sealed partial class AppLifecycleOrchestratorTests
             IServiceProvider? services,
             IElevationTicketStore? elevationTickets,
             params AppManifest[] manifests)
+            : this(services, elevationTickets, systemAppIds: [], manifests)
+        {
+        }
+
+        /// <summary>A kernel whose host declared <paramref name="systemAppIds"/> system apps (ADR 0048).</summary>
+        internal Fixture(IReadOnlyCollection<string> systemAppIds, params AppManifest[] manifests)
+            : this(services: null, elevationTickets: null, systemAppIds, manifests)
+        {
+        }
+
+        private Fixture(
+            IServiceProvider? services,
+            IElevationTicketStore? elevationTickets,
+            IReadOnlyCollection<string> systemAppIds,
+            AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -831,7 +846,7 @@ public sealed partial class AppLifecycleOrchestratorTests
                 Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager,
                 machineName: () => LoginEnvironment.HostName);
 
-            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
+            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests, systemAppIds);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
             AppCatalog catalog = catalogResult.Catalog!;
 

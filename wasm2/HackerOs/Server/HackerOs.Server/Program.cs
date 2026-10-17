@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using HackerOs.Ecosystem;
 using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
@@ -63,6 +64,9 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordHashService, Pbkdf2PasswordHashService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ISyncService, SyncService>();
+// ADR 0101: tombstones are kept 90 days, then purged by a daily job.
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddHostedService<SyncTombstonePurgeService>();
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IContentBlobService, ContentBlobService>();

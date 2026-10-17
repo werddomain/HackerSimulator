@@ -151,6 +151,14 @@ public interface IAppExecutionContext
     IAppServiceControlGateway Services => new UnsupportedAppServiceControlGateway();
 
     /// <summary>
+    /// Gets the channel a running service uses to tell the OS it is ready and how healthy it is
+    /// (ADR 0097, section 2; <see cref="ServiceAppBase.ReportHealth"/>). Defaults to a gateway that
+    /// drops every message, so contexts that predate this member keep compiling; the trusted
+    /// platform factory gives a service process the real one.
+    /// </summary>
+    IAppServiceNotifyGateway ServiceNotify => NullAppServiceNotifyGateway.Instance;
+
+    /// <summary>
     /// Gets this instance's permission-error notification gateway. Defaults to a no-op gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
     /// compiling; the trusted platform factory overrides it with a real implementation.
@@ -278,6 +286,14 @@ public interface IAppExecutionContext
     /// compiling.
     /// </summary>
     IAppConsoleGateway Console => DetachedAppConsoleGateway.Instance;
+
+    /// <summary>
+    /// Gets the session user's keyring as this app sees it, behind <see cref="Keyring.HackKeyring"/>
+    /// (ADR 0100 section 2; own entries without capability, every app's with <c>keyring.read-all</c>).
+    /// Defaults to a locked gateway so existing implementations keep compiling; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring => HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
 }
 
 /// <summary>
@@ -365,6 +381,17 @@ public static class UnsupportedAdministrationGateways
             throw new NotSupportedException(Message);
 
         public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(Message);
     }
 

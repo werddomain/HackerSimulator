@@ -17,7 +17,7 @@ HackerOs.Apps.ErrorLogViewer.LogFileContent.Source.init -> void
 HackerOs.Apps.ErrorLogViewer.LogFileContent.UnparsedLineCount.get -> int
 HackerOs.Apps.ErrorLogViewer.LogFileContent.UnparsedLineCount.init -> void
 HackerOs.Apps.ErrorLogViewer.LogFileReader
-HackerOs.Apps.ErrorLogViewer.LogFileReader.ListSourcesAsync(bool includeArchives, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Apps.ErrorLogViewer.LogSource!>!>!
+HackerOs.Apps.ErrorLogViewer.LogFileReader.ListSourcesAsync(bool includeArchives, bool includeAudit = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Apps.ErrorLogViewer.LogSource!>!>!
 HackerOs.Apps.ErrorLogViewer.LogFileReader.LogFileReader(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem) -> void
 HackerOs.Apps.ErrorLogViewer.LogFileReader.ReadAsync(HackerOs.Apps.ErrorLogViewer.LogSource! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Apps.ErrorLogViewer.LogFileContent!>!
 HackerOs.Apps.ErrorLogViewer.LogFileReader.TruncateAsync(HackerOs.Apps.ErrorLogViewer.LogSource! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>!
@@ -37,6 +37,8 @@ HackerOs.Apps.ErrorLogViewer.LogSource.Label.init -> void
 HackerOs.Apps.ErrorLogViewer.LogSource.LogSource(HackerOs.App.Abstractions.VirtualPath Path, string! Label, bool IsArchive) -> void
 HackerOs.Apps.ErrorLogViewer.LogSource.Path.get -> HackerOs.App.Abstractions.VirtualPath
 HackerOs.Apps.ErrorLogViewer.LogSource.Path.init -> void
+HackerOs.Apps.ErrorLogViewer.LogSource.RequiresRoot.get -> bool
+HackerOs.Apps.ErrorLogViewer.LogSource.RequiresRoot.init -> void
 HackerOs.Apps.ErrorLogViewer._Imports
 HackerOs.Apps.ErrorLogViewer._Imports.Execute() -> void
 HackerOs.Apps.ErrorLogViewer._Imports._Imports() -> void

@@ -35,6 +35,7 @@ public sealed class FileSystemService : IFileSystemService
     private readonly Func<Guid> _transactionIdFactory;
     private readonly Func<DateTimeOffset> _clock;
     private readonly IProcessIoAccounting? _ioAccounting;
+    private readonly IFileSystemAuditSink? _audit;
 
     /// <summary>Initializes the mounted filesystem service.</summary>
     /// <param name="router">Mount table.</param>
@@ -47,6 +48,10 @@ public sealed class FileSystemService : IFileSystemService
     /// Optional per-process I/O accounting (ADR 0057); when present, the bytes a process reads and
     /// writes through this service are charged to the PID of its operation context.
     /// </param>
+    /// <param name="audit">
+    /// Optional audit sink (ADR 0100 section 3): every create, write, delete, rename, copy and
+    /// <c>chmod</c> under <c>/etc</c>, <c>/bin</c> and <c>/var</c> (except <c>/var/log</c>), allowed or refused.
+    /// </param>
     public FileSystemService(
         IFileSystemMountRouter router,
         IFileSystemPathResolver pathResolver,
@@ -54,7 +59,8 @@ public sealed class FileSystemService : IFileSystemService
         ITopicMessageBus topicBus,
         Func<Guid>? transactionIdFactory = null,
         Func<DateTimeOffset>? clock = null,
-        IProcessIoAccounting? ioAccounting = null)
+        IProcessIoAccounting? ioAccounting = null,
+        IFileSystemAuditSink? audit = null)
     {
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
@@ -63,6 +69,7 @@ public sealed class FileSystemService : IFileSystemService
         _transactionIdFactory = transactionIdFactory ?? Guid.NewGuid;
         _clock = clock ?? (static () => DateTimeOffset.UtcNow);
         _ioAccounting = ioAccounting;
+        _audit = audit;
 
         _topicBus.RegisterSharedChannel(
             TopicNames.Shared("filesystem").Segment("changed").Build(),
@@ -159,6 +166,20 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
     {
+        FileSystemMutationResult result = await CreateCoreAsync(request, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && FileSystemAuditPolicy.IsAudited(request.Path))
+        {
+            _audit.Record("create", request.Path, null, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> CreateCoreAsync(
+        FileSystemCreateRequest request,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
+    {
         VirtualPath requestedParent = GetParent(request.Path);
         FileSystemResult<FileSystemPathResolution> parentResolution = await ResolveAsync(
             requestedParent,
@@ -212,6 +233,21 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
     {
+        FileSystemMutationResult result = await WriteCoreAsync(request, content, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && FileSystemAuditPolicy.IsAudited(request.Path))
+        {
+            _audit.Record("write", request.Path, null, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> WriteCoreAsync(
+        FileSystemWriteRequest request,
+        IFileSystemContentSource content,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
+    {
         FileSystemResult<FileSystemPathResolution> resolution = await ResolveAsync(
             request.Path,
             FileSystemLinkBehavior.Follow,
@@ -264,6 +300,20 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemMoveRequest request,
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
+    {
+        FileSystemMutationResult result = await MoveCoreAsync(request, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && (FileSystemAuditPolicy.IsAudited(request.SourcePath) || FileSystemAuditPolicy.IsAudited(request.DestinationPath)))
+        {
+            _audit.Record("rename", request.SourcePath, request.DestinationPath, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> MoveCoreAsync(
+        FileSystemMoveRequest request,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemPathResolution> sourceResolution = await ResolveAsync(
             request.SourcePath,
@@ -348,6 +398,20 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
     {
+        FileSystemMutationResult result = await CopyCoreAsync(request, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && FileSystemAuditPolicy.IsAudited(request.DestinationPath))
+        {
+            _audit.Record("copy", request.DestinationPath, null, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> CopyCoreAsync(
+        FileSystemCopyRequest request,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
+    {
         FileSystemResult<FileSystemPathResolution> sourceResolution = await ResolveAsync(
             request.SourcePath,
             FileSystemLinkBehavior.NoFollow,
@@ -422,6 +486,20 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemDeleteRequest request,
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
+    {
+        FileSystemMutationResult result = await DeleteCoreAsync(request, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && FileSystemAuditPolicy.IsAudited(request.Path))
+        {
+            _audit.Record("delete", request.Path, null, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> DeleteCoreAsync(
+        FileSystemDeleteRequest request,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemPathResolution> resolution = await ResolveAsync(
             request.Path,
@@ -523,6 +601,20 @@ public sealed class FileSystemService : IFileSystemService
         FileSystemSetPermissionsRequest request,
         FileSystemAuthorizationContext context,
         CancellationToken cancellationToken = default)
+    {
+        FileSystemMutationResult result = await SetPermissionsCoreAsync(request, context, cancellationToken).ConfigureAwait(false);
+        if (_audit is not null && FileSystemAuditPolicy.IsAudited(request.Path))
+        {
+            _audit.Record("chmod", request.Path, null, context.OperationContext, result);
+        }
+
+        return result;
+    }
+
+    private async ValueTask<FileSystemMutationResult> SetPermissionsCoreAsync(
+        FileSystemSetPermissionsRequest request,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemPathResolution> resolution = await ResolveAsync(
             request.Path,

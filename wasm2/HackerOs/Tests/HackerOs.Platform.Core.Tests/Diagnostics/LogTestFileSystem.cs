@@ -24,14 +24,27 @@ internal sealed class LogTestFileSystem
             () => FileSystemEntryId.FromGuid(new Guid(_entryId++, 0, 0, new byte[8])),
             () => new Guid(_transactionId++, 0, 0, new byte[8]),
             new ClockTimeProvider(Clock));
-        FileSystemMountRouter router = new(Repository);
-        Service = new FileSystemService(
-            router,
-            new FileSystemPathResolver(router),
-            new FileSystemAuthorizer(),
-            new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => Clock.UtcNow)),
-            () => new Guid(_transactionId++, 0, 0, new byte[8]));
+        _router = new FileSystemMountRouter(Repository);
+        _topicBus = new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => Clock.UtcNow));
+        Service = CreateService(audit: null);
     }
+
+    private readonly FileSystemMountRouter _router;
+    private readonly InMemoryTopicMessageBus _topicBus;
+
+    /// <summary>
+    /// A second <see cref="FileSystemService"/> over the same repository that reports audited
+    /// mutations to <paramref name="audit"/> (ADR 0100 §3).
+    /// </summary>
+    public FileSystemService CreateServiceWithAudit(IFileSystemAuditSink audit) => CreateService(audit);
+
+    private FileSystemService CreateService(IFileSystemAuditSink? audit) => new(
+        _router,
+        new FileSystemPathResolver(_router),
+        new FileSystemAuthorizer(),
+        _topicBus,
+        () => new Guid(_transactionId++, 0, 0, new byte[8]),
+        audit: audit);
 
     public ManualSimulationClock Clock { get; }
 

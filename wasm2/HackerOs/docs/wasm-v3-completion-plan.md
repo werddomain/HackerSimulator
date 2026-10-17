@@ -197,11 +197,11 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/2-game-removal`
 - [x] `v3/3-window-model` ([`window-model.md`](window-model.md))
 - [ ] `v3/4-intents`
-- [ ] `v3/5-services`
+- [x] `v3/5-services` (ADR 0097, ajusté par l'ADR 0107)
 - [x] `v3/6-sdk-versioning` (ADR 0098 §1-7, [`sdk-packages.md`](sdk-packages.md))
 - [ ] `v3/7-storage-backup`
-- [ ] `v3/8-settings-security`
-- [ ] `v3/9-sync`
+- [x] `v3/8-settings-security` ([`sensitive-settings.md`](sensitive-settings.md))
+- [x] `v3/9-sync` ([`synchronization.md`](synchronization.md))
 - [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0108)
 - [ ] `v3/11-apps`
 - [ ] `v3/12-localization`

@@ -293,6 +293,13 @@
             return;
         }
 
+        // The system services' account (ADR 0097) is built in: no login account may take its name.
+        if (ServiceAccount.IsReserved(SetupLogin.Trim()))
+        {
+            FormError = $"'{ServiceAccount.LoginName}' is reserved for the system services.";
+            return;
+        }
+
         IsSubmitting = true;
         try
         {

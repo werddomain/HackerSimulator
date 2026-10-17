@@ -507,6 +507,10 @@ internal sealed class RemoteProcessSession
             case RemoteOps.EnvSetVariable:
                 c.Environment.SetVariable(a.GetString("n"), a.GetOptionalString("v"));
                 return static _ => { };
+            case RemoteOps.ServiceNotify:
+                // The trusted context of this process only accepts it if it is a service (ADR 0097).
+                c.ServiceNotify.Notify(WireCodec.ReadServiceNotification(a));
+                return static _ => { };
             case RemoteOps.Log:
                 c.Logging.Log(
                     (HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity)a.GetInt32("s"),
@@ -637,6 +641,13 @@ internal sealed class RemoteProcessSession
             }
             case RemoteOps.ServiceSetMode:
                 return ServiceResult(await c.Services.SetStartModeAsync(a.GetString("id"), (ServiceStartMode)a.GetInt32("m"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.ServiceStatus:
+            {
+                ServiceStatusSnapshot status = await c.Services.GetStatusAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteServiceStatus(writer, status);
+            }
+            case RemoteOps.ServiceResetFailed:
+                return ServiceResult(await c.Services.ResetFailedAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
             case RemoteOps.Drives:
             {
                 var drives = await c.Drives.GetDrivesAsync(cancellationToken).ConfigureAwait(false);

@@ -2,6 +2,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Administration;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Server.Contracts.Proxy;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Gateways;
 using ServerState = HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState;
 
@@ -16,12 +18,18 @@ namespace HackerOs.Platform.Core.Administration;
 /// <param name="GrantsSync">Grant pull (ADR 0031).</param>
 /// <param name="FileAssociationsSync">File association sync (ADR 0033).</param>
 /// <param name="Proxy">Network relay client, read for its policy (ADR 0102 §5).</param>
+/// <param name="Scheduler">Periodic synchronization (ADR 0101 section 4).</param>
+/// <param name="ConflictCenter">The OS conflict dialog's state (ADR 0101 section 2).</param>
+/// <param name="Settings">Writes <c>~/.config/hackeros/sync.config</c>.</param>
 public sealed record ServerConnectionGatewayServices(
     Func<IServerConnectionService> Connection,
     Func<IFileSystemSyncService>? FileSystemSync = null,
     Func<IGrantsSyncService>? GrantsSync = null,
     Func<IFileAssociationsSyncService>? FileAssociationsSync = null,
-    Func<IProxyClient>? Proxy = null);
+    Func<IProxyClient>? Proxy = null,
+    Func<SyncScheduler>? Scheduler = null,
+    Func<SyncConflictCenter>? ConflictCenter = null,
+    Func<IOsSettingsService>? Settings = null);
 
 /// <summary>
 /// Trusted <see cref="IAppServerConnectionGateway"/> (ADR 0056, section 10) over the server
@@ -118,13 +126,16 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
     }
 
     /// <inheritdoc />
-    public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default)
     {
         _capabilities.Require(AppCapabilities.ServerConnectionManage);
-        IReadOnlyList<HackSyncConflict> conflicts = _services?.FileSystemSync is { } fileSystemSync
-            ? [.. fileSystemSync().UnresolvedConflicts.Select(path => new HackSyncConflict(HackSyncDomain.FileSystem, path))]
-            : [];
-        return ValueTask.FromResult(conflicts);
+        if (_services?.FileSystemSync is not { } fileSystemSync)
+        {
+            return [];
+        }
+
+        IReadOnlyList<SyncFileConflict> conflicts = await fileSystemSync().GetConflictsAsync(cancellationToken).ConfigureAwait(false);
+        return [.. conflicts.Select(conflict => new HackSyncConflict(HackSyncDomain.FileSystem, conflict.RelativePath, conflict.DetectedAtUtc))];
     }
 
     /// <inheritdoc />
@@ -171,6 +182,82 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
         }
     }
 
+    public async ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.ConflictCenter is { } center)
+        {
+            await center().OpenAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    public ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        return ValueTask.FromResult(_services?.Scheduler is { } scheduler ? ToPublic(scheduler().Status) : HackSyncStatus.Inactive);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.Settings is not { } settings)
+        {
+            throw new HackServerConnectionException("This HackerOS host has no periodic synchronization.");
+        }
+
+        await settings().SetAsync(
+            SyncSettingsDocuments.Document, SyncSettingsDocuments.PausedKey, paused ? "true" : "false", SettingLayer.User,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!paused)
+        {
+            _services.Scheduler?.Invoke().RequestSync();
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services is null)
+        {
+            return HackSyncStatus.Inactive;
+        }
+
+        if (_services.Scheduler is not { } scheduler)
+        {
+            // A host without the scheduler: the same order, one domain after the other.
+            await SyncAsync(HackSyncDomain.FileSystem, HackSyncDirection.Push, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileSystem, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.Grants, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileAssociations, HackSyncDirection.Push, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileAssociations, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            return HackSyncStatus.Inactive;
+        }
+
+        try
+        {
+            await scheduler().SyncNowAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException or IOException)
+        {
+            throw new HackServerConnectionException($"Sync failed: {exception.Message}", exception);
+        }
+
+        return ToPublic(scheduler().Status);
+    }
+
+    private static HackSyncStatus ToPublic(SyncSchedulerStatus status) => new(
+        status.IsActive,
+        status.IsPaused,
+        status.IsOnline,
+        status.LastPassAtUtc,
+        status.LastResult?.Sent ?? 0,
+        status.LastResult?.Received ?? 0,
+        status.LastError,
+        status.Interval);
+
     private async ValueTask<HackServerConnectionState> ConnectCoreAsync(
         Uri serverUrl, string login, string password, bool createAccount, CancellationToken cancellationToken)
     {
@@ -186,6 +273,9 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
             ServerState state = createAccount
                 ? await connection.ConnectWithNewAccountAsync(serverUrl, login, password, cancellationToken).ConfigureAwait(false)
                 : await connection.ConnectWithExistingAccountAsync(serverUrl, login, password, cancellationToken).ConfigureAwait(false);
+
+            // ADR 0101 section 4: a (re)connection triggers a pass.
+            _services.Scheduler?.Invoke().RequestSync();
             return ToPublic(state);
         }
         catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)

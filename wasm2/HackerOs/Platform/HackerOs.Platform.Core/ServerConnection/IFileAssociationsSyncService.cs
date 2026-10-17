@@ -15,7 +15,8 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// Pushes/pulls the single <see cref="FileAssociationSettingsDocuments"/> file
 /// (<c>/etc/hackeros/file-associations.json</c>) to/from the optional server's FileAssociations sync
 /// domain (ADR 0033). Since ADR 0044 the document is an ordinary system file; this service reads and
-/// writes it as an audited system operation. A no-op when this device isn't connected.
+/// writes it as an audited system operation. A no-op when this device isn't connected. Deleting the
+/// file pushes a tombstone; a received tombstone restores the installation defaults (ADR 0101).
 /// </summary>
 public interface IFileAssociationsSyncService
 {
@@ -47,15 +48,22 @@ public sealed class FileAssociationsSyncService(
         }
 
         string? content = await settings.ReadFileAsync(FileAssociationSettingsDocuments.File, cancellationToken).ConfigureAwait(false);
+        SyncRecordTrackingState? tracked = await recordState.GetAsync(
+            SyncDomain.FileAssociations, RecordId, cancellationToken).ConfigureAwait(false);
         if (content is null)
         {
+            // ADR 0101 section 1: deleting the synchronized file is a deletion for the other devices
+            // too. A file this device never synchronized leaves no tombstone.
+            if (tracked is { IsTombstone: false })
+            {
+                await PushTombstoneAsync(state, accessToken, tracked, cancellationToken).ConfigureAwait(false);
+            }
+
             return;
         }
 
         string contentHash = ComputeHash(content);
-        SyncRecordTrackingState? tracked = await recordState.GetAsync(
-            SyncDomain.FileAssociations, RecordId, cancellationToken).ConfigureAwait(false);
-        if (tracked is not null && string.Equals(tracked.ContentHash, contentHash, StringComparison.Ordinal))
+        if (tracked is { IsTombstone: false } && string.Equals(tracked.ContentHash, contentHash, StringComparison.Ordinal))
         {
             return; // Unchanged since the last successful push/pull.
         }
@@ -113,9 +121,31 @@ public sealed class FileAssociationsSyncService(
 
             foreach (SyncRecordEnvelope envelope in response.Records)
             {
-                if (envelope.PayloadJson is null || envelope.RecordId != RecordId)
+                if (envelope.RecordId != RecordId)
                 {
-                    continue; // Tombstoned, or not our one document (shouldn't happen for this domain).
+                    continue; // Not our one document (shouldn't happen for this domain).
+                }
+
+                SyncRecordTrackingState? tracked = await recordState.GetAsync(
+                    SyncDomain.FileAssociations, RecordId, cancellationToken).ConfigureAwait(false);
+                if (tracked is not null && envelope.Revision <= tracked.Revision)
+                {
+                    continue; // Already applied, or this device's own push coming back.
+                }
+
+                if (envelope.IsTombstone || envelope.PayloadJson is null)
+                {
+                    // Deleted on another device: back to the installation defaults, like a fresh
+                    // machine, rather than leaving the OS without the file.
+                    await settings.WriteFileAsync(
+                        FileAssociationSettingsDocuments.File, FileAssociationSettingsDocuments.DefaultContent, cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
+                    await recordState.SetAsync(
+                        SyncDomain.FileAssociations,
+                        RecordId,
+                        new SyncRecordTrackingState(envelope.Revision, ComputeHash(FileAssociationSettingsDocuments.DefaultContent)),
+                        cancellationToken).ConfigureAwait(false);
+                    continue;
                 }
 
                 if (new FileAssociationSettingsValidator().Validate(envelope.PayloadJson).Count != 0)
@@ -141,6 +171,25 @@ public sealed class FileAssociationsSyncService(
             {
                 break;
             }
+        }
+    }
+
+    private async Task PushTombstoneAsync(
+        ServerConnectionState state, string accessToken, SyncRecordTrackingState tracked, CancellationToken cancellationToken)
+    {
+        long revision = tracked.Revision + 1;
+        string hash = ComputeHash(string.Empty);
+        SyncRecordEnvelope tombstone = new(
+            RecordId, SyncDomain.FileAssociations, SchemaVersion: 1, state.AccountId, state.DeviceId,
+            revision, DateTimeOffset.UtcNow, ServerReceivedUtc: null, hash, IsTombstone: true, PayloadJson: null);
+        PushResponse response = await syncClient.PushAsync(
+            new Uri(state.ServerBaseUrl), accessToken, new PushRequest(SyncDomain.FileAssociations, [tombstone], Guid.NewGuid()), cancellationToken)
+            .ConfigureAwait(false);
+        if (response.Conflicts.Count == 0)
+        {
+            await recordState.SetAsync(
+                SyncDomain.FileAssociations, RecordId, new SyncRecordTrackingState(revision, hash, IsTombstone: true), cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 

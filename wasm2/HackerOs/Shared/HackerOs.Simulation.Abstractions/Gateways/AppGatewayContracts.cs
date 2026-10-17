@@ -444,4 +444,26 @@ public interface IAppServiceControlGateway
     /// </exception>
     ValueTask<ServiceControlResult> SetStartModeAsync(
         string serviceAppId, ServiceStartMode mode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the target service's activation state, last result and health (ADR 0097). Needs no
+    /// capability: like <c>systemctl status</c>, any user may read any unit's state.
+    /// </summary>
+    /// <param name="serviceAppId">Exact catalog app ID of the service.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The snapshot; <see cref="ServiceStatusSnapshot.NeverStarted"/> for an unknown or never-started service.</returns>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<ServiceStatusSnapshot> GetStatusAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This service-control gateway does not report service states.");
+
+    /// <summary>
+    /// Clears the <see cref="ServiceActiveState.Failed"/> state of the target service, like
+    /// <c>systemctl reset-failed</c>. Same authorization rule as <see cref="StartAsync"/>.
+    /// </summary>
+    /// <param name="serviceAppId">Exact catalog app ID of the service.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies control of this service.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<ServiceControlResult> ResetFailedAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This service-control gateway does not report service states.");
 }

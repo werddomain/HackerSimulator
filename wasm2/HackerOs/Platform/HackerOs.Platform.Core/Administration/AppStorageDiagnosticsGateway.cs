@@ -58,6 +58,7 @@ internal sealed class AppStorageDiagnosticsGateway : IAppStorageDiagnosticsGatew
         _capabilities.Require(AppCapabilities.SystemStorageInspect);
         IStorageInspector inspector = _inspector?.Invoke()
             ?? throw new NotSupportedException("This HackerOS host has no persistent storage to inspect.");
-        return await inspector.CaptureAsync(cancellationToken).ConfigureAwait(false);
+        // ADR 0100: private settings files and keyrings are masked in every report and export.
+        return StorageSnapshotRedactor.Redact(await inspector.CaptureAsync(cancellationToken).ConfigureAwait(false));
     }
 }

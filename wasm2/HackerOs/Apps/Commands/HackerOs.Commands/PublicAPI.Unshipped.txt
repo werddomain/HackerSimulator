@@ -1,9 +1,14 @@
 #nullable enable
+const HackerOs.Commands.Ausearch.AusearchCommand.AuditLogPath = "/var/log/audit.log" -> string!
 const HackerOs.Commands.Clear.ClearCommand.ClearSequence = "\u001b[H\u001b[2J\u001b[3J" -> string!
 HackerOs.Commands.Alias.AliasApp
 HackerOs.Commands.Alias.AliasApp.AliasApp() -> void
 HackerOs.Commands.Alias.AliasCommand
 HackerOs.Commands.Alias.AliasCommand.AliasCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.Ausearch.AusearchApp
+HackerOs.Commands.Ausearch.AusearchApp.AusearchApp() -> void
+HackerOs.Commands.Ausearch.AusearchCommand
+HackerOs.Commands.Ausearch.AusearchCommand.AusearchCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.Basename.BasenameApp
 HackerOs.Commands.Basename.BasenameApp.BasenameApp() -> void
 HackerOs.Commands.Basename.BasenameCommand
@@ -267,6 +272,17 @@ override HackerOs.Commands.Alias.AliasApp.PublisherId.get -> string!
 override HackerOs.Commands.Alias.AliasApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Alias.AliasApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Alias.AliasCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.Ausearch.AusearchApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Ausearch.AusearchApp.Description.get -> string!
+override HackerOs.Commands.Ausearch.AusearchApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Ausearch.AusearchApp.Id.get -> string!
+override HackerOs.Commands.Ausearch.AusearchApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Ausearch.AusearchApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Ausearch.AusearchApp.Name.get -> string!
+override HackerOs.Commands.Ausearch.AusearchApp.PublisherId.get -> string!
+override HackerOs.Commands.Ausearch.AusearchApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Ausearch.AusearchApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Ausearch.AusearchCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.Basename.BasenameApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.Basename.BasenameApp.Description.get -> string!
 override HackerOs.Commands.Basename.BasenameApp.EntryPoint.get -> System.Type!

@@ -232,6 +232,26 @@
     color: var(--hos-warning, #e0ad50);
 }
 
+.process-list {
+    margin: 0 0 0.75rem;
+    padding: 6px 10px 6px 1.75rem;
+    font-size: 0.82rem;
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    color: var(--hos-error, #ff7b72);
+    border-left: 3px solid var(--hos-error, #ff7b72);
+    background: rgba(255, 123, 114, 0.06);
+}
+
+.process-pid {
+    display: inline-block;
+    min-width: 3.5em;
+    color: var(--hos-text-muted, #8b949e);
+}
+
+.process-user {
+    color: var(--hos-text-muted, #8b949e);
+}
+
 .scope-options {
     display: inline-flex;
     border: 1px solid var(--hos-border, #3a4b53);

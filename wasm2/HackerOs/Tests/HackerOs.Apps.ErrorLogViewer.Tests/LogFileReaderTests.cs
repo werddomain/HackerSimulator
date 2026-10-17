@@ -38,6 +38,31 @@ public sealed class LogFileReaderTests
     }
 
     [Fact]
+    public async Task Lists_the_audit_log_only_for_administrators_and_parses_its_records()
+    {
+        // ADR 0100 section 3: audit.log is 0600 root, so it is offered only on request.
+        Fixture fixture = await Fixture.CreateAsync();
+        fixture.Writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "boot");
+        await fixture.Writer.AttachAsync(fixture.Service);
+        string refused = AuditLineFormat.Format(new AuditRecord(
+            new DateTimeOffset(2026, 10, 17, 8, 30, 0, TimeSpan.Zero), 9, "write", "/etc/hosts", null,
+            "alice", "alice", 12, "nano", "org.hackeros.commands.nano", false, "PermissionDenied"));
+        await fixture.WriteSystemFileAsync("/var/log/audit.log", refused + "\n");
+
+        IReadOnlyList<LogSource> plain = await fixture.Reader.ListSourcesAsync(includeArchives: false);
+        IReadOnlyList<LogSource> admin = await fixture.Reader.ListSourcesAsync(includeArchives: false, includeAudit: true);
+
+        Assert.DoesNotContain(plain, source => source.Label == "audit.log");
+        LogSource audit = Assert.Single(admin, source => source.Label == "audit.log");
+        Assert.True(audit.RequiresRoot);
+
+        LogRow row = Assert.Single(LogFileReader.Parse(audit, refused + "\n").Rows);
+        Assert.Equal(DiagnosticSeverity.Warning, row.Line.Severity);
+        Assert.Equal("org.hackeros.commands.nano", row.Line.Source);
+        Assert.Contains("/etc/hosts", row.Line.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Reads_and_parses_lines_counting_foreign_ones()
     {
         Fixture fixture = await Fixture.CreateAsync();

@@ -334,6 +334,11 @@ HackerOs.Platform.Blazor.Sites.HackWebSiteHost.FindSite(System.Uri! pageUrl) -> 
 HackerOs.Platform.Blazor.Sites.HackWebSiteHost.HackWebSiteHost(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Simulation.Abstractions.Sessions.ISessionService! sessions, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<(HackerOs.Platform.Core.Discovery.AppDescriptor? Descriptor, string? Error)>!>! descriptors, HackerOs.Platform.Blazor.Sites.HackWebSiteHost.StartRenderer! start, System.Func<HackerOs.Simulation.Abstractions.Processes.ProcessId, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason, System.Threading.Tasks.Task<bool>!>! stop) -> void
 HackerOs.Platform.Blazor.Sites.HackWebSiteHost.StartAsync(HackerOs.AppSdk.Web.Blazor.Sites.HackWebSiteStartRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Web.Blazor.Sites.HackWebSiteStart!>!
 HackerOs.Platform.Blazor.Sites.HackWebSiteHost.StartRenderer
+HackerOs.Platform.Blazor.Sync.SyncConflictOverlay
+HackerOs.Platform.Blazor.Sync.SyncConflictOverlay.Dispose() -> void
+HackerOs.Platform.Blazor.Sync.SyncConflictOverlay.Services.get -> System.IServiceProvider!
+HackerOs.Platform.Blazor.Sync.SyncConflictOverlay.Services.set -> void
+HackerOs.Platform.Blazor.Sync.SyncConflictOverlay.SyncConflictOverlay() -> void
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry.AppBackHandlerRegistry() -> void
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry.NavigateBackAsync(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.AppBackRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppBackResult!>

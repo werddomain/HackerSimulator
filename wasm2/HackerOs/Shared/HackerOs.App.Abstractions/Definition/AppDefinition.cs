@@ -78,8 +78,15 @@ public abstract class AppDefinition
     /// <summary>Gets whether a second launch focuses the running instance (window apps only).</summary>
     public virtual bool SingleInstancePerUser => false;
 
-    /// <summary>Gets whether a service app starts at session login.</summary>
+    /// <summary>Gets whether a service app starts on its own (at login, or at boot with <see cref="ServiceStartup"/>).</summary>
     public virtual bool AutoStart => false;
+
+    /// <summary>
+    /// Gets when an automatic service app starts (ADR 0097, section 4): <see langword="null"/> or
+    /// <see cref="AppServiceStartup.Login"/> after a login, <see cref="AppServiceStartup.Boot"/> at boot
+    /// (honored for system apps only). Service apps only.
+    /// </summary>
+    public virtual AppServiceStartup? ServiceStartup => null;
 
     /// <summary>Gets whether the app participates in platform Back navigation (window apps only).</summary>
     public virtual bool SupportsBack => false;

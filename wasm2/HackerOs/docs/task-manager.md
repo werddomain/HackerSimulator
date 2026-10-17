@@ -128,6 +128,11 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
 
 ### Services
 
+Colonnes État (`active`, `activating`, `deactivating`, `inactive`, `failed`
+avec sa raison, ADR 0097) et Santé (santé et texte rapportés par le service).
+Une ligne `failed` est mise en évidence et offre « Reset » (`reset-failed`).
+L'état vient du gestionnaire de services (`RefreshStatusAsync` à chaque
+rafraîchissement) ; seul un OS qui ne le fournit pas retombe sur `/proc`.
 La liste et les types de démarrage sont lus à l'ouverture de l'onglet et après
 chaque action ; l'état et le PID suivent les processus lus chaque seconde par
 la fenêtre, donc un service qui s'arrête apparaît arrêté sans recharger la
@@ -185,7 +190,15 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
 
 - Propriétés : `ServiceName` (id d'app), `DisplayName`, `Description`,
   `Status` (`Stopped`, `StartPending`, `StopPending`, `Running`, valeurs de
-  `ServiceControllerStatus`), `StartType` (`ServiceStartMode?`), `ProcessId`.
+  `ServiceControllerStatus`, déduit de l'état actif : `failed` donne
+  `Stopped`), `StartType` (`ServiceStartMode?`), `ProcessId`.
+- États façon systemd (ADR 0097) : `ActiveState` (`HackServiceActiveState` :
+  `Inactive`, `Activating`, `Active`, `Deactivating`, `Failed`), `Result`
+  (`HackServiceResult` : `Success`, `ExitCode`, `Exception`, `Killed`,
+  `Timeout`), `Health` (`HackServiceHealth`), `StatusText`,
+  `ActiveStateChangedAt`, `ExitCode`. `ResetFailedAsync()` efface `failed` ;
+  `RefreshStatusAsync()` relit l'état seul. `HackServiceStates.ToSystemdName`
+  donne les mots de systemd.
 - Liste : `HackApps.GetInstalledAsync` filtrée sur `AppKind.Service`, triée
   par nom. État : `HackProcess`. Type de démarrage et actions :
   `IAppServiceControlGateway`.

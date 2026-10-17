@@ -21,6 +21,7 @@ using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Keyring;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
@@ -117,6 +118,10 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IAuditLog>(provider => new FileAuditLog(
             provider.GetRequiredService<LogFileWriter>(),
             provider.GetRequiredService<IDiagnosticRedactor>()));
+        // /var/log/audit.log (ADR 0100 section 3): FileSystemService hands it every protected write.
+        services.AddSingleton<IFileSystemAuditSink>(provider => new FileSystemAuditLog(
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<ISimulationClock>()));
         // Every dependency is a singleton, so the host's root ILoggerFactory can build this provider
         // before any Blazor scope exists. ILogger<T> entries land in /var/log/syslog.
         services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
@@ -301,7 +306,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<IContentTransferClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
+            provider.GetRequiredService<ISyncRecordStateRepository>(),
+            logger: provider.GetService<Microsoft.Extensions.Logging.ILogger<FileSystemSyncService>>()));
 
         // Grants domain sync (ADR 0031) — pull-only, applies server-issued grants into the durable
         // grant store. Not wired into live capability enforcement in this pass (see ADR 0031).
@@ -320,6 +326,21 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
+
+        // ADR 0101: periodic synchronization (started at login, idle without a server) and the
+        // state of the OS conflict dialog the shell renders.
+        services.AddScoped<SyncScheduler>(provider => new SyncScheduler(
+            provider.GetRequiredService<IFileSystemSyncService>(),
+            provider.GetRequiredService<IGrantsSyncService>(),
+            provider.GetRequiredService<IFileAssociationsSyncService>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<ITopicMessageBus>(),
+            logger: provider.GetService<Microsoft.Extensions.Logging.ILogger<SyncScheduler>>(),
+            events: provider.GetRequiredService<IEventBus>()));
+        services.AddScoped<SyncConflictCenter>(provider => new SyncConflictCenter(
+            provider.GetRequiredService<IFileSystemSyncService>()));
 
         // Admin re-authentication elevation (ADR 0042) — powers the terminal's `sudo` built-in and
         // the admin-approval prompt on a denied permission. Never touches ISessionService's own
@@ -388,6 +409,17 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IStorageInspector>(provider =>
             new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
 
+        // User keyring (ADR 0100 section 2): ~/.local/share/keyrings/login.keyring, sealed with
+        // AES-GCM through Web Crypto, unlocked by the session service at login.
+        services.AddScoped<IKeyringCipher>(provider =>
+            new HackerOs.Ecosystem.Keyring.WebCryptoKeyringCipher(provider.GetRequiredService<WebCryptoPasswordHasher>()));
+        services.AddScoped<UserKeyringService>(provider => new UserKeyringService(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IKeyringCipher>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetService<ILogger<UserKeyringService>>()));
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -403,7 +435,8 @@ public static class EcosystemServiceCollectionExtensions
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct),
                 grantRepository: provider.GetService<ICapabilityGrantRepository>(),
                 catalog: provider.GetService<AppCatalog>(),
-                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>());
+                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>(),
+                keyring: provider.GetRequiredService<UserKeyringService>());
         });
         // Per-process arguments, working directory and environment (ADR 0050): filled and
         // emptied by the process manager, read by /proc and each app's Environment gateway.
@@ -531,6 +564,8 @@ public static class EcosystemServiceCollectionExtensions
             localNetwork: provider.GetRequiredService<LocalNetworkServices>(),
             // HackWebDb (ADR 0088): hackweb.<app id> for web apps, and their listing in Diagnostic.
             webDatabases: provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>(),
+            // HackKeyring (ADR 0100 section 2): the session user's keyring, per app.
+            keyring: provider.GetRequiredService<UserKeyringService>(),
             administration: new SystemAdministrationGatewayServices(
                 () => provider.GetRequiredService<IOsSettingsService>(),
                 () => provider.GetRequiredService<AppPermissionAdministration>(),
@@ -539,7 +574,10 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IFileSystemSyncService>(),
                     () => provider.GetRequiredService<IGrantsSyncService>(),
                     () => provider.GetRequiredService<IFileAssociationsSyncService>(),
-                    () => provider.GetRequiredService<IProxyClient>()),
+                    () => provider.GetRequiredService<IProxyClient>(),
+                    () => provider.GetRequiredService<SyncScheduler>(),
+                    () => provider.GetRequiredService<SyncConflictCenter>(),
+                    () => provider.GetRequiredService<IOsSettingsService>()),
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
@@ -589,7 +627,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<LoginEnvironmentProvider>(),
             // ADR 0070: commands and services in Web Workers, on the hosts that have them (the
             // WebAssembly hosts register it in Program.cs); none on the server (section 6).
-            provider.GetService<IRemoteProcessHost>()));
+            provider.GetService<IRemoteProcessHost>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            // ADR 0097: a service that fails is written to /var/log/syslog.
+            provider.GetService<ILogger<AppLifecycleOrchestrator>>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.
@@ -611,6 +652,17 @@ public static class EcosystemServiceCollectionExtensions
             // ADR 0088 section 4: uninstalling a web app deletes its browser database.
             provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>()));
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
+        // ADR 0097 section 4: system services at the end of the boot, the user's at each login;
+        // stopped at the logout and the shutdown. Resolved with EcosystemBootCoordinator, so it
+        // subscribes to the session events before the first login.
+        services.AddScoped<ServiceStartupCoordinator>(provider => new ServiceStartupCoordinator(
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<IEventBus>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<AppInstallationService>(),
+            () => provider.GetRequiredService<ISimulationClock>().UtcNow,
+            provider.GetService<ILogger<ServiceStartupCoordinator>>()));
         // The headless shell hsh (ADR 0050): the terminal runs every line through it.
         services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),

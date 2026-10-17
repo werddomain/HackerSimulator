@@ -111,7 +111,8 @@ public sealed class TrashCommand : TerminalAppBase
 
             // Show the trash name when it is not obvious from the path, so `trash rm <name>` is usable.
             string suffix = item.OriginalPath is null || HackPath.GetFileName(item.OriginalPath) != item.Name ? $"  [{item.Name}]" : string.Empty;
-            context.StandardOutput.WriteLine($"{date}  {path}{suffix}");
+            string origin = item.DeletedOnAnotherDevice ? "  (deleted on another device)" : string.Empty;
+            context.StandardOutput.WriteLine($"{date}  {path}{suffix}{origin}");
         }
 
         return 0;

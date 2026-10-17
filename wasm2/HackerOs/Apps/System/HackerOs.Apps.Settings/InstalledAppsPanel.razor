@@ -67,7 +67,21 @@
                     </ul>
                 }
 
-                <p>Running windows are closed. Settings and files are kept.</p>
+                @if (_plan is { RunningProcesses.Count: > 0 } plan)
+                {
+                    <p>These processes will be stopped:</p>
+                    <ul class="process-list">
+                        @foreach (HackRunningProcessInfo process in plan.RunningProcesses)
+                        {
+                            <li><span class="process-pid">@process.Pid</span> @process.Name <span class="process-user">(@process.UserName)</span></li>
+                        }
+                    </ul>
+                    <p>Each one is asked to stop and gets a few seconds to save its work before it is forced. Settings and files are kept.</p>
+                }
+                else
+                {
+                    <p>Nothing of it is running. Settings and files are kept.</p>
+                }
 
                 @foreach (string siteId in WebSitesIn(_pending.UninstallClosure))
                 {

@@ -21,6 +21,12 @@ public sealed record LogFileTarget
     /// <summary>Audit log: logins, <c>sudo</c>, permission approvals. Mode <c>0600</c>, like Linux.</summary>
     public static readonly LogFileTarget AuthLog = new(VirtualPath.Parse("/var/log/auth.log"), 0b110_000_000);
 
+    /// <summary>
+    /// Filesystem audit log: every protected write under <c>/etc</c>, <c>/bin</c> and <c>/var</c>, in the
+    /// format of <c>auditd</c> (ADR 0100, section 3). Mode <c>0600</c>, read with <c>sudo ausearch</c>.
+    /// </summary>
+    public static readonly LogFileTarget AuditLog = new(VirtualPath.Parse("/var/log/audit.log"), 0b110_000_000);
+
     private LogFileTarget(VirtualPath path, ushort mode)
     {
         Path = path;

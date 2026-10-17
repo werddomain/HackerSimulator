@@ -1,5 +1,6 @@
 #nullable enable
 abstract HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryMetadata.Kind.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryKind
+const HackerOs.Simulation.Abstractions.Diagnostics.AuditLineFormat.UnsetAuid = "unset" -> string!
 const HackerOs.Simulation.Abstractions.Diagnostics.LogLineFormat.LevelWidth = 5 -> int
 const HackerOs.Simulation.Abstractions.Diagnostics.LogLineFormat.LineTerminator = '\n' -> char
 const HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryName.MaximumUtf8ByteLength = 255 -> int
@@ -47,6 +48,9 @@ const HackerOs.Simulation.Abstractions.Sessions.LocalLoginName.MaximumLength = 3
 const HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.LockedSectionName = "locked" -> string!
 const HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.SchemaVersionKey = "schemaVersion" -> string!
 const HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.DefaultDocumentId = "settings" -> string!
+const HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.PrivateFileMode = 384 -> ushort
+const HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.PrivateSuffix = ".private.config" -> string!
+const HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.PublicSuffix = ".config" -> string!
 const HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.DefaultDirectoryMode = 493 -> ushort
 const HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.DefaultFileMode = 420 -> ushort
 HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardChannel
@@ -65,10 +69,37 @@ HackerOs.Simulation.Abstractions.Diagnostics.AuditEntry.Outcome.get -> HackerOs.
 HackerOs.Simulation.Abstractions.Diagnostics.AuditEntry.Properties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 HackerOs.Simulation.Abstractions.Diagnostics.AuditEntry.Subject.get -> string!
 HackerOs.Simulation.Abstractions.Diagnostics.AuditEntry.TimestampUtc.get -> System.DateTimeOffset
+HackerOs.Simulation.Abstractions.Diagnostics.AuditLineFormat
 HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome
 HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome.Denied = 1 -> HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome
 HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome.Failed = 2 -> HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome
 HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome.Success = 0 -> HackerOs.Simulation.Abstractions.Diagnostics.AuditOutcome
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.AppId.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.AppId.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.AuditRecord(System.DateTimeOffset TimestampUtc, long Serial, string! Operation, string! Path, string? NewPath, string! Uid, string! Auid, long ProcessId, string! Command, string! AppId, bool Succeeded, string? Error) -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Auid.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Auid.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Command.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Command.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Error.get -> string?
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Error.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.NewPath.get -> string?
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.NewPath.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Operation.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Operation.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Path.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Path.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.ProcessId.get -> long
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.ProcessId.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Serial.get -> long
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Serial.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Succeeded.get -> bool
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Succeeded.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.TimestampUtc.get -> System.DateTimeOffset
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.TimestampUtc.init -> void
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Uid.get -> string!
+HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord.Uid.init -> void
 HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticEntry
 HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticEntry.Category.get -> string!
 HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticEntry.CorrelationId.get -> System.Guid
@@ -573,9 +604,13 @@ HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.StartChild(string! 
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.StopAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, System.TimeSpan timeout, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CloseRequested, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.GetStartModeAsync(string! serviceAppId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.App.Abstractions.ServiceStartMode>
+HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.GetStatusAsync(string! serviceAppId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot!>
+HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.ResetFailedAsync(string! serviceAppId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.SetStartModeAsync(string! serviceAppId, HackerOs.App.Abstractions.ServiceStartMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.StartAsync(string! serviceAppId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway.StopAsync(string! serviceAppId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppServiceNotifyGateway
+HackerOs.Simulation.Abstractions.Gateways.IAppServiceNotifyGateway.Notify(HackerOs.Simulation.Abstractions.Gateways.ServiceNotification! notification) -> void
 HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker
 HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker.Evaluate(string! capability, HackerOs.App.Abstractions.AppAuthority requiredAuthority = HackerOs.App.Abstractions.AppAuthority.User, HackerOs.App.Abstractions.Policy.CapabilityResourceCandidate? resourceCandidate = null) -> HackerOs.App.Abstractions.Policy.CapabilityPolicyEvaluation
 HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker.Require(string! capability, HackerOs.App.Abstractions.AppAuthority requiredAuthority = HackerOs.App.Abstractions.AppAuthority.User, HackerOs.App.Abstractions.Policy.CapabilityResourceCandidate? resourceCandidate = null) -> void
@@ -586,6 +621,14 @@ HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegis
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.RevokeAllForProcess(HackerOs.Simulation.Abstractions.Processes.ProcessId processId) -> int
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.RevokeAllForUser(string! userId) -> int
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.TryGet(System.Guid handleId, out HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle! handle) -> bool
+HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway
+HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway.Notify(HackerOs.Simulation.Abstractions.Gateways.ServiceNotification! notification) -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState.Activating = 1 -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState.Active = 2 -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState.Deactivating = 3 -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState.Failed = 4 -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState.Inactive = 0 -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome.Faulted = 4 -> HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome.NotAService = 2 -> HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome
@@ -598,6 +641,36 @@ HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult.ErrorCode.init ->
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult.Outcome.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult.Outcome.init -> void
 HackerOs.Simulation.Abstractions.Gateways.ServiceControlResult.ServiceControlResult(HackerOs.Simulation.Abstractions.Gateways.ServiceControlOutcome Outcome, string? ErrorCode = null) -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.Health.get -> HackerOs.Simulation.Abstractions.Processes.ServiceHealth?
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.Health.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.Ready.get -> bool
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.Ready.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.ServiceNotification(bool Ready = false, HackerOs.Simulation.Abstractions.Processes.ServiceHealth? Health = null, string? StatusText = null) -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.StatusText.get -> string?
+HackerOs.Simulation.Abstractions.Gateways.ServiceNotification.StatusText.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult.Exception = 2 -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult.ExitCode = 1 -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult.Killed = 3 -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult.Success = 0 -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult.Timeout = 4 -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.ActiveState.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.ActiveState.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.ExitCode.get -> int?
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.ExitCode.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.Health.get -> HackerOs.Simulation.Abstractions.Processes.ServiceHealth
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.Health.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.MainPid.get -> long?
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.MainPid.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.Result.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.Result.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.ServiceStatusSnapshot(HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState ActiveState, HackerOs.Simulation.Abstractions.Gateways.ServiceRunResult Result, HackerOs.Simulation.Abstractions.Processes.ServiceHealth Health, string? StatusText, System.DateTimeOffset? StateChangedAtUtc, long? MainPid, int? ExitCode) -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.StateChangedAtUtc.get -> System.DateTimeOffset?
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.StateChangedAtUtc.init -> void
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.StatusText.get -> string?
+HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.StatusText.init -> void
 HackerOs.Simulation.Abstractions.ISettingsDocumentValidator
 HackerOs.Simulation.Abstractions.ISettingsDocumentValidator.Validate(string! content) -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Simulation.Abstractions.Metrics.BlockDeviceCounters
@@ -1069,6 +1142,7 @@ HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetCancellationToken(
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetHistory() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Kill(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.MarkRunning(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
+HackerOs.Simulation.Abstractions.Processes.IProcessManager.SetServiceHealth(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ServiceHealth health) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord?
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Start(HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest! request) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.StopAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, System.TimeSpan timeout, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CloseRequested, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.TryGetActive(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> bool
@@ -1198,11 +1272,13 @@ HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Kind.get -> Hacke
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Kind.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentPid.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId?
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentPid.init -> void
-HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ProcessStartRequest(HackerOs.Simulation.Abstractions.Processes.ProcessId? ParentPid, string! AppId, HackerOs.Simulation.Abstractions.Processes.AppInstanceId AppInstanceId, HackerOs.App.Abstractions.AppKind Kind, HackerOs.Simulation.Abstractions.Sessions.LocalUserId UserId, HackerOs.Simulation.Abstractions.Sessions.SessionId SessionId, HackerOs.Simulation.Abstractions.Processes.ResourceProfile! ResourceProfile, System.Collections.Generic.IReadOnlyList<string!>? Arguments = null, HackerOs.App.Abstractions.VirtualPath? WorkingDirectory = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Environment = null, bool Auxiliary = false) -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ProcessStartRequest(HackerOs.Simulation.Abstractions.Processes.ProcessId? ParentPid, string! AppId, HackerOs.Simulation.Abstractions.Processes.AppInstanceId AppInstanceId, HackerOs.App.Abstractions.AppKind Kind, HackerOs.Simulation.Abstractions.Sessions.LocalUserId UserId, HackerOs.Simulation.Abstractions.Sessions.SessionId SessionId, HackerOs.Simulation.Abstractions.Processes.ResourceProfile! ResourceProfile, System.Collections.Generic.IReadOnlyList<string!>? Arguments = null, HackerOs.App.Abstractions.VirtualPath? WorkingDirectory = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Environment = null, bool Auxiliary = false, bool SystemScope = false) -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceProfile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceProfile!
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceProfile.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.SessionId.get -> HackerOs.Simulation.Abstractions.Sessions.SessionId
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.SessionId.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.SystemScope.get -> bool
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.SystemScope.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.UserId.get -> HackerOs.Simulation.Abstractions.Sessions.LocalUserId
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.UserId.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.WorkingDirectory.get -> HackerOs.App.Abstractions.VirtualPath?
@@ -1356,7 +1432,7 @@ HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState.ServerBa
 HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState.ServerConnectionState(System.Guid AccountId, System.Guid DeviceId, string! ServerBaseUrl, string! DeviceFingerprint, string! RefreshTokenOpaque, System.DateTimeOffset RefreshTokenExpiresUtc) -> void
 HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal
 HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.AuthenticatedAtUtc.get -> System.DateTimeOffset
-HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.AuthenticatedPrincipal(HackerOs.Simulation.Abstractions.Sessions.SessionId sessionId, HackerOs.Simulation.Abstractions.Sessions.LocalUserId userId, HackerOs.Simulation.Abstractions.Sessions.LocalLoginName loginName, string! displayName, HackerOs.App.Abstractions.AppAuthority authority, HackerOs.Simulation.Abstractions.Sessions.LocalGroupId primaryGroupId, System.Collections.Generic.IReadOnlyCollection<HackerOs.Simulation.Abstractions.Sessions.LocalGroupId>! groupIds, HackerOs.Simulation.Abstractions.Sessions.InstallationId installationId, HackerOs.Simulation.Abstractions.Sessions.DeviceId deviceId, System.DateTimeOffset authenticatedAtUtc) -> void
+HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.AuthenticatedPrincipal(HackerOs.Simulation.Abstractions.Sessions.SessionId sessionId, HackerOs.Simulation.Abstractions.Sessions.LocalUserId userId, HackerOs.Simulation.Abstractions.Sessions.LocalLoginName loginName, string! displayName, HackerOs.App.Abstractions.AppAuthority authority, HackerOs.Simulation.Abstractions.Sessions.LocalGroupId primaryGroupId, System.Collections.Generic.IReadOnlyCollection<HackerOs.Simulation.Abstractions.Sessions.LocalGroupId>! groupIds, HackerOs.Simulation.Abstractions.Sessions.InstallationId installationId, HackerOs.Simulation.Abstractions.Sessions.DeviceId deviceId, System.DateTimeOffset authenticatedAtUtc, string? homePath = null) -> void
 HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.Authority.get -> HackerOs.App.Abstractions.AppAuthority
 HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.DeviceId.get -> HackerOs.Simulation.Abstractions.Sessions.DeviceId
 HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal.DisplayName.get -> string!
@@ -1529,11 +1605,33 @@ HackerOs.Simulation.Abstractions.Settings.EmptyLegacySettingsStore.EmptyLegacySe
 HackerOs.Simulation.Abstractions.Settings.EmptyLegacySettingsStore.ReadAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Settings.LegacySettingsRecord!>!>
 HackerOs.Simulation.Abstractions.Settings.ILegacySettingsStore
 HackerOs.Simulation.Abstractions.Settings.ILegacySettingsStore.ReadAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Settings.LegacySettingsRecord!>!>
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.LayeredConfigFiles(string? SystemContent, string? UserContent, string! SystemPath, string! UserPath) -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemContent.get -> string?
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemContent.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPath.get -> string!
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPath.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPrivateContent.get -> string?
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPrivateContent.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPrivateDenied.get -> bool
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPrivateDenied.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.SystemPrivatePath.get -> string!
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserContent.get -> string?
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserContent.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPath.get -> string!
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPath.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPrivateContent.get -> string?
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPrivateContent.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPrivateDenied.get -> bool
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPrivateDenied.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles.UserPrivatePath.get -> string!
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.LayeredConfigSnapshot(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Values, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.Simulation.Abstractions.Settings.SettingLayer>! Sources, System.Collections.Generic.IReadOnlySet<string!>! LockedKeys, System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Settings.LayeredConfigWarning!>! Warnings) -> void
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.LockedKeys.get -> System.Collections.Generic.IReadOnlySet<string!>!
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.LockedKeys.init -> void
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.MaskedKeys.get -> System.Collections.Generic.IReadOnlySet<string!>!
+HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.MaskedKeys.init -> void
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.Sources.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.Simulation.Abstractions.Settings.SettingLayer>!
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.Sources.init -> void
 HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot.Values.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
@@ -1601,6 +1699,7 @@ HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Content.init ->
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Error.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemError?
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Error.init -> void
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Exists.get -> bool
+HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.IsDenied.get -> bool
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Revision.get -> long?
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.Revision.init -> void
 HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult.SettingsFileReadResult(string? Content, long? Revision, HackerOs.Simulation.Abstractions.FileSystem.FileSystemError? Error) -> void
@@ -1608,6 +1707,7 @@ HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher
 HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher.SettingsFilesWatcher(HackerOs.Simulation.Abstractions.FileSystem.IAppFileSystemWatchGateway! watch, System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.VirtualPath>! files, System.Func<System.Threading.Tasks.ValueTask>! onChanged) -> void
 HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles
 HackerOs.Simulation.Abstractions.Settings.SettingsSchema
 HackerOs.Simulation.Abstractions.Settings.SettingsSchema.Fields.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.Simulation.Abstractions.Settings.SettingFieldDeclaration!>!
 HackerOs.Simulation.Abstractions.Settings.SettingsSchema.MigrationIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -1687,16 +1787,35 @@ HackerOs.Simulation.Abstractions.Sync.GrantsSyncPayload.UserId.get -> string!
 HackerOs.Simulation.Abstractions.Sync.GrantsSyncPayload.UserId.init -> void
 HackerOs.Simulation.Abstractions.Sync.ISyncCursorRepository
 HackerOs.Simulation.Abstractions.Sync.ISyncCursorRepository.GetCursorAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+HackerOs.Simulation.Abstractions.Sync.ISyncCursorRepository.GetLastPulledAtAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.DateTimeOffset?>
 HackerOs.Simulation.Abstractions.Sync.ISyncCursorRepository.SetCursorAsync(string! domain, string? cursor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Simulation.Abstractions.Sync.ISyncCursorRepository.SetLastPulledAtAsync(string! domain, System.DateTimeOffset pulledAtUtc, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository
 HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository.GetAsync(string! domain, System.Guid recordId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState?>
+HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository.ListAsync(string! domain, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord!>!>
+HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository.RemoveAsync(string! domain, System.Guid recordId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository.SetAsync(string! domain, System.Guid recordId, HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState! state, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Simulation.Abstractions.Sync.ISyncRecordStateRepository.SetAsync(string! domain, System.Guid recordId, long revision, string! contentHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState
 HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.ContentHash.get -> string!
 HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.ContentHash.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.IsTombstone.get -> bool
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.IsTombstone.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.LocalEntryId.get -> System.Guid?
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.LocalEntryId.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.RelativePath.get -> string?
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.RelativePath.init -> void
 HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.Revision.get -> long
 HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.Revision.init -> void
-HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.SyncRecordTrackingState(long Revision, string! ContentHash) -> void
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.SyncRecordTrackingState(long Revision, string! ContentHash, string? RelativePath = null, System.Guid? LocalEntryId = null, bool IsTombstone = false, string? UserLogin = null) -> void
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.UserLogin.get -> string?
+HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState.UserLogin.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord.RecordId.get -> System.Guid
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord.RecordId.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord.State.get -> HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState!
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord.State.init -> void
+HackerOs.Simulation.Abstractions.Sync.SyncTrackedRecord.SyncTrackedRecord(System.Guid RecordId, HackerOs.Simulation.Abstractions.Sync.SyncRecordTrackingState! State) -> void
 HackerOs.Simulation.Abstractions.Time.ISimulationClock
 HackerOs.Simulation.Abstractions.Time.ISimulationClock.CurrentTick.get -> long
 HackerOs.Simulation.Abstractions.Time.ISimulationClock.DelayAsync(System.TimeSpan delay, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -1790,6 +1909,8 @@ override HackerOs.Simulation.Abstractions.Sessions.LocalUserId.ToString() -> str
 override HackerOs.Simulation.Abstractions.Sessions.SessionId.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Sync.FileSystemSyncContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Simulation.Abstractions.Sync.GrantsSyncContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+static HackerOs.Simulation.Abstractions.Diagnostics.AuditLineFormat.Format(HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord! record) -> string!
+static HackerOs.Simulation.Abstractions.Diagnostics.AuditLineFormat.TryParse(string! line, out HackerOs.Simulation.Abstractions.Diagnostics.AuditRecord? record) -> bool
 static HackerOs.Simulation.Abstractions.Diagnostics.LogLineFormat.Format(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticEntry! entry, long? processId = null) -> string!
 static HackerOs.Simulation.Abstractions.Diagnostics.LogLineFormat.Format(System.DateTimeOffset timestampUtc, HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity severity, string! source, long? processId, string! message, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? properties = null) -> string!
 static HackerOs.Simulation.Abstractions.Diagnostics.LogLineFormat.FormatAudit(HackerOs.Simulation.Abstractions.Diagnostics.AuditEntry! entry) -> string!
@@ -1817,6 +1938,8 @@ static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTopics.ForDirectory
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Cancelled(System.Guid transactionId, HackerOs.Simulation.Abstractions.FileSystem.FileSystemError! error) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Committed(System.Guid transactionId, System.Collections.Generic.IEnumerable<HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryId>! affectedEntryIds) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Rejected(System.Guid transactionId, HackerOs.Simulation.Abstractions.FileSystem.FileSystemError! error) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
+static HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway.Instance.get -> HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway!
+static HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.NeverStarted.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot!
 static HackerOs.Simulation.Abstractions.Metrics.CpuTimes.operator +(HackerOs.Simulation.Abstractions.Metrics.CpuTimes left, HackerOs.Simulation.Abstractions.Metrics.CpuTimes right) -> HackerOs.Simulation.Abstractions.Metrics.CpuTimes
 static HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.Zero.get -> HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters
 static HackerOs.Simulation.Abstractions.Network.SimulatedFileTypes.GetContentType(string? fileName) -> string!
@@ -1874,6 +1997,7 @@ static HackerOs.Simulation.Abstractions.Settings.ConfigDocumentFormat.Parse(stri
 static HackerOs.Simulation.Abstractions.Settings.ConfigDocumentFormat.Serialize(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! values) -> string!
 static HackerOs.Simulation.Abstractions.Settings.ConfigDocumentFormat.UnescapeValue(string! value) -> string!
 static HackerOs.Simulation.Abstractions.Settings.ConfigDocumentLines.Parse(string! content) -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Settings.ConfigLine!>!
+static HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.Resolve(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema, HackerOs.Simulation.Abstractions.Settings.LayeredConfigFiles! files) -> HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot!
 static HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.Resolve(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema, string? systemContent, string? userContent, string! systemPath, string! userPath) -> HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot!
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppDevice(string! appId, string! installationId, string! documentId = "settings") -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppRoamingUser(string! appId, string! userId, string! documentId = "settings") -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
@@ -1881,8 +2005,14 @@ static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppUser(
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppUserDevice(string! appId, string! userId, string! installationId, string! documentId = "settings") -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForOsAdmin(string! documentId) -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentPathFactory.GetProjectionPath(HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey key) -> HackerOs.App.Abstractions.VirtualPath
+static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.Apply(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema, string? publicContent, string? privateContent, System.Collections.Generic.IReadOnlyList<(HackerOs.Simulation.Abstractions.Settings.SettingFieldDeclaration! Field, string? Value)>! edits) -> (string? Public, string? Private)
+static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.GetPrivatePath(string! publicPath) -> string!
+static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.HasPrivateFields(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema) -> bool
+static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.IsPrivate(HackerOs.Simulation.Abstractions.Settings.SettingFieldDeclaration! field) -> bool
+static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.IsPrivateFile(string! path) -> bool
 static HackerOs.Simulation.Abstractions.Settings.SettingsSchema.FromManifest(HackerOs.App.Abstractions.AppSettingsSchemaManifest! manifest) -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
 static HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.EditAsync(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.App.Abstractions.VirtualPath path, System.Func<string?, string!>! edit, bool createIfMissing = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemError?>
+static HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.EditAsync(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.App.Abstractions.VirtualPath path, System.Func<string?, string!>! edit, bool createIfMissing, ushort fileMode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemError?>
 static HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.EnsureDirectoryAsync(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemError?>
 static HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.GetParent(HackerOs.App.Abstractions.VirtualPath path) -> HackerOs.App.Abstractions.VirtualPath
 static HackerOs.Simulation.Abstractions.Settings.SettingsTextFile.ReadAsync(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Settings.SettingsFileReadResult!>

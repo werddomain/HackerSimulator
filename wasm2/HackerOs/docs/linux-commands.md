@@ -69,12 +69,18 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `htop` | `-d DIXIÈMES`, `-u USER`, `-t`, `-C` | Barres par cœur, mémoire et swap en couleur, liste défilante avec sélection, arbre (`t`), tri (`P`/`M`/`T`/`N`), recherche (`/`), utilisateur (`u`), `k` tue le processus choisi (`process.manage`), `q` quitte. |
 | `kill` | `-s SIG`, `-SIG`, `-N`, `-l`, `PID` ou `%job` | `KILL` (9) tue tout de suite, sans prévenir ; les autres signaux demandent l'arrêt (`StopRequested`, raison `Terminated`, ADR 0069) puis forcent après 5 s ; `kill -0 PID` teste l'existence ; `%n` passe par le shell (`shell.control`). |
 | `jobs` | `-l -p -r -s` | Jobs du shell appelant ; les jobs terminés sont montrés une fois. |
-| `systemctl` (`service`) | `list-units`, `list-unit-files`, `status`, `start`, `stop`, `restart`, `enable`, `disable`, `mask`, `unmask`, `is-active`, `is-enabled` | Les apps `Service` du catalogue vues comme des unités `nom.service` ; automatique = `enabled`, manuel = `disabled`, désactivé = `masked`. Agir sur le service d'une autre app demande `services.manage`. `service NOM ACTION` est accepté. |
+| `systemctl` (`service`) | `list-units`, `list-unit-files`, `status`, `start`, `stop`, `restart`, `enable`, `disable`, `mask`, `unmask`, `is-active`, `is-enabled`, `is-failed`, `reset-failed` | Les apps `Service` du catalogue vues comme des unités `nom.service` ; automatique = `enabled`, manuel = `disabled`, désactivé = `masked`. États façon systemd (ADR 0097) : `status` affiche `Active: active (running)`, `activating (start)`, `deactivating (stop-sigterm)`, `failed (Result: exit-code|exception|killed|timeout) since …`, `Main PID`, la ligne `Status: "…"` et `Health:` quand le service les a donnés ; `is-active` imprime l'état et sort avec 0 seulement pour `active` (3 sinon) ; `is-failed` sort avec 0 pour `failed` ; `reset-failed [UNIT]` efface l'échec (toutes les unités sans argument). Un service système (démarré au boot) ne se pilote qu'en administrateur. Agir sur le service d'une autre app demande `services.manage`. `service NOM ACTION` est accepté. |
 | `watch` | `-n SECONDES`, `-t`, `-g`, `-e` | Relance la ligne par `IShellSession.RunAsync` (sous-shell : tubes et variables marchent) et affiche sa dernière sortie en plein écran ; `q` ou Ctrl+C quitte. |
 | `sleep` | `N[smhd]…`, décimaux | Ctrl+C l'interrompt (130). |
 | `stress` | `-c N`, `-t SECONDES`, `--yield` | Comme `stress(1)` : N boucles de calcul sans rendre la main (`--yield` : avec points d'arrêt). Tourne dans un Web Worker : le bureau reste fluide, le cœur passe « not-responding », `kill -9` termine le worker ([`worker-processes.md`](worker-processes.md)). |
 | `whoami` | — | `root` sous `sudo`. |
 | `which` | `NOM…` | `/usr/bin/NOM` pour une commande installée, `/bin/sh` pour le shell ; code 1 sinon. |
+
+## Sécurité
+
+| Commande | Options | Notes |
+|---|---|---|
+| `ausearch` | `-f CHEMIN`, `-ua`/`-ui`/`-ul UTILISATEUR`, `-c COMM`, `--success yes\|no` (`-sv`), `-if FICHIER`, `-i` | Comme l'outil d'`auditd` : cherche dans `/var/log/audit.log` et ses archives (ADR 0100 §3, [`sensitive-settings.md`](sensitive-settings.md)). Le journal est `0600 root` : `sudo ausearch -f /etc/hosts`. `-f` accepte le chemin, un fichier dessous ou un nom de fichier ; `-ul` cherche l'humain d'origine (`auid`). Code 1 et `<no matches>` sans résultat. |
 
 ## Réseau
 
@@ -105,7 +111,8 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`) avec les passerelles factices.
-- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées dont 63 commandes (`stress` ajoutée par `rebuild/5-worker-processes`).
+- `Tests/HackerOs.Ecosystem.Tests` : 81 apps intégrées dont 65 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `ausearch` par `v3/8-settings-security`).
+- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch`.
 
 ## Liste des tâches
 
@@ -119,5 +126,6 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - [x] `systemctl`/`service`.
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.
+- [x] `ausearch` (`v3/8-settings-security`, ADR 0100).
 - [x] Tests et documentation.
 - [x] ADR 0069 (`rebuild/5-graceful-stop`) : `find`, `grep` (et `grep -r`), `du`, `zip`, `unzip`, `locate` appellent `HackProcess.CheckpointAsync` dans leurs boucles ; `kill` envoie `Terminated`.

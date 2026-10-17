@@ -24,6 +24,7 @@ public sealed class InMemoryProcessManager : IProcessManager
     private long _nextPid = 1;
     private readonly Dictionary<ProcessId, Entry> _active = [];
     private readonly List<ProcessRecord> _history = [];
+    private readonly CancellationTokenSource _systemRoot = new();
 
     /// <summary>Initializes an in-memory process manager.</summary>
     /// <param name="clock">Simulation clock used for every timestamp and bounded-stop deadline.</param>
@@ -71,7 +72,10 @@ public sealed class InMemoryProcessManager : IProcessManager
             ProcessId pid = ProcessId.FromInt64(_nextPid++);
             // Copy the parent's directory and environment now, while it is known to be active.
             _environments.Create(request, pid);
-            CancellationTokenSource tokenSource = _session.CreateLinkedCancellationSource();
+            // ADR 0097 section 4: a boot service lives until shutdown, not until logout.
+            CancellationTokenSource tokenSource = request.SystemScope
+                ? CancellationTokenSource.CreateLinkedTokenSource(_systemRoot.Token)
+                : _session.CreateLinkedCancellationSource();
             DateTimeOffset now = _clock.UtcNow;
 
             ProcessRecord record = new(
@@ -209,6 +213,31 @@ public sealed class InMemoryProcessManager : IProcessManager
             return ForceTerminal(entry, reason);
         }
     }
+
+    /// <inheritdoc />
+    public ProcessRecord? SetServiceHealth(ProcessId pid, ServiceHealth health)
+    {
+        lock (_gate)
+        {
+            if (!_active.TryGetValue(pid, out Entry? entry) || entry.Record.Kind != AppKind.Service)
+            {
+                return null;
+            }
+
+            ProcessRecord old = entry.Record;
+            entry.Record = new ProcessRecord(
+                old.Pid, old.ParentPid, old.AppId, old.AppInstanceId, old.Kind, old.UserId, old.SessionId,
+                old.State, old.ResourceProfile, health, old.CreatedAtUtc, old.StartedAtUtc,
+                old.StoppedAtUtc, old.ExitCode, old.ExitReason);
+            return entry.Record;
+        }
+    }
+
+    /// <summary>
+    /// Cancels the token of every system-scope process (ADR 0097, section 4), as the last step of a
+    /// shutdown; their stop is the service manager's job before that.
+    /// </summary>
+    public void CancelSystemScope() => _systemRoot.Cancel();
 
     /// <inheritdoc />
     public bool TryGetActive(ProcessId pid, out ProcessRecord process)

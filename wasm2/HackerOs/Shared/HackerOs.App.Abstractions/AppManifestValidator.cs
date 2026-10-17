@@ -69,6 +69,17 @@ public static partial class AppManifestValidator
             AddError(errors, "manifest.autoStart.forbidden", "autoStart", "Only service apps can declare autoStart.");
         }
 
+        if (manifest.ServiceStartup is not null && manifest.Kind != AppKind.Service)
+        {
+            // ADR 0097 section 4: boot or login only means something for a service.
+            AddError(errors, "manifest.serviceStartup.forbidden", "serviceStartup", "Only service apps can declare serviceStartup.");
+        }
+
+        if (manifest.ServiceStartup is { } startup && !Enum.IsDefined(startup))
+        {
+            AddError(errors, "manifest.serviceStartup.invalid", "serviceStartup", "serviceStartup must be 'login' or 'boot'.");
+        }
+
         ValidateKindSpecificFields(manifest, errors);
 
         return new ManifestValidationResult(errors);

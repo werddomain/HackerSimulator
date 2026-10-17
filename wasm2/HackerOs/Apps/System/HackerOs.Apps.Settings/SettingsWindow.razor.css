@@ -418,3 +418,44 @@
     opacity: 0.45;
     cursor: not-allowed;
 }
+
+/* Synchronization tab (ADR 0101). */
+.sync-pause-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--hos-text-primary, #e6f1f2);
+    cursor: pointer;
+}
+
+.sync-pause-toggle input {
+    accent-color: var(--hos-accent, #2bd4c4);
+}
+
+.sync-conflict-list {
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sync-conflict-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 10px;
+    border-left: 3px solid #f5c451;
+    border-radius: 4px;
+    background: rgb(245 196 81 / 8%);
+    overflow-wrap: anywhere;
+}
+
+.sync-conflict-date {
+    font-size: 11px;
+    color: var(--hos-text-secondary, #a8bac4);
+}
