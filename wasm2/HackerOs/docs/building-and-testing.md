@@ -236,7 +236,9 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
     ARIA écrits en `"true"`/`"false"`, voir
     [`old/common-pitfalls.md`](old/common-pitfalls.md) §8 ; le test du choix
     Mobile attend la bascule avant de recharger, car l'écriture du réglage
-    dans `~/.config/hackeros` prend environ 2 s dans le navigateur) ;
+    dans `~/.config/hackeros` n'est pas instantanée : environ 2 s avant
+    `web/15`, 235 ms depuis, voir
+    [`filesystem-path-lookup.md`](filesystem-path-lookup.md)) ;
   - `HackerOs.Pwa.E2E.Tests` : 0/5, le conteneur n'a pas d'IPv6 et la suite
     se lie volontairement à `[::1]` (le service worker refuse
     `127.0.0.1` et `localhost`) : `SocketException : Address family not

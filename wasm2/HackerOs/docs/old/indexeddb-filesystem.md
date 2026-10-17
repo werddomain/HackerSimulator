@@ -47,7 +47,9 @@ The root directory uses one reserved stable entry ID and is inserted with
 ## Metadata Reads
 
 `IndexedDbFileSystemReader` resolves canonical paths from the stable root by
-following compound `(parentId, name)` links. Missing links return absence;
+following compound `(parentId, name)` links. Since ADR 0090 the whole walk runs
+inside one read-only transaction (the `resolvePath` operation of
+`indexedDb.js`, see [`../filesystem-path-lookup.md`](../filesystem-path-lookup.md)). Missing links return absence;
 links that reference missing entries are reported as persisted-data corruption.
 Immediate-child enumeration uses the `parentId` index, loads child entries in
 one ordered transaction batch, and returns names in ordinal order. Manual

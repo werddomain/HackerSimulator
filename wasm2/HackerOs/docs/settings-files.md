@@ -191,6 +191,11 @@ ni la connexion. Le schéma IndexedDB ne change pas.
 - La synchronisation des paramètres (`ISettingsSyncService`) disparaît : les
   fichiers sont synchronisés avec le reste du système de fichiers (l'ADR 0044
   remplace l'ADR 0029).
+- Coût d'une écriture : les réglages passent par le système de fichiers comme
+  tout fichier. Depuis l'ADR 0090, chaque chemin est recherché en une requête à
+  IndexedDB ; enregistrer le choix Mobile/Desktop coûte 51 transactions
+  (235 ms) au lieu de 604 (845 ms). Voir
+  [`filesystem-path-lookup.md`](filesystem-path-lookup.md).
 
 ## Tests de contrat
 

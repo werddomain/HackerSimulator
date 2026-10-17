@@ -128,6 +128,98 @@ public sealed class FileSystemPathResolverTests
     }
 
     [Fact]
+    public async Task Walking_provider_resolves_a_deep_path_in_one_request()
+    {
+        WalkingMetadataProvider root = new("root");
+        root.AddDirectory("/home");
+        root.AddDirectory("/home/user");
+        root.AddDirectory("/home/user/.config");
+        root.AddDirectory("/home/user/.config/hackeros");
+        root.AddFile("/home/user/.config/hackeros/ui-platform.config");
+        FileSystemPathResolver resolver = CreateResolver(root);
+
+        FileSystemResult<FileSystemPathResolution> result = await resolver.ResolveAsync(
+            VirtualPath.Parse("/home/user/.config/hackeros/ui-platform.config"),
+            FileSystemLinkBehavior.Follow,
+            FileSystemOperation.Write,
+            CreateContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("/home/user/.config/hackeros/ui-platform.config", result.Value?.Path.Value);
+        Assert.Equal(["/home/user/.config/hackeros/ui-platform.config"], root.WalkPaths);
+        Assert.Empty(root.StatPaths);
+    }
+
+    [Fact]
+    public async Task Walking_provider_reports_the_first_missing_component()
+    {
+        WalkingMetadataProvider root = new("root");
+        root.AddDirectory("/home");
+        FileSystemPathResolver resolver = CreateResolver(root);
+
+        FileSystemResult<FileSystemPathResolution> result = await resolver.ResolveAsync(
+            VirtualPath.Parse("/home/user/.config/file"),
+            FileSystemLinkBehavior.Follow,
+            FileSystemOperation.Read,
+            CreateContext());
+
+        Assert.Equal(FileSystemErrorCode.NotFound, result.Error?.Code);
+        Assert.Equal("/home/user", result.Error?.Path?.Value);
+    }
+
+    [Fact]
+    public async Task Walking_provider_keeps_traverse_permission_and_link_restarts()
+    {
+        WalkingMetadataProvider root = new("root");
+        root.AddDirectory("/private", owner: "other", mode: 0x01C0);
+        root.AddFile("/private/file.txt");
+        root.AddDirectory("/home");
+        root.AddLink("/home/docs", "/srv/docs");
+        root.AddDirectory("/srv");
+        root.AddDirectory("/srv/docs");
+        root.AddFile("/srv/docs/readme.txt");
+        FileSystemPathResolver resolver = CreateResolver(root);
+
+        FileSystemResult<FileSystemPathResolution> denied = await resolver.ResolveAsync(
+            VirtualPath.Parse("/private/file.txt"),
+            FileSystemLinkBehavior.Follow,
+            FileSystemOperation.Read,
+            CreateContext());
+        FileSystemResult<FileSystemPathResolution> followed = await resolver.ResolveAsync(
+            VirtualPath.Parse("/home/docs/readme.txt"),
+            FileSystemLinkBehavior.Follow,
+            FileSystemOperation.Read,
+            CreateContext());
+
+        Assert.Equal(FileSystemErrorCode.PermissionDenied, denied.Error?.Code);
+        Assert.Equal("/srv/docs/readme.txt", followed.Value?.Path.Value);
+        Assert.Equal(1, followed.Value?.FollowedSymbolicLinks);
+        // The walk stops at the link (a link has no children); the resolver restarts on the target.
+        Assert.Equal(["/private/file.txt", "/home/docs/readme.txt", "/srv/docs/readme.txt"], root.WalkPaths);
+    }
+
+    [Fact]
+    public async Task Path_crossing_a_mount_is_stated_per_prefix()
+    {
+        WalkingMetadataProvider root = new("root");
+        MetadataProvider mounted = new("mounted");
+        root.AddDirectory("/etc");
+        mounted.AddDirectory("/etc/hackeros");
+        mounted.AddFile("/etc/hackeros/settings.json");
+        FileSystemPathResolver resolver = CreateResolver(root, mounted);
+
+        FileSystemResult<FileSystemPathResolution> result = await resolver.ResolveAsync(
+            VirtualPath.Parse("/etc/hackeros/settings.json"),
+            FileSystemLinkBehavior.Follow,
+            FileSystemOperation.Read,
+            CreateContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Empty(root.WalkPaths);
+        Assert.Equal(["/etc"], root.StatPaths);
+    }
+
+    [Fact]
     public void Virtual_path_normalizes_unicode_and_enforces_encoded_limits()
     {
         VirtualPath normalized = VirtualPath.Parse("/home/re\u0301sume\u0301.txt");
@@ -161,7 +253,7 @@ public sealed class FileSystemPathResolverTests
             new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero));
     }
 
-    private sealed class MetadataProvider(string providerId) : IFileSystemProvider
+    private class MetadataProvider(string providerId) : IFileSystemProvider
     {
         private readonly Dictionary<string, FileSystemEntryMetadata> _entries =
             new(StringComparer.Ordinal);
@@ -181,6 +273,9 @@ public sealed class FileSystemPathResolverTests
 
         public void AddLink(string path, string target, string? id = null) =>
             Add(path, FileSystemEntryKind.SymbolicLink, target, id);
+
+        protected FileSystemEntryMetadata? Find(string path) =>
+            _entries.TryGetValue(path, out FileSystemEntryMetadata? metadata) ? metadata : null;
 
         public ValueTask<FileSystemResult<FileSystemEntrySnapshot>> StatAsync(
             FileSystemStatRequest request,
@@ -233,6 +328,34 @@ public sealed class FileSystemPathResolverTests
                 FileSystemEntryKind.SymbolicLink => new SymbolicLinkMetadata(entryId, owner, "users", permissions, timestamps, 1, target!),
                 _ => throw new ArgumentOutOfRangeException(nameof(kind))
             };
+        }
+    }
+
+    /// <summary>A provider that looks a whole path up in one request, like the IndexedDB one.</summary>
+    private sealed class WalkingMetadataProvider(string providerId) : MetadataProvider(providerId), IFileSystemPathWalkProvider
+    {
+        public List<string> WalkPaths { get; } = [];
+
+        public ValueTask<FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>> StatComponentsAsync(
+            VirtualPath path,
+            FileSystemAuthorizationContext context,
+            CancellationToken cancellationToken = default)
+        {
+            WalkPaths.Add(path.Value);
+            string[] names = path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            List<FileSystemEntrySnapshot> components = [];
+            for (int count = 1; count <= names.Length; count++)
+            {
+                VirtualPath prefix = VirtualPath.Parse($"/{string.Join('/', names.Take(count))}");
+                if (Find(prefix.Value) is not { } metadata)
+                {
+                    break;
+                }
+
+                components.Add(new FileSystemEntrySnapshot(prefix, metadata));
+            }
+
+            return ValueTask.FromResult(FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>.Success(components));
         }
     }
 }

@@ -127,6 +127,11 @@ UTF-8 bytes per segment and 4,096 UTF-8 bytes per canonical path.
 - reports non-directory intermediate entries; and
 - preserves the final link when an operation requests no-follow behavior.
 
+Since ADR 0090, when every prefix of a path is on one mount whose provider
+implements `IFileSystemPathWalkProvider` (IndexedDB), the resolver gets all the
+components in one request instead of one `lstat` per prefix, then applies the
+same rules (see [`../filesystem-path-lookup.md`](../filesystem-path-lookup.md)).
+
 Deleting, moving, or copying a symbolic link therefore acts on the link entry,
 not its target. `~` and other presentation aliases are deliberately rejected by
 `VirtualPath`; shell/dialog code expands them before filesystem parsing.

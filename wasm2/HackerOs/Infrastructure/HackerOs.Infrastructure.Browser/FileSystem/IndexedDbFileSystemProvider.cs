@@ -6,7 +6,7 @@ using Microsoft.JSInterop;
 namespace HackerOs.Infrastructure.Browser.FileSystem;
 
 /// <summary>Provides persistent browser filesystem operations backed by IndexedDB.</summary>
-public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDisposable
+public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSystemPathWalkProvider, IAsyncDisposable
 {
     private readonly IndexedDbFileSystemReader _reader;
     private readonly IndexedDbFileSystemWriter _writer;
@@ -731,6 +731,45 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IAsyncDis
         {
             return FileSystemResult<FileSystemEntrySnapshot>.Failure(
                 Error(FileSystemOperation.Stat, FileSystemErrorCode.Cancelled, request.Path));
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>> StatComponentsAsync(
+        VirtualPath path,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>.Failure(
+                Error(FileSystemOperation.Stat, FileSystemErrorCode.Cancelled, path));
+        }
+
+        try
+        {
+            IReadOnlyList<IndexedDbFileSystemEntryRecord> components =
+                await _reader.ResolveComponentsAsync(path, cancellationToken).ConfigureAwait(false);
+            string[] names = path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            FileSystemEntrySnapshot[] snapshots = new FileSystemEntrySnapshot[components.Count];
+            for (int index = 0; index < components.Count; index++)
+            {
+                VirtualPath prefix = VirtualPath.Parse($"/{string.Join('/', names, 0, index + 1)}");
+                snapshots[index] = new FileSystemEntrySnapshot(prefix, components[index].ToMetadata());
+            }
+
+            return FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>.Success(snapshots);
+        }
+        catch (InvalidDataException)
+        {
+            return FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>.Failure(
+                Error(FileSystemOperation.Stat, FileSystemErrorCode.ProviderFailure, path));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>>.Failure(
+                Error(FileSystemOperation.Stat, FileSystemErrorCode.Cancelled, path));
         }
     }
 
