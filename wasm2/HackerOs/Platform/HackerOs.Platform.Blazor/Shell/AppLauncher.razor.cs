@@ -33,6 +33,10 @@ public partial class AppLauncher : ComponentBase, IDisposable
     [Inject]
     private AppCatalog Catalog { get; set; } = null!;
 
+    /// <summary>Gets the session language: app names and descriptions are shown in it (ADR 0104 section 4).</summary>
+    [Inject]
+    private HackerOs.Platform.Core.Globalization.SessionLocaleService Locale { get; set; } = null!;
+
     /// <summary>Gets the live enablement registry used to suppress disabled applications.</summary>
     [Inject]
     private IAppEnablementRegistry Enablement { get; set; } = null!;
@@ -320,7 +324,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
     private void RebuildProjection(bool resetSelection = false)
     {
         _projection = LauncherAppProjection.Create(
-            Catalog.Manifests.Values,
+            Catalog.Manifests.Values.Select(manifest => Catalog.Localize(manifest, Locale.Culture)),
             Enablement,
             _pinnedAppIds,
             _selectedCategory,

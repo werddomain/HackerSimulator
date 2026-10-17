@@ -41,7 +41,12 @@ public static class BuiltInApplicationsAggregator
 
             if (ManifestFileReader.TryRead(input.ManifestPath, out AppManifest? manifest, out IReadOnlyList<GeneratorDiagnostic> readErrors))
             {
-                applications.Add(new BuiltInApplication(input.IsSystemApp, manifest!, InspectImage(input)));
+                // ADR 0104 section 4: the translated texts travel with the catalog, so the launcher
+                // can show them before the app's assembly is ever loaded.
+                IReadOnlyDictionary<string, AppManifestText> localized =
+                    ManifestLocalizationGenerator.ReadReferenced(input.ManifestPath, manifest!, diagnostics);
+                applications.Add(new BuiltInApplication(
+                    input.IsSystemApp, manifest!, InspectImage(input), localized.Count > 0 ? localized : null));
             }
             else
             {

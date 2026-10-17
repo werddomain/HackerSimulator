@@ -50,6 +50,20 @@ public static class HackEnvironment
     public static string MachineName => Gateway.MachineName;
 
     /// <summary>
+    /// Gets the language of the current process's texts, <c>en</c> or <c>fr</c> (ADR 0104):
+    /// <c>LC_ALL</c>, <c>LC_MESSAGES</c> then <c>LANG</c>, like a program's <c>setlocale</c>.
+    /// </summary>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static System.Globalization.CultureInfo Culture => HackExecutionContext.Current.Culture;
+
+    /// <summary>
+    /// Gets the culture of the current process's dates and numbers, the full locale of
+    /// <c>LC_TIME</c> (or <c>LC_ALL</c>, then <c>LANG</c>), e.g. <c>fr-CA</c> (ADR 0104).
+    /// </summary>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static System.Globalization.CultureInfo FormatCulture => HackExecutionContext.Current.FormatCulture;
+
+    /// <summary>
     /// Changes the current process's working directory, like <c>chdir</c>. A relative path is
     /// resolved against the current directory and <c>~</c> expands to the home directory.
     /// </summary>

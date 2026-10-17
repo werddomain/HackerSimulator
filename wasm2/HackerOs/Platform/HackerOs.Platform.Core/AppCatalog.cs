@@ -65,9 +65,39 @@ public sealed class AppCatalog
     {
         ArgumentNullException.ThrowIfNull(applications);
         BuiltInApplication[] items = applications.ToArray();
-        return Build(
+        AppCatalogBuildResult result = Build(
             items.Select(item => item.Manifest),
             items.Where(item => item.IsSystemApp).Select(item => item.Manifest.Id));
+        if (result.Catalog is { } catalog)
+        {
+            // ADR 0104 section 4: the translated texts the host build read from each app's localization files.
+            catalog.Localized = items
+                .Where(static item => item.Localized is { Count: > 0 })
+                .ToFrozenDictionary(static item => item.Manifest.Id, static item => item.Localized!, StringComparer.Ordinal);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the translated name, description and usage of each app, by app id then culture
+    /// (ADR 0104, section 4). Apps only in English are absent.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, AppManifestText>> Localized { get; private set; } =
+        FrozenDictionary<string, IReadOnlyDictionary<string, AppManifestText>>.Empty;
+
+    /// <summary>
+    /// Returns <paramref name="manifest"/> with its name, description and usage in
+    /// <paramref name="culture"/> when this catalog has them (ADR 0104, section 4), for display
+    /// only: ids, command names and everything else stay as they are.
+    /// </summary>
+    /// <param name="manifest">A manifest of this catalog (any other is returned unchanged).</param>
+    /// <param name="culture">The language of the surface showing it.</param>
+    public AppManifest Localize(AppManifest manifest, System.Globalization.CultureInfo culture)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(culture);
+        return AppManifestLocalization.Apply(manifest, Localized.GetValueOrDefault(manifest.Id), culture);
     }
 
     /// <summary>Builds a catalog without loading or executing app assemblies.</summary>

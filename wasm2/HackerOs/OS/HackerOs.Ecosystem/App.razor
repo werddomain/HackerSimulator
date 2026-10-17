@@ -23,6 +23,7 @@
 @inject ThemePreferenceService ThemePreference
 @inject UserThemeCatalogService UserThemes
 @inject HackerOs.Platform.Core.Clipboard.HostClipboardBridge HostClipboard
+@inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 
 <ThemeScope ThemeId="@ActiveTheme.BaseThemeId"
             Tokens="@ActiveTheme.UserTheme?.Tokens"
@@ -280,6 +281,12 @@
 
         try
         {
+            // ADR 0104: every process may speak French whatever the browser's language, so the
+            // French satellite assemblies are loaded once, before any app renders; the sign-in
+            // screens then speak the system language (/etc/locale.conf).
+            await HackerOs.Infrastructure.Browser.Globalization.BrowserSatelliteAssemblies.LoadAsync(
+                HackerOs.AppSdk.Globalization.HackLocale.SupportedLanguages.Select(static culture => culture.Name));
+            await SessionLocale.UseSystemLocaleAsync();
             await PlatformPreference.InitializeAsync();
             await ThemePreference.InitializeAsync();
             await UserThemes.InitializeAsync();
@@ -330,7 +337,8 @@
             State.BeginLoginProgress();
             StateHasChanged();
             await Task.Delay(50);
-            await SessionService.LoginAsync(loginName, SetupPassword);
+            AuthenticatedPrincipal principal = await SessionService.LoginAsync(loginName, SetupPassword);
+            await UseSessionLocaleAsync(principal);
             ClearPasswords();
             State.CompleteLogin();
         }
@@ -354,7 +362,8 @@
             State.BeginLoginProgress();
             StateHasChanged();
             await Task.Delay(50);
-            await SessionService.LoginAsync(LocalLoginName.Parse(SelectedLogin), LoginPassword);
+            AuthenticatedPrincipal principal = await SessionService.LoginAsync(LocalLoginName.Parse(SelectedLogin), LoginPassword);
+            await UseSessionLocaleAsync(principal);
             ClearPasswords();
             State.CompleteLogin();
         }
@@ -366,6 +375,23 @@
         finally
         {
             IsSubmitting = false;
+        }
+    }
+
+    /// <summary>
+    /// ADR 0104: the desktop takes the language of the user's login environment (system locale,
+    /// /etc/environment, ~/.config/locale.conf). An unreadable file never blocks the session: the
+    /// language already shown is kept and the problem is logged by the provider.
+    /// </summary>
+    private async Task UseSessionLocaleAsync(AuthenticatedPrincipal principal)
+    {
+        try
+        {
+            await SessionLocale.UseSessionLocaleAsync(principal);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // Keep the sign-in screen's language.
         }
     }
 

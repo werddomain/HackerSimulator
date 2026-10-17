@@ -79,9 +79,9 @@ internal sealed class AppCatalogGateway : IAppCatalogGateway
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<HackAppInfo> installed = [.. _catalog.Manifests.Values
             .Where(manifest => _enablement.IsEnabled(manifest.Id))
-            .OrderBy(manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(manifest => manifest.Id, StringComparer.Ordinal)
-            .Select(Describe)];
+            .Select(Describe)
+            .OrderBy(info => info.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(info => info.Id, StringComparer.Ordinal)];
         return ValueTask.FromResult(installed);
     }
 
@@ -106,7 +106,13 @@ internal sealed class AppCatalogGateway : IAppCatalogGateway
             : [.. others];
     }
 
-    private HackAppInfo Describe(AppManifest manifest) => HackAppInfo.FromManifest(manifest, _catalog.IsSystemApp(manifest.Id));
+    /// <summary>
+    /// Describes an app in the calling process's language (ADR 0104 section 4): <c>LANG=fr_CA.UTF-8</c>
+    /// lists "Calculatrice", <c>LANG=en_US.UTF-8</c> "Calculator".
+    /// </summary>
+    private HackAppInfo Describe(AppManifest manifest) => HackAppInfo.FromManifest(
+        _catalog.Localize(manifest, _ambient.Context?.Culture ?? HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage),
+        _catalog.IsSystemApp(manifest.Id));
 
     private void OnInstallationChanged(object? sender, EventArgs e)
     {

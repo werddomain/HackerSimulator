@@ -205,6 +205,24 @@ public interface IAppExecutionContext
     IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
 
     /// <summary>
+    /// Gets the language of this instance's texts (ADR 0104, the "language gateway"): <c>en</c> or
+    /// <c>fr</c>, read from its own process environment (<c>LC_ALL</c>, <c>LC_MESSAGES</c>, then
+    /// <c>LANG</c>) at every access, never from the browser tab's shared thread culture.
+    /// <see cref="Globalization.HackLocalization.GetLocalizer{TResource}(IAppExecutionContext?)"/>
+    /// looks texts up in this culture.
+    /// </summary>
+    System.Globalization.CultureInfo Culture =>
+        Globalization.HackLocale.ResolveLanguage(Environment.GetVariable);
+
+    /// <summary>
+    /// Gets the culture of this instance's dates and numbers (ADR 0104, section 1): the full locale
+    /// of <c>LC_TIME</c> (or <c>LC_ALL</c>, then <c>LANG</c>), e.g. <c>fr-CA</c>, which can differ
+    /// from <see cref="Culture"/>'s language.
+    /// </summary>
+    System.Globalization.CultureInfo FormatCulture =>
+        Globalization.HackLocale.ResolveFormatCulture(Environment.GetVariable);
+
+    /// <summary>
     /// Gets this instance's network stack: resolution, ping, HTTP and TCP probes, with the OS's
     /// real-network fallback (ADR 0056, section 6), read by <c>HackDns</c>, <c>HackPing</c>,
     /// <c>HackHttpClient</c> and <c>HackTcpClient</c>. Defaults to an unsupported gateway so existing

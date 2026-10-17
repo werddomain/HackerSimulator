@@ -20,6 +20,9 @@ internal sealed class AppAmbientContextBinding
     /// <summary>Binds the context every wrapped callback enters. Called once by the factory.</summary>
     public void Bind(IAppExecutionContext context) => _context = context ?? throw new ArgumentNullException(nameof(context));
 
+    /// <summary>Gets the bound context, or <see langword="null"/> before <see cref="Bind"/>.</summary>
+    public IAppExecutionContext? Context => _context;
+
     /// <summary>Wraps <paramref name="callback"/> so it runs inside the bound app's ambient scope.</summary>
     public Action Wrap(Action callback)
     {

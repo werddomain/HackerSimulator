@@ -34,6 +34,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Network.Local;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Sessions;
@@ -476,6 +477,9 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetService<ILogger<LoginEnvironmentProvider>>()));
+        // ADR 0104: the platform's language (sign-in screens: /etc/locale.conf; desktop: the
+        // user's login environment) and the IStringLocalizer<T> every platform component injects.
+        services.AddHackerOsPlatformLocalization();
         services.AddSingleton<IResourceSimulator>(provider => new DeterministicResourceSimulator(
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),

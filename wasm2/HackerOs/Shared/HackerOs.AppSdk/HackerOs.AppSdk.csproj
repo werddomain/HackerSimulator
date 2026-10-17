@@ -6,6 +6,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- ADR 0104: IStringLocalizer, the contract HackStringLocalizer implements. -->
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- ADR 0069: the OS's per-process scheduler stamps the time slice CheckpointAsync reads (HackProcessSlice). -->
     <InternalsVisibleTo Include="HackerOs.Platform.Core" />
     <InternalsVisibleTo Include="HackerOs.AppSdk.Tests" />
