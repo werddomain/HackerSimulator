@@ -235,7 +235,14 @@ HackOpenFileResult opened = await HackApps.OpenFileAsync("~/notes.md");   // Ope
 - `GetInstalledAsync` : apps installées pour l'utilisateur, triées par nom ;
   une app désinstallée (ADR 0048) n'y figure pas. **Aucune capacité.**
 - `GetHandlersAsync` : apps fenêtrées installées qui déclarent l'extension ou
-  le type MIME ; le défaut de `/etc/hackeros/file-associations.json` en tête.
+  le type MIME ; le défaut en tête : celui de l'utilisateur
+  (`~/.config/hackeros/file-associations.json`), sinon celui de
+  `/etc/hackeros/file-associations.json` (ADR 0121).
+- `GetDefaultHandlersAsync`, `SetDefaultHandlerAsync(target, appId, action)` et
+  `ResetDefaultHandlerAsync(target, action)` (ADR 0121, chantier `v3/4b`) :
+  défauts de l'utilisateur et de la machine, choix propre à l'utilisateur
+  (`file-associations.read`, plus `filesystem.user-home.write` pour écrire) ;
+  voir [`user-file-associations.md`](user-file-associations.md).
 - `LaunchAsync` et `OpenFileAsync` passent par `IAppIntentGateway`
   (`apps.launch`). Échec : `HackAppLaunchException` (app inconnue,
   désinstallée, ou erreur au démarrage).

@@ -1,2 +1,4 @@
 #nullable enable
 override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+HackerOs.Apps.FileExplorer.OpenWithDialog.Extension.get -> string?
+HackerOs.Apps.FileExplorer.OpenWithDialog.Extension.set -> void

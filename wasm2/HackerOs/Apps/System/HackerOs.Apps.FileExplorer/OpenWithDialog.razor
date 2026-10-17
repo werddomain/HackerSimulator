@@ -17,6 +17,10 @@
                     </MudListItem>
                 }
             </MudList>
+            @if (CanRemember)
+            {
+                <MudCheckBox T="bool" @bind-Value="_alwaysUse" Label="@L["OpenWith.AlwaysUse", Extension!]" Dense="true" />
+            }
         </div>
     </DialogContent>
     <DialogActions>
@@ -35,7 +39,21 @@
     [Parameter]
     public IReadOnlyList<HackAppInfo> AvailableApps { get; set; } = [];
 
+    /// <summary>
+    /// Lowercase extension of the file (<c>.md</c>), or <see langword="null"/>: with one, the dialog
+    /// offers "Always use" for an app that declares it (ADR 0121, section 4).
+    /// </summary>
+    [Parameter]
+    public string? Extension { get; set; }
+
     private HackAppInfo? _selectedApp;
+    private bool _alwaysUse;
+
+    // Only an app that declares the extension can become its default: the OS refuses the others.
+    private bool CanRemember => Extension is not null && _selectedApp is not null
+        && _selectedApp.FileHandlers.Any(handler =>
+            handler.Extensions.Any(e => string.Equals(e, Extension, StringComparison.OrdinalIgnoreCase))
+            && handler.Actions.Any(a => string.Equals(a, "open", StringComparison.OrdinalIgnoreCase)));
 
     // "Select an installed app to open {0}:" split around the bold file path.
     private (string Before, string After) PromptText => Strings.Around(L["OpenWith.Prompt"]);
@@ -49,7 +67,7 @@
     {
         if (_selectedApp is not null)
         {
-            MudDialog.Close(DialogResult.Ok(_selectedApp));
+            MudDialog.Close(DialogResult.Ok(new OpenWithChoice(_selectedApp, CanRemember && _alwaysUse)));
         }
     }
 

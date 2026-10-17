@@ -256,7 +256,8 @@ public sealed class AppExecutionContextFactory
         AppClockGateway clock = new(_clock);
         AppCatalogGateway? catalogGateway = _appCatalog is null
             ? null
-            : new AppCatalogGateway(_appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation);
+            : new AppCatalogGateway(
+                _appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation, principal, capabilities);
         AppManagementGateway? managementGateway = _appCatalog?.Installation is null
             ? null
             : new AppManagementGateway(
@@ -349,6 +350,12 @@ public sealed class AppExecutionContextFactory
             context.SystemBackup = administration.SystemBackup;
         }
 
+        if (administration.UserAccounts is not null)
+        {
+            // ADR 0120: accounts and passwords, set after construction like the backup gateway.
+            context.UserAccounts = administration.UserAccounts;
+        }
+
         if (_shellHostProvider is not null)
         {
             // ADR 0056 section 7: the shell is a child process of this one, with this instance's
@@ -377,7 +384,7 @@ public sealed class AppExecutionContextFactory
     {
         if (_administration is null)
         {
-            return new AdministrationGateways(null, null, null, null, null, null);
+            return new AdministrationGateways(null, null, null, null, null, null, null);
         }
 
         AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated, language);
@@ -387,7 +394,8 @@ public sealed class AppExecutionContextFactory
             new AppServerConnectionGateway(_administration.Server, capabilities, language),
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
             new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases),
-            new AppSystemBackupGateway(_administration.Backup, capabilities, gate));
+            new AppSystemBackupGateway(_administration.Backup, capabilities, gate),
+            new AppUserAccountsGateway(_administration.Passwords, capabilities, gate));
     }
 
     private sealed record AdministrationGateways(
@@ -396,7 +404,8 @@ public sealed class AppExecutionContextFactory
         AppServerConnectionGateway? ServerConnection,
         AppSystemPowerGateway? SystemPower,
         AppStorageDiagnosticsGateway? StorageDiagnostics,
-        AppSystemBackupGateway? SystemBackup);
+        AppSystemBackupGateway? SystemBackup,
+        AppUserAccountsGateway? UserAccounts);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {

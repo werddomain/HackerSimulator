@@ -1,4 +1,3 @@
-using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -21,7 +20,9 @@ internal static class IntentChoiceStore
     /// <summary>Gets the file of one user.</summary>
     /// <param name="loginName">Login name; the home is <c>/home/&lt;login&gt;</c>.</param>
     public static VirtualPath GetPath(string loginName) =>
-        VirtualPath.Parse($"/home/{loginName}/.config/hackeros/intents.config");
+        VirtualPath.Parse($"/home/{loginName}/.config/hackeros/{FileName}");
+
+    private const string FileName = "intents.config";
 
     /// <summary>Reads the app remembered for <paramref name="intentId"/>, or <see langword="null"/>.</summary>
     public static async ValueTask<string?> ReadAsync(
@@ -75,52 +76,13 @@ internal static class IntentChoiceStore
             lines.Add(entry);
         }
 
-        FileSystemAuthorizationContext context = PrincipalFileAccess.ForUser(principal, AppIntentDispatcher.OsAppId);
-        string login = principal.LoginName.Value;
-        FileSystemMutationResult directory = await fileSystem.CreateAsync(
-            new FileSystemCreateRequest(
-                VirtualPath.Parse($"/home/{login}/.config/hackeros"), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)),
-            context,
-            cancellationToken).ConfigureAwait(false);
-        if (!directory.Succeeded && directory.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
-        {
-            return false;
-        }
-
-        VirtualPath path = GetPath(login);
-        FileSystemMutationResult file = await fileSystem.CreateAsync(
-            new FileSystemCreateRequest(path, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_000_000)),
-            context,
-            cancellationToken).ConfigureAwait(false);
-        if (!file.Succeeded && file.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
-        {
-            return false;
-        }
-
-        FileSystemMutationResult write = await fileSystem.WriteAsync(
-            new FileSystemWriteRequest(path),
-            new TextContentSource(string.Join('\n', lines) + "\n"),
-            context,
-            cancellationToken).ConfigureAwait(false);
-        return write.Succeeded;
+        return await PrincipalTextFile.WriteConfigAsync(
+            fileSystem, principal, FileName, string.Join('\n', lines) + "\n", 0b110_000_000, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async ValueTask<string?> ReadContentAsync(
-        IFileSystemService fileSystem, AuthenticatedPrincipal principal, CancellationToken cancellationToken)
-    {
-        FileSystemResult<FileSystemContentReadHandle> result = await fileSystem.ReadAsync(
-            new FileSystemReadRequest(GetPath(principal.LoginName.Value)),
-            PrincipalFileAccess.ForUser(principal, AppIntentDispatcher.OsAppId),
-            cancellationToken).ConfigureAwait(false);
-        if (!result.Succeeded || result.Value is null)
-        {
-            return null;
-        }
-
-        await using FileSystemContentReadHandle handle = result.Value;
-        using StreamReader reader = new(handle.Content, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-        return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-    }
+    private static ValueTask<string?> ReadContentAsync(
+        IFileSystemService fileSystem, AuthenticatedPrincipal principal, CancellationToken cancellationToken) =>
+        PrincipalTextFile.ReadAsync(fileSystem, principal, GetPath(principal.LoginName.Value), cancellationToken);
 
     private static bool TryParse(string rawLine, out string key, out string value)
     {
@@ -135,21 +97,6 @@ internal static class IntentChoiceStore
         key = line[..equals].Trim();
         value = line[(equals + 1)..].Trim();
         return true;
-    }
-
-    private sealed class TextContentSource(string content) : IFileSystemContentSource
-    {
-        private readonly byte[] _bytes = Encoding.UTF8.GetBytes(content);
-
-        public FileSystemContentDescriptor Descriptor { get; } = FileSystemContentDescriptor.Text();
-
-        public long? Length => _bytes.LongLength;
-
-        public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<Stream>(new MemoryStream(_bytes, writable: false));
-        }
     }
 }
 

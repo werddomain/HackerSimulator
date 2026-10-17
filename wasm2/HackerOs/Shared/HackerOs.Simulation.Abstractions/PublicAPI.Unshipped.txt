@@ -1,1 +1,2 @@
 #nullable enable
+HackerOs.Simulation.Abstractions.Sessions.ILocalUserRepository.SetCredentialAsync(HackerOs.Simulation.Abstractions.Sessions.LocalUserId id, HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential? credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Sessions.LocalUser!>

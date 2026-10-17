@@ -158,21 +158,6 @@
     background: #b38cff;
 }
 
-.associations-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.assoc-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background-color: var(--hos-bg-base, #101417);
-    border: 1px solid var(--hos-border-subtle, #27343a);
-    border-radius: var(--hos-radius-sm, 0.25rem);
-}
-
 .grants-list {
     display: flex;
     flex-wrap: wrap;

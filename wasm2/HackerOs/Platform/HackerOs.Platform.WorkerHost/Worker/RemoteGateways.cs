@@ -577,6 +577,20 @@ internal sealed class RemoteCatalogGateway(RemoteProcessChannel channel) : IAppC
             }
         }, cancellationToken).ConfigureAwait(false));
 
+    public async ValueTask<IReadOnlyList<HackFileAssociation>> GetDefaultHandlersAsync(CancellationToken cancellationToken = default) =>
+        WireCodec.ReadAssociations(await channel.CallAsync(RemoteOps.CatalogDefaults, null, cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<HackDefaultHandlerStatus> SetUserDefaultHandlerAsync(
+        string target, string action, string? appId, CancellationToken cancellationToken = default) =>
+        (HackDefaultHandlerStatus)(await channel.CallAsync(RemoteOps.CatalogSetDefault, writer =>
+        {
+            writer.WriteString("t", target);
+            writer.WriteString("a", action);
+            if (appId is not null)
+            {
+                writer.WriteString("id", appId);
+            }
+        }, cancellationToken).ConfigureAwait(false)).GetInt32("s");
 }
 
 /// <summary><see cref="IAppServiceControlGateway"/> in a worker (<c>systemctl</c>).</summary>

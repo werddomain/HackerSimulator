@@ -1,0 +1,5 @@
+{
+  "name": "passwd",
+  "description": "Change le mot de passe d'un utilisateur",
+  "terminalUsage": "passwd [-d] [-S] [utilisateur]"
+}

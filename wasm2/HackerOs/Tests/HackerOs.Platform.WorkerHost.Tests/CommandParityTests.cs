@@ -53,6 +53,7 @@ public sealed class CommandParityTests
         new("netstat", ["netstat", "netstat -i"]),
         new("nslookup", ["nslookup example.hackeros", "nslookup nowhere.invalid", "nslookup"]),
         new("nmap", ["nmap example.hackeros", "nmap -p 80-443 -sV 10.0.0.10"]),
+        new("passwd", ["passwd -S", "passwd bob", "passwd -x"]),
         new("ping", ["ping example.hackeros", "ping nowhere.invalid"]),
         new("printf", ["printf '%s-%d\\n' a 1 b 2"]),
         new("ps", ["ps", "ps -a -u"]),
@@ -81,6 +82,8 @@ public sealed class CommandParityTests
         new("which", ["which ls", "which -a cd nope"]),
         new("whoami", ["whoami"]),
         new("xdg-open", ["xdg-open missing.txt", "xdg-open", "xdg-open notes.txt", "xdg-open docs", "xdg-open nope://thing"]),
+        new("xdg-mime", ["xdg-mime", "xdg-mime query filetype notes.txt", "xdg-mime query filetype docs", "xdg-mime query filetype missing.txt",
+            "xdg-mime default org.example.missing text/plain", "xdg-mime query default x-scheme-handler/https"]),
         new("zip", ["zip -q notes.zip notes.txt words.txt", "zip -r docs.zip docs", "unzip -l docs.zip"])
     ];
 
@@ -107,7 +110,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(68, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(70, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

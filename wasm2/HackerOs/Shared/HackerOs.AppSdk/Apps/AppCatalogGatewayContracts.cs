@@ -1,11 +1,12 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Simulation.Abstractions.Gateways;
 
 namespace HackerOs.AppSdk.Apps;
 
 /// <summary>
 /// Read access to the app catalog for one app instance (ADR 0056, section 2), behind
 /// <see cref="HackApps"/>. Needs no capability: the list of installed apps is public, like
-/// <c>/usr/share/applications</c>.
+/// <c>/usr/share/applications</c>. The default handlers (ADR 0121) are the exception.
 /// </summary>
 public interface IAppCatalogGateway
 {
@@ -21,14 +22,42 @@ public interface IAppCatalogGateway
 
     /// <summary>
     /// Gets the installed window apps that declare they can open <paramref name="path"/> ("Open
-    /// with"): the default configured in <c>/etc/hackeros/file-associations.json</c> first, then the
-    /// others by name.
+    /// with"): the default first (the user's own in <c>~/.config/hackeros/file-associations.json</c>,
+    /// else the one of <c>/etc/hackeros/file-associations.json</c>, ADR 0121), then the others by name.
     /// </summary>
     /// <param name="path">File to open.</param>
     /// <param name="mediaType">MIME type when known, matched besides the extension.</param>
     /// <param name="cancellationToken">Cancels the read of the associations file.</param>
     ValueTask<IReadOnlyList<HackAppInfo>> GetHandlersAsync(
         VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets every configured default handler of the user (ADR 0121, section 3): the entries of
+    /// <c>~/.config/hackeros/file-associations.json</c> first, then those of
+    /// <c>/etc/hackeros/file-associations.json</c>. A user entry hides the system entry with the
+    /// same target and action, so the first row of a pair is the one used. Needs
+    /// <c>file-associations.read</c>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the reads.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">The app lacks <c>file-associations.read</c>.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0121.</exception>
+    ValueTask<IReadOnlyList<HackFileAssociation>> GetDefaultHandlersAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This catalog gateway cannot read the default handlers.");
+
+    /// <summary>
+    /// Sets or removes the user's own default handler of one file type or URI scheme (ADR 0121,
+    /// section 3), in <c>~/.config/hackeros/file-associations.json</c>; the machine-wide file is
+    /// never written here. Needs <c>file-associations.read</c> and <c>filesystem.user-home.write</c>.
+    /// </summary>
+    /// <param name="target">Extension with its dot (<c>.md</c>) or media type (<c>x-scheme-handler/https</c>).</param>
+    /// <param name="action"><c>open</c> or <c>edit</c>.</param>
+    /// <param name="appId">New default, which must declare the target and action; <see langword="null"/> removes the user's choice.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">The app lacks one of the two capabilities.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0121.</exception>
+    ValueTask<HackDefaultHandlerStatus> SetUserDefaultHandlerAsync(
+        string target, string action, string? appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This catalog gateway cannot change the default handlers.");
 }
 
 /// <summary>Installation state of an app for the session user (ADR 0048, section 4).</summary>

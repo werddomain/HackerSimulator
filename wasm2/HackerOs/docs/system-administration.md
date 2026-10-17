@@ -20,13 +20,13 @@ Core ni Infrastructure.Browser.
 | Couche | Fichiers |
 |---|---|
 | SDK (contrats, façades) | `Shared/HackerOs.AppSdk/Administration/` (`HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` et leurs contrats), `Shared/HackerOs.AppSdk/Settings/IAppSystemSettingsGateway.cs`, `SettingsDocumentStores.cs` |
-| Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AppSystemBackupGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
-| Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt, `RestartAfterAsync`), `Backup/SystemBackupService.cs`, `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
+| Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AppSystemBackupGateway`, `AppUserAccountsGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
+| Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt, `RestartAfterAsync`), `Backup/SystemBackupService.cs`, `Sessions/LocalPasswordService.cs` (ADR 0120), `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
 | Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/BrowserSystemBackupDevice.cs` (export, téléchargement, sélecteur de l'hôte), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |
 | SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte), `[Obsolete]` depuis l'ADR 0065 puis retirés au gel du SDK 1.0 (ADR 0114) : Diagnostic copie par `HackClipboard`, que l'OS recopie vers l'hôte ([`clipboard.md`](clipboard.md)) |
 
 `AppExecutionContextFactory` reçoit un `SystemAdministrationGatewayServices`
-(résolutions paresseuses) et crée, pour chaque instance, les six passerelles
+(résolutions paresseuses ; `Passwords` est une propriété `init` ajoutée en 1.1) et crée, pour chaque instance, les sept passerelles
 avec les capacités et le principal de l'app. `AdministratorGate` appelle
 l'agent d'authentification de l'OS
 ([`admin-authentication-agent.md`](admin-authentication-agent.md)) : l'app ne
@@ -115,6 +115,16 @@ machine sur l'ordinateur hôte ; `RestoreAsync(Merge | Replace)` ouvre le
 sélecteur de l'hôte, valide l'archive, **puis** demande un administrateur,
 ferme la session, restaure et redémarre. Création et restauration vont dans
 `/var/log/auth.log`. Détails : [`system-backup.md`](system-backup.md).
+
+### Comptes et mots de passe (`users.manage`)
+
+`HackUserAccounts.ListAsync` et `ChangePasswordAsync` (son propre mot de passe,
+après le mot de passe courant) ne demandent aucune capacité ;
+`ResetPasswordAsync` et `RemovePasswordAsync` exigent `users.manage` et un
+administrateur (actions `users.password-reset` et `users.password-delete`).
+Le trousseau du compte visé est mis de côté. Détails :
+[`sensitive-settings.md`](sensitive-settings.md#4-mots-de-passe--passwd-et-réinitialisation)
+et [ADR 0120](adr/0120-passwd-and-administrator-password-reset.md).
 
 ## Décisions
 

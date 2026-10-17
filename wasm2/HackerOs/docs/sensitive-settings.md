@@ -120,9 +120,9 @@ réservée à root, garde tout.
 - **Déconnexion, arrêt** : `Lock()` efface la clé de la mémoire.
 - **Changement de mot de passe** : `ChangePasswordAsync(userId, nouveau)`
   re-chiffre le trousseau avec un nouveau sel. **Mise à l'écart par un
-  administrateur** : `SetAsideAsync(homePath)`. L'OS n'a pas encore de
-  commande `passwd` ni d'écran de réinitialisation : ces deux méthodes sont les
-  points d'appel prévus pour eux.
+  administrateur** : `SetAsideAsync(homePath)`. La commande `passwd` et
+  l'onglet « Utilisateurs » des Paramètres les appellent (ADR 0120, voir
+  [§4](#4-mots-de-passe--passwd-et-réinitialisation) plus bas).
 - Le journal d'authentification (`IAuditLog`) reçoit `keyring.unlock`,
   `keyring.create`, `keyring.reset` (aussi pour une mise à l'écart par
   l'administrateur) et `keyring.rekey`, sans aucun secret.
@@ -193,6 +193,40 @@ type=PATH msg=audit(1792218000.123:42): op=write path="/etc/hosts" uid=0 auid=10
   chaque ouverture. Une écriture refusée s'affiche en avertissement, une
   écriture réussie en information, avec l'app comme source.
 
+## 4. Mots de passe : `passwd` et réinitialisation
+
+Décision : [ADR 0120](adr/0120-passwd-and-administrator-password-reset.md).
+
+- **`LocalPasswordService`** (`Platform.Core/Sessions`) fait le travail de
+  `passwd` et de `/etc/shadow` : il hache le nouveau mot de passe comme à la
+  création du compte (`LocalPasswordHasher`, PBKDF2-SHA-256, Web Crypto dans
+  le navigateur), l'enregistre par `ILocalUserRepository.SetCredentialAsync`,
+  fait suivre le trousseau et écrit `passwd.change`, `passwd.reset` ou
+  `passwd.delete` dans `auth.log`.
+- **Son propre mot de passe**, sans capacité : le mot de passe courant est
+  vérifié (vide si le compte n'en a pas), le nouveau doit avoir 8 à 256
+  caractères sans caractère de contrôle et différer de l'actuel. Le trousseau
+  est re-chiffré (`ChangePasswordAsync`) ; s'il n'était pas ouvert, il est
+  d'abord ouvert avec l'ancien mot de passe.
+- **Le mot de passe d'un autre compte** : capacité dangereuse `users.manage`
+  et un administrateur par l'agent d'authentification (rien sous `sudo`). Le
+  trousseau du compte est mis de côté (`login.keyring.old`) ; si c'est celui
+  de la session, il est re-chiffré (réinitialisation) ou mis de côté puis
+  verrouillé (retrait). Retirer le mot de passe du dernier administrateur
+  actif qui en a un est refusé.
+- **SDK** : `HackUserAccounts` (`ListAsync`, `ChangePasswordAsync`,
+  `ResetPasswordAsync`, `RemovePasswordAsync`, `ValidateNewPassword`) sur
+  `IAppExecutionContext.UserAccounts`, branché par
+  `SystemAdministrationGatewayServices.Passwords`.
+- **Terminal** : `passwd`, `passwd NOM` et `passwd -d NOM` sous `sudo`,
+  `passwd -S [NOM]` ([`linux-commands.md`](linux-commands.md)). Les mots de
+  passe sont lus écho coupé : `TerminalExecutionContext.ReadSecretLineAsync`
+  coupe `ITerminalInputMode.EchoEnabled` de l'entrée du terminal, comme
+  `getpass(3)` coupe `ECHO` ([`terminal-emulator.md`](terminal-emulator.md)).
+- **Paramètres > Utilisateurs** (`UsersPanel`) : liste des comptes avec leur
+  état `P`/`NP`/`L`, changement de son mot de passe, et pour un administrateur
+  la réinitialisation ou le retrait du mot de passe d'un autre compte.
+
 ## Limites connues
 
 - Les documents de l'OS (`OsSettingsDocument`) n'acceptent que des clés
@@ -217,6 +251,15 @@ type=PATH msg=audit(1792218000.123:42): op=write path="/etc/hosts" uid=0 auid=10
   politique, format aller-retour, écritures acceptées et refusées dans
   `audit.log` (`0600`), `uid`/`auid` sous `sudo`.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` : filtres d'`ausearch`.
+- `Tests/HackerOs.Platform.Core.Tests/Sessions/LocalPasswordServiceTests.cs` :
+  changement avec trousseau conservé, mauvais mot de passe courant, règles,
+  réinitialisation qui met le trousseau de côté, retrait refusé au dernier
+  administrateur, passerelle (`users.manage` et administrateur).
+- `Tests/HackerOs.Commands.Wave5.Tests/PasswdCommandTests.cs` : invites écho
+  coupé, confirmation différente, `sudo passwd NOM`, `-d`, `-S`.
+- `Tests/HackerOs.UI.E2E.Tests/PasswdTerminalTests.cs` : `passwd` dans le vrai
+  terminal n'affiche rien de ce qui est tapé, puis seule la nouvelle valeur
+  ouvre la session.
 
 ## Liste des tâches
 
@@ -230,4 +273,4 @@ type=PATH msg=audit(1792218000.123:42): op=write path="/etc/hosts" uid=0 auid=10
 - [x] Journal `/var/log/audit.log` écrit par le système de fichiers
 - [x] Commande `ausearch` et lecture du journal d'audit par l'Error Log Viewer
 - [x] Tests
-- [ ] Commande `passwd` et réinitialisation par un administrateur (hors chantier : branchent `ChangePasswordAsync`/`SetAsideAsync`)
+- [x] Commande `passwd` et réinitialisation par un administrateur (ADR 0120 : `LocalPasswordService`, `HackUserAccounts`, onglet « Utilisateurs »)

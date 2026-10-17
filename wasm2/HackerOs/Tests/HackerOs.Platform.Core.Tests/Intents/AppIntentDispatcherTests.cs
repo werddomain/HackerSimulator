@@ -553,6 +553,23 @@ public sealed class AppIntentDispatcherTests
     }
 
     [Fact]
+    public async Task Open_uri_and_open_file_use_the_acting_users_own_default()
+    {
+        // ADR 0121: ~/.config/hackeros/file-associations.json comes before the machine's file.
+        Fixture fixture = new(BrowserManifest(), SchemeHandlerManifest("org.test.other-browser", "https"), NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        Assert.Equal(UserDefaultHandlerChangeStatus.Changed,
+            await fixture.Associations.SetUserDefaultAsync(principal, "x-scheme-handler/https", "open", "org.test.other-browser"));
+
+        AppIntentDispatchResult uri = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("https://example.hackeros/")));
+        AppIntentDispatchResult http = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("http://example.hackeros/")));
+
+        Assert.Equal("org.test.other-browser", uri.Process!.AppId);
+        Assert.Equal("org.hackeros.browser", http.Process!.AppId);
+    }
+
+    [Fact]
     public async Task Open_uri_honors_a_preferred_handler()
     {
         Fixture fixture = new(BrowserManifest(), SchemeHandlerManifest("org.test.other-browser", "https"));
@@ -1232,7 +1249,8 @@ public sealed class AppIntentDispatcherTests
             AppEnablementRegistry enablement = new(catalog);
             Enablement = enablement;
             Orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, Grants, contextFactory);
-            FileAssociationResolver resolver = new(catalog, enablement, Settings);
+            FileAssociationResolver resolver = new(catalog, enablement, Settings, fileSystem);
+            Associations = resolver;
             Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }
 
@@ -1246,6 +1264,9 @@ public sealed class AppIntentDispatcherTests
         internal IOsSettingsService Settings { get; }
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal AppIntentDispatcher Dispatcher { get; }
+
+        /// <summary>The resolver the dispatcher uses, to set a user's defaults (ADR 0121).</summary>
+        internal FileAssociationResolver Associations { get; }
 
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");
 

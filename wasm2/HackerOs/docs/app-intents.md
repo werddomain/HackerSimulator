@@ -28,7 +28,9 @@ Et la commande `xdg-open <fichier|dossier|URI>`.
 App ──HackApps.*Async──► IAppIntentGateway ──► AppIntentDispatcher ──► FileAssociationResolver
  │                       (AppIntentGateway,      (capacités, accès,       (/etc/hackeros/
  │                        ou RemoteIntentGateway  erreurs intent.*)        file-associations.json,
- │                        dans un Web Worker)            │                 FileHandlers des manifestes)
+ │                        dans un Web Worker)            │                 FileHandlers des manifestes ;
+ │                                                       │                 ~/.config/hackeros d'abord,
+ │                                                       │                 ADR 0121)
  │                                                       ▼
  └◄── AppContext.Intent / IntentReceived ◄── AppLifecycleOrchestrator.LaunchAsync(AppLaunchRequest.Intent)
 ```
@@ -158,11 +160,12 @@ donnent 4 et la liste des candidates.
 - **Un identifiant intégré ne peut pas être envoyé comme intent d'app**
   (`intent.custom.reserved-id`) : il a un record typé avec ses propres règles,
   qu'un envoi non typé contournerait.
-- **Le choix par défaut d'un schéma vit dans `/etc/hackeros/file-associations.json`**,
-  couche système seulement, comme toutes les associations aujourd'hui : il
-  n'existe pas encore de couche utilisateur pour les associations (l'ADR la
-  suppose « comme les autres associations »). Question posée à Benoit dans le
-  fil du chantier.
+- **Le choix par défaut d'un schéma vit dans `file-associations.json`**, comme
+  celui d'un type de fichier : celui de l'utilisateur
+  (`~/.config/hackeros/file-associations.json`) passe avant celui de la machine
+  (`/etc/hackeros/file-associations.json`) depuis le chantier `v3/4b`
+  ([ADR 0121](adr/0121-user-file-associations.md),
+  [`user-file-associations.md`](user-file-associations.md)).
 - **Un terminal n'a pas de sélecteur** : `xdg-open` avec plusieurs apps et
   aucun défaut sort avec 4 et liste les candidates ; l'OS ne devine jamais.
 - **L'explorateur honore enfin son argument de dossier** : ouvrir un dossier

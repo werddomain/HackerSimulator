@@ -136,6 +136,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public IAppSystemBackupGateway SystemBackup { get => Guarded(field); internal set; } = UnsupportedAdministrationGateways.SystemBackup;
 
     /// <inheritdoc />
+    public IAppUserAccountsGateway UserAccounts { get => Guarded(field); internal set; } = UnsupportedAdministrationGateways.UserAccounts;
+
+    /// <inheritdoc />
     public string UserLoginName { get; }
 
     /// <inheritdoc />

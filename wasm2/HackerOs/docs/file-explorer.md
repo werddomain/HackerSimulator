@@ -214,3 +214,12 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - [x] L'explorateur ouvre le dossier passé en argument (il ouvrait toujours le dossier personnel).
 - [x] `--select=<chemin>` : sélection et défilement (`FileView.RevealAsync`, `revealItem`).
 - [x] Tests et ce document.
+
+## Tâches du chantier `v3/4b` (ADR 0121)
+
+- [x] « Ouvrir avec » propose « Toujours utiliser cette app pour les fichiers
+  .ext » quand l'app choisie déclare l'extension ; le choix est écrit dans
+  `~/.config/hackeros/file-associations.json` par
+  `AppContext.Catalog.SetUserDefaultHandlerAsync`
+  ([`user-file-associations.md`](user-file-associations.md)).
+- [x] L'explorateur déclare `file-associations.read`.

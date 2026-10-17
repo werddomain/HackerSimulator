@@ -137,7 +137,8 @@ commande n'a pas besoin du shell (`shell.control`), elle envoie un
 `OpenFileIntent` ou un `OpenUriIntent` avec `apps.launch` et rend la main
 (codes 0, 1, 3, 4 de freedesktop). Un `ExecuteCommandIntent` qui lance
 `xdg-open` se comporte de même. `launch <app-id> [args]` reste le moyen
-d'ouvrir une app précise.
+d'ouvrir une app précise. `xdg-mime default <app-id> <type>` choisit l'app
+qui ouvre un type pour l'utilisateur (ADR 0121).
 
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
 `IShellSession.SetVariable` et `UnsetVariable` lèvent `ArgumentException`
@@ -180,7 +181,7 @@ disparu.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` et
   `Tests/HackerOs.Commands.Wave5.Tests/Wave5Tests.cs` : `cd`, `clear`, `help`
   avec `FakeShellSession` (`Tests/HackerOs.Tests.Support/`).
-- `Tests/HackerOs.Ecosystem.Tests` : 85 apps intégrées, 68 commandes (`stress` depuis `rebuild/5-worker-processes`, `ausearch` depuis `v3/8`, `xdg-open` depuis `v3/4`, `hackbackup` depuis `v3/7`, `localectl` depuis `v3/12`).
+- `Tests/HackerOs.Ecosystem.Tests` : 87 apps intégrées, 70 commandes (`stress` depuis `rebuild/5-worker-processes`, `ausearch` depuis `v3/8`, `xdg-open` depuis `v3/4`, `hackbackup` depuis `v3/7`, `localectl` depuis `v3/12`, `xdg-mime` depuis `v3/4b`, `passwd` depuis `v3/8`).
 
 ## Liste des tâches
 

@@ -95,7 +95,7 @@ Toutes les voies consultent `IAppEnablementRegistry` :
 | --- | --- |
 | `AppLifecycleOrchestrator.LaunchAsync` | `AppLaunchStatus.Disabled` |
 | `AppIntentDispatcher` (intentions, `launch`) | refus ; `launch` répond « is not installed » |
-| `FileAssociationResolver` | ni défaut ni candidate ; les préférences de `/etc/hackeros/file-associations.json` ne sont **pas** réécrites |
+| `FileAssociationResolver` | ni défaut ni candidate ; les préférences de `/etc/hackeros/file-associations.json` et de `~/.config/hackeros/file-associations.json` ne sont **pas** réécrites (une entrée périmée est sautée, ADR 0121) |
 | Lanceur et recherche (`LauncherAppProjection`) | absente ; le menu ouvert se met à jour sur `Changed` |
 | Explorateur, « Open With... » | absente de la liste |
 | Terminal (`ShellCommandResolver`, `ShellInterpreter`) | `command not found`, absente de `help` et de la complétion |
