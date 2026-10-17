@@ -14,7 +14,7 @@ namespace HackerOs.AppSdk.Administration;
 /// <see cref="HackUnauthorizedAccessException"/>.
 /// </para>
 /// <para>
-/// <see cref="SetPolicyAsync"/> and <see cref="SetMachineDecisionAsync"/> change machine files. Like
+/// <see cref="SetPolicyAsync(HackDangerousCapabilityPolicy, CancellationToken)"/> and <see cref="SetMachineDecisionAsync(string, string, HackPermissionDecision, CancellationToken)"/> change machine files. Like
 /// <c>pkexec</c>, the OS first asks an administrator for their password in its own secure window
 /// (ADR 0055, section 5); the app never sees the password. A refusal or a cancellation raises
 /// <see cref="HackUnauthorizedAccessException"/> and nothing is written. A process already running

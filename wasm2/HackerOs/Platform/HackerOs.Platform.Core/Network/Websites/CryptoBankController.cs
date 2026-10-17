@@ -12,10 +12,14 @@ public sealed class CryptoBankController : SimulatedWebsiteControllerBase
 {
     private const string SessionCookie = "cryptobank_session";
 
+    /// <inheritdoc/>
     public override string PrimaryHostname => "cryptobank.com";
+    /// <inheritdoc/>
     public override string Theme           => "bank";
+    /// <inheritdoc/>
     public override string SiteName        => "CryptoBank";
 
+    /// <summary>Registers the routes: <c>/</c> and <c>/account</c> (dashboard when logged in, else the login form), GET/POST <c>/login</c> and <c>/logout</c>.</summary>
     public CryptoBankController()
     {
         Get("/",        req => IsLoggedIn(req) ? SimulatedHttpResponse.Ok(BuildDashboardPage(GetUsername(req)))

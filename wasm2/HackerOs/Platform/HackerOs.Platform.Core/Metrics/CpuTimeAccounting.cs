@@ -55,6 +55,10 @@ public sealed class CpuTimeAccounting : ICpuTimeAccounting
     /// Measured CPU time (ADR 0067); when it measures, <c>/proc/stat</c> shows real times instead of
     /// the simulated ones. <see langword="null"/> or the null accountant keeps the simulation.
     /// </param>
+    /// <param name="workers">
+    /// The worker pool (ADR 0070); with measured times, the busy time of each pool worker is added to
+    /// the core it runs on. <see langword="null"/> when the host has no worker pool.
+    /// </param>
     public CpuTimeAccounting(
         VirtualHardwareProfile hardware,
         Func<ProcessRecord, bool>? isSystemProcess = null,

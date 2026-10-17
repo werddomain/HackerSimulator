@@ -22,6 +22,13 @@ public sealed partial class ShellInterpreter
     /// <summary>Names of the shell binary itself: <c>sh script</c>, <c>bash -c "…"</c>.</summary>
     private static readonly HashSet<string> ShellNames = new(StringComparer.Ordinal) { "sh", "bash", "hsh" };
 
+    /// <summary>
+    /// Gets every name the shell runs itself, never looked up in the catalog: the special built-ins
+    /// and the shell's own names. The host build refuses an app command or alias with one of these
+    /// names (<c>HOSAPP0022</c>, ADR 0098 §4).
+    /// </summary>
+    public static IReadOnlySet<string> ReservedNames { get; } = new HashSet<string>(SpecialBuiltins.Concat(ShellNames), StringComparer.Ordinal);
+
     /// <summary>The shell's own entries for <c>help</c> and completion.</summary>
     private static readonly ShellCommandInfo[] BuiltinCommands =
     [

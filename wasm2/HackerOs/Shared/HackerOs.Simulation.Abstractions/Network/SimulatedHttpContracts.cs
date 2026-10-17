@@ -11,12 +11,19 @@ namespace HackerOs.Simulation.Abstractions.Network;
 /// </summary>
 public static class SimulatedHttpMethods
 {
+    /// <summary><c>GET</c>: reads a resource.</summary>
     public const string Get    = "GET";
+    /// <summary><c>POST</c>: submits data, e.g. a form.</summary>
     public const string Post   = "POST";
+    /// <summary><c>PUT</c>: replaces a resource.</summary>
     public const string Put    = "PUT";
+    /// <summary><c>DELETE</c>: removes a resource.</summary>
     public const string Delete = "DELETE";
+    /// <summary><c>HEAD</c>: like GET, without the response body.</summary>
     public const string Head   = "HEAD";
+    /// <summary><c>PATCH</c>: partially updates a resource.</summary>
     public const string Patch  = "PATCH";
+    /// <summary><c>OPTIONS</c>: asks which methods a resource supports.</summary>
     public const string Options = "OPTIONS";
 
     /// <summary>
@@ -127,23 +134,35 @@ public sealed record SimulatedHttpRequest(
 /// </summary>
 public static class SimulatedHttpStatus
 {
+    /// <summary>200 OK.</summary>
     public const int Ok                = 200;
+    /// <summary>201 Created.</summary>
     public const int Created           = 201;
+    /// <summary>204 No Content.</summary>
     public const int NoContent         = 204;
+    /// <summary>302 Found: temporary redirect; browsers follow it with a GET.</summary>
     public const int Found             = 302;
+    /// <summary>303 See Other: redirect after a POST, always followed with a GET.</summary>
     public const int SeeOther          = 303;
     /// <summary>301 Moved Permanently (historical name; see <see cref="MovedPermanently"/>).</summary>
     public const int PermanentRedirect = 301;
+    /// <summary>301 Moved Permanently.</summary>
     public const int MovedPermanently  = 301;
     /// <summary>307: redirect that keeps the method and the body.</summary>
     public const int TemporaryRedirect = 307;
     /// <summary>308: permanent redirect that keeps the method and the body.</summary>
     public const int PermanentRedirectKeepMethod = 308;
+    /// <summary>400 Bad Request.</summary>
     public const int BadRequest        = 400;
+    /// <summary>401 Unauthorized: authentication is required.</summary>
     public const int Unauthorized      = 401;
+    /// <summary>403 Forbidden: authenticated but not allowed.</summary>
     public const int Forbidden         = 403;
+    /// <summary>404 Not Found.</summary>
     public const int NotFound          = 404;
+    /// <summary>405 Method Not Allowed: no route for this method on the path.</summary>
     public const int MethodNotAllowed  = 405;
+    /// <summary>500 Internal Server Error.</summary>
     public const int InternalError     = 500;
 }
 

@@ -25,7 +25,7 @@ public enum DangerousCapabilityApprovalOutcome
 /// Attempts left; <c>0</c> after the third failure, and the prompt must then close with
 /// <see cref="DangerousCapabilityApprovalOutcome.Dismissed"/>.
 /// </param>
-/// <param name="FailureReason">Stable reason code of a failure (from <see cref="IAdminElevationVerifier"/>), else <see langword="null"/>.</param>
+/// <param name="FailureReason">Stable reason code of a failure (from <see cref="HackerOs.App.Abstractions.Policy.IAdminElevationVerifier"/>), else <see langword="null"/>.</param>
 public sealed record DangerousCapabilityApprovalAttempt(bool Succeeded, int RemainingAttempts, string? FailureReason = null);
 
 /// <summary>

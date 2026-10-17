@@ -50,9 +50,9 @@ public static class AppEntryPointDiscovery
     /// Resolves manifest-declared type names by name (<see cref="Assembly.GetType(string, bool)"/>),
     /// which is fundamentally reflection-based and cannot be statically analyzed for trimming. This
     /// is a bounded, explicit reflection boundary: only assemblies the host itself passes in
-    /// <paramref name="hostAssemblies"/> are consulted, matching the build profile's discovery list
-    /// (`P1-BLD-006`). A future host publish step (Phase 2/6) must add matching trim root
-    /// descriptors for every build-profile-selected entry-point type; see the Problem Register entry
+    /// <paramref name="hostAssemblies"/> are consulted, matching the apps the host references
+    /// (ADR 0047, 0048). A future host publish step (Phase 2/6) must add matching trim root
+    /// descriptors for every referenced app's entry-point type; see the Problem Register entry
     /// linked from `P1-GATE-004` in `integration-task-list.md` until that exists.
     /// </remarks>
     [RequiresUnreferencedCode(

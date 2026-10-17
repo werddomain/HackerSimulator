@@ -45,7 +45,7 @@ public sealed class ShellHostService
         PublisherId = "pub.hackeros",
         Description = "HackerOS shell",
         Kind = AppKind.Terminal,
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("system", AppLaunchVisibility.Hidden, []),
         Resources = new AppResourceProfileManifest(0, 0.01, 0.01, 0.01, 0, 0, 0, 0),
         Terminal = new TerminalCommandManifest("hsh", [], "hsh")

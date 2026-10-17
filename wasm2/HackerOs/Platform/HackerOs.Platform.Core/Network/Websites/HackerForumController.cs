@@ -9,10 +9,14 @@ namespace HackerOs.Platform.Core.Network.Websites;
 /// </summary>
 public sealed class HackerForumController : SimulatedWebsiteControllerBase
 {
+    /// <inheritdoc/>
     public override string PrimaryHostname => "hackerz.forum";
+    /// <inheritdoc/>
     public override string Theme           => "forum";
+    /// <inheritdoc/>
     public override string SiteName        => "Hackerz Forum";
 
+    /// <summary>Registers the routes: <c>/</c> and <c>/forums</c>, both serving the forum index.</summary>
     public HackerForumController()
     {
         Get("/",       _ => SimulatedHttpResponse.Ok(BuildMainPage()));

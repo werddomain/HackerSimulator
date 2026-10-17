@@ -8,7 +8,7 @@ namespace HackerOs.Platform.Core.Execution;
 /// <see cref="AppExecutionContext"/> and shared, unchanged, by every
 /// <see cref="AppFileSystemGateway"/> scoped clone (including ones returned from
 /// <see cref="IAppFileSystemGateway.WithSelectedHandle"/>), so a subscription registered through
-/// <see cref="IAppExecutionContext.PermissionErrors"/> observes denials raised by any of them.
+/// <see cref="HackerOs.AppSdk.IAppExecutionContext.PermissionErrors"/> observes denials raised by any of them.
 /// </summary>
 public sealed class AppPermissionErrorGateway : IAppPermissionErrorGateway
 {

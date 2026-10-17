@@ -271,7 +271,7 @@ public sealed class CoreCommandsTests
             Description = "Command line tool",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("Assembly.dll", "Type"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],

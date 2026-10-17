@@ -103,6 +103,25 @@
     border-style: dashed;
 }
 
+/* ADR 0098 §3 and §5: refused (wrong SDK) or altered apps. */
+.app-row.is-incompatible,
+.app-row.is-damaged {
+    border-left-color: var(--hos-error, #ff6b70);
+}
+
+.app-badge-incompatible,
+.app-badge-damaged {
+    border-color: var(--hos-error, #ff6b70);
+    color: var(--hos-error, #ff9a91);
+}
+
+.app-problem {
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    font-size: 0.72rem;
+    color: var(--hos-error, #ff9a91);
+    white-space: normal;
+}
+
 .commands-group {
     margin-top: 12px;
 }

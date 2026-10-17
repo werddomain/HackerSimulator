@@ -179,6 +179,19 @@ Variables facultatives : `HACKEROS_SMOKE_HOST` (nom affiché),
 
 Chaque PR `rebuild/5-*` colle la sortie de `build/verify-hosts.sh`.
 
+## Produire les paquets locaux
+
+```bash
+build/pack-local.sh            # ou build/pack-local.ps1 sous Windows
+```
+
+Empaquette en Release chaque projet qui importe `Platform/Packaging.props` (SDK,
+plateforme, apps de base, `HackerOs.App.Build`, `HackerOs.Ecosystem.Host`,
+`HackerOs.Templates`) dans `artifacts/local-nupkg`, à la version de
+`build/Versions.props`, et retire cette version du cache NuGet global pour qu'un
+autre dépôt ne reçoive pas d'anciens octets. Rien n'est publié sur nuget.org.
+Détails : [`sdk-packages.md`](sdk-packages.md).
+
 ## Tester
 
 ```bash
@@ -193,6 +206,7 @@ dotnet test HackerOs.sln
 | `Tests/HackerOs.Samples.Intranet.Tests` | Exemple Intranet en mémoire (`HackWebHost.CreateApplication`) : vues `.cshtml` et `.razor`, `wwwroot`, session, anti-falsification, CRUD par formulaires, API REST, page hôte du tableau Blazor. Le parcours dans Chromium est `BrowserIntranetTests` (UI E2E). |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | Builds MSBuild réels des projets `Tests/ManifestGenerator.Fixtures.*` : génération, agrégation, frontière du SDK. Plus lents. |
 | `Tests/HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests` | Playwright contre l'OS lancé dans Chromium. Pièges connus : [`old/common-pitfalls.md`](old/common-pitfalls.md) §4 à §6. |
+| `Tests/HackerOs.Templates.E2E.Tests` | Modèles `dotnet new` (ADR 0098 §6) : empaquette tout avec `build/pack-local.sh` (ou prend le flux de `HACKEROS_LOCAL_FEED`), génère et compile chaque modèle hors du dépôt avec un cache NuGet isolé, puis lance l'hôte généré dans Chromium avec une app fenêtrée et une commande générées. |
 | `Tests/HackerOs.HostSmoke.Tests` | Démarrage d'un hôte déjà lancé, piloté par `build/verify-hosts.sh` (voir plus haut) ; « skipped » sans `HACKEROS_SMOKE_URL`. |
 
 Tester un seul projet ou un seul test :
@@ -350,6 +364,7 @@ dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQua
 - [x] Suites de tests, filtrage, outils de test des apps, état connu.
 - [x] `build/verify-hosts.sh` : les trois hôtes, les combinaisons des mesures, le test de démarrage (`rebuild/5-host-smoke`).
 - [x] Repli des suites Playwright sur le Chromium du conteneur et leur état dans un conteneur.
+- [x] Paquets locaux (`build/pack-local.sh`) et test des modèles (v3/6).
 - [x] Fixtures de montée de version IndexedDB (ADR 0099 §4, `v3/7`) :
   - [x] historique du schéma : v1 absente du dépôt, v2 jusqu'à `e46e897`, v3 en `7a20401` ;
   - [x] vidages v2 et v3 produits en démarrant l'OS de ces commits (`produce-fixture.js`) ;

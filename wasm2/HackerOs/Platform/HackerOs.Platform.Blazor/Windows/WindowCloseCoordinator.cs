@@ -22,6 +22,7 @@ public sealed class WindowCloseCoordinator
     /// <param name="windowId">Window requested by the user.</param>
     /// <param name="confirmAsync">Optional unsaved-change confirmation callback.</param>
     /// <returns>Ordered window events, or an empty list when confirmation rejects close.</returns>
+    /// <param name="cancellationToken">Cancels the confirmation; once confirmed, cancellation is checked before the process is stopped.</param>
     public async Task<IReadOnlyList<WindowEvent>> CloseAsync(
         WindowId windowId,
         Func<CancellationToken, ValueTask<bool>>? confirmAsync = null,

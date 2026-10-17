@@ -16,6 +16,7 @@ namespace HackerOs.Commands.Rm;
 /// </remarks>
 public sealed class RmCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public RmCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />

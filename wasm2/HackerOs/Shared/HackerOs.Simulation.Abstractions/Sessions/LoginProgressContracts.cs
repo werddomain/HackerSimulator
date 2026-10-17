@@ -30,20 +30,26 @@ public interface ILoginProgressTracker
 /// <summary>No-op default implementation of <see cref="ILoginProgressTracker"/>.</summary>
 public sealed class NullLoginProgressTracker : ILoginProgressTracker
 {
+    /// <summary>The shared stateless instance.</summary>
     public static NullLoginProgressTracker Instance { get; } = new();
 
+    /// <summary>Always a fixed "Ready" snapshot at 0 percent: nothing is tracked.</summary>
     public LoginProgressSnapshot CurrentSnapshot => new("Ready", 0, 1, 0, []);
 
+    /// <summary>Never raised; subscribing does nothing.</summary>
     public event Action<LoginProgressSnapshot>? ProgressChanged
     {
         add { }
         remove { }
     }
 
+    /// <summary>Ignored: the null tracker counts no steps.</summary>
     public void SetTotalSteps(int totalSteps) { }
 
+    /// <summary>Returns a scope whose disposal does nothing.</summary>
     public IDisposable BeginStep(string stepName) => NullScope.Instance;
 
+    /// <summary>Does nothing: there is no state to reset.</summary>
     public void Reset() { }
 
     private sealed class NullScope : IDisposable

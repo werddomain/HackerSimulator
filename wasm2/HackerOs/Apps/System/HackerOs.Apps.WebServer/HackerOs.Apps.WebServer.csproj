@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Apps.WebServer</PackageId>
+    <Description>The base HackerOS hackwebd web server and Web Server Manager app, to include in an OS host (ProjectReference or PackageReference, optionally IsSystemApp).</Description>
+    <PackageTags>hackeros;app</PackageTags>
+  </PropertyGroup>
+
   <!--
     ADR 0077 / ADR 0080: the hosted static sites. Two apps in one assembly, like nginx and its
     control tools in one package: the hackwebd service (HackWebdApp) and the Web Server Manager window

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- One version for every HackerOS package (ADR 0098 §1). -->
+    <HackerOsVersion>0.0.0-dev</HackerOsVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+    <PackageReference Include="HackerOs.AppSdk.Web" Version="$(HackerOsVersion)" />
+    <!--
+      Generates manifest.json, the route table and the site's entry point (ASP.Hack route generator),
+      and embeds wwwroot/ in the assembly (served by UseStaticFiles).
+    -->
+    <PackageReference Include="HackerOs.App.Build" Version="$(HackerOsVersion)" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

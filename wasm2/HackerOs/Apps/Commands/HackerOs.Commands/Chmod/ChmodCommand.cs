@@ -18,8 +18,10 @@ public sealed class ChmodCommand : TerminalAppBase
     /// <summary>The default file creation mask, applied to symbolic modes without a "who" letter.</summary>
     private const ushort Umask = 0b000_010_010;
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public ChmodCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

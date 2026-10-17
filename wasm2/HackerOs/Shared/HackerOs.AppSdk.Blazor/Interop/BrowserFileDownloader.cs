@@ -9,6 +9,8 @@ public sealed class BrowserFileDownloader : IAsyncDisposable
 {
     private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
 
+    /// <summary>Prepares the lazy import of <c>_content/HackerOs.AppSdk.Blazor/download.js</c>; the module loads on the first download.</summary>
+    /// <param name="jsRuntime">The JavaScript runtime the module is imported into.</param>
     public BrowserFileDownloader(IJSRuntime jsRuntime)
     {
         _moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
@@ -27,6 +29,8 @@ public sealed class BrowserFileDownloader : IAsyncDisposable
         await module.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
     }
 
+    /// <summary>Disposes the JavaScript module reference if it was ever loaded.</summary>
+    /// <returns>A task that completes once the module is released.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_moduleTask.IsValueCreated)

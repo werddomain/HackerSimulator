@@ -34,6 +34,13 @@ compile-time dependency on the server. This is the host that ships — it must
 build, publish, and run fully offline on its own. See
 [`ecosystem-host.md`](ecosystem-host.md).
 
+> **Update (v3/6, ADR 0098 §2):** the OS itself (`App.razor`, boot coordinator,
+> `AddHackerOsEcosystem`, browser adapters, `css/app.css`) moved to the Razor
+> Class Library `OS/HackerOs.Ecosystem.Host` (namespace unchanged, so
+> `HackerOs.Ecosystem.App` now lives in that assembly). `OS/HackerOs.Ecosystem`
+> keeps its page, service worker, app references and a three-line `Program.cs`
+> calling `AddHackerOsBrowserHost`. See [`../sdk-packages.md`](../sdk-packages.md).
+
 ### 2. `test/test` — the interactive debug harness
 
 `test/test/test.csproj` is a Blazor **Web App** (ASP.NET Core host, `Program.cs`

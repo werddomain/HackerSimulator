@@ -21,6 +21,8 @@ public sealed partial class XdgOpenCommand : TerminalAppBase
 {
     private const string Usage = "usage: xdg-open { file | URL }";
 
+    /// <summary>Initializes the command with its manifest.</summary>
+    /// <param name="manifest">This command's manifest.</param>
     public XdgOpenCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />

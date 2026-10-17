@@ -54,17 +54,21 @@ public sealed class ServerConnectionService(
     private string? _cachedAccessToken;
     private DateTimeOffset _cachedAccessTokenExpiresUtc = DateTimeOffset.MinValue;
 
+    /// <inheritdoc />
     public ValueTask<ServerConnectionState?> GetStateAsync(CancellationToken cancellationToken = default) =>
         repository.GetAsync(cancellationToken);
 
+    /// <inheritdoc />
     public Task<ServerConnectionState> ConnectWithNewAccountAsync(
         Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
         ConnectAsync(serverBaseUrl, username, password, createNewAccount: true, cancellationToken);
 
+    /// <inheritdoc />
     public Task<ServerConnectionState> ConnectWithExistingAccountAsync(
         Uri serverBaseUrl, string username, string password, CancellationToken cancellationToken = default) =>
         ConnectAsync(serverBaseUrl, username, password, createNewAccount: false, cancellationToken);
 
+    /// <inheritdoc />
     public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
     {
         await repository.ClearAsync(cancellationToken).ConfigureAwait(false);
@@ -72,6 +76,7 @@ public sealed class ServerConnectionService(
         _cachedAccessTokenExpiresUtc = DateTimeOffset.MinValue;
     }
 
+    /// <inheritdoc />
     public async Task<string?> EnsureAccessTokenAsync(CancellationToken cancellationToken = default)
     {
         ServerConnectionState? state = await repository.GetAsync(cancellationToken).ConfigureAwait(false);

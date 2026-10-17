@@ -101,18 +101,18 @@ public interface ISimulatedDns
 /// Distinct from <see cref="SimulatedHttpResponse"/> because the service
 /// follows redirects and applies cookie state before returning to callers.
 /// </summary>
+/// <param name="FinalUrl">Final URL after all redirects.</param>
+/// <param name="StatusCode">Final HTTP status code.</param>
+/// <param name="Page">Structured page content (null for non-content status codes).</param>
+/// <param name="NetworkError">Error description when the host is down or the DNS name is unknown.</param>
+/// <param name="RedirectCount">Number of redirects followed (max 10).</param>
+/// <param name="Body">Body of the final response (ADR 0074, section 1), or null.</param>
 public sealed record SimulatedNavigationResult(
-    /// <summary>Final URL after all redirects.</summary>
     string FinalUrl,
-    /// <summary>Final HTTP status code.</summary>
     int StatusCode,
-    /// <summary>Structured page content (null for non-content status codes).</summary>
     SimulatedPage? Page,
-    /// <summary>Error description when the host is down or the DNS name is unknown.</summary>
     string? NetworkError,
-    /// <summary>Number of redirects followed (max 10).</summary>
     int RedirectCount,
-    /// <summary>Body of the final response (ADR 0074, section 1), or null.</summary>
     SimulatedHttpBody? Body = null)
 {
     /// <summary>True when navigation completed with a renderable page.</summary>
@@ -136,10 +136,19 @@ public sealed record SimulatedExchangeResult(SimulatedHttpResponse? Response, st
 /// </summary>
 public static class SimulatedNetworkErrors
 {
+    /// <summary>DNS has no record for the host name.</summary>
     public const string UnknownHost      = "ERR_NAME_NOT_RESOLVED";
+
+    /// <summary>The host exists but is down: it does not answer at all.</summary>
     public const string HostDown         = "ERR_HOST_UNREACHABLE";
+
+    /// <summary>The host is up but nothing listens on the port (a TCP reset).</summary>
     public const string ConnectionRefused = "ERR_CONNECTION_REFUSED";
+
+    /// <summary>More than the allowed number of redirects (10) were chained.</summary>
     public const string TooManyRedirects = "ERR_TOO_MANY_REDIRECTS";
+
+    /// <summary>The network has no route to the destination address.</summary>
     public const string NoRoute          = "ERR_NO_ROUTE";
 }
 

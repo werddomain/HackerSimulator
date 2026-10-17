@@ -106,10 +106,45 @@ public sealed class AppDefinitionInspectorTests
     [Fact]
     public void Sdk_minimum_version_comes_from_the_compiled_reference()
     {
-        Version referenced = Fixtures.GetReferencedAssemblies().Single(name => name.Name == "HackerOs.App.Abstractions").Version!;
+        string abstractions = typeof(AppDefinition).Assembly.Location;
 
-        Assert.Equal($"{referenced.Major}.{referenced.Minor}.0", AppDefinitionInspector.SdkMinimumVersionOf(Fixtures));
+        Assert.Equal(HackerOsSdk.Version, AppDefinitionInspector.SdkMinimumVersionOf(Fixtures, ["/missing/HackerOs.App.Abstractions.dll", abstractions]));
+        Assert.Matches(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$", HackerOsSdk.Version);
     }
+
+    [Fact]
+    public void Declared_assets_are_hashed_from_wwwroot()
+    {
+        string root = Directory.CreateTempSubdirectory("hackeros-assets-").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "data"));
+            File.WriteAllText(Path.Combine(root, "data", "table.json"), "[1,2,3]");
+
+            InspectionResult result = AppDefinitionInspector.Inspect(Fixtures, [typeof(AssetApp)], HackerOsSdk.Version, root);
+
+            Assert.True(result.IsSuccess, string.Join("; ", result.Diagnostics));
+            AssetManifest asset = Assert.Single(Assert.Single(result.Manifests).Manifest.Assets);
+            Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData("[1,2,3]"u8.ToArray())), asset.Sha256);
+            Assert.Contains(asset.Sha256, Assert.Single(result.Manifests).CanonicalJson, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void A_declared_asset_without_a_file_fails_with_HOSAPP0023()
+    {
+        InspectionResult result = AppDefinitionInspector.Inspect(Fixtures, [typeof(AssetApp)], HackerOsSdk.Version, Path.Combine(Path.GetTempPath(), "no-such-wwwroot"));
+
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == GeneratorCodes.AssetMissing);
+    }
+
+    [Fact]
+    public void Sdk_minimum_version_falls_back_to_the_tool_version() =>
+        Assert.Equal(HackerOsSdk.Version, AppDefinitionInspector.SdkMinimumVersionOf(Fixtures, []));
 
     [Fact]
     public void Diagnostic_uses_msbuild_canonical_error_format() =>

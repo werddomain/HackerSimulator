@@ -79,6 +79,8 @@ public sealed class WebCryptoPasswordHasher : IAsyncDisposable
         return await module.InvokeAsync<byte[]?>("aesGcmDecrypt", cancellationToken, key, nonce, sealedData).ConfigureAwait(false);
     }
 
+    /// <summary>Disposes the imported crypto module once; later calls do nothing.</summary>
+    /// <returns>A task that completes when the module is released.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_disposed)

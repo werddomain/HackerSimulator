@@ -120,7 +120,7 @@ public sealed class LauncherAppProjectionTests
         Description = description,
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.TestApp", "HackerOs.TestApp.TestWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest(category, AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

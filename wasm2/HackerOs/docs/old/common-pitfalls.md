@@ -19,6 +19,13 @@ prefix you'd expect. `@Assets["app.css"]` and `_content/HackerOs.Ecosystem/css/a
 are both wrong keys for this file; the correct one is `css/app.css` (or
 `@Assets["css/app.css"]` if you want fingerprinting).
 
+> **Update (v3/6, ADR 0098 §2):** `wwwroot/css/app.css` moved to the Razor Class
+> Library `OS/HackerOs.Ecosystem.Host`, so every host (the Ecosystem PWA included)
+> now serves it at `_content/HackerOs.Ecosystem.Host/css/app.css`, the normal RCL
+> prefix. The unprefixed-route behaviour below still applies to anything left in
+> the Ecosystem app's own `wwwroot` (service worker, web manifest, icons), and the
+> rule about decoy copies is unchanged.
+
 **Why this bites hard:** the wrong key doesn't error — if the host also has
 its own file at that literal path (e.g. a leftover `dotnet new blazor`
 scaffold `wwwroot/app.css`), the lookup silently resolves to *that* instead,

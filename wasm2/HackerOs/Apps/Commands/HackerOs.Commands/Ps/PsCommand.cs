@@ -18,8 +18,10 @@ public sealed class PsCommand : TerminalAppBase
 {
     private static readonly VirtualPath ProcRoot = VirtualPath.Parse("/proc");
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public PsCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Platform.Blazor</PackageId>
+    <Description>HackerOS Blazor shell: desktop, launcher, window launching, dialogs and lazy app loading. For composing an OS host.</Description>
+    <PackageTags>hackeros;platform;blazor</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -1,0 +1,14 @@
+body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Courier New', monospace;
+    margin: 2rem;
+}
+
+h1 {
+    color: #42d392;
+}
+
+a {
+    color: #58a6ff;
+}

@@ -19,6 +19,16 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// </remarks>
 public interface IProxyClient
 {
+    /// <summary>
+    /// Has the server perform one real HTTP request on the app's behalf (<c>POST api/proxy/http</c>),
+    /// subject to the server's proxy policy and the app's stored capability grant.
+    /// </summary>
+    /// <param name="serverBaseUrl">The server's base URL; endpoint paths are resolved relative to it.</param>
+    /// <param name="accessToken">The bearer token of the connected account.</param>
+    /// <param name="request">The method, URL, headers, timeout and requesting app; <c>IncludeBody</c> asks for the body too.</param>
+    /// <param name="cancellationToken">Cancels the HTTP request.</param>
+    /// <returns>The status, headers and, when requested, the base64 body of the real response.</returns>
+    /// <exception cref="ServerConnectionException">The server refused or failed the request; the message carries the proxy error code when there is one.</exception>
     Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default);
 
@@ -29,6 +39,12 @@ public interface IProxyClient
     Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
         Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Reads the proxy limits the server applies to this device (<c>GET api/proxy/policy</c>).</summary>
+    /// <param name="serverBaseUrl">The server's base URL; endpoint paths are resolved relative to it.</param>
+    /// <param name="accessToken">The bearer token of the connected account.</param>
+    /// <param name="cancellationToken">Cancels the HTTP request.</param>
+    /// <returns>Concurrency, payload, duration and redirect limits, allowed protocols and operator warnings.</returns>
+    /// <exception cref="ServerConnectionException">The server answered with a non-success status.</exception>
     Task<ProxyPolicyResponse> GetPolicyAsync(
         Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default);
 
@@ -60,6 +76,7 @@ public sealed class HttpProxyClient(
     {
     }
 
+    /// <inheritdoc />
     public async Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default)
     {
@@ -83,6 +100,7 @@ public sealed class HttpProxyClient(
             ProxyContractsJsonContext.Default.ProxyHttpResponse, cancellationToken).ConfigureAwait(false))!;
     }
 
+    /// <inheritdoc />
     public async Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
         Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default)
     {
@@ -106,6 +124,7 @@ public sealed class HttpProxyClient(
             ProxyContractsJsonContext.Default.ProxyTcpProbeResponse, cancellationToken).ConfigureAwait(false))!;
     }
 
+    /// <inheritdoc />
     public async Task<ProxyPolicyResponse> GetPolicyAsync(
         Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default)
     {

@@ -69,7 +69,7 @@ public sealed class AppPlatformEntryPointResolverTests
         Description = "Resolver test application.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Samples.PlatformApp.dll", "HackerOs.Samples.PlatformApp.PlatformDemoWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

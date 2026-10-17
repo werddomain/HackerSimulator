@@ -17,7 +17,7 @@ public sealed class AdministratorAuthenticationAgentTests
         PublisherId = "org.test",
         Description = "Settings",
         Kind = AppKind.Window,
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

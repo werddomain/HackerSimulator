@@ -190,7 +190,7 @@ public sealed class AppEntryPointDiscoveryTests
         Description = "Discovery test application.",
         Kind = kind,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", entryTypeName),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

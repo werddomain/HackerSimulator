@@ -14,7 +14,7 @@ namespace HackerOs.AppSdk.Administration;
 /// raises <see cref="HackUnauthorizedAccessException"/>.
 /// </para>
 /// <para>
-/// The server is optional (<c>AGENTS.md</c>): without one, <see cref="GetStateAsync()"/> reports
+/// The server is optional (<c>AGENTS.md</c>): without one, <see cref="GetStateAsync(CancellationToken)"/> reports
 /// <see cref="HackServerConnectionState.NotConnected"/> and <see cref="SyncAsync(HackSyncDomain, HackSyncDirection, CancellationToken)"/>
 /// does nothing. Only a request the user made (connect, create an account, synchronize) raises
 /// <see cref="HackServerConnectionException"/> when the server refuses it or cannot be reached.

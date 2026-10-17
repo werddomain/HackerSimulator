@@ -14,19 +14,32 @@ public sealed class PaintCanvasState
     private long _nextSnapshotId;
     private long _savedSnapshotId = -1;
 
+    /// <summary>Starts with a blank white 800 x 600 document.</summary>
     public PaintCanvasState() => NewDocument(800, 600);
 
+    /// <summary>Width of the current image in pixels (16 to 4096 for a new document).</summary>
     public int Width { get; private set; }
+    /// <summary>Height of the current image in pixels (16 to 4096 for a new document).</summary>
     public int Height { get; private set; }
+    /// <summary>The brush color as <c>#rrggbb</c>; an unparsable value paints the default green.</summary>
     public string ActiveColor { get; set; } = "#33ff33";
+    /// <summary>The brush diameter in pixels.</summary>
     public int BrushSize { get; set; } = 5;
+    /// <summary>The display zoom factor, from 0.2 to 5; it never changes the document pixels.</summary>
     public double Scale { get; private set; } = 1.0;
+    /// <summary>True when the pixel grid overlay is drawn over the canvas.</summary>
     public bool ShowGrid { get; private set; }
+    /// <summary>True when dragging pans the viewport instead of painting.</summary>
     public bool PanMode { get; private set; }
+    /// <summary>True when dragging selects a crop rectangle instead of painting.</summary>
     public bool CropMode { get; private set; }
+    /// <summary>Horizontal viewport offset in screen pixels, changed by <see cref="PanBy"/>.</summary>
     public int PanX { get; private set; }
+    /// <summary>Vertical viewport offset in screen pixels, changed by <see cref="PanBy"/>.</summary>
     public int PanY { get; private set; }
+    /// <summary>True when an earlier snapshot exists in the history (at most 20 are kept).</summary>
     public bool CanUndo => _historyIndex > 0;
+    /// <summary>True after an undo, until a new commit discards the redo branch.</summary>
     public bool CanRedo => _historyIndex >= 0 && _historyIndex < _history.Count - 1;
 
     /// <summary>
@@ -65,7 +78,13 @@ public sealed class PaintCanvasState
     /// <summary>Returns a defensive copy so callers cannot mutate history.</summary>
     public byte[] GetCurrentBuffer() => _history[_historyIndex].Buffer.ToArray();
 
+    /// <summary>Commits a copy of an edited RGBA buffer of the current size as a new undo step.</summary>
+    /// <param name="pixelRgba">The full image, 4 bytes per pixel; its length must match <see cref="Width"/> x <see cref="Height"/>.</param>
     public void PushHistory(byte[] pixelRgba) => Commit(Width, Height, pixelRgba);
+    /// <summary>Commits a copy of an edited RGBA buffer that may change the image size, as a new undo step.</summary>
+    /// <param name="width">The new image width in pixels (1 to 4096).</param>
+    /// <param name="height">The new image height in pixels (1 to 4096).</param>
+    /// <param name="pixelRgba">The full image, 4 bytes per pixel.</param>
     public void PushHistory(int width, int height, byte[] pixelRgba) => Commit(width, height, pixelRgba);
 
     /// <summary>Draws a round, opaque RGBA brush stroke into the authoritative document.</summary>
@@ -104,12 +123,19 @@ public sealed class PaintCanvasState
         Commit(right - left, bottom - top, cropped);
     }
 
+    /// <summary>Steps back to the previous snapshot, restoring its size as well as its pixels.</summary>
     public void Undo() { if (CanUndo) Apply(--_historyIndex); }
+    /// <summary>Steps forward to the snapshot undone last.</summary>
     public void Redo() { if (CanRedo) Apply(++_historyIndex); }
+    /// <summary>Zooms in by 25 percent, up to 5x.</summary>
     public void ZoomIn() => Scale = Math.Min(5, Math.Round(Scale * 1.25, 2));
+    /// <summary>Zooms out by 20 percent, down to 0.2x.</summary>
     public void ZoomOut() => Scale = Math.Max(.2, Math.Round(Scale * .8, 2));
+    /// <summary>Shows or hides the pixel grid overlay.</summary>
     public void ToggleGrid() => ShowGrid = !ShowGrid;
+    /// <summary>Switches dragging between painting and panning the viewport.</summary>
     public void TogglePanMode() => PanMode = !PanMode;
+    /// <summary>Switches dragging between painting and selecting a crop rectangle.</summary>
     public void ToggleCropMode() => CropMode = !CropMode;
     /// <summary>Moves only the rendered viewport; document pixels remain unchanged.</summary>
     public void PanBy(int deltaX, int deltaY) { PanX += deltaX; PanY += deltaY; }
@@ -125,6 +151,14 @@ public sealed class PaintCanvasState
         Commit(Height, Width, rotated);
     }
 
+    /// <summary>Allocates an RGBA buffer filled with one color.</summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <param name="height">Height in pixels.</param>
+    /// <param name="r">Red component of the fill color.</param>
+    /// <param name="g">Green component of the fill color.</param>
+    /// <param name="b">Blue component of the fill color.</param>
+    /// <param name="a">Alpha component of the fill color.</param>
+    /// <returns>A new buffer of <c>width * height * 4</c> bytes.</returns>
     public static byte[] CreateBlankBuffer(int width, int height, byte r, byte g, byte b, byte a)
     {
         var result = new byte[checked(width * height * 4)];

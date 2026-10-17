@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <PackageId>HackerOs.Windowing.Blazor</PackageId>
     <Description>Razor components (DesktopArea, WindowHost, WindowChrome) that render a HackerOs.Windowing.Core WindowRuntime. No MudBlazor dependency.</Description>
+    <PackageTags>hackeros;windowing;blazor;desktop-shell</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

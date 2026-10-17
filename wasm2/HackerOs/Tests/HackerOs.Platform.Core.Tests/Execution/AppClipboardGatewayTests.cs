@@ -164,7 +164,7 @@ public sealed class AppClipboardGatewayTests
         Description = "Clipboard contract test application.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("Test", "Test.Window"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Capabilities = capabilities

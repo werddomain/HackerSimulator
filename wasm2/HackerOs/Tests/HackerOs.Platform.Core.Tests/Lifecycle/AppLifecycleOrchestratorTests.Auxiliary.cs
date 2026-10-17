@@ -80,7 +80,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "A web app with a Blazor root.",
         Kind = AppKind.Web,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(BlazorSiteApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Capabilities = [AppCapabilities.NetworkListen, AppCapabilities.NetworkSimulatedRead],

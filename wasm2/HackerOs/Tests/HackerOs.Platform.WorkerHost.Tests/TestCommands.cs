@@ -43,7 +43,7 @@ internal static class TestCommands
         Description = $"Test command {name}.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest(AssemblyFile, typeof(TCommand).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest(name, [], $"{name} [args]"),
@@ -59,7 +59,7 @@ internal static class TestCommands
         Description = "Test service.",
         Kind = AppKind.Service,
         EntryPoint = new AppEntryPointManifest(AssemblyFile, typeof(TService).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Execution = AppExecutionHost.Dedicated
@@ -74,7 +74,7 @@ internal static class TestCommands
         Description = "Test web app.",
         Kind = AppKind.Web,
         EntryPoint = new AppEntryPointManifest(AssemblyFile, typeof(TSite).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Web = new WebAppManifest([url])

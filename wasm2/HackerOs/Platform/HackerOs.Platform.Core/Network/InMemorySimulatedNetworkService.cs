@@ -110,6 +110,13 @@ public sealed class InMemorySimulatedNetworkService : ISimulatedNetworkService
     /// <inheritdoc/>
     public IReadOnlyList<SimulatedHost> AllHosts => [.._hostsByIp.Values];
 
+    /// <summary>Builds the network from its hosts and websites, and its DNS from the host names and aliases.</summary>
+    /// <param name="hosts">The simulated machines, indexed by IP address and by host name.</param>
+    /// <param name="registry">The website controllers that answer HTTP requests sent to those hosts.</param>
+    /// <param name="dnsAliases">
+    /// Extra DNS names, each resolving to an IP address. The alias host names of every registered
+    /// controller whose primary host exists are added automatically.
+    /// </param>
     public InMemorySimulatedNetworkService(
         IEnumerable<SimulatedHost> hosts,
         ISimulatedWebsiteRegistry registry,

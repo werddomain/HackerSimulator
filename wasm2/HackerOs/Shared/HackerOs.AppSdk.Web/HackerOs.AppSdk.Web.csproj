@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.AppSdk.Web</PackageId>
+    <Description>ASP.Hack: MVC-like web sites hosted inside HackerOS (controllers, routing, model binding, Razor views, cookie session).</Description>
+    <PackageTags>hackeros;app-sdk;asp-hack;web</PackageTags>
+  </PropertyGroup>
+
   <!--
     ASP.Hack (ADR 0076): an ASP.NET MVC-like layer over the SDK's HackHttpListener. A site is a web
     app process (AppKind.Web) running in the shared web worker; this library gives it a middleware

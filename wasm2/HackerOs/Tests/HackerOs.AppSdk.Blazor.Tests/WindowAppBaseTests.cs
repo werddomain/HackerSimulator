@@ -215,7 +215,7 @@ public sealed class WindowAppBaseTests
         Description = "Window App SDK test component.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.AppSdk.Blazor.Tests", "TestWindowApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };
@@ -247,7 +247,7 @@ public sealed class WindowAppBaseTests
             Description = "Window App SDK test component.",
             Kind = kind,
             EntryPoint = new AppEntryPointManifest("HackerOs.AppSdk.Blazor.Tests", "TestWindowApp"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         };

@@ -114,7 +114,8 @@ capacités dangereuses. Liste et règles : [`app-model.md`](app-model.md#apps-sy
 
 | Projet | Rôle |
 |---|---|
-| `OS/HackerOs.Ecosystem` | **L'hôte livré** : PWA Blazor WebAssembly autonome (`wwwroot/index.html`, service worker), sans serveur. Il référence les apps et agrège leurs manifestes dans `BuiltInApplications.json` au build. Tout doit fonctionner avec lui seul, hors ligne. |
+| `OS/HackerOs.Ecosystem` | **L'hôte livré** : PWA Blazor WebAssembly autonome (`wwwroot/index.html`, service worker), sans serveur. Il référence `HackerOs.Ecosystem.Host` et les apps, agrège leurs manifestes dans `BuiltInApplications.json` au build, et son `Program.cs` appelle `AddHackerOsBrowserHost`. Tout doit fonctionner avec lui seul, hors ligne. |
+| `OS/HackerOs.Ecosystem.Host` | **L'OS lui-même**, en bibliothèque Razor publiée en paquet (ADR 0098 §2) : bureau (`App.razor`), écran de progression, `EcosystemBootCoordinator`, composition des services (`AddHackerOsEcosystem`, `AddHackerOsBrowserHost`), mesure des ressources, adaptateurs du navigateur, jetons de design (`_content/HackerOs.Ecosystem.Host/css/app.css`), `HostAppCatalog`. Un hôte d'un autre dépôt le référence ([`sdk-packages.md`](sdk-packages.md)). |
 | `test/test` | Blazor Web App de débogage : rend le même arbre de composants en `InteractiveWebAssembly` pour profiter du débogueur. Pas une cible de distribution. |
 | `Server/HackerOs.Server` | Serveur ASP.NET Core **optionnel** : synchronisation, comptes, relais HTTP/TCP/UDP vers le vrai réseau ([`server-network-relay.md`](server-network-relay.md), politique et quotas dans `appsettings.json`). Il sert aussi l'interface en `InteractiveServer` (ADR 0027), en mode mono-utilisateur. Aucune app ne doit en dépendre. |
 | `Server/HackerOs.Server.Contracts` | Contrats partagés entre le serveur et le client. |
@@ -128,10 +129,13 @@ Plus de détails sur les hôtes dans [`old/hosting-model.md`](old/hosting-model.
 |---|---|
 | `Tools/HackerOs.Tools.ManifestGenerator` | Génère `manifest.json` depuis la classe `[AppManifest]` de chaque app, vérifie la frontière du SDK et agrège `BuiltInApplications.json` dans l'hôte ([`app-model.md`](app-model.md)). |
 | `Tools/HackerOs.Tools.WebRouteGenerator` | Générateur de sources Roslyn branché sur chaque app : table de routes des contrôleurs ASP.Hack et entrée des sites, erreurs `HOSWEB*` (ADR 0082, [`asp-hack-mvc.md`](asp-hack-mvc.md)). |
+| `Tools/HackerOs.App.Build` | Paquet de l'intégration de build pour un autre dépôt : `build/HackerOs.Apps.targets`, générateur de manifestes, générateur de routes ([`sdk-packages.md`](sdk-packages.md)). |
+| `Templates/HackerOs.Templates` | Modèles `dotnet new` : `hackeros-window`, `-command`, `-service`, `-site`, `-host` (ADR 0098 §6). |
 | `Tools/icon-import` | Script Node d'import des bibliothèques d'icônes. |
 | `Samples/HackerOs.Windowing.SampleHost` | Hôte d'exemple du gestionnaire de fenêtres seul. |
-| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) et le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
-| `build/HackerOs.Apps.targets` | Cibles MSBuild du modèle d'app (génération, agrégation, frontière du SDK). |
+| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`) et le test des modèles (`HackerOs.Templates.E2E.Tests`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
+| `build/HackerOs.Apps.targets` | Cibles MSBuild du modèle d'app (génération, agrégation, frontière du SDK, empaquetage des manifestes). |
+| `build/Versions.props`, `build/pack-local.sh`/`.ps1` | Version unique de tout ce qui est publié et production des paquets locaux dans `artifacts/local-nupkg` ([`sdk-packages.md`](sdk-packages.md)). |
 
 ## Le système simulé
 
@@ -182,8 +186,9 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 
 ### Démarrage
 
-1. `Program.cs` de l'hôte enregistre les services (`AddHackerOsEcosystem`) et le
-   catalogue lu dans `BuiltInApplications.json` (`BuildKnownLazyApps`).
+1. `Program.cs` de l'hôte appelle `AddHackerOsBrowserHost`, qui enregistre les
+   services (`AddHackerOsEcosystem`) et le catalogue lu dans
+   `BuiltInApplications.json` (`HostAppCatalog`, `BuildKnownLazyApps` dans l'Ecosystem).
 2. `EcosystemBootCoordinator` monte le stockage, attache l'écrivain de journaux
    à `/var/log`, installe `/etc/hackeros/apps.config`, démarre l'horloge
    simulée et l'échantillonnage des mesures, puis valide politique, sessions et

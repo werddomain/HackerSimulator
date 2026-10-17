@@ -27,6 +27,7 @@ public sealed class GrantsSyncService(
     ISyncClient syncClient,
     ISyncCursorRepository cursors) : IGrantsSyncService
 {
+    /// <inheritdoc />
     public async Task PullAsync(CancellationToken cancellationToken = default)
     {
         ServerConnectionState? state = await connection.GetStateAsync(cancellationToken).ConfigureAwait(false);

@@ -1,0 +1,85 @@
+#nullable enable
+const HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.WebServerManagerAppId = "org.hackeros.web-server-manager" -> string!
+HackerOs.Apps.FileExplorer.FileConflictDialog
+HackerOs.Apps.FileExplorer.FileConflictDialog.Conflict.get -> HackerOs.AppSdk.FileView.Transfers.FileTransferConflict!
+HackerOs.Apps.FileExplorer.FileConflictDialog.Conflict.set -> void
+HackerOs.Apps.FileExplorer.FileConflictDialog.FileConflictDialog() -> void
+HackerOs.Apps.FileExplorer.FileConflictDialog.ShowApplyToAll.get -> bool
+HackerOs.Apps.FileExplorer.FileConflictDialog.ShowApplyToAll.set -> void
+HackerOs.Apps.FileExplorer.FileExplorerApp
+HackerOs.Apps.FileExplorer.FileExplorerApp.FileExplorerApp() -> void
+HackerOs.Apps.FileExplorer.FileExplorerDialogBase
+HackerOs.Apps.FileExplorer.FileExplorerDialogBase.FileExplorerDialogBase() -> void
+HackerOs.Apps.FileExplorer.FileExplorerDialogBase.OwnerAppContext.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.Apps.FileExplorer.FileExplorerDialogBase.OwnerAppContext.set -> void
+HackerOs.Apps.FileExplorer.FileExplorerState
+HackerOs.Apps.FileExplorer.FileExplorerState.CanNavigateBack.get -> bool
+HackerOs.Apps.FileExplorer.FileExplorerState.CanNavigateForward.get -> bool
+HackerOs.Apps.FileExplorer.FileExplorerState.CanNavigateUp.get -> bool
+HackerOs.Apps.FileExplorer.FileExplorerState.CurrentPath.get -> string!
+HackerOs.Apps.FileExplorer.FileExplorerState.FileExplorerState(string! initialPath = "/home/user") -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.NavigateBack() -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.NavigateForward() -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.NavigateTo(string! newPath) -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.NavigateUp() -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.NotifyStateChanged() -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.SearchQuery.get -> string!
+HackerOs.Apps.FileExplorer.FileExplorerState.SearchQuery.set -> void
+HackerOs.Apps.FileExplorer.FileExplorerState.StateChanged -> System.Action?
+HackerOs.Apps.FileExplorer.FileExplorerState.ViewMode.get -> HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.Apps.FileExplorer.FileExplorerState.ViewMode.set -> void
+HackerOs.Apps.FileExplorer.FileExplorerWindow
+HackerOs.Apps.FileExplorer.FileExplorerWindow.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Apps.FileExplorer.FileExplorerWindow.FileExplorerWindow() -> void
+HackerOs.Apps.FileExplorer.FilePropertiesDialog
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.EntryName.get -> string!
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.EntryName.set -> void
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.FilePropertiesDialog() -> void
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.Metadata.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryMetadata?
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.Metadata.set -> void
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.Path.get -> string!
+HackerOs.Apps.FileExplorer.FilePropertiesDialog.Path.set -> void
+HackerOs.Apps.FileExplorer.OpenWithDialog
+HackerOs.Apps.FileExplorer.OpenWithDialog.AvailableApps.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Apps.HackAppInfo!>!
+HackerOs.Apps.FileExplorer.OpenWithDialog.AvailableApps.set -> void
+HackerOs.Apps.FileExplorer.OpenWithDialog.FilePath.get -> string!
+HackerOs.Apps.FileExplorer.OpenWithDialog.FilePath.set -> void
+HackerOs.Apps.FileExplorer.OpenWithDialog.OpenWithDialog() -> void
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Customize(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext! context, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Matches(HackerOs.AppSdk.FileView.FileViewItem! item) -> bool
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.PublishSiteContextMenuProvider(System.Func<string!, string!, System.Threading.Tasks.Task!>! launch) -> void
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.Apps.FileExplorer.TrashView
+HackerOs.Apps.FileExplorer.TrashView.ReloadAsync() -> System.Threading.Tasks.Task!
+HackerOs.Apps.FileExplorer.TrashView.Restored.get -> Microsoft.AspNetCore.Components.EventCallback<System.Collections.Generic.IReadOnlyList<string!>!>
+HackerOs.Apps.FileExplorer.TrashView.Restored.set -> void
+HackerOs.Apps.FileExplorer.TrashView.TrashView() -> void
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Customize(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext! context, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Matches(HackerOs.AppSdk.FileView.FileViewItem! item) -> bool
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.ZipFileContextMenuProvider(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, System.Func<HackerOs.AppSdk.FileView.FileView?>! fileView, System.Action<string!>! reportError) -> void
+HackerOs.Apps.FileExplorer._Imports
+HackerOs.Apps.FileExplorer._Imports.Execute() -> void
+HackerOs.Apps.FileExplorer._Imports._Imports() -> void
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Description.get -> string!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.EntryPoint.get -> System.Type!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.FileHandlers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.FileHandler!>!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Id.get -> string!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Name.get -> string!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.PublisherId.get -> string!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Apps.FileExplorer.FileExplorerDialogBase.SetParametersAsync(Microsoft.AspNetCore.Components.ParameterView parameters) -> System.Threading.Tasks.Task!
+override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppAfterRender(bool firstRender) -> void
+override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppInitialized() -> void
+override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
+override HackerOs.Apps.FileExplorer.TrashView.OnInitializedAsync() -> System.Threading.Tasks.Task!
+~override HackerOs.Apps.FileExplorer.FileConflictDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Apps.FileExplorer.FileExplorerWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Apps.FileExplorer.FilePropertiesDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Apps.FileExplorer.OpenWithDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Apps.FileExplorer.TrashView.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
