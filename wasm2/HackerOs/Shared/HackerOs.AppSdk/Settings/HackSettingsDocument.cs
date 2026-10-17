@@ -111,10 +111,97 @@ public sealed class HackSettingsDocument : IAsyncDisposable
     /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, as declared.</param>
     /// <exception cref="ArgumentException">The key is not declared in the schema.</exception>
     /// <exception cref="InvalidCastException"><typeparamref name="T"/> does not fit the field's type.</exception>
+    /// <exception cref="HackSettingMaskedException">The value lives in a private file the caller may not read (ADR 0100).</exception>
     public T Get<T>(string qualifiedKey)
     {
         SettingFieldDeclaration field = RequireField(qualifiedKey);
-        return SettingValueConverter.FromSetting<T>(field, _snapshot.Values[field.QualifiedKey]);
+        LayeredConfigSnapshot snapshot = _snapshot;
+        if (snapshot.MaskedKeys.Contains(field.QualifiedKey))
+        {
+            throw new HackSettingMaskedException(field.QualifiedKey, PrivatePathOf(snapshot.Sources[field.QualifiedKey]));
+        }
+
+        return SettingValueConverter.FromSetting<T>(field, snapshot.Values[field.QualifiedKey]);
+    }
+
+    /// <summary>
+    /// Gets a declared key as the caller may see it, never failing on a masked value
+    /// (ADR 0100 section 1): a key held in a private file the caller may not read comes back with
+    /// <see cref="HackSettingValue.IsMasked"/> set and no value, which a UI shows as
+    /// <see cref="HackSettingValue.MaskText"/>.
+    /// </summary>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, as declared.</param>
+    /// <exception cref="ArgumentException">The key is not declared in the schema.</exception>
+    public HackSettingValue GetValue(string qualifiedKey)
+    {
+        SettingFieldDeclaration field = RequireField(qualifiedKey);
+        LayeredConfigSnapshot snapshot = _snapshot;
+        string key = field.QualifiedKey;
+        bool masked = snapshot.MaskedKeys.Contains(key);
+        return new HackSettingValue(
+            key,
+            masked ? null : snapshot.Values[key],
+            field.Sensitivity,
+            snapshot.Sources[key],
+            snapshot.LockedKeys.Contains(key),
+            masked);
+    }
+
+    /// <summary>Gets whether a declared key's value is hidden from the caller (ADR 0100 section 1).</summary>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, as declared.</param>
+    /// <exception cref="ArgumentException">The key is not declared in the schema.</exception>
+    public bool IsMasked(string qualifiedKey) => _snapshot.MaskedKeys.Contains(RequireField(qualifiedKey).QualifiedKey);
+
+    /// <summary>
+    /// Reads the secret of a <see cref="SettingSensitivity.SecretReference"/> key (ADR 0100 section 2):
+    /// the private file holds a keyring entry id, the secret itself is in the user's keyring.
+    /// </summary>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, declared <c>SecretReference</c>.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The secret, or <see langword="null"/> when none is set.</returns>
+    /// <exception cref="ArgumentException">The key is undeclared or not a <c>SecretReference</c>.</exception>
+    /// <exception cref="HackSettingMaskedException">The reference itself is hidden from the caller.</exception>
+    /// <exception cref="HackerOs.AppSdk.Keyring.HackKeyringLockedException">The keyring is locked.</exception>
+    /// <exception cref="NotSupportedException">An OS document: it has no keyring.</exception>
+    public async ValueTask<string?> GetSecretAsync(string qualifiedKey, CancellationToken cancellationToken = default)
+    {
+        SettingFieldDeclaration field = RequireSecretField(qualifiedKey);
+        string reference = Get<string>(field.QualifiedKey);
+        return reference.Length == 0
+            ? null
+            : await RequireKeyring().GetAsync(null, reference, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Stores the secret of a <see cref="SettingSensitivity.SecretReference"/> key in the user's keyring
+    /// and its entry id in the user's private settings file; <see langword="null"/> deletes both.
+    /// Secrets are per user, so only the user layer holds a reference.
+    /// </summary>
+    /// <param name="qualifiedKey"><c>key</c> or <c>Group.key</c>, declared <c>SecretReference</c>.</param>
+    /// <param name="secret">New secret, or <see langword="null"/> to forget it.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="ArgumentException">The key is undeclared or not a <c>SecretReference</c>.</exception>
+    /// <exception cref="HackSettingLockedException">The key is locked by the administrator.</exception>
+    /// <exception cref="HackerOs.AppSdk.Keyring.HackKeyringLockedException">The keyring is locked.</exception>
+    public async ValueTask SetSecretAsync(string qualifiedKey, string? secret, CancellationToken cancellationToken = default)
+    {
+        SettingFieldDeclaration field = RequireSecretField(qualifiedKey);
+        HackerOs.AppSdk.Keyring.IAppKeyringGateway keyring = RequireKeyring();
+        string reference = $"settings:{_store.DocumentId}:{field.QualifiedKey}";
+        if (secret is null)
+        {
+            await keyring.DeleteAsync(reference, cancellationToken).ConfigureAwait(false);
+            await ResetAsync(field.QualifiedKey, SettingLayer.User, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (_snapshot.LockedKeys.Contains(field.QualifiedKey))
+        {
+            throw new HackSettingLockedException(field.QualifiedKey, SystemPath);
+        }
+
+        await keyring.SetAsync(reference, secret, field.QualifiedKey, cancellationToken).ConfigureAwait(false);
+        await SetAsync(field.QualifiedKey, reference, SettingLayer.User, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Gets the layer that supplied the effective value of a declared key.</summary>
@@ -225,6 +312,14 @@ public sealed class HackSettingsDocument : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(target), target, "Only the User and System layers can be written.");
         }
 
+        // ADR 0100: a Restricted key exists only in the system private file (root only).
+        if (target == SettingLayer.User
+            && edits.FirstOrDefault(static edit => edit.Value is not null && edit.Field.Sensitivity == SettingSensitivity.Restricted) is { } restricted)
+        {
+            throw new InvalidOperationException(
+                $"Setting '{restricted.Field.QualifiedKey}' is Restricted: only the system layer can hold it.");
+        }
+
         await ReloadAsync(raiseChanged: true, cancellationToken).ConfigureAwait(false);
         // Only a write that sets a value is pointless on a locked key; removing a stale user value is not.
         if (target == SettingLayer.User
@@ -276,7 +371,8 @@ public sealed class HackSettingsDocument : IAsyncDisposable
             if (!previous.Values.TryGetValue(key, out string? before)
                 || before != value
                 || previous.Sources[key] != next.Sources[key]
-                || previous.LockedKeys.Contains(key) != next.LockedKeys.Contains(key))
+                || previous.LockedKeys.Contains(key) != next.LockedKeys.Contains(key)
+                || previous.MaskedKeys.Contains(key) != next.MaskedKeys.Contains(key))
             {
                 changed.Add(key);
             }
@@ -284,6 +380,20 @@ public sealed class HackSettingsDocument : IAsyncDisposable
 
         return changed;
     }
+
+    private string PrivatePathOf(SettingLayer layer) =>
+        SettingsPrivateFiles.GetPrivatePath(layer == SettingLayer.User ? UserPath : SystemPath);
+
+    private SettingFieldDeclaration RequireSecretField(string qualifiedKey)
+    {
+        SettingFieldDeclaration field = RequireField(qualifiedKey);
+        return field.Sensitivity == SettingSensitivity.SecretReference
+            ? field
+            : throw new ArgumentException($"Setting '{field.QualifiedKey}' is not declared SecretReference.", nameof(qualifiedKey));
+    }
+
+    private HackerOs.AppSdk.Keyring.IAppKeyringGateway RequireKeyring() =>
+        _store.Keyring ?? throw new NotSupportedException("OS settings documents have no keyring.");
 
     private SettingFieldDeclaration RequireField(string qualifiedKey)
     {

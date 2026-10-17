@@ -21,6 +21,7 @@ using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Keyring;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
 using HackerOs.Platform.Core.Intents;
@@ -117,6 +118,10 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IAuditLog>(provider => new FileAuditLog(
             provider.GetRequiredService<LogFileWriter>(),
             provider.GetRequiredService<IDiagnosticRedactor>()));
+        // /var/log/audit.log (ADR 0100 section 3): FileSystemService hands it every protected write.
+        services.AddSingleton<IFileSystemAuditSink>(provider => new FileSystemAuditLog(
+            provider.GetRequiredService<LogFileWriter>(),
+            provider.GetRequiredService<ISimulationClock>()));
         // Every dependency is a singleton, so the host's root ILoggerFactory can build this provider
         // before any Blazor scope exists. ILogger<T> entries land in /var/log/syslog.
         services.AddSingleton<ILoggerProvider>(provider => new HackerOsDiagnosticLoggerProvider(
@@ -404,6 +409,17 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IStorageInspector>(provider =>
             new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
 
+        // User keyring (ADR 0100 section 2): ~/.local/share/keyrings/login.keyring, sealed with
+        // AES-GCM through Web Crypto, unlocked by the session service at login.
+        services.AddScoped<IKeyringCipher>(provider =>
+            new HackerOs.Ecosystem.Keyring.WebCryptoKeyringCipher(provider.GetRequiredService<WebCryptoPasswordHasher>()));
+        services.AddScoped<UserKeyringService>(provider => new UserKeyringService(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IKeyringCipher>(),
+            provider.GetRequiredService<IAuditLog>(),
+            provider.GetService<ILogger<UserKeyringService>>()));
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -419,7 +435,8 @@ public static class EcosystemServiceCollectionExtensions
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct),
                 grantRepository: provider.GetService<ICapabilityGrantRepository>(),
                 catalog: provider.GetService<AppCatalog>(),
-                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>());
+                profileInitializer: provider.GetRequiredService<SettingsStoreToFilesMigration>(),
+                keyring: provider.GetRequiredService<UserKeyringService>());
         });
         // Per-process arguments, working directory and environment (ADR 0050): filled and
         // emptied by the process manager, read by /proc and each app's Environment gateway.
@@ -539,6 +556,8 @@ public static class EcosystemServiceCollectionExtensions
             localNetwork: provider.GetRequiredService<LocalNetworkServices>(),
             // HackWebDb (ADR 0088): hackweb.<app id> for web apps, and their listing in Diagnostic.
             webDatabases: provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>(),
+            // HackKeyring (ADR 0100 section 2): the session user's keyring, per app.
+            keyring: provider.GetRequiredService<UserKeyringService>(),
             administration: new SystemAdministrationGatewayServices(
                 () => provider.GetRequiredService<IOsSettingsService>(),
                 () => provider.GetRequiredService<AppPermissionAdministration>(),

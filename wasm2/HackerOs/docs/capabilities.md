@@ -46,6 +46,7 @@ classement.
 | `system.power` | **dangereuse** (`HackSystem` : redémarrage, réinitialisation, ADR 0056 §11 ; déclarée par Paramètres) |
 | `system.storage.inspect` | **dangereuse** (`HackStorageDiagnostics`, ADR 0056 §11 ; déclarée par Diagnostic, seule app non système de la base à demander une approbation au premier lancement) |
 | `shell.host` | **dangereuse** (ADR 0056 §7 : héberger un shell dont les commandes agissent avec leurs propres droits, voir [`shell-host.md`](shell-host.md)) |
+| `keyring.read-all` | **dangereuse** (ADR 0100 §2 : lire les entrées du trousseau de toutes les apps, pour un gestionnaire de mots de passe ; voir [`sensitive-settings.md`](sensitive-settings.md)). Phrase de risque : « Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés. » |
 
 Les phrases de risque sont celles de la table de l'ADR 0049.
 

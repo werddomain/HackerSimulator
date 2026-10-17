@@ -153,6 +153,13 @@ public static class AppCapabilities
     public const string ShellHost = "shell.host";
 
     /// <summary>
+    /// Read every app's entries of the session user's keyring through <c>HackKeyring</c>
+    /// (ADR 0100, section 2), as a password manager does. Dangerous; an app always reaches its own
+    /// entries without any capability.
+    /// </summary>
+    public const string KeyringReadAll = "keyring.read-all";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -232,7 +239,11 @@ public static class AppCapabilities
         Dangerous(
             ShellHost,
             "Héberger un shell",
-            "Exécuter des commandes en votre nom, avec les droits de ces commandes.")
+            "Exécuter des commandes en votre nom, avec les droits de ces commandes."),
+        Dangerous(
+            KeyringReadAll,
+            "Lire tout le trousseau",
+            "Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés.")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);

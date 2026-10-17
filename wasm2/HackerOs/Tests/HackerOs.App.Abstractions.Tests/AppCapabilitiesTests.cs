@@ -70,6 +70,7 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.SystemPower, CapabilityRisk.Dangerous },
         { AppCapabilities.SystemStorageInspect, CapabilityRisk.Dangerous },
         { AppCapabilities.ShellHost, CapabilityRisk.Dangerous },
+        { AppCapabilities.KeyringReadAll, CapabilityRisk.Dangerous },
     };
 
     [Theory]

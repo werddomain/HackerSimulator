@@ -59,7 +59,8 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppSystemPowerGateway? systemPower = null,
         IAppStorageDiagnosticsGateway? storageDiagnostics = null,
         Processes.ProcessControlBlock? control = null,
-        HackerOs.AppSdk.WebData.IAppWebDatabaseGateway? webDatabase = null)
+        HackerOs.AppSdk.WebData.IAppWebDatabaseGateway? webDatabase = null,
+        HackerOs.AppSdk.Keyring.IAppKeyringGateway? keyring = null)
     {
         // ADR 0069: a context built without the process manager's block (tests) is never stopped or killed.
         Control = control ?? new Processes.ProcessControlBlock(processId);
@@ -102,7 +103,11 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         StorageDiagnostics = storageDiagnostics ?? UnsupportedAdministrationGateways.StorageDiagnostics;
         Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
         WebDatabase = webDatabase ?? new WebData.AppWebDatabaseGateway(null, manifest);
+        Keyring = keyring ?? HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
     }
+
+    /// <inheritdoc />
+    public HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring { get => Guarded(field); }
 
     /// <inheritdoc />
     public HackerOs.AppSdk.WebData.IAppWebDatabaseGateway WebDatabase { get => Guarded(field); }

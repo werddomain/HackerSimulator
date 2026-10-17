@@ -286,6 +286,14 @@ public interface IAppExecutionContext
     /// compiling.
     /// </summary>
     IAppConsoleGateway Console => DetachedAppConsoleGateway.Instance;
+
+    /// <summary>
+    /// Gets the session user's keyring as this app sees it, behind <see cref="Keyring.HackKeyring"/>
+    /// (ADR 0100 section 2; own entries without capability, every app's with <c>keyring.read-all</c>).
+    /// Defaults to a locked gateway so existing implementations keep compiling; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring => HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
 }
 
 /// <summary>

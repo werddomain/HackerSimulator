@@ -29,7 +29,7 @@ Conventions de l'API :
 |---|---|---|
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
 | `Shared/HackerOs.Simulation.Abstractions` | `HackerOs.Simulation.Abstractions.*` | Types de données du système simulé (chemins, passerelles, journaux, notifications, processus). |
-| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration` | Façades `Hack*`, contexte d'exécution, commandes et services. |
+| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Keyring`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration` | Façades `Hack*`, contexte d'exécution, commandes et services. |
 | `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings` | Apps fenêtrées, dialogues, graphiques. |
 | `Shared/HackerOs.AppSdk.FileView` | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable. |
 | `Shared/HackerOs.AppSdk.Terminal` | `HackerOs.AppSdk.Terminal` | Terminal xterm.js. |
@@ -84,6 +84,7 @@ Détails : [`app-model.md`](app-model.md).
 | `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
+| `KeyringReadAll` | `keyring.read-all` | **dangereuse** | `HackKeyring` sur les entrées des autres apps |
 | `PermissionsManage` | `permissions.manage` | **dangereuse** | `HackPermissionAdministration` |
 | `ServerConnectionManage` | `server.connection.manage` | **dangereuse** | `HackServerConnection` |
 | `SystemPower` | `system.power` | **dangereuse** | `HackSystem` (avec un administrateur) |
@@ -118,6 +119,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Console` | Derrière `HackConsole` (ADR 0064). |
 | `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics` | Derrière les façades d'administration. |
 | `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
+| `Keyring` | Trousseau de connexion de l'utilisateur (`IAppKeyringGateway`, ADR 0100 §2) ; derrière `HackKeyring`. Toujours verrouillé hors d'une session avec mot de passe. |
 | `PermissionErrors` | Événement `PermissionDenied` à chaque refus de permission. |
 | `OneShotElevation` | Tickets d'élévation à usage unique (ADR 0042). |
 
@@ -156,8 +158,18 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 | API | Membres | Capacité | Document |
 |---|---|---|---|
 | `HackSettings` | `OpenAsync([context,] documentId)`, `GetAsync<T>`, `SetAsync<T>`, `OpenSystemAsync(documentId)` | `filesystem.private.*` ; documents de l'OS : droits des fichiers | [`settings-files.md`](settings-files.md) |
-| `HackSettingsDocument` | `Get<T>`, `GetSource`, `IsLocked`, `SetAsync`, `SetManyAsync`, `ResetAsync`, `RefreshAsync`, `Changed`, `Warnings` | — | [`settings-files.md`](settings-files.md) |
+| `HackSettingsDocument` | `Get<T>`, `GetValue`, `IsMasked`, `GetSource`, `IsLocked`, `SetAsync`, `SetManyAsync`, `ResetAsync`, `GetSecretAsync`, `SetSecretAsync`, `RefreshAsync`, `Changed`, `Warnings` | — | [`settings-files.md`](settings-files.md), [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackSettingValue` | `QualifiedKey`, `Value`, `Sensitivity`, `Source`, `IsLocked`, `IsMasked`, `DisplayText` (`••••••••`) | — | [`sensitive-settings.md`](sensitive-settings.md) |
 | `HackSettingLockedException` | Clé verrouillée dans `[locked]` | — | [`settings-files.md`](settings-files.md) |
+| `HackSettingMaskedException` | Clé non publique dont le fichier privé est illisible (`QualifiedKey`, `PrivatePath`) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+
+### Trousseau (`HackerOs.AppSdk.Keyring`)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackKeyring` | `IsUnlocked`, `GetAsync([context,] id)`, `GetAsync(context, appId, id)`, `SetAsync(id, secret, label)`, `DeleteAsync`, `ListAsync`, `ListAllAsync` | aucune pour ses propres entrées ; `keyring.read-all` (dangereuse) pour celles des autres apps | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackKeyringEntry` | `AppId`, `Id`, `Label`, `UpdatedAtUtc` (jamais le secret) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackKeyringLockedException` | Trousseau verrouillé | — | [`sensitive-settings.md`](sensitive-settings.md) |
 
 ### Apps (`HackerOs.AppSdk.Apps`)
 
@@ -386,7 +398,7 @@ Détails : [`file-explorer.md`](file-explorer.md).
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 31 capacités.
+- [x] Types de définition d'une app et table complète des 32 capacités.
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.
@@ -394,3 +406,4 @@ Détails : [`file-explorer.md`](file-explorer.md).
 - [x] Hôte d'exécution (`AppExecutionHost`, ADR 0070) et `IAppProcessGateway.KillAsync`.
 - [x] Sites web ASP.Hack : démarrage, requête, contrôleurs, vues, anti-falsification, liens des sites Blazor (`web/11`).
 - [x] Base `HackWebDb`, journal de débogage d'un site, passerelle `WebDatabase`, bases des sites dans `HackStorageDiagnostics` (`web/12`).
+- [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
