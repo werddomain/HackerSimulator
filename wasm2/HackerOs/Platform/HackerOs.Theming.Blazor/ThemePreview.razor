@@ -7,7 +7,7 @@
          data-accent="@RenderState.AccentId"
          data-motion="@RenderState.MotionId"
          role="img"
-         aria-label="@($"{Title ?? RenderState.Theme.DisplayName} theme preview")">
+         aria-label="@L["ThemePreview.Label", Title ?? RenderState.Theme.DisplayName]">
     <div class="preview-canvas @(RenderState.Theme.Platform == ThemePlatform.Mobile ? "is-mobile" : "is-desktop")">
         <div class="preview-window">
             <header class="preview-titlebar">

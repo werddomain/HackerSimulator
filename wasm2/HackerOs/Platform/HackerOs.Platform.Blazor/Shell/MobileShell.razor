@@ -12,6 +12,7 @@
 @inject AppBackHandlerRegistry BackHandlers
 @inject WindowAppEventDispatcher WindowEvents
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<Strings> L
 
 <div class="mobile-shell">
     <div class="mobile-shell-workspace">
@@ -41,7 +42,7 @@
         <button type="button"
                 class="mobile-shade-handle"
                 @ref="_swipeHandleElement"
-                aria-label="Notifications, calendar, and platform mode"
+                aria-label="@L["Mobile.Shade"]"
                 aria-expanded="@(_isShadeOpen ? "true" : "false")"
                 @onclick="ToggleShade">
             <span class="mobile-shade-grabber" aria-hidden="true"></span>

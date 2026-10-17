@@ -29,3 +29,14 @@ This is `MOB-010` from the mobile platform plan. It does not yet implement
 Back's ordered semantics (dialog → app handler → nav stack → Home, plan §7.3)
 or the Recent surface itself (`MOB-011`/`MOB-012`) — those are a host
 concern the dispatched `IMobileNavigationCommands` methods fulfill.
+
+## Localization
+
+The package's texts (accessible labels, Back/Home/Recent, the Recent surface) live in `Resources/Strings.resx`
+(English) and `Resources/Strings.fr.resx` (French), read through
+`HackerOs.Theming.Blazor.Localization.PackageStringLocalizer` (ADR 0104): a host that
+registers an `IStringLocalizer<T>` (HackerOS registers its session-language
+`SessionStringLocalizer<T>`) gets its language; a host without localization gets English.
+
+Every label of `MobileSystemNavigationBarOptions` and `MobileRecentSurfaceOptions` is now
+`string?`: a host value wins, `null` (the default) uses the localized package text.

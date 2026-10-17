@@ -2,6 +2,7 @@
 @using HackerOs.Windowing.Abstractions
 @using HackerOs.Windowing.Core
 @implements IAsyncDisposable
+@inject IStringLocalizer<Strings> L
 
 @* ADR 0095 §3: the window manager's keyboard surfaces — switcher, keyboard move/resize banner and
    window menu. Every decision lives in WindowKeyboardCommands; this component only draws its state
@@ -12,7 +13,7 @@
     IReadOnlyList<WindowRuntimeState> windows = Commands.SwitcherWindows;
     WindowId? selection = Commands.SwitcherSelection;
     <div class="window-switcher-backdrop">
-        <section class="window-switcher" role="listbox" aria-label="Switch windows" aria-activedescendant="@(selection is { } selected ? ItemId(selected) : null)">
+        <section class="window-switcher" role="listbox" aria-label="@L["Switcher.Label"]" aria-activedescendant="@(selection is { } selected ? ItemId(selected) : null)">
             @foreach (WindowRuntimeState window in windows)
             {
                 bool isSelected = window.Id == selection;
@@ -41,8 +42,8 @@
 @if (Commands.ModeWindow is not null)
 {
     <aside class="window-mode-banner" role="status" aria-live="polite" data-window-mode="@(Commands.Mode == WindowKeyboardMode.Moving ? "move" : "resize")">
-        <strong>@(Commands.Mode == WindowKeyboardMode.Moving ? "Move window" : "Resize window")</strong>
-        <span>Arrows: @(Commands.Mode == WindowKeyboardMode.Moving ? "move" : "resize") · Ctrl: 1 px · Enter: keep · Esc: cancel</span>
+        <strong>@(Commands.Mode == WindowKeyboardMode.Moving ? L["WindowMode.Move"] : L["WindowMode.Resize"])</strong>
+        <span>@(Commands.Mode == WindowKeyboardMode.Moving ? L["WindowMode.MoveHint"] : L["WindowMode.ResizeHint"])</span>
     </aside>
 }
 
@@ -54,7 +55,7 @@
          class="window-menu"
          role="menu"
          tabindex="-1"
-         aria-label="Window menu"
+         aria-label="@L["WindowMenu.Label"]"
          data-window-menu-for="@menu.WindowId"
          @onkeydown="HandleMenuKeyDownAsync"
          @onkeydown:preventDefault="true"

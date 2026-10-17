@@ -1,4 +1,6 @@
+using System.Globalization;
 using HackerOs.Platform.Blazor.Windows;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Simulation.Abstractions.Time;
 using HackerOs.Taskbar.Blazor;
 using HackerOs.Windowing.Core;
@@ -140,17 +142,27 @@ public sealed class TaskbarClockPanelSourceAdapter : ITaskbarClockPanelSource
 public sealed class TaskbarStatusSourceAdapter : ITaskbarStatusSource, IDisposable
 {
     private readonly ISimulationClock _clock;
+    private readonly SessionLocaleService? _locale;
     private IDisposable? _subscription;
 
     /// <summary>Creates a status source over the session's simulation clock.</summary>
-    public TaskbarStatusSourceAdapter(ISimulationClock clock)
+    /// <param name="clock">The session's simulation clock.</param>
+    /// <param name="locale">
+    /// The session language, whose <c>LC_TIME</c> culture formats the clock (ADR 0104);
+    /// <see langword="null"/> keeps the taskbar's invariant <c>HH:mm:ss</c>.
+    /// </param>
+    public TaskbarStatusSourceAdapter(ISimulationClock clock, SessionLocaleService? locale = null)
     {
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _locale = locale;
         ScheduleNextTick();
     }
 
     /// <inheritdoc />
     public DateTimeOffset UtcNow => _clock.UtcNow;
+
+    /// <inheritdoc />
+    public CultureInfo FormatCulture => _locale?.FormatCulture ?? CultureInfo.InvariantCulture;
 
     /// <inheritdoc />
     public event Action? Changed;

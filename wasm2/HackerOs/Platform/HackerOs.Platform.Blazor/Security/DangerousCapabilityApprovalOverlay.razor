@@ -22,8 +22,8 @@
             <header class="dca-banner">
                 <HackerIcon Library="IconLibrary.Lucide" Name="shield-alert" Size="28" Title="" class="dca-shield" />
                 <div>
-                    <h2 id="dca-title">Autorisation administrateur requise</h2>
-                    <p id="dca-subtitle">Une application demande des capacités dangereuses.</p>
+                    <h2 id="dca-title">@L["Approval.Title"]</h2>
+                    <p id="dca-subtitle">@L["Approval.Subtitle"]</p>
                 </div>
             </header>
 
@@ -34,14 +34,14 @@
                     </div>
                     <dl class="dca-app-facts">
                         <dt class="dca-app-name">@request.Manifest.Name</dt>
-                        <dd class="dca-app-badge">App non système</dd>
-                        <dd><span class="dca-label">Identifiant</span> <code>@request.Manifest.Id</code></dd>
-                        <dd><span class="dca-label">Éditeur</span> @request.Manifest.PublisherId</dd>
-                        <dd><span class="dca-label">Version</span> @request.Manifest.Version</dd>
+                        <dd class="dca-app-badge">@L["Approval.NonSystemApp"]</dd>
+                        <dd><span class="dca-label">@L["Approval.Identifier"]</span> <code>@request.Manifest.Id</code></dd>
+                        <dd><span class="dca-label">@L["Approval.Publisher"]</span> @request.Manifest.PublisherId</dd>
+                        <dd><span class="dca-label">@L["Approval.Version"]</span> @request.Manifest.Version</dd>
                     </dl>
                 </div>
 
-                <h3 class="dca-section-title">Capacités demandées</h3>
+                <h3 class="dca-section-title">@L["Approval.Capabilities"]</h3>
                 <ul class="dca-capabilities">
                     @foreach (CapabilityDescription capability in request.Capabilities)
                     {
@@ -55,7 +55,7 @@
 
                 <form class="dca-credentials" @onsubmit="ApproveAsync" @onsubmit:preventDefault="true">
                     <label>
-                        <span>Nom d'administrateur</span>
+                        <span>@L["Security.AdministratorName"]</span>
                         <input @ref="_loginInput"
                                type="text"
                                autocomplete="username"
@@ -65,7 +65,7 @@
                                @bind:event="oninput" />
                     </label>
                     <label>
-                        <span>Mot de passe</span>
+                        <span>@L["Common.Password"]</span>
                         <input @ref="_passwordInput"
                                type="password"
                                autocomplete="current-password"
@@ -80,15 +80,15 @@
                     }
 
                     <div class="dca-actions">
-                        <button type="button" class="dca-refuse" disabled="@_isVerifying" @onclick="Refuse">Refuser</button>
+                        <button type="button" class="dca-refuse" disabled="@_isVerifying" @onclick="Refuse">@L["Approval.Deny"]</button>
                         <button type="submit" class="dca-approve" disabled="@(!CanApprove)">
-                            @(_isVerifying ? "Vérification..." : "Autoriser")
+                            @(_isVerifying ? L["Security.Verifying"] : L["Approval.Allow"])
                         </button>
                     </div>
                 </form>
             </div>
 
-            <footer class="dca-footer">Cette décision sera inscrite dans /var/log/auth.log</footer>
+            <footer class="dca-footer">@L["Approval.Footer"]</footer>
         </section>
     </div>
 }

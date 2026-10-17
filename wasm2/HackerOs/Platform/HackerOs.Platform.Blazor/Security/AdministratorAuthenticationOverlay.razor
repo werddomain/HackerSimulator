@@ -22,8 +22,8 @@
             <header class="aaa-banner">
                 <HackerIcon Library="IconLibrary.Lucide" Name="key-round" Size="28" Title="" class="aaa-key" />
                 <div>
-                    <h2 id="aaa-title">Authentification administrateur</h2>
-                    <p>Une application demande une opération réservée aux administrateurs.</p>
+                    <h2 id="aaa-title">@L["Auth.Title"]</h2>
+                    <p>@L["Auth.Subtitle"]</p>
                 </div>
             </header>
 
@@ -31,13 +31,13 @@
                 <p id="aaa-operation" class="aaa-operation">@request.Operation</p>
 
                 <dl class="aaa-facts">
-                    <div><dt>Application</dt><dd>@request.App.Name <code>@request.App.Id</code></dd></div>
-                    <div><dt>Demandé par</dt><dd>@(request.RequestedBy?.LoginName.Value ?? "système")</dd></div>
+                    <div><dt>@L["Auth.Application"]</dt><dd>@request.App.Name <code>@request.App.Id</code></dd></div>
+                    <div><dt>@L["Auth.RequestedBy"]</dt><dd>@(request.RequestedBy?.LoginName.Value ?? L["Auth.System"])</dd></div>
                 </dl>
 
                 <form class="aaa-credentials" @onsubmit="AuthenticateAsync" @onsubmit:preventDefault="true">
                     <label>
-                        <span>Nom d'administrateur</span>
+                        <span>@L["Security.AdministratorName"]</span>
                         <input @ref="_loginInput"
                                type="text"
                                autocomplete="username"
@@ -47,7 +47,7 @@
                                @bind:event="oninput" />
                     </label>
                     <label>
-                        <span>Mot de passe</span>
+                        <span>@L["Common.Password"]</span>
                         <input @ref="_passwordInput"
                                type="password"
                                autocomplete="current-password"
@@ -62,15 +62,15 @@
                     }
 
                     <div class="aaa-actions">
-                        <button type="button" class="aaa-cancel" disabled="@_isVerifying" @onclick="Cancel">Annuler</button>
+                        <button type="button" class="aaa-cancel" disabled="@_isVerifying" @onclick="Cancel">@L["Common.Cancel"]</button>
                         <button type="submit" class="aaa-authenticate" disabled="@(!CanAuthenticate)">
-                            @(_isVerifying ? "Vérification..." : "Authentifier")
+                            @(_isVerifying ? L["Security.Verifying"] : L["Auth.Authenticate"])
                         </button>
                     </div>
                 </form>
             </div>
 
-            <footer class="aaa-footer">Cette demande sera inscrite dans /var/log/auth.log</footer>
+            <footer class="aaa-footer">@L["Auth.Footer"]</footer>
         </section>
     </div>
 }

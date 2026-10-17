@@ -4,18 +4,19 @@
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@inject IStringLocalizer<Strings> L
 
 <section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@TitleId"
          tabindex="-1" @onkeydown="HandleKeyDown">
     <header>
         <MudIcon Icon="@Icons.Material.Filled.FolderOpen" />
-        <h2 id="@TitleId">@(Presentation.Request.Title ?? "Open file")</h2>
+        <h2 id="@TitleId">@(Presentation.Request.Title ?? L["FileDialog.OpenFile"])</h2>
     </header>
 
     @if (Presentation.Request.Filters.Count > 1)
     {
         <label class="filter-control">
-            <span>File type</span>
+            <span>@L["FileDialog.FileType"]</span>
             <select value="@_filterIndex" @onchange="ChangeFilter">
                 @for (int index = 0; index < Presentation.Request.Filters.Count; index++)
                 {
@@ -36,8 +37,8 @@
 
     <footer>
         <span class="selection-summary" aria-live="polite">@SelectionSummary</span>
-        <button type="button" class="secondary" @onclick="Cancel">Cancel</button>
-        <button type="button" class="primary" disabled="@(_selection.Count == 0)" @onclick="Open">Open</button>
+        <button type="button" class="secondary" @onclick="Cancel">@L["Common.Cancel"]</button>
+        <button type="button" class="primary" disabled="@(_selection.Count == 0)" @onclick="Open">@L["Common.Open"]</button>
     </footer>
 </section>
 
@@ -60,9 +61,9 @@
     private string TitleId => _titleId;
     private string SelectionSummary => _selection.Count switch
     {
-        0 => "No file selected",
+        0 => L["FileDialog.NoFileSelected"],
         1 => _selection[0].Value,
-        _ => $"{_selection.Count} files selected",
+        _ => L["FileDialog.FilesSelected", _selection.Count],
     };
 
     private void UpdateSelection(IReadOnlyList<VirtualPath> selection) => _selection = selection;

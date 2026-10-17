@@ -3,12 +3,13 @@
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@inject IStringLocalizer<Strings> L
 
 <section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
          tabindex="-1" @onkeydown="HandleKeyDown">
     <header>
         <MudIcon Icon="@Icons.Material.Filled.DriveFolderUpload" />
-        <h2 id="@_titleId">@(Presentation.Request.Title ?? "Select folder")</h2>
+        <h2 id="@_titleId">@(Presentation.Request.Title ?? L["FileDialog.SelectFolder"])</h2>
     </header>
 
     <VirtualFolderBrowser @ref="_browser"
@@ -22,8 +23,8 @@
     @if (Presentation.Request.AllowCreateFolder)
     {
         <div class="create-control">
-            <input value="@_newFolderName" @oninput="ChangeFolderName" aria-label="New folder name" />
-            <button type="button" disabled="@_creating" @onclick="CreateFolderAsync">New folder</button>
+            <input value="@_newFolderName" @oninput="ChangeFolderName" aria-label="@L["FileDialog.NewFolderName"]" />
+            <button type="button" disabled="@_creating" @onclick="CreateFolderAsync">@L["FileDialog.NewFolder"]</button>
         </div>
     }
 
@@ -34,8 +35,8 @@
 
     <footer>
         <span>@SelectedPath.Value</span>
-        <button type="button" @onclick="Cancel">Cancel</button>
-        <button type="button" class="primary" @onclick="Select">Select</button>
+        <button type="button" @onclick="Cancel">@L["Common.Cancel"]</button>
+        <button type="button" class="primary" @onclick="Select">@L["FileDialog.Select"]</button>
     </footer>
 </section>
 
@@ -109,7 +110,7 @@
         }
         else
         {
-            _error = $"Unable to create the folder ({result.Transaction.Error?.Code}).";
+            _error = L["FileDialog.CreateFolderFailed", result.Transaction.Error?.Code.ToString() ?? string.Empty];
         }
     }
 

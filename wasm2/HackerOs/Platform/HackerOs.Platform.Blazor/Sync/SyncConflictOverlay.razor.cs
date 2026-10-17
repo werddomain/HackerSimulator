@@ -1,10 +1,12 @@
 using System.Globalization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Blazor.Sync;
 
@@ -20,7 +22,7 @@ namespace HackerOs.Platform.Blazor.Sync;
 /// </para>
 /// <para>
 /// Each file shows the date, device and size of both versions and, on demand, a text preview.
-/// <em>Plus tard</em> closes the dialog without choosing: the files stay frozen, a notification says
+/// <em>Later</em> closes the dialog without choosing: the files stay frozen, a notification says
 /// where to find them (Settings → Synchronization), and the dialog comes back at the next login.
 /// On a host built without the sync services the component renders nothing.
 /// </para>
@@ -31,6 +33,14 @@ public sealed partial class SyncConflictOverlay
     private SyncConflictCenter? _center;
     private bool _isBusy;
     private string? _error;
+
+    /// <summary>Gets or sets the dialog's texts, in the session language (ADR 0104).</summary>
+    [Inject]
+    private IStringLocalizer<Strings> L { get; set; } = default!;
+
+    /// <summary>Gets or sets the session language, whose <c>LC_TIME</c> culture formats dates and sizes.</summary>
+    [Inject]
+    private SessionLocaleService Locale { get; set; } = default!;
 
     /// <summary>Gets or sets the services the optional sync parts are resolved from.</summary>
     [Inject]
@@ -74,18 +84,18 @@ public sealed partial class SyncConflictOverlay
         {
             builder.OpenElement(2, "dd");
             builder.AddAttribute(3, "class", "scd-deleted");
-            builder.AddContent(4, "Supprimé");
+            builder.AddContent(4, L["Sync.Deleted"].Value);
             builder.CloseElement();
         }
         else
         {
-            AddFact(builder, 10, "Modifié", version.ModifiedAtUtc is { } modified
-                ? modified.ToLocalTime().ToString("g", CultureInfo.GetCultureInfo("fr-FR"))
-                : "inconnu");
-            AddFact(builder, 20, "Taille", version.Length is { } length ? FormatSize(length) : "—");
+            AddFact(builder, 10, L["Sync.Modified"], version.ModifiedAtUtc is { } modified
+                ? modified.ToLocalTime().ToString("g", Locale.FormatCulture)
+                : L["Sync.Unknown"]);
+            AddFact(builder, 20, L["Sync.Size"], version.Length is { } length ? FormatSize(length, L, Locale.FormatCulture) : "—");
         }
 
-        AddFact(builder, 30, "Appareil", version.DeviceId is { } device && device != Guid.Empty ? device.ToString("N")[..8] : "inconnu");
+        AddFact(builder, 30, L["Sync.Device"], version.DeviceId is { } device && device != Guid.Empty ? device.ToString("N")[..8] : L["Sync.Unknown"]);
         builder.CloseElement();
     };
 
@@ -100,13 +110,24 @@ public sealed partial class SyncConflictOverlay
         builder.CloseElement();
     }
 
-    /// <summary>Formats a size the way a file manager does (octets, Kio, Mio).</summary>
-    internal static string FormatSize(long bytes) => bytes switch
+    /// <summary>
+    /// Formats a size the way a file manager does: binary units named in the session language
+    /// (B/KiB/MiB in English, o/Kio/Mio in French) and the number in the <c>LC_NUMERIC</c>-like
+    /// format culture (1.5 or 1,5).
+    /// </summary>
+    /// <param name="bytes">The size.</param>
+    /// <param name="text">The texts holding the unit patterns (<c>Size.Bytes</c>, <c>Size.KiB</c>, <c>Size.MiB</c>).</param>
+    /// <param name="format">The culture of the number.</param>
+    internal static string FormatSize(long bytes, IStringLocalizer text, CultureInfo format)
     {
-        < 1024 => $"{bytes} o",
-        < 1024 * 1024 => string.Create(CultureInfo.GetCultureInfo("fr-FR"), $"{bytes / 1024d:0.#} Kio"),
-        _ => string.Create(CultureInfo.GetCultureInfo("fr-FR"), $"{bytes / (1024d * 1024):0.#} Mio")
-    };
+        (string key, double value, string number) = bytes switch
+        {
+            < 1024 => ("Size.Bytes", bytes, "0"),
+            < 1024 * 1024 => ("Size.KiB", bytes / 1024d, "0.#"),
+            _ => ("Size.MiB", bytes / (1024d * 1024), "0.#")
+        };
+        return text[key, value.ToString(number, format)];
+    }
 
     private async Task LoadPreviewAsync(Guid recordId)
     {
@@ -142,7 +163,7 @@ public sealed partial class SyncConflictOverlay
         catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or IOException
                                               or ServerConnectionException or HttpRequestException)
         {
-            _error = $"Le choix n'a pas pu être appliqué : {exception.Message}";
+            _error = L["Sync.ResolveFailed", exception.Message];
         }
         finally
         {
@@ -187,10 +208,8 @@ public sealed partial class SyncConflictOverlay
                 principal.UserId,
                 "org.hackeros.sync",
                 NotificationSeverity.Warning,
-                "Conflits de synchronisation en attente",
-                count == 1
-                    ? "Un fichier attend votre choix. Ouvrez Paramètres → Synchronisation pour le résoudre."
-                    : $"{count} fichiers attendent votre choix. Ouvrez Paramètres → Synchronisation pour les résoudre.",
+                L["Sync.Pending.Title"],
+                count == 1 ? L["Sync.Pending.One"] : L["Sync.Pending.Many", count],
                 [],
                 DateTimeOffset.UtcNow,
                 expiresAtUtc: null));

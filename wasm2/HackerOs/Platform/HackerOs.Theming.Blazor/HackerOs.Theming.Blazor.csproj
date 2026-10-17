@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+    <!-- ADR 0104: IStringLocalizer<T>, resolved optionally (Localization/PackageStringLocalizer.cs). -->
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>

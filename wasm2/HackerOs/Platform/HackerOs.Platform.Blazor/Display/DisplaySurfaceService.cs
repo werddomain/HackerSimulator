@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using HackerOs.AppSdk.Blazor.Display;
+using HackerOs.AppSdk.Globalization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Simulation.Abstractions.Notifications;
 using HackerOs.Simulation.Abstractions.Sessions;
 using HackerOs.Simulation.Abstractions.Time;
@@ -36,6 +38,7 @@ public sealed class DisplaySurfaceService : IDisplaySurfaceService, IAsyncDispos
     private readonly List<Surface> _surfaces = [];
     private IJSObjectReference? _module;
     private DotNetObjectReference<DisplaySurfaceService>? _self;
+    private readonly Microsoft.Extensions.Localization.IStringLocalizer _text;
     private int _nextId;
     private bool _disposed;
 
@@ -44,16 +47,19 @@ public sealed class DisplaySurfaceService : IDisplaySurfaceService, IAsyncDispos
     /// <param name="notifications">Where a blocked window is reported; optional.</param>
     /// <param name="session">Gives the user a notification is posted to; optional.</param>
     /// <param name="clock">Stamps notifications; optional.</param>
+    /// <param name="locale">The session language of the notification (ADR 0104); optional, English without it.</param>
     public DisplaySurfaceService(
         IJSRuntime jsRuntime,
         INotificationQueue? notifications = null,
         ISessionService? session = null,
-        ISimulationClock? clock = null)
+        ISimulationClock? clock = null,
+        SessionLocaleService? locale = null)
     {
         _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         _notifications = notifications;
         _session = session;
         _clock = clock;
+        _text = Strings.For(() => locale?.Culture ?? HackLocale.DefaultLanguage);
     }
 
     /// <inheritdoc />
@@ -195,8 +201,8 @@ public sealed class DisplaySurfaceService : IDisplaySurfaceService, IAsyncDispos
             principal.UserId,
             NotificationSource,
             NotificationSeverity.Warning,
-            "Detached window blocked",
-            $"Your browser blocked the window for \"{title}\". Allow pop-ups for this site (icon at the right of the address bar), then try again.",
+            _text["Display.Blocked.Title"],
+            _text["Display.Blocked.Message", title],
             [],
             now,
             now + TimeSpan.FromMinutes(5)));
