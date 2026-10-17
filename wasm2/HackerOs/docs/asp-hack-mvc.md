@@ -16,8 +16,9 @@ par cookie. Le site est une app de genre `web` (ADR 0073) : l'OS la démarre au
 premier accès à l'une de ses URL et son code tourne dans le worker `web` partagé.
 
 Vues `.razor`, `View()`, `PartialView()`, anti-falsification et `wwwroot` :
-[`asp-hack-razor-views.md`](asp-hack-razor-views.md) (`web/7`, ADR 0083). Hors de
-ce chantier : vues `.cshtml` (`web/8`), sites Blazor (`web/9`).
+[`asp-hack-razor-views.md`](asp-hack-razor-views.md) (`web/7`, ADR 0083). Vues
+`.cshtml` : [`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md) (`web/8`, ADR 0086).
+Hors de ce chantier : sites Blazor (`web/9`).
 
 ## Exemple
 
@@ -91,7 +92,7 @@ UseExceptionPage : toute exception du pipeline → page d'erreur (sinon « 500 I
 | `Mvc/` | Attributs, `HackControllerBase` / `HackController` / `HackApiController`, `HackModelBinder`, `HackModelStateDictionary`, filtres, résultats, `HackUrlHelper`, `HackActionInvoker`, `HackResults`, contrat `HackControllerActionDescriptor`. |
 | `Sessions/` | `HackSession`, `HackSessionOptions`, `HackSessionStore`. |
 | `Diagnostics/` | `HackExceptionPage` (page d'erreur au style console). |
-| `Tools/HackerOs.Tools.WebRouteGenerator` | Générateur de sources Roslyn (ADR 0082) : table de routes et `<Nom>WebHost`, erreurs `HOSWEB0001` à `HOSWEB0007`. |
+| `Tools/HackerOs.Tools.WebRouteGenerator` | Générateur de sources Roslyn (ADR 0082) : table de routes et `<Nom>WebHost`, erreurs `HOSWEB0001` à `HOSWEB0007` (`HOSWEB0008` : vue `.razor` et `.cshtml` au même chemin, ADR 0086). |
 
 ## Démarrage
 

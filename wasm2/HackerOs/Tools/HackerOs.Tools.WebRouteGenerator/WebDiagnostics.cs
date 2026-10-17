@@ -72,4 +72,13 @@ internal static class WebDiagnostics
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>A <c>.razor</c> and a <c>.cshtml</c> view have the same path under <c>Views/</c> (ADR 0086 §4).</summary>
+    public static readonly DiagnosticDescriptor DuplicateView = new(
+        "HOSWEB0008",
+        "Duplicate view",
+        "The view 'Views/{0}' exists as both .razor and .cshtml; View() could not tell them apart: rename or remove one",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

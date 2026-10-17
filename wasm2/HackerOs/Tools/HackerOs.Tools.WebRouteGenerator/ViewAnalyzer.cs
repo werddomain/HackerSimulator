@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace HackerOs.Tools.WebRouteGenerator;
 
-/// <summary>A <c>.razor</c> file of the project, as the Razor SDK hands it to analyzers.</summary>
+/// <summary>A <c>.razor</c> or <c>.cshtml</c> file of the project, as the Razor SDK hands it to analyzers.</summary>
 /// <param name="TargetPath">Project-relative path with <c>/</c> separators (<c>Views/Home/Index.razor</c>).</param>
 /// <param name="RootNamespace">The project's root namespace.</param>
 /// <param name="NamespaceDirective">The <c>@namespace</c> the file declares, or <see langword="null"/>.</param>
@@ -33,6 +33,10 @@ internal static class ViewAnalyzer
 {
     private const string ViewsFolder = "Views/";
     private const string Imports = "_Imports.razor";
+    private const string ViewImports = "_ViewImports.cshtml";
+
+    /// <summary>The namespace of a <c>.cshtml</c> class without <c>@namespace</c> (Razor SDK 6.0 and later).</summary>
+    internal const string CshtmlDefaultNamespace = "AspNetCoreGeneratedDocument";
 
     /// <summary>Describes one Razor file from its path and the analyzer options of the build.</summary>
     public static RazorFileModel Describe(AdditionalText text, AnalyzerConfigOptionsProvider options, CancellationToken cancellationToken)
@@ -71,36 +75,86 @@ internal static class ViewAnalyzer
         return new RazorFileModel(targetPath, string.IsNullOrEmpty(rootNamespace) ? "Views" : rootNamespace!, directive);
     }
 
-    /// <summary>Turns the Razor files into the view table: every file under <c>Views/</c> except the imports.</summary>
+    /// <summary>
+    /// Turns the Razor files into the view table: every <c>.razor</c> and <c>.cshtml</c> file under
+    /// <c>Views/</c> except the imports (<c>_Imports.razor</c>, <c>_ViewImports.cshtml</c>).
+    /// </summary>
     public static ImmutableArray<ViewModel> CollectViews(ImmutableArray<RazorFileModel> files)
     {
-        // @namespace of an _Imports.razor applies to its folder and below, as in the Razor compiler.
+        // @namespace of an _Imports.razor (or _ViewImports.cshtml) applies to its folder and below, as in the Razor compiler.
         Dictionary<string, string> importNamespaces = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> viewImportNamespaces = new(StringComparer.OrdinalIgnoreCase);
         foreach (RazorFileModel file in files)
         {
-            if (file.NamespaceDirective is not null && Path.GetFileName(file.TargetPath).Equals(Imports, StringComparison.OrdinalIgnoreCase))
+            string name = Path.GetFileName(file.TargetPath);
+            if (file.NamespaceDirective is not null && name.Equals(Imports, StringComparison.OrdinalIgnoreCase))
             {
                 importNamespaces[DirectoryOf(file.TargetPath)] = file.NamespaceDirective;
+            }
+            else if (file.NamespaceDirective is not null && name.Equals(ViewImports, StringComparison.OrdinalIgnoreCase))
+            {
+                viewImportNamespaces[DirectoryOf(file.TargetPath)] = file.NamespaceDirective;
             }
         }
 
         List<ViewModel> views = [];
         foreach (RazorFileModel file in files.OrderBy(file => file.TargetPath, StringComparer.Ordinal))
         {
+            string name = Path.GetFileName(file.TargetPath);
             if (!file.TargetPath.StartsWith(ViewsFolder, StringComparison.OrdinalIgnoreCase)
-                || Path.GetFileName(file.TargetPath).Equals(Imports, StringComparison.OrdinalIgnoreCase))
+                || name.Equals(Imports, StringComparison.OrdinalIgnoreCase)
+                || name.Equals(ViewImports, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            string withoutExtension = file.TargetPath.Substring(0, file.TargetPath.Length - ".razor".Length);
+            bool isCshtml = file.TargetPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase);
+            string withoutExtension = file.TargetPath.Substring(0, file.TargetPath.Length - (isCshtml ? ".cshtml" : ".razor").Length);
             string viewPath = withoutExtension.Substring(ViewsFolder.Length);
+            if (isCshtml)
+            {
+                views.Add(new ViewModel(viewPath, CshtmlTypeName(file, withoutExtension, viewImportNamespaces)));
+                continue;
+            }
+
             string className = SanitizeIdentifier(Path.GetFileName(withoutExtension));
             string ns = file.NamespaceDirective ?? NearestImportNamespace(importNamespaces, DirectoryOf(file.TargetPath)) ?? DefaultNamespace(file);
             views.Add(new ViewModel(viewPath, ns.Length == 0 ? className : $"{ns}.{className}"));
         }
 
         return [.. views];
+    }
+
+    /// <summary>
+    /// Names a <c>.cshtml</c> class as the Razor compiler's MVC mode does (ADR 0086 §4): the class is the
+    /// whole path without extension, sanitized (<c>Views/Home/Index</c> becomes <c>Views_Home_Index</c>); the
+    /// namespace is the file's own <c>@namespace</c>, or the nearest <c>_ViewImports.cshtml</c> one followed
+    /// by the folders between it and the file, or <c>AspNetCoreGeneratedDocument</c>.
+    /// </summary>
+    private static string CshtmlTypeName(RazorFileModel file, string withoutExtension, Dictionary<string, string> viewImportNamespaces)
+    {
+        string className = SanitizeIdentifier(withoutExtension);
+        string? ns = file.NamespaceDirective;
+        if (ns is null)
+        {
+            string directory = DirectoryOf(file.TargetPath);
+            for (string current = directory; ; current = DirectoryOf(current))
+            {
+                if (viewImportNamespaces.TryGetValue(current, out string? imported))
+                {
+                    string relative = directory.Length > current.Length ? directory.Substring(current.Length).TrimStart('/') : string.Empty;
+                    ns = string.Join(".", new[] { imported }.Concat(relative.Split(['/'], StringSplitOptions.RemoveEmptyEntries).Select(SanitizeIdentifier)));
+                    break;
+                }
+
+                if (current.Length == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        return $"{ns ?? CshtmlDefaultNamespace}.{className}";
     }
 
     private static string DefaultNamespace(RazorFileModel file)

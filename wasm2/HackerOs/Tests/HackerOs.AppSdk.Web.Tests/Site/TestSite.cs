@@ -304,6 +304,48 @@ public sealed class PagesController(NoteStore store) : HackController
     public IHackActionResult Status() => new HackViewResult { ViewName = "Plain", StatusCode = 418 };
 }
 
+/// <summary>A controller of pages rendered by .cshtml views (web/8, ADR 0086).</summary>
+public sealed class CshtmlController(NoteStore store) : HackController
+{
+    public IHackActionResult Index() => View(store);
+
+    public IHackActionResult Details(int id) => store.Find(id) is Note note ? View(note) : NotFound();
+
+    [HttpGet]
+    public IHackActionResult Edit() => View(new ContactForm { Name = "Ada", Age = 36 });
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IHackActionResult Edit(ContactForm form)
+    {
+        if (!ModelState.IsValid)
+        {
+            ModelState.AddModelError(string.Empty, "Please fix the errors below.");
+            return View(form);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public IHackActionResult WithRazorLayout() => View();
+
+    public IHackActionResult FromRazor() => View();
+
+    public IHackActionResult NoLayout() => View();
+
+    public IHackActionResult Card(int id) => PartialView("_CshtmlCard", store.Find(id));
+
+    public IHackActionResult WrongModel() => View("Details", "not a note");
+
+    public IHackActionResult NoBody() => View();
+
+    public IHackActionResult MissingSection() => View();
+
+    public IHackActionResult Orphan() => View();
+
+    public IHackActionResult Absolute() => View("~/Views/Cshtml/NoLayout.cshtml");
+}
+
 /// <summary>A site without exception page nor controllers: a failure is a bare <c>500</c>.</summary>
 [AppManifest]
 public sealed partial class BareSite : WebAppDefinition

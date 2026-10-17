@@ -17,8 +17,8 @@ namespace HackerOs.Tools.WebRouteGenerator;
 /// <c>HackControllerActionDescriptor</c> per action of every public controller of the assembly, with
 /// its routes (attribute routes combined with the controller's prefix and checked), the code that
 /// creates the controller from the request's services, binds each argument and calls the method;</item>
-/// <item><c>HackWebGeneratedRoutes.Views</c>: one <c>HackViewDescriptor</c> per <c>.razor</c> file under
-/// <c>Views/</c>, so <c>View()</c> finds a view by name without reflection (ADR 0083);</item>
+/// <item><c>HackWebGeneratedRoutes.Views</c>: one <c>HackViewDescriptor</c> per <c>.razor</c> or <c>.cshtml</c>
+/// file under <c>Views/</c>, so <c>View()</c> finds a view by name without reflection (ADR 0083, ADR 0086);</item>
 /// <item>for each <c>partial</c> <c>WebAppDefinition</c> without its own entry point, a
 /// <c>&lt;Name&gt;WebHost</c> process class and the <c>EntryPoint</c> override that names it.</item>
 /// </list>
@@ -37,11 +37,12 @@ public sealed class WebRouteGenerator : IIncrementalGenerator
     {
         // Sites are small assemblies: the whole compilation is analyzed when it changes. The model is
         // compared by value, so unchanged controllers do not rewrite the output.
-        // Views (ADR 0083 §2): the .razor files under Views/ are AdditionalFiles of the Razor SDK; their
-        // component class is named from the file path as the Razor compiler names it, so the table can
-        // reference it without seeing the Razor generator's output.
+        // Views (ADR 0083 §2, ADR 0086 §4): the .razor and .cshtml files under Views/ are AdditionalFiles of
+        // the Razor SDK; their class is named from the file path as the Razor compiler names it, so the
+        // table can reference it without seeing the Razor generator's output.
         IncrementalValuesProvider<RazorFileModel> razorFiles = context.AdditionalTextsProvider
-            .Where(static text => text.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
+            .Where(static text => text.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)
+                || text.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
             .Combine(context.AnalyzerConfigOptionsProvider)
             .Select(static (pair, cancellationToken) => ViewAnalyzer.Describe(pair.Left, pair.Right, cancellationToken));
 
@@ -172,6 +173,11 @@ internal sealed class SiteAnalyzer
         }
 
         CheckConflicts(actions);
+        foreach (IGrouping<string, ViewModel> duplicate in views.GroupBy(view => view.Path, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+        {
+            Report(WebDiagnostics.DuplicateView, Location.None, duplicate.Key);
+        }
+
 
         List<KeyValuePair<string, string>> sources = [new($"{WebRouteGenerator.GeneratedClass}.g.cs", WriteRouteTable(actions, views))];
         foreach (INamedTypeSymbol definition in types.Where(IsWebAppDefinition).OrderBy(type => type.ToDisplayString(), StringComparer.Ordinal))
@@ -1206,7 +1212,7 @@ internal sealed class SiteAnalyzer
 
         code.AppendLine("        });");
         code.AppendLine();
-        code.AppendLine("        /// <summary>Gets the views: the Razor components under <c>Views/</c>, by path without extension (ADR 0083).</summary>");
+        code.AppendLine("        /// <summary>Gets the views: the Razor components and pages under <c>Views/</c>, by path without extension (ADR 0083, ADR 0086).</summary>");
         code.AppendLine("        public static global::HackerOs.AppSdk.Web.Views.HackViewTable Views { get; } = new(new global::HackerOs.AppSdk.Web.Views.HackViewDescriptor[]");
         code.AppendLine("        {");
         foreach (ViewModel view in views)

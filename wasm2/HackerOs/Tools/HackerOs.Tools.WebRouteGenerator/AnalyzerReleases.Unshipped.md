@@ -12,3 +12,4 @@ HOSWEB0004 | HackerOs.Web | Error | WebDiagnostics
 HOSWEB0005 | HackerOs.Web | Error | WebDiagnostics
 HOSWEB0006 | HackerOs.Web | Error | WebDiagnostics
 HOSWEB0007 | HackerOs.Web | Error | WebDiagnostics
+HOSWEB0008 | HackerOs.Web | Error | WebDiagnostics

@@ -20,6 +20,17 @@ public sealed class HackViewDataDictionary : Dictionary<string, object?>
     {
     }
 
+    /// <summary>
+    /// Gets or sets a value; a missing key reads as <see langword="null"/>, as ASP.NET's <c>ViewData["x"]</c>
+    /// (a layout can test a value only some views set).
+    /// </summary>
+    /// <param name="key">The key (case-insensitive).</param>
+    public new object? this[string key]
+    {
+        get => TryGetValue(key, out object? value) ? value : null;
+        set => base[key] = value;
+    }
+
     /// <summary>Gets or sets the page title (<c>ViewData["Title"]</c>), which layouts usually put in <c>&lt;title&gt;</c>.</summary>
     public string? Title
     {
@@ -36,7 +47,7 @@ public sealed class HackViewDataDictionary : Dictionary<string, object?>
 public sealed class HackViewContext
 {
     private readonly HackViewEngine _engine;
-    private readonly Dictionary<string, RenderFragment> _sections;
+    private readonly Dictionary<string, HackViewSection> _sections;
     private readonly HashSet<string> _renderedSections;
     private IHackUrlHelper? _url;
 
@@ -52,7 +63,7 @@ public sealed class HackViewContext
         Model = model;
         ViewData = viewData;
         IsPartial = isPartial;
-        _sections = new Dictionary<string, RenderFragment>(StringComparer.OrdinalIgnoreCase);
+        _sections = new Dictionary<string, HackViewSection>(StringComparer.OrdinalIgnoreCase);
         _renderedSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -66,7 +77,11 @@ public sealed class HackViewContext
         IsPartial = true;
         _sections = parent._sections;
         _renderedSections = parent._renderedSections;
+        Renderer = parent.Renderer;
     }
+
+    /// <summary>Gets the engine that renders the page.</summary>
+    internal HackViewEngine Engine => _engine;
 
     /// <summary>Gets the action context (request, route values, action, model state).</summary>
     public HackActionContext ActionContext { get; }
@@ -117,26 +132,89 @@ public sealed class HackViewContext
     /// <param name="model">The partial's model.</param>
     public HackViewContext ForPartial(object? model) => new(this, model);
 
-    internal void DefineSection(string name, RenderFragment content)
+    /// <summary>
+    /// Gets or sets the renderer of the page's passes (the engine sets it): a <c>.cshtml</c> page renders
+    /// its partials and components with it, inside the same request scope.
+    /// </summary>
+    internal Microsoft.AspNetCore.Components.Web.HtmlRenderer? Renderer { get; set; }
+
+    internal void DefineSection(string name, RenderFragment content) => DefineSection(name, new HackViewSection(content, null), replaceRendered: false);
+
+    /// <summary>Defines a section a <c>.cshtml</c> page rendered to HTML (ADR 0086 §5).</summary>
+    /// <param name="name">The section name.</param>
+    /// <param name="html">Its HTML.</param>
+    /// <param name="replaceRendered">
+    /// Whether a section already rendered may be defined again: a nested layout re-defines the section it
+    /// rendered (<c>@section Scripts { @RenderSection("Scripts", false) }</c>) for the layout around it.
+    /// </param>
+    internal void DefineSection(string name, string html, bool replaceRendered) =>
+        DefineSection(name, new HackViewSection(null, html), replaceRendered);
+
+    private void DefineSection(string name, HackViewSection section, bool replaceRendered)
     {
-        if (!_sections.TryAdd(name, content))
+        if (_sections.ContainsKey(name))
         {
-            throw new InvalidOperationException($"The section '{name}' is already defined.");
+            if (!replaceRendered || !_renderedSections.Remove(name))
+            {
+                throw new InvalidOperationException($"The section '{name}' is already defined.");
+            }
+
+            _sections[name] = section;
+            return;
         }
+
+        _sections.Add(name, section);
     }
 
     internal bool TryRenderSection(string name, [NotNullWhen(true)] out RenderFragment? content)
     {
-        if (_sections.TryGetValue(name, out content))
+        if (_sections.TryGetValue(name, out HackViewSection? section))
         {
+            _renderedSections.Add(name);
+            content = section.Fragment ?? (builder => builder.AddMarkupContent(0, section.Html));
+            return true;
+        }
+
+        content = null;
+        return false;
+    }
+
+    /// <summary>Gets the HTML of a section for a <c>.cshtml</c> layout; the engine materialized it before the pass.</summary>
+    internal bool TryRenderSectionHtml(string name, [NotNullWhen(true)] out string? html)
+    {
+        if (_sections.TryGetValue(name, out HackViewSection? section))
+        {
+            html = section.Html ?? throw new InvalidOperationException($"The section '{name}' was not rendered to HTML before the layout.");
             _renderedSections.Add(name);
             return true;
         }
 
+        html = null;
         return false;
+    }
+
+    /// <summary>Marks a section as rendered without writing it (<c>IgnoreSection</c>).</summary>
+    internal void IgnoreSection(string name)
+    {
+        if (!_sections.ContainsKey(name))
+        {
+            throw new InvalidOperationException($"The section '{name}' is not defined.");
+        }
+
+        _renderedSections.Add(name);
     }
 
     internal bool IsSectionDefined(string name) => _sections.ContainsKey(name);
 
+    /// <summary>The sections still held as Razor fragments, which a <c>.cshtml</c> layout cannot write as such.</summary>
+    internal IEnumerable<KeyValuePair<string, RenderFragment>> FragmentSections =>
+        _sections.Where(pair => pair.Value.Html is null).Select(pair => KeyValuePair.Create(pair.Key, pair.Value.Fragment!)).ToArray();
+
+    /// <summary>Replaces a fragment section by its HTML (rendered by the engine).</summary>
+    internal void SetSectionHtml(string name, string html) => _sections[name] = new HackViewSection(_sections[name].Fragment, html);
+
     internal IEnumerable<string> UnrenderedSections => _sections.Keys.Where(name => !_renderedSections.Contains(name));
 }
+
+/// <summary>A section of a page: a Razor fragment (a <c>.razor</c> view), its HTML (a <c>.cshtml</c> page), or both.</summary>
+internal sealed record HackViewSection(RenderFragment? Fragment, string? Html);

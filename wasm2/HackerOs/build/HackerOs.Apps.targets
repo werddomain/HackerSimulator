@@ -98,6 +98,34 @@
   </Target>
 
   <!--
+    ASP.Hack .cshtml views (ADR 0086 §2): the Razor compiler of the SDK compiles a .cshtml in MVC mode, whose
+    generated C# names a few ASP.NET MVC types. For a project that references HackerOs.AppSdk.Web and has
+    .cshtml files, this target adds a root _ViewImports.cshtml (base class HackRazorPage<TModel> and the
+    helpers in place of MVC's implicit @inject) and a C# file of internal compatibility types with the names
+    the generated code expects. No ASP.NET MVC reference is involved. RAZORSDK1004 ("no Razor support for
+    MVC") is expected for these projects and kept as a message.
+  -->
+  <PropertyGroup>
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);RAZORSDK1004</MSBuildWarningsAsMessages>
+    <_HackerOsAspHackRazorDir>$(MSBuildThisFileDirectory)asp-hack/</_HackerOsAspHackRazorDir>
+  </PropertyGroup>
+
+  <Target Name="_HackerOsAspHackRazorViews" BeforeTargets="AssignRazorGenerateTargetPaths;CoreCompile" Condition="'@(RazorGenerate)' != ''">
+    <PropertyGroup>
+      <_HackerOsCshtmlSite Condition="'%(ProjectReference.Filename)' == 'HackerOs.AppSdk.Web' and '@(RazorGenerate->WithMetadataValue('Extension', '.cshtml')->Count())' != '0'">true</_HackerOsCshtmlSite>
+    </PropertyGroup>
+    <Error Condition="'$(_HackerOsCshtmlSite)' == 'true' and '$(_HackerOsAspHackRazorAdded)' != 'true' and Exists('$(MSBuildProjectDirectory)/_ViewImports.cshtml')"
+           Text="ASP.Hack provides the root _ViewImports.cshtml of a site (ADR 0086). Move this project's _ViewImports.cshtml to Views/_ViewImports.cshtml." />
+    <ItemGroup Condition="'$(_HackerOsCshtmlSite)' == 'true' and '$(_HackerOsAspHackRazorAdded)' != 'true'">
+      <RazorGenerate Include="$(_HackerOsAspHackRazorDir)_ViewImports.cshtml" Link="_ViewImports.cshtml" />
+      <Compile Include="$(_HackerOsAspHackRazorDir)HackRazorCompat.cs" Link="obj/HackRazorCompat.cs" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(_HackerOsCshtmlSite)' == 'true'">
+      <_HackerOsAspHackRazorAdded>true</_HackerOsAspHackRazorAdded>
+    </PropertyGroup>
+  </Target>
+
+  <!--
     Generated manifests sit in the project directory (tracked by git for review) but are not
     content: they must never be copied or published under the same name by several apps.
   -->

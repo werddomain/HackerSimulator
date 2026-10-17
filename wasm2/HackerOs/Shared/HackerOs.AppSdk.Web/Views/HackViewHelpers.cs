@@ -323,7 +323,19 @@ public sealed class HackPartial : HackViewHelper
         builder.AddComponentParameter(2, nameof(CascadingValue<HackViewContext>.IsFixed), true);
         builder.AddComponentParameter(3, nameof(CascadingValue<HackViewContext>.ChildContent), (RenderFragment)(inner =>
         {
-            inner.OpenComponent(0, view.ViewType);
+            if (view.Kind == HackViewKind.RazorPage)
+            {
+                // A .cshtml partial (ADR 0086 §5) runs as a page, then is written as markup.
+                inner.OpenComponent<HackRazorPagePartial>(0);
+                inner.AddComponentParameter(1, nameof(HackRazorPagePartial.View), view);
+                inner.AddComponentParameter(2, nameof(HackRazorPagePartial.Context), partialContext);
+                inner.AddComponentParameter(3, nameof(HackRazorPagePartial.Model), model);
+            }
+            else
+            {
+                inner.OpenComponent(0, view.ViewType);
+            }
+
             inner.CloseComponent();
         }));
         builder.CloseComponent();
