@@ -6,7 +6,8 @@ namespace HackerOs.Platform.Core.Lifecycle;
 
 /// <summary>
 /// Reads and writes the per-user, per-service start-mode config file at
-/// <c>/home/{userName}/.config/{appId}/service.conf</c> -- the live, Linux-rc-style
+/// <c>/home/{userName}/.config/{appId}/service.conf</c> -- or, for a system service started at boot
+/// (ADR 0097, section 4), the machine's <c>/etc/{appId}/service.conf</c> -- the live, Linux-rc-style
 /// enabled/disabled state that lives alongside, but independently of, the manifest's
 /// <see cref="AppManifest.AutoStart"/> preset. Every call here is trusted, system-authority IO:
 /// callers are expected to have already authorized the request one layer up (same-assembly or
@@ -19,20 +20,68 @@ internal static class ServiceStartModeStore
     private const string StartModeKey = "StartMode=";
 
     /// <summary>Reads the effective start mode, or <paramref name="fallback"/> when no config file exists yet.</summary>
-    public static async ValueTask<ServiceStartMode> ReadAsync(
+    public static ValueTask<ServiceStartMode> ReadAsync(
         IFileSystemService fileSystem,
         string userName,
         string appId,
         ServiceStartMode fallback,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return ReadCoreAsync(fileSystem, UserLocation(userName, appId), fallback, cancellationToken);
+    }
 
-        FileSystemAuthorizationContext context = BuildContext(userName, appId);
+    /// <summary>
+    /// Reads the effective start mode of a system service from <c>/etc/{appId}/service.conf</c>
+    /// (ADR 0097, section 4), or <paramref name="fallback"/> when the file does not exist yet.
+    /// </summary>
+    public static ValueTask<ServiceStartMode> ReadSystemAsync(
+        IFileSystemService fileSystem,
+        string appId,
+        ServiceStartMode fallback,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return ReadCoreAsync(fileSystem, SystemLocation(appId), fallback, cancellationToken);
+    }
+
+    /// <summary>Writes the effective start mode, creating the app's config directory/file if needed.</summary>
+    public static ValueTask WriteAsync(
+        IFileSystemService fileSystem,
+        string userName,
+        string appId,
+        ServiceStartMode mode,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return WriteCoreAsync(fileSystem, UserLocation(userName, appId), appId, mode, cancellationToken);
+    }
+
+    /// <summary>
+    /// Writes the effective start mode of a system service to <c>/etc/{appId}/service.conf</c>
+    /// (<c>root:root 0644</c>). The caller checked that an administrator asked.
+    /// </summary>
+    public static ValueTask WriteSystemAsync(
+        IFileSystemService fileSystem,
+        string appId,
+        ServiceStartMode mode,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return WriteCoreAsync(fileSystem, SystemLocation(appId), appId, mode, cancellationToken);
+    }
+
+    private static async ValueTask<ServiceStartMode> ReadCoreAsync(
+        IFileSystemService fileSystem,
+        Location location,
+        ServiceStartMode fallback,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(fileSystem);
         FileSystemResult<FileSystemContentReadHandle> result = await fileSystem.ReadAsync(
-            new FileSystemReadRequest(GetConfigPath(userName, appId)), context, cancellationToken).ConfigureAwait(false);
+            new FileSystemReadRequest(location.File), location.Context, cancellationToken).ConfigureAwait(false);
         if (!result.Succeeded || result.Value is null)
         {
             return fallback;
@@ -44,24 +93,17 @@ internal static class ServiceStartModeStore
         return Parse(content, fallback);
     }
 
-    /// <summary>Writes the effective start mode, creating the app's config directory/file if needed.</summary>
-    public static async ValueTask WriteAsync(
+    private static async ValueTask WriteCoreAsync(
         IFileSystemService fileSystem,
-        string userName,
+        Location location,
         string appId,
         ServiceStartMode mode,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
-        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
-
-        FileSystemAuthorizationContext context = BuildContext(userName, appId);
-
         FileSystemMutationResult createDirectory = await fileSystem.CreateAsync(
-            new FileSystemCreateRequest(
-                GetDirectoryPath(userName, appId), FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_000_000)),
-            context,
+            new FileSystemCreateRequest(location.Directory, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(location.DirectoryMode)),
+            location.Context,
             cancellationToken).ConfigureAwait(false);
         if (!createDirectory.Succeeded && createDirectory.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
         {
@@ -69,10 +111,9 @@ internal static class ServiceStartModeStore
                 $"Could not create service config directory for '{appId}': {createDirectory.Transaction.Error?.Code}.");
         }
 
-        VirtualPath filePath = GetConfigPath(userName, appId);
         FileSystemMutationResult createFile = await fileSystem.CreateAsync(
-            new FileSystemCreateRequest(filePath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_000_000)),
-            context,
+            new FileSystemCreateRequest(location.File, FileSystemEntryKind.File, FileSystemPermissions.FromMode(location.FileMode)),
+            location.Context,
             cancellationToken).ConfigureAwait(false);
         if (!createFile.Succeeded && createFile.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
         {
@@ -81,7 +122,7 @@ internal static class ServiceStartModeStore
         }
 
         FileSystemMutationResult write = await fileSystem.WriteAsync(
-            new FileSystemWriteRequest(filePath), new TextContentSource($"{StartModeKey}{mode}\n"), context, cancellationToken)
+            new FileSystemWriteRequest(location.File), new TextContentSource($"{StartModeKey}{mode}\n"), location.Context, cancellationToken)
             .ConfigureAwait(false);
         if (!write.Succeeded)
         {
@@ -90,11 +131,23 @@ internal static class ServiceStartModeStore
         }
     }
 
-    private static VirtualPath GetDirectoryPath(string userName, string appId) =>
-        VirtualPath.Parse($"/home/{userName}/.config/{appId}");
+    /// <summary>Gets the path of a system service's start-mode file (ADR 0097, section 4).</summary>
+    internal static VirtualPath GetSystemConfigPath(string appId) => VirtualPath.Parse($"/etc/{appId}/service.conf");
 
-    private static VirtualPath GetConfigPath(string userName, string appId) =>
-        VirtualPath.Parse($"/home/{userName}/.config/{appId}/service.conf");
+    private static Location UserLocation(string userName, string appId) => new(
+        VirtualPath.Parse($"/home/{userName}/.config/{appId}"),
+        VirtualPath.Parse($"/home/{userName}/.config/{appId}/service.conf"),
+        BuildContext(userName, appId),
+        0b111_000_000,
+        0b110_000_000);
+
+    private static Location SystemLocation(string appId) => new(
+        VirtualPath.Parse($"/etc/{appId}"),
+        GetSystemConfigPath(appId),
+        // Like /etc/hackeros/apps.config: the OS writes it as root, everyone may read it.
+        new FileSystemAuthorizationContext(Settings.OsSettingsService.CreateSystemOperation(), ["system"], DateTimeOffset.UtcNow),
+        0b111_101_101,
+        0b110_100_100);
 
     private static FileSystemAuthorizationContext BuildContext(string userName, string appId)
     {
@@ -138,6 +191,10 @@ internal static class ServiceStartModeStore
 
         return fallback;
     }
+
+    /// <summary>Where one start-mode file lives and who writes it.</summary>
+    private sealed record Location(
+        VirtualPath Directory, VirtualPath File, FileSystemAuthorizationContext Context, ushort DirectoryMode, ushort FileMode);
 
     private sealed class TextContentSource(string content) : IFileSystemContentSource
     {

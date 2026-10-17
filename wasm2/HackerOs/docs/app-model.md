@@ -35,6 +35,7 @@ Valeurs par défaut des membres facultatifs :
 | `Terminal`, `MobileEntryPoint`, `Settings` | `null` |
 | `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) |
 | `SingleInstancePerUser`, `AutoStart`, `SupportsBack` | `false` |
+| `ServiceStartup` | `null` (= `Login`) ; `serviceStartup` est alors omis du manifeste. `Boot` ne vaut que pour une app système de genre `Service` (ADR 0097 §4, ADR 0107) |
 | `Resources` | `AppResourceProfileManifest.None` |
 | `Window` | `null` : la fenêtre prend `WindowOptions.Default` (800×560, minimum 360×240) ; l'objet `window` est alors omis du manifeste (ADR 0095, [`window-model.md`](window-model.md)). Déclaré seulement par une app de genre `Window` (`manifest.window.*`). |
 

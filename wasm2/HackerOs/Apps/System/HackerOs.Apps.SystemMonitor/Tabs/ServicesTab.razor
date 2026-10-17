@@ -22,6 +22,7 @@
                     <th>Service</th>
                     <th class="num">PID</th>
                     <th>Status</th>
+                    <th>Health</th>
                     <th>Start type</th>
                     <th></th>
                 </tr>
@@ -30,14 +31,30 @@
                 @foreach (HackServiceController service in _services)
                 {
                     HackServiceController current = service;
-                    HackServiceControllerStatus status = LiveStatus(current);
-                    <tr>
+                    HackServiceActiveState state = LiveState(current);
+                    <tr class="@(state == HackServiceActiveState.Failed ? "svc-row-failed" : null)">
                         <td>
                             <span class="svc-name">@current.DisplayName</span>
                             <span class="svc-id">@current.ServiceName</span>
                         </td>
                         <td class="num mono">@(LivePid(current)?.ToString() ?? "—")</td>
-                        <td><span class="svc-status svc-@status">@StatusText(status)</span></td>
+                        <td>
+                            <span class="svc-status svc-@state" title="@StateTitle(current, state)">@StateText(current, state)</span>
+                        </td>
+                        <td>
+                            @if (state is HackServiceActiveState.Active or HackServiceActiveState.Activating or HackServiceActiveState.Deactivating || current.StatusText is not null)
+                            {
+                                <span class="svc-health svc-health-@current.Health">@HealthText(current.Health)</span>
+                                @if (current.StatusText is { Length: > 0 } text)
+                                {
+                                    <span class="svc-status-text">@text</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="sysmon-muted">—</span>
+                            }
+                        </td>
                         <td>
                             @if (current.StartType is { } startType)
                             {
@@ -55,12 +72,17 @@
                             }
                         </td>
                         <td class="svc-actions">
-                            @if (status is HackServiceControllerStatus.Running or HackServiceControllerStatus.StartPending)
+                            @if (state is HackServiceActiveState.Active or HackServiceActiveState.Activating)
                             {
                                 <button class="sysmon-btn btn-danger" disabled="@_busy" @onclick='() => RunAsync(current, current.StopAsync, "stop")'>Stop</button>
                             }
                             else
                             {
+                                @if (state == HackServiceActiveState.Failed)
+                                {
+                                    <button class="sysmon-btn sysmon-btn-ghost" disabled="@_busy" title="Forget the failure (systemctl reset-failed)"
+                                            @onclick='() => RunAsync(current, current.ResetFailedAsync, "reset")'>Reset</button>
+                                }
                                 <button class="sysmon-btn" disabled="@(_busy || current.StartType == ServiceStartMode.Disabled)"
                                         @onclick='() => RunAsync(current, current.StartAsync, "start")'>Start</button>
                             }
@@ -69,7 +91,7 @@
                 }
                 @if (_services.Count == 0 && !_busy)
                 {
-                    <tr class="svc-empty"><td colspan="5">No service installed.</td></tr>
+                    <tr class="svc-empty"><td colspan="6">No service installed.</td></tr>
                 }
             </tbody>
         </table>

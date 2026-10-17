@@ -28,6 +28,11 @@ namespace HackerOs.Simulation.Abstractions.Processes;
 /// auxiliary process is never found by <see cref="IProcessManager.TryGetSingleton"/>, so a web app's
 /// on-demand activation still starts its site when only renderers run.
 /// </param>
+/// <param name="SystemScope">
+/// Whether the process belongs to the system rather than to the login session (ADR 0097, section 4):
+/// a service started at boot, before any login. Its token is linked to the OS's own root, cancelled
+/// only at shutdown, so a logout does not stop it; it can be created while no session is active.
+/// </param>
 public sealed record ProcessStartRequest(
     ProcessId? ParentPid,
     string AppId,
@@ -39,7 +44,8 @@ public sealed record ProcessStartRequest(
     IReadOnlyList<string>? Arguments = null,
     VirtualPath? WorkingDirectory = null,
     IReadOnlyDictionary<string, string>? Environment = null,
-    bool Auxiliary = false);
+    bool Auxiliary = false,
+    bool SystemScope = false);
 
 /// <summary>
 /// Creates, tracks, and terminates processes in memory, per ADR 0012. All state transitions are
@@ -114,6 +120,15 @@ public interface IProcessManager
     /// <summary>Gets the cancellation token owned by one active process.</summary>
     /// <exception cref="KeyNotFoundException">No active process has this PID.</exception>
     CancellationToken GetCancellationToken(ProcessId pid);
+
+    /// <summary>
+    /// Records the health a running <see cref="AppKind.Service"/> process reported about itself
+    /// (ADR 0097, section 2) in its record. No state change, no event.
+    /// </summary>
+    /// <param name="pid">An active service process.</param>
+    /// <param name="health">The reported health.</param>
+    /// <returns>The updated record, or <see langword="null"/> when the process is not active or not a service.</returns>
+    ProcessRecord? SetServiceHealth(ProcessId pid, ServiceHealth health) => null;
 }
 
 /// <summary>

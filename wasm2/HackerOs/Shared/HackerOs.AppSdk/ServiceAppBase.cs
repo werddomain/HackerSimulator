@@ -1,4 +1,6 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.ServiceProcess;
+using HackerOs.Simulation.Abstractions.Gateways;
 
 namespace HackerOs.AppSdk;
 
@@ -134,6 +136,9 @@ public abstract class ServiceAppBase : AppBase
         using IDisposable scope = HackExecutionContext.Enter(context);
         try
         {
+            // ADR 0097: "activating" until the start code returns, "active" from then on (READY=1).
+            await OnStartAsync(context, sessionCancellationToken);
+            context.ServiceNotify.Notify(new ServiceNotification(Ready: true));
             await RunCoreAsync(context, sessionCancellationToken);
         }
         finally
@@ -141,6 +146,31 @@ public abstract class ServiceAppBase : AppBase
             context.StopRequested -= OnStopRequested;
         }
     }
+
+    /// <summary>
+    /// Prepares the service before its loop (ADR 0097, section 1): the service reads as
+    /// <c>activating</c> until this returns, then <c>active</c> with health
+    /// <see cref="HackServiceHealth.Healthy"/>. A start longer than the OS's start timeout (30 s) is
+    /// killed and the service reads as <c>failed (Result: timeout)</c>; an exception here fails it
+    /// with <c>exception</c>. The default does nothing, so the service is active at once.
+    /// </summary>
+    /// <param name="context">Scoped application execution context.</param>
+    /// <param name="sessionCancellationToken">Signals the end of the run.</param>
+    /// <returns>A task completing when the service is ready to serve.</returns>
+    protected virtual Task OnStartAsync(IAppExecutionContext context, CancellationToken sessionCancellationToken) =>
+        Task.CompletedTask;
+
+    /// <summary>
+    /// Reports the service's own health without stopping it (ADR 0097, section 2), like
+    /// <c>sd_notify("STATUS=…")</c>: a site that can no longer reach its database reports
+    /// <see cref="HackServiceHealth.Degraded"/> with a short reason. <c>systemctl status</c> and the
+    /// task manager show both.
+    /// </summary>
+    /// <param name="health">The current health.</param>
+    /// <param name="status">A short human-readable status, or <see langword="null"/> to clear it.</param>
+    /// <remarks>Does nothing before <see cref="RunAsync"/> or when the OS does not track this process as a service.</remarks>
+    protected void ReportHealth(HackServiceHealth health, string? status = null) =>
+        _context?.ServiceNotify.Notify(new ServiceNotification(Health: HackServiceStates.ToInternal(health), StatusText: status ?? string.Empty));
 
     /// <summary>Implements the active service loop.</summary>
     /// <param name="context">Scoped application execution context.</param>

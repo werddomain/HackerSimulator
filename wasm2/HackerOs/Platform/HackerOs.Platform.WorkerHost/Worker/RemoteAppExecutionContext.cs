@@ -57,6 +57,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Notifications = new RemoteNotificationGateway(channel);
         Intents = new RemoteIntentGateway(channel);
         Services = new RemoteServiceControlGateway(channel);
+        ServiceNotify = new RemoteServiceNotifyGateway(channel);
         Environment = new RemoteEnvironmentGateway(
             channel, snapshot.Arguments, snapshot.CurrentDirectory,
             new Dictionary<string, string>(snapshot.Variables, StringComparer.Ordinal),
@@ -120,6 +121,8 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
     public IAppFileSystemWatchGateway Watch { get; } = new RemoteWatchGateway();
 
     public IAppServiceControlGateway Services { get; }
+
+    public IAppServiceNotifyGateway ServiceNotify { get; }
 
     public IAppPermissionErrorGateway PermissionErrors => _permissionErrors;
 

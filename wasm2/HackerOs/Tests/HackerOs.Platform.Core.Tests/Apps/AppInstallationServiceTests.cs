@@ -50,6 +50,26 @@ public sealed class AppInstallationServiceTests
     }
 
     [Fact]
+    public async Task The_uninstall_plan_lists_the_running_processes_and_the_result_the_stopped_ones()
+    {
+        Harness harness = await Harness.CreateAsync();
+        AuthenticatedPrincipal alice = await harness.LoginAsync(harness.Settings.Alice);
+        AppLaunchResult running = await harness.Orchestrator.LaunchAsync(new AppLaunchRequest(Calc, alice, []));
+
+        AppUninstallPlan plan = await harness.Installation.PlanUninstallAsync(Calc);
+        AppInstallationResult result = await harness.Installation.UninstallAsync(Calc, AppInstallationScope.User);
+
+        // ADR 0097 section 5: what will stop is shown before, what stopped is reported after.
+        AppProcessInfo planned = Assert.Single(plan.RunningProcesses);
+        Assert.Equal(running.Process!.Pid.Value, planned.Pid);
+        Assert.Equal("alice", planned.UserName);
+        AppProcessInfo stopped = Assert.Single(result.StoppedProcesses!);
+        Assert.Equal(planned.Pid, stopped.Pid);
+        Assert.False(stopped.Forced);
+        Assert.Empty((await harness.Installation.PlanUninstallAsync(Calc)).RunningProcesses);
+    }
+
+    [Fact]
     public async Task Uninstalling_a_website_deletes_its_browser_database_and_nothing_else()
     {
         Harness harness = await Harness.CreateAsync();

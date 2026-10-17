@@ -20,6 +20,10 @@ public sealed record AuthenticatedPrincipal
     /// <param name="installationId">Identifier of the HackerOS installation/profile hosting the session.</param>
     /// <param name="deviceId">Identifier of the physical/browser device hosting the session.</param>
     /// <param name="authenticatedAtUtc">UTC simulation time authentication completed.</param>
+    /// <param name="homePath">
+    /// Home directory when it is not <c>/home/&lt;login&gt;</c>: a service account's, such as
+    /// <c>/var/lib/hackeros-svc</c> (ADR 0097, section 4). <see langword="null"/> for a login account.
+    /// </param>
     /// <exception cref="ArgumentException">An invariant is violated.</exception>
     public AuthenticatedPrincipal(
         SessionId sessionId,
@@ -31,7 +35,8 @@ public sealed record AuthenticatedPrincipal
         IReadOnlyCollection<LocalGroupId> groupIds,
         InstallationId installationId,
         DeviceId deviceId,
-        DateTimeOffset authenticatedAtUtc)
+        DateTimeOffset authenticatedAtUtc,
+        string? homePath = null)
     {
         if (string.IsNullOrWhiteSpace(displayName))
         {
@@ -60,7 +65,10 @@ public sealed record AuthenticatedPrincipal
         InstallationId = installationId;
         DeviceId = deviceId;
         AuthenticatedAtUtc = authenticatedAtUtc;
+        _homePath = homePath;
     }
+
+    private readonly string? _homePath;
 
     /// <summary>Gets the identifier of the session this principal belongs to.</summary>
     public SessionId SessionId { get; }
@@ -93,7 +101,7 @@ public sealed record AuthenticatedPrincipal
     public DateTimeOffset AuthenticatedAtUtc { get; }
 
     /// <summary>Gets the authenticated user's home directory path.</summary>
-    public string HomePath => $"/home/{LoginName.Value}";
+    public string HomePath => _homePath ?? $"/home/{LoginName.Value}";
 
     /// <summary>Determines whether the principal carries at least the required authority.</summary>
     /// <param name="required">Minimum authority required by the operation.</param>

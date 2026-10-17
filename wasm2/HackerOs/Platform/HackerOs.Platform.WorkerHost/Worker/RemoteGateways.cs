@@ -598,6 +598,25 @@ internal sealed class RemoteServiceControlGateway(RemoteProcessChannel channel) 
             writer.WriteString("id", serviceAppId);
             writer.WriteNumber("m", (int)mode);
         }, cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<ServiceStatusSnapshot> GetStatusAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadServiceStatus(await channel.CallAsync(RemoteOps.ServiceStatus, writer => writer.WriteString("id", serviceAppId), cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<ServiceControlResult> ResetFailedAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadServiceResult(await channel.CallAsync(RemoteOps.ServiceResetFailed, writer => writer.WriteString("id", serviceAppId), cancellationToken).ConfigureAwait(false));
+}
+
+/// <summary>
+/// <see cref="IAppServiceNotifyGateway"/> of a service in a worker (ADR 0097, section 2): each
+/// message is posted to the OS, which applies it to the service's state under this process's PID.
+/// </summary>
+internal sealed class RemoteServiceNotifyGateway(RemoteProcessChannel channel) : IAppServiceNotifyGateway
+{
+    public void Notify(ServiceNotification notification)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+        channel.Notify(RemoteOps.ServiceNotify, writer => WireCodec.WriteServiceNotification(writer, notification));
+    }
 }
 
 /// <summary><see cref="IAppDriveGateway"/> in a worker (<c>df</c>).</summary>

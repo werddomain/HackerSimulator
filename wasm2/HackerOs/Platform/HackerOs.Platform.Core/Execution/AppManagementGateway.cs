@@ -91,6 +91,29 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     }
 
     /// <inheritdoc />
+    public async ValueTask<HackUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        RequireApp(appId);
+        AppUninstallPlan plan = await _installation().PlanUninstallAsync(appId, cancellationToken).ConfigureAwait(false);
+        return new HackUninstallPlan(plan.AppIds, [.. plan.RunningProcesses.Select(ToPublic)]);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackUninstallReport> UninstallWithReportAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default)
+    {
+        AppManifest target = RequireApp(appId);
+        IAppFileSystemGateway? writer = await AuthorizeAsync(target, scope, uninstall: true, cancellationToken).ConfigureAwait(false);
+        AppInstallationResult result = await _installation()
+            .UninstallAsync(appId, ToInternal(scope), writer, cancellationToken)
+            .ConfigureAwait(false);
+        return new HackUninstallReport(Unwrap(result), [.. (result.StoppedProcesses ?? []).Select(ToPublic)]);
+    }
+
+    private static HackRunningProcessInfo ToPublic(Lifecycle.AppProcessInfo process) =>
+        new(process.Pid, process.AppId, process.Name, process.UserName, process.Forced);
+
+    /// <inheritdoc />
     public async ValueTask<IReadOnlyList<string>> ReinstallAsync(
         string appId, HackInstallScope scope, CancellationToken cancellationToken = default)
     {

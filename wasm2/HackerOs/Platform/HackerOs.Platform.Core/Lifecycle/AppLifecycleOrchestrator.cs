@@ -15,6 +15,9 @@ using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using HackerOs.Simulation.Abstractions.Time;
 
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
@@ -44,8 +47,14 @@ public sealed class AppLifecycleOrchestrator
     private readonly IDangerousCapabilityGate? _dangerousCapabilityGate;
     private readonly LoginEnvironmentProvider? _loginEnvironment;
     private readonly IRemoteProcessHost? _remoteHost;
+    private readonly ISimulationClock? _clock;
+    private readonly ILogger _logger;
+    private readonly ServiceStateTable _serviceStates;
     private readonly object _sync = new();
     private readonly Dictionary<ProcessId, RunningInstance> _running = [];
+    // Service processes of this boot, by PID, so the end of one updates its unit (ADR 0097).
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<ProcessId, string> _servicePids = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _bootRefusalLogged = new(StringComparer.Ordinal);
 
     /// <summary>Initializes the orchestrator over a fully resolved discovery result.</summary>
     /// <param name="catalog">Validated, dependency-ordered app catalog.</param>
@@ -94,6 +103,13 @@ public sealed class AppLifecycleOrchestrator
     /// run there. Registered only by the WebAssembly hosts; when omitted (the server host, tests),
     /// every process runs in-process and <c>execution</c> is ignored.
     /// </param>
+    /// <param name="clock">
+    /// Optional simulation clock timestamping service state changes (ADR 0097); real time when omitted.
+    /// </param>
+    /// <param name="logger">
+    /// Optional logger; a service entering <c>failed</c> is written there, hence to
+    /// <c>/var/log/syslog</c> (ADR 0097, section 3).
+    /// </param>
     public AppLifecycleOrchestrator(
         AppCatalog catalog,
         IReadOnlyDictionary<string, AppDescriptor> descriptors,
@@ -108,7 +124,9 @@ public sealed class AppLifecycleOrchestrator
         IElevationTicketStore? elevationTickets = null,
         IDangerousCapabilityGate? dangerousCapabilityGate = null,
         LoginEnvironmentProvider? loginEnvironment = null,
-        IRemoteProcessHost? remoteHost = null)
+        IRemoteProcessHost? remoteHost = null,
+        ISimulationClock? clock = null,
+        ILogger<AppLifecycleOrchestrator>? logger = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _descriptors = descriptors ?? throw new ArgumentNullException(nameof(descriptors));
@@ -124,7 +142,57 @@ public sealed class AppLifecycleOrchestrator
         _dangerousCapabilityGate = dangerousCapabilityGate;
         _loginEnvironment = loginEnvironment;
         _remoteHost = remoteHost;
+        _logger = (ILogger?)logger ?? NullLogger.Instance;
+        _clock = clock;
+        _serviceStates = new ServiceStateTable(clock is null ? static () => DateTimeOffset.UtcNow : () => clock.UtcNow);
+        _serviceStates.Failed += OnServiceFailed;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+    }
+
+    /// <summary>
+    /// Gets or sets how long a service may stay <c>activating</c> (its <c>OnStartAsync</c>) before
+    /// the OS kills it and marks it <c>failed (Result: timeout)</c> (ADR 0097, section 1). 30 s, like
+    /// systemd's <c>TimeoutStartSec</c> default of 90 s scaled to the simulation.
+    /// </summary>
+    public TimeSpan ServiceStartTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets the service manager's state of one <see cref="AppKind.Service"/> app (ADR 0097): active
+    /// state, last result, health and status text. <see cref="ServiceStatusSnapshot.NeverStarted"/> for
+    /// a service that has not run during this boot.
+    /// </summary>
+    /// <param name="appId">Service app ID.</param>
+    public ServiceStatusSnapshot GetServiceStatus(string appId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return _serviceStates.Get(appId);
+    }
+
+    /// <summary>Clears a service's <c>failed</c> state (<c>systemctl reset-failed</c>).</summary>
+    /// <param name="appId">Service app ID.</param>
+    /// <returns><see langword="true"/> when it was failed.</returns>
+    public bool ResetFailedService(string appId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return _serviceStates.ResetFailed(appId);
+    }
+
+    /// <summary>Gets the systemd unit name of a service app: <c>org.hackeros.hackwebd</c> is <c>hackwebd.service</c>.</summary>
+    /// <param name="appId">Service app ID.</param>
+    public static string UnitNameOf(string appId) => appId[(appId.LastIndexOf('.') + 1)..] + ".service";
+
+    /// <summary>ADR 0097 section 3: a failure goes to <c>/var/log/syslog</c> with systemd's wording.</summary>
+    private void OnServiceFailed(string appId, ServiceStatusSnapshot status)
+    {
+        string result = status.Result switch
+        {
+            ServiceRunResult.ExitCode => "exit-code",
+            ServiceRunResult.Exception => "exception",
+            ServiceRunResult.Killed => "killed",
+            ServiceRunResult.Timeout => "timeout",
+            _ => "success"
+        };
+        _logger.LogWarning("{Unit}: Failed with result '{Result}'.", UnitNameOf(appId), result);
     }
 
     /// <summary>
@@ -145,11 +213,24 @@ public sealed class AppLifecycleOrchestrator
 
     private void OnProcessStateChanged(ProcessStateChangedEvent e)
     {
+        if (e.NewState == ProcessState.Stopping && _servicePids.TryGetValue(e.Pid, out string? stoppingService))
+        {
+            // SIGTERM from kill, End task or the OS itself: the unit is deactivating (ADR 0097).
+            _serviceStates.MarkDeactivating(stoppingService, e.Pid);
+        }
+
         if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
         {
             lock (_sync)
             {
                 _running.Remove(e.Pid);
+            }
+
+            if (_servicePids.TryRemove(e.Pid, out string? endedService)
+                && _processManager.GetHistory().LastOrDefault(record => record.Pid == e.Pid) is { } ended)
+            {
+                // Published inside the process manager's lock, which is re-entrant for this thread.
+                _serviceStates.MarkEnded(endedService, ended);
             }
         }
     }
@@ -361,7 +442,8 @@ public sealed class AppLifecycleOrchestrator
             // otherwise the manifest's command name (ADR 0050).
             [request.CommandName ?? descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
             workingDirectory,
-            environment));
+            environment,
+            SystemScope: request.SystemScope));
 
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
@@ -475,8 +557,10 @@ public sealed class AppLifecycleOrchestrator
     }
 
     /// <summary>
-    /// Starts every enabled <see cref="AppKind.Service"/> app in catalog activation order, per
-    /// `P1-APP-005`. Intended to run once per new session.
+    /// Starts every enabled, automatic session <see cref="AppKind.Service"/> app in catalog
+    /// activation order, per `P1-APP-005` and ADR 0097 section 4: run once per new session, right
+    /// after the login, as the logged-in user. System services (<see cref="AppServiceStartup.Boot"/>)
+    /// are left to <see cref="StartBootServicesAsync"/>.
     /// </summary>
     /// <param name="principal">Authenticated principal the services run as.</param>
     public async Task<IReadOnlyList<AppLaunchResult>> StartAllServicesAsync(AuthenticatedPrincipal principal)
@@ -484,18 +568,9 @@ public sealed class AppLifecycleOrchestrator
         ArgumentNullException.ThrowIfNull(principal);
 
         List<AppLaunchResult> results = [];
-        foreach (string appId in _catalog.ActivationOrder)
+        foreach (AppDescriptor descriptor in AutomaticServiceCandidates(AppServiceStartup.Login))
         {
-            if (!_descriptors.TryGetValue(appId, out AppDescriptor? descriptor) || descriptor.Manifest.Kind != AppKind.Service)
-            {
-                continue;
-            }
-
-            if (!_enablement.IsEnabled(appId))
-            {
-                continue;
-            }
-
+            string appId = descriptor.Manifest.Id;
             ServiceStartMode effectiveMode = _fileSystem is null
                 ? ServiceStartMode.Automatic
                 : await ServiceStartModeStore.ReadAsync(
@@ -515,6 +590,134 @@ public sealed class AppLifecycleOrchestrator
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Starts every enabled, automatic system service (<see cref="AppServiceStartup.Boot"/>, system
+    /// apps only) in catalog activation order, once storage is mounted and before the login screen
+    /// (ADR 0097, section 4). They run as <paramref name="serviceAccount"/> (<c>hackeros-svc</c>), in
+    /// the system scope: a logout does not stop them, only a shutdown does. Their start mode is read
+    /// from <c>/etc/&lt;appId&gt;/service.conf</c>.
+    /// </summary>
+    /// <param name="serviceAccount">The service account's principal (<c>ServiceAccount.CreatePrincipal</c>).</param>
+    public async Task<IReadOnlyList<AppLaunchResult>> StartBootServicesAsync(AuthenticatedPrincipal serviceAccount)
+    {
+        ArgumentNullException.ThrowIfNull(serviceAccount);
+
+        List<AppLaunchResult> results = [];
+        foreach (AppDescriptor descriptor in AutomaticServiceCandidates(AppServiceStartup.Boot))
+        {
+            string appId = descriptor.Manifest.Id;
+            ServiceStartMode effectiveMode = _fileSystem is null
+                ? ServiceStartMode.Automatic
+                : await ServiceStartModeStore.ReadSystemAsync(
+                    _fileSystem,
+                    appId,
+                    descriptor.Manifest.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
+                    CancellationToken.None);
+            if (effectiveMode != ServiceStartMode.Automatic)
+            {
+                continue;
+            }
+
+            // A system service holds its declared capabilities for the service account, as a system
+            // app's do for every user at login (ADR 0049).
+            CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(
+                _grants, descriptor.Manifest, serviceAccount.UserId.ToString(), isSystemApp: true);
+            AppLaunchResult launched = await LaunchAsync(new AppLaunchRequest(appId, serviceAccount, [], Interactive: false, SystemScope: true));
+            if (launched.Status is AppLaunchStatus.Launched)
+            {
+                _logger.LogInformation("{Unit}: started at boot as {User}", UnitNameOf(appId), serviceAccount.LoginName.Value);
+            }
+
+            results.Add(launched);
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Stops the services and web apps of one login session (ADR 0097, section 4): at the logout,
+    /// every service the session started is stopped through the bounded stop path; the system
+    /// services keep running.
+    /// </summary>
+    /// <param name="sessionId">The session that ended.</param>
+    /// <param name="reason">Reason recorded against stopped processes (<see cref="ProcessExitReason.Logout"/>).</param>
+    /// <returns>How many instances were stopped.</returns>
+    public async Task<int> StopSessionServicesAsync(SessionId sessionId, ProcessExitReason reason = ProcessExitReason.Logout)
+    {
+        List<KeyValuePair<ProcessId, RunningInstance>> snapshot;
+        lock (_sync)
+        {
+            snapshot = [.. _running.Where(entry =>
+                entry.Value.RunTask is not null
+                && entry.Value.Context.SessionId == sessionId)];
+        }
+
+        foreach ((ProcessId pid, RunningInstance instance) in snapshot)
+        {
+            await StopInstanceAsync(pid, instance, reason).ConfigureAwait(false);
+        }
+
+        // A service that ended on the cancelled session token before the OS could stop it is
+        // ended here, so its unit does not stay active (ADR 0097).
+        foreach (ProcessRecord orphan in _processManager.GetActiveProcesses()
+            .Where(record => record.SessionId == sessionId && _servicePids.ContainsKey(record.Pid)))
+        {
+            try
+            {
+                _processManager.Kill(orphan.Pid, reason);
+            }
+            catch (KeyNotFoundException)
+            {
+                // Ended concurrently.
+            }
+        }
+
+        return snapshot.Count;
+    }
+
+    /// <summary>
+    /// Gets when an automatic service actually starts (ADR 0097, section 4): <see cref="AppServiceStartup.Boot"/>
+    /// only for a system app; a non-system app asking for it starts at login, with a warning in
+    /// <c>/var/log/syslog</c> (once per boot).
+    /// </summary>
+    /// <param name="manifest">A service app's manifest.</param>
+    public AppServiceStartup GetEffectiveStartup(AppManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        if (manifest.Kind != AppKind.Service || manifest.ServiceStartup != AppServiceStartup.Boot)
+        {
+            return AppServiceStartup.Login;
+        }
+
+        if (_catalog.IsSystemApp(manifest.Id))
+        {
+            return AppServiceStartup.Boot;
+        }
+
+        if (_bootRefusalLogged.TryAdd(manifest.Id, 0))
+        {
+            _logger.LogWarning(
+                "{Unit}: asks to start at boot but is not a system app; it starts at login instead",
+                UnitNameOf(manifest.Id));
+        }
+
+        return AppServiceStartup.Login;
+    }
+
+    private IEnumerable<AppDescriptor> AutomaticServiceCandidates(AppServiceStartup startup)
+    {
+        foreach (string appId in _catalog.ActivationOrder)
+        {
+            if (_descriptors.TryGetValue(appId, out AppDescriptor? descriptor)
+                && descriptor.Manifest.Kind == AppKind.Service
+                && _enablement.IsEnabled(appId)
+                && GetEffectiveStartup(descriptor.Manifest) == startup)
+            {
+                yield return descriptor;
+            }
+        }
     }
 
     /// <summary>
@@ -644,6 +847,7 @@ public sealed class AppLifecycleOrchestrator
         }
 
         IReadOnlyList<string> closure = _enablement.ComputeDisableClosure(appId);
+        List<AppProcessInfo> stopped = [];
         foreach (string toDisable in closure)
         {
             List<KeyValuePair<ProcessId, RunningInstance>> instances;
@@ -654,7 +858,8 @@ public sealed class AppLifecycleOrchestrator
 
             foreach ((ProcessId pid, RunningInstance instance) in instances)
             {
-                await StopInstanceAsync(pid, instance, reason);
+                bool forced = await StopInstanceAsync(pid, instance, reason);
+                stopped.Add(Describe(pid, instance) with { Forced = forced });
             }
         }
 
@@ -664,8 +869,32 @@ public sealed class AppLifecycleOrchestrator
             _eventBus?.Publish(new AppDisabledEvent(disabledAppId));
         }
 
-        return new AppDisableResult(true, closure, []);
+        return new AppDisableResult(true, closure, [], stopped);
     }
+
+    /// <summary>
+    /// Gets the processes this orchestrator runs for the given apps (windows, services, sites and
+    /// their renderers), by PID: what an uninstall of those apps would stop (ADR 0097, section 5).
+    /// </summary>
+    /// <param name="appIds">The apps.</param>
+    public IReadOnlyList<AppProcessInfo> GetRunningProcesses(IEnumerable<string> appIds)
+    {
+        ArgumentNullException.ThrowIfNull(appIds);
+        HashSet<string> wanted = new(appIds, StringComparer.Ordinal);
+        lock (_sync)
+        {
+            return [.. _running
+                .Where(entry => wanted.Contains(entry.Value.Descriptor.Manifest.Id))
+                .OrderBy(entry => entry.Key.Value)
+                .Select(entry => Describe(entry.Key, entry.Value))];
+        }
+    }
+
+    private static AppProcessInfo Describe(ProcessId pid, RunningInstance instance) => new(
+        pid.Value,
+        instance.Descriptor.Manifest.Id,
+        instance.Descriptor.Manifest.Name,
+        instance.Context.UserLoginName);
 
     /// <summary>
     /// Re-enables one app, failing with an explanatory error when a non-optional dependency is
@@ -1028,6 +1257,7 @@ public sealed class AppLifecycleOrchestrator
         }
 
         ServiceAppBase service = (ServiceAppBase)CreateAppInstance(descriptor);
+        TrackService(descriptor, process, context);
         _processManager.MarkRunning(process.Pid);
         Task runTask = RunServiceAsync(service, process.Pid, context);
 
@@ -1045,6 +1275,7 @@ public sealed class AppLifecycleOrchestrator
     /// </summary>
     private AppLaunchResult StartRemoteService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
     {
+        TrackService(descriptor, process, context);
         _processManager.MarkRunning(process.Pid);
         IRemoteService remote = _remoteHost!.StartService(
             new RemoteProcessLaunch(descriptor, context, ControlOf(context), PlacementGroup: null));
@@ -1056,6 +1287,63 @@ public sealed class AppLifecycleOrchestrator
         }
 
         return new AppLaunchResult(AppLaunchStatus.Launched, process, context);
+    }
+
+    /// <summary>
+    /// Opens a new run of a <see cref="AppKind.Service"/> app in the state table (ADR 0097): the
+    /// unit is <c>activating</c> until the service's notification says it is ready, the process gets
+    /// the notification channel, and a watchdog kills a start that outlives
+    /// <see cref="ServiceStartTimeout"/>. A web app (same base class) is not a unit.
+    /// </summary>
+    private void TrackService(AppDescriptor descriptor, ProcessRecord process, IAppExecutionContext context)
+    {
+        if (descriptor.Manifest.Kind != AppKind.Service)
+        {
+            return;
+        }
+
+        string appId = descriptor.Manifest.Id;
+        ProcessId pid = process.Pid;
+        _servicePids[pid] = appId;
+        _serviceStates.MarkActivating(appId, pid);
+        if (context is AppExecutionContext trusted)
+        {
+            trusted.ServiceNotify = new ServiceNotifyGateway(notification =>
+            {
+                if (_serviceStates.Notify(appId, pid, notification) is { } health)
+                {
+                    _processManager.SetServiceHealth(pid, health);
+                }
+            });
+        }
+
+        _ = WatchServiceStartAsync(appId, pid);
+    }
+
+    /// <summary>Kills a service still <c>activating</c> after <see cref="ServiceStartTimeout"/> (ADR 0097, <c>Result: timeout</c>).</summary>
+    private async Task WatchServiceStartAsync(string appId, ProcessId pid)
+    {
+        TimeSpan timeout = ServiceStartTimeout;
+        if (timeout <= TimeSpan.Zero || timeout == Timeout.InfiniteTimeSpan)
+        {
+            return;
+        }
+
+        // Simulated time when the OS has a clock (a paused simulation does not time a start out).
+        await (_clock?.DelayAsync(timeout) ?? Task.Delay(timeout)).ConfigureAwait(false);
+        if (_serviceStates.IsActivating(appId, pid) && _processManager.TryGetActive(pid, out _))
+        {
+            _logger.LogWarning("{Unit}: start operation timed out. Terminating.", UnitNameOf(appId));
+            _serviceStates.MarkStartTimedOut(appId, pid);
+            try
+            {
+                _processManager.Kill(pid, ProcessExitReason.Timeout);
+            }
+            catch (KeyNotFoundException)
+            {
+                // Ended concurrently.
+            }
+        }
     }
 
     private Task RunServiceAsync(ServiceAppBase service, ProcessId pid, IAppExecutionContext context) =>
@@ -1080,14 +1368,16 @@ public sealed class AppLifecycleOrchestrator
             // Expected once the process token is cancelled. StopInstanceAsync (logout, shutdown,
             // disable) unregisters the instance first and ends the process itself; a SIGTERM from
             // another process (kill, End task, ADR 0069) leaves it registered: the service ended by
-            // honoring its token, so it completes within its grace period.
+            // honoring its token, so it completes within its grace period. So does a service whose
+            // scope was cancelled under it (the session root at logout, the system scope at
+            // shutdown): its unit must not stay active with no code running (ADR 0097).
             bool stoppedByEcosystem;
             lock (_sync)
             {
                 stoppedByEcosystem = !_running.ContainsKey(pid);
             }
 
-            if (!stoppedByEcosystem && context.StopRequest is not null && _processManager.TryGetActive(pid, out _))
+            if (!stoppedByEcosystem && _processManager.TryGetActive(pid, out _))
             {
                 try
                 {
@@ -1162,26 +1452,38 @@ public sealed class AppLifecycleOrchestrator
     }
 
     /// <summary>Waits for the work the app deferred on its stop request, or until <paramref name="limit"/> completes.</summary>
-    private static async Task WaitForStopWorkAsync(IAppExecutionContext context, Task limit)
+    /// <returns><see langword="false"/> when <paramref name="limit"/> came first: the work was still running.</returns>
+    private static async Task<bool> WaitForStopWorkAsync(IAppExecutionContext context, Task limit)
     {
         if (context.StopRequest is { } request)
         {
-            await Task.WhenAny(request.WhenDeferredWorkEndedAsync(), limit).ConfigureAwait(false);
+            Task work = request.WhenDeferredWorkEndedAsync();
+            return await Task.WhenAny(work, limit).ConfigureAwait(false) == work;
         }
+
+        return true;
     }
 
-    private async Task StopInstanceAsync(ProcessId pid, RunningInstance instance, ProcessExitReason reason)
+    private async Task<bool> StopInstanceAsync(ProcessId pid, RunningInstance instance, ProcessExitReason reason)
     {
         lock (_sync)
         {
             _running.Remove(pid);
         }
 
+        if (_servicePids.TryGetValue(pid, out string? serviceId))
+        {
+            _serviceStates.MarkDeactivating(serviceId, pid);
+        }
+
+        // Whether the app did not finish its stop work within the grace period (ADR 0097, section 5).
+        bool forced = false;
+
         bool isService = instance.ServiceInstance is not null || instance.RemoteService is not null;
         if (_processManager.TryGetActive(pid, out _) && AnnounceStop(pid, instance.Context, reason, isService))
         {
             // Logout, shutdown, disable: the app keeps a recovery draft or ends its operation first.
-            await WaitForStopWorkAsync(instance.Context, Task.Delay(StopBudget)).ConfigureAwait(false);
+            forced |= !await WaitForStopWorkAsync(instance.Context, Task.Delay(StopBudget)).ConfigureAwait(false);
         }
 
         if ((instance.ServiceInstance is not null || instance.RemoteService is not null) && _processManager.TryGetActive(pid, out _))
@@ -1193,6 +1495,11 @@ public sealed class AppLifecycleOrchestrator
                     ? service.StopAsync(ToServiceStopReason(reason), stopBudget.Token).AsTask()
                     : instance.RemoteService!.StopAsync(ToServiceStopReason(reason), stopBudget.Token);
                 await stopping;
+            }
+            catch (OperationCanceledException) when (stopBudget.IsCancellationRequested)
+            {
+                // The service's cleanup outlived its budget: it is cut off below.
+                forced = true;
             }
             catch
             {
@@ -1216,6 +1523,8 @@ public sealed class AppLifecycleOrchestrator
                 // Faults from the run task are already reflected in the process's Faulted state.
             }
         }
+
+        return forced;
     }
 
     /// <summary>Grace period an app gets to stop before its process is force-stopped.</summary>

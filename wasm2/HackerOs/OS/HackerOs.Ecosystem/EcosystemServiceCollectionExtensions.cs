@@ -600,7 +600,10 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<LoginEnvironmentProvider>(),
             // ADR 0070: commands and services in Web Workers, on the hosts that have them (the
             // WebAssembly hosts register it in Program.cs); none on the server (section 6).
-            provider.GetService<IRemoteProcessHost>()));
+            provider.GetService<IRemoteProcessHost>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            // ADR 0097: a service that fails is written to /var/log/syslog.
+            provider.GetService<ILogger<AppLifecycleOrchestrator>>()));
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.
@@ -622,6 +625,17 @@ public static class EcosystemServiceCollectionExtensions
             // ADR 0088 section 4: uninstalling a web app deletes its browser database.
             provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>()));
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
+        // ADR 0097 section 4: system services at the end of the boot, the user's at each login;
+        // stopped at the logout and the shutdown. Resolved with EcosystemBootCoordinator, so it
+        // subscribes to the session events before the first login.
+        services.AddScoped<ServiceStartupCoordinator>(provider => new ServiceStartupCoordinator(
+            provider.GetRequiredService<AppLifecycleOrchestrator>(),
+            provider.GetRequiredService<IEventBus>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<AppInstallationService>(),
+            () => provider.GetRequiredService<ISimulationClock>().UtcNow,
+            provider.GetService<ILogger<ServiceStartupCoordinator>>()));
         // The headless shell hsh (ADR 0050): the terminal runs every line through it.
         services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(
             provider.GetRequiredService<AppLifecycleOrchestrator>(),

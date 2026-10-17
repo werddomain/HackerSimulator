@@ -151,6 +151,14 @@ public interface IAppExecutionContext
     IAppServiceControlGateway Services => new UnsupportedAppServiceControlGateway();
 
     /// <summary>
+    /// Gets the channel a running service uses to tell the OS it is ready and how healthy it is
+    /// (ADR 0097, section 2; <see cref="ServiceAppBase.ReportHealth"/>). Defaults to a gateway that
+    /// drops every message, so contexts that predate this member keep compiling; the trusted
+    /// platform factory gives a service process the real one.
+    /// </summary>
+    IAppServiceNotifyGateway ServiceNotify => NullAppServiceNotifyGateway.Instance;
+
+    /// <summary>
     /// Gets this instance's permission-error notification gateway. Defaults to a no-op gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
     /// compiling; the trusted platform factory overrides it with a real implementation.

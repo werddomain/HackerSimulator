@@ -46,9 +46,37 @@
     border: 1px solid currentColor;
 }
 
-.svc-Running { color: var(--hos-accent, #42d392); }
-.svc-StartPending, .svc-StopPending { color: var(--hos-warning, #d29922); }
-.svc-Stopped { color: var(--hos-text-muted, #6e7681); }
+.svc-Active { color: var(--hos-accent, #42d392); }
+.svc-Activating, .svc-Deactivating { color: var(--hos-warning, #d29922); }
+.svc-Inactive { color: var(--hos-text-muted, #6e7681); }
+.svc-Failed { color: var(--hos-error, #ff7b72); font-weight: 600; }
+
+.svc-row-failed td {
+    background: color-mix(in srgb, var(--hos-error, #ff7b72) 6%, transparent);
+}
+
+.svc-health {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.svc-health-Healthy { color: var(--hos-accent, #42d392); }
+.svc-health-Degraded { color: var(--hos-warning, #d29922); }
+.svc-health-Unhealthy { color: var(--hos-error, #ff7b72); }
+.svc-health-Unknown { color: var(--hos-text-muted, #6e7681); }
+
+.svc-status-text {
+    display: block;
+    font-size: 11px;
+    color: var(--hos-text-muted, #6e7681);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .svc-select {
     padding: 3px 6px;

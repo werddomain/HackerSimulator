@@ -69,6 +69,56 @@ public static class HackAppManagement
         }
     }
 
+    /// <summary>
+    /// Tells, without changing anything, what <see cref="UninstallAsync"/> would do (ADR 0097,
+    /// section 5): the apps it removes and their running processes, which it would stop. A
+    /// confirmation dialog shows both before asking.
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="ArgumentException">The app is not in the catalog.</exception>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>apps.manage</c>.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static async Task<HackUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        try
+        {
+            return await Gateway.PlanUninstallAsync(appId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
+
+    /// <summary>
+    /// Uninstalls like <see cref="UninstallAsync"/> and reports the processes it stopped, and which
+    /// of them had to be forced after their grace period (ADR 0097, section 5).
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="scope">For the current user only, or for every user (administrator).</param>
+    /// <param name="cancellationToken">Cancels the authentication and the write.</param>
+    /// <exception cref="ArgumentException">The app is not in the catalog.</exception>
+    /// <exception cref="InvalidOperationException">The app, or an app that needs it, is a system app.</exception>
+    /// <exception cref="HackUnauthorizedAccessException">
+    /// This app lacks <c>apps.manage</c>, no administrator authenticated, or the file's rights deny the write.
+    /// </exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static async Task<HackUninstallReport> UninstallWithReportAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        try
+        {
+            return await Gateway.UninstallWithReportAsync(appId, scope, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
+
     /// <summary>Reinstalls an app and its uninstalled dependencies in one scope.</summary>
     /// <param name="appId">Exact catalog app ID.</param>
     /// <param name="scope">The scope that uninstalled it.</param>

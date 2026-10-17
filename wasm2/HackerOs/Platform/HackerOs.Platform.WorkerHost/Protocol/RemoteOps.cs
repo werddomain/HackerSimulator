@@ -60,6 +60,9 @@ internal static class RemoteOps
     public const string ServiceStop = "svc.stop";
     public const string ServiceGetMode = "svc.getmode";
     public const string ServiceSetMode = "svc.setmode";
+    public const string ServiceStatus = "svc.status";
+    public const string ServiceResetFailed = "svc.resetfailed";
+    public const string ServiceNotify = "svc.notify";
     public const string Drives = "drv.list";
     public const string IntentLaunch = "int.launch";
     public const string IntentOpenFile = "int.open";
