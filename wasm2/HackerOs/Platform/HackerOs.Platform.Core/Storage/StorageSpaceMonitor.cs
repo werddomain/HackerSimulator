@@ -55,6 +55,7 @@ public sealed class StorageSpaceMonitor : IStorageSpaceGuard, IAsyncDisposable
     private volatile bool _isRootReserveReached;
     private volatile bool _isLowSpace;
     private StorageCapacity? _last;
+    private int _disposed;
 
     /// <summary>Creates the monitor.</summary>
     /// <param name="probe">Reads the host's usage and quota.</param>
@@ -140,6 +141,12 @@ public sealed class StorageSpaceMonitor : IStorageSpaceGuard, IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        // The container disposes the instance once per registration (the class and IStorageSpaceGuard).
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
         await _stopping.CancelAsync().ConfigureAwait(false);
         if (_loop is not null)
         {

@@ -38,7 +38,8 @@ fil principal.
 Les 66 commandes de `HackerOs.Commands` : 52 en `pool`, 14 en `mainThread`
 avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
-demande un mot de passe à l'agent d'authentification ; `nano`, `top`, `htop`,
+demande un mot de passe à l'agent d'authentification ; `hackbackup` ouvre
+le sélecteur de fichiers du navigateur, qui exige le geste de l'utilisateur ; `nano`, `top`, `htop`,
 `watch` utilisent l'écran alternatif du terminal). Le service d'exemple reste
 en `mainThread` : il publie des événements typés, non disponibles dans un
 worker (ADR 0072 §3).
