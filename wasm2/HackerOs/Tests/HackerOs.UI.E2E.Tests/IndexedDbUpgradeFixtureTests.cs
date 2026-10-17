@@ -240,7 +240,7 @@ public sealed partial class IndexedDbUpgradeFixtureTests(ITestOutputHelper outpu
         {
             try
             {
-                using HttpResponseMessage response = await client.GetAsync(address + "/css/app.css");
+                using HttpResponseMessage response = await client.GetAsync(address + "/_content/HackerOs.Ecosystem.Host/css/app.css");
                 if (response.IsSuccessStatusCode)
                 {
                     output.WriteLine($"[harness] {address} answered after {elapsed.Elapsed.TotalSeconds:0.0} s.");
