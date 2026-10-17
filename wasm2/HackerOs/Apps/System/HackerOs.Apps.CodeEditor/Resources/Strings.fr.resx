@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Activity.Explorer" xml:space="preserve">
+    <value>Explorateur</value>
+  </data>
+  <data name="Activity.Explorer.Title" xml:space="preserve">
+    <value>Explorateur (Ctrl+Maj+E)</value>
+  </data>
+  <data name="Activity.Label" xml:space="preserve">
+    <value>Vues</value>
+  </data>
+  <data name="Activity.Search" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Activity.Search.Title" xml:space="preserve">
+    <value>Rechercher (Ctrl+Maj+F)</value>
+  </data>
+  <data name="Activity.Terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="Activity.Terminal.Title" xml:space="preserve">
+    <value>Afficher/masquer le terminal (Ctrl+`)</value>
+  </data>
+  <data name="App.Name" xml:space="preserve">
+    <value>Éditeur de code</value>
+  </data>
+  <data name="Breadcrumbs.Label" xml:space="preserve">
+    <value>Fil d'Ariane</value>
+  </data>
+  <data name="Cursor.GoToLine" xml:space="preserve">
+    <value>Atteindre la ligne (Ctrl+G)</value>
+  </data>
+  <data name="Cursor.Position" xml:space="preserve">
+    <value>Ligne {0}, colonne {1}</value>
+  </data>
+  <data name="Cursor.Selected.One" xml:space="preserve">
+    <value> ({0} sélectionné)</value>
+  </data>
+  <data name="Cursor.Selected.Other" xml:space="preserve">
+    <value> ({0} sélectionnés)</value>
+  </data>
+  <data name="Delete.Failed" xml:space="preserve">
+    <value>Impossible de supprimer {0}</value>
+  </data>
+  <data name="Delete.Failure" xml:space="preserve">
+    <value>« {0} » : {1}</value>
+  </data>
+  <data name="Delete.PermissionDenied" xml:space="preserve">
+    <value>« {0} » : permission refusée</value>
+  </data>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Dialog.Delete.Many" xml:space="preserve">
+    <value>Supprimer définitivement ces {0} éléments ? Cette action est irréversible.</value>
+  </data>
+  <data name="Dialog.Delete.One" xml:space="preserve">
+    <value>Supprimer définitivement « {0} » ? Cette action est irréversible.</value>
+  </data>
+  <data name="Dialog.Delete.Title" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="Dialog.Discard" xml:space="preserve">
+    <value>Abandonner</value>
+  </data>
+  <data name="Dialog.DiscardAndClose" xml:space="preserve">
+    <value>Abandonner et fermer</value>
+  </data>
+  <data name="Dialog.Filter.All" xml:space="preserve">
+    <value>Tous les fichiers</value>
+  </data>
+  <data name="Dialog.Filter.Source" xml:space="preserve">
+    <value>Fichiers source et texte</value>
+  </data>
+  <data name="Dialog.KeepEditing" xml:space="preserve">
+    <value>Continuer à modifier</value>
+  </data>
+  <data name="Dialog.OpenFolder" xml:space="preserve">
+    <value>Ouvrir un dossier</value>
+  </data>
+  <data name="Dialog.OpenSourceFile" xml:space="preserve">
+    <value>Ouvrir un fichier source</value>
+  </data>
+  <data name="Dialog.SaveSourceFile" xml:space="preserve">
+    <value>Enregistrer le fichier source</value>
+  </data>
+  <data name="Dialog.UnsavedChanges.Message" xml:space="preserve">
+    <value>Abandonner les modifications non enregistrées de « {0} » ?</value>
+  </data>
+  <data name="Dialog.UnsavedChanges.Title" xml:space="preserve">
+    <value>Modifications non enregistrées</value>
+  </data>
+  <data name="Dialog.UnsavedDocuments.Message" xml:space="preserve">
+    <value>Fermer et abandonner les modifications non enregistrées de : {0} ?</value>
+  </data>
+  <data name="Dialog.UnsavedDocuments.Title" xml:space="preserve">
+    <value>Documents non enregistrés</value>
+  </data>
+  <data name="Document.ExceedsLimit" xml:space="preserve">
+    <value>Le document dépasse la limite de {0} Kio de l'éditeur.</value>
+  </data>
+  <data name="Document.Untitled" xml:space="preserve">
+    <value>Sans titre-{0}</value>
+  </data>
+  <data name="Editor.AriaLabel" xml:space="preserve">
+    <value>Éditeur de code source</value>
+  </data>
+  <data name="Explorer.Actions" xml:space="preserve">
+    <value>Actions de l'explorateur</value>
+  </data>
+  <data name="Explorer.CreateTarget" xml:space="preserve">
+    <value>dans {0}</value>
+  </data>
+  <data name="Explorer.CreateTargetRoot" xml:space="preserve">
+    <value>dans {0} (racine)</value>
+  </data>
+  <data name="Explorer.FileNamePlaceholder" xml:space="preserve">
+    <value>nom du fichier</value>
+  </data>
+  <data name="Explorer.FindInFolder" xml:space="preserve">
+    <value>Rechercher dans le dossier…</value>
+  </data>
+  <data name="Explorer.FolderNamePlaceholder" xml:space="preserve">
+    <value>nom du dossier</value>
+  </data>
+  <data name="Explorer.Hint" xml:space="preserve">
+    <value>Ouvrir un dossier affiche ses fichiers ici, permet de créer des fichiers et des dossiers, et active la recherche dans tous ses fichiers (Ctrl+Maj+F) et l'ouverture rapide (Ctrl+P).</value>
+  </data>
+  <data name="Explorer.NewFile" xml:space="preserve">
+    <value>Nouveau fichier</value>
+  </data>
+  <data name="Explorer.NewFile.Title" xml:space="preserve">
+    <value>Nouveau fichier…</value>
+  </data>
+  <data name="Explorer.NewFileName" xml:space="preserve">
+    <value>Nom du nouveau fichier</value>
+  </data>
+  <data name="Explorer.NewFolder" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="Explorer.NewFolder.Title" xml:space="preserve">
+    <value>Nouveau dossier…</value>
+  </data>
+  <data name="Explorer.NewFolderName" xml:space="preserve">
+    <value>Nom du nouveau dossier</value>
+  </data>
+  <data name="Explorer.NoFolder" xml:space="preserve">
+    <value>Vous n'avez pas encore ouvert de dossier.</value>
+  </data>
+  <data name="Explorer.OpenFolder" xml:space="preserve">
+    <value>Ouvrir un dossier</value>
+  </data>
+  <data name="Explorer.OpenInTerminal" xml:space="preserve">
+    <value>Ouvrir dans le terminal intégré</value>
+  </data>
+  <data name="Explorer.Refresh" xml:space="preserve">
+    <value>Actualiser l'explorateur</value>
+  </data>
+  <data name="Explorer.Title" xml:space="preserve">
+    <value>Explorateur</value>
+  </data>
+  <data name="Facts.Editors" xml:space="preserve">
+    <value>Éditeurs</value>
+  </data>
+  <data name="Facts.EditorsValue" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="Facts.File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+  <data name="Facts.Folder" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="Facts.Language" xml:space="preserve">
+    <value>Langage</value>
+  </data>
+  <data name="Facts.None" xml:space="preserve">
+    <value>(aucun)</value>
+  </data>
+  <data name="Facts.Open.One" xml:space="preserve">
+    <value>{0} ouvert</value>
+  </data>
+  <data name="Facts.Open.Other" xml:space="preserve">
+    <value>{0} ouverts</value>
+  </data>
+  <data name="Facts.Terminals" xml:space="preserve">
+    <value>Terminaux</value>
+  </data>
+  <data name="Facts.Unsaved.One" xml:space="preserve">
+    <value>{0} non enregistré</value>
+  </data>
+  <data name="Facts.Unsaved.Other" xml:space="preserve">
+    <value>{0} non enregistrés</value>
+  </data>
+  <data name="File.AccessDenied" xml:space="preserve">
+    <value>Accès refusé.</value>
+  </data>
+  <data name="File.Binary" xml:space="preserve">
+    <value>Les fichiers binaires ne peuvent pas être modifiés comme du texte source.</value>
+  </data>
+  <data name="File.ChangedOnDisk" xml:space="preserve">
+    <value>Le fichier a été modifié sur le disque.</value>
+  </data>
+  <data name="File.DestinationNotFound" xml:space="preserve">
+    <value>Destination introuvable.</value>
+  </data>
+  <data name="File.ExceedsLimit" xml:space="preserve">
+    <value>Le fichier dépasse la limite de {0} Kio de l'éditeur.</value>
+  </data>
+  <data name="File.NoRevision" xml:space="preserve">
+    <value>Aucune révision du fichier accessible en écriture n'est disponible.</value>
+  </data>
+  <data name="File.NotFound" xml:space="preserve">
+    <value>Fichier introuvable.</value>
+  </data>
+  <data name="File.NotRegular" xml:space="preserve">
+    <value>Le chemin n'est pas un fichier ordinaire.</value>
+  </data>
+  <data name="File.ReadFailed" xml:space="preserve">
+    <value>Échec de la lecture.</value>
+  </data>
+  <data name="File.TooLarge" xml:space="preserve">
+    <value>Le document dépasse la taille maximale de l'éditeur.</value>
+  </data>
+  <data name="File.WriteFailed" xml:space="preserve">
+    <value>Échec de l'écriture.</value>
+  </data>
+  <data name="Menu.Edit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Menu.Edit.Find" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Menu.Edit.FindInFolder" xml:space="preserve">
+    <value>Rechercher dans le dossier</value>
+  </data>
+  <data name="Menu.Edit.FormatDocument" xml:space="preserve">
+    <value>Mettre en forme le document</value>
+  </data>
+  <data name="Menu.Edit.Redo" xml:space="preserve">
+    <value>Rétablir</value>
+  </data>
+  <data name="Menu.Edit.Replace" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
+  <data name="Menu.Edit.ToggleLineComment" xml:space="preserve">
+    <value>Commenter/décommenter la ligne</value>
+  </data>
+  <data name="Menu.Edit.Undo" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Menu.File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+  <data name="Menu.File.CloseAllEditors" xml:space="preserve">
+    <value>Fermer tous les éditeurs</value>
+  </data>
+  <data name="Menu.File.CloseEditor" xml:space="preserve">
+    <value>Fermer l'éditeur</value>
+  </data>
+  <data name="Menu.File.CloseFolder" xml:space="preserve">
+    <value>Fermer le dossier</value>
+  </data>
+  <data name="Menu.File.NewFileInFolder" xml:space="preserve">
+    <value>Nouveau fichier dans le dossier…</value>
+  </data>
+  <data name="Menu.File.NewTextFile" xml:space="preserve">
+    <value>Nouveau fichier texte</value>
+  </data>
+  <data name="Menu.File.OpenFile" xml:space="preserve">
+    <value>Ouvrir un fichier…</value>
+  </data>
+  <data name="Menu.File.OpenFolder" xml:space="preserve">
+    <value>Ouvrir un dossier…</value>
+  </data>
+  <data name="Menu.File.Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="Menu.File.SaveAll" xml:space="preserve">
+    <value>Tout enregistrer</value>
+  </data>
+  <data name="Menu.File.SaveAs" xml:space="preserve">
+    <value>Enregistrer sous…</value>
+  </data>
+  <data name="Menu.Go" xml:space="preserve">
+    <value>Atteindre</value>
+  </data>
+  <data name="Menu.Go.GoToFile" xml:space="preserve">
+    <value>Atteindre le fichier…</value>
+  </data>
+  <data name="Menu.Go.GoToLine" xml:space="preserve">
+    <value>Atteindre la ligne…</value>
+  </data>
+  <data name="Menu.Go.NextEditor" xml:space="preserve">
+    <value>Éditeur suivant</value>
+  </data>
+  <data name="Menu.Go.PreviousEditor" xml:space="preserve">
+    <value>Éditeur précédent</value>
+  </data>
+  <data name="Menu.Label" xml:space="preserve">
+    <value>Menu de l'éditeur</value>
+  </data>
+  <data name="Menu.View" xml:space="preserve">
+    <value>Affichage</value>
+  </data>
+  <data name="Menu.View.CommandPalette" xml:space="preserve">
+    <value>Palette de commandes…</value>
+  </data>
+  <data name="Menu.View.DisableWordWrap" xml:space="preserve">
+    <value>Désactiver le retour automatique à la ligne</value>
+  </data>
+  <data name="Menu.View.Explorer" xml:space="preserve">
+    <value>Explorateur</value>
+  </data>
+  <data name="Menu.View.HideMinimap" xml:space="preserve">
+    <value>Masquer la minimap</value>
+  </data>
+  <data name="Menu.View.HidePanel" xml:space="preserve">
+    <value>Masquer le panneau</value>
+  </data>
+  <data name="Menu.View.Problems" xml:space="preserve">
+    <value>Problèmes</value>
+  </data>
+  <data name="Menu.View.Search" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Menu.View.ShowMinimap" xml:space="preserve">
+    <value>Afficher la minimap</value>
+  </data>
+  <data name="Menu.View.ShowPanel" xml:space="preserve">
+    <value>Afficher le panneau</value>
+  </data>
+  <data name="Menu.View.StatusLog" xml:space="preserve">
+    <value>Journal d'état</value>
+  </data>
+  <data name="Menu.View.Terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="Menu.View.ToggleSideBar" xml:space="preserve">
+    <value>Afficher/masquer la barre latérale</value>
+  </data>
+  <data name="Menu.View.WordWrap" xml:space="preserve">
+    <value>Retour automatique à la ligne</value>
+  </data>
+  <data name="Message.Dismiss" xml:space="preserve">
+    <value>Fermer le message</value>
+  </data>
+  <data name="Panel.ClearStatusLog" xml:space="preserve">
+    <value>Effacer le journal d'état</value>
+  </data>
+  <data name="Panel.Hide.Title" xml:space="preserve">
+    <value>Masquer le panneau (Ctrl+J)</value>
+  </data>
+  <data name="Panel.Label" xml:space="preserve">
+    <value>Panneau</value>
+  </data>
+  <data name="Panel.Problems" xml:space="preserve">
+    <value>Problèmes</value>
+  </data>
+  <data name="Panel.Resize" xml:space="preserve">
+    <value>Redimensionner le panneau</value>
+  </data>
+  <data name="Panel.Status" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Panel.StatusLog" xml:space="preserve">
+    <value>Journal d'état</value>
+  </data>
+  <data name="Panel.Terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="Panel.Views" xml:space="preserve">
+    <value>Vues du panneau</value>
+  </data>
+  <data name="Problems.Empty" xml:space="preserve">
+    <value>Aucun problème n'a été détecté dans l'espace de travail.</value>
+  </data>
+  <data name="QuickOpen.Files" xml:space="preserve">
+    <value>Fichiers</value>
+  </data>
+  <data name="QuickOpen.Label" xml:space="preserve">
+    <value>Atteindre le fichier</value>
+  </data>
+  <data name="QuickOpen.Listing" xml:space="preserve">
+    <value>Liste des fichiers en cours…</value>
+  </data>
+  <data name="QuickOpen.NoMatch" xml:space="preserve">
+    <value>Aucun fichier correspondant</value>
+  </data>
+  <data name="QuickOpen.Placeholder" xml:space="preserve">
+    <value>Rechercher des fichiers par nom</value>
+  </data>
+  <data name="Recovery.Conflict" xml:space="preserve">
+    <value>La récupération a été modifiée en même temps.</value>
+  </data>
+  <data name="Recovery.Denied" xml:space="preserve">
+    <value>Accès à la récupération refusé.</value>
+  </data>
+  <data name="Recovery.Failed" xml:space="preserve">
+    <value>Échec de l'opération de récupération.</value>
+  </data>
+  <data name="Recovery.Incompatible" xml:space="preserve">
+    <value>Les données de récupération sont incompatibles avec cet utilisateur ou ce schéma.</value>
+  </data>
+  <data name="Recovery.Invalid" xml:space="preserve">
+    <value>Le contenu de récupération n'est pas valide.</value>
+  </data>
+  <data name="Recovery.Malformed" xml:space="preserve">
+    <value>Le JSON de récupération est mal formé.</value>
+  </data>
+  <data name="Recovery.NotDirectory" xml:space="preserve">
+    <value>Le chemin de récupération n'est pas un dossier.</value>
+  </data>
+  <data name="Recovery.NotText" xml:space="preserve">
+    <value>Les données de récupération ne sont pas du texte UTF-8 borné.</value>
+  </data>
+  <data name="Search.Clear" xml:space="preserve">
+    <value>Effacer les résultats de la recherche</value>
+  </data>
+  <data name="Search.CollapseAll" xml:space="preserve">
+    <value>Tout réduire</value>
+  </data>
+  <data name="Search.CollapseAll.Label" xml:space="preserve">
+    <value>Réduire tous les résultats</value>
+  </data>
+  <data name="Search.Exclude" xml:space="preserve">
+    <value>fichiers à exclure</value>
+  </data>
+  <data name="Search.Exclude.Placeholder" xml:space="preserve">
+    <value>ex. **/*.min.js</value>
+  </data>
+  <data name="Search.FileCount.One" xml:space="preserve">
+    <value>{0} fichier</value>
+  </data>
+  <data name="Search.FileCount.Other" xml:space="preserve">
+    <value>{0} fichiers</value>
+  </data>
+  <data name="Search.HideDetails" xml:space="preserve">
+    <value>Masquer les détails de la recherche</value>
+  </data>
+  <data name="Search.InFolder" xml:space="preserve">
+    <value>Rechercher dans le dossier</value>
+  </data>
+  <data name="Search.Include" xml:space="preserve">
+    <value>fichiers à inclure</value>
+  </data>
+  <data name="Search.Include.Placeholder" xml:space="preserve">
+    <value>ex. *.cs, src/**</value>
+  </data>
+  <data name="Search.InvalidRegex" xml:space="preserve">
+    <value>Expression régulière non valide : {0}</value>
+  </data>
+  <data name="Search.MatchCase" xml:space="preserve">
+    <value>Respecter la casse</value>
+  </data>
+  <data name="Search.MatchPosition" xml:space="preserve">
+    <value>Ligne {0}, colonne {1}</value>
+  </data>
+  <data name="Search.NoFolder" xml:space="preserve">
+    <value>Ouvrez un dossier pour rechercher dans ses fichiers.</value>
+  </data>
+  <data name="Search.NoResults.One" xml:space="preserve">
+    <value>Aucun résultat ({0} fichier parcouru). Vérifiez les exclusions configurées dans vos paramètres.</value>
+  </data>
+  <data name="Search.NoResults.Other" xml:space="preserve">
+    <value>Aucun résultat ({0} fichiers parcourus). Vérifiez les exclusions configurées dans vos paramètres.</value>
+  </data>
+  <data name="Search.Placeholder" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Search.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Search.Refresh.Label" xml:space="preserve">
+    <value>Actualiser la recherche</value>
+  </data>
+  <data name="Search.Regex" xml:space="preserve">
+    <value>Utiliser une expression régulière</value>
+  </data>
+  <data name="Search.ResultCount.One" xml:space="preserve">
+    <value>{0} résultat</value>
+  </data>
+  <data name="Search.ResultCount.Other" xml:space="preserve">
+    <value>{0} résultats</value>
+  </data>
+  <data name="Search.Results" xml:space="preserve">
+    <value>Résultats de la recherche</value>
+  </data>
+  <data name="Search.Searching" xml:space="preserve">
+    <value>Recherche en cours…</value>
+  </data>
+  <data name="Search.Summary" xml:space="preserve">
+    <value>{0} dans {1}</value>
+  </data>
+  <data name="Search.Title" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Search.ToggleDetails" xml:space="preserve">
+    <value>Afficher les détails de la recherche</value>
+  </data>
+  <data name="Search.Truncated" xml:space="preserve">
+    <value>{0} - les résultats ne contiennent qu'une partie des correspondances. Précisez votre recherche.</value>
+  </data>
+  <data name="Search.WholeWord" xml:space="preserve">
+    <value>Mot entier uniquement</value>
+  </data>
+  <data name="SideBar.Label" xml:space="preserve">
+    <value>Barre latérale</value>
+  </data>
+  <data name="SideBar.Resize" xml:space="preserve">
+    <value>Redimensionner la barre latérale</value>
+  </data>
+  <data name="Status.AssetsFailed" xml:space="preserve">
+    <value>Impossible d'initialiser les ressources de l'éditeur de code.</value>
+  </data>
+  <data name="Status.EditRejected" xml:space="preserve">
+    <value>Modification refusée.</value>
+  </data>
+  <data name="Status.OpenFailed" xml:space="preserve">
+    <value>Impossible d'ouvrir le fichier.</value>
+  </data>
+  <data name="Status.Opened" xml:space="preserve">
+    <value>{0} ouvert.</value>
+  </data>
+  <data name="Status.Recovered" xml:space="preserve">
+    <value>Session d'édition non enregistrée récupérée.</value>
+  </data>
+  <data name="Status.RecoveryClearFailed" xml:space="preserve">
+    <value>Impossible d'effacer la récupération de l'éditeur.</value>
+  </data>
+  <data name="Status.RecoveryLoadFailed" xml:space="preserve">
+    <value>Impossible de charger la récupération de l'éditeur.</value>
+  </data>
+  <data name="Status.RecoverySaveFailed" xml:space="preserve">
+    <value>Impossible d'enregistrer la récupération de l'éditeur.</value>
+  </data>
+  <data name="Status.SaveFailed" xml:space="preserve">
+    <value>Échec de l'enregistrement.</value>
+  </data>
+  <data name="Status.Saved" xml:space="preserve">
+    <value>{0} enregistré.</value>
+  </data>
+  <data name="Status.TerminalCd" xml:space="preserve">
+    <value>Terminal : impossible d'aller dans {0}.</value>
+  </data>
+  <data name="Status.TerminalError" xml:space="preserve">
+    <value>Terminal : {0}</value>
+  </data>
+  <data name="StatusBar.Label" xml:space="preserve">
+    <value>État de l'éditeur de code</value>
+  </data>
+  <data name="StatusBar.LanguageMode" xml:space="preserve">
+    <value>Mode de langage</value>
+  </data>
+  <data name="StatusBar.ShowStatusLog" xml:space="preserve">
+    <value>Afficher le journal d'état</value>
+  </data>
+  <data name="StatusBar.Unsaved.One" xml:space="preserve">
+    <value>{0} non enregistré</value>
+  </data>
+  <data name="StatusBar.Unsaved.Other" xml:space="preserve">
+    <value>{0} non enregistrés</value>
+  </data>
+  <data name="StatusBar.UnsavedEditors" xml:space="preserve">
+    <value>Éditeurs non enregistrés</value>
+  </data>
+  <data name="StatusLog.Empty" xml:space="preserve">
+    <value>Aucun message pour l'instant.</value>
+  </data>
+  <data name="StatusLog.Error" xml:space="preserve">
+    <value>erreur</value>
+  </data>
+  <data name="StatusLog.Info" xml:space="preserve">
+    <value>info</value>
+  </data>
+  <data name="Syntax.PlainText" xml:space="preserve">
+    <value>Texte brut</value>
+  </data>
+  <data name="Tabs.Close" xml:space="preserve">
+    <value>Fermer (Ctrl+W)</value>
+  </data>
+  <data name="Tabs.CloseNamed" xml:space="preserve">
+    <value>Fermer {0}</value>
+  </data>
+  <data name="Tabs.Label" xml:space="preserve">
+    <value>Documents ouverts dans l'éditeur</value>
+  </data>
+  <data name="Terminals.Clear" xml:space="preserve">
+    <value>Effacer le terminal</value>
+  </data>
+  <data name="Terminals.Kill" xml:space="preserve">
+    <value>Arrêter le terminal</value>
+  </data>
+  <data name="Terminals.KillNumbered" xml:space="preserve">
+    <value>Arrêter le terminal {0}</value>
+  </data>
+  <data name="Terminals.Label" xml:space="preserve">
+    <value>Terminaux ouverts</value>
+  </data>
+  <data name="Terminals.New" xml:space="preserve">
+    <value>Nouveau terminal</value>
+  </data>
+  <data name="Title.Document" xml:space="preserve">
+    <value>{0} - Éditeur de code</value>
+  </data>
+  <data name="Title.DocumentFolder" xml:space="preserve">
+    <value>{0} - {1} - Éditeur de code</value>
+  </data>
+  <data name="Title.Folder" xml:space="preserve">
+    <value>{0} - Éditeur de code</value>
+  </data>
+  <data name="Watermark.FindInFolder" xml:space="preserve">
+    <value>Rechercher dans le dossier</value>
+  </data>
+  <data name="Watermark.GoToFile" xml:space="preserve">
+    <value>Atteindre le fichier</value>
+  </data>
+  <data name="Watermark.NewFile" xml:space="preserve">
+    <value>Nouveau fichier</value>
+  </data>
+  <data name="Watermark.NewTextFile" xml:space="preserve">
+    <value>Nouveau fichier texte</value>
+  </data>
+  <data name="Watermark.OpenFile" xml:space="preserve">
+    <value>Ouvrir un fichier</value>
+  </data>
+  <data name="Watermark.ToggleTerminal" xml:space="preserve">
+    <value>Afficher/masquer le terminal</value>
+  </data>
+  <data name="Workspace.AlreadyExists" xml:space="preserve">
+    <value>Un fichier ou un dossier « {0} » existe déjà à cet emplacement.</value>
+  </data>
+  <data name="Workspace.CreateFailed" xml:space="preserve">
+    <value>Impossible de créer l'élément.</value>
+  </data>
+  <data name="Workspace.EntryExists" xml:space="preserve">
+    <value>Un élément portant ce nom existe déjà.</value>
+  </data>
+  <data name="Workspace.FolderChanged" xml:space="preserve">
+    <value>Le dossier a changé entre-temps ; réessayez.</value>
+  </data>
+  <data name="Workspace.FolderGone" xml:space="preserve">
+    <value>Le dossier n'existe plus.</value>
+  </data>
+  <data name="Workspace.NameCharacters" xml:space="preserve">
+    <value>Le nom ne peut pas contenir « / », « \ » ni de caractères de contrôle.</value>
+  </data>
+  <data name="Workspace.NameInvalid" xml:space="preserve">
+    <value>Le nom « {0} » n'est pas valide comme nom de fichier ou de dossier.</value>
+  </data>
+  <data name="Workspace.NameRequired" xml:space="preserve">
+    <value>Un nom de fichier ou de dossier est requis.</value>
+  </data>
+</root>

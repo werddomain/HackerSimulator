@@ -17,84 +17,84 @@
     status bar (cursor position, language). Sizes and keyboard
     shortcuts are handled by CodeEditorWindow.razor.js; everything else is C#.
 *@
-<section class="code-editor" @ref="_root" aria-label="Code Editor">
+<section class="code-editor" @ref="_root" aria-label="@L["App.Name"]">
     @* MudMenu's activator wrapper is itself the focusable role="button" element, so the titles
        are plain text calling the menu context (a nested <button> would be nested-interactive). *@
-    <header class="menubar" aria-label="Editor menu">
+    <header class="menubar" aria-label="@L["Menu.Label"]">
         <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
-            <ActivatorContent><span class="menu-title" id="code-menu-file" @onclick="context.ToggleAsync">File</span></ActivatorContent>
+            <ActivatorContent><span class="menu-title" id="code-menu-file" @onclick="context.ToggleAsync">@L["Menu.File"]</span></ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="NewDocumentAsync"><span class="menu-entry"><span>New Text File</span><kbd>Ctrl+N</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="NewFileInFolderAsync" Disabled="@(_workspace is null)"><span class="menu-entry"><span>New File in Folder...</span></span></MudMenuItem>
+                <MudMenuItem OnClick="NewDocumentAsync"><span class="menu-entry"><span>@L["Menu.File.NewTextFile"]</span><kbd>Ctrl+N</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="NewFileInFolderAsync" Disabled="@(_workspace is null)"><span class="menu-entry"><span>@L["Menu.File.NewFileInFolder"]</span></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="OpenFileAsync"><span class="menu-entry"><span>Open File...</span><kbd>Ctrl+O</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="OpenFolderAsync"><span class="menu-entry"><span>Open Folder...</span></span></MudMenuItem>
-                <MudMenuItem OnClick="CloseFolder" Disabled="@(_workspace is null)"><span class="menu-entry"><span>Close Folder</span></span></MudMenuItem>
+                <MudMenuItem OnClick="OpenFileAsync"><span class="menu-entry"><span>@L["Menu.File.OpenFile"]</span><kbd>Ctrl+O</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="OpenFolderAsync"><span class="menu-entry"><span>@L["Menu.File.OpenFolder"]</span></span></MudMenuItem>
+                <MudMenuItem OnClick="CloseFolder" Disabled="@(_workspace is null)"><span class="menu-entry"><span>@L["Menu.File.CloseFolder"]</span></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="SaveActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Save</span><kbd>Ctrl+S</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="SaveActiveAsAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Save As...</span><kbd>Ctrl+Shift+S</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="SaveAllAsync" Disabled="@(_dirtyCount == 0)"><span class="menu-entry"><span>Save All</span></span></MudMenuItem>
+                <MudMenuItem OnClick="SaveActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.File.Save"]</span><kbd>Ctrl+S</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="SaveActiveAsAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.File.SaveAs"]</span><kbd>Ctrl+Shift+S</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="SaveAllAsync" Disabled="@(_dirtyCount == 0)"><span class="menu-entry"><span>@L["Menu.File.SaveAll"]</span></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="CloseActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Close Editor</span><kbd>Ctrl+W</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="CloseAllAsync" Disabled="@(_session.Documents.Count == 0)"><span class="menu-entry"><span>Close All Editors</span></span></MudMenuItem>
+                <MudMenuItem OnClick="CloseActiveAsync" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.File.CloseEditor"]</span><kbd>Ctrl+W</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="CloseAllAsync" Disabled="@(_session.Documents.Count == 0)"><span class="menu-entry"><span>@L["Menu.File.CloseAllEditors"]</span></span></MudMenuItem>
             </ChildContent>
         </MudMenu>
         <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
-            <ActivatorContent><span class="menu-title" id="code-menu-edit" @onclick="context.ToggleAsync">Edit</span></ActivatorContent>
+            <ActivatorContent><span class="menu-title" id="code-menu-edit" @onclick="context.ToggleAsync">@L["Menu.Edit"]</span></ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("undo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Undo</span><kbd>Ctrl+Z</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("redo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Redo</span><kbd>Ctrl+Y</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("undo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.Undo"]</span><kbd>Ctrl+Z</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("redo"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.Redo"]</span><kbd>Ctrl+Y</kbd></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("actions.find"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Find</span><kbd>Ctrl+F</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.startFindReplaceAction"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Replace</span><kbd>Ctrl+H</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>Find in Folder</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("actions.find"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.Find"]</span><kbd>Ctrl+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.startFindReplaceAction"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.Replace"]</span><kbd>Ctrl+H</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>@L["Menu.Edit.FindInFolder"]</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.commentLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Toggle Line Comment</span><kbd>Ctrl+/</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.formatDocument"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Format Document</span><kbd>Shift+Alt+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.commentLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.ToggleLineComment"]</span><kbd>Ctrl+/</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.formatDocument"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Edit.FormatDocument"]</span><kbd>Shift+Alt+F</kbd></span></MudMenuItem>
             </ChildContent>
         </MudMenu>
         <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
-            <ActivatorContent><span class="menu-title" id="code-menu-view" @onclick="context.ToggleAsync">View</span></ActivatorContent>
+            <ActivatorContent><span class="menu-title" id="code-menu-view" @onclick="context.ToggleAsync">@L["Menu.View"]</span></ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.quickCommand"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Command Palette...</span><kbd>F1</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.quickCommand"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.View.CommandPalette"]</span><kbd>F1</kbd></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="ShowExplorer"><span class="menu-entry"><span>Explorer</span><kbd>Ctrl+Shift+E</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>Search</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="ToggleSidebar"><span class="menu-entry"><span>Toggle Side Bar</span><kbd>Ctrl+B</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="ToggleTerminalPanel"><span class="menu-entry"><span>Terminal</span><kbd>Ctrl+`</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="TogglePanel"><span class="menu-entry"><span>@(_showPanel ? "Hide Panel" : "Show Panel")</span><kbd>Ctrl+J</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="() => ShowDockView(DockView.Status)"><span class="menu-entry"><span>Status Log</span></span></MudMenuItem>
-                <MudMenuItem OnClick="() => ShowDockView(DockView.Problems)"><span class="menu-entry"><span>Problems</span></span></MudMenuItem>
+                <MudMenuItem OnClick="ShowExplorer"><span class="menu-entry"><span>@L["Menu.View.Explorer"]</span><kbd>Ctrl+Shift+E</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ShowSearchAsync"><span class="menu-entry"><span>@L["Menu.View.Search"]</span><kbd>Ctrl+Shift+F</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleSidebar"><span class="menu-entry"><span>@L["Menu.View.ToggleSideBar"]</span><kbd>Ctrl+B</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleTerminalPanel"><span class="menu-entry"><span>@L["Menu.View.Terminal"]</span><kbd>Ctrl+`</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="TogglePanel"><span class="menu-entry"><span>@(_showPanel ? L["Menu.View.HidePanel"] : L["Menu.View.ShowPanel"])</span><kbd>Ctrl+J</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="() => ShowDockView(DockView.Status)"><span class="menu-entry"><span>@L["Menu.View.StatusLog"]</span></span></MudMenuItem>
+                <MudMenuItem OnClick="() => ShowDockView(DockView.Problems)"><span class="menu-entry"><span>@L["Menu.View.Problems"]</span></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="ToggleMinimap"><span class="menu-entry"><span>@(_minimap ? "Hide Minimap" : "Show Minimap")</span></span></MudMenuItem>
-                <MudMenuItem OnClick="ToggleWordWrap"><span class="menu-entry"><span>@(_wordWrap ? "Disable Word Wrap" : "Word Wrap")</span><kbd>Alt+Z</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleMinimap"><span class="menu-entry"><span>@(_minimap ? L["Menu.View.HideMinimap"] : L["Menu.View.ShowMinimap"])</span></span></MudMenuItem>
+                <MudMenuItem OnClick="ToggleWordWrap"><span class="menu-entry"><span>@(_wordWrap ? L["Menu.View.DisableWordWrap"] : L["Menu.View.WordWrap"])</span><kbd>Alt+Z</kbd></span></MudMenuItem>
             </ChildContent>
         </MudMenu>
         <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="menu">
-            <ActivatorContent><span class="menu-title" id="code-menu-go" @onclick="context.ToggleAsync">Go</span></ActivatorContent>
+            <ActivatorContent><span class="menu-title" id="code-menu-go" @onclick="context.ToggleAsync">@L["Menu.Go"]</span></ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="QuickOpenAsync"><span class="menu-entry"><span>Go to File...</span><kbd>Ctrl+P</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.gotoLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>Go to Line...</span><kbd>Ctrl+G</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="QuickOpenAsync"><span class="menu-entry"><span>@L["Menu.Go.GoToFile"]</span><kbd>Ctrl+P</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => RunEditorActionAsync("editor.action.gotoLine"))" Disabled="@(ActiveDocument is null)"><span class="menu-entry"><span>@L["Menu.Go.GoToLine"]</span><kbd>Ctrl+G</kbd></span></MudMenuItem>
                 <MudDivider />
-                <MudMenuItem OnClick="@(() => CycleTabAsync(1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>Next Editor</span><kbd>Ctrl+Tab</kbd></span></MudMenuItem>
-                <MudMenuItem OnClick="@(() => CycleTabAsync(-1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>Previous Editor</span><kbd>Ctrl+Shift+Tab</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => CycleTabAsync(1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>@L["Menu.Go.NextEditor"]</span><kbd>Ctrl+Tab</kbd></span></MudMenuItem>
+                <MudMenuItem OnClick="@(() => CycleTabAsync(-1))" Disabled="@(_session.Documents.Count < 2)"><span class="menu-entry"><span>@L["Menu.Go.PreviousEditor"]</span><kbd>Ctrl+Shift+Tab</kbd></span></MudMenuItem>
             </ChildContent>
         </MudMenu>
         <span class="menubar-title">@WindowTitle()</span>
     </header>
 
     <div class="workbench-body">
-        <nav class="activity-bar" aria-label="Views">
+        <nav class="activity-bar" aria-label="@L["Activity.Label"]">
             <button type="button" id="code-activity-explorer"
                     class="activity-button @(_sidebarVisible && _view == SideView.Explorer ? "is-active" : null)"
-                    title="Explorer (Ctrl+Shift+E)" aria-label="Explorer"
+                    title="@L["Activity.Explorer.Title"]" aria-label="@L["Activity.Explorer"]"
                     aria-pressed="@(_sidebarVisible && _view == SideView.Explorer ? "true" : "false")"
                     @onclick="() => ToggleView(SideView.Explorer)">
                 <HackerIcon Library="IconLibrary.Lucide" Name="files" Size="22" />
             </button>
             <button type="button" id="code-activity-search"
                     class="activity-button @(_sidebarVisible && _view == SideView.Search ? "is-active" : null)"
-                    title="Search (Ctrl+Shift+F)" aria-label="Search"
+                    title="@L["Activity.Search.Title"]" aria-label="@L["Activity.Search"]"
                     aria-pressed="@(_sidebarVisible && _view == SideView.Search ? "true" : "false")"
                     @onclick="() => ToggleView(SideView.Search)">
                 <HackerIcon Library="IconLibrary.Lucide" Name="search" Size="22" />
@@ -102,7 +102,7 @@
             <span class="activity-spacer"></span>
             <button type="button" id="code-toggle-terminal"
                     class="activity-button @(_showPanel && _dockView == DockView.Terminal ? "is-active" : null)"
-                    title="Toggle Terminal (Ctrl+`)" aria-label="Terminal"
+                    title="@L["Activity.Terminal.Title"]" aria-label="@L["Activity.Terminal"]"
                     aria-pressed="@(_showPanel && _dockView == DockView.Terminal ? "true" : "false")"
                     @onclick="ToggleTerminalPanel">
                 <HackerIcon Library="IconLibrary.Lucide" Name="terminal" Size="22" />
@@ -111,7 +111,7 @@
 
         @* Both views stay rendered while the side bar is open, so switching keeps the tree's
            expansion and the search results, as VS Code does. *@
-        <aside class="side-bar @(_sidebarVisible ? null : "is-hidden")" aria-label="Side bar">
+        <aside class="side-bar @(_sidebarVisible ? null : "is-hidden")" aria-label="@L["SideBar.Label"]">
             <div class="side-view @(_view == SideView.Explorer ? "is-active" : null)">
                 <CodeEditorExplorer @ref="_explorer"
                                     Workspace="_workspace"
@@ -135,7 +135,7 @@
             </div>
         </aside>
         <div class="sidebar-splitter @(_sidebarVisible ? null : "is-hidden")" data-resizes=".side-bar"
-             role="separator" aria-orientation="vertical" aria-label="Resize side bar"></div>
+             role="separator" aria-orientation="vertical" aria-label="@L["SideBar.Resize"]"></div>
 
         <div class="main-column">
             <div class="editor-group">
@@ -143,7 +143,7 @@
                    tabindex), and each tab carries its own close button, which the tablist/tab
                    pattern doesn't allow (axe aria-required-children). aria-pressed communicates
                    the active document without claiming a pattern this widget doesn't implement. *@
-                <nav class="tab-strip @(_session.Documents.Count == 0 ? "is-empty" : null)" aria-label="Open editor documents">
+                <nav class="tab-strip @(_session.Documents.Count == 0 ? "is-empty" : null)" aria-label="@L["Tabs.Label"]">
                     @foreach (CodeEditorDocument document in _session.Documents)
                     {
                         bool active = document.Id == _session.ActiveDocumentId;
@@ -163,8 +163,8 @@
                                 }
                             </button>
                             <button class="tab-close"
-                                    aria-label="Close @document.Title"
-                                    title="Close (Ctrl+W)"
+                                    aria-label="@L["Tabs.CloseNamed", document.Title]"
+                                    title="@L["Tabs.Close"]"
                                     @onclick="() => CloseDocumentAsync(document.Id)">
                                 <span class="dirty-dot" aria-hidden="true">●</span>
                                 <span class="close-x" aria-hidden="true">×</span>
@@ -175,7 +175,7 @@
 
                 @if (ActiveDocument is { } current)
                 {
-                    <div class="breadcrumbs" aria-label="Breadcrumbs">
+                    <div class="breadcrumbs" aria-label="@L["Breadcrumbs.Label"]">
                         @foreach (string segment in Breadcrumbs(current))
                         {
                             <span class="crumb">@segment</span>
@@ -189,7 +189,7 @@
                 {
                     <div class="editor-message is-error" role="alert">
                         <span>@_statusMessage</span>
-                        <button type="button" class="message-close" aria-label="Dismiss message" @onclick="ClearStatus">×</button>
+                        <button type="button" class="message-close" aria-label="@L["Message.Dismiss"]" @onclick="ClearStatus">×</button>
                     </div>
                 }
 
@@ -200,16 +200,16 @@
                         <div class="watermark">
                             <div class="watermark-logo" aria-hidden="true">&lt;/&gt;</div>
                             <dl class="watermark-shortcuts">
-                                <dt>Go to File</dt><dd><kbd>Ctrl</kbd>+<kbd>P</kbd></dd>
-                                <dt>Find in Folder</dt><dd><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dd>
-                                <dt>New Text File</dt><dd><kbd>Ctrl</kbd>+<kbd>N</kbd></dd>
-                                <dt>Open File</dt><dd><kbd>Ctrl</kbd>+<kbd>O</kbd></dd>
-                                <dt>Toggle Terminal</dt><dd><kbd>Ctrl</kbd>+<kbd>`</kbd></dd>
+                                <dt>@L["Watermark.GoToFile"]</dt><dd><kbd>Ctrl</kbd>+<kbd>P</kbd></dd>
+                                <dt>@L["Watermark.FindInFolder"]</dt><dd><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dd>
+                                <dt>@L["Watermark.NewTextFile"]</dt><dd><kbd>Ctrl</kbd>+<kbd>N</kbd></dd>
+                                <dt>@L["Watermark.OpenFile"]</dt><dd><kbd>Ctrl</kbd>+<kbd>O</kbd></dd>
+                                <dt>@L["Watermark.ToggleTerminal"]</dt><dd><kbd>Ctrl</kbd>+<kbd>`</kbd></dd>
                             </dl>
                             <div class="watermark-actions">
-                                <button type="button" id="code-new" class="link-button" @onclick="NewDocumentAsync">New File</button>
-                                <button type="button" id="code-open" class="link-button" @onclick="OpenFileAsync">Open File...</button>
-                                <button type="button" id="code-open-folder" class="link-button" @onclick="OpenFolderAsync">Open Folder...</button>
+                                <button type="button" id="code-new" class="link-button" @onclick="NewDocumentAsync">@L["Watermark.NewFile"]</button>
+                                <button type="button" id="code-open" class="link-button" @onclick="OpenFileAsync">@L["Menu.File.OpenFile"]</button>
+                                <button type="button" id="code-open-folder" class="link-button" @onclick="OpenFolderAsync">@L["Menu.File.OpenFolder"]</button>
                             </div>
                         </div>
                     }
@@ -224,15 +224,15 @@
             @if (_showPanel)
             {
                 <div class="panel-splitter" data-resizes=".bottom-dock"
-                     role="separator" aria-orientation="horizontal" aria-label="Resize panel"></div>
+                     role="separator" aria-orientation="horizontal" aria-label="@L["Panel.Resize"]"></div>
             }
             @* The dock stays rendered while hidden, so its terminals keep their shells and screens. *@
-            <section class="bottom-dock @(_showPanel ? null : "is-hidden")" aria-label="Panel">
+            <section class="bottom-dock @(_showPanel ? null : "is-hidden")" aria-label="@L["Panel.Label"]">
                 <header class="panel-header">
-                    <nav class="dock-tabs" aria-label="Panel views">
+                    <nav class="dock-tabs" aria-label="@L["Panel.Views"]">
                         <button type="button" id="code-dock-status" class="dock-tab @(_dockView == DockView.Status ? "is-active" : null)"
                                 aria-pressed="@(_dockView == DockView.Status ? "true" : "false")" @onclick="() => ShowDockView(DockView.Status)">
-                            Status
+                            @L["Panel.Status"]
                             @if (_statusLog.Any(entry => entry.IsError))
                             {
                                 <span class="dock-badge is-error">@_statusLog.Count(entry => entry.IsError)</span>
@@ -240,17 +240,17 @@
                         </button>
                         <button type="button" id="code-dock-terminal" class="dock-tab @(_dockView == DockView.Terminal ? "is-active" : null)"
                                 aria-pressed="@(_dockView == DockView.Terminal ? "true" : "false")" @onclick="() => ShowDockView(DockView.Terminal)">
-                            Terminal
+                            @L["Panel.Terminal"]
                         </button>
                         <button type="button" id="code-dock-problems" class="dock-tab @(_dockView == DockView.Problems ? "is-active" : null)"
                                 aria-pressed="@(_dockView == DockView.Problems ? "true" : "false")" @onclick="() => ShowDockView(DockView.Problems)">
-                            Problems
+                            @L["Panel.Problems"]
                             <span class="dock-badge">0</span>
                         </button>
                     </nav>
                     @if (_dockView == DockView.Terminal)
                     {
-                        <nav class="terminal-tabs" aria-label="Open terminals">
+                        <nav class="terminal-tabs" aria-label="@L["Terminals.Label"]">
                             @foreach (TerminalTab tab in _terminalTabs)
                             {
                                 <div class="terminal-tab-shell @(tab.Id == _activeTerminalTabId ? "is-active" : null)" @key="tab.Id">
@@ -262,8 +262,8 @@
                                         <span>@tab.Number: @tab.Label</span>
                                     </button>
                                     <button class="terminal-tab-close"
-                                            aria-label="Kill Terminal @tab.Number"
-                                            title="Kill Terminal"
+                                            aria-label="@L["Terminals.KillNumbered", tab.Number]"
+                                            title="@L["Terminals.Kill"]"
                                             @onclick="() => CloseTerminalTab(tab.Id)">×</button>
                                 </div>
                             }
@@ -272,40 +272,40 @@
                     <span class="panel-actions">
                         @if (_dockView == DockView.Terminal)
                         {
-                            <button type="button" class="panel-button" aria-label="New Terminal" title="New Terminal" @onclick="() => AddTerminalTab()">+</button>
-                            <button type="button" class="panel-button" aria-label="Clear Terminal" title="Clear Terminal" @onclick="ClearActiveTerminalAsync">
+                            <button type="button" class="panel-button" aria-label="@L["Terminals.New"]" title="@L["Terminals.New"]" @onclick="() => AddTerminalTab()">+</button>
+                            <button type="button" class="panel-button" aria-label="@L["Terminals.Clear"]" title="@L["Terminals.Clear"]" @onclick="ClearActiveTerminalAsync">
                                 <HackerIcon Library="IconLibrary.Lucide" Name="eraser" Size="14" />
                             </button>
                         }
                         else if (_dockView == DockView.Status)
                         {
-                            <button type="button" class="panel-button" aria-label="Clear Status Log" title="Clear Status Log" @onclick="ClearStatusLog">
+                            <button type="button" class="panel-button" aria-label="@L["Panel.ClearStatusLog"]" title="@L["Panel.ClearStatusLog"]" @onclick="ClearStatusLog">
                                 <HackerIcon Library="IconLibrary.Lucide" Name="eraser" Size="14" />
                             </button>
                         }
-                        <button type="button" class="panel-button" aria-label="Hide Panel" title="Hide Panel (Ctrl+J)" @onclick="TogglePanel">×</button>
+                        <button type="button" class="panel-button" aria-label="@L["Menu.View.HidePanel"]" title="@L["Panel.Hide.Title"]" @onclick="TogglePanel">×</button>
                     </span>
                 </header>
 
-                <div class="dock-view dock-status @(_dockView == DockView.Status ? "is-active" : null)" role="log" aria-label="Status log">
+                <div class="dock-view dock-status @(_dockView == DockView.Status ? "is-active" : null)" role="log" aria-label="@L["Panel.StatusLog"]">
                     <dl class="status-facts">
-                        <dt>Folder</dt><dd>@(_workspace?.Root.Value ?? "(none)")</dd>
-                        <dt>File</dt><dd>@(ActiveDocument?.Path?.Value ?? ActiveDocument?.Title ?? "(none)")</dd>
-                        <dt>Language</dt><dd>@(ActiveDocument is null ? "-" : SyntaxModeLabel(ActiveDocument.SyntaxMode))</dd>
-                        <dt>Editors</dt><dd>@_session.Documents.Count open, @_dirtyCount unsaved</dd>
-                        <dt>Terminals</dt><dd>@_terminalTabs.Count</dd>
+                        <dt>@L["Facts.Folder"]</dt><dd>@(_workspace?.Root.Value ?? L["Facts.None"])</dd>
+                        <dt>@L["Facts.File"]</dt><dd>@(ActiveDocument?.Path?.Value ?? ActiveDocument?.Title ?? L["Facts.None"])</dd>
+                        <dt>@L["Facts.Language"]</dt><dd>@(ActiveDocument is null ? "-" : SyntaxModeLabel(ActiveDocument.SyntaxMode))</dd>
+                        <dt>@L["Facts.Editors"]</dt><dd>@(L["Facts.EditorsValue", Strings.Count(L, "Facts.Open", _session.Documents.Count), Strings.Count(L, "Facts.Unsaved", _dirtyCount)])</dd>
+                        <dt>@L["Facts.Terminals"]</dt><dd>@_terminalTabs.Count</dd>
                     </dl>
                     <ol class="status-log">
                         @if (_statusLog.Count == 0)
                         {
-                            <li class="status-empty">No messages yet.</li>
+                            <li class="status-empty">@L["StatusLog.Empty"]</li>
                         }
                         @for (int i = _statusLog.Count - 1; i >= 0; i--)
                         {
                             StatusEntry entry = _statusLog[i];
                             <li class="status-entry @(entry.IsError ? "is-error" : null)">
-                                <time datetime="@entry.Time.ToString("O")">@entry.Time.ToLocalTime().ToString("HH:mm:ss")</time>
-                                <span class="status-level">@(entry.IsError ? "error" : "info")</span>
+                                <time datetime="@entry.Time.ToString("O")">@entry.Time.ToLocalTime().ToString("HH:mm:ss", AppContext.FormatCulture)</time>
+                                <span class="status-level">@(entry.IsError ? L["StatusLog.Error"] : L["StatusLog.Info"])</span>
                                 <span>@entry.Message</span>
                             </li>
                         }
@@ -326,13 +326,13 @@
                 </div>
 
                 <div class="dock-view dock-problems @(_dockView == DockView.Problems ? "is-active" : null)">
-                    <p class="problems-empty">No problems have been detected in the workspace.</p>
+                    <p class="problems-empty">@L["Problems.Empty"]</p>
                 </div>
             </section>
         </div>
     </div>
 
-    <footer class="statusbar" role="group" aria-label="Code editor status">
+    <footer class="statusbar" role="group" aria-label="@L["StatusBar.Label"]">
         <span class="status-left">
             @if (_workspace is not null)
             {
@@ -343,14 +343,14 @@
             }
             @if (!_statusIsError && !string.IsNullOrWhiteSpace(_statusMessage))
             {
-                <button type="button" class="status-item status-message" title="Show Status Log"
+                <button type="button" class="status-item status-message" title="@L["StatusBar.ShowStatusLog"]"
                         @onclick="() => ShowDockView(DockView.Status)">@_statusMessage</button>
             }
             @if (_dirtyCount > 0)
             {
-                <span class="status-item" title="Unsaved editors">
+                <span class="status-item" title="@L["StatusBar.UnsavedEditors"]">
                     <HackerIcon Library="IconLibrary.Lucide" Name="circle-dot" Size="13" />
-                    @_dirtyCount unsaved
+                    @(Strings.Count(L, "StatusBar.Unsaved", _dirtyCount))
                 </span>
             }
         </span>
@@ -361,7 +361,7 @@
                 <span class="status-item">UTF-8</span>
                 <span class="status-item">LF</span>
                 <label class="status-item language-label" for="code-language">
-                    <span class="visually-hidden">Language mode</span>
+                    <span class="visually-hidden">@L["StatusBar.LanguageMode"]</span>
                     <select id="code-language"
                             class="language-select"
                             value="@ActiveDocument.SyntaxMode"

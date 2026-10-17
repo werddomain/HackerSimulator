@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.CodeEditor;
 
@@ -9,6 +11,11 @@ namespace HackerOs.Apps.CodeEditor;
 /// </summary>
 public partial class CodeEditorQuickOpenPalette
 {
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Code Editor's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     private ElementReference _input;
     private bool _open;
     private bool _loading;

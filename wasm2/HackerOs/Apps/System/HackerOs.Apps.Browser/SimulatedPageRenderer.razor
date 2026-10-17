@@ -22,6 +22,11 @@
 </div>
 
 @code {
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The browser's texts in its own process's language (ADR 0104); the page's content is not translated.</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     /// <summary>The structured page to render.</summary>
     [Parameter, EditorRequired] public SimulatedPage Page { get; set; } = default!;
 
@@ -123,7 +128,7 @@
 
     private RenderFragment RenderNavigation(NavigationSection n) => __builder =>
     {
-        <nav class="sim-section sim-nav" aria-label="Page navigation">
+        <nav class="sim-section sim-nav" aria-label="@L["Page.Navigation"]">
             @foreach (var link in n.Links)
             {
                 <a class="sim-nav-link @(link.IsActive ? "active" : "")"
@@ -265,10 +270,10 @@
         </div>
     };
 
-    private static RenderFragment RenderUnknown(SimulatedPageSection section) => __builder =>
+    private RenderFragment RenderUnknown(SimulatedPageSection section) => __builder =>
     {
         <div class="sim-section sim-unknown">
-            <em>[Unknown section type: @section.GetType().Name]</em>
+            <em>@L["Page.UnknownSection", section.GetType().Name]</em>
         </div>
     };
 }

@@ -26,8 +26,8 @@
         case ResponseBodyKind.Pdf:
             <object class="body-viewer-pdf" type="application/pdf" data="@View.DataUrl" aria-label="@Url">
                 <div class="body-viewer-binary" role="note">
-                    <p>This PDF can't be displayed here.</p>
-                    <p class="binary-hint">Use <code>curl -O @Url</code> or <code>wget</code> to save it.</p>
+                    <p>@L["Body.Pdf.CannotDisplay"]</p>
+                    <p class="binary-hint">@L["Body.Pdf.Use"] <code>curl -O @Url</code> @L["Body.Or"] <code>wget</code> @L["Body.Pdf.ToSave"]</p>
                 </div>
             </object>
             break;
@@ -36,17 +36,17 @@
                 <div class="binary-icon">&#128190;</div>
                 @if (DownloadedTo is not null)
                 {
-                    <p>Downloaded to <code class="download-path">@DownloadedTo</code></p>
+                    <p>@L["Body.DownloadedTo"] <code class="download-path">@DownloadedTo</code></p>
                 }
                 else
                 {
-                    <p>This file can't be displayed in the browser.</p>
+                    <p>@L["Body.CannotDisplay"]</p>
                 }
-                <p class="binary-hint">From a terminal: <code>curl -O @Url</code> or <code>wget @Url</code>.</p>
+                <p class="binary-hint">@L["Body.FromTerminal"] <code>curl -O @Url</code> @L["Body.Or"] <code>wget @Url</code>.</p>
             </div>
             break;
         default:
-            <div class="body-viewer-empty">The server returned no content.</div>
+            <div class="body-viewer-empty">@L["Body.Empty"]</div>
             break;
     }
 </div>
@@ -64,10 +64,20 @@
     /// <summary>Path the browser saved a binary body to, or <see langword="null"/>.</summary>
     [Parameter] public string? DownloadedTo { get; set; }
 
-    private static string FormatSize(int bytes) => bytes switch
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The browser's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The size in the units of the process's language, its number in the process's format culture.</summary>
+    private string FormatSize(int bytes)
     {
-        < 1024 => $"{bytes} B",
-        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
-        _ => $"{bytes / (1024.0 * 1024):0.#} MB"
-    };
+        System.Globalization.CultureInfo numbers = AppContext?.FormatCulture ?? HackLocale.DefaultFormatCulture;
+        return bytes switch
+        {
+            < 1024 => L["Size.Bytes", bytes.ToString(numbers)],
+            < 1024 * 1024 => L["Size.KibiBytes", (bytes / 1024.0).ToString("0.#", numbers)],
+            _ => L["Size.Megabytes", (bytes / (1024.0 * 1024)).ToString("0.#", numbers)]
+        };
+    }
 }

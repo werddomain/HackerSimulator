@@ -94,7 +94,7 @@ public sealed class CodeEditorFileService
         if (content is null)
         {
             return new CodeEditorLoadResult(
-                CodeEditorFileStatus.UnsupportedContent, path, Error: "Binary files cannot be edited as source text.");
+                CodeEditorFileStatus.UnsupportedContent, path, Error: Strings.Ambient["File.Binary"]);
         }
 
         if (Encoding.UTF8.GetByteCount(content) > CodeEditorDocument.MaxDocumentBytes)
@@ -122,7 +122,7 @@ public sealed class CodeEditorFileService
         if (document.Utf8ByteCount > CodeEditorDocument.MaxDocumentBytes)
         {
             return new CodeEditorSaveResult(
-                CodeEditorFileStatus.TooLarge, path, Error: "Document exceeds the editor size limit.");
+                CodeEditorFileStatus.TooLarge, path, Error: Strings.Ambient["File.TooLarge"]);
         }
 
         long? revision = document.Path == path ? document.Revision : null;
@@ -153,7 +153,7 @@ public sealed class CodeEditorFileService
         if (revision is not long expectedRevision)
         {
             return new CodeEditorSaveResult(
-                CodeEditorFileStatus.Failed, path, Error: "No writable file revision is available.");
+                CodeEditorFileStatus.Failed, path, Error: Strings.Ambient["File.NoRevision"]);
         }
 
         FileSystemMutationResult write = await _fileSystem.WriteAsync(
@@ -201,16 +201,16 @@ public sealed class CodeEditorFileService
             FileSystemErrorCode.PermissionDenied or
             FileSystemErrorCode.CapabilityDenied or
             FileSystemErrorCode.AuthorityDenied =>
-                new CodeEditorLoadResult(CodeEditorFileStatus.Denied, path, Error: "Access denied."),
+                new CodeEditorLoadResult(CodeEditorFileStatus.Denied, path, Error: Strings.Ambient["File.AccessDenied"]),
             FileSystemErrorCode.NotFound =>
-                new CodeEditorLoadResult(CodeEditorFileStatus.NotFound, path, Error: "File not found."),
+                new CodeEditorLoadResult(CodeEditorFileStatus.NotFound, path, Error: Strings.Ambient["File.NotFound"]),
             FileSystemErrorCode.NotFile =>
                 new CodeEditorLoadResult(
-                    CodeEditorFileStatus.UnsupportedContent, path, Error: "Path is not a regular file."),
+                    CodeEditorFileStatus.UnsupportedContent, path, Error: Strings.Ambient["File.NotRegular"]),
             FileSystemErrorCode.Cancelled =>
                 new CodeEditorLoadResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorLoadResult(
-                CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Read failed.")
+                CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? Strings.Ambient["File.ReadFailed"])
         };
 
     private static CodeEditorSaveResult SaveFailure(VirtualPath path, FileSystemErrorCode? error) =>
@@ -219,21 +219,21 @@ public sealed class CodeEditorFileService
             FileSystemErrorCode.PermissionDenied or
             FileSystemErrorCode.CapabilityDenied or
             FileSystemErrorCode.AuthorityDenied =>
-                new CodeEditorSaveResult(CodeEditorFileStatus.Denied, path, Error: "Access denied."),
+                new CodeEditorSaveResult(CodeEditorFileStatus.Denied, path, Error: Strings.Ambient["File.AccessDenied"]),
             FileSystemErrorCode.NotFound =>
-                new CodeEditorSaveResult(CodeEditorFileStatus.NotFound, path, Error: "Destination not found."),
+                new CodeEditorSaveResult(CodeEditorFileStatus.NotFound, path, Error: Strings.Ambient["File.DestinationNotFound"]),
             FileSystemErrorCode.RevisionConflict =>
-                new CodeEditorSaveResult(CodeEditorFileStatus.Conflict, path, Error: "File changed on disk."),
+                new CodeEditorSaveResult(CodeEditorFileStatus.Conflict, path, Error: Strings.Ambient["File.ChangedOnDisk"]),
             FileSystemErrorCode.Cancelled =>
                 new CodeEditorSaveResult(CodeEditorFileStatus.Cancelled, path),
             _ => new CodeEditorSaveResult(
-                CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? "Write failed.")
+                CodeEditorFileStatus.Failed, path, Error: error?.ToString() ?? Strings.Ambient["File.WriteFailed"])
         };
 
     private static CodeEditorLoadResult TooLargeLoad(VirtualPath path) => new(
         CodeEditorFileStatus.TooLarge,
         path,
-        Error: $"File exceeds the {CodeEditorDocument.MaxDocumentBytes / 1024} KiB editor limit.");
+        Error: Strings.Ambient["File.ExceedsLimit", CodeEditorDocument.MaxDocumentBytes / 1024]);
 
     private static VirtualPath ParentOf(VirtualPath path)
     {

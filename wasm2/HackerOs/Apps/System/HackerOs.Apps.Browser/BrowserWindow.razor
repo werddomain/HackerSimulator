@@ -11,10 +11,10 @@
     <!-- Address / Navigation Toolbar -->
     <div class="browser-toolbar">
         <div class="nav-buttons">
-            <button id="browser-btn-back"    class="nav-btn" disabled="@(!CanGoBack)"    @onclick="GoBack"    title="Back (Alt+Left)">&#8592;</button>
-            <button id="browser-btn-forward" class="nav-btn" disabled="@(!CanGoForward)" @onclick="GoForward" title="Forward (Alt+Right)">&#8594;</button>
-            <button id="browser-btn-refresh" class="nav-btn" @onclick="RefreshAsync"     title="Refresh (F5)">&#8635;</button>
-            <button id="browser-btn-home"    class="nav-btn" @onclick="NavigateHomeAsync" title="Home">&#8962;</button>
+            <button id="browser-btn-back"    class="nav-btn" disabled="@(!CanGoBack)"    @onclick="GoBack"    title="@L["Toolbar.Back"]">&#8592;</button>
+            <button id="browser-btn-forward" class="nav-btn" disabled="@(!CanGoForward)" @onclick="GoForward" title="@L["Toolbar.Forward"]">&#8594;</button>
+            <button id="browser-btn-refresh" class="nav-btn" @onclick="RefreshAsync"     title="@L["Toolbar.Refresh"]">&#8635;</button>
+            <button id="browser-btn-home"    class="nav-btn" @onclick="NavigateHomeAsync" title="@L["Toolbar.Home"]">&#8962;</button>
         </div>
 
         <div class="address-bar">
@@ -25,25 +25,25 @@
                    value="@_urlInputValue"
                    @oninput="OnUrlInputChanged"
                    @onkeydown="HandleAddressKeyDownAsync"
-                   aria-label="URL address bar"
+                   aria-label="@L["Toolbar.AddressBar"]"
                    spellcheck="false" />
         </div>
 
-        <button id="browser-btn-navigate" class="go-btn" @onclick="NavigateToCurrentInputAsync" title="Navigate">Go</button>
+        <button id="browser-btn-navigate" class="go-btn" @onclick="NavigateToCurrentInputAsync" title="@L["Toolbar.Navigate"]">@L["Toolbar.Go"]</button>
 
         <button id="browser-btn-source" class="nav-btn @(_viewSource ? "toggled" : null)" @onclick="ToggleViewSourceAsync"
-                title="View page source (Ctrl+U)" aria-pressed="@(_viewSource ? "true" : "false")" disabled="@(!CanViewSource)">&lt;/&gt;</button>
+                title="@L["Toolbar.ViewSource"]" aria-pressed="@(_viewSource ? "true" : "false")" disabled="@(!CanViewSource)">&lt;/&gt;</button>
         <button id="browser-btn-devtools" class="nav-btn devtools-toggle @(_devToolsOpen ? "toggled" : null)" @onclick="ToggleDevTools"
-                title="Developer tools (F12)" aria-pressed="@(_devToolsOpen ? "true" : "false")">
+                title="@L["Toolbar.DevTools"]" aria-pressed="@(_devToolsOpen ? "true" : "false")">
             &#128295;
             @if (_devTools.ErrorCount > 0)
             {
                 <span class="devtools-badge">@_devTools.ErrorCount</span>
             }
         </button>
-        <button id="browser-btn-bookmarks" class="nav-btn" @onclick="ToggleBookmarksAsync" title="Bookmarks">&#9733;</button>
+        <button id="browser-btn-bookmarks" class="nav-btn" @onclick="ToggleBookmarksAsync" title="@L["Toolbar.Bookmarks"]">&#9733;</button>
         <button id="browser-btn-detach" class="nav-btn @(_surface is not null ? "toggled" : null)" @onclick="ToggleDetachedAsync"
-                title="@(_surface is null ? "Open in a detached window" : "Bring the page back into this window")"
+                title="@(_surface is null ? L["Toolbar.Detach"] : L["Toolbar.Reattach"])"
                 aria-pressed="@(_surface is not null ? "true" : "false")" disabled="@(!CanDetach)">&#10697;</button>
     </div>
 
@@ -53,7 +53,7 @@
         {
             <div class="page-alert detach-alert" role="alert">
                 <span class="page-alert-message">@_detachMessage</span>
-                <button class="action-btn" @onclick="DismissDetachMessage">OK</button>
+                <button class="action-btn" @onclick="DismissDetachMessage">@L["Common.Ok"]</button>
             </div>
         }
 
@@ -61,16 +61,16 @@
         {
             <div class="page-alert" role="status">
                 <span class="page-alert-message">@_notice</span>
-                <button class="action-btn" @onclick="DismissNotice">OK</button>
+                <button class="action-btn" @onclick="DismissNotice">@L["Common.Ok"]</button>
             </div>
         }
 
         @if (_alertMessage is not null)
         {
             <div class="page-alert" role="alert">
-                <span class="page-alert-origin">@_alertOrigin says</span>
+                <span class="page-alert-origin">@L["Alert.Says", _alertOrigin]</span>
                 <span class="page-alert-message">@_alertMessage</span>
-                <button class="action-btn" @onclick="DismissAlert">OK</button>
+                <button class="action-btn" @onclick="DismissAlert">@L["Common.Ok"]</button>
             </div>
         }
 
@@ -79,11 +79,11 @@
             <div class="browser-view">
                 <div class="browser-detached" role="status">
                     <div class="detached-icon">&#10697;</div>
-                    <h1 class="detached-title">This page is open in a detached window</h1>
+                    <h1 class="detached-title">@L["Detached.Title"]</h1>
                     <p class="detached-url">@_finalUrl</p>
                     <div class="detached-actions">
-                        <button id="browser-btn-show-detached" class="action-btn" @onclick="ShowDetachedAsync">Show the window</button>
-                        <button id="browser-btn-reattach" class="action-btn" @onclick="ReattachAsync">Bring the page back here</button>
+                        <button id="browser-btn-show-detached" class="action-btn" @onclick="ShowDetachedAsync">@L["Detached.Show"]</button>
+                        <button id="browser-btn-reattach" class="action-btn" @onclick="ReattachAsync">@L["Detached.BringBack"]</button>
                     </div>
                 </div>
             </div>
@@ -107,8 +107,8 @@
                             }
                             <span class="surface-url">@_finalUrl</span>
                         </span>
-                        <button id="surface-btn-refresh" class="nav-btn" @onclick="RefreshAsync" title="Refresh (F5)">&#8635;</button>
-                        <button id="surface-btn-reattach" class="nav-btn" @onclick="ReattachAsync" title="Bring the page back into HackerOS">&#8690; Reattach</button>
+                        <button id="surface-btn-refresh" class="nav-btn" @onclick="RefreshAsync" title="@L["Toolbar.Refresh"]">&#8635;</button>
+                        <button id="surface-btn-reattach" class="nav-btn" @onclick="ReattachAsync" title="@L["Surface.ReattachTitle"]">&#8690; @L["Surface.Reattach"]</button>
                     </div>
                 }
                 @PageContent
@@ -125,7 +125,7 @@
     <div class="browser-statusbar" aria-live="polite">
         @if (_isLoading)
         {
-            <span>Connecting to @_currentUrl&hellip;</span>
+            <span>@L["Status.Connecting", _currentUrl]</span>
         }
         else if (_error is not null)
         {
@@ -146,7 +146,7 @@
         {
             <div class="browser-loading" role="status" aria-live="polite">
                 <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-                <span class="loading-label">Loading @_currentUrl&hellip;</span>
+                <span class="loading-label">@L["Loading.Label", _currentUrl]</span>
             </div>
         }
         else if (_error is not null)
@@ -165,7 +165,7 @@
                     </ul>
                 }
                 <p class="error-code">@_error.Code</p>
-                <button class="action-btn" @onclick="RefreshAsync">Try Again</button>
+                <button class="action-btn" @onclick="RefreshAsync">@L["Error.TryAgain"]</button>
             </div>
         }
         else if (_currentPage is not null)
@@ -191,8 +191,8 @@
         {
             <!-- New-tab placeholder -->
             <div class="browser-new-tab">
-                <h1 class="new-tab-title">HackerOS Browser</h1>
-                <p class="new-tab-subtitle">Type a URL or a path (file:///home/…) in the address bar to begin browsing.</p>
+                <h1 class="new-tab-title">@L["NewTab.Title"]</h1>
+                <p class="new-tab-subtitle">@L["NewTab.Subtitle"]</p>
                 <div class="new-tab-bookmarks">
                     @foreach (var (label, url) in DefaultBookmarks)
                     {

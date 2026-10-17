@@ -96,7 +96,7 @@ public sealed class CodeEditorDocument
 
     /// <summary>Creates a clean, unsaved editor document.</summary>
     public static CodeEditorDocument CreateNew(int sequence) =>
-        new(Guid.NewGuid(), $"Untitled-{sequence}", null, string.Empty, string.Empty, null,
+        new(Guid.NewGuid(), Strings.Ambient["Document.Untitled", sequence], null, string.Empty, string.Empty, null,
             CodeEditorSyntaxMode.PlainText);
 
     /// <summary>Creates a clean document from a successful VFS load.</summary>
@@ -139,7 +139,7 @@ public sealed class CodeEditorDocument
         {
             return new CodeEditorEditResult(
                 false,
-                $"Document exceeds the {MaxDocumentBytes / 1024} KiB editor limit.");
+                Strings.Ambient["Document.ExceedsLimit", MaxDocumentBytes / 1024]);
         }
 
         Content = content;
@@ -179,7 +179,7 @@ public sealed class CodeEditorDocument
         {
             throw new ArgumentOutOfRangeException(
                 nameof(content),
-                $"Document exceeds the {MaxDocumentBytes / 1024} KiB editor limit.");
+                Strings.Ambient["Document.ExceedsLimit", MaxDocumentBytes / 1024]);
         }
     }
 
