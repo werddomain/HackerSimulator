@@ -199,7 +199,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/4-intents` ([`app-intents.md`](app-intents.md))
 - [x] `v3/5-services` (ADR 0097, ajusté par l'ADR 0107)
 - [ ] `v3/6-sdk-versioning`
-- [ ] `v3/7-storage-backup`
+- [x] `v3/7-storage-backup` ([`system-backup.md`](system-backup.md) ; archive téléchargée sur l'hôte, pas dans `~`, ADR 0099)
 - [x] `v3/8-settings-security` ([`sensitive-settings.md`](sensitive-settings.md))
 - [x] `v3/9-sync` ([`synchronization.md`](synchronization.md))
 - [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0108)
