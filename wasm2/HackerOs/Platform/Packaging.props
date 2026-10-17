@@ -19,7 +19,10 @@
          generator emits that method without a #nullable enable pragma; there is no source we
          control to fix, so it is excluded rather than hand-authoring oblivious-nullable
          PublicAPI entries that would break on every Razor SDK bump. -->
-    <NoWarn>$(NoWarn);RS0041</NoWarn>
+    <!-- RS0026/RS0027 (optional parameters across public overloads) are API design rules, not
+         surface tracking: the SDK predates the analyzer, and changing those overloads now would
+         break every app for no gain. The surface itself stays tracked (RS0016/RS0017). -->
+    <NoWarn>$(NoWarn);RS0041;RS0026;RS0027</NoWarn>
     <IsPackable>true</IsPackable>
     <Authors>Benoit Robin</Authors>
     <RepositoryUrl>https://github.com/werddomain/HackerSimulator</RepositoryUrl>

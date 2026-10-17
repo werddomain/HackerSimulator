@@ -1,0 +1,53 @@
+#nullable enable
+HackerOs.Apps.HackPaint.HackPaintApp
+HackerOs.Apps.HackPaint.HackPaintApp.HackPaintApp() -> void
+HackerOs.Apps.HackPaint.HackPaintWindow
+HackerOs.Apps.HackPaint.HackPaintWindow.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Apps.HackPaint.HackPaintWindow.HackPaintWindow() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState
+HackerOs.Apps.HackPaint.PaintCanvasState.ActiveColor.get -> string!
+HackerOs.Apps.HackPaint.PaintCanvasState.ActiveColor.set -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.BrushSize.get -> int
+HackerOs.Apps.HackPaint.PaintCanvasState.BrushSize.set -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.CanRedo.get -> bool
+HackerOs.Apps.HackPaint.PaintCanvasState.CanUndo.get -> bool
+HackerOs.Apps.HackPaint.PaintCanvasState.Crop(int x, int y, int width, int height) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.CropMode.get -> bool
+HackerOs.Apps.HackPaint.PaintCanvasState.DrawLine(int startX, int startY, int endX, int endY, string? color = null, int? size = null) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.GetCurrentBuffer() -> byte[]!
+HackerOs.Apps.HackPaint.PaintCanvasState.Height.get -> int
+HackerOs.Apps.HackPaint.PaintCanvasState.NewDocument(int width, int height, byte r = 255, byte g = 255, byte b = 255, byte a = 255) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.PaintCanvasState() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.PanBy(int deltaX, int deltaY) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.PanMode.get -> bool
+HackerOs.Apps.HackPaint.PaintCanvasState.PanX.get -> int
+HackerOs.Apps.HackPaint.PaintCanvasState.PanY.get -> int
+HackerOs.Apps.HackPaint.PaintCanvasState.PushHistory(byte[]! pixelRgba) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.PushHistory(int width, int height, byte[]! pixelRgba) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.Redo() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.ReplaceDocument(int width, int height, byte[]! pixelRgba) -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.Rotate90() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.Scale.get -> double
+HackerOs.Apps.HackPaint.PaintCanvasState.ShowGrid.get -> bool
+HackerOs.Apps.HackPaint.PaintCanvasState.ToggleCropMode() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.ToggleGrid() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.TogglePanMode() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.Undo() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.Width.get -> int
+HackerOs.Apps.HackPaint.PaintCanvasState.ZoomIn() -> void
+HackerOs.Apps.HackPaint.PaintCanvasState.ZoomOut() -> void
+HackerOs.Apps.HackPaint._Imports
+HackerOs.Apps.HackPaint._Imports.Execute() -> void
+HackerOs.Apps.HackPaint._Imports._Imports() -> void
+override HackerOs.Apps.HackPaint.HackPaintApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.HackPaint.HackPaintApp.Category.get -> string!
+override HackerOs.Apps.HackPaint.HackPaintApp.Description.get -> string!
+override HackerOs.Apps.HackPaint.HackPaintApp.EntryPoint.get -> System.Type!
+override HackerOs.Apps.HackPaint.HackPaintApp.Id.get -> string!
+override HackerOs.Apps.HackPaint.HackPaintApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Apps.HackPaint.HackPaintApp.Name.get -> string!
+override HackerOs.Apps.HackPaint.HackPaintApp.PublisherId.get -> string!
+override HackerOs.Apps.HackPaint.HackPaintApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Apps.HackPaint.HackPaintWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+static HackerOs.Apps.HackPaint.PaintCanvasState.CreateBlankBuffer(int width, int height, byte r, byte g, byte b, byte a) -> byte[]!
+~override HackerOs.Apps.HackPaint.HackPaintWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.AppSdk.Terminal</PackageId>
+    <Description>HackerOS App SDK for terminal commands and the embeddable terminal contract (IHackTerminal, HackConsole).</Description>
+    <PackageTags>hackeros;app-sdk;terminal</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

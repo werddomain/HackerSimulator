@@ -1,0 +1,29 @@
+#nullable enable
+HackerOs.Apps.Settings.AppPermissionsPanel
+HackerOs.Apps.Settings.AppPermissionsPanel.AppPermissionsPanel() -> void
+HackerOs.Apps.Settings.InstalledAppsPanel
+HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
+HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
+HackerOs.Apps.Settings.SettingsApp
+HackerOs.Apps.Settings.SettingsApp.SettingsApp() -> void
+HackerOs.Apps.Settings.SettingsWindow
+HackerOs.Apps.Settings.SettingsWindow.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Apps.Settings.SettingsWindow.SettingsWindow() -> void
+HackerOs.Apps.Settings._Imports
+HackerOs.Apps.Settings._Imports.Execute() -> void
+HackerOs.Apps.Settings._Imports._Imports() -> void
+override HackerOs.Apps.Settings.InstalledAppsPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Apps.Settings.SettingsApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.Settings.SettingsApp.Category.get -> string!
+override HackerOs.Apps.Settings.SettingsApp.Description.get -> string!
+override HackerOs.Apps.Settings.SettingsApp.EntryPoint.get -> System.Type!
+override HackerOs.Apps.Settings.SettingsApp.Id.get -> string!
+override HackerOs.Apps.Settings.SettingsApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Apps.Settings.SettingsApp.Name.get -> string!
+override HackerOs.Apps.Settings.SettingsApp.PublisherId.get -> string!
+override HackerOs.Apps.Settings.SettingsApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Apps.Settings.SettingsApp.SingleInstancePerUser.get -> bool
+override HackerOs.Apps.Settings.SettingsWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Apps.Settings.SettingsWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
+~override HackerOs.Apps.Settings.InstalledAppsPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Apps.Settings.SettingsWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

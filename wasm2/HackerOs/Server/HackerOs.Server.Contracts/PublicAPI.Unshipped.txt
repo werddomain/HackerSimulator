@@ -1,0 +1,626 @@
+#nullable enable
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedAddress = "BLOCKED_ADDRESS" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedPort = "BLOCKED_PORT" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.CapabilityDenied = "CAPABILITY_DENIED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.DnsRebindingBlocked = "DNS_REBINDING_BLOCKED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.MalformedRequest = "MALFORMED_REQUEST" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.PayloadTooLarge = "PAYLOAD_TOO_LARGE" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.QuotaExceeded = "QUOTA_EXCEEDED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.SimulatedDomainBlocked = "SIMULATED_DOMAIN_BLOCKED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.Timeout = "TIMEOUT" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.TooManyRedirects = "TOO_MANY_REDIRECTS" -> string!
+const HackerOs.Server.Contracts.Sync.SyncDomain.AppCatalog = "app_catalog" -> string!
+const HackerOs.Server.Contracts.Sync.SyncDomain.FileAssociations = "file_associations" -> string!
+const HackerOs.Server.Contracts.Sync.SyncDomain.FileSystem = "filesystem" -> string!
+const HackerOs.Server.Contracts.Sync.SyncDomain.Grants = "grants" -> string!
+const HackerOs.Server.Contracts.Sync.SyncDomain.Settings = "settings" -> string!
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.AccountDataExportRequest(System.Collections.Generic.IReadOnlyList<string!>? IncludeDomains, bool IncludeFileContent, bool IncludeAuditLog, string! Format) -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.Format.get -> string!
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.Format.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeAuditLog.get -> bool
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeAuditLog.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeDomains.get -> System.Collections.Generic.IReadOnlyList<string!>?
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeDomains.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeFileContent.get -> bool
+HackerOs.Server.Contracts.Admin.AccountDataExportRequest.IncludeFileContent.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.AccountDataExportStatus(System.Guid JobId, string! Status, string? DownloadUrl, System.DateTimeOffset? ExpiresUtc, string? FailureReason) -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.DownloadUrl.get -> string?
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.DownloadUrl.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.ExpiresUtc.get -> System.DateTimeOffset?
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.ExpiresUtc.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.FailureReason.get -> string?
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.FailureReason.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.JobId.get -> System.Guid
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.JobId.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.Status.get -> string!
+HackerOs.Server.Contracts.Admin.AccountDataExportStatus.Status.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.AccountDataSummaryResponse(System.Guid AccountId, string! Username, System.DateTimeOffset CreatedUtc, int RegisteredDevices, System.Collections.Generic.IReadOnlyList<string!>! SyncedDomains, long TotalSyncedRecords, long StoredContentBytes, long AuditEntryCount, string! DataRetentionPolicy, bool EncryptionAtRest) -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.AccountId.get -> System.Guid
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.AccountId.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.AuditEntryCount.get -> long
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.AuditEntryCount.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.CreatedUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.CreatedUtc.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.DataRetentionPolicy.get -> string!
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.DataRetentionPolicy.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.EncryptionAtRest.get -> bool
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.EncryptionAtRest.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.RegisteredDevices.get -> int
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.RegisteredDevices.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.StoredContentBytes.get -> long
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.StoredContentBytes.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.SyncedDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.SyncedDomains.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.TotalSyncedRecords.get -> long
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.TotalSyncedRecords.init -> void
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.Username.get -> string!
+HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse.Username.init -> void
+HackerOs.Server.Contracts.Admin.AdminContractsJsonContext
+HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.AdminContractsJsonContext() -> void
+HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.AdminContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.Server.Contracts.Admin.ComponentHealth
+HackerOs.Server.Contracts.Admin.ComponentHealth.ComponentHealth(string! Name, string! Status, string? Message) -> void
+HackerOs.Server.Contracts.Admin.ComponentHealth.Message.get -> string?
+HackerOs.Server.Contracts.Admin.ComponentHealth.Message.init -> void
+HackerOs.Server.Contracts.Admin.ComponentHealth.Name.get -> string!
+HackerOs.Server.Contracts.Admin.ComponentHealth.Name.init -> void
+HackerOs.Server.Contracts.Admin.ComponentHealth.Status.get -> string!
+HackerOs.Server.Contracts.Admin.ComponentHealth.Status.init -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest.ConfirmationPhrase.get -> string!
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest.ConfirmationPhrase.init -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest.DeleteAccountRequest(string! ConfirmationPhrase, int RetainExportDays) -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest.RetainExportDays.get -> int
+HackerOs.Server.Contracts.Admin.DeleteAccountRequest.RetainExportDays.init -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.DeleteAccountResponse(bool Deleted, string! FinalExportDownloadUrl, System.DateTimeOffset ExportExpiresUtc) -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.Deleted.get -> bool
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.Deleted.init -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.ExportExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.ExportExpiresUtc.init -> void
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.FinalExportDownloadUrl.get -> string!
+HackerOs.Server.Contracts.Admin.DeleteAccountResponse.FinalExportDownloadUrl.init -> void
+HackerOs.Server.Contracts.Admin.ServerHealthResponse
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Components.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Admin.ComponentHealth!>!
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Components.init -> void
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.ServerHealthResponse(string! Status, string! Version, string! Uptime, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Admin.ComponentHealth!>! Components) -> void
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Status.get -> string!
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Status.init -> void
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Uptime.get -> string!
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Uptime.init -> void
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Version.get -> string!
+HackerOs.Server.Contracts.Admin.ServerHealthResponse.Version.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.CreateAccountRequest(string! Username, string! PasswordHash, string! Salt, string! DeviceName, string! DeviceFingerprint) -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.DeviceFingerprint.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.DeviceFingerprint.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.DeviceName.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.DeviceName.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.PasswordHash.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.PasswordHash.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.Salt.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.Salt.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.Username.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountRequest.Username.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountResponse
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.AccountId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.AccountId.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.CreateAccountResponse(System.Guid AccountId, string! Username, System.DateTimeOffset CreatedUtc, System.Guid DeviceId) -> void
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.CreatedUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.CreatedUtc.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.DeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.DeviceId.init -> void
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.Username.get -> string!
+HackerOs.Server.Contracts.Identity.CreateAccountResponse.Username.init -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary
+HackerOs.Server.Contracts.Identity.DeviceSummary.DeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.DeviceSummary.DeviceId.init -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary.DeviceName.get -> string!
+HackerOs.Server.Contracts.Identity.DeviceSummary.DeviceName.init -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary.DeviceSummary(System.Guid DeviceId, string! DeviceName, System.DateTimeOffset RegisteredUtc, System.DateTimeOffset? LastSeenUtc, bool IsCurrentDevice) -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary.IsCurrentDevice.get -> bool
+HackerOs.Server.Contracts.Identity.DeviceSummary.IsCurrentDevice.init -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary.LastSeenUtc.get -> System.DateTimeOffset?
+HackerOs.Server.Contracts.Identity.DeviceSummary.LastSeenUtc.init -> void
+HackerOs.Server.Contracts.Identity.DeviceSummary.RegisteredUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.DeviceSummary.RegisteredUtc.init -> void
+HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext
+HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.IdentityContractsJsonContext() -> void
+HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.IdentityContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.Server.Contracts.Identity.LoginRequest
+HackerOs.Server.Contracts.Identity.LoginRequest.DeviceFingerprint.get -> string!
+HackerOs.Server.Contracts.Identity.LoginRequest.DeviceFingerprint.init -> void
+HackerOs.Server.Contracts.Identity.LoginRequest.LoginRequest(string! Username, string! PasswordHash, string! DeviceFingerprint) -> void
+HackerOs.Server.Contracts.Identity.LoginRequest.PasswordHash.get -> string!
+HackerOs.Server.Contracts.Identity.LoginRequest.PasswordHash.init -> void
+HackerOs.Server.Contracts.Identity.LoginRequest.Username.get -> string!
+HackerOs.Server.Contracts.Identity.LoginRequest.Username.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse
+HackerOs.Server.Contracts.Identity.LoginResponse.AccessToken.get -> string!
+HackerOs.Server.Contracts.Identity.LoginResponse.AccessToken.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.AccessTokenExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.LoginResponse.AccessTokenExpiresUtc.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.AccountId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.LoginResponse.AccountId.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.DeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.LoginResponse.DeviceId.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.LoginResponse(System.Guid AccountId, System.Guid DeviceId, string! AccessToken, string! RefreshToken, System.DateTimeOffset AccessTokenExpiresUtc, System.DateTimeOffset RefreshTokenExpiresUtc) -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.RefreshToken.get -> string!
+HackerOs.Server.Contracts.Identity.LoginResponse.RefreshToken.init -> void
+HackerOs.Server.Contracts.Identity.LoginResponse.RefreshTokenExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.LoginResponse.RefreshTokenExpiresUtc.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest.DeviceFingerprint.get -> string!
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest.DeviceFingerprint.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest.RefreshToken.get -> string!
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest.RefreshToken.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenRequest.RefreshTokenRequest(string! RefreshToken, string! DeviceFingerprint) -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.AccessToken.get -> string!
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.AccessToken.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.AccessTokenExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.AccessTokenExpiresUtc.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.RefreshToken.get -> string!
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.RefreshToken.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.RefreshTokenExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.RefreshTokenExpiresUtc.init -> void
+HackerOs.Server.Contracts.Identity.RefreshTokenResponse.RefreshTokenResponse(string! AccessToken, System.DateTimeOffset AccessTokenExpiresUtc, string! RefreshToken, System.DateTimeOffset RefreshTokenExpiresUtc) -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest.DeviceFingerprint.get -> string!
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest.DeviceFingerprint.init -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest.DeviceName.get -> string!
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest.DeviceName.init -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceRequest.RegisterDeviceRequest(string! DeviceName, string! DeviceFingerprint) -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.DeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.DeviceId.init -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.DeviceName.get -> string!
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.DeviceName.init -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisterDeviceResponse(System.Guid DeviceId, string! DeviceName, System.DateTimeOffset RegisteredUtc) -> void
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisteredUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisteredUtc.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext
+HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyContractsJsonContext() -> void
+HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.Server.Contracts.Proxy.ProxyErrorCode
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.AuditId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.AuditId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.ErrorCode.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.ErrorCode.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.Message.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.Message.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.ProxyErrorResponse(System.Guid? RequestId, string! ErrorCode, string! Message, System.Guid AuditId) -> void
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.RequestId.get -> System.Guid?
+HackerOs.Server.Contracts.Proxy.ProxyErrorResponse.RequestId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHeader
+HackerOs.Server.Contracts.Proxy.ProxyHeader.Name.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHeader.Name.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHeader.ProxyHeader(string! Name, string! Value) -> void
+HackerOs.Server.Contracts.Proxy.ProxyHeader.Value.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHeader.Value.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.AppId.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.AppId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyBytes.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyBytes.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyHash.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyHash.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Headers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>!
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Headers.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.HttpMethod.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.HttpMethod.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.IncludeBody.get -> bool
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.IncludeBody.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Protocol.get -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Protocol.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.ProxyHttpRequest(System.Guid RequestId, HackerOs.Server.Contracts.Proxy.ProxyProtocol Protocol, string! TargetUrl, string? HttpMethod, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! Headers, string? BodyHash, long BodyBytes, int TimeoutSeconds, string! AppId, bool IncludeBody = false) -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.RequestId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.RequestId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.TargetUrl.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.TargetUrl.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.TimeoutSeconds.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.TimeoutSeconds.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyBase64.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyBase64.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyBytes.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyBytes.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyHash.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.BodyHash.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.DurationMs.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.DurationMs.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.FinalUrl.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.FinalUrl.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.Headers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>!
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.Headers.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.ProxyHttpResponse(System.Guid RequestId, int StatusCode, string! ReasonPhrase, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! Headers, string? BodyHash, long BodyBytes, string! FinalUrl, int RedirectHops, long DurationMs, string? BodyBase64 = null) -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.ReasonPhrase.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.ReasonPhrase.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.RedirectHops.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.RedirectHops.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.RequestId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.RequestId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.StatusCode.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.StatusCode.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowedProtocols.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowedProtocols.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AuditRetentionDays.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AuditRetentionDays.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentConcurrentRequests.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentConcurrentRequests.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.DeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.DeviceId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxConcurrentRequests.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxConcurrentRequests.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxDurationSeconds.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxDurationSeconds.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxPayloadBytes.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxPayloadBytes.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRedirectHops.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRedirectHops.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.OperatorWeakeningWarnings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.OperatorWeakeningWarnings.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.ProxyPolicyResponse(System.Guid DeviceId, int MaxConcurrentRequests, int CurrentConcurrentRequests, long MaxPayloadBytes, int MaxDurationSeconds, int MaxRedirectHops, System.Collections.Generic.IReadOnlyList<string!>! AllowedProtocols, int AuditRetentionDays, System.Collections.Generic.IReadOnlyList<string!>! OperatorWeakeningWarnings) -> void
+HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyProtocol.Http = 0 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyProtocol.HttpConnect = 1 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyProtocol.Tcp = 2 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyProtocol.Udp = 3 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.AppId.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.AppId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.Host.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.Host.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.Port.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.Port.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.ProxyTcpProbeRequest(System.Guid RequestId, string! Host, int Port, int TimeoutSeconds, string! AppId) -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.RequestId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.RequestId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.TimeoutSeconds.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.TimeoutSeconds.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.DurationMs.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.DurationMs.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.ProxyTcpProbeResponse(System.Guid RequestId, HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState State, long DurationMs) -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.RequestId.get -> System.Guid
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.RequestId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.State.get -> HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse.State.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState.Closed = 1 -> HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState.Filtered = 2 -> HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState
+HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState.Open = 0 -> HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState
+HackerOs.Server.Contracts.Sync.ConflictResolution
+HackerOs.Server.Contracts.Sync.ConflictResolution.ClientWins = 0 -> HackerOs.Server.Contracts.Sync.ConflictResolution
+HackerOs.Server.Contracts.Sync.ConflictResolution.Merge = 2 -> HackerOs.Server.Contracts.Sync.ConflictResolution
+HackerOs.Server.Contracts.Sync.ConflictResolution.ServerWins = 1 -> HackerOs.Server.Contracts.Sync.ConflictResolution
+HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext
+HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.ContentTransferContractsJsonContext() -> void
+HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.ContentTransferContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest.InitiateContentDownloadRequest(string! ContentHash, long StartByteOffset) -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest.StartByteOffset.get -> long
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest.StartByteOffset.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ChunkSizeBytes.get -> int
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ChunkSizeBytes.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.DownloadSessionId.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.DownloadSessionId.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.ExpiresUtc.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.InitiateContentDownloadResponse(string! DownloadSessionId, string! ContentHash, long TotalBytes, long RemainingBytes, int ChunkSizeBytes, System.DateTimeOffset ExpiresUtc) -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.RemainingBytes.get -> long
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.RemainingBytes.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.TotalBytes.get -> long
+HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse.TotalBytes.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.InitiateContentUploadRequest(string! ContentHash, long TotalBytes, System.Guid OwnerAccountId) -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.OwnerAccountId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.OwnerAccountId.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.TotalBytes.get -> long
+HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest.TotalBytes.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.AlreadyExists.get -> bool
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.AlreadyExists.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ChunkSizeBytes.get -> int
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ChunkSizeBytes.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ExpiresUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.ExpiresUtc.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.InitiateContentUploadResponse(string! UploadSessionId, string! ContentHash, bool AlreadyExists, int ChunkSizeBytes, int TotalChunks, System.DateTimeOffset ExpiresUtc) -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.TotalChunks.get -> int
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.TotalChunks.init -> void
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.UploadSessionId.get -> string!
+HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse.UploadSessionId.init -> void
+HackerOs.Server.Contracts.Sync.PullRequest
+HackerOs.Server.Contracts.Sync.PullRequest.Cursor.get -> string?
+HackerOs.Server.Contracts.Sync.PullRequest.Cursor.init -> void
+HackerOs.Server.Contracts.Sync.PullRequest.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.PullRequest.Domain.init -> void
+HackerOs.Server.Contracts.Sync.PullRequest.MaxRecords.get -> int
+HackerOs.Server.Contracts.Sync.PullRequest.MaxRecords.init -> void
+HackerOs.Server.Contracts.Sync.PullRequest.PullRequest(string! Domain, string? Cursor, int MaxRecords) -> void
+HackerOs.Server.Contracts.Sync.PullResponse
+HackerOs.Server.Contracts.Sync.PullResponse.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.PullResponse.Domain.init -> void
+HackerOs.Server.Contracts.Sync.PullResponse.HasMore.get -> bool
+HackerOs.Server.Contracts.Sync.PullResponse.HasMore.init -> void
+HackerOs.Server.Contracts.Sync.PullResponse.NextCursor.get -> string?
+HackerOs.Server.Contracts.Sync.PullResponse.NextCursor.init -> void
+HackerOs.Server.Contracts.Sync.PullResponse.PulledAtUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.PullResponse.PulledAtUtc.init -> void
+HackerOs.Server.Contracts.Sync.PullResponse.PullResponse(string! Domain, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope!>! Records, string? NextCursor, bool HasMore, System.DateTimeOffset PulledAtUtc) -> void
+HackerOs.Server.Contracts.Sync.PullResponse.Records.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope!>!
+HackerOs.Server.Contracts.Sync.PullResponse.Records.init -> void
+HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushOutcome.Accepted = 0 -> HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushOutcome.AlreadyProcessed = 2 -> HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushOutcome.ConflictsDetected = 1 -> HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushOutcome.SchemaIncompatible = 3 -> HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushRequest
+HackerOs.Server.Contracts.Sync.PushRequest.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.PushRequest.Domain.init -> void
+HackerOs.Server.Contracts.Sync.PushRequest.IdempotencyKey.get -> System.Guid
+HackerOs.Server.Contracts.Sync.PushRequest.IdempotencyKey.init -> void
+HackerOs.Server.Contracts.Sync.PushRequest.PushRequest(string! Domain, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope!>! Records, System.Guid IdempotencyKey) -> void
+HackerOs.Server.Contracts.Sync.PushRequest.Records.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope!>!
+HackerOs.Server.Contracts.Sync.PushRequest.Records.init -> void
+HackerOs.Server.Contracts.Sync.PushResponse
+HackerOs.Server.Contracts.Sync.PushResponse.AcceptedCount.get -> int
+HackerOs.Server.Contracts.Sync.PushResponse.AcceptedCount.init -> void
+HackerOs.Server.Contracts.Sync.PushResponse.Conflicts.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncConflict!>!
+HackerOs.Server.Contracts.Sync.PushResponse.Conflicts.init -> void
+HackerOs.Server.Contracts.Sync.PushResponse.Outcome.get -> HackerOs.Server.Contracts.Sync.PushOutcome
+HackerOs.Server.Contracts.Sync.PushResponse.Outcome.init -> void
+HackerOs.Server.Contracts.Sync.PushResponse.PushResponse(HackerOs.Server.Contracts.Sync.PushOutcome Outcome, int AcceptedCount, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncConflict!>! Conflicts) -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressRequest
+HackerOs.Server.Contracts.Sync.QueryUploadProgressRequest.QueryUploadProgressRequest(string! UploadSessionId) -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressRequest.UploadSessionId.get -> string!
+HackerOs.Server.Contracts.Sync.QueryUploadProgressRequest.UploadSessionId.init -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.IsComplete.get -> bool
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.IsComplete.init -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.QueryUploadProgressResponse(string! UploadSessionId, System.Collections.Generic.IReadOnlyList<int>! ReceivedChunks, bool IsComplete) -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.ReceivedChunks.get -> System.Collections.Generic.IReadOnlyList<int>!
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.ReceivedChunks.init -> void
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.UploadSessionId.get -> string!
+HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse.UploadSessionId.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.Domain.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.MergedContentHash.get -> string?
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.MergedContentHash.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.MergedPayloadJson.get -> string?
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.MergedPayloadJson.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.RecordId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.RecordId.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.Resolution.get -> HackerOs.Server.Contracts.Sync.ConflictResolution
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.Resolution.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest.ResolveSyncConflictRequest(System.Guid RecordId, string! Domain, HackerOs.Server.Contracts.Sync.ConflictResolution Resolution, string? MergedPayloadJson, string? MergedContentHash) -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.FinalRevision.get -> long
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.FinalRevision.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.Reason.get -> string?
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.Reason.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.Resolved.get -> bool
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.Resolved.init -> void
+HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse.ResolveSyncConflictResponse(bool Resolved, string? Reason, long FinalRevision) -> void
+HackerOs.Server.Contracts.Sync.SyncConflict
+HackerOs.Server.Contracts.Sync.SyncConflict.ClientRevision.get -> long
+HackerOs.Server.Contracts.Sync.SyncConflict.ClientRevision.init -> void
+HackerOs.Server.Contracts.Sync.SyncConflict.ConflictCode.get -> string!
+HackerOs.Server.Contracts.Sync.SyncConflict.ConflictCode.init -> void
+HackerOs.Server.Contracts.Sync.SyncConflict.RecordId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncConflict.RecordId.init -> void
+HackerOs.Server.Contracts.Sync.SyncConflict.ServerModifiedUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.SyncConflict.ServerModifiedUtc.init -> void
+HackerOs.Server.Contracts.Sync.SyncConflict.ServerRevision.get -> long
+HackerOs.Server.Contracts.Sync.SyncConflict.ServerRevision.init -> void
+HackerOs.Server.Contracts.Sync.SyncConflict.SyncConflict(System.Guid RecordId, long ClientRevision, long ServerRevision, System.DateTimeOffset ServerModifiedUtc, string! ConflictCode) -> void
+HackerOs.Server.Contracts.Sync.SyncContractsJsonContext
+HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.SyncContractsJsonContext() -> void
+HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.SyncContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.Server.Contracts.Sync.SyncDomain
+HackerOs.Server.Contracts.Sync.SyncRecord<T>
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Domain.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.IsTombstone.get -> bool
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.IsTombstone.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ModifiedUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ModifiedUtc.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.OriginDeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.OriginDeviceId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.OwnerAccountId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.OwnerAccountId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Payload.get -> T?
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Payload.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.RecordId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.RecordId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Revision.get -> long
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.Revision.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.SchemaVersion.get -> int
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.SchemaVersion.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ServerReceivedUtc.get -> System.DateTimeOffset?
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.ServerReceivedUtc.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecord<T>.SyncRecord(System.Guid RecordId, string! Domain, int SchemaVersion, System.Guid OwnerAccountId, System.Guid OriginDeviceId, long Revision, System.DateTimeOffset ModifiedUtc, System.DateTimeOffset? ServerReceivedUtc, string! ContentHash, bool IsTombstone, T? Payload) -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ContentHash.get -> string!
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ContentHash.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.Domain.get -> string!
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.Domain.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.IsTombstone.get -> bool
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.IsTombstone.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ModifiedUtc.get -> System.DateTimeOffset
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ModifiedUtc.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.OriginDeviceId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.OriginDeviceId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.OwnerAccountId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.OwnerAccountId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.PayloadJson.get -> string?
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.PayloadJson.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.RecordId.get -> System.Guid
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.RecordId.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.Revision.get -> long
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.Revision.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.SchemaVersion.get -> int
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.SchemaVersion.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ServerReceivedUtc.get -> System.DateTimeOffset?
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.ServerReceivedUtc.init -> void
+HackerOs.Server.Contracts.Sync.SyncRecordEnvelope.SyncRecordEnvelope(System.Guid RecordId, string! Domain, int SchemaVersion, System.Guid OwnerAccountId, System.Guid OriginDeviceId, long Revision, System.DateTimeOffset ModifiedUtc, System.DateTimeOffset? ServerReceivedUtc, string! ContentHash, bool IsTombstone, string? PayloadJson) -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.ApiVersionEntry(string! Version, string! Status, System.DateTimeOffset? SunsetUtc, int MinPwaSchemaVersion, int MaxPwaSchemaVersion) -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.MaxPwaSchemaVersion.get -> int
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.MaxPwaSchemaVersion.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.MinPwaSchemaVersion.get -> int
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.MinPwaSchemaVersion.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.Status.get -> string!
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.Status.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.SunsetUtc.get -> System.DateTimeOffset?
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.SunsetUtc.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.Version.get -> string!
+HackerOs.Server.Contracts.Versioning.ApiVersionEntry.Version.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.ApiVersionResponse(string! ServerVersion, string! CurrentApiVersion, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Versioning.ApiVersionEntry!>! SupportedVersions, int MinCompatiblePwaSchema) -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.CurrentApiVersion.get -> string!
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.CurrentApiVersion.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.MinCompatiblePwaSchema.get -> int
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.MinCompatiblePwaSchema.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.ServerVersion.get -> string!
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.ServerVersion.init -> void
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.SupportedVersions.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Versioning.ApiVersionEntry!>!
+HackerOs.Server.Contracts.Versioning.ApiVersionResponse.SupportedVersions.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest.ClientPwaSchemaVersion.get -> int
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest.ClientPwaSchemaVersion.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest.CompatibilityCheckRequest(int ClientPwaSchemaVersion, string! DesiredApiVersion) -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest.DesiredApiVersion.get -> string!
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest.DesiredApiVersion.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.CompatibilityCheckResponse(bool Compatible, string? Reason, bool UpgradeRequired, bool VersionSunset) -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.Compatible.get -> bool
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.Compatible.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.Reason.get -> string?
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.Reason.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.UpgradeRequired.get -> bool
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.UpgradeRequired.init -> void
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.VersionSunset.get -> bool
+HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.VersionSunset.init -> void
+HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext
+HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.VersioningContractsJsonContext() -> void
+HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.VersioningContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+override HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+static HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Admin.AdminContractsJsonContext!
+static HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext!
+static HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext!
+static HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext!
+static HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Sync.SyncContractsJsonContext!
+static HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext!
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.AccountDataExportRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.AccountDataExportRequest>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.AccountDataExportStatus.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.AccountDataExportStatus>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.AccountDataSummaryResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.AccountDataSummaryResponse>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.ComponentHealth.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.ComponentHealth>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.DateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.DeleteAccountRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.DeleteAccountRequest>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.DeleteAccountResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.DeleteAccountResponse>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Guid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Int32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Int64.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<long>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.IReadOnlyListComponentHealth.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Admin.ComponentHealth>>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.IReadOnlyListString.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<string>>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.ServerHealthResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.ServerHealthResponse>
+~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.CreateAccountRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.CreateAccountRequest>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.CreateAccountResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.CreateAccountResponse>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.DateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.DeviceSummary.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.DeviceSummary>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Guid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.IReadOnlyListDeviceSummary.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Identity.DeviceSummary>>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.LoginRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.LoginRequest>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.LoginResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.LoginResponse>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.RefreshTokenRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.RefreshTokenRequest>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.RefreshTokenResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.RefreshTokenResponse>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.RegisterDeviceRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.RegisterDeviceRequest>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.RegisterDeviceResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.RegisterDeviceResponse>
+~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Guid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Int32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Int64.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<long>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.IReadOnlyListProxyHeader.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader>>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.IReadOnlyListString.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<string>>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.NullableGuid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid?>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyErrorResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyErrorResponse>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyHeader.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyHeader>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyHttpRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyHttpRequest>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyHttpResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyHttpResponse>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyPolicyResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyProtocol.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyProtocol>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyTcpProbeRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyTcpProbeResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyTcpProbeState.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyTcpProbeState>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.DateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Guid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.InitiateContentDownloadRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.InitiateContentDownloadRequest>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.InitiateContentDownloadResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.InitiateContentDownloadResponse>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.InitiateContentUploadRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.InitiateContentUploadRequest>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.InitiateContentUploadResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.InitiateContentUploadResponse>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Int32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Int64.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<long>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.IReadOnlyListInt32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<int>>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.QueryUploadProgressRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.QueryUploadProgressRequest>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.QueryUploadProgressResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.QueryUploadProgressResponse>
+~HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.ConflictResolution.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.ConflictResolution>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.DateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Guid.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Guid>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Int32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Int64.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<long>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.IReadOnlyListSyncConflict.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncConflict>>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.IReadOnlyListSyncRecordEnvelope.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope>>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.PullRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.PullRequest>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.PullResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.PullResponse>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.PushOutcome.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.PushOutcome>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.PushRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.PushRequest>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.PushResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.PushResponse>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.ResolveSyncConflictRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.ResolveSyncConflictRequest>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.ResolveSyncConflictResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.ResolveSyncConflictResponse>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.SyncConflict.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.SyncConflict>
+~HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.SyncRecordEnvelope.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Sync.SyncRecordEnvelope>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.ApiVersionEntry.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Versioning.ApiVersionEntry>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.ApiVersionResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Versioning.ApiVersionResponse>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.CompatibilityCheckRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Versioning.CompatibilityCheckRequest>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.CompatibilityCheckResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.DateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Int32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.IReadOnlyListApiVersionEntry.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Versioning.ApiVersionEntry>>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
+~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>

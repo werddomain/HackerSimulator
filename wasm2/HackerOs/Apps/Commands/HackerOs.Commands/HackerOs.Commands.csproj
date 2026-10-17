@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Commands</PackageId>
+    <Description>The built-in HackerOS terminal commands (ls, cat, grep, curl, nano...), one lazy-loaded assembly.</Description>
+    <PackageTags>hackeros;app;commands</PackageTags>
+  </PropertyGroup>
+
   <!--
     ADR 0051: every built-in terminal command lives in this single project, one folder per command
     (Cat/CatApp.cs + Cat/CatCommand.cs, namespace HackerOs.Commands.Cat). Each [AppManifest] class

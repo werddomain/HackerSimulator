@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.AppSdk.FileView</PackageId>
+    <Description>HackerOS file views shared by apps: file lists, icons and pickers over the Hack* file API.</Description>
+    <PackageTags>hackeros;app-sdk;blazor;files</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
