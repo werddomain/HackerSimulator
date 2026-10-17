@@ -241,6 +241,9 @@ RESULT: PASS
 - Apps à fenêtre dans un worker.
 - Workers et mesures sur `HackerOs.Server`.
 
+Ces points sont repris par [`execution-followups-plan.md`](execution-followups-plan.md)
+(plan proposé le 2026-10-17, exécuté après la migration wasm v3).
+
 ## 8. Références
 
 - ADR [0066](adr/0066-optional-resource-accounting.md),
