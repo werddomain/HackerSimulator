@@ -9,6 +9,21 @@ The exhaustive remaining work, maintenance rules, decisions, problems, and phase
 gates are maintained in `docs/integration-task-list.md`. This status file remains
 the concise implemented-state summary.
 
+## 2026-10-17 wasm v3 migration complete (`v3/16-final`)
+
+This file is archived; the current state lives in
+[`../wasm-v3-final-status.md`](../wasm-v3-final-status.md). In short:
+
+- The sixteen chantiers of [`../wasm-v3-completion-plan.md`](../wasm-v3-completion-plan.md)
+  are merged into `v3/base`: window model, intents, services, SDK versions and
+  NuGet packages, backup, sensitive settings, sync, server relay, Hack Paint and
+  theme editor, localization (EN/FR), accessibility, trimmed publish, SDK 1.0
+  freeze. The game left this repository (ADR 0092).
+- Every deferred decision of the migration analysis has a written status
+  (ADR 0094); runtime app installation is deferred to its own plan.
+- Open gaps and unanswered questions are listed in the final status document,
+  not here.
+
 ## 2026-08-19 shared themes and Start menu expansion
 
 The former accent-only, Settings-window-owned DOM mutation has been replaced by

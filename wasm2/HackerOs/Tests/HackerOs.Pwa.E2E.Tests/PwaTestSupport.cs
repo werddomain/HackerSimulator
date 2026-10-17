@@ -280,8 +280,20 @@ internal static class PwaTestSupport
         await addressInput.PressAsync("Enter");
 
         ILocator row = page.Locator("tr.entry-row", new PageLocatorOptions { HasText = fileName });
-        await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
-        await row.ClickAsync();
+        // The listing can reload once more right after the navigation and drop the selection
+        // (same race HackerOs.UI.E2E.Tests' SelectFileExplorerEntryAsync handles): click until the
+        // row reports itself selected, so "Download" is enabled.
+        for (int attempt = 1; ; attempt++)
+        {
+            await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
+            await row.ClickAsync();
+            await page.WaitForTimeoutAsync(500);
+            string? classes = await row.GetAttributeAsync("class");
+            if (classes?.Split(' ').Contains("selected") == true || attempt >= 5)
+            {
+                break;
+            }
+        }
 
         int countBefore = await page.EvaluateAsync<int>("window.__pwaCaptures.length");
         await page.GetByRole(AriaRole.Button, new() { Name = "Download" }).ClickAsync();

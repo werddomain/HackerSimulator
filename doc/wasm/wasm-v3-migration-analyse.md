@@ -5,6 +5,14 @@
 > qui utilise l'écosystème HackerOS ([ADR 0092](../../wasm2/HackerOs/docs/adr/0092-game-in-a-separate-repository.md)).
 > Ce qui reste à faire de cette analyse est planifié dans
 > [`wasm-v3-completion-plan.md`](../../wasm2/HackerOs/docs/wasm-v3-completion-plan.md).
+>
+> **Statut au 2026-10-17 (chantier `v3/16-final`) : migration terminée.** Les
+> seize chantiers du plan sont fusionnés dans `v3/base`, le SDK est gelé en
+> 1.0.0 (ADR 0114) et les décisions différées de la section 20 ont toutes un
+> statut écrit (ADR 0094). La section 24 ci-dessous confronte la définition du
+> succès (section 21) à l'état réel ; le bilan détaillé, la vérification finale
+> et ce qui reste ouvert sont dans
+> [`wasm-v3-final-status.md`](../../wasm2/HackerOs/docs/wasm-v3-final-status.md).
 
 
 **Status:** Approved for phased implementation  
@@ -1148,7 +1156,8 @@ The v3 migration is successful when:
 - [x] Recommend project boundaries and dependency rules.
 - [x] Define phased migration gates and acceptance criteria.
 - [x] Review and approve this analysis.
-- [ ] Resolve Phase 0 deferred decisions in architecture decision records.
+- [x] Resolve Phase 0 deferred decisions in architecture decision records
+  (ADR 0094: nine settled, three deferred to the runtime app install plan).
 - [x] Begin implementation only after Phase 0 approval.
 
 ## 23. Reference Material
@@ -1159,3 +1168,26 @@ The v3 migration is successful when:
 - Microsoft Learn: [Lazy load assemblies in ASP.NET Core Blazor WebAssembly](https://learn.microsoft.com/aspnet/core/blazor/webassembly-lazy-load-assemblies?view=aspnetcore-10.0)
 - Microsoft Learn: [ASP.NET Core Blazor Progressive Web Application](https://learn.microsoft.com/aspnet/core/blazor/progressive-web-app/?view=aspnetcore-10.0)
 - Microsoft Learn: [Secure ASP.NET Core Blazor WebAssembly](https://learn.microsoft.com/aspnet/core/blazor/security/webassembly/?view=aspnetcore-10.0)
+
+## 24. Statut final (2026-10-17)
+
+Confrontation de la section 21 avec `v3/base` après le chantier `v3/16-final`.
+Le détail et les preuves sont dans
+[`wasm-v3-final-status.md`](../../wasm2/HackerOs/docs/wasm-v3-final-status.md).
+
+| Critère de la section 21 | État |
+| --- | --- |
+| L'OS tourne hors ligne en PWA Blazor WebAssembly publiée | Atteint : publication Release élaguée, test hors ligne de `build/publish-trimmed.sh` (ADR 0106, 0113). |
+| Apps système et externes passent par les mêmes frontières documentées du SDK | Atteint : frontière vérifiée au build (ADR 0055), SDK 1.0 gelé (ADR 0114). |
+| Types de base distincts pour fenêtre, terminal et service | Atteint : `WindowAppBase`, `TerminalAppBase`, `ServiceAppBase` (ADR 0095, 0097). |
+| Chaque app versionnée dans son projet et son manifeste | Atteint : classe `[AppManifest]` et `manifest.json` généré par projet. |
+| Choix des apps livrées par profil de build, désactivation sûre par l'administrateur | Atteint autrement : `ProjectReference` + `IsSystemApp` ; la désactivation est remplacée par la désinstallation des apps non système (ADR 0048). |
+| Paramètres et données partitionnés par app et par utilisateur | Atteint : `/etc/<appId>`, `~/.config/<appId>`, réglages sensibles (ADR 0100). |
+| Lancement d'apps et ouverture de fichiers par intents typés | Atteint (ADR 0096). |
+| Associations de fichiers avec défaut et **Ouvrir avec** | Atteint au niveau système ; pas de couche par utilisateur (question ouverte, voir le bilan). |
+| Fichiers et réglages survivent au rechargement et aux mises à jour | Atteint : IndexedDB versionnée, sauvegarde et restauration (ADR 0099). |
+| La perte du serveur optionnel n'empêche jamais l'usage local | Atteint : l'hôte Ecosystem seul est la cible de toutes les suites E2E. |
+| Synchro et relais réseau appliquent la politique côté serveur | Atteint (ADR 0101, 0102, 0108). |
+| Migration large seulement après la porte PWA Release | Atteint (phases 1 à 4 du plan de reconstruction). |
+| Assemblies installées au runtime seulement si la faisabilité est prouvée | Reporté au plan « installation d'apps au runtime » (réponse 1 de Benoit, ADR 0094). |
+

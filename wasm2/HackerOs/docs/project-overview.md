@@ -208,6 +208,7 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 | Pas de CSS ni de JavaScript en ligne dans un `.razor` (ADR 0007) | cible `ValidateHackerOsRazorAssets`, `Directory.Build.targets` | [`AGENTS.md`](../../../AGENTS.md) |
 | Chaque projet sous `Apps/` a une classe `[AppManifest]` valide ; `manifest.json` est régénéré (`HOSAPP0001`…) | `build/HackerOs.Apps.targets` | [`app-model.md`](app-model.md) |
 | Une app n'utilise que le SDK (`HOSAPP0030`, `HOSAPP0031`, `HOSSDK0001`) | `build/HackerOs.Apps.targets` et générateur | [`app-sdk.md`](app-sdk.md) |
+| La surface publique du SDK 1.0 ne change pas sans trace : `PublicAPI.Shipped.txt`/`Unshipped.txt` (RS0016, RS0017), app compilée contre 1.0.0 toujours admise (ADR 0114) | analyseur d'API publique, `Tests/HackerOs.SdkCompatibility.Tests` | [`sdk-packages.md`](sdk-packages.md) |
 
 ## Organisation du travail
 
@@ -219,9 +220,16 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 - Les documents sont rédigés en français, avec des noms de fichiers en
   anglais. Tout ajout ou renommage de document met à jour l'index
   [`README.md`](README.md) dans le même changement.
-- Branche d'intégration : `rebuild/base`. Chaque chantier part de cette branche
-  (`rebuild/<n>-<sujet>`) et y revient ; seul le propriétaire du dépôt fusionne
-  vers `main`.
+- Chaque série de chantiers a sa branche d'intégration : `rebuild/base`
+  (phases 1 à 4, fusionnée dans `main`), `web/base` (sites ASP.Hack et Blazor),
+  puis `v3/base` (fin de la migration wasm v3, partie de `web/base`). Chaque
+  chantier part de la branche de sa série (`v3/<n>-<sujet>`…) et y revient ;
+  seul le propriétaire du dépôt fusionne vers `main`.
+- État : la migration wasm v3 est terminée et le SDK est gelé en 1.0.0
+  (ADR 0114) ; le bilan et ce qui reste ouvert sont dans
+  [`wasm-v3-final-status.md`](wasm-v3-final-status.md). Le jeu n'est pas dans
+  ce dépôt (ADR 0092) : il se construit ailleurs sur le SDK 1.0
+  ([`building-on-hackeros.md`](building-on-hackeros.md)).
 
 ## Tâches de ce document
 
@@ -230,3 +238,4 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 - [x] Résumer le système simulé (fichiers, processus, shell, capacités) avec les liens vers les documents détaillés.
 - [x] Décrire la séquence de démarrage.
 - [x] Lister les règles vérifiées au build.
+- [x] Relecture finale de la migration v3 (`v3/16-final`) : branches d'intégration et état du projet.
