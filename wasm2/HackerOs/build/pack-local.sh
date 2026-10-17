@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# ADR 0098 §2: packs every library HackerOS publishes (each project importing
+# Platform/Packaging.props, plus the templates) into artifacts/local-nupkg.
+# Local only: nothing is ever pushed to nuget.org. Another repository consumes the
+# folder through a nuget.config (sample: build/nuget.config.sample).
+#
+#   build/pack-local.sh [--configuration Release] [--output <dir>]
+#
+# Re-packing the same version would leave NuGet's global cache serving the previous
+# bytes, so the script also removes that version of each HackerOs.* package from it.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+configuration="Release"
+output="$root/artifacts/local-nupkg"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -c|--configuration) configuration="$2"; shift 2 ;;
+    -o|--output) output="$2"; shift 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+version="$(sed -n 's:.*<HackerOsVersion>\(.*\)</HackerOsVersion>.*:\1:p' "$root/build/Versions.props")"
+mkdir -p "$output" "$root/artifacts"
+
+# Solution filter of the published projects (paths relative to the solution).
+filter="$root/artifacts/packages.slnf"
+mapfile -t projects < <(cd "$root" && grep -rl --include='*.csproj' -e 'Packaging.props' -e 'HackerOsTemplatePackage' . \
+  | grep -v '/obj/' | grep -v '/bin/' | sed 's:^\./::' | sort)
+{
+  echo '{ "solution": { "path": "../HackerOs.sln", "projects": ['
+  for i in "${!projects[@]}"; do
+    sep=","; [[ $i -eq $((${#projects[@]} - 1)) ]] && sep=""
+    printf '  "%s"%s\n' "${projects[$i]//\//\\\\}" "$sep"
+  done
+  echo '] } }'
+} > "$filter"
+
+echo "Packing ${#projects[@]} projects, version $version, into $output"
+dotnet pack "$filter" -c "$configuration" -o "$output" -p:ContinuousIntegrationBuild=false
+
+cache="${NUGET_PACKAGES:-$HOME/.nuget/packages}"
+for package in "$output"/*."$version".nupkg; do
+  id="$(basename "$package" ".$version.nupkg" | tr '[:upper:]' '[:lower:]')"
+  rm -rf "${cache:?}/$id/$version"
+done
+echo "Done: $(ls "$output"/*."$version".nupkg | wc -l) packages."

@@ -39,6 +39,13 @@ public sealed class EcosystemBootCoordinator
     private readonly IWorkerPoolStatus? _workers;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
+    /// <param name="fileSystemBootstrapper">Mounts the IndexedDB-backed filesystem, the first step of the boot.</param>
+    /// <param name="settingsMigration">Moves settings from the retired key-value store into files under <c>/etc</c> and <c>~/.config</c>.</param>
+    /// <param name="grants">Persistent capability grants, opened before any app can ask for one.</param>
+    /// <param name="catalog">Persisted app catalog (the enablement state of the previous boots).</param>
+    /// <param name="selectedCatalog">The apps this host was built with (its <see cref="HostAppCatalog"/>).</param>
+    /// <param name="groups">Local groups (<c>/etc/group</c>), seeded on the first boot.</param>
+    /// <param name="users">Local users (<c>/etc/passwd</c>), seeded on the first boot.</param>
     /// <param name="logWriter">
     /// Platform log writer attached to <paramref name="fileSystem"/> once storage is ready, so lines
     /// queued since startup reach <c>/var/log</c> (ADR 0045). Optional for headless tests.

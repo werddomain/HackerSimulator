@@ -3,49 +3,32 @@ using HackerOs.Platform.Core;
 
 namespace HackerOs.Ecosystem;
 
-/// <summary>Provides the host-owned manifest catalog for optional build-known apps.</summary>
+/// <summary>The apps this host was built with (its <see cref="HostAppCatalog"/>).</summary>
 /// <remarks>
 /// The catalog comes from the <c>HackerOs.BuiltInApplications.json</c> resource the build
-/// aggregates from every referenced app's generated <c>manifest.json</c> (ADR 0047 §3, §5). Only
-/// JSON is read: app assemblies stay lazy and their <c>AppDefinition</c> classes are never
-/// instantiated at runtime.
+/// aggregates into this assembly from every referenced app's generated <c>manifest.json</c>
+/// (ADR 0047 §3, §5). The server host and test/test reference this project and read the same one.
 /// System apps (ADR 0048 §1) are exposed by <see cref="AppCatalog.SystemAppIds"/> and
 /// <see cref="AppCatalog.IsSystemApp"/> on <see cref="Catalog"/>.
 /// </remarks>
 public static class BuildKnownLazyApps
 {
-    private static readonly IReadOnlyList<BuiltInApplication> Applications = ReadApplications();
+    /// <summary>Gets this host's apps, read once from its own assembly.</summary>
+    public static HostAppCatalog Host { get; } = HostAppCatalog.Load(typeof(BuildKnownLazyApps).Assembly);
 
     /// <summary>Gets the validated immutable catalog used for lazy descriptor discovery.</summary>
-    public static AppCatalog Catalog { get; } = CreateCatalog();
+    public static AppCatalog Catalog => Host.Catalog;
 
     /// <summary>
     /// Gets the executable image of each built-in app, by app id: the assembly sizes the host build
     /// measured (ADR 0068, image layer). An app missing here has no image layer.
     /// </summary>
-    public static IReadOnlyDictionary<string, AppImage> Images { get; } = Applications
-        .Where(static application => application.Image is not null)
-        .ToDictionary(static application => application.Manifest.Id, static application => application.Image!, StringComparer.Ordinal);
+    public static IReadOnlyDictionary<string, AppImage> Images => Host.Images;
+}
 
-    private static AppCatalog CreateCatalog()
-    {
-        if (Applications.Count == 0)
-        {
-            throw new InvalidOperationException("The build contains no embedded first-party app manifests.");
-        }
-
-        AppCatalogBuildResult result = AppCatalog.BuildFromBuiltInApplications(Applications);
-        return result.Catalog ?? throw new InvalidOperationException(
-            $"The build-known lazy catalog is invalid: {string.Join("; ", result.Errors.Select(error => error.Message))}");
-    }
-
-    private static IReadOnlyList<BuiltInApplication> ReadApplications()
-    {
-        using Stream builtIn = typeof(BuildKnownLazyApps).Assembly
-            .GetManifestResourceStream(BuiltInApplicationsJsonSerializer.ResourceName)
-            ?? throw new InvalidOperationException(
-                $"The build did not embed '{BuiltInApplicationsJsonSerializer.ResourceName}' (HackerOsAppHost aggregation).");
-        using StreamReader reader = new(builtIn);
-        return BuiltInApplicationsJsonSerializer.DeserializeStrict(reader.ReadToEnd());
-    }
+/// <summary>Single source of truth for optional assemblies emitted by this host build.</summary>
+public static class BuildKnownLazyAssemblies
+{
+    /// <summary>Gets the exact app assemblies declared by the immutable host catalog (<see cref="HostAppCatalog.LazyAssemblyNames"/>).</summary>
+    public static IReadOnlyList<string> Names => BuildKnownLazyApps.Host.LazyAssemblyNames;
 }

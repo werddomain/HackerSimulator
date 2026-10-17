@@ -158,7 +158,7 @@ builder.Services.AddSingleton<ISyncClient, DirectSyncClient>();
 // ADR 0066: optional measured CPU/memory, decided once from HackerOs:ResourceAccounting in
 // appsettings.json and what the build compiled in. Both are off by default on this host: several
 // threads run app code at once under Interactive Server (ADR 0067, section 6).
-builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
+builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
 
 int serviceCountBeforeEcosystem = builder.Services.Count;
 builder.Services.AddHackerOsEcosystem(

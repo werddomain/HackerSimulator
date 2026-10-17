@@ -18,7 +18,7 @@ namespace HackerOs.Ecosystem;
 /// and installs the common context-switch hook only when at least one measurement is active.
 /// </summary>
 /// <remarks>
-/// Each host calls <see cref="AddHackerOsResourceAccounting(IServiceCollection, IConfiguration?)"/>
+/// Each host calls <see cref="AddHackerOsResourceAccounting(IServiceCollection, IConfiguration?, IReadOnlyDictionary{string, AppImage}?)"/>
 /// before <see cref="EcosystemServiceCollectionExtensions.AddHackerOsEcosystem"/>. A host (or a test)
 /// that never calls it gets the null accountants and <see cref="ResourceAccountingPlan.Disabled"/>:
 /// exactly the simulated behavior of phases 1 to 4.
@@ -45,9 +45,14 @@ public static class ResourceAccountingServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The host's service collection.</param>
     /// <param name="configuration">The host configuration (<c>appsettings.json</c>); <see langword="null"/> reads as an absent section.</param>
+    /// <param name="images">
+    /// The image of each app for the memory measurement (ADR 0068), usually
+    /// <see cref="HostAppCatalog.Images"/>; <see langword="null"/> gives no app an image layer.
+    /// </param>
     /// <returns>The resolved plan, also registered as a singleton.</returns>
-    public static ResourceAccountingPlan AddHackerOsResourceAccounting(this IServiceCollection services, IConfiguration? configuration) =>
-        services.AddHackerOsResourceAccounting(ReadSettings(configuration), CompiledSupport, hookInstaller: null, images: null);
+    public static ResourceAccountingPlan AddHackerOsResourceAccounting(
+        this IServiceCollection services, IConfiguration? configuration, IReadOnlyDictionary<string, AppImage>? images = null) =>
+        services.AddHackerOsResourceAccounting(ReadSettings(configuration), CompiledSupport, hookInstaller: null, images);
 
     /// <summary>
     /// Composes the accounting for explicit settings and build support. Tests use it to cover every
@@ -62,8 +67,8 @@ public static class ResourceAccountingServiceCollectionExtensions
     /// measurement is active.
     /// </param>
     /// <param name="images">
-    /// The image of each app for the memory measurement (ADR 0068); <see langword="null"/> uses the
-    /// host's built-in catalog, <see cref="BuildKnownLazyApps.Images"/>.
+    /// The image of each app for the memory measurement (ADR 0068), usually
+    /// <see cref="HostAppCatalog.Images"/>; <see langword="null"/> gives no app an image layer.
     /// </param>
     /// <returns>The resolved plan, also registered as a singleton.</returns>
     /// <exception cref="InvalidOperationException">A measurement is active but this assembly was built without the accounting project.</exception>
@@ -101,7 +106,7 @@ public static class ResourceAccountingServiceCollectionExtensions
 
             if (plan.MemoryActive && ResourceAccountingFeatures.IsMemoryAccountingSupported)
             {
-                AddMeasuredMemory(services, dispatcher, images ?? BuildKnownLazyApps.Images);
+                AddMeasuredMemory(services, dispatcher, images ?? new Dictionary<string, AppImage>(StringComparer.Ordinal));
             }
 #else
             throw new InvalidOperationException(

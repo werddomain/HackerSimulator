@@ -4,8 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Required by the [JSImport] DOM-presence check in Program.cs (SYSLIB1074). -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
@@ -26,15 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Infrastructure\HackerOs.Infrastructure.Browser\HackerOs.Infrastructure.Browser.csproj" />
-    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
-    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
-    <!-- ADR 0070/0071: commands and services in Web Workers; part of the boot set, since every worker loads it. -->
-    <ProjectReference Include="..\..\Platform\HackerOs.Platform.WorkerHost\HackerOs.Platform.WorkerHost.csproj" />
-    <ProjectReference Include="..\..\Platform\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
-    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
-    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />
-    <ProjectReference Include="..\..\Shared\HackerOs.Theming.Abstractions\HackerOs.Theming.Abstractions.csproj" />
+    <!--
+      ADR 0098 §2: the OS itself (desktop, boot, services, browser adapters) is the
+      HackerOs.Ecosystem.Host library, published as a package for hosts in other repositories.
+      This project is the standalone PWA: its page, its service worker and its apps.
+    -->
+    <ProjectReference Include="..\HackerOs.Ecosystem.Host\HackerOs.Ecosystem.Host.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" IsSystemApp="true" />
