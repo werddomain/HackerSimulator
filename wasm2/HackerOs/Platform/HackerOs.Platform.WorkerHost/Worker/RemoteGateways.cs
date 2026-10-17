@@ -204,6 +204,13 @@ internal sealed class RemoteLoggingGateway(RemoteProcessChannel channel) : IAppL
             writer.WriteString("m", line);
         });
     }
+
+    /// <summary>Posts a line of the site's debug log (ADR 0088, section 5); the OS drops it for an app that is not a web app.</summary>
+    public void AppendToSiteDebugLog(string line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        channel.Notify(RemoteOps.LogSite, writer => writer.WriteString("m", line));
+    }
 }
 
 /// <summary>
@@ -619,6 +626,30 @@ internal sealed class RemoteIntentGateway(RemoteProcessChannel channel) : IAppIn
                 writer.WriteString("mt", mediaType);
             }
         }, cancellationToken).ConfigureAwait(false));
+}
+
+/// <summary>
+/// <see cref="HackerOs.AppSdk.WebData.IAppWebDatabaseGateway"/> in a worker (ADR 0088, section 1): the schema
+/// and each batch travel as JSON to the OS, which opens <c>hackweb.&lt;app id&gt;</c> on the main thread.
+/// </summary>
+internal sealed class RemoteWebDatabaseGateway(RemoteProcessChannel channel, string appId) : HackerOs.AppSdk.WebData.IAppWebDatabaseGateway
+{
+    public string DatabaseName { get; } = HackerOs.AppSdk.WebData.HackWebDbNames.ForApp(appId);
+
+    public async ValueTask OpenAsync(HackerOs.AppSdk.WebData.HackWebDbSchemaDefinition schema, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        string json = JsonSerializer.Serialize(schema, HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbSchemaDefinition);
+        await channel.CallAsync(RemoteOps.WebDbOpen, writer => writer.WriteString("j", json), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask<IReadOnlyList<string?>> ExecuteAsync(HackerOs.AppSdk.WebData.HackWebDbRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        string json = JsonSerializer.Serialize(request, HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbRequest);
+        JsonElement result = await channel.CallAsync(RemoteOps.WebDbExecute, writer => writer.WriteString("j", json), cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize(result.GetString("r"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.ListString) ?? [];
+    }
 }
 
 /// <summary><see cref="IAppClipboardGateway"/> in a worker. <see cref="Changed"/> is never raised.</summary>

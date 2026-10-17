@@ -30,6 +30,24 @@ public interface IAppStorageDiagnosticsGateway
     /// <summary>Reads every object store of the OS database in one transaction.</summary>
     /// <param name="cancellationToken">Cancels the read.</param>
     ValueTask<HackStorageSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the browser databases of web sites, <c>hackweb.*</c> (ADR 0088, section 4): they are not in
+    /// the OS database nor in its files. Defaults to none so existing implementations keep compiling.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    ValueTask<IReadOnlyList<HackWebSiteDatabaseInfo>> GetWebSiteDatabasesAsync(CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<IReadOnlyList<HackWebSiteDatabaseInfo>>([]);
+
+    /// <summary>
+    /// Deletes the browser database of a web site; the site recreates it empty, with its schema, on its
+    /// next request (ADR 0088, section 4).
+    /// </summary>
+    /// <param name="databaseName">A <c>hackweb.*</c> name from <see cref="GetWebSiteDatabasesAsync"/>.</param>
+    /// <param name="cancellationToken">Cancels the deletion.</param>
+    /// <exception cref="ArgumentException">The name is not a site database name.</exception>
+    ValueTask DeleteWebSiteDatabaseAsync(string databaseName, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This host has no site databases.");
 }
 
 /// <summary>Role of one object store, so a viewer can render the filesystem stores specially.</summary>

@@ -6,6 +6,7 @@ using HackerOs.AppSdk.Web.Mvc;
 using HackerOs.AppSdk.Web.Routing;
 using HackerOs.AppSdk.Web.Sessions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace HackerOs.AppSdk.Web.Hosting;
 
@@ -316,6 +317,11 @@ public sealed class HackWebApplication : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(request);
         HackRequestDelegate pipeline = GetPipeline();
+        // ADR 0088 §5: the request lines of the debug log, as Microsoft.AspNetCore.Hosting.Diagnostics.
+        ILogger? requests = _builder.Logging is { DebugLogEnabled: true, LogRequests: true } ? RequestLogger : null;
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        requests?.LogInformation("Request starting HTTP/1.1 {Method} {Url} - {ContentType} {ContentLength}",
+            request.Method, request.Url.AbsoluteUri, request.ContentType ?? "-", request.Body.Length > 0 ? request.Body.Length : "-");
         await using AsyncServiceScope scope = _services.CreateAsyncScope();
         long connection = Interlocked.Increment(ref s_connections);
         HackHttpContext context = new(
@@ -330,6 +336,7 @@ public sealed class HackWebApplication : IAsyncDisposable
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             UnhandledException?.Invoke(context, exception);
+            ExceptionLogger.LogError(exception, "An unhandled exception has occurred while executing the request ({TraceIdentifier}).", context.TraceIdentifier);
             context.Response.Clear();
             if (_exceptionPage)
             {
@@ -344,8 +351,16 @@ public sealed class HackWebApplication : IAsyncDisposable
             }
         }
 
-        return context.Response.ToResponseData(withoutBody: context.Request.Method == "HEAD");
+        HackWebResponseData response = context.Response.ToResponseData(withoutBody: context.Request.Method == "HEAD");
+        requests?.LogInformation("Request finished HTTP/1.1 {Method} {Url} - {StatusCode} {ContentLength} {ContentType} {ElapsedMilliseconds}ms",
+            request.Method, request.Url.AbsoluteUri, response.StatusCode, response.Body.Length, response.ContentType ?? "-",
+            System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds.ToString("0.0000", CultureInfo.InvariantCulture));
+        return response;
     }
+
+    private ILogger RequestLogger => field ??= _services.GetRequiredService<ILoggerFactory>().CreateLogger("HackerOs.AppSdk.Web.Hosting.Diagnostics");
+
+    private ILogger ExceptionLogger => field ??= _services.GetRequiredService<ILoggerFactory>().CreateLogger("HackerOs.AppSdk.Web.Diagnostics.ExceptionHandler");
 
     /// <inheritdoc />
     public ValueTask DisposeAsync() => _services.DisposeAsync();

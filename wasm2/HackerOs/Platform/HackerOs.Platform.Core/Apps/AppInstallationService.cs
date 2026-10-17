@@ -44,6 +44,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     private readonly ISimulationClock _clock;
     private readonly ITopicMessageBus? _topicBus;
     private readonly ILogger _logger;
+    private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
     private readonly IDisposable[] _sessionSubscriptions;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly HashSet<string> _loggedWarnings = new(StringComparer.Ordinal);
@@ -66,6 +67,10 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     /// <param name="topicBus">Optional topic bus enabling the file watchers.</param>
     /// <param name="eventBus">Optional kernel event bus; login and logout then reload the user layer.</param>
     /// <param name="logger">Optional logger; its lines reach <c>/var/log/syslog</c> (ADR 0045).</param>
+    /// <param name="webDatabases">
+    /// Browser databases of web sites: <see cref="UninstallAsync"/> deletes the one of each uninstalled
+    /// web app (ADR 0088, section 4); <see langword="null"/> deletes nothing.
+    /// </param>
     public AppInstallationService(
         AppCatalog catalog,
         AppEnablementRegistry enablement,
@@ -75,7 +80,8 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         ISimulationClock clock,
         ITopicMessageBus? topicBus = null,
         IEventBus? eventBus = null,
-        ILogger<AppInstallationService>? logger = null)
+        ILogger<AppInstallationService>? logger = null,
+        WebData.IWebSiteDatabaseStore? webDatabases = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
@@ -85,6 +91,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _topicBus = topicBus;
         _logger = (ILogger?)logger ?? NullLogger.Instance;
+        _webDatabases = webDatabases;
         _sessionSubscriptions = eventBus is null
             ? []
             :
@@ -165,7 +172,40 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         }
 
         await ReloadAsync(cancellationToken).ConfigureAwait(false);
+        await DeleteWebSiteDatabasesAsync(closure, cancellationToken).ConfigureAwait(false);
         return new AppInstallationResult(true, closure, []);
+    }
+
+    /// <summary>
+    /// Deletes the browser database of every web app just uninstalled (ADR 0088, section 4): the only data
+    /// an uninstall removes, since the user cannot reach it in the files. A failure is logged, not thrown:
+    /// the uninstall itself is done.
+    /// </summary>
+    private async ValueTask DeleteWebSiteDatabasesAsync(IReadOnlyList<string> uninstalled, CancellationToken cancellationToken)
+    {
+        if (_webDatabases is null)
+        {
+            return;
+        }
+
+        foreach (string appId in uninstalled)
+        {
+            if (!_catalog.Manifests.TryGetValue(appId, out AppManifest? manifest) || manifest.Kind != AppKind.Web)
+            {
+                continue;
+            }
+
+            string name = AppSdk.WebData.HackWebDbNames.ForApp(appId);
+            try
+            {
+                await _webDatabases.DeleteAsync(name, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("apps: {AppId} browser database {Database} deleted", appId, name);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning("apps: {AppId} browser database {Database} could not be deleted: {Error}", appId, name, exception.Message);
+            }
+        }
     }
 
     /// <inheritdoc />

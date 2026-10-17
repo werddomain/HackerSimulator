@@ -3,6 +3,8 @@ using HackerOs.AppSdk.Web.Routing;
 using HackerOs.AppSdk.Web.Antiforgery;
 using HackerOs.AppSdk.Web.Sessions;
 using HackerOs.AppSdk.Web.Views;
+using HackerOs.AppSdk.Web.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -84,12 +86,18 @@ public sealed class HackWebApplicationBuilder
     /// <summary>Gets the MVC settings (global filters).</summary>
     public HackMvcOptions Mvc { get; } = new();
 
+    /// <summary>
+    /// Gets the logging settings (ADR 0088 §5): <c>ILogger&lt;T&gt;</c> is always injectable;
+    /// <c>builder.Logging.EnableDebugLog()</c> writes it to <c>/var/log/hackweb/&lt;app id&gt;.log</c>.
+    /// </summary>
+    public HackWebLoggingOptions Logging { get; } = new();
+
     /// <summary>Gets the application built by <see cref="Build"/>, or <see langword="null"/>.</summary>
     internal HackWebApplication? Application => _application;
 
     /// <summary>
     /// Builds the application: adds the framework's services (JSON and MVC options, links, sessions,
-    /// view engine, anti-forgery, <see cref="TimeProvider"/>) and creates the service provider. Call it once.
+    /// view engine, anti-forgery, logging, <see cref="TimeProvider"/>) and creates the service provider. Call it once.
     /// </summary>
     /// <returns>The application, whose pipeline is still to describe.</returns>
     /// <exception cref="InvalidOperationException">Already built.</exception>
@@ -110,6 +118,22 @@ public sealed class HackWebApplicationBuilder
         Services.AddSingleton(Antiforgery);
         Services.TryAddSingleton<HackAntiforgery>();
         Services.TryAddSingleton(new HackViewEngine(Views));
+        Services.AddSingleton(Logging);
+        // ILogger<T> as in ASP.NET Core; written only when the site enabled its debug log. The OS sink
+        // is the logging gateway of the process building the site (Configure runs in the site process).
+        IAppExecutionContext? process = HackExecutionContext.CurrentOrNull;
+        Services.AddLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.SetMinimumLevel(Logging.DebugLogEnabled ? Logging.MinimumLevel : LogLevel.None);
+            if (Logging.DebugLogEnabled)
+            {
+                logging.Services.AddSingleton<ILoggerProvider>(provider => new HackWebDebugLogProvider(
+                    provider.GetService<IHackWebDebugLogSink>()
+                        ?? (process is null ? new HackWebDebugLogMemorySink() : new HackWebDebugLogGatewaySink(process)),
+                    provider.GetRequiredService<TimeProvider>()));
+            }
+        });
         ServiceProvider provider = Services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         _application = new HackWebApplication(this, provider, endpoints);
         return _application;

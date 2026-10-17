@@ -11,7 +11,8 @@ namespace HackerOs.Apps.Diagnostic;
 
 /// <summary>
 /// IndexedDB Diagnostic: shows every object store of the OS database, resolves each filesystem
-/// entry's virtual path, and exports the whole snapshot as JSON.
+/// entry's virtual path, and exports the whole snapshot as JSON. It also lists the browser databases
+/// of web sites (<c>hackweb.*</c>, ADR 0088) and can clear one.
 /// </summary>
 /// <remarks>
 /// Uses only the public SDK (ADR 0055, ADR 0056 section 11):
@@ -37,6 +38,13 @@ public partial class DiagnosticWindow : IAsyncDisposable
     private bool _showRawJson;
     private string? _toastMessage;
     private string? _loadError;
+    private IReadOnlyList<HackWebSiteDatabaseInfo> _sites = [];
+    private string? _sitesError;
+    private string? _selectedSiteName;
+    private bool _confirmDelete;
+
+    private HackWebSiteDatabaseInfo? SelectedSite =>
+        _selectedSiteName is null ? null : _sites.FirstOrDefault(site => site.Name == _selectedSiteName);
 
     private HackStorageStoreSnapshot? SelectedStore =>
         _snapshot?.Stores.FirstOrDefault(store => store.Name == _selectedStoreName);
@@ -82,15 +90,70 @@ public partial class DiagnosticWindow : IAsyncDisposable
             _loadError = $"Failed to load IndexedDB: {exception.Message}";
         }
 
+        await LoadSitesAsync();
         _isLoading = false;
         StateHasChanged();
+    }
+
+    /// <summary>Lists the web sites' browser databases (ADR 0088); a failure leaves the OS stores shown.</summary>
+    private async Task LoadSitesAsync()
+    {
+        _sitesError = null;
+        try
+        {
+            _sites = await HackStorageDiagnostics.GetWebSiteDatabasesAsync(AppContext.CancellationToken);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or InvalidOperationException or Microsoft.JSInterop.JSException)
+        {
+            _sites = [];
+            _sitesError = $"Website databases unavailable: {exception.Message}";
+        }
     }
 
     private void SelectStore(string storeName)
     {
         _selectedStoreName = storeName;
+        _selectedSiteName = null;
+        _confirmDelete = false;
         _searchFilter = string.Empty;
     }
+
+    private void SelectSite(string databaseName)
+    {
+        _selectedSiteName = databaseName;
+        _confirmDelete = false;
+    }
+
+    private async Task DeleteSiteAsync()
+    {
+        if (SelectedSite is not { } site)
+        {
+            return;
+        }
+
+        _confirmDelete = false;
+        try
+        {
+            await HackStorageDiagnostics.DeleteWebSiteDatabaseAsync(site.Name, AppContext.CancellationToken);
+            ShowToast($"{site.Name} deleted.");
+            _selectedSiteName = null;
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or ArgumentException or NotSupportedException or InvalidOperationException or Microsoft.JSInterop.JSException)
+        {
+            ShowToast($"Delete failed: {exception.Message}");
+        }
+
+        await LoadSitesAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>Formats a size as the browser's storage settings do: B, KB, MB.</summary>
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes / (1024.0 * 1024):0.#} MB",
+    };
 
     private void ToggleRawJsonView() => _showRawJson = !_showRawJson;
 

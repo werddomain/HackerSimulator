@@ -21,6 +21,7 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
     private readonly long? _processId;
     private readonly IDiagnosticRedactor _redactor;
     private readonly bool _isSystemApp;
+    private readonly bool _isWebApp;
 
     /// <summary>Initializes a logging gateway bound to one app.</summary>
     /// <param name="sink">In-memory buffer of recent entries.</param>
@@ -35,6 +36,10 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
     /// Whether the app is a system app (ADR 0048), which may keep daemon logs of its own
     /// (<see cref="AppendToLogFile"/>, ADR 0080).
     /// </param>
+    /// <param name="isWebApp">
+    /// Whether the app is a web site (<c>AppKind.Web</c>), which may keep a debug log
+    /// (<see cref="AppendToSiteDebugLog"/>, ADR 0088).
+    /// </param>
     public AppLoggingGateway(
         IDiagnosticSink sink,
         ISimulationClock clock,
@@ -42,7 +47,8 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
         LogFileWriter? writer = null,
         long? processId = null,
         IDiagnosticRedactor? redactor = null,
-        bool isSystemApp = false)
+        bool isSystemApp = false,
+        bool isWebApp = false)
     {
         _sink = sink ?? throw new ArgumentNullException(nameof(sink));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -53,6 +59,7 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
         _processId = processId;
         _redactor = redactor ?? new SensitiveKeyDiagnosticRedactor();
         _isSystemApp = isSystemApp;
+        _isWebApp = isWebApp;
     }
 
     /// <inheritdoc />
@@ -90,5 +97,29 @@ public sealed class AppLoggingGateway : IAppLoggingGateway
         }
 
         _sink.Record(new DiagnosticEntry(_clock.UtcNow, DiagnosticSeverity.Information, target.Path.Value, escaped, Guid.NewGuid(), null));
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <c>/var/log/hackweb/&lt;app id&gt;.log</c>, through <see cref="LogFileWriter"/> like
+    /// <see cref="AppendToLogFile"/>; without a writer the line stays in the in-memory buffer.
+    /// </remarks>
+    public void AppendToSiteDebugLog(string line)
+    {
+        if (!_isWebApp)
+        {
+            throw new UnauthorizedAccessException($"Only a web app keeps a site debug log ('{_appId}' is not one).");
+        }
+
+        ArgumentNullException.ThrowIfNull(line);
+        LogFileTarget target = LogFileTarget.ForDaemon($"hackweb/{_appId}.log");
+        string escaped = line.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal);
+        if (_writer is not null)
+        {
+            _writer.Enqueue(target, escaped);
+            return;
+        }
+
+        _sink.Record(new DiagnosticEntry(_clock.UtcNow, DiagnosticSeverity.Debug, target.Path.Value, escaped, Guid.NewGuid(), null));
     }
 }

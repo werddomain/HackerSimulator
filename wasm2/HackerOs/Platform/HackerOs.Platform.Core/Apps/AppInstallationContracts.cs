@@ -65,7 +65,8 @@ public interface IAppInstallationService
 
     /// <summary>
     /// Uninstalls an app and its dependents in one scope, stopping their running instances. No data
-    /// is deleted. A system app, or a closure containing one, is refused.
+    /// is deleted, except the browser database (<c>hackweb.&lt;id&gt;</c>) of an uninstalled web app
+    /// (ADR 0088, section 4). A system app, or a closure containing one, is refused.
     /// </summary>
     /// <param name="appId">Exact catalog app ID.</param>
     /// <param name="scope">File to write.</param>

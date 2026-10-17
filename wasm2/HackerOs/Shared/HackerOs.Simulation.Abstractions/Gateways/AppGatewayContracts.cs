@@ -230,6 +230,16 @@ public interface IAppLoggingGateway
     /// <exception cref="ArgumentException">The path is not a valid daemon log path.</exception>
     void AppendToLogFile(string relativePath, string line) =>
         throw new UnauthorizedAccessException("Daemon log files are not offered by this host.");
+
+    /// <summary>
+    /// Appends one line to the debug log of the calling web site, <c>/var/log/hackweb/&lt;app id&gt;.log</c>
+    /// (ADR 0073 section 3, ADR 0088 section 5). Only an app of kind <c>Web</c> may do so, when the site
+    /// enabled its debug log; the platform's log writer does the write, with the usual rotation.
+    /// </summary>
+    /// <param name="line">The line, written as is (a line break inside it is escaped).</param>
+    /// <exception cref="UnauthorizedAccessException">The app is not a web app, or the host offers no site logs.</exception>
+    void AppendToSiteDebugLog(string line) =>
+        throw new UnauthorizedAccessException("Site debug logs are not offered by this host.");
 }
 
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>

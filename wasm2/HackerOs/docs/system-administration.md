@@ -85,6 +85,12 @@ un administrateur (`system.reboot`, `system.factory-reset`). Séquence de
 pourquoi Diagnostic, app non système, demande un administrateur à son premier
 lancement.
 
+`GetWebSiteDatabasesAsync` liste les bases IndexedDB des sites (`hackweb.<id>` :
+version, magasins, nombre d'enregistrements, taille estimée) et
+`DeleteWebSiteDatabaseAsync(name)` en supprime une, avec la même capacité
+(ADR 0088 §4, [`asp-hack-site-data.md`](asp-hack-site-data.md)). Diagnostic les
+montre sous *Website databases*.
+
 ## Décisions
 
 - Voir l'ADR 0060 : propriété `SystemPower` (pas `System`),

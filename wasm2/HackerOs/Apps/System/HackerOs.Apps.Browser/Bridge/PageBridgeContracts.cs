@@ -135,6 +135,18 @@ public sealed record BridgeHistoryEvent(string Url, bool Replace);
 /// <param name="Alt">Alt held.</param>
 public sealed record BridgeKeyEvent(string? Key, bool Ctrl, bool Shift, bool Alt);
 
+/// <summary>The page asks the values remembered for a form field (ADR 0088 §6).</summary>
+/// <param name="Name">The field's <c>name</c>.</param>
+public sealed record BridgeFormHistoryRequest(string? Name);
+
+/// <summary>The values offered in the field's <c>&lt;datalist&gt;</c>, most used first.</summary>
+/// <param name="Values">The values.</param>
+public sealed record BridgeFormHistoryReply(IReadOnlyList<string> Values);
+
+/// <summary>A form was submitted: the fields the browser may remember (text-like, named, not <c>autocomplete="off"</c>).</summary>
+/// <param name="Fields">Name and value pairs.</param>
+public sealed record BridgeFormSubmitEvent(IReadOnlyList<string[]>? Fields);
+
 /// <summary>Source-generated JSON for the bridge messages (trim-safe, camelCase like the JavaScript side).</summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(PageBootstrap))]
@@ -150,6 +162,9 @@ public sealed record BridgeKeyEvent(string? Key, bool Ctrl, bool Shift, bool Alt
 [JsonSerializable(typeof(BridgeDialogEvent))]
 [JsonSerializable(typeof(BridgeHistoryEvent))]
 [JsonSerializable(typeof(BridgeKeyEvent))]
+[JsonSerializable(typeof(BridgeFormHistoryRequest))]
+[JsonSerializable(typeof(BridgeFormHistoryReply))]
+[JsonSerializable(typeof(BridgeFormSubmitEvent))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 public sealed partial class PageBridgeJsonContext : JsonSerializerContext;
 

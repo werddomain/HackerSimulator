@@ -23,6 +23,10 @@ internal static class RemoteErrors
         writer.WriteString("em", exception.Message);
         switch (exception)
         {
+            case HackerOs.AppSdk.WebData.HackWebDbException database:
+                writer.WriteString("et", "webdb");
+                writer.WriteString("dn", database.Name);
+                break;
             case AppGatewayAccessDeniedException denied:
                 writer.WriteString("et", "denied");
                 writer.WriteString("cap", denied.Capability);
@@ -93,6 +97,7 @@ internal static class RemoteErrors
                 error.GetString("cap"),
                 CapabilityPolicyEvaluation.DenyMissing(Math.Max(1, error.GetOptional("rev")?.GetInt64() ?? 1))),
             "killed" => new HackProcessKilledException(error.GetInt64("pid")),
+            "webdb" => new HackerOs.AppSdk.WebData.HackWebDbException(error.GetOptionalString("dn") ?? HackerOs.AppSdk.WebData.HackWebDbException.InvalidStateError, StripName(message, error.GetOptionalString("dn"))),
             "cancel" => new OperationCanceledException(message),
             "arg" => new ArgumentException(message, error.GetOptionalString("pn")),
             "notsup" => new NotSupportedException(message),
@@ -105,6 +110,10 @@ internal static class RemoteErrors
             _ => new WorkerRemoteException(error.GetOptionalString("ty") ?? "Exception", message)
         };
     }
+
+    // HackWebDbException's message starts with its name; the rebuilt exception adds it again.
+    private static string StripName(string message, string? name) =>
+        name is not null && message.StartsWith(name + ": ", StringComparison.Ordinal) ? message[(name.Length + 2)..] : message;
 
     private static void WriteFileDetails(Utf8JsonWriter writer, FileSystemErrorCode? code, string? path)
     {

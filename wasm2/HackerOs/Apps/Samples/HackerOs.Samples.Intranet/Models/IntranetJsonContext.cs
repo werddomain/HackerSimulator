@@ -16,6 +16,8 @@ namespace HackerOs.Samples.Intranet.Models;
 [JsonSerializable(typeof(IReadOnlyList<BoardTask>))]
 [JsonSerializable(typeof(SiteStatus))]
 [JsonSerializable(typeof(Visitor))]
+// The meta store of the notes database keeps plain strings.
+[JsonSerializable(typeof(string))]
 public sealed partial class IntranetJsonContext : JsonSerializerContext;
 
 /// <summary>What <c>/health</c> answers.</summary>

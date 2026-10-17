@@ -21,14 +21,35 @@ internal sealed class AppStorageDiagnosticsGateway : IAppStorageDiagnosticsGatew
 {
     private readonly Func<IStorageInspector>? _inspector;
     private readonly ICapabilityChecker _capabilities;
+    private readonly WebData.IWebSiteDatabaseStore? _webSites;
 
     /// <summary>Creates the gateway for one app instance.</summary>
     /// <param name="inspector">Lazily resolved inspector; <see langword="null"/> on a host without persistent storage.</param>
     /// <param name="capabilities">The app's capability checker.</param>
-    public AppStorageDiagnosticsGateway(Func<IStorageInspector>? inspector, ICapabilityChecker capabilities)
+    /// <param name="webSites">The browser databases of web sites (ADR 0088, section 4); <see langword="null"/> when the host has none.</param>
+    public AppStorageDiagnosticsGateway(Func<IStorageInspector>? inspector, ICapabilityChecker capabilities, WebData.IWebSiteDatabaseStore? webSites = null)
     {
         _inspector = inspector;
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+        _webSites = webSites;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<HackWebSiteDatabaseInfo>> GetWebSiteDatabasesAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.SystemStorageInspect);
+        return _webSites is null ? [] : await _webSites.ListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DeleteWebSiteDatabaseAsync(string databaseName, CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.SystemStorageInspect);
+        WebData.WebSiteDatabaseNames.Require(databaseName);
+        if (_webSites is not null)
+        {
+            await _webSites.DeleteAsync(databaseName, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc />

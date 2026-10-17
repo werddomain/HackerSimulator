@@ -154,6 +154,10 @@ utilisée pour ce fichier. La liste des apps installées, elle, est lue par
   administrateur (un utilisateur standard n'a que sa propre portée) ; « For all
   users » ouvre la fenêtre de l'agent d'authentification, où l'administrateur
   retape son mot de passe ;
+- pour un site (app `Web`) emporté par la désinstallation, la confirmation
+  annonce que sa base de navigateur `hackweb.<id>` sera supprimée ; elle l'est
+  après la désinstallation par `UninstallAsync`, seule donnée qu'une
+  désinstallation efface (ADR 0088 §4, [`asp-hack-site-data.md`](asp-hack-site-data.md)) ;
 - **Reinstall** pour une app désinstallée dans une portée que l'utilisateur
   peut modifier ; sinon la mention « Uninstalled by the administrator » ;
 - l'ancien interrupteur activer/désactiver a disparu ;
