@@ -104,7 +104,7 @@ Comportement HTTP :
 L'OS ne tente le réseau réel que si l'hôte n'existe pas dans le réseau simulé,
 que l'app a `network.real.access`, que le serveur optionnel est connecté et que
 `EnsureAccessTokenAsync` rend un jeton. Depuis `v3/10-server-proxy`
-(ADR 0102, 0107, [`server-network-relay.md`](server-network-relay.md)), le
+(ADR 0102, 0108, [`server-network-relay.md`](server-network-relay.md)), le
 serveur vérifie aussi l'accord de son côté et relaie :
 
 | Appel | Relais réel |

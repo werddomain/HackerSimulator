@@ -2,7 +2,7 @@
 
 Chantier `v3/10-server-proxy` du [plan de fin de migration](wasm-v3-completion-plan.md),
 décisions dans l'[ADR 0102](adr/0102-server-network-relay-tcp-udp-and-policy.md)
-et ses ajustements dans l'[ADR 0107](adr/0107-server-relay-implementation-adjustments.md).
+et ses ajustements dans l'[ADR 0108](adr/0108-server-relay-implementation-adjustments.md).
 
 ## But
 
@@ -125,7 +125,7 @@ les défauts sont posés par `ProxyRelayPolicy.From`.
   bloqués.
 - **Désactiver les quotas** : `Quotas:Enabled: false` lève les limites de
   taille, de concurrence, de flux et d'inactivité. `MaxRedirectHops` reste
-  appliqué (ADR 0107 §3).
+  appliqué (ADR 0108 §3).
 - **Couper le relais** : `Enabled: false` ; toute requête reçoit
   `RELAY_DISABLED`.
 
@@ -176,12 +176,12 @@ flux ouverts, apps accordées et avertissements.
 ## Décisions clés
 
 - Accord vérifié côté serveur par `GrantedApps` **ou** par les accords
-  synchronisés (ADR 0107 §1) : sans la liste, aucun accord n'existerait sur
+  synchronisés (ADR 0108 §1) : sans la liste, aucun accord n'existerait sur
   le serveur et le relais refuserait tout. Question posée à Benoit dans le
   fil « V3 10 : relais du serveur ».
 - Socket connecté avant d'accepter le WebSocket, refus en code de fermeture
   `4001` : un `WebSocket` de navigateur ne lit pas le statut d'une mise à
-  niveau refusée (ADR 0107 §2).
+  niveau refusée (ADR 0108 §2).
 - Jeton dans la requête seulement sur les routes de flux : un `WebSocket` de
   navigateur ne peut pas envoyer `Authorization`.
 - Adresse résolue une fois et épinglée pour la connexion, contre le
@@ -202,4 +202,4 @@ flux ouverts, apps accordées et avertissements.
 - [x] `HackTcpClient.ConnectAsync`, `HackNetworkStream`, `HackUdpClient`, erreurs d'une vraie pile.
 - [x] `HackServerConnection.GetRelayPolicyAsync` et panneau de Paramètres.
 - [x] Tests : service, endpoints WebSocket, client direct, passerelle réseau, politique.
-- [x] ADR 0107 et documentation.
+- [x] ADR 0108 et documentation.
