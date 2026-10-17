@@ -209,11 +209,12 @@ public static class ShellParser
             EndWord();
             if (_expectHereDelimiter)
             {
-                error = new ShellSyntaxError(
+                error = ShellSyntaxError.Create(
                     ShellSyntaxErrorCodes.MissingRedirectTarget,
-                    $"syntax error: missing here-document delimiter after `{_hereOperator!.Text}'",
                     baseOffset + text.Length,
-                    0);
+                    0,
+                    "Syntax.MissingHereDocumentDelimiter",
+                    _hereOperator!.Text);
                 return false;
             }
 
@@ -222,11 +223,12 @@ public static class ShellParser
                 // A here-document needs the lines after its command: on one terminal line the
                 // input is incomplete, like bash waiting at its `>` prompt.
                 HereDocument first = _pendingHereDocuments[0];
-                error = new ShellSyntaxError(
+                error = ShellSyntaxError.Create(
                     ShellSyntaxErrorCodes.UnterminatedHereDocument,
-                    $"syntax error: here-document delimited by `{first.Delimiter.LiteralText}' is not terminated",
                     first.Delimiter.Offset,
-                    first.Delimiter.Length);
+                    first.Delimiter.Length,
+                    "Syntax.HereDocumentNotTerminated",
+                    first.Delimiter.LiteralText);
                 return false;
             }
 
@@ -312,7 +314,7 @@ public static class ShellParser
             int end = text.IndexOf('\'', start + 1);
             if (end < 0)
             {
-                return new ShellSyntaxError(ShellSyntaxErrorCodes.UnterminatedQuote, "syntax error: unterminated single quote", baseOffset + start, text.Length - start);
+                return ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnterminatedQuote, baseOffset + start, text.Length - start, "Syntax.UnterminatedSingleQuote");
             }
 
             for (int i = start + 1; i < end; i++)
@@ -401,14 +403,14 @@ public static class ShellParser
                 }
             }
 
-            return new ShellSyntaxError(ShellSyntaxErrorCodes.UnterminatedQuote, "syntax error: unterminated double quote", baseOffset + start, text.Length - start);
+            return ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnterminatedQuote, baseOffset + start, text.Length - start, "Syntax.UnterminatedDoubleQuote");
         }
 
         private ShellSyntaxError? ReadEscape()
         {
             if (_position + 1 >= text.Length)
             {
-                return new ShellSyntaxError(ShellSyntaxErrorCodes.TrailingEscape, "syntax error: trailing escape character '\\'", baseOffset + _position, 1);
+                return ShellSyntaxError.Create(ShellSyntaxErrorCodes.TrailingEscape, baseOffset + _position, 1, "Syntax.TrailingEscape");
             }
 
             if (text[_position + 1] == '\n')
@@ -436,7 +438,7 @@ public static class ShellParser
                 int close = FindClosingParenthesis(start + 2);
                 if (close < 0)
                 {
-                    return new ShellSyntaxError(ShellSyntaxErrorCodes.UnterminatedSubstitution, "syntax error: unterminated `$('", baseOffset + start, text.Length - start);
+                    return ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnterminatedSubstitution, baseOffset + start, text.Length - start, "Syntax.UnterminatedCommandSubstitution");
                 }
 
                 return AddSubstitution(text[(start + 2)..close], start + 2, close + 1, quoted);
@@ -549,7 +551,7 @@ public static class ShellParser
         }
 
         private ShellSyntaxError BadSubstitution(int start, int length) =>
-            new(ShellSyntaxErrorCodes.BadSubstitution, $"{text.Substring(start, length)}: bad substitution", baseOffset + start, length);
+            ShellSyntaxError.Create(ShellSyntaxErrorCodes.BadSubstitution, baseOffset + start, length, "Syntax.BadSubstitution", text.Substring(start, length));
 
         private static bool IsParameterName(string name) =>
             IsName(name) || name.All(char.IsAsciiDigit) || name is "#" or "@" or "*" or "$" or "!" or "-" or "?";
@@ -627,7 +629,7 @@ public static class ShellParser
             int close = FindClosingParenthesis(start + 2);
             if (close < 0)
             {
-                return new ShellSyntaxError(ShellSyntaxErrorCodes.UnterminatedSubstitution, "syntax error: unterminated `$(('", baseOffset + start, text.Length - start);
+                return ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnterminatedSubstitution, baseOffset + start, text.Length - start, "Syntax.UnterminatedArithmetic");
             }
 
             return AddSubstitution(text[(start + 2)..close], start + 2, close + 1, quoted);
@@ -659,7 +661,7 @@ public static class ShellParser
 
             if (i >= text.Length)
             {
-                return new ShellSyntaxError(ShellSyntaxErrorCodes.UnterminatedSubstitution, "syntax error: unterminated backquote", baseOffset + start, text.Length - start);
+                return ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnterminatedSubstitution, baseOffset + start, text.Length - start, "Syntax.UnterminatedBackquote");
             }
 
             return AddSubstitution(body.ToString(), start + 1, i + 1, quoted);
@@ -851,11 +853,12 @@ public static class ShellParser
 
             if (op is "<<<" or "<>")
             {
-                return new ShellSyntaxError(
+                return ShellSyntaxError.Create(
                     ShellSyntaxErrorCodes.Unsupported,
-                    $"syntax error: `{op}' is not supported (quote or escape it to pass it literally)",
                     baseOffset + _position,
-                    op.Length);
+                    op.Length,
+                    "Syntax.Unsupported",
+                    op);
             }
 
             int? ioNumber = null;
@@ -932,11 +935,12 @@ public static class ShellParser
 
                 if (!terminated)
                 {
-                    return new ShellSyntaxError(
+                    return ShellSyntaxError.Create(
                         ShellSyntaxErrorCodes.UnterminatedHereDocument,
-                        $"syntax error: here-document delimited by `{delimiter}' is not terminated",
                         document.Delimiter.Offset,
-                        document.Delimiter.Length);
+                        document.Delimiter.Length,
+                        "Syntax.HereDocumentNotTerminated",
+                        delimiter);
                 }
 
                 if (document.Delimiter.HasQuoting)
@@ -1327,13 +1331,9 @@ public static class ShellParser
             Token target = Current;
             if (target.Kind != TokenKind.Word)
             {
-                throw new SyntaxException(new ShellSyntaxError(
-                    ShellSyntaxErrorCodes.MissingRedirectTarget,
-                    target.Kind is TokenKind.End or TokenKind.Newline
-                        ? $"syntax error: missing file name after `{op.Text}'"
-                        : $"syntax error near unexpected token `{target.Text}'",
-                    target.Offset,
-                    target.Length));
+                throw new SyntaxException(target.Kind is TokenKind.End or TokenKind.Newline
+                    ? ShellSyntaxError.Create(ShellSyntaxErrorCodes.MissingRedirectTarget, target.Offset, target.Length, "Syntax.MissingFileName", op.Text)
+                    : ShellSyntaxError.Create(ShellSyntaxErrorCodes.MissingRedirectTarget, target.Offset, target.Length, "Syntax.UnexpectedToken", target.Text));
             }
 
             _index++;
@@ -1362,11 +1362,11 @@ public static class ShellParser
                     return BothOutputs(ShellRedirectionKind.Append, word);
                 default:
                     ShellWord body = op.HereDocument?.Body
-                        ?? throw new SyntaxException(new ShellSyntaxError(
+                        ?? throw new SyntaxException(ShellSyntaxError.Create(
                             ShellSyntaxErrorCodes.UnterminatedHereDocument,
-                            "syntax error: here-document is not terminated",
                             word.Offset,
-                            word.Length));
+                            word.Length,
+                            "Syntax.HereDocumentBodyNotTerminated"));
                     return [new ShellRedirection(ShellRedirectionKind.HereDocument, body, op.IoNumber)];
             }
         }
@@ -1556,8 +1556,8 @@ public static class ShellParser
             string name = nameToken.Word!.PlainText!;
             if (!IsFunctionName(name))
             {
-                throw new SyntaxException(new ShellSyntaxError(
-                    ShellSyntaxErrorCodes.BadFunctionName, $"`{name}': not a valid function name", nameToken.Offset, nameToken.Length));
+                throw new SyntaxException(ShellSyntaxError.Create(
+                    ShellSyntaxErrorCodes.BadFunctionName, nameToken.Offset, nameToken.Length, "Syntax.BadFunctionName", name));
             }
 
             _index += 3; // name ( )
@@ -1629,23 +1629,22 @@ public static class ShellParser
         }
 
         private static SyntaxException Unexpected(Token token) =>
-            new(new ShellSyntaxError(
+            new(ShellSyntaxError.Create(
                 ShellSyntaxErrorCodes.UnexpectedToken,
-                token.Kind == TokenKind.Newline
-                    ? "syntax error near unexpected token `newline'"
-                    : $"syntax error near unexpected token `{token.Text}'",
                 token.Offset,
-                Math.Max(1, token.Length)));
+                Math.Max(1, token.Length),
+                "Syntax.UnexpectedToken",
+                token.Kind == TokenKind.Newline ? "newline" : token.Text));
 
         private SyntaxException UnexpectedEnd(string? expected = null)
         {
             Token? last = _index > 0 ? tokens[_index - 1] : null;
-            string message = expected is not null
-                ? $"syntax error: unexpected end of file (expecting `{expected}')"
+            ShellSyntaxError error = expected is not null
+                ? ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnexpectedEnd, endOffset, 0, "Syntax.UnexpectedEndExpecting", expected)
                 : last is { Kind: TokenKind.Operator }
-                    ? $"syntax error: unexpected end of line after `{last.Text}'"
-                    : "syntax error: unexpected end of file";
-            return new SyntaxException(new ShellSyntaxError(ShellSyntaxErrorCodes.UnexpectedEnd, message, endOffset, 0));
+                    ? ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnexpectedEnd, endOffset, 0, "Syntax.UnexpectedEndAfter", last.Text)
+                    : ShellSyntaxError.Create(ShellSyntaxErrorCodes.UnexpectedEnd, endOffset, 0, "Syntax.UnexpectedEnd");
+            return new SyntaxException(error);
         }
     }
 

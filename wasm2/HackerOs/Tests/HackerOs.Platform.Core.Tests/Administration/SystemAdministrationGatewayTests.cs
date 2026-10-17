@@ -227,6 +227,27 @@ public sealed class SystemAdministrationGatewayTests
     }
 
     [Fact]
+    public async Task The_operation_shown_to_the_administrator_follows_the_calling_process_language()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        RecordingDevice device = new();
+        CountingAgent agent = new(succeed: true);
+        AdministratorGate french = new(
+            () => agent, harness.Catalog.Manifests[SettingsId], harness.Principal, isRootElevated: false,
+            language: () => System.Globalization.CultureInfo.GetCultureInfo("fr"));
+        AppSystemPowerGateway gateway = new(
+            () => new SystemPowerService(device, harness.Files.Session, auditLog: harness.Audit),
+            new FixedCapabilities(AppCapabilities.SystemPower),
+            french);
+
+        await gateway.FactoryResetAsync();
+
+        // ADR 0104: the prompt text is French; the audited action id stays stable.
+        Assert.Equal("Effacer cette machine (tous les comptes, fichiers et réglages) et la redémarrer", agent.LastRequest!.Operation);
+        Assert.Equal("system.factory-reset", agent.LastRequest.Action);
+    }
+
+    [Fact]
     public async Task Storage_inspection_requires_its_capability()
     {
         HackStorageSnapshot snapshot = new(DateTimeOffset.UnixEpoch, "hackeros", 3, [], new Dictionary<string, string>(), 0);

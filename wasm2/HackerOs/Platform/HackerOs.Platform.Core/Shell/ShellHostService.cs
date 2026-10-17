@@ -99,7 +99,7 @@ public sealed class ShellHostService
                 await TryChangeDirectoryAsync(shellContext, session, options.WorkingDirectory, cancellationToken).ConfigureAwait(false);
             }
 
-            ShellHostPrompts? prompts = options.CredentialPrompt is { } prompt ? new ShellHostPrompts(prompt, _elevation) : null;
+            ShellHostPrompts? prompts = options.CredentialPrompt is { } prompt ? new ShellHostPrompts(prompt, _elevation, () => ShellText.Language(session)) : null;
             return new HostedShell(_interpreter, _processes, shellContext, session, prompts);
         }
         catch

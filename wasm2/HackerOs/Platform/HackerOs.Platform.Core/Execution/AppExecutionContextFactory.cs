@@ -225,6 +225,13 @@ public sealed class AppExecutionContextFactory
             ? new AppServiceControlGateway(_intentDispatcherProvider, manifest.Id, userId, principal)
             : UnsupportedServiceControlGateway.Instance;
 
+        IAppEnvironmentGateway environment = _environments is null
+            ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
+            : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath);
+
+        // The process's language (ADR 0104), read at each use: the OS texts it asks for (the
+        // operation shown in an administrator prompt) follow its LANG, as its own texts do.
+        Func<System.Globalization.CultureInfo> language = () => HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(environment.GetVariable);
         AppPermissionErrorGateway permissionErrors = new();
         AppEventGateway events = new(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString());
         AppClockGateway clock = new(_clock);
@@ -242,12 +249,13 @@ public sealed class AppExecutionContextFactory
                 principal,
                 isRootElevated,
                 _fileSystem,
-                _clock);
+                _clock,
+                language);
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
         AppFileSystemGateway fileSystem = new(
             _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory);
-        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
+        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem, language);
 
         AppExecutionContext context = new(
             manifest,
@@ -274,9 +282,7 @@ public sealed class AppExecutionContextFactory
             services,
             operationContext.OneShotElevation,
             principal.HomePath,
-            _environments is null
-                ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
-                : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath),
+            environment,
             isRootElevated,
             userName,
             principal.DisplayName,
@@ -342,14 +348,15 @@ public sealed class AppExecutionContextFactory
         AuthenticatedPrincipal principal,
         bool isRootElevated,
         ICapabilityChecker capabilities,
-        AppFileSystemGateway fileSystem)
+        AppFileSystemGateway fileSystem,
+        Func<System.Globalization.CultureInfo> language)
     {
         if (_administration is null)
         {
             return new AdministrationGateways(null, null, null, null, null, null);
         }
 
-        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated);
+        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated, language);
         return new AdministrationGateways(
             _administration.Settings is { } settings ? new AppSystemSettingsGateway(settings, fileSystem) : null,
             _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,

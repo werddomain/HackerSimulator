@@ -67,19 +67,42 @@ public sealed record FileTransferResult(
     /// <summary>Gets whether no source failed.</summary>
     public bool Succeeded => Failures.Count == 0;
 
-    /// <summary>Builds the one-paragraph summary of the failures, or <see langword="null"/> when there are none.</summary>
-    /// <param name="verb">Verb of the operation, e.g. <c>"copy"</c>.</param>
-    public string? DescribeFailures(string verb)
+    /// <summary>
+    /// Builds the one-paragraph summary of the failures, or <see langword="null"/> when there are
+    /// none, in the language of the ambient app's process (ADR 0104).
+    /// </summary>
+    /// <param name="verb">
+    /// Verb of the operation: <c>"copy"</c>, <c>"move"</c>, <c>"move to the trash"</c> and
+    /// <c>"upload"</c> are translated; any other verb is printed as given.
+    /// </param>
+    public string? DescribeFailures(string verb) => DescribeFailures(verb, HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>());
+
+    /// <summary>Builds the summary of the failures in the language of <paramref name="context"/>'s process.</summary>
+    /// <param name="verb">Verb of the operation (see <see cref="DescribeFailures(string)"/>).</param>
+    /// <param name="context">The app whose language the summary is written in.</param>
+    public string? DescribeFailures(string verb, IAppExecutionContext? context) =>
+        DescribeFailures(verb, HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(context));
+
+    private string? DescribeFailures(string verb, Microsoft.Extensions.Localization.IStringLocalizer<Strings> text)
     {
+        ArgumentNullException.ThrowIfNull(verb);
         if (Failures.Count == 0)
         {
             return null;
         }
 
-        string items = string.Join("; ", Failures.Select(failure => $"'{FileTransfer.GetName(failure.Path)}': {failure.Reason}"));
+        string localizedVerb = verb switch
+        {
+            "copy" => text["Transfer.Verb.Copy"],
+            "move" => text["Transfer.Verb.Move"],
+            "move to the trash" => text["Transfer.Verb.Trash"],
+            "upload" => text["Transfer.Verb.Upload"],
+            _ => verb
+        };
+        string items = string.Join("; ", Failures.Select(failure => (string)text["Transfer.Failure.Item", FileTransfer.GetName(failure.Path), failure.Reason]));
         return Failures.Count == 1
-            ? $"Could not {verb} {items}."
-            : $"Could not {verb} {Failures.Count} items: {items}.";
+            ? text["Transfer.Failure.One", localizedVerb, items]
+            : text["Transfer.Failure.Many", localizedVerb, Failures.Count, items];
     }
 }
 

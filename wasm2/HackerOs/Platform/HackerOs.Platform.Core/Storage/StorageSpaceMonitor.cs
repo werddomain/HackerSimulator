@@ -47,6 +47,7 @@ public sealed class StorageSpaceMonitor : IStorageSpaceGuard, IAsyncDisposable
     private readonly INotificationQueue? _notifications;
     private readonly Func<AuthenticatedPrincipal?> _currentUser;
     private readonly TimeProvider _time;
+    private readonly Func<CultureInfo> _language;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly CancellationTokenSource _stopping = new();
     private Task? _loop;
@@ -62,13 +63,19 @@ public sealed class StorageSpaceMonitor : IStorageSpaceGuard, IAsyncDisposable
     /// <param name="notifications">Queue receiving the low-space warning; <see langword="null"/> posts none.</param>
     /// <param name="currentUser">Session user who gets the warning (resolved lazily: the session depends on the filesystem).</param>
     /// <param name="time">Time source for the throttle and the poll; defaults to the system clock.</param>
+    /// <param name="language">
+    /// Language of the session the warning is shown in (ADR 0104: <c>SessionLocaleService.Culture</c>),
+    /// read when the warning is posted; English when <see langword="null"/>.
+    /// </param>
     public StorageSpaceMonitor(
         IStorageCapacityProbe probe,
         INotificationQueue? notifications = null,
         Func<AuthenticatedPrincipal?>? currentUser = null,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        Func<CultureInfo>? language = null)
     {
         _probe = probe ?? throw new ArgumentNullException(nameof(probe));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
         _notifications = notifications;
         _currentUser = currentUser ?? (static () => null);
         _time = time ?? TimeProvider.System;
@@ -196,19 +203,19 @@ public sealed class StorageSpaceMonitor : IStorageSpaceGuard, IAsyncDisposable
 
         _warnedUser = user.UserId;
         DateTimeOffset now = _time.GetUtcNow();
+        Microsoft.Extensions.Localization.IStringLocalizer text = Strings.For(_language());
         _notifications.Enqueue(new Notification(
             NotificationId.FromGuid(Guid.NewGuid()),
             user.UserId,
             NotificationSourceAppId,
             NotificationSeverity.Warning,
-            "Low storage space",
-            $"Only {FormatMebibytes(capacity.AvailableBytes)} left of {FormatMebibytes(capacity.QuotaBytes)}. "
-                + "Delete files or empty the trash; open Diagnostic to see what uses the space.",
-            [NotificationAction.LaunchApp(DiagnosticAppId, "Open Diagnostic")],
+            text["Storage.LowSpace.Title"],
+            text["Storage.LowSpace.Message", ToMebibytes(capacity.AvailableBytes), ToMebibytes(capacity.QuotaBytes)],
+            [NotificationAction.LaunchApp(DiagnosticAppId, text["Storage.LowSpace.OpenDiagnostic"])],
             now,
             expiresAtUtc: null));
     }
 
-    private static string FormatMebibytes(long bytes) =>
-        string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024.0):0.#} MiB");
+    /// <summary>Converts bytes to MiB; the text formats the number (<c>{0:0.#}</c>) in its own culture.</summary>
+    private static double ToMebibytes(long bytes) => bytes / (1024.0 * 1024.0);
 }

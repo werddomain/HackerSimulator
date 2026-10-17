@@ -4,7 +4,7 @@
 <figure class="hos-chart @SizeClass @Class">
     <figcaption class="hos-chart-header">
         <span class="hos-chart-title">@Title</span>
-        <span class="hos-chart-scale" title="Top of the scale">@FormatValue(EffectiveMaximum)</span>
+        <span class="hos-chart-scale" title="@L["Chart.ScaleTop"]">@FormatValue(EffectiveMaximum)</span>
     </figcaption>
 
     <div class="hos-chart-plot">
@@ -33,7 +33,7 @@
 
     <div class="hos-chart-axis" aria-hidden="true">
         <span>@AxisLabel</span>
-        <span>now</span>
+        <span>@L["Chart.Now"]</span>
     </div>
 
     @if (ShowLegend && Series.Count > 0)

@@ -40,7 +40,7 @@ internal sealed class AppSystemBackupGateway : IAppSystemBackupGateway
     {
         SystemBackupService backup = Require();
         string admin = await _gate.AuthenticateAsync(
-            "Back up this machine (every account, file and setting) to the host computer",
+            _gate.Text["Admin.Backup"],
             SystemBackupService.CreateAction,
             "machine",
             cancellationToken).ConfigureAwait(false);
@@ -63,8 +63,8 @@ internal sealed class AppSystemBackupGateway : IAppSystemBackupGateway
         }
 
         string what = mode == HackBackupRestoreMode.Replace
-            ? $"Replace this whole machine with the backup '{candidate.File.Name}' and restart it"
-            : $"Merge the backup '{candidate.File.Name}' into this machine and restart it";
+            ? _gate.Text["Admin.RestoreReplace", candidate.File.Name]
+            : _gate.Text["Admin.RestoreMerge", candidate.File.Name];
         string admin = await _gate.AuthenticateAsync(what, SystemBackupService.RestoreAction, "machine", cancellationToken)
             .ConfigureAwait(false);
         await backup.RestoreAsync(candidate, mode, admin, _gate.Principal).ConfigureAwait(false);

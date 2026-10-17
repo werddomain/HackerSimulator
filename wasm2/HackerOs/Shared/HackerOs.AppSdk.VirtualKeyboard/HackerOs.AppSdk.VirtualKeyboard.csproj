@@ -19,4 +19,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Key caps follow the language of the app the keyboard serves (ADR 0104). -->
+    <ProjectReference Include="..\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
+  </ItemGroup>
+
 </Project>

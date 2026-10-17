@@ -1,4 +1,5 @@
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
@@ -14,9 +15,13 @@ namespace HackerOs.AppSdk.FileView.Transfers;
 /// Every member runs as the ambient app through the public <c>Hack*</c> API (ADR 0043), so the app's
 /// capabilities and the file permissions apply to each step. Call it from an app event handler (a
 /// <c>HackComponentBase</c> handler is in scope) or inside <see cref="HackExecutionContext.Enter"/>.
+/// The failure reasons are written in the language of that ambient app's process (ADR 0104).
 /// </remarks>
 public static class FileTransfer
 {
+    /// <summary>Gets the library's texts in the ambient app's language.</summary>
+    private static Microsoft.Extensions.Localization.IStringLocalizer<Strings> Text => HackLocalization.GetLocalizer<Strings>();
+
     /// <summary>Largest host file an import reads (256 MiB); a bigger one is reported as a failure.</summary>
     public const long MaxHostFileBytes = 256L * 1024 * 1024;
 
@@ -73,7 +78,7 @@ public static class FileTransfer
         {
             foreach (string source in sources)
             {
-                outcome.Fail(source, $"cannot open '{destination}': {Describe(exception)}");
+                outcome.Fail(source, Text["Transfer.Error.CannotOpen", destination, Describe(exception)]);
             }
 
             return outcome.ToResult();
@@ -87,8 +92,8 @@ public static class FileTransfer
             if (destination == source || destination.StartsWith(source + "/", StringComparison.Ordinal))
             {
                 outcome.Fail(source, mode == FileTransferMode.Copy
-                    ? "cannot copy a folder into itself"
-                    : "cannot move a folder into itself");
+                    ? Text["Transfer.Error.CopyIntoItself"]
+                    : Text["Transfer.Error.MoveIntoItself"]);
             }
             else
             {
@@ -110,7 +115,7 @@ public static class FileTransfer
                 bool sourceIsDirectory = await HackDirectory.ExistsAsync(source, cancellationToken).ConfigureAwait(false);
                 if (!sourceIsDirectory && !await HackFile.ExistsAsync(source, cancellationToken).ConfigureAwait(false))
                 {
-                    outcome.Fail(source, "no longer exists");
+                    outcome.Fail(source, Text["Transfer.Error.NoLongerExists"]);
                     continue;
                 }
 
@@ -198,7 +203,7 @@ public static class FileTransfer
         {
             foreach (FileTransferHostFile file in files)
             {
-                outcome.Fail(file.Name, $"cannot open '{destination}': {Describe(exception)}");
+                outcome.Fail(file.Name, Text["Transfer.Error.CannotOpen", destination, Describe(exception)]);
             }
 
             return outcome.ToResult();
@@ -214,13 +219,13 @@ public static class FileTransfer
 
             if (string.IsNullOrWhiteSpace(file.Name) || file.Name.Contains('/', StringComparison.Ordinal) || file.Name is "." or "..")
             {
-                outcome.Fail(file.Name, "invalid file name");
+                outcome.Fail(file.Name, Text["Transfer.Error.InvalidName"]);
                 continue;
             }
 
             if (file.Size > MaxHostFileBytes)
             {
-                outcome.Fail(file.Name, $"larger than {MaxHostFileBytes / (1024 * 1024)} MiB");
+                outcome.Fail(file.Name, Text["Transfer.Error.TooLarge", MaxHostFileBytes / (1024 * 1024)]);
                 continue;
             }
 
@@ -340,7 +345,7 @@ public static class FileTransfer
         {
             for (int remaining = index; remaining < items.Count; remaining++)
             {
-                outcome.Fail(name(items[remaining]), "stopped before this item");
+                outcome.Fail(name(items[remaining]), Text["Transfer.Error.Stopped"]);
             }
 
             outcome.Cancelled = true;
@@ -401,15 +406,16 @@ public static class FileTransfer
             _ => null
         };
 
+        Microsoft.Extensions.Localization.IStringLocalizer<Strings> text = Text;
         return code switch
         {
-            FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.AuthorityDenied => "permission denied",
-            FileSystemErrorCode.CapabilityDenied => "this app is not allowed to write there",
-            FileSystemErrorCode.UnsupportedOperation => "read-only file system",
-            FileSystemErrorCode.ProtectedEntry => "protected system entry",
-            FileSystemErrorCode.NotFound => "no longer exists",
-            FileSystemErrorCode.AlreadyExists => "the name is already taken",
-            _ when exception is UnauthorizedAccessException => "permission denied",
+            FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.AuthorityDenied => text["Transfer.Error.PermissionDenied"],
+            FileSystemErrorCode.CapabilityDenied => text["Transfer.Error.AppNotAllowed"],
+            FileSystemErrorCode.UnsupportedOperation => text["Transfer.Error.ReadOnly"],
+            FileSystemErrorCode.ProtectedEntry => text["Transfer.Error.Protected"],
+            FileSystemErrorCode.NotFound => text["Transfer.Error.NoLongerExists"],
+            FileSystemErrorCode.AlreadyExists => text["Transfer.Error.NameTaken"],
+            _ when exception is UnauthorizedAccessException => text["Transfer.Error.PermissionDenied"],
             _ => exception.Message
         };
     }
