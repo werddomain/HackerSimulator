@@ -124,6 +124,33 @@ d'accessibilité ; trimming ; décisions différées sans objet et taille maxima
 des fichiers. Les numéros sont attribués au moment de l'écriture (premier
 numéro libre ; plusieurs fils écrivent des ADR en parallèle).
 
+**ADR écrits par `v3/1` (2026-10-17) :**
+
+| Chantier | ADR |
+|---|---|
+| `v3/1-adr` | [0094](adr/0094-deferred-decisions-status-and-maximum-file-size.md) décisions différées et taille maximale des fichiers |
+| `v3/2-game-removal` | [0092](adr/0092-game-in-a-separate-repository.md) (déjà écrit) |
+| `v3/3-window-model` | [0095](adr/0095-window-events-sizes-and-keyboard.md) (§3 proposé) |
+| `v3/4-intents` | [0096](adr/0096-added-intents-and-app-defined-intents.md) |
+| `v3/5-services` | [0097](adr/0097-service-health-and-startup.md) (§4 proposé) |
+| `v3/6-sdk-versioning` | [0098](adr/0098-sdk-versions-packages-and-manifest-checks.md) §1 à §7 |
+| `v3/7-storage-backup` | [0099](adr/0099-os-backup-and-low-storage.md) |
+| `v3/8-settings-security` | [0100](adr/0100-sensitive-settings-and-protected-write-audit.md) (§2 proposé) |
+| `v3/9-sync` | [0101](adr/0101-synchronized-deletions-and-conflicts.md) (§2 proposé) |
+| `v3/10-server-proxy` | [0102](adr/0102-server-network-relay-tcp-udp-and-policy.md) |
+| `v3/11-apps` | [0103](adr/0103-hack-paint-image-files-and-theme-editor.md) (§2.4 proposé) |
+| `v3/12-localization` | [0104](adr/0104-localization.md) |
+| `v3/13-accessibility` | [0105](adr/0105-accessibility-preferences.md) |
+| `v3/14-trimming` | [0106](adr/0106-trimmed-release-publish.md) |
+| `v3/15-sdk-freeze` | [0098](adr/0098-sdk-versions-packages-and-manifest-checks.md) §8 |
+| `v3/16-final` | aucun |
+
+Deux écarts au plan, décidés dans ces ADR : la sauvegarde est téléchargée sur
+l'hôte au lieu d'être écrite dans `~` (une archive de l'OS dépasse la limite de
+16 Mio par fichier, ADR 0099 §1) ; il n'y a pas de client du domaine de synchro
+`app_catalog`, le choix d'apps de l'utilisateur voyageant déjà comme fichier de
+`~/.config` (ADR 0101 §3). Le prochain numéro libre est 0107.
+
 ## 5. Hors périmètre
 
 - Tout le contenu de jeu (section 1).
@@ -166,7 +193,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] Création de `v3/base` depuis `web/base` (après `web/12` à `web/15`).
 
 ### Chantiers
-- [ ] `v3/1-adr`
+- [x] `v3/1-adr` (ADR 0094 à 0106)
 - [ ] `v3/2-game-removal`
 - [ ] `v3/3-window-model`
 - [ ] `v3/4-intents`
