@@ -20,6 +20,32 @@ public sealed class IntranetApiTests
     }
 
     [Fact]
+    public async Task Notes_of_one_author_are_read_through_the_database_index()
+    {
+        IntranetClient client = new();
+        await client.SendJsonAsync("POST", "/api/notes", """{"title":"Mine","body":"x","author":"neo"}""");
+
+        using JsonDocument itOps = JsonDocument.Parse((await client.GetAsync("/api/notes?author=it-ops")).ReadAsString());
+        using JsonDocument neo = JsonDocument.Parse((await client.GetAsync("/api/notes?author=neo&q=min")).ReadAsString());
+
+        Assert.Equal(["Welcome to the intranet", "VPN maintenance"], itOps.RootElement.EnumerateArray().Select(note => note.GetProperty("title").GetString()));
+        Assert.Equal("Mine", Assert.Single(neo.RootElement.EnumerateArray()).GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task Deleting_every_note_does_not_bring_the_welcome_notes_back()
+    {
+        IntranetClient client = new();
+        for (int id = 1; id <= 3; id++)
+        {
+            Assert.Equal(204, (await client.DeleteAsync($"/api/notes/{id}")).StatusCode);
+        }
+
+        using JsonDocument health = JsonDocument.Parse((await client.GetAsync("/health")).ReadAsString());
+        Assert.Equal(0, health.RootElement.GetProperty("notes").GetInt32());
+    }
+
+    [Fact]
     public async Task Notes_answer_every_verb_with_json_and_problems()
     {
         IntranetClient client = new();
