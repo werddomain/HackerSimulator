@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Empty.TooManyArguments" xml:space="preserve">
+    <value>empty: trop d'arguments</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>trash: {0}</value>
+  </data>
+  <data name="List.OtherDevice" xml:space="preserve">
+    <value>  (supprimé sur un autre appareil)</value>
+  </data>
+  <data name="List.TooManyArguments" xml:space="preserve">
+    <value>list: trop d'arguments</value>
+  </data>
+  <data name="List.UnknownOrigin" xml:space="preserve">
+    <value>(origine inconnue)</value>
+  </data>
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission non accordée</value>
+  </data>
+  <data name="Put.Error" xml:space="preserve">
+    <value>put: {0}</value>
+  </data>
+  <data name="Put.MissingOperand" xml:space="preserve">
+    <value>put: opérande manquant</value>
+  </data>
+  <data name="Put.Permanent" xml:space="preserve">
+    <value>put: --permanent n'est pas une opération de la Corbeille ; utilisez « rm --permanent »</value>
+  </data>
+  <data name="Restore.Expected" xml:space="preserve">
+    <value>restore: attendu : &lt;nom|chemin-d-origine&gt; [destination]</value>
+  </data>
+  <data name="Restore.NotInTrash" xml:space="preserve">
+    <value>restore: « {0} » n'est pas dans la Corbeille</value>
+  </data>
+  <data name="Rm.MissingName" xml:space="preserve">
+    <value>rm: nom d'élément de la Corbeille manquant</value>
+  </data>
+  <data name="Rm.NotInTrash" xml:space="preserve">
+    <value>trash: rm: « {0} » n'est pas dans la Corbeille</value>
+  </data>
+  <data name="UnknownSubcommand" xml:space="preserve">
+    <value>sous-commande inconnue « {0} »</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>utilisation : trash put [-f] &lt;fichier...&gt;
+              trash list
+              trash restore &lt;nom|chemin-d-origine&gt; [destination]
+              trash rm &lt;nom...&gt;
+              trash empty</value>
+  </data>
+</root>

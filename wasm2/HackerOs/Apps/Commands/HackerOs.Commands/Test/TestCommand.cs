@@ -2,6 +2,8 @@ using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Test;
 
@@ -18,6 +20,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         IReadOnlyList<string> argv = context.App.Environment.GetCommandLineArgs();
         string name = argv.Count > 0 ? argv[0] : "test";
         List<string> args = [.. context.Arguments];
@@ -25,7 +28,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
         {
             if (args.Count == 0 || args[^1] != "]")
             {
-                await context.StandardError.WriteLineAsync("[: missing `]'");
+                await context.StandardError.WriteLineAsync(text["MissingBracket"]);
                 return 2;
             }
 
@@ -39,7 +42,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
         }
         catch (FormatException exception)
         {
-            await context.StandardError.WriteLineAsync($"{name}: {exception.Message}");
+            await context.StandardError.WriteLineAsync(text["Error", name, exception.Message]);
             return 2;
         }
     }
@@ -47,6 +50,8 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
     /// <summary>Recursive descent over the arguments: or := and (-o and)*; and := not (-a not)*; not := ! not | primary.</summary>
     private sealed class Evaluator(List<string> args, TerminalExecutionContext context, CancellationToken cancellationToken)
     {
+        /// <summary>The syntax error texts, in the language of the command's process (ADR 0104).</summary>
+        private readonly IStringLocalizer<Strings> _text = context.App.GetLocalizer<Strings>();
         private int _position;
 
         private static readonly HashSet<string> BinaryOperators = new(StringComparer.Ordinal)
@@ -72,7 +77,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
             bool result = await OrAsync();
             if (_position < args.Count)
             {
-                throw new FormatException($"{args[_position]}: unexpected argument");
+                throw new FormatException(_text["UnexpectedArgument", args[_position]]);
             }
 
             return result;
@@ -119,7 +124,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
         {
             if (_position >= args.Count)
             {
-                throw new FormatException("argument expected");
+                throw new FormatException(_text["ArgumentExpected"]);
             }
 
             string token = args[_position];
@@ -129,7 +134,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
                 bool inner = await OrAsync();
                 if (_position >= args.Count || args[_position] != ")")
                 {
-                    throw new FormatException("`)' expected");
+                    throw new FormatException(_text["ParenthesisExpected"]);
                 }
 
                 _position++;
@@ -186,7 +191,7 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
                     'w' => exists && (root || Allowed(mode, owner, UnixFileMode.UserWrite, UnixFileMode.GroupWrite | UnixFileMode.OtherWrite)),
                     'x' => exists && Allowed(mode, owner || root, UnixFileMode.UserExecute, UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
                     'b' or 'c' or 'p' or 'S' or 'g' or 'u' or 'k' => false,
-                    _ => throw new FormatException($"-{op}: unary operator expected")
+                    _ => throw new FormatException(_text["UnaryExpected", op])
                 };
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -235,9 +240,9 @@ public sealed class TestCommand(AppManifest manifest) : TerminalAppBase(manifest
             };
         }
 
-        private static long ParseInteger(string text) =>
+        private long ParseInteger(string text) =>
             long.TryParse(text.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long value)
                 ? value
-                : throw new FormatException($"{text}: integer expression expected");
+                : throw new FormatException(_text["IntegerExpected", text]);
     }
 }

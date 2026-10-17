@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotResolve" xml:space="preserve">
+    <value>ping: impossible de résoudre « {0} » : Nom ou service inconnu</value>
+  </data>
+  <data name="Header" xml:space="preserve">
+    <value>PING {0} 56(84) octets de données.</value>
+  </data>
+  <data name="HeaderAddress" xml:space="preserve">
+    <value>PING {0} ({1}) 56(84) octets de données.</value>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>64 octets de {0} : icmp_seq={1} ttl={2} temps={3} ms</value>
+  </data>
+  <data name="Statistics.Summary" xml:space="preserve">
+    <value>{0} paquets transmis, {1} reçus, {2} % de perte de paquets, temps {3} ms</value>
+  </data>
+  <data name="Statistics.Title" xml:space="preserve">
+    <value>--- statistiques ping de {0} ---</value>
+  </data>
+  <data name="Timeout" xml:space="preserve">
+    <value>Délai d'attente dépassé pour icmp_seq {0}</value>
+  </data>
+  <data name="Unreachable" xml:space="preserve">
+    <value>De {0} icmp_seq={1} Hôte de destination injoignable</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>ping: utilisation : ping &lt;nom-d-hôte|ip&gt;</value>
+  </data>
+</root>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotCreate" xml:space="preserve">
+    <value>mkdir: cannot create directory '{0}': {1}</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>mkdir: created directory '{0}'</value>
+  </data>
+  <data name="InvalidOption" xml:space="preserve">
+    <value>mkdir: invalid option -- '{0}'</value>
+  </data>
+  <data name="MissingOperand" xml:space="preserve">
+    <value>mkdir: missing operand</value>
+  </data>
+  <data name="Reason.Failed" xml:space="preserve">
+    <value>Operation failed</value>
+  </data>
+  <data name="Reason.FileExists" xml:space="preserve">
+    <value>File exists</value>
+  </data>
+  <data name="Reason.InvalidArgument" xml:space="preserve">
+    <value>Invalid argument</value>
+  </data>
+  <data name="Reason.NoSpace" xml:space="preserve">
+    <value>No space left on device</value>
+  </data>
+  <data name="Reason.NotDirectory" xml:space="preserve">
+    <value>Not a directory</value>
+  </data>
+  <data name="Reason.NotFound" xml:space="preserve">
+    <value>No such file or directory</value>
+  </data>
+  <data name="Reason.PermissionDenied" xml:space="preserve">
+    <value>Permission denied</value>
+  </data>
+  <data name="UnrecognizedOption" xml:space="preserve">
+    <value>mkdir: unrecognized option '{0}'</value>
+  </data>
+</root>

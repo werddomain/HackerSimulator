@@ -3,6 +3,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Net;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Netstat;
 
@@ -20,6 +22,8 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Titles and summaries follow the process language; column headers and rows stay English for scripts (ADR 0104, section 5).
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         HashSet<char> flags = [];
         foreach (string arg in context.Arguments)
         {
@@ -38,7 +42,7 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
 
         if (flags.Contains('i'))
         {
-            await context.StandardOutput.WriteLineAsync("Kernel Interface table");
+            await context.StandardOutput.WriteLineAsync(text["InterfaceTable"]);
             await context.StandardOutput.WriteLineAsync("Iface             MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg");
             foreach (NetworkInterface nic in await NetworkInfo.GetInterfacesAsync(cancellationToken))
             {
@@ -51,7 +55,7 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
 
         if (flags.Contains('r'))
         {
-            await context.StandardOutput.WriteLineAsync("Kernel IP routing table");
+            await context.StandardOutput.WriteLineAsync(text["RoutingTable"]);
             await context.StandardOutput.WriteLineAsync("Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface");
             foreach (var route in NetworkInfo.Routes)
             {
@@ -67,13 +71,13 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
             long received = interfaces.Sum(nic => nic.RxPackets);
             long sent = interfaces.Sum(nic => nic.TxPackets);
             await context.StandardOutput.WriteLineAsync("Ip:");
-            await context.StandardOutput.WriteLineAsync($"    {received} total packets received");
-            await context.StandardOutput.WriteLineAsync("    0 forwarded");
-            await context.StandardOutput.WriteLineAsync($"    {received} incoming packets delivered");
-            await context.StandardOutput.WriteLineAsync($"    {sent} requests sent out");
+            await context.StandardOutput.WriteLineAsync(text["Stats.TotalReceived", received]);
+            await context.StandardOutput.WriteLineAsync(text["Stats.Forwarded"]);
+            await context.StandardOutput.WriteLineAsync(text["Stats.Delivered", received]);
+            await context.StandardOutput.WriteLineAsync(text["Stats.RequestsSent", sent]);
             await context.StandardOutput.WriteLineAsync("Tcp:");
-            await context.StandardOutput.WriteLineAsync($"    {sent} segments sent out");
-            await context.StandardOutput.WriteLineAsync($"    {received} segments received");
+            await context.StandardOutput.WriteLineAsync(text["Stats.SegmentsSent", sent]);
+            await context.StandardOutput.WriteLineAsync(text["Stats.SegmentsReceived", received]);
             return 0;
         }
 
@@ -81,7 +85,7 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
         bool numeric = flags.Contains('n');
         bool programs = flags.Contains('p');
         bool udpOnly = flags.Contains('u') && !flags.Contains('t');
-        await context.StandardOutput.WriteLineAsync($"Active Internet connections ({(flags.Contains('a') ? "servers and established" : listening ? "only servers" : "w/o servers")})");
+        await context.StandardOutput.WriteLineAsync(text[flags.Contains('a') ? "Connections.All" : listening ? "Connections.Servers" : "Connections.NoServers"]);
         await context.StandardOutput.WriteLineAsync($"Proto Recv-Q Send-Q Local Address           Foreign Address         State      {(programs ? " PID/Program name" : string.Empty)}");
         if (!listening || udpOnly)
         {
@@ -92,8 +96,8 @@ public sealed class NetstatCommand(AppManifest manifest) : TerminalAppBase(manif
         if (programs && listeners.Any(static listener => listener.ProcessId is null))
         {
             // net-tools prints this before the table when some owners are hidden from the caller.
-            await context.StandardError.WriteLineAsync("(Not all processes could be identified, non-owned process info");
-            await context.StandardError.WriteLineAsync(" will not be shown, you would have to be root to see it all.)");
+            await context.StandardError.WriteLineAsync(text["HiddenOwners.Line1"]);
+            await context.StandardError.WriteLineAsync(text["HiddenOwners.Line2"]);
         }
 
         foreach (HackTcpListenerInfo listener in listeners)

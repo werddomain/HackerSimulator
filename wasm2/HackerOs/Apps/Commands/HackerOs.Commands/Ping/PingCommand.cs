@@ -2,6 +2,8 @@ using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ping;
 
@@ -28,10 +30,11 @@ public sealed class PingCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Arguments.Count == 0)
         {
-            context.StandardError.WriteLine("ping: usage: ping <hostname|ip>");
+            context.StandardError.WriteLine(text["Usage"]);
             return 1;
         }
 
@@ -51,15 +54,15 @@ public sealed class PingCommand : TerminalAppBase
             }
             catch (HackPingException)
             {
-                context.StandardOutput.WriteLine($"ping: cannot resolve '{target}': Name or service not known");
+                context.StandardOutput.WriteLine(text["CannotResolve", target]);
                 return 2;
             }
 
             if (sequence == 1)
             {
                 context.StandardOutput.WriteLine(reply.Address is null
-                    ? $"PING {target} 56(84) bytes of data."
-                    : $"PING {target} ({reply.Address}) 56(84) bytes of data.");
+                    ? text["Header", target]
+                    : text["HeaderAddress", target, reply.Address]);
             }
 
             replies.Add(reply);
@@ -68,30 +71,30 @@ public sealed class PingCommand : TerminalAppBase
             {
                 case HackIPStatus.Success:
                     context.StandardOutput.WriteLine(
-                        $"64 bytes from {from}: icmp_seq={sequence} ttl={reply.Ttl} time={FormatMilliseconds(reply.RoundtripTime)} ms");
+                        text["Reply", from, sequence, reply.Ttl, FormatMilliseconds(reply.RoundtripTime)]);
                     break;
                 case HackIPStatus.DestinationHostUnreachable:
-                    context.StandardOutput.WriteLine($"From {from} icmp_seq={sequence} Destination Host Unreachable");
+                    context.StandardOutput.WriteLine(text["Unreachable", from, sequence]);
                     break;
                 default:
-                    context.StandardOutput.WriteLine($"Request timeout for icmp_seq {sequence}");
+                    context.StandardOutput.WriteLine(text["Timeout", sequence]);
                     break;
             }
         }
 
-        return WriteStatistics(context, target, replies);
+        return WriteStatistics(context, text, target, replies);
     }
 
     /// <summary>Writes the summary <c>ping</c> prints on exit and returns its status: 0 if any reply came back.</summary>
-    private static int WriteStatistics(TerminalExecutionContext context, string target, IReadOnlyList<HackPingReply> replies)
+    private static int WriteStatistics(TerminalExecutionContext context, IStringLocalizer<Strings> text, string target, IReadOnlyList<HackPingReply> replies)
     {
         double[] times = [.. replies.Where(r => r.Status == HackIPStatus.Success).Select(r => r.RoundtripTime.TotalMilliseconds)];
         int lossPercent = replies.Count == 0 ? 100 : (int)Math.Round(100.0 * (replies.Count - times.Length) / replies.Count);
 
         context.StandardOutput.WriteLine();
-        context.StandardOutput.WriteLine($"--- {target} ping statistics ---");
+        context.StandardOutput.WriteLine(text["Statistics.Title", target]);
         context.StandardOutput.WriteLine(
-            $"{replies.Count} packets transmitted, {times.Length} received, {lossPercent}% packet loss, time {Math.Max(0, replies.Count - 1) * 1001}ms");
+            text["Statistics.Summary", replies.Count, times.Length, lossPercent, Math.Max(0, replies.Count - 1) * 1001]);
         if (times.Length == 0)
         {
             return 1;
@@ -99,6 +102,7 @@ public sealed class PingCommand : TerminalAppBase
 
         double average = times.Average();
         double deviation = Math.Sqrt(times.Average(t => (t - average) * (t - average)));
+        // The rtt line keeps its machine format in every language, as iputils prints it.
         context.StandardOutput.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"rtt min/avg/max/mdev = {times.Min():0.000}/{average:0.000}/{times.Max():0.000}/{deviation:0.000} ms"));
         return 0;

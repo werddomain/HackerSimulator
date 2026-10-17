@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ArgumentExpected" xml:space="preserve">
+    <value>argument attendu</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="IntegerExpected" xml:space="preserve">
+    <value>{0} : nombre entier attendu</value>
+  </data>
+  <data name="MissingBracket" xml:space="preserve">
+    <value>[: « ] » manquant</value>
+  </data>
+  <data name="ParenthesisExpected" xml:space="preserve">
+    <value>« ) » attendu</value>
+  </data>
+  <data name="UnaryExpected" xml:space="preserve">
+    <value>-{0} : opérateur unaire attendu</value>
+  </data>
+  <data name="UnexpectedArgument" xml:space="preserve">
+    <value>{0} : argument inattendu</value>
+  </data>
+</root>

@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Sudo;
 
@@ -22,16 +24,17 @@ public sealed class SudoCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Arguments.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("usage: sudo <command> [args...]");
+            await context.StandardError.WriteLineAsync(text["Usage"]);
             return 1;
         }
 
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("sudo: no shell session");
+            await context.StandardError.WriteLineAsync(text["NoShell"]);
             return 1;
         }
 

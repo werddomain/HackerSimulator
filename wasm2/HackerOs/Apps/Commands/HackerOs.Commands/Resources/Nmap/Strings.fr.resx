@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Done" xml:space="preserve">
+    <value>Nmap terminé : 1 adresse IP (1 hôte actif) analysée en {0:F2} secondes</value>
+  </data>
+  <data name="DoneNoHost" xml:space="preserve">
+    <value>Nmap terminé : 1 adresse IP (0 hôte actif) analysée</value>
+  </data>
+  <data name="HostSeemsDown" xml:space="preserve">
+    <value>Remarque : l'hôte semble éteint. S'il est vraiment actif mais bloque nos sondes ping, essayez -Pn</value>
+  </data>
+  <data name="HostUnreachable" xml:space="preserve">
+    <value>L'hôte est injoignable.</value>
+  </data>
+  <data name="HostUp" xml:space="preserve">
+    <value>L'hôte est actif.</value>
+  </data>
+  <data name="HostUpLatency" xml:space="preserve">
+    <value>L'hôte est actif ({0:0.0000} s de latence).</value>
+  </data>
+  <data name="NotShown" xml:space="preserve">
+    <value>Non affichés : {0} ports tcp fermés (conn-refused)</value>
+  </data>
+  <data name="OsDetails" xml:space="preserve">
+    <value>Détails de l'OS : {0} {1}  (précision : {2} %)</value>
+  </data>
+  <data name="OsDetection" xml:space="preserve">
+    <value>Détection de l'OS effectuée. Signalez tout résultat incorrect sur https://nmap.org/submit/</value>
+  </data>
+  <data name="ProbeFailed" xml:space="preserve">
+    <value>Remarque : échec de la sonde ({0}).</value>
+  </data>
+  <data name="ScanReport" xml:space="preserve">
+    <value>Rapport d'analyse Nmap pour {0}</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>
+Démarrage de Nmap 7.94 ( https://nmap.org ) le {0:yyyy-MM-dd HH:mm} UTC</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>nmap: utilisation : nmap [-p &lt;plage-de-ports&gt;] [-sV] [-O] &lt;cible&gt;</value>
+  </data>
+</root>

@@ -1,9 +1,10 @@
-using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Nmap;
 
@@ -33,6 +34,8 @@ public sealed class NmapCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        // Human-readable lines follow the process language; the port table stays English (ADR 0104, section 5).
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         // Parse arguments: nmap [-p <range>] [-sV] [-O] <target>
         string? target = null;
@@ -65,11 +68,11 @@ public sealed class NmapCommand : TerminalAppBase
 
         if (target is null)
         {
-            context.StandardError.WriteLine("nmap: usage: nmap [-p <port-range>] [-sV] [-O] <target>");
+            context.StandardError.WriteLine(text["Usage"]);
             return 1;
         }
 
-        context.StandardOutput.WriteLine($"\nStarting Nmap 7.94 ( https://nmap.org ) at {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
+        context.StandardOutput.WriteLine(text["Starting", DateTime.UtcNow]);
 
         IPAddress? address = await TryResolveAsync(target, cancellationToken).ConfigureAwait(false);
         string reportName = address is null || address.ToString() == target ? target : $"{target} ({address})";
@@ -81,9 +84,9 @@ public sealed class NmapCommand : TerminalAppBase
             discovery = await HackPing.SendAsync(target, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (discovery.Status != HackIPStatus.Success)
             {
-                context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
-                context.StandardOutput.WriteLine("Host is unreachable.");
-                context.StandardOutput.WriteLine("Nmap done: 1 IP address (0 hosts up) scanned");
+                context.StandardOutput.WriteLine(text["ScanReport", reportName]);
+                context.StandardOutput.WriteLine(text["HostUnreachable"]);
+                context.StandardOutput.WriteLine(text["DoneNoHost"]);
                 return 1;
             }
         }
@@ -95,23 +98,23 @@ public sealed class NmapCommand : TerminalAppBase
         }
         catch (SocketException exception)
         {
-            context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
+            context.StandardOutput.WriteLine(text["ScanReport", reportName]);
             context.StandardOutput.WriteLine(exception.SocketErrorCode == SocketError.HostNotFound
-                ? "Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn"
-                : $"Note: probe failed ({exception.SocketErrorCode}).");
-            context.StandardOutput.WriteLine("Nmap done: 1 IP address (0 hosts up) scanned");
+                ? text["HostSeemsDown"]
+                : text["ProbeFailed", exception.SocketErrorCode]);
+            context.StandardOutput.WriteLine(text["DoneNoHost"]);
             return 1;
         }
 
-        context.StandardOutput.WriteLine($"Nmap scan report for {reportName}");
+        context.StandardOutput.WriteLine(text["ScanReport", reportName]);
         context.StandardOutput.WriteLine(discovery is null
-            ? "Host is up."
-            : string.Create(CultureInfo.InvariantCulture, $"Host is up ({discovery.RoundtripTime.TotalSeconds:0.0000}s latency)."));
+            ? text["HostUp"]
+            : text["HostUpLatency", discovery.RoundtripTime.TotalSeconds]);
 
         int hidden = (lastPort - firstPort + 1) - ports.Count;
         if (hidden > 0)
         {
-            context.StandardOutput.WriteLine($"Not shown: {hidden} closed tcp ports (conn-refused)");
+            context.StandardOutput.WriteLine(text["NotShown", hidden]);
         }
 
         if (ports.Count > 0)
@@ -138,14 +141,13 @@ public sealed class NmapCommand : TerminalAppBase
             && await HackTcpClient.DetectOperatingSystemAsync(target, cancellationToken).ConfigureAwait(false) is { } os)
         {
             context.StandardOutput.WriteLine();
-            context.StandardOutput.WriteLine("OS detection performed. Please report any incorrect results at https://nmap.org/submit/");
-            context.StandardOutput.WriteLine($"OS details: {os.Name} {os.Version}  (Accuracy: {os.Accuracy}%)");
+            context.StandardOutput.WriteLine(text["OsDetection"]);
+            context.StandardOutput.WriteLine(text["OsDetails", os.Name, os.Version, os.Accuracy]);
         }
 
         double elapsedSeconds = discovery is null ? 0.5 : discovery.RoundtripTime.TotalMilliseconds * 0.1;
         context.StandardOutput.WriteLine();
-        context.StandardOutput.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"Nmap done: 1 IP address (1 host up) scanned in {elapsedSeconds:F2} seconds"));
+        context.StandardOutput.WriteLine(text["Done", elapsedSeconds]);
         return 0;
     }
 

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Done" xml:space="preserve">
+    <value>Nmap done: 1 IP address (1 host up) scanned in {0:F2} seconds</value>
+  </data>
+  <data name="DoneNoHost" xml:space="preserve">
+    <value>Nmap done: 1 IP address (0 hosts up) scanned</value>
+  </data>
+  <data name="HostSeemsDown" xml:space="preserve">
+    <value>Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn</value>
+  </data>
+  <data name="HostUnreachable" xml:space="preserve">
+    <value>Host is unreachable.</value>
+  </data>
+  <data name="HostUp" xml:space="preserve">
+    <value>Host is up.</value>
+  </data>
+  <data name="HostUpLatency" xml:space="preserve">
+    <value>Host is up ({0:0.0000}s latency).</value>
+  </data>
+  <data name="NotShown" xml:space="preserve">
+    <value>Not shown: {0} closed tcp ports (conn-refused)</value>
+  </data>
+  <data name="OsDetails" xml:space="preserve">
+    <value>OS details: {0} {1}  (Accuracy: {2}%)</value>
+  </data>
+  <data name="OsDetection" xml:space="preserve">
+    <value>OS detection performed. Please report any incorrect results at https://nmap.org/submit/</value>
+  </data>
+  <data name="ProbeFailed" xml:space="preserve">
+    <value>Note: probe failed ({0}).</value>
+  </data>
+  <data name="ScanReport" xml:space="preserve">
+    <value>Nmap scan report for {0}</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>
+Starting Nmap 7.94 ( https://nmap.org ) at {0:yyyy-MM-dd HH:mm} UTC</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>nmap: usage: nmap [-p &lt;port-range&gt;] [-sV] [-O] &lt;target&gt;</value>
+  </data>
+</root>

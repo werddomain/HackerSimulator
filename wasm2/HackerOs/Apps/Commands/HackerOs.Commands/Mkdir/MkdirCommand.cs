@@ -1,7 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Mkdir;
 
@@ -25,6 +27,7 @@ public sealed class MkdirCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         (List<string> options, List<string> paths) = CommandIO.SplitArguments(context.Arguments);
         bool parents = false;
@@ -43,7 +46,7 @@ public sealed class MkdirCommand : TerminalAppBase
 
             if (option.StartsWith("--", StringComparison.Ordinal))
             {
-                context.StandardError.WriteLine($"mkdir: unrecognized option '{option}'");
+                context.StandardError.WriteLine(text["UnrecognizedOption", option]);
                 return 1;
             }
 
@@ -59,7 +62,7 @@ public sealed class MkdirCommand : TerminalAppBase
                         verbose = true;
                         break;
                     default:
-                        context.StandardError.WriteLine($"mkdir: invalid option -- '{flag}'");
+                        context.StandardError.WriteLine(text["InvalidOption", flag]);
                         return 1;
                 }
             }
@@ -67,7 +70,7 @@ public sealed class MkdirCommand : TerminalAppBase
 
         if (paths.Count == 0)
         {
-            context.StandardError.WriteLine("mkdir: missing operand");
+            context.StandardError.WriteLine(text["MissingOperand"]);
             return 1;
         }
 
@@ -81,7 +84,7 @@ public sealed class MkdirCommand : TerminalAppBase
             }
             catch (FormatException)
             {
-                context.StandardError.WriteLine($"mkdir: cannot create directory '{path}': Invalid argument");
+                context.StandardError.WriteLine(text["CannotCreate", path, text["Reason.InvalidArgument"]]);
                 status = 1;
                 continue;
             }
@@ -114,7 +117,7 @@ public sealed class MkdirCommand : TerminalAppBase
             new FileSystemStatRequest(VirtualPath.Parse(parentPath)), cancellationToken);
         if (!parentStat.Succeeded || parentStat.Value is null)
         {
-            context.StandardError.WriteLine($"mkdir: cannot create directory '{operand}': No such file or directory");
+            context.StandardError.WriteLine(Text(context)["CannotCreate", operand, Text(context)["Reason.NotFound"]]);
             return false;
         }
 
@@ -150,8 +153,9 @@ public sealed class MkdirCommand : TerminalAppBase
             {
                 if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
                 {
-                    string reason = isTarget ? "File exists" : "Not a directory";
-                    context.StandardError.WriteLine($"mkdir: cannot create directory '{operand}': {reason}");
+                    IStringLocalizer<Strings> text = Text(context);
+                    string reason = isTarget ? text["Reason.FileExists"] : text["Reason.NotDirectory"];
+                    context.StandardError.WriteLine(text["CannotCreate", operand, reason]);
                     return false;
                 }
 
@@ -167,7 +171,7 @@ public sealed class MkdirCommand : TerminalAppBase
                     new FileSystemStatRequest(VirtualPath.Parse(parent)), cancellationToken);
                 if (!parentStat.Succeeded || parentStat.Value is null)
                 {
-                    context.StandardError.WriteLine($"mkdir: cannot create directory '{operand}': No such file or directory");
+                    context.StandardError.WriteLine(Text(context)["CannotCreate", operand, Text(context)["Reason.NotFound"]]);
                     return false;
                 }
 
@@ -210,27 +214,31 @@ public sealed class MkdirCommand : TerminalAppBase
         var result = await context.App.FileSystem.CreateAsync(request, cancellationToken);
         if (!result.Succeeded)
         {
-            context.StandardError.WriteLine($"mkdir: cannot create directory '{operand}': {Describe(result.Transaction.Error?.Code)}");
+            IStringLocalizer<Strings> text = Text(context);
+            context.StandardError.WriteLine(text["CannotCreate", operand, Describe(text, result.Transaction.Error?.Code)]);
             return false;
         }
 
         if (verbose)
         {
-            context.StandardOutput.WriteLine($"mkdir: created directory '{display}'");
+            context.StandardOutput.WriteLine(Text(context)["Created", display]);
         }
 
         return true;
     }
 
-    /// <summary>The <c>strerror</c> text for the usual failures; other codes keep their name.</summary>
-    private static string Describe(FileSystemErrorCode? code) => code switch
+    /// <summary>The texts of the command, in the language of its process (ADR 0104).</summary>
+    private static IStringLocalizer<Strings> Text(TerminalExecutionContext context) => context.App.GetLocalizer<Strings>();
+
+    /// <summary>The <c>strerror</c> text for the usual failures, translated like glibc's; other codes keep their name.</summary>
+    private static string Describe(IStringLocalizer<Strings> text, FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.AlreadyExists => "File exists",
-        FileSystemErrorCode.NotFound => "No such file or directory",
-        FileSystemErrorCode.NoSpace => "No space left on device",
-        FileSystemErrorCode.NotDirectory => "Not a directory",
-        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied => "Permission denied",
-        null => "Operation failed",
+        FileSystemErrorCode.AlreadyExists => text["Reason.FileExists"],
+        FileSystemErrorCode.NotFound => text["Reason.NotFound"],
+        FileSystemErrorCode.NoSpace => text["Reason.NoSpace"],
+        FileSystemErrorCode.NotDirectory => text["Reason.NotDirectory"],
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied => text["Reason.PermissionDenied"],
+        null => text["Reason.Failed"],
         _ => code.Value.ToString(),
     };
 

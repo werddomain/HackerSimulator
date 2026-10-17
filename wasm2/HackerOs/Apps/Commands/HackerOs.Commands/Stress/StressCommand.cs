@@ -3,6 +3,8 @@ using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Stress;
 
@@ -33,6 +35,7 @@ public sealed class StressCommand : TerminalAppBase
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         int hogs = 1;
         double? timeout = null;
         bool yieldSlices = false;
@@ -56,15 +59,15 @@ public sealed class StressCommand : TerminalAppBase
             }
             else
             {
-                await context.StandardError.WriteLineAsync($"stress: invalid option '{arg}'");
-                await context.StandardError.WriteLineAsync("Usage: stress [-c N] [-t SECONDS] [--yield]");
+                await context.StandardError.WriteLineAsync(text["InvalidOption", arg]);
+                await context.StandardError.WriteLineAsync(text["Usage"]);
                 return 1;
             }
         }
 
         long pid = context.App.ProcessId.Value;
         await context.StandardOutput.WriteLineAsync(
-            string.Create(CultureInfo.InvariantCulture, $"stress: info: [{pid}] dispatching hogs: {hogs} cpu, 0 io, 0 vm, 0 hdd"));
+            text["Dispatching", pid, hogs]);
         await context.StandardOutput.FlushAsync(cancellationToken);
 
         // One thread per process: N hogs share it, as N processes would share one core.
@@ -86,7 +89,7 @@ public sealed class StressCommand : TerminalAppBase
 
         GC.KeepAlive(sink);
         await context.StandardOutput.WriteLineAsync(
-            string.Create(CultureInfo.InvariantCulture, $"stress: info: [{pid}] successful run completed in {elapsed.Elapsed.TotalSeconds:0}s"));
+            text["Completed", pid, elapsed.Elapsed.TotalSeconds]);
         return 0;
     }
 

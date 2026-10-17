@@ -3,6 +3,8 @@ using System.Net.Sockets;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Nslookup;
 
@@ -23,10 +25,12 @@ public sealed class NslookupCommand(AppManifest manifest) : TerminalAppBase(mani
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Messages and source comments follow the process language; the record lines stay as BIND prints them.
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         string? target = context.Arguments.FirstOrDefault(static argument => !argument.StartsWith('-'));
         if (target is null)
         {
-            await context.StandardError.WriteLineAsync("Usage: nslookup <name|address>");
+            await context.StandardError.WriteLineAsync(text["Usage"]);
             return 1;
         }
 
@@ -44,7 +48,7 @@ public sealed class NslookupCommand(AppManifest manifest) : TerminalAppBase(mani
             }
 
             HackHostEntry entry = await HackDns.GetHostEntryAsync(target, cancellationToken);
-            await context.StandardOutput.WriteLineAsync(SourceLine(entry));
+            await context.StandardOutput.WriteLineAsync(SourceLine(text, entry));
             if (!string.Equals(entry.HostName, target.TrimEnd('.'), StringComparison.OrdinalIgnoreCase))
             {
                 await context.StandardOutput.WriteLineAsync($"{target}\tcanonical name = {entry.HostName}.");
@@ -61,21 +65,21 @@ public sealed class NslookupCommand(AppManifest manifest) : TerminalAppBase(mani
         catch (SocketException)
         {
             string name = IPAddress.TryParse(target, out IPAddress? literal) ? ReverseName(literal) : target;
-            await context.StandardOutput.WriteLineAsync($"** server can't find {name}: NXDOMAIN");
+            await context.StandardOutput.WriteLineAsync(text["NotFound", name]);
             await context.StandardOutput.WriteLineAsync();
             return 1;
         }
     }
 
     /// <summary>The line that says where the answer came from, in the comment style of <c>dig</c>.</summary>
-    private static string SourceLine(HackHostEntry entry) => entry.Source switch
+    private static string SourceLine(IStringLocalizer<Strings> text, HackHostEntry entry) => entry.Source switch
     {
-        HackDnsSource.HostsFile => $";; source: {entry.SourceDetail ?? "/etc/hosts"} (static table)",
-        HackDnsSource.Loopback => ";; source: loopback (this machine)",
-        HackDnsSource.WebApp => $";; source: web app {entry.SourceDetail} (web.urls, this machine)",
-        HackDnsSource.HostedSite => $";; source: hosted site {entry.SourceDetail} (this machine)",
-        HackDnsSource.SimulatedNetwork => "Non-authoritative answer:",
-        _ => ";; source: unknown"
+        HackDnsSource.HostsFile => text["Source.HostsFile", entry.SourceDetail ?? "/etc/hosts"],
+        HackDnsSource.Loopback => text["Source.Loopback"],
+        HackDnsSource.WebApp => text["Source.WebApp", entry.SourceDetail ?? string.Empty],
+        HackDnsSource.HostedSite => text["Source.HostedSite", entry.SourceDetail ?? string.Empty],
+        HackDnsSource.SimulatedNetwork => text["Source.NonAuthoritative"],
+        _ => text["Source.Unknown"]
     };
 
     /// <summary>The PTR name of an IPv4 address: its octets reversed under <c>in-addr.arpa</c>.</summary>

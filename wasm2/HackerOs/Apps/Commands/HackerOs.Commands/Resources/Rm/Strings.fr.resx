@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotRemove" xml:space="preserve">
+    <value>rm: impossible de supprimer « {0} » : {1}</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>rm: {0}</value>
+  </data>
+  <data name="InvalidOption" xml:space="preserve">
+    <value>option invalide -- « {0} »</value>
+  </data>
+  <data name="MissingOperand" xml:space="preserve">
+    <value>rm: opérande manquant</value>
+  </data>
+  <data name="Reason.IsDirectory" xml:space="preserve">
+    <value>Est un dossier</value>
+  </data>
+  <data name="Reason.NotFound" xml:space="preserve">
+    <value>Aucun fichier ou dossier de ce nom</value>
+  </data>
+  <data name="Reason.PermissionDenied" xml:space="preserve">
+    <value>Permission non accordée</value>
+  </data>
+  <data name="Reason.Unknown" xml:space="preserve">
+    <value>erreur inconnue</value>
+  </data>
+  <data name="UnrecognizedOption" xml:space="preserve">
+    <value>option non reconnue « {0} »</value>
+  </data>
+</root>
