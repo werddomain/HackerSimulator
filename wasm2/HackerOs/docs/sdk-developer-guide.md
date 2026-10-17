@@ -18,7 +18,7 @@ section exécuté contre le code de `rebuild/base` (2026-10-11).
 | `Window` | composant Razor dérivé de `WindowAppBase` | Text Editor, File Explorer, Calculator |
 | `Terminal` | classe dérivée de `TerminalAppBase`, lancée par le shell | `ls`, `cat`, `grep`, `nano` |
 | `Service` | classe dérivée de `ServiceAppBase`, sans interface, liée à la session | services démarrés à la connexion |
-| `Web` | classe dérivée de `WebServerAppBase`, URL dans `Urls` (`web.urls`), démarrée à la première requête dans le worker `web` partagé | sites internes `.hack` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)) |
+| `Web` | classe dérivée de `WebServerAppBase`, URL dans `Urls` (`web.urls`), démarrée à la première requête dans le worker `web` partagé ; avec ASP.Hack, une `WebAppDefinition` | sites internes `.hack` : [guide ASP.Hack](asp-hack-developer-guide.md), exemple Intranet |
 
 Une app est décrite par une classe `[AppManifest]` dérivée d'`AppDefinition`.
 Le build en tire `manifest.json` ; l'OS ne lit que ce fichier, jamais la classe.

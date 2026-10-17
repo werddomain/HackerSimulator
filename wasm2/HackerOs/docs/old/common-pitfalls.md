@@ -155,3 +155,26 @@ failures but the same tests pass individually, that's resource contention in
 the environment, not a bug in the app — filter E2E projects out of routine
 solution-wide test runs (`--filter "FullyQualifiedName!~E2E.Tests&
 FullyQualifiedName!~Pwa.E2E"`) and run them separately.
+
+## 7. Test projects don't run the trim analyzer: a shipping app is the only place IL2110/IL2111 surface
+
+`Directory.Build.props` turns on `IsTrimmable`/`EnableTrimAnalyzer` (warnings
+as errors) for every project whose name does not end with `.Tests`. ASP.Hack
+views were built and tested for weeks inside test projects only; the first
+app under `Apps/` with views (the Intranet sample, web/11, ADR 0087 §2) failed
+to build with `IL2110`/`IL2111` in the generated route table and in every
+Razor-generated view.
+
+Why: a view type is named with `DynamicallyAccessedMemberTypes.All` (the
+generated view table, `RazorCompiledItemAttribute`, `[Layout(typeof(...))]`).
+`All` makes every member of the type **and of its base classes** "accessed by
+reflection", so any `[DynamicallyAccessedMembers]` on a base-class member (a
+property, or a parameter that an `async` method captures into its state
+machine field) is reported in every consuming project.
+
+**Rule:** no member of a view or component base class (`HackViewBase`,
+`HackRazorPage`, `HackComponentBase`, ...) carries a DAM annotation; keep it on
+the OS methods that receive a `Type`, and keep annotated parameters out of
+`async` methods (do the reflection in a synchronous prologue). When you add a
+base type to an SDK library, build a shipping project that uses it (the
+Ecosystem host builds the samples), not just its test project.

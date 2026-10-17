@@ -1,0 +1,61 @@
+.task-crumbs a {
+    color: #39ff88;
+    text-decoration: none;
+}
+
+.task-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 560px;
+    padding: 20px;
+    border: 1px solid #23362b;
+    border-radius: 8px;
+    background: #111814;
+}
+
+.task-prompt {
+    margin: 0;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    color: #1f8f51;
+}
+
+.task-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #7f9a89;
+    font-size: 13px;
+}
+
+.task-field input {
+    padding: 7px 10px;
+    border: 1px solid #23362b;
+    border-radius: 4px;
+    background: #070a08;
+    color: #d5e8dc;
+    font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+.task-button {
+    align-self: flex-start;
+    padding: 7px 16px;
+    border: 1px solid #1f8f51;
+    border-radius: 4px;
+    background: rgba(57, 255, 136, 0.12);
+    color: #39ff88;
+    cursor: pointer;
+}
+
+.task-muted {
+    color: #7f9a89;
+    font-size: 13px;
+}
+
+.task-saved {
+    color: #39ff88;
+}
+
+.task-error {
+    color: #ff5d5d;
+}

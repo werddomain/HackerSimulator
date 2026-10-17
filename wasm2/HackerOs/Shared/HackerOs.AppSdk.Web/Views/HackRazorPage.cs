@@ -306,7 +306,7 @@ public abstract class HackRazorPage
     /// <param name="model">The model.</param>
     /// <param name="body">The HTML of what the page wraps, for a layout; <see langword="null"/> for a view.</param>
     /// <param name="layout">The initial <see cref="Layout"/> (from the view starts).</param>
-    internal async Task<string> RenderAsync(
+    internal Task<string> RenderAsync(
         [DynamicallyAccessedMembers(HackViewTypes.Component)] Type pageType,
         HackViewContext viewContext,
         object? model,
@@ -319,6 +319,14 @@ public abstract class HackRazorPage
         Layout = layout;
         Activate(pageType, viewContext.HttpContext.RequestServices);
 
+        // The annotated pageType stays out of the async state machine: a field of a nested type of the
+        // page base, annotated for the trimmer, would be reported in every site whose views are kept
+        // with all their members (IL2110).
+        return ExecuteAndCollectAsync(viewContext, body);
+    }
+
+    private async Task<string> ExecuteAndCollectAsync(HackViewContext viewContext, string? body)
+    {
         using StringWriter output = new();
         _writers.Push(output);
         await ExecuteAsync().ConfigureAwait(true);

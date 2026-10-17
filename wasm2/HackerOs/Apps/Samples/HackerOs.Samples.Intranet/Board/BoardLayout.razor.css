@@ -1,0 +1,71 @@
+.board-site {
+    --board-bg: #0b0f0d;
+    --board-panel: #111814;
+    --board-line: #23362b;
+    --board-text: #d5e8dc;
+    --board-muted: #7f9a89;
+    --board-accent: #39ff88;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    background: var(--board-bg);
+    color: var(--board-text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.board-header {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 12px 28px;
+    border-bottom: 1px solid var(--board-line);
+}
+
+.board-brand {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--board-text);
+    text-decoration: none;
+}
+
+.board-brand span {
+    color: var(--board-accent);
+}
+
+.board-nav {
+    display: flex;
+    gap: 18px;
+    flex: 1;
+}
+
+.board-nav a,
+.board-nav ::deep a {
+    color: var(--board-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    padding: 4px 0;
+}
+
+.board-nav ::deep a.active {
+    color: var(--board-text);
+    border-bottom-color: var(--board-accent);
+}
+
+.board-who {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 13px;
+    color: var(--board-accent);
+}
+
+.board-body {
+    flex: 1;
+    padding: 24px 28px;
+}
+
+.board-footer {
+    padding: 8px 28px;
+    font-size: 12px;
+    color: var(--board-muted);
+    border-top: 1px solid var(--board-line);
+}

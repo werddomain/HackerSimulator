@@ -31,11 +31,16 @@ class SiteLinks {
             return;
         }
 
+        // As in Blazor, a link that targets another frame (_top, _blank, a name) is not a navigation
+        // within the site: the document changes. One tab per window, so it opens in this tab.
+        const target = anchor.getAttribute("target");
+        const forceLoad = !!target && target !== "_self";
+
         // The OS's Blazor router must never see a site link: it would navigate HackerOS itself.
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        this.dotnet.invokeMethodAsync("OnLinkClicked", href);
+        this.dotnet.invokeMethodAsync("OnLinkClicked", href, forceLoad);
     }
 
     dispose() {

@@ -172,7 +172,8 @@ la requête (`/Home/Details/7?sort=asc`).
   `LocalRedirect` (refuse une URL externe), `RedirectToAction`, `Created`,
   `CreatedAtAction` (URL absolue), `NotFound`, `BadRequest` (dont
   `BadRequest(ModelState)`), `Unauthorized`, `Forbid`, `Conflict`, `Problem`,
-  `ValidationProblem`.
+  `ValidationProblem`, et `TryValidateModel(model, prefix)` pour valider un
+  modèle construit ou fusionné par l'action (un `PATCH`, ADR 0087 §3).
 - Une action rend `void`, `Task`, `ValueTask`, un `IHackActionResult`, un objet
   (texte brut pour une `string`, JSON sinon, `204` pour `null`) ou une tâche de
   l'un d'eux. Un paramètre `CancellationToken` reçoit `RequestAborted`.

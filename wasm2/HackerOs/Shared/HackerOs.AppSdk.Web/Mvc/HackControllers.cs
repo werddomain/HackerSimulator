@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization.Metadata;
 using HackerOs.AppSdk.Web.Http;
@@ -259,6 +260,37 @@ public abstract class HackControllerBase
     [NonAction]
     public virtual HackProblemResult ValidationProblem(HackModelStateDictionary modelState) =>
         new(new HackValidationProblemDetails(modelState) { Status = 400 });
+
+    /// <summary>
+    /// Validates <paramref name="model"/> with its <c>DataAnnotations</c> attributes and
+    /// <see cref="IValidatableObject"/>, adds the errors to <see cref="ModelState"/> and returns whether
+    /// the model state is valid, like ASP.NET's <c>ControllerBase.TryValidateModel</c>. Useful when an
+    /// action builds or changes a model after binding (a <c>PATCH</c> merged into the stored entity).
+    /// </summary>
+    /// <typeparam name="TModel">The model type; its public properties are kept by the trimmer.</typeparam>
+    /// <param name="model">The model to validate.</param>
+    /// <param name="prefix">Prefix of the model state keys (<c>note</c> gives <c>note.Title</c>); none by default.</param>
+    [NonAction]
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "TModel is annotated with PublicProperties: the trimmer keeps the properties and their validation attributes that Validator reads.")]
+    public virtual bool TryValidateModel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TModel>(TModel model, string? prefix = null)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        List<ValidationResult> results = [];
+        Validator.TryValidateObject(model, new ValidationContext(model, HttpContext.RequestServices, null), results, validateAllProperties: true);
+        foreach (ValidationResult result in results)
+        {
+            string message = result.ErrorMessage ?? "The value is invalid.";
+            string[] members = [.. result.MemberNames];
+            foreach (string member in members.Length == 0 ? [string.Empty] : members)
+            {
+                string key = string.IsNullOrEmpty(prefix) ? member : member.Length == 0 ? prefix : $"{prefix}.{member}";
+                ModelState.AddModelError(key, message);
+            }
+        }
+
+        return ModelState.IsValid;
+    }
 }
 
 /// <summary>

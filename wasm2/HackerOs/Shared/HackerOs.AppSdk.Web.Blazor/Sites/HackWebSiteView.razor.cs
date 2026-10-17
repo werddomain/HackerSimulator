@@ -126,8 +126,13 @@ public sealed partial class HackWebSiteView : IAsyncDisposable
 
     /// <summary>Called by the script when the user clicked a link of the site.</summary>
     /// <param name="href">The link's <c>href</c>, as written.</param>
+    /// <param name="forceLoad">
+    /// Whether the link opens outside the site's own frame (a <c>target</c> other than <c>_self</c>):
+    /// as in Blazor, such a link is a navigation of the document, so a site reaches its server-rendered
+    /// pages (MVC views on the same origin) with <c>&lt;a href="/" target="_top"&gt;</c>.
+    /// </param>
     [JSInvokable]
-    public async Task OnLinkClicked(string href)
+    public async Task OnLinkClicked(string href, bool forceLoad)
     {
         using IDisposable? scope = AmbientScope();
         if (_site is null || string.IsNullOrWhiteSpace(href))
@@ -145,7 +150,7 @@ public sealed partial class HackWebSiteView : IAsyncDisposable
             return;
         }
 
-        await FollowAsync(target, replace: false, forceLoad: false, interceptedLink: true);
+        await FollowAsync(target, replace: false, forceLoad, interceptedLink: true);
     }
 
     private void OnNavigationRequested(string uri, NavigationOptions options) =>

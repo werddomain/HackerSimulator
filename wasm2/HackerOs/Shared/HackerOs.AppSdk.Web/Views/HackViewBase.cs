@@ -46,10 +46,16 @@ public abstract class HackViewBase : ComponentBase
     /// Gets or sets the layout applied after this component rendered (its <c>@layout</c> by default);
     /// <see langword="null"/> renders the page without layout.
     /// </summary>
-    [DynamicallyAccessedMembers(HackViewTypes.Component)]
+    /// <remarks>
+    /// Not annotated for the trimmer on purpose: every view class is kept with all its members (the
+    /// generated view table and Razor name it with <see cref="HackViewTypes.Component"/>), and an annotated
+    /// member of a view base would then be reported as reached by reflection in every site (IL2111).
+    /// </remarks>
     protected Type? Layout
     {
         get => ViewContext.Layout;
+        [UnconditionalSuppressMessage("Trimming", "IL2067",
+            Justification = "A view sets its layout from typeof() of a component of its own assembly, as Razor's [Layout(typeof(...))] does; Blazor's LayoutView renders it the same way.")]
         set => ViewContext.Layout = value;
     }
 }

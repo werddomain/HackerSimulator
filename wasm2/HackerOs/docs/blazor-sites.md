@@ -98,6 +98,10 @@ de route qui appelle l'API du site, page qui plante.
   jour l'adresse et l'historique (`pushState`/`replaceState`), aucune requête.
 - Ailleurs, ou `forceLoad` : `OnNavigate` → navigation ordinaire du navigateur,
   qui arrête le processus de rendu.
+- Un lien dont `target` existe et n'est pas `_self` (`_top`, `_blank`, un nom)
+  est une navigation du document même vers le site, comme dans Blazor
+  (ADR 0087 §1) : c'est ainsi qu'une page Blazor rejoint les pages MVC du même
+  site (`<a href="/Notes" target="_top">` dans l'exemple Intranet).
 - Précédent/suivant : si la cible est dans le site vivant, le navigateur change
   l'adresse de la vue (`Url`), qui appelle `SetLocation` ; sinon vraie requête.
   Recharger fait toujours une vraie requête (nouveau processus de rendu).

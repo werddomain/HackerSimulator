@@ -34,7 +34,11 @@ public sealed partial class AmbientFrameSourceTests
         "HackComponentBase",
         "HackEmbeddableComponent",
         // The layout base of a Blazor site (ADR 0084) derives from HackComponentBase in the SDK.
-        "HackSiteLayoutBase"
+        "HackSiteLayoutBase",
+        // ASP.Hack views (ADR 0083): rendered once to static HTML while the site serves a request, so
+        // they run in the frame of the site process and have no event handler.
+        "HackView",
+        "HackLayout"
     };
 
     private static readonly HashSet<string> PlainComponentBases = new(StringComparer.Ordinal)
