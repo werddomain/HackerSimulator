@@ -414,6 +414,17 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         Dictionary<string, Dictionary<string, string>> jar = ToJar(request.Cookies);
         HashSet<HackCookie> before = [.. FromJar(jar)];
         Uri currentUri = request.RequestUri;
+
+        // ADR 0089: a Cookie header the app wrote itself (`curl -H 'Cookie: …'`) is sent with the
+        // jar's cookies, on the hops that stay on the requested host only (curl drops it when a
+        // redirect leaves for another host). It never enters the jar: a request header stores
+        // nothing, so it never comes back as a Set-Cookie of the response.
+        IReadOnlyList<KeyValuePair<string, string>> explicitCookies = ParseCookieHeaders(request.Headers);
+        IReadOnlyList<KeyValuePair<string, string>> headers =
+        [
+            .. request.Headers.Where(static header => !header.Key.Equals("Cookie", StringComparison.OrdinalIgnoreCase))
+        ];
+        string requestedHost = request.RequestUri.Host;
         SimulatedHttpBody? body = request.Content is { } content ? new SimulatedHttpBody(content.ContentType, content.Bytes.Span) : null;
         int redirectCount = 0;
         Route route = first;
@@ -425,11 +436,13 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<KeyValuePair<string, string>> hopCookies =
+                string.Equals(currentUri.Host, requestedHost, StringComparison.OrdinalIgnoreCase) ? explicitCookies : [];
             SimulatedHttpResponse response;
             if (route.IsLocal)
             {
                 (SimulatedHttpResponse? local, HackNetworkError? error) = await SendLocalAsync(
-                    method, currentUri, request.Headers, body, jar, cancellationToken).ConfigureAwait(false);
+                    method, currentUri, headers, body, jar, hopCookies, cancellationToken).ConfigureAwait(false);
                 if (error is { } localError)
                 {
                     return (HackNetworkResult<HackHttpResponse>.Failure(localError), first.IsLocal);
@@ -451,7 +464,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
                 Uri target = route.Answer is { Source: HackDnsSource.HostsFile }
                     ? new UriBuilder(currentUri) { Host = host.Hostname }.Uri
                     : currentUri;
-                SimulatedExchangeResult exchange = _network.Send(method, target.AbsoluteUri, request.Headers, body, jar);
+                SimulatedExchangeResult exchange = SendSimulated(method, target, headers, body, jar, hopCookies);
                 if (exchange.NetworkError is not null)
                 {
                     return (HackNetworkResult<HackHttpResponse>.Failure(MapSimulatedError(exchange.NetworkError)), first.IsLocal);
@@ -618,10 +631,119 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
     }
 
     /// <summary>
+    /// Sends one hop to a simulated machine. Without explicit cookies the jar is handed over as is;
+    /// with them the site reads a copy holding the merged cookies of the host, and only the
+    /// cookies it sets are written back, so the explicit ones never land in the jar.
+    /// </summary>
+    private SimulatedExchangeResult SendSimulated(
+        string method,
+        Uri target,
+        IReadOnlyList<KeyValuePair<string, string>> headers,
+        SimulatedHttpBody? body,
+        Dictionary<string, Dictionary<string, string>> jar,
+        IReadOnlyList<KeyValuePair<string, string>> explicitCookies)
+    {
+        if (explicitCookies.Count == 0)
+        {
+            return _network.Send(method, target.AbsoluteUri, headers, body, jar);
+        }
+
+        string host = target.Host;
+        Dictionary<string, string> merged = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> cookie in MergeCookies(jar, host, explicitCookies))
+        {
+            merged[cookie.Key] = cookie.Value;
+        }
+
+        Dictionary<string, Dictionary<string, string>> hopJar = new(StringComparer.OrdinalIgnoreCase) { [host] = merged };
+        SimulatedExchangeResult exchange = _network.Send(method, target.AbsoluteUri, headers, body, hopJar);
+        if (exchange.Response is { SetCookies.IsEmpty: false } response)
+        {
+            if (!jar.TryGetValue(host, out Dictionary<string, string>? cookies))
+            {
+                cookies = new Dictionary<string, string>(StringComparer.Ordinal);
+                jar[host] = cookies;
+            }
+
+            foreach (KeyValuePair<string, string> cookie in response.SetCookies)
+            {
+                cookies[cookie.Key] = cookie.Value;
+            }
+        }
+
+        return exchange;
+    }
+
+    /// <summary>
+    /// Reads the <c>name=value</c> pairs of every <c>Cookie</c> header the app wrote (RFC 6265
+    /// section 4.2), in order; a pair without <c>=</c> or without a name is skipped.
+    /// </summary>
+    private static IReadOnlyList<KeyValuePair<string, string>> ParseCookieHeaders(
+        IEnumerable<KeyValuePair<string, string>> headers)
+    {
+        List<KeyValuePair<string, string>> cookies = [];
+        foreach (KeyValuePair<string, string> header in headers)
+        {
+            if (!header.Key.Equals("Cookie", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (string pair in header.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                int equals = pair.IndexOf('=', StringComparison.Ordinal);
+                if (equals > 0)
+                {
+                    cookies.Add(new(pair[..equals].Trim(), pair[(equals + 1)..].Trim()));
+                }
+            }
+        }
+
+        return cookies;
+    }
+
+    /// <summary>
+    /// The cookies a hop to <paramref name="host"/> carries: the jar's, in order, then the explicit
+    /// ones; an explicit cookie replaces the jar's cookie of the same name, as what the user typed wins.
+    /// </summary>
+    private static IReadOnlyList<KeyValuePair<string, string>> MergeCookies(
+        Dictionary<string, Dictionary<string, string>> jar,
+        string host,
+        IReadOnlyList<KeyValuePair<string, string>> explicitCookies)
+    {
+        List<KeyValuePair<string, string>> cookies = [];
+        Dictionary<string, int> positions = new(StringComparer.Ordinal);
+        if (jar.TryGetValue(host, out Dictionary<string, string>? stored))
+        {
+            foreach (KeyValuePair<string, string> cookie in stored)
+            {
+                positions[cookie.Key] = cookies.Count;
+                cookies.Add(cookie);
+            }
+        }
+
+        foreach (KeyValuePair<string, string> cookie in explicitCookies)
+        {
+            if (positions.TryGetValue(cookie.Key, out int position))
+            {
+                cookies[position] = cookie;
+            }
+            else
+            {
+                positions[cookie.Key] = cookies.Count;
+                cookies.Add(cookie);
+            }
+        }
+
+        return cookies;
+    }
+
+    /// <summary>
     /// Delivers one HTTP hop to the process listening on this machine (ADR 0074, section 2): routed
     /// by port, <c>Host</c> and path as <c>http.sys</c> does, the owning web app started on demand
     /// when nothing listens yet (section 3). The reply comes back as a simulated response so the
-    /// redirect loop treats both worlds alike; its cookies land in <paramref name="jar"/>.
+    /// redirect loop treats both worlds alike; its cookies land in <paramref name="jar"/>. The
+    /// <c>Cookie</c> header carries the jar's cookies of the host merged with <paramref name="explicitCookies"/>.
     /// </summary>
     private async ValueTask<(SimulatedHttpResponse? Response, HackNetworkError? Error)> SendLocalAsync(
         string method,
@@ -629,6 +751,7 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
         IReadOnlyList<KeyValuePair<string, string>> headers,
         SimulatedHttpBody? body,
         Dictionary<string, Dictionary<string, string>> jar,
+        IReadOnlyList<KeyValuePair<string, string>> explicitCookies,
         CancellationToken cancellationToken)
     {
         LocalNetworkCaller local = _local!;
@@ -665,7 +788,8 @@ public sealed class AppNetworkGateway : IAppNetworkGateway
                 && !header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
                 && !header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
         ];
-        if (jar.TryGetValue(host, out Dictionary<string, string>? cookies) && cookies.Count > 0)
+        IReadOnlyList<KeyValuePair<string, string>> cookies = MergeCookies(jar, host, explicitCookies);
+        if (cookies.Count > 0)
         {
             wire.Add(new("Cookie", string.Join("; ", cookies.Select(static cookie => $"{cookie.Key}={cookie.Value}"))));
         }

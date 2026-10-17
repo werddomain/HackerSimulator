@@ -257,8 +257,9 @@ le contrat reste la référence de `web/9`.
   (`Address.City`) ni de dictionnaires.
 - `HEAD` n'envoie pas de `Content-Length` du corps qui aurait été produit.
 - Pas d'environnements (`Development`/`Production`) ni de `TempData`.
-- `curl -H 'Cookie: ...'` est ignoré par la passerelle réseau (`web/3`) : seul
-  le pot à cookies de la commande est envoyé.
+- ~~`curl -H 'Cookie: ...'` est ignoré par la passerelle réseau (`web/3`).~~
+  Corrigé par `web/14` (ADR 0089) : l'en-tête atteint le site, fusionné avec
+  le pot à cookies de la commande.
 
 ## Tâches
 

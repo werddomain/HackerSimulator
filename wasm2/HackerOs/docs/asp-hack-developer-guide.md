@@ -405,8 +405,10 @@ manifestes et les assemblies paresseuses (`BuildKnownLazyAppsTests`,
   ni de `ViewBag` ; pas d'environnements `Development`/`Production`.
 - Les requêtes `Site.Http` des pages Blazor n'apparaissent pas dans l'onglet
   Network.
-- `curl -H 'Cookie: ...'` est ignoré par la passerelle réseau : chaque `curl`
-  a son pot à cookies.
+- Chaque `curl` a son pot à cookies. Pour rejouer une session, passez le
+  cookie à la main : `curl -H 'Cookie: .HackSession=…'` est envoyé au site,
+  fusionné avec le pot (ce qui est tapé gagne), sur l'hôte demandé seulement,
+  sans jamais être stocké (ADR 0089).
 - Compiler un site **dans l'OS** reste hors périmètre (ADR 0076 §8).
 
 ## Tâches
