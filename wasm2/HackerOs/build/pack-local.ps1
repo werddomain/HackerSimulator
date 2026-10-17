@@ -21,7 +21,7 @@ New-Item -ItemType Directory -Force -Path $Output, (Join-Path $root "artifacts")
 
 $projects = Get-ChildItem -Path $root -Recurse -Filter *.csproj |
     Where-Object { $_.FullName -notmatch '[\\/](obj|bin)[\\/]' } |
-    Where-Object { Select-String -Path $_.FullName -Pattern 'Packaging.props|HackerOsTemplatePackage' -Quiet } |
+    Where-Object { Select-String -Path $_.FullName -Pattern 'Packaging.props' -Quiet } |
     ForEach-Object { [System.IO.Path]::GetRelativePath($root, $_.FullName) } |
     Sort-Object
 $filter = Join-Path $root "artifacts/packages.slnf"

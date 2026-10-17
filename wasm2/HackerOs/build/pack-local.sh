@@ -26,7 +26,7 @@ mkdir -p "$output" "$root/artifacts"
 
 # Solution filter of the published projects (paths relative to the solution).
 filter="$root/artifacts/packages.slnf"
-mapfile -t projects < <(cd "$root" && grep -rl --include='*.csproj' -e 'Packaging.props' -e 'HackerOsTemplatePackage' . \
+mapfile -t projects < <(cd "$root" && grep -rl --include='*.csproj' -e 'Packaging.props' . \
   | grep -v '/obj/' | grep -v '/bin/' | sed 's:^\./::' | sort)
 {
   echo '{ "solution": { "path": "../HackerOs.sln", "projects": ['
