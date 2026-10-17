@@ -8,6 +8,8 @@ using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Tests.Settings;
+using HackerOs.Platform.Core.WebData;
+using HackerOs.AppSdk.WebData;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.Extensions.Logging;
@@ -23,6 +25,7 @@ public sealed class AppInstallationServiceTests
     private const string Term = "org.test.term";
     private const string Kernel = "org.test.kernel";
     private const string Unknown = "org.other-build.app";
+    private const string Site = "org.test.site";
 
     [Fact]
     public async Task User_uninstall_writes_the_home_file_blocks_launch_stops_instances_and_keeps_data()
@@ -44,6 +47,26 @@ public sealed class AppInstallationServiceTests
         Assert.Equal(AppLaunchStatus.Disabled, relaunch.Status);
         Assert.Equal("mode=scientific\n", await harness.Settings.ReadAsync($"/home/alice/.config/{Calc}/prefs.config"));
         Assert.Contains(harness.Log.Lines, line => line == $"apps: {Calc} uninstalled (scope=user, by=alice)");
+    }
+
+    [Fact]
+    public async Task Uninstalling_a_website_deletes_its_browser_database_and_nothing_else()
+    {
+        Harness harness = await Harness.CreateAsync();
+        await harness.LoginAsync(harness.Settings.Alice);
+        HackWebDbSchemaDefinition schema = new(1, [new HackWebDbMigrationStep(1, [new HackWebDbStoreDefinition("notes", null, true, [])], [], [], [])]);
+        await harness.WebDatabases.OpenAsync(HackWebDbNames.ForApp(Site), schema);
+        await harness.WebDatabases.OpenAsync(HackWebDbNames.ForApp("org.test.other-site"), schema);
+
+        AppInstallationResult calc = await harness.Installation.UninstallAsync(Calc, AppInstallationScope.User);
+        Assert.Equal(2, (await harness.WebDatabases.ListAsync()).Count);
+        AppInstallationResult site = await harness.Installation.UninstallAsync(Site, AppInstallationScope.User);
+
+        Assert.True(calc.Success);
+        Assert.True(site.Success);
+        HackerOs.AppSdk.Administration.HackWebSiteDatabaseInfo left = Assert.Single(await harness.WebDatabases.ListAsync());
+        Assert.Equal("hackweb.org.test.other-site", left.Name);
+        Assert.Contains(harness.Log.Lines, line => line == $"apps: {Site} browser database hackweb.{Site} deleted");
     }
 
     [Fact]
@@ -274,7 +297,8 @@ public sealed class AppInstallationServiceTests
                     Window(Lib, "Lib"),
                     Window(Viewer, "Viewer", Needs(Lib)),
                     Window(Kernel, "Kernel"),
-                    Window(Term, "Term", Needs(Kernel))
+                    Window(Term, "Term", Needs(Kernel)),
+                    Window(Site, "Site") with { Kind = AppKind.Web, Web = new WebAppManifest(["http://site.hack/"]) }
                 ],
                 [Term]);
             Assert.True(built.IsSuccess, string.Join(", ", built.Errors.Select(error => error.Message)));
@@ -293,7 +317,7 @@ public sealed class AppInstallationServiceTests
                 Catalog, descriptors, Enablement, Processes, settings.Grants, contextFactory, settings.EventBus);
             Installation = new AppInstallationService(
                 Catalog, Enablement, Orchestrator, settings.FileSystem, settings.Session, settings.Clock,
-                settings.TopicBus, settings.EventBus, Log);
+                settings.TopicBus, settings.EventBus, Log, WebDatabases);
         }
 
         internal SettingsFilesHarness Settings { get; }
@@ -303,6 +327,7 @@ public sealed class AppInstallationServiceTests
         internal AppLifecycleOrchestrator Orchestrator { get; }
         internal AppInstallationService Installation { get; }
         internal ListLogger<AppInstallationService> Log { get; } = new();
+        internal InMemoryWebSiteDatabaseStore WebDatabases { get; } = new();
 
         /// <summary>Boots like the Ecosystem host: settings defaults, the apps.config migration, then the service.</summary>
         internal static async Task<Harness> CreateAsync(bool boot = true)

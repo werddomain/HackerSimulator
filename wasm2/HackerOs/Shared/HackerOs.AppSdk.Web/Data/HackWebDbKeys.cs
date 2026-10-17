@@ -126,4 +126,7 @@ public sealed class HackWebDbKeyRange
 /// <summary>JSON of keys.</summary>
 [System.Text.Json.Serialization.JsonSerializable(typeof(string))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(double))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(int))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(long))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(bool))]
 internal sealed partial class HackWebDbSdkJsonContext : System.Text.Json.Serialization.JsonSerializerContext;

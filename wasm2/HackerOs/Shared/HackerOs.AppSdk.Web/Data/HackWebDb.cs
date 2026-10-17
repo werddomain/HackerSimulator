@@ -144,7 +144,22 @@ public sealed class HackWebDb
         return [.. document.RootElement.EnumerateArray().Select(item => HackWebDbKey.FromJson(item.GetRawText()))];
     }
 
-    private JsonTypeInfo<T> TypeInfo<T>() => (JsonTypeInfo<T>)_json.GetTypeInfo(typeof(T));
+    /// <summary>
+    /// The site's JSON metadata for <typeparamref name="T"/> (its <c>JsonSerializerContext</c>, trim-safe);
+    /// plain values (<see cref="string"/>, numbers, <see cref="bool"/>) work even when the site's context
+    /// does not list them, as a key-value store often holds them.
+    /// </summary>
+    private JsonTypeInfo<T> TypeInfo<T>()
+    {
+        try
+        {
+            return (JsonTypeInfo<T>)_json.GetTypeInfo(typeof(T));
+        }
+        catch (NotSupportedException) when (HackWebDbSdkJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> primitive)
+        {
+            return primitive;
+        }
+    }
 }
 
 /// <summary>An object store of a site database; values are <typeparamref name="T"/>.</summary>
