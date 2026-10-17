@@ -306,7 +306,9 @@ dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQua
   - `HackerOs.UI.E2E.Tests` : 10/10 depuis `rebuild/5-ui-a11y-mkdir`, 15/15 sur
     `web/base` depuis son portage (`web/13`, 2026-10-17), 18/18 avec les deux
     tests de [montée de version IndexedDB](#fixtures-de-montée-de-version-indexeddb)
-    (`v3/7`, 2026-10-17, environ 1 min 20 s chacun)
+    (`v3/7`, 2026-10-17, environ 1 min 20 s chacun), 20/20 après le rebase de
+    `v3/7` sur `v3/3` avec `LowStorageSpaceTests` (quota de Chromium abaissé,
+    [`system-backup.md`](system-backup.md))
     (2026-10-16 : contraste de `--hos-text-muted` du thème HackerOS, états
     ARIA écrits en `"true"`/`"false"`, voir
     [`old/common-pitfalls.md`](old/common-pitfalls.md) §8 ; le test du choix
@@ -326,7 +328,14 @@ dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQua
     6/6 seule ; `Reload_fully_offline_boots_the_app_and_preserves_a_saved_file`
     a échoué une fois (bouton « Download » resté désactivé) pendant qu'une
     autre suite Playwright tournait en parallèle, puis est passé seul
-    ([`old/common-pitfalls.md`](old/common-pitfalls.md) §6).
+    ([`old/common-pitfalls.md`](old/common-pitfalls.md) §6). Sur `v3/7`
+    rebasé, sans autre suite en parallèle, trois lancements donnent 5/6 :
+    tantôt ce test (bouton « Download »), tantôt
+    `Update_to_a_new_release_purges_the_old_cache_and_preserves_compatible_data`
+    (fichier enregistré pas encore listé par l'explorateur après 20 s) ; les
+    deux passent ensemble ou seuls au lancement suivant. **Instables, à
+    stabiliser** : l'attente porte sur l'explorateur de fichiers, pas sur le
+    cache.
 - Phase 5 : chaque PR `rebuild/5-*` colle la sortie de
   `build/verify-hosts.sh` ([Vérifier les trois hôtes](#vérifier-les-trois-hôtes)).
 - Un test de `AppInstallationService` est instable (environ une fois sur
