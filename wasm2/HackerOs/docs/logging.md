@@ -43,6 +43,10 @@ HostExceptionReporter ───────────────────�
     synchrones, jamais bloquants. Canal de 10 000 lignes ; au-delà, les plus
     anciennes sont perdues et une ligne `WARN logging: <n> entries dropped` est
     écrite dans `syslog` au vidage suivant.
+  - Plus de place (`NoSpace`, ADR 0099 §2) : le lot refusé est abandonné et
+    ses lignes comptées (`PendingNoSpaceLoss`) ; au premier vidage réussi,
+    une seule ligne `WARN logging: <n> lines lost (No space left on device)`
+    est écrite dans `syslog` ([`system-backup.md`](system-backup.md)).
   - Vidage toutes les 1 s de temps simulé, dès 100 lignes en attente, à la
     déconnexion (`SessionLoggedOutEvent`) et à `DisposeAsync`. Un seul vidage à
     la fois par système de fichiers attaché ; une seule écriture par fichier et
@@ -128,4 +132,5 @@ HostExceptionReporter ───────────────────�
 - [x] Retrait de `IAppDiagnosticsGateway` et des dépôts IndexedDB de la composition.
 - [x] Error Log Viewer lit les fichiers.
 - [x] Tests de contrat.
+- [x] Lignes perdues faute de place, comptées puis signalées (`v3/7`, ADR 0099 §2).
 - [ ] Passer Error Log Viewer sur `HackFile` après le merge de l'ADR 0043.

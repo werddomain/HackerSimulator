@@ -145,6 +145,14 @@ public static class AppCapabilities
     public const string SystemStorageInspect = "system.storage.inspect";
 
     /// <summary>
+    /// Back up the whole machine to the host computer, or restore it from a backup, through
+    /// <c>HackSystemBackup</c> (ADR 0099, section 1). Dangerous: an archive holds every user's
+    /// files, the accounts and their password hashes, and a restore overwrites them; every call
+    /// also needs an administrator.
+    /// </summary>
+    public const string SystemBackup = "system.backup";
+
+    /// <summary>
     /// Host interactive shells, as a terminal emulator does (ADR 0056, section 7): start an
     /// <c>hsh</c> process and run any line the user types in it. Dangerous: each command runs with
     /// <b>its own</b> capabilities and no window, so an app holding only harmless capabilities
@@ -236,6 +244,10 @@ public static class AppCapabilities
             SystemStorageInspect,
             "Inspecter le stockage brut",
             "Lire le stockage brut de la machine, y compris les fichiers de tous les utilisateurs."),
+        Dangerous(
+            SystemBackup,
+            "Sauvegarder et restaurer la machine",
+            "Copier sur l'ordinateur hôte tous les fichiers et comptes de la machine, ou les remplacer par une sauvegarde."),
         Dangerous(
             ShellHost,
             "Héberger un shell",

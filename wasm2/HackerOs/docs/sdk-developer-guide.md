@@ -553,13 +553,18 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Réseau simulé (et réel si l'OS l'autorise) | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | `network.simulated.*`, `network.real.access` (dangereuse) |
 | Processus et services | `HackProcess`, `HackServiceController` | `process.list`, `process.manage`, `services.manage` |
 | Héberger un shell (terminal, éditeur de code) | `HackShell.StartAsync` | `shell.host` (dangereuse) |
+| Sauvegarder ou restaurer toute la machine (apps système) | `HackSystemBackup.CreateAsync`, `RestoreAsync` | `system.backup` (dangereuse) + administrateur |
 | Temps simulé, minuteries | `AppContext.Clock` | aucune |
 
 Les chemins acceptent `~` et les chemins relatifs (au répertoire courant du
 processus). Les erreurs suivent `System.IO` : `HackFileNotFoundException`,
 `HackDirectoryNotFoundException`, `HackFileConflictException` (révision
 concurrente), `HackIOException`, `HackUnauthorizedAccessException` (avec
-`RequiredCapability`).
+`RequiredCapability`). Une écriture peut échouer faute de place :
+`HackIOException` avec `ErrorCode` `NoSpace` (`ENOSPC` : quota du navigateur
+atteint, ou réserve de root atteinte pour un utilisateur simple) ou
+`FileTooLarge` (`EFBIG`, plus de 16 Mio) ; `ShellErrorText.Describe` donne le
+message Linux ([`system-backup.md`](system-backup.md)).
 
 Exemples détaillés par domaine : [`hack-file-api.md`](hack-file-api.md),
 [`settings-files.md`](settings-files.md), [`logging.md`](logging.md),
@@ -661,3 +666,4 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Installation dans l'hôte et test unitaire d'une commande.
 - [x] Compiler les exemples et exécuter le test contre `rebuild/base`.
 - [x] Construire une app ou un hôte depuis un autre dépôt avec les paquets locaux et les modèles (v3/6).
+- [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).

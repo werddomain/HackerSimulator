@@ -3,12 +3,14 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.Infrastructure.Browser.FileSystem;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.Core.Apps;
+using HackerOs.Platform.Core.Backup;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Settings;
+using HackerOs.Platform.Core.Storage;
 using HackerOs.Platform.Core.Time;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -38,6 +40,8 @@ public sealed class EcosystemBootCoordinator
     private readonly IRemoteProcessHost? _remoteHost;
     private readonly IWorkerPoolStatus? _workers;
     private readonly ServiceStartupCoordinator? _serviceStartup;
+    private readonly StorageSpaceMonitor? _spaceMonitor;
+    private readonly SystemBackupService? _backup;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="fileSystemBootstrapper">Mounts the IndexedDB-backed filesystem, the first step of the boot.</param>
@@ -76,6 +80,14 @@ public sealed class EcosystemBootCoordinator
     /// </param>
     /// <param name="workers">The worker pool, for the boot notice of its size and ceiling.</param>
     /// <param name="serviceStartup">Starts the boot services, then the login services (ADR 0097).</param>
+    /// <param name="spaceMonitor">
+    /// Free-space monitor of ADR 0099 (section 2), started once storage exists: low-space warning
+    /// and root reserve. Optional for headless tests.
+    /// </param>
+    /// <param name="backup">
+    /// Backup service whose restore record, kept across the restart, is written to
+    /// <c>/var/log/auth.log</c> at boot (ADR 0099, section 1). Optional for headless tests.
+    /// </param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -94,7 +106,9 @@ public sealed class EcosystemBootCoordinator
         SystemStartupSignal? startup = null,
         IRemoteProcessHost? remoteHost = null,
         IWorkerPoolStatus? workers = null,
-        ServiceStartupCoordinator? serviceStartup = null)
+        ServiceStartupCoordinator? serviceStartup = null,
+        StorageSpaceMonitor? spaceMonitor = null,
+        SystemBackupService? backup = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -115,6 +129,8 @@ public sealed class EcosystemBootCoordinator
         _remoteHost = remoteHost;
         _workers = workers;
         _serviceStartup = serviceStartup;
+        _spaceMonitor = spaceMonitor;
+        _backup = backup;
     }
 
     /// <summary>
@@ -154,6 +170,8 @@ public sealed class EcosystemBootCoordinator
         WriteResourceAccountingNotices();
         WriteWorkerNotice();
         WriteCatalogNotices();
+        _spaceMonitor?.Start();
+        await WritePendingRestoreRecordAsync(cancellationToken).ConfigureAwait(false);
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
@@ -265,6 +283,27 @@ public sealed class EcosystemBootCoordinator
                 ? "workers: commands and services run in Web Workers"
                 : $"workers: {_workers.PoolSize} pool worker(s), one per virtual core, plus one ready worker once the system is started; ceiling {_workers.Capacity} (navigator.hardwareConcurrency)";
         _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "workers", notice);
+    }
+
+    /// <summary>
+    /// Writes the restore that ran just before this boot to <c>/var/log/auth.log</c> (ADR 0099,
+    /// section 1). Never blocks the boot: a host without the record or a failure leaves it unwritten.
+    /// </summary>
+    private async ValueTask WritePendingRestoreRecordAsync(CancellationToken cancellationToken)
+    {
+        if (_backup is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _backup.WritePendingRestoreRecordAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logWriter?.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "backup", $"restore record unreadable: {exception.Message}");
+        }
     }
 
     /// <summary>

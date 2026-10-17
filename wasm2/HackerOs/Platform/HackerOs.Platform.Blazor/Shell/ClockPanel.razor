@@ -1,4 +1,5 @@
 @using HackerOs.App.Abstractions
+@using HackerOs.Platform.Core.Lifecycle
 @using HackerOs.Platform.Core.Shell
 @using HackerOs.Simulation.Abstractions.Notifications
 @using HackerOs.Simulation.Abstractions.Sessions
@@ -10,6 +11,7 @@
 @inject ISimulationClock SimulationClock
 @inject UiPlatformPreferenceService PlatformPreference
 @inject PlatformShellSwitchCoordinator PlatformSwitch
+@inject IServiceProvider Services
 
 <div class="clock-panel" role="dialog" aria-label="Notifications and calendar" @onkeydown="HandleKeyDownAsync">
     <section class="clock-panel-section" aria-label="Notifications">
@@ -43,6 +45,19 @@
                         </div>
                         <h4 class="notification-title">@notification.Title</h4>
                         <p class="notification-message">@notification.Message</p>
+                        @if (notification.Actions.Count > 0)
+                        {
+                            <div class="notification-actions">
+                                @foreach (NotificationAction action in notification.Actions)
+                                {
+                                    <button type="button"
+                                            class="notification-action"
+                                            @onclick="() => InvokeActionAsync(notification, action)">
+                                        @action.Label
+                                    </button>
+                                }
+                            </div>
+                        }
                     </li>
                 }
             </ul>
@@ -178,6 +193,33 @@
         NotificationQueue.Dismiss(id);
         StateHasChanged();
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Runs a notification action. A launch action (<see cref="NotificationAction.LaunchApp"/>, used
+    /// by OS notifications such as the low-storage warning of ADR 0099) launches its app, which the
+    /// shell then presents, and dismisses the notification; other actions belong to their app.
+    /// </summary>
+    private async Task InvokeActionAsync(Notification notification, NotificationAction action)
+    {
+        if (!action.TryGetLaunchedApp(out string? appId)
+            || SessionService.CurrentPrincipal is not AuthenticatedPrincipal principal
+            || Services.GetService(typeof(AppLifecycleOrchestrator)) is not AppLifecycleOrchestrator orchestrator)
+        {
+            return;
+        }
+
+        AppLaunchResult result = await orchestrator.LaunchAsync(new AppLaunchRequest(appId, principal, []));
+        if (result.IsSuccess)
+        {
+            NotificationQueue.Dismiss(notification.Id);
+            if (OnClose.HasDelegate)
+            {
+                await OnClose.InvokeAsync();
+            }
+        }
+
+        StateHasChanged();
     }
 
     private Task SetAutoAsync() => PlatformSwitch.RequestAutoAsync();

@@ -25,9 +25,17 @@ namespace HackerOs.Pwa.E2E.Tests;
 /// still being loopback traffic (no firewall prompt, no dependency on a real LAN/NIC
 /// address, works identically on a sandboxed CI runner and a dev workstation). The
 /// production gate itself is never touched.
+///
+/// A machine without IPv6 (some cloud containers: binding <c>[::1]</c> throws "Address
+/// family not supported by protocol") falls back to <c>127.0.0.2</c>: still loopback, still
+/// a secure context for the browser (the whole <c>127.0.0.0/8</c> block is), and its
+/// hostname does not contain "127.0.0.1" either, so the service worker registers there too.
 /// </summary>
 internal sealed class PublishedAppHost : IAsyncDisposable
 {
+    /// <summary>The loopback address this suite binds: <c>[::1]</c>, or <c>127.0.0.2</c> without IPv6.</summary>
+    private static readonly Lazy<IPAddress> Loopback = new(ChooseLoopback);
+
     private WebApplication? _app;
 
     public string Address { get; private set; } = string.Empty;
@@ -42,7 +50,8 @@ internal sealed class PublishedAppHost : IAsyncDisposable
         }
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseUrls($"http://[::1]:{port}");
+        string address = $"http://{FormatHost(Loopback.Value)}:{port}";
+        builder.WebHost.UseUrls(address);
         builder.Logging.ClearProviders();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
@@ -64,7 +73,7 @@ internal sealed class PublishedAppHost : IAsyncDisposable
 
         await app.StartAsync();
         _app = app;
-        Address = $"http://[::1]:{port}";
+        Address = address;
     }
 
     /// <summary>Simulates "server unavailable" (P2-ACC-015) without touching the browser's network stack.</summary>
@@ -80,12 +89,30 @@ internal sealed class PublishedAppHost : IAsyncDisposable
 
     public static int ReservePort()
     {
-        TcpListener listener = new(IPAddress.IPv6Loopback, 0);
+        TcpListener listener = new(Loopback.Value, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         return port;
     }
+
+    private static IPAddress ChooseLoopback()
+    {
+        try
+        {
+            TcpListener probe = new(IPAddress.IPv6Loopback, 0);
+            probe.Start();
+            probe.Stop();
+            return IPAddress.IPv6Loopback;
+        }
+        catch (SocketException)
+        {
+            return IPAddress.Parse("127.0.0.2");
+        }
+    }
+
+    private static string FormatHost(IPAddress address) =>
+        address.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{address}]" : address.ToString();
 
     public async ValueTask DisposeAsync()
     {

@@ -102,6 +102,29 @@
     overflow-wrap: anywhere;
 }
 
+.notification-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+}
+
+.notification-action {
+    border: 1px solid var(--hos-accent, #42d392);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--hos-accent, #42d392);
+    font: inherit;
+    font-size: 0.74rem;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+}
+
+.notification-action:hover,
+.notification-action:focus-visible {
+    background: var(--hos-accent-subtle, #173b2c);
+}
+
 .calendar-grid {
     width: 100%;
     border-collapse: collapse;

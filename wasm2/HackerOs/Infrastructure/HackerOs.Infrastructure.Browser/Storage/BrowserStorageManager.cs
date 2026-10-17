@@ -1,15 +1,20 @@
+using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Infrastructure.Browser.Storage;
 
 /// <summary>Reports browser storage capacity and requests durable storage retention.</summary>
-public sealed class BrowserStorageManager : IAsyncDisposable
+/// <remarks>
+/// It is also the OS's <see cref="IStorageCapacityProbe"/> (ADR 0099, section 2): the low-space
+/// warning, the root reserve and <c>df</c> read the origin's real usage and quota through it.
+/// </remarks>
+public sealed class BrowserStorageManager : IStorageCapacityProbe, IAsyncDisposable
 {
     /// <summary>Absolute free-space threshold used alongside the proportional threshold.</summary>
-    public const long LowSpaceByteThreshold = 64L * 1024 * 1024;
+    public const long LowSpaceByteThreshold = StorageSpacePolicy.LowSpaceBytes;
 
     /// <summary>Proportional free-space threshold used alongside the absolute threshold.</summary>
-    public const double LowSpaceRatioThreshold = 0.10;
+    public const double LowSpaceRatioThreshold = StorageSpacePolicy.LowSpaceRatio;
 
     private const string ModulePath = "./_content/HackerOs.Infrastructure.Browser/storageManager.js";
     private readonly IJSRuntime _runtime;
@@ -31,10 +36,9 @@ public sealed class BrowserStorageManager : IAsyncDisposable
         BrowserStorageEstimate estimate = await (await GetModuleAsync(cancellationToken).ConfigureAwait(false))
             .InvokeAsync<BrowserStorageEstimate>("getStorageEstimate", cancellationToken)
             .ConfigureAwait(false);
-        long availableBytes = Math.Max(0, estimate.QuotaBytes - estimate.UsageBytes);
-        bool isLowSpace = estimate.QuotaBytes > 0
-            && (availableBytes < LowSpaceByteThreshold
-                || (double)availableBytes / estimate.QuotaBytes < LowSpaceRatioThreshold);
+        StorageCapacity capacity = new(estimate.UsageBytes, estimate.QuotaBytes);
+        long availableBytes = capacity.AvailableBytes;
+        bool isLowSpace = StorageSpacePolicy.IsLow(capacity);
 
         return new BrowserStorageStatus(
             estimate.UsageBytes,
@@ -42,6 +46,21 @@ public sealed class BrowserStorageManager : IAsyncDisposable
             availableBytes,
             estimate.IsPersisted,
             isLowSpace);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<StorageCapacity?> GetCapacityAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            BrowserStorageStatus status = await GetStatusAsync(cancellationToken).ConfigureAwait(false);
+            return status.QuotaBytes > 0 ? new StorageCapacity(status.UsageBytes, status.QuotaBytes) : null;
+        }
+        catch (JSException)
+        {
+            // A browser without the StorageManager API cannot tell its quota.
+            return null;
+        }
     }
 
     /// <summary>Requests durable retention and returns whether the browser granted it.</summary>

@@ -85,6 +85,10 @@ HackerOs.Commands.Grep.GrepApp
 HackerOs.Commands.Grep.GrepApp.GrepApp() -> void
 HackerOs.Commands.Grep.GrepCommand
 HackerOs.Commands.Grep.GrepCommand.GrepCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.Hackbackup.HackbackupApp
+HackerOs.Commands.Hackbackup.HackbackupApp.HackbackupApp() -> void
+HackerOs.Commands.Hackbackup.HackbackupCommand
+HackerOs.Commands.Hackbackup.HackbackupCommand.HackbackupCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.Head.HeadApp
 HackerOs.Commands.Head.HeadApp.HeadApp() -> void
 HackerOs.Commands.Head.HeadCommand
@@ -494,6 +498,17 @@ override HackerOs.Commands.Grep.GrepApp.PublisherId.get -> string!
 override HackerOs.Commands.Grep.GrepApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Grep.GrepApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Grep.GrepCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.Hackbackup.HackbackupApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Hackbackup.HackbackupApp.Description.get -> string!
+override HackerOs.Commands.Hackbackup.HackbackupApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Hackbackup.HackbackupApp.Id.get -> string!
+override HackerOs.Commands.Hackbackup.HackbackupApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Hackbackup.HackbackupApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Hackbackup.HackbackupApp.Name.get -> string!
+override HackerOs.Commands.Hackbackup.HackbackupApp.PublisherId.get -> string!
+override HackerOs.Commands.Hackbackup.HackbackupApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Hackbackup.HackbackupApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Hackbackup.HackbackupCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.Head.HeadApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.Head.HeadApp.Description.get -> string!
 override HackerOs.Commands.Head.HeadApp.EntryPoint.get -> System.Type!

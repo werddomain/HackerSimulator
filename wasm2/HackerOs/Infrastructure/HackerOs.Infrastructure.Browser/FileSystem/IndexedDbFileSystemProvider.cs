@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Infrastructure.Browser.Storage;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Metrics;
 using Microsoft.JSInterop;
@@ -240,6 +241,15 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
         {
             return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.Cancelled, request.Path);
         }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.NoSpace, request.Path);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.FileTooLarge, request.Path);
+        }
         catch (InvalidDataException)
         {
             return MutationFailure(FileSystemOperation.Create, FileSystemErrorCode.ProviderFailure, request.Path);
@@ -316,6 +326,15 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.Cancelled, request.Path);
+        }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.NoSpace, request.Path);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(FileSystemOperation.Write, FileSystemErrorCode.FileTooLarge, request.Path);
         }
         catch (InvalidDataException)
         {
@@ -466,6 +485,23 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
                 request.SourcePath,
                 request.DestinationPath);
         }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(
+                FileSystemOperation.Move,
+                FileSystemErrorCode.NoSpace,
+                request.SourcePath,
+                request.DestinationPath);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(
+                FileSystemOperation.Move,
+                FileSystemErrorCode.FileTooLarge,
+                request.SourcePath,
+                request.DestinationPath);
+        }
         catch (InvalidDataException)
         {
             return MutationFailure(
@@ -598,6 +634,23 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
                 request.SourcePath,
                 request.DestinationPath);
         }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(
+                FileSystemOperation.Copy,
+                FileSystemErrorCode.NoSpace,
+                request.SourcePath,
+                request.DestinationPath);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(
+                FileSystemOperation.Copy,
+                FileSystemErrorCode.FileTooLarge,
+                request.SourcePath,
+                request.DestinationPath);
+        }
         catch (InvalidDataException)
         {
             return MutationFailure(
@@ -691,6 +744,15 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return MutationFailure(FileSystemOperation.Delete, FileSystemErrorCode.Cancelled, request.Path);
+        }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(FileSystemOperation.Delete, FileSystemErrorCode.NoSpace, request.Path);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(FileSystemOperation.Delete, FileSystemErrorCode.FileTooLarge, request.Path);
         }
         catch (InvalidDataException)
         {
@@ -832,6 +894,15 @@ public sealed class IndexedDbFileSystemProvider : IFileSystemProvider, IFileSyst
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return MutationFailure(FileSystemOperation.SetPermissions, FileSystemErrorCode.Cancelled, request.Path);
+        }
+        catch (BrowserStorageQuotaException)
+        {
+            // QuotaExceededError aborted the whole IndexedDB transaction: nothing was written (ADR 0099).
+            return MutationFailure(FileSystemOperation.SetPermissions, FileSystemErrorCode.NoSpace, request.Path);
+        }
+        catch (FileContentTooLargeException)
+        {
+            return MutationFailure(FileSystemOperation.SetPermissions, FileSystemErrorCode.FileTooLarge, request.Path);
         }
         catch (InvalidDataException)
         {

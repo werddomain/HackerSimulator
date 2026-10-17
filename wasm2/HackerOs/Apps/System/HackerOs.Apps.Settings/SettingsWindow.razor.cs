@@ -11,7 +11,7 @@ namespace HackerOs.Apps.Settings;
 
 /// <summary>
 /// The Settings app's window: appearance, file associations, granted capabilities, permissions,
-/// installed apps, optional server connection and system (restart, factory reset).
+/// installed apps, optional server connection, backup and system (restart, factory reset).
 /// </summary>
 /// <remarks>
 /// Uses only the public SDK (ADR 0055, ADR 0056 sections 8 to 11):
@@ -23,6 +23,8 @@ namespace HackerOs.Apps.Settings;
 /// optional server;</item>
 /// <item><see cref="HackSystem"/> (capability <c>system.power</c>) for restart and factory reset;
 /// the OS asks an administrator in its own window, this app never sees the password.</item>
+/// <item><see cref="HackSystemBackup"/> (capability <c>system.backup</c>, ADR 0099) in the Backup tab,
+/// shown only when the host supports it.</item>
 /// </list>
 /// </remarks>
 public partial class SettingsWindow : IAsyncDisposable

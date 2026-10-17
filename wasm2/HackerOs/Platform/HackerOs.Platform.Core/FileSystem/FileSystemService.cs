@@ -25,6 +25,12 @@ namespace HackerOs.Platform.Core.FileSystem;
 /// files through this service, and only here is the mount known, which tells persistent storage
 /// (<c>read_bytes</c>, <c>write_bytes</c>) from the virtual <c>/proc</c> and <c>/dev</c>.
 /// </para>
+/// <para>
+/// With an <see cref="IStorageSpaceGuard"/>, it also keeps the root reserve of ADR 0099 (section 2):
+/// once the free space is inside it, a create, write or copy into persistent storage by a
+/// non-administrator fails with <see cref="FileSystemErrorCode.NoSpace"/> before reaching the
+/// provider, while the system (logs) and the administrator keep writing.
+/// </para>
 /// </remarks>
 public sealed class FileSystemService : IFileSystemService
 {
@@ -36,6 +42,7 @@ public sealed class FileSystemService : IFileSystemService
     private readonly Func<DateTimeOffset> _clock;
     private readonly IProcessIoAccounting? _ioAccounting;
     private readonly IFileSystemAuditSink? _audit;
+    private readonly IStorageSpaceGuard? _spaceGuard;
 
     /// <summary>Initializes the mounted filesystem service.</summary>
     /// <param name="router">Mount table.</param>
@@ -52,6 +59,10 @@ public sealed class FileSystemService : IFileSystemService
     /// Optional audit sink (ADR 0100 section 3): every create, write, delete, rename, copy and
     /// <c>chmod</c> under <c>/etc</c>, <c>/bin</c> and <c>/var</c> (except <c>/var/log</c>), allowed or refused.
     /// </param>
+    /// <param name="spaceGuard">
+    /// Optional free-space state (ADR 0099 section 2): enforces the root reserve and is told to
+    /// measure again after persistent writes.
+    /// </param>
     public FileSystemService(
         IFileSystemMountRouter router,
         IFileSystemPathResolver pathResolver,
@@ -60,7 +71,8 @@ public sealed class FileSystemService : IFileSystemService
         Func<Guid>? transactionIdFactory = null,
         Func<DateTimeOffset>? clock = null,
         IProcessIoAccounting? ioAccounting = null,
-        IFileSystemAuditSink? audit = null)
+        IFileSystemAuditSink? audit = null,
+        IStorageSpaceGuard? spaceGuard = null)
     {
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
@@ -70,6 +82,7 @@ public sealed class FileSystemService : IFileSystemService
         _clock = clock ?? (static () => DateTimeOffset.UtcNow);
         _ioAccounting = ioAccounting;
         _audit = audit;
+        _spaceGuard = spaceGuard;
 
         _topicBus.RegisterSharedChannel(
             TopicNames.Shared("filesystem").Segment("changed").Build(),
@@ -209,6 +222,11 @@ public sealed class FileSystemService : IFileSystemService
         }
 
         FileSystemMountResolution route = _router.Resolve(path);
+        if (CheckReservedSpace(FileSystemOperation.Create, path, route.Mount.Provider, context) is { } full)
+        {
+            return Reject(full);
+        }
+
         FileSystemMutationResult result = await route.Mount.Provider.CreateAsync(
             new FileSystemCreateRequest(
                 path,
@@ -218,6 +236,7 @@ public sealed class FileSystemService : IFileSystemService
                 request.SymbolicLinkTarget),
             context,
             cancellationToken);
+        NoteSpaceUse(result, route.Mount.Provider);
         if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
         {
             PublishChange(path, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.Created);
@@ -274,6 +293,11 @@ public sealed class FileSystemService : IFileSystemService
         }
 
         IFileSystemProvider target = _router.Resolve(path).Mount.Provider;
+        if (CheckReservedSpace(FileSystemOperation.Write, path, target, context) is { } full)
+        {
+            return Reject(full);
+        }
+
         ProcessId? writer = AccountedProcess(context);
         WriteCountingContentSource? counted = writer is null ? null : new WriteCountingContentSource(content);
         FileSystemMutationResult result = await target.WriteAsync(
@@ -286,6 +310,8 @@ public sealed class FileSystemService : IFileSystemService
             // One write(2) per call: the provider consumes the whole content in one operation.
             _ioAccounting!.RecordWrite(writer!.Value, counted.Bytes, toStorage: target is not IVirtualFileSystemProvider);
         }
+
+        NoteSpaceUse(result, target);
 
         if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
         {
@@ -465,6 +491,11 @@ public sealed class FileSystemService : IFileSystemService
             return Reject(sourceDenial ?? destinationDenial!);
         }
 
+        if (CheckReservedSpace(FileSystemOperation.Copy, destination, destinationRoute.Mount.Provider, context) is { } full)
+        {
+            return Reject(full);
+        }
+
         FileSystemMutationResult result = await sourceRoute.Mount.Provider.CopyAsync(
             new FileSystemCopyRequest(
                 source,
@@ -473,6 +504,7 @@ public sealed class FileSystemService : IFileSystemService
                 request.ExpectedDestinationParentRevision),
             context,
             cancellationToken);
+        NoteSpaceUse(result, sourceRoute.Mount.Provider);
         if (result.Transaction.Status == FileSystemTransactionStatus.Committed && result.Entry is not null)
         {
             PublishChange(destination, result.Entry.Metadata.Kind, result.Entry.Metadata.Revision, FileSystemChangeKind.Created);
@@ -749,6 +781,39 @@ public sealed class FileSystemService : IFileSystemService
 
     private static bool IsWithin(VirtualPath path, string root) =>
         path.Value == root || path.Value.StartsWith($"{root}/", StringComparison.Ordinal);
+
+    /// <summary>
+    /// The root reserve (ADR 0099 section 2): inside it, a persistent create, write or copy by
+    /// anyone below administrator authority is refused with <c>ENOSPC</c>. Virtual mounts take no
+    /// space and are never refused.
+    /// </summary>
+    private FileSystemError? CheckReservedSpace(
+        FileSystemOperation operation,
+        VirtualPath path,
+        IFileSystemProvider target,
+        FileSystemAuthorizationContext context)
+    {
+        if (_spaceGuard is not { IsRootReserveReached: true }
+            || target is IVirtualFileSystemProvider
+            || AppAuthorityPolicy.Satisfies(context.OperationContext.EffectiveAuthority, AppAuthority.Administrator))
+        {
+            return null;
+        }
+
+        // Space may have been freed since the last measure: look again soon.
+        _spaceGuard.RequestRefresh();
+        return new FileSystemError(operation, FileSystemErrorCode.NoSpace, path);
+    }
+
+    /// <summary>A persistent mutation changed the used space, or hit the real limit: ask for a new measure.</summary>
+    private void NoteSpaceUse(FileSystemMutationResult result, IFileSystemProvider target)
+    {
+        if (_spaceGuard is not null && target is not IVirtualFileSystemProvider
+            && (result.Succeeded || result.Transaction.Error?.Code == FileSystemErrorCode.NoSpace))
+        {
+            _spaceGuard.RequestRefresh();
+        }
+    }
 
     private FileSystemMutationResult Reject(FileSystemError error)
     {

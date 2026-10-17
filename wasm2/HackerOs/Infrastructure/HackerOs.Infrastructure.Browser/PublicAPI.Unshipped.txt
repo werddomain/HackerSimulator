@@ -1,4 +1,5 @@
 #nullable enable
+const HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ArchiveExtension = ".hosbak" -> string!
 const HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.DefaultContentHashAlgorithm = "SHA-256" -> string!
 const HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.DefaultDeduplicateChunks = true -> bool
 const HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.DefaultMaxChunkSizeBytes = 262144 -> long
@@ -24,9 +25,20 @@ const HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.LowSpaceByte
 const HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.LowSpaceRatioThreshold = 0.1 -> double
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ExportArchiveAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]!>
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ExportAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.IndexedDbBackupService(Microsoft.JSInterop.IJSRuntime! runtime, System.TimeProvider? timeProvider = null) -> void
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.RestoreAsync(string! backupJson, HackerOs.Infrastructure.Browser.Backup.IndexedDbRestoreMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Infrastructure.Browser.Backup.IndexedDbRestoreResult!>
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.CreatedAtUtc.get -> System.DateTimeOffset
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.CreatedAtUtc.init -> void
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.IndexedDbBackupSummary(System.DateTimeOffset CreatedAtUtc, int SchemaVersion, int RecordCount, System.Collections.Generic.IReadOnlyDictionary<string!, int>! StoreRecordCounts) -> void
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.RecordCount.get -> int
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.RecordCount.init -> void
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.SchemaVersion.get -> int
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.SchemaVersion.init -> void
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.StoreRecordCounts.get -> System.Collections.Generic.IReadOnlyDictionary<string!, int>!
+HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary.StoreRecordCounts.init -> void
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupValidationException
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupValidationException.IndexedDbBackupValidationException(string! message) -> void
 HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupValidationException.IndexedDbBackupValidationException(string! message, System.Exception! innerException) -> void
@@ -201,6 +213,7 @@ HackerOs.Infrastructure.Browser.Settings.IndexedDbLegacySettingsStore.ReadAllAsy
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.BrowserStorageManager(Microsoft.JSInterop.IJSRuntime! runtime) -> void
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.GetCapacityAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Metrics.StorageCapacity?>
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Infrastructure.Browser.Storage.BrowserStorageStatus!>
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.RequestPersistenceAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 HackerOs.Infrastructure.Browser.Storage.BrowserStorageQuotaException
@@ -246,6 +259,8 @@ HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.HardwareConcurre
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.InitializeAsync() -> System.Threading.Tasks.Task!
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.StartAsync(HackerOs.Simulation.Abstractions.Workers.WebWorkerStartOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Workers.IWebWorker!>!
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.WhenIdleAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.Inspect(string! backupJson) -> HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary!
+static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ReadArchive(byte[]! archive) -> string!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.AwaitDestructiveConfirmation(HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryActions action, string! affectedData, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.Classify(System.Exception! exception, HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryContext context, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.Default.get -> HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy!

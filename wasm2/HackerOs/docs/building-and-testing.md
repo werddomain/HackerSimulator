@@ -235,6 +235,79 @@ Pour tester une app sans OS, `Tests/HackerOs.Tests.Support` fournit
 journaux, processus, intentions, environnement, shell). Exemple : voir le
 [guide du SDK](sdk-developer-guide.md#8-tester-une-app).
 
+### Fixtures de montée de version IndexedDB
+
+ADR 0099 §4. `Tests/fixtures/indexeddb/` contient un vidage de la base
+`hackeros` par version de schéma déjà publiée. `IndexedDbUpgradeFixtureTests`
+(`HackerOs.UI.E2E.Tests`) recrée chaque base à son ancienne version avec
+`indexedDB.open(nom, ancienneVersion)`, depuis une page de la même origine
+qui ne démarre pas l'OS (servie par Playwright lui-même ; l'attente de l'hôte
+se fait en HTTP, car ouvrir la page de l'OS créerait une base v4 neuve), puis
+démarre l'OS courant et vérifie :
+
+- l'écran « Sign in » (pas l'accueil « Create administrator ») et la connexion
+  avec le mot de passe de l'administrateur du vidage : le compte a survécu ;
+- `cat` du fichier du vidage dans le Terminal : entrées, liens et contenu ;
+- `cat /etc/hackeros/appearance.config` contient `accent=cyan` : le réglage
+  rangé dans l'ancien magasin `settings` a été repris par la migration vers les
+  fichiers (ADR 0044) ;
+- la base est en version 4 avec `serverConnection`, `syncCursors` et
+  `syncRecordState`.
+
+`IndexedDbUpgradeFixtureCatalogTests` (`HackerOs.Infrastructure.Browser.Tests`,
+sans navigateur, donc dans chaque passe ordinaire) vérifie qu'un vidage existe
+pour chaque version de 2 à `CurrentVersion - 1` et qu'il concorde avec le
+schéma (nom de la base, version, magasins connus, chemin de clé,
+auto-incrément, administrateur présent).
+
+| Fichier | Version | Commit démarré | Production |
+|---|---|---|---|
+| — | 1 | aucun | **Pas de vidage.** La version 1 n'a existé avant aucun commit du dépôt : le commit racine `fdca68e` déclare déjà `CurrentVersion = 2`. Aucun build ne peut la produire et un vidage reconstitué serait inventé. L'étape 1 du plan reste testée par la création d'une base neuve (chaque démarrage à vide). |
+| `hackeros-v2.json` | 2 | `e46e897` (dernier commit en v2, avant `7a20401`) | OS démarré pour de vrai |
+| `hackeros-v3.json` | 3 | `7a20401` (seul commit en v3, avant `2481d67`) | OS démarré pour de vrai |
+
+Chaque vidage contient `databaseName`, `version`, `producedFrom` (commit,
+méthode, hôte, date), `expectations` (identifiants de l'administrateur,
+chemin et contenu du fichier, réglage attendu) et `objectStores` : pour chaque
+magasin, `keyPath`, `autoIncrement`, `indexes` et `records` (plus `keys` pour
+un magasin sans chemin de clé ; aucun pour l'instant).
+
+**Procédure** (utilisée le 2026-10-17 pour v2 et v3) :
+
+1. Extraire l'ancien commit hors du dépôt :
+   `git archive <commit> wasm2/HackerOs | tar -x -C <dossier>`.
+2. Les commits d'avant `2fcccba` (2026-08-17) ne compilent pas tels quels :
+   `Infrastructure/HackerOs.Infrastructure.Browser/Backup/` était exclu par la
+   règle `Backup*/` du `.gitignore` de Visual Studio. Y remettre
+   `IndexedDbBackupService.cs` tiré de `2fcccba`
+   (`git show 2fcccba:wasm2/HackerOs/Infrastructure/HackerOs.Infrastructure.Browser/Backup/IndexedDbBackupService.cs`).
+3. À cette époque, l'hôte Ecosystem autonome ne rendait rien
+   (`RootComponents.Add<App>` en commentaire) : démarrer `test/test`.
+   `dotnet build test/test/test.csproj -c Release`, puis
+   `ASPNETCORE_ENVIRONMENT=Development dotnet run --no-build -c Release --project test/test/test.csproj --urls http://127.0.0.1:5301`.
+   Le SDK .NET 10 courant suffit (même `global.json`).
+4. `node Tests/fixtures/indexeddb/produce-fixture.js http://127.0.0.1:5301/ <version> <commit> Tests/fixtures/indexeddb/hackeros-v<version>.json <préfixe-captures>`
+   (`PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright` et
+   `CHROMIUM=/opt/pw-browsers/chromium` dans un conteneur cloud). Le script,
+   dans un contexte Chromium vierge, crée l'administrateur `admin` (mot de
+   passe `Fixture-v<version>-pass`), téléverse
+   `~/Documents/upgrade-note.txt` par l'Explorateur de fichiers (l'éditeur de
+   texte de `7a20401` n'enregistre pas un nouveau fichier), choisit l'accent
+   Cyan dans Paramètres, puis vide tous les magasins et refuse un vidage dont la
+   version n'est pas celle attendue.
+5. Lancer `IndexedDbUpgradeFixtureTests` et
+   `IndexedDbUpgradeFixtureCatalogTests` ; ajouter la version au
+   `[InlineData]` du premier.
+
+**Règle :** tout chantier qui augmente `HackerOsIndexedDbSchema.CurrentVersion`
+ajoute le vidage de la version précédente, produit par cette procédure à partir
+du dernier commit de cette version, et l'ajoute au test E2E.
+`IndexedDbUpgradeFixtureCatalogTests` échoue tant qu'il manque.
+
+```bash
+dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQualifiedName~IndexedDbUpgradeFixtureTests"
+```
+
 ### État connu
 
 - **GitHub Actions** ne tourne plus (les jobs échouent sans exécuteur) : un
@@ -245,7 +318,11 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
   fois) :
   - `HackerOs.E2E.Tests` : 16/16 ;
   - `HackerOs.UI.E2E.Tests` : 10/10 depuis `rebuild/5-ui-a11y-mkdir`, 15/15 sur
-    `web/base` depuis son portage (`web/13`, 2026-10-17)
+    `web/base` depuis son portage (`web/13`, 2026-10-17), 18/18 avec les deux
+    tests de [montée de version IndexedDB](#fixtures-de-montée-de-version-indexeddb)
+    (`v3/7`, 2026-10-17, environ 1 min 20 s chacun), 20/20 après le rebase de
+    `v3/7` sur `v3/3` avec `LowStorageSpaceTests` (quota de Chromium abaissé,
+    [`system-backup.md`](system-backup.md))
     (2026-10-16 : contraste de `--hos-text-muted` du thème HackerOS, états
     ARIA écrits en `"true"`/`"false"`, voir
     [`old/common-pitfalls.md`](old/common-pitfalls.md) §8 ; le test du choix
@@ -253,10 +330,26 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
     dans `~/.config/hackeros` n'est pas instantanée : environ 2 s avant
     `web/15`, 235 ms depuis, voir
     [`filesystem-path-lookup.md`](filesystem-path-lookup.md)) ;
-  - `HackerOs.Pwa.E2E.Tests` : 0/5, le conteneur n'a pas d'IPv6 et la suite
-    se lie volontairement à `[::1]` (le service worker refuse
-    `127.0.0.1` et `localhost`) : `SocketException : Address family not
-    supported by protocol`.
+  - `HackerOs.Pwa.E2E.Tests` : la suite se lie à `[::1]` (le service worker
+    refuse `127.0.0.1` et `localhost`) ; sans IPv6 elle se replie depuis
+    `v3/7-storage-backup` sur `127.0.0.2`, adresse de bouclage et contexte
+    sécurisé que le filtre d'`index.html` laisse passer (avant : 0/5,
+    `SocketException : Address family not supported by protocol`). Elle
+    compte 6 tests : le test qui vérifiait que des octets corrompus du cache
+    étaient servis tels quels est remplacé par deux tests de récupération du
+    cache (en ligne, hors ligne puis reconnexion), voir
+    [`pwa-cache-recovery.md`](pwa-cache-recovery.md). État au 2026-10-17 :
+    6/6 seule ; `Reload_fully_offline_boots_the_app_and_preserves_a_saved_file`
+    a échoué une fois (bouton « Download » resté désactivé) pendant qu'une
+    autre suite Playwright tournait en parallèle, puis est passé seul
+    ([`old/common-pitfalls.md`](old/common-pitfalls.md) §6). Sur `v3/7`
+    rebasé, sans autre suite en parallèle, trois lancements donnent 5/6 :
+    tantôt ce test (bouton « Download »), tantôt
+    `Update_to_a_new_release_purges_the_old_cache_and_preserves_compatible_data`
+    (fichier enregistré pas encore listé par l'explorateur après 20 s) ; les
+    deux passent ensemble ou seuls au lancement suivant. **Instables, à
+    stabiliser** : l'attente porte sur l'explorateur de fichiers, pas sur le
+    cache.
 - Phase 5 : chaque PR `rebuild/5-*` colle la sortie de
   `build/verify-hosts.sh` ([Vérifier les trois hôtes](#vérifier-les-trois-hôtes)).
 - Un test de `AppInstallationService` est instable (environ une fois sur
@@ -272,3 +365,8 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
 - [x] `build/verify-hosts.sh` : les trois hôtes, les combinaisons des mesures, le test de démarrage (`rebuild/5-host-smoke`).
 - [x] Repli des suites Playwright sur le Chromium du conteneur et leur état dans un conteneur.
 - [x] Paquets locaux (`build/pack-local.sh`) et test des modèles (v3/6).
+- [x] Fixtures de montée de version IndexedDB (ADR 0099 §4, `v3/7`) :
+  - [x] historique du schéma : v1 absente du dépôt, v2 jusqu'à `e46e897`, v3 en `7a20401` ;
+  - [x] vidages v2 et v3 produits en démarrant l'OS de ces commits (`produce-fixture.js`) ;
+  - [x] test E2E par vidage (compte, fichier, réglage, version 4) ;
+  - [x] contrôle sans navigateur de la règle « un vidage par version précédente ».

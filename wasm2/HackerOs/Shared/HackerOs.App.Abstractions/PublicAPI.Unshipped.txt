@@ -36,6 +36,7 @@ const HackerOs.App.Abstractions.AppCapabilities.ServerConnectionManage = "server
 const HackerOs.App.Abstractions.AppCapabilities.ServicesManage = "services.manage" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ShellControl = "shell.control" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ShellHost = "shell.host" -> string!
+const HackerOs.App.Abstractions.AppCapabilities.SystemBackup = "system.backup" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemPower = "system.power" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemStorageInspect = "system.storage.inspect" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.WindowsManage = "windows.manage" -> string!

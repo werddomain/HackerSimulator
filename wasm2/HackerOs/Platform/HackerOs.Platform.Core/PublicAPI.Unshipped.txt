@@ -15,6 +15,8 @@ const HackerOs.Platform.Core.Apps.AppsConfigDocument.FileName = "apps.config" ->
 const HackerOs.Platform.Core.Apps.AppsConfigDocument.MachineDefaultContent = "# Apps uninstalled for every user of this machine (ADR 0048).\n# One app ID per line under [uninstalled], set to true. Remove the line (or set it to false)\n# to reinstall. System apps cannot be uninstalled: their lines are ignored. No data is deleted.\n# Users uninstall apps for themselves in ~/.config/hackeros/apps.config.\n[uninstalled]\n" -> string!
 const HackerOs.Platform.Core.Apps.AppsConfigDocument.Section = "uninstalled" -> string!
 const HackerOs.Platform.Core.Apps.AppsConfigDocument.UserDefaultContent = "# Apps you uninstalled for yourself (ADR 0048). Same format as /etc/hackeros/apps.config.\n[uninstalled]\n" -> string!
+const HackerOs.Platform.Core.Backup.SystemBackupService.CreateAction = "system.backup.create" -> string!
+const HackerOs.Platform.Core.Backup.SystemBackupService.RestoreAction = "system.backup.restore" -> string!
 const HackerOs.Platform.Core.Clipboard.ClipboardSettingsDocuments.SharingKey = "sharing" -> string!
 const HackerOs.Platform.Core.Clipboard.HostClipboardBridge.HostFilesMediaType = "application/x-hackeros-host-files" -> string!
 const HackerOs.Platform.Core.Clipboard.SystemClipboard.TextMediaType = "text/plain" -> string!
@@ -109,6 +111,8 @@ const HackerOs.Platform.Core.Shell.UiPlatformPreferenceSettingsDocuments.Selecti
 const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.DocumentId = "keybindings" -> string!
 const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.FallbackGroup = "fallback" -> string!
 const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.LinuxGroup = "linux" -> string!
+const HackerOs.Platform.Core.Storage.StorageSpaceMonitor.DiagnosticAppId = "org.hackeros.diagnostic" -> string!
+const HackerOs.Platform.Core.Storage.StorageSpaceMonitor.NotificationSourceAppId = "org.hackeros.storage" -> string!
 const HackerOs.Platform.Core.Time.SimulationClockDriver.DefaultMaxTicksPerBeat = 50 -> int
 HackerOs.Platform.Core.Administration.IStorageInspector
 HackerOs.Platform.Core.Administration.IStorageInspector.CaptureAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackStorageSnapshot!>!
@@ -133,6 +137,8 @@ HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.Settings.i
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.AuthenticationAgent.get -> System.Func<HackerOs.Platform.Core.Elevation.IAdministratorAuthenticationAgent!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.AuthenticationAgent.init -> void
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Backup.get -> System.Func<HackerOs.Platform.Core.Backup.SystemBackupService!>?
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Backup.init -> void
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Permissions.get -> System.Func<HackerOs.Platform.Core.Policy.AppPermissionAdministration!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Permissions.init -> void
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Power.get -> System.Func<HackerOs.Platform.Core.Power.SystemPowerService!>?
@@ -143,7 +149,7 @@ HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Settin
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Settings.init -> void
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Storage.get -> System.Func<HackerOs.Platform.Core.Administration.IStorageInspector!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.Storage.init -> void
-HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.SystemAdministrationGatewayServices(System.Func<HackerOs.Platform.Core.Settings.IOsSettingsService!>? Settings = null, System.Func<HackerOs.Platform.Core.Policy.AppPermissionAdministration!>? Permissions = null, HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices? Server = null, System.Func<HackerOs.Platform.Core.Power.SystemPowerService!>? Power = null, System.Func<HackerOs.Platform.Core.Administration.IStorageInspector!>? Storage = null, System.Func<HackerOs.Platform.Core.Elevation.IAdministratorAuthenticationAgent!>? AuthenticationAgent = null) -> void
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.SystemAdministrationGatewayServices(System.Func<HackerOs.Platform.Core.Settings.IOsSettingsService!>? Settings = null, System.Func<HackerOs.Platform.Core.Policy.AppPermissionAdministration!>? Permissions = null, HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices? Server = null, System.Func<HackerOs.Platform.Core.Power.SystemPowerService!>? Power = null, System.Func<HackerOs.Platform.Core.Administration.IStorageInspector!>? Storage = null, System.Func<HackerOs.Platform.Core.Elevation.IAdministratorAuthenticationAgent!>? AuthenticationAgent = null, System.Func<HackerOs.Platform.Core.Backup.SystemBackupService!>? Backup = null) -> void
 HackerOs.Platform.Core.AppCatalog
 HackerOs.Platform.Core.AppCatalog.ActivationOrder.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Platform.Core.AppCatalog.CommandOwners.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
@@ -273,6 +279,63 @@ HackerOs.Platform.Core.Apps.IAppInstallationService.ReinstallAsync(string! appId
 HackerOs.Platform.Core.Apps.IAppInstallationService.UninstallAsync(string! appId, HackerOs.Platform.Core.Apps.AppInstallationScope scope, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway? writer = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Apps.AppInstallationResult!>
 HackerOs.Platform.Core.Apps.NoAppAssetSource
 HackerOs.Platform.Core.Apps.NoAppAssetSource.ReadAsync(HackerOs.App.Abstractions.AppManifest! manifest, string! assetPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]?>
+HackerOs.Platform.Core.Backup.ISystemBackupDevice
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.ExportAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Backup.SystemBackupArchive!>!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.Inspect(byte[]! archive) -> HackerOs.Platform.Core.Backup.SystemBackupSummary!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.PickFromHostAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Backup.SystemBackupFile?>!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.RestoreAsync(byte[]! archive, HackerOs.AppSdk.Administration.HackBackupRestoreMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.SaveRestoreRecordAsync(HackerOs.Platform.Core.Backup.SystemRestoreRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.SaveToHostAsync(string! fileName, byte[]! archive, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Backup.ISystemBackupDevice.TakeRestoreRecordAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Backup.SystemRestoreRecord?>!
+HackerOs.Platform.Core.Backup.SystemBackupArchive
+HackerOs.Platform.Core.Backup.SystemBackupArchive.Bytes.get -> byte[]!
+HackerOs.Platform.Core.Backup.SystemBackupArchive.Bytes.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupArchive.Summary.get -> HackerOs.Platform.Core.Backup.SystemBackupSummary!
+HackerOs.Platform.Core.Backup.SystemBackupArchive.Summary.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupArchive.SystemBackupArchive(byte[]! Bytes, HackerOs.Platform.Core.Backup.SystemBackupSummary! Summary) -> void
+HackerOs.Platform.Core.Backup.SystemBackupCandidate
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.File.get -> HackerOs.Platform.Core.Backup.SystemBackupFile!
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.File.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.Summary.get -> HackerOs.Platform.Core.Backup.SystemBackupSummary!
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.Summary.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.SystemBackupCandidate(HackerOs.Platform.Core.Backup.SystemBackupFile! File, HackerOs.Platform.Core.Backup.SystemBackupSummary! Summary) -> void
+HackerOs.Platform.Core.Backup.SystemBackupCandidate.ToInfo() -> HackerOs.AppSdk.Administration.HackBackupInfo!
+HackerOs.Platform.Core.Backup.SystemBackupFile
+HackerOs.Platform.Core.Backup.SystemBackupFile.Bytes.get -> byte[]!
+HackerOs.Platform.Core.Backup.SystemBackupFile.Bytes.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupFile.Name.get -> string!
+HackerOs.Platform.Core.Backup.SystemBackupFile.Name.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupFile.SystemBackupFile(string! Name, byte[]! Bytes) -> void
+HackerOs.Platform.Core.Backup.SystemBackupService
+HackerOs.Platform.Core.Backup.SystemBackupService.CreateAsync(string! administratorLogin, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? requestedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackBackupInfo!>!
+HackerOs.Platform.Core.Backup.SystemBackupService.PickAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Backup.SystemBackupCandidate?>!
+HackerOs.Platform.Core.Backup.SystemBackupService.RestoreAsync(HackerOs.Platform.Core.Backup.SystemBackupCandidate! candidate, HackerOs.AppSdk.Administration.HackBackupRestoreMode mode, string! administratorLogin, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? requestedBy) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Backup.SystemBackupService.SystemBackupService(HackerOs.Platform.Core.Backup.ISystemBackupDevice! device, HackerOs.Platform.Core.Power.SystemPowerService! power, HackerOs.Simulation.Abstractions.Diagnostics.IAuditLog? auditLog = null, System.Func<System.DateTimeOffset>? clock = null) -> void
+HackerOs.Platform.Core.Backup.SystemBackupService.WritePendingRestoreRecordAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Backup.SystemBackupSummary
+HackerOs.Platform.Core.Backup.SystemBackupSummary.CreatedAtUtc.get -> System.DateTimeOffset
+HackerOs.Platform.Core.Backup.SystemBackupSummary.CreatedAtUtc.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupSummary.RecordCount.get -> int
+HackerOs.Platform.Core.Backup.SystemBackupSummary.RecordCount.init -> void
+HackerOs.Platform.Core.Backup.SystemBackupSummary.SystemBackupSummary(System.DateTimeOffset CreatedAtUtc, int RecordCount) -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Administrator.get -> string!
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Administrator.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.AtUtc.get -> System.DateTimeOffset
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.AtUtc.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.FileName.get -> string!
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.FileName.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Mode.get -> HackerOs.AppSdk.Administration.HackBackupRestoreMode
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Mode.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Outcome.get -> string!
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.Outcome.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RecordCount.get -> int
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RecordCount.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RequestedBy.get -> string!
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RequestedBy.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RequestedById.get -> string!
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.RequestedById.init -> void
+HackerOs.Platform.Core.Backup.SystemRestoreRecord.SystemRestoreRecord(System.DateTimeOffset AtUtc, string! Administrator, string! RequestedBy, string! RequestedById, HackerOs.AppSdk.Administration.HackBackupRestoreMode Mode, string! FileName, int RecordCount, string! Outcome) -> void
 HackerOs.Platform.Core.Clipboard.ClipboardSettingsDocuments
 HackerOs.Platform.Core.Clipboard.ClipboardSharingMode
 HackerOs.Platform.Core.Clipboard.ClipboardSharingMode.Bidirectional = 0 -> HackerOs.Platform.Core.Clipboard.ClipboardSharingMode
@@ -348,6 +411,7 @@ HackerOs.Platform.Core.Diagnostics.LogFileWriter.FlushAsync(System.Threading.Can
 HackerOs.Platform.Core.Diagnostics.LogFileWriter.IsAttached.get -> bool
 HackerOs.Platform.Core.Diagnostics.LogFileWriter.LogFileWriter(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Diagnostics.IDiagnosticSink? memoryBuffer = null, HackerOs.Simulation.Abstractions.Events.IEventBus? eventBus = null) -> void
 HackerOs.Platform.Core.Diagnostics.LogFileWriter.PendingCount.get -> int
+HackerOs.Platform.Core.Diagnostics.LogFileWriter.PendingNoSpaceLoss.get -> long
 HackerOs.Platform.Core.Diagnostics.LogFileWriter.TotalDropped.get -> long
 HackerOs.Platform.Core.Diagnostics.LogFileWriter.Write(HackerOs.Platform.Core.Diagnostics.LogFileTarget! target, HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity severity, string! source, string! message, long? processId = null) -> void
 HackerOs.Platform.Core.Diagnostics.LogRotationPolicy
@@ -617,7 +681,7 @@ HackerOs.Platform.Core.FileSystem.FileSystemService.CopyAsync(HackerOs.Simulatio
 HackerOs.Platform.Core.FileSystem.FileSystemService.CreateAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemCreateRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Platform.Core.FileSystem.FileSystemService.DeleteAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemDeleteRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Platform.Core.FileSystem.FileSystemService.EnumerateAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemEnumerateRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemDirectorySnapshot!>!>
-HackerOs.Platform.Core.FileSystem.FileSystemService.FileSystemService(HackerOs.Simulation.Abstractions.FileSystem.IFileSystemMountRouter! router, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemPathResolver! pathResolver, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemAuthorizer! authorizer, HackerOs.Simulation.Abstractions.Events.ITopicMessageBus! topicBus, System.Func<System.Guid>? transactionIdFactory = null, System.Func<System.DateTimeOffset>? clock = null, HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting? ioAccounting = null, HackerOs.Platform.Core.FileSystem.IFileSystemAuditSink? audit = null) -> void
+HackerOs.Platform.Core.FileSystem.FileSystemService.FileSystemService(HackerOs.Simulation.Abstractions.FileSystem.IFileSystemMountRouter! router, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemPathResolver! pathResolver, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemAuthorizer! authorizer, HackerOs.Simulation.Abstractions.Events.ITopicMessageBus! topicBus, System.Func<System.Guid>? transactionIdFactory = null, System.Func<System.DateTimeOffset>? clock = null, HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting? ioAccounting = null, HackerOs.Platform.Core.FileSystem.IFileSystemAuditSink? audit = null, HackerOs.Simulation.Abstractions.Metrics.IStorageSpaceGuard? spaceGuard = null) -> void
 HackerOs.Platform.Core.FileSystem.FileSystemService.MoveAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemMoveRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Platform.Core.FileSystem.FileSystemService.ProviderId.get -> string!
 HackerOs.Platform.Core.FileSystem.FileSystemService.ReadAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemReadRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemContentReadHandle!>!>
@@ -1259,6 +1323,7 @@ HackerOs.Platform.Core.Power.ISystemPowerDevice.RestartAsync(System.Threading.Ca
 HackerOs.Platform.Core.Power.SystemPowerService
 HackerOs.Platform.Core.Power.SystemPowerService.FactoryResetAsync(string! administratorLogin, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? requestedBy) -> System.Threading.Tasks.Task!
 HackerOs.Platform.Core.Power.SystemPowerService.RebootAsync(string! administratorLogin, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal? requestedBy) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Power.SystemPowerService.RestartAfterAsync(System.Func<System.Threading.Tasks.Task!>! whileStopped) -> System.Threading.Tasks.Task!
 HackerOs.Platform.Core.Power.SystemPowerService.SystemPowerService(HackerOs.Platform.Core.Power.ISystemPowerDevice! device, HackerOs.Simulation.Abstractions.Sessions.ISessionService! session, HackerOs.Platform.Core.Diagnostics.LogFileWriter? logs = null, HackerOs.Simulation.Abstractions.Diagnostics.IAuditLog? auditLog = null, System.Func<System.DateTimeOffset>? clock = null) -> void
 HackerOs.Platform.Core.Processes.Accounting.NullCpuTimeAccountant
 HackerOs.Platform.Core.Processes.Accounting.NullCpuTimeAccountant.IsMeasuring.get -> bool
@@ -2052,6 +2117,15 @@ HackerOs.Platform.Core.Shell.WindowKeyboardAction.SwitchPrevious = 1 -> HackerOs
 HackerOs.Platform.Core.Shell.WindowKeyboardAction.ToggleFullScreen = 12 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
 HackerOs.Platform.Core.Shell.WindowKeyboardAction.ToggleMaximize = 9 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
 HackerOs.Platform.Core.Shell.WindowKeyboardAction.WindowMenu = 3 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.IsLowSpace.get -> bool
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.IsRootReserveReached.get -> bool
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.LastCapacity.get -> HackerOs.Simulation.Abstractions.Metrics.StorageCapacity?
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.RefreshAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.RequestRefresh() -> void
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.Start() -> void
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.StorageSpaceMonitor(HackerOs.Simulation.Abstractions.Metrics.IStorageCapacityProbe! probe, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue? notifications = null, System.Func<HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal?>? currentUser = null, System.TimeProvider? time = null) -> void
 HackerOs.Platform.Core.Time.ManualSimulationClock
 HackerOs.Platform.Core.Time.ManualSimulationClock.Advance(int tickCount = 1) -> void
 HackerOs.Platform.Core.Time.ManualSimulationClock.CurrentTick.get -> long
@@ -2134,6 +2208,7 @@ static HackerOs.Platform.Core.Apps.AppsConfigDocument.MarkUninstalled(string? co
 static HackerOs.Platform.Core.Apps.AppsConfigDocument.Read(string? content, HackerOs.App.Abstractions.VirtualPath path, HackerOs.Platform.Core.AppCatalog! catalog) -> HackerOs.Platform.Core.Apps.AppsConfigReadResult!
 static HackerOs.Platform.Core.Apps.AppsConfigReadResult.Empty.get -> HackerOs.Platform.Core.Apps.AppsConfigReadResult!
 static HackerOs.Platform.Core.Apps.NoAppAssetSource.Instance.get -> HackerOs.Platform.Core.Apps.NoAppAssetSource!
+static HackerOs.Platform.Core.Backup.SystemBackupService.FileNameFor(System.DateTimeOffset atUtc) -> string!
 static HackerOs.Platform.Core.Clipboard.ClipboardSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
 static HackerOs.Platform.Core.Clipboard.ClipboardSettingsDocuments.ParseMode(string? value) -> HackerOs.Platform.Core.Clipboard.ClipboardSharingMode
 static HackerOs.Platform.Core.Clipboard.ClipboardSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
@@ -2263,6 +2338,8 @@ static readonly HackerOs.Platform.Core.Processes.ResourceSamplingService.Default
 static readonly HackerOs.Platform.Core.ServerConnection.FileSystemSyncService.TombstoneRetention -> System.TimeSpan
 static readonly HackerOs.Platform.Core.ServerConnection.SyncScheduler.ChangeDebounce -> System.TimeSpan
 static readonly HackerOs.Platform.Core.ServerConnection.SyncScheduler.OfflineRetry -> System.TimeSpan
+static readonly HackerOs.Platform.Core.Storage.StorageSpaceMonitor.MinimumRefreshSpacing -> System.TimeSpan
+static readonly HackerOs.Platform.Core.Storage.StorageSpaceMonitor.PollInterval -> System.TimeSpan
 virtual HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.WriteAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemWriteRequest! request, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemContentSource! content, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 virtual HackerOs.Platform.Core.Network.Websites.SimulatedWebsiteControllerBase.AliasHostnames.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual HackerOs.Platform.Core.Shell.ShellWordPart.IsQuoted.get -> bool

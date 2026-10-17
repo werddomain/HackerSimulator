@@ -8,6 +8,10 @@ const HackerOs.Simulation.Abstractions.FileSystem.FileSystemTraversalPolicy.Maxi
 const HackerOs.Simulation.Abstractions.FileSystem.SymbolicLinkMetadata.MaximumTargetUtf8ByteLength = 4096 -> int
 const HackerOs.Simulation.Abstractions.Metrics.NetworkInterfaceNames.Ethernet = "eth0" -> string!
 const HackerOs.Simulation.Abstractions.Metrics.NetworkInterfaceNames.Loopback = "lo" -> string!
+const HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.LowSpaceBytes = 67108864 -> long
+const HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.LowSpaceRatio = 0.1 -> double
+const HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.MaxReserveBytes = 268435456 -> long
+const HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.ReserveRatio = 0.05 -> double
 const HackerOs.Simulation.Abstractions.Network.SimulatedHttpMethods.Delete = "DELETE" -> string!
 const HackerOs.Simulation.Abstractions.Network.SimulatedHttpMethods.Get = "GET" -> string!
 const HackerOs.Simulation.Abstractions.Network.SimulatedHttpMethods.Head = "HEAD" -> string!
@@ -43,6 +47,7 @@ const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.HostDown =
 const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.NoRoute = "ERR_NO_ROUTE" -> string!
 const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.TooManyRedirects = "ERR_TOO_MANY_REDIRECTS" -> string!
 const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.UnknownHost = "ERR_NAME_NOT_RESOLVED" -> string!
+const HackerOs.Simulation.Abstractions.Notifications.NotificationAction.LaunchAppPrefix = "launch:" -> string!
 const HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile.DefaultStorageCapacityBytes = 8589934592 -> long
 const HackerOs.Simulation.Abstractions.Sessions.LocalLoginName.MaximumLength = 32 -> int
 const HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.LockedSectionName = "locked" -> string!
@@ -362,9 +367,11 @@ HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.Cancelled = 1600
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.CapabilityDenied = 1201 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.CrossMountOperation = 1403 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.DirectoryNotEmpty = 1104 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
+HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.FileTooLarge = 1801 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.InvalidContent = 1002 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.InvalidName = 1001 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.InvalidPath = 1000 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
+HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.NoSpace = 1800 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.NotDirectory = 1103 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.NotFile = 1102 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.NotFound = 1100 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
@@ -757,6 +764,11 @@ HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting.Get(HackerOs.Simul
 HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting.RecordRead(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, long bytes, bool fromStorage) -> void
 HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting.RecordWrite(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, long bytes, bool toStorage) -> void
 HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting.Retain(System.Collections.Generic.IReadOnlyCollection<HackerOs.Simulation.Abstractions.Processes.ProcessId>! livePids) -> void
+HackerOs.Simulation.Abstractions.Metrics.IStorageCapacityProbe
+HackerOs.Simulation.Abstractions.Metrics.IStorageCapacityProbe.GetCapacityAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Metrics.StorageCapacity?>
+HackerOs.Simulation.Abstractions.Metrics.IStorageSpaceGuard
+HackerOs.Simulation.Abstractions.Metrics.IStorageSpaceGuard.IsRootReserveReached.get -> bool
+HackerOs.Simulation.Abstractions.Metrics.IStorageSpaceGuard.RequestRefresh() -> void
 HackerOs.Simulation.Abstractions.Metrics.IStorageUsageProvider
 HackerOs.Simulation.Abstractions.Metrics.IStorageUsageProvider.GetUsageAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Metrics.StorageUsage>
 HackerOs.Simulation.Abstractions.Metrics.NetworkInterfaceCounters
@@ -798,6 +810,15 @@ HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.WriteSyscalls.get -> 
 HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.WriteSyscalls.init -> void
 HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.WrittenChars.get -> long
 HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.WrittenChars.init -> void
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.AvailableBytes.get -> long
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.QuotaBytes.get -> long
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.QuotaBytes.init -> void
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.StorageCapacity() -> void
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.StorageCapacity(long UsageBytes, long QuotaBytes) -> void
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.UsageBytes.get -> long
+HackerOs.Simulation.Abstractions.Metrics.StorageCapacity.UsageBytes.init -> void
+HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy
 HackerOs.Simulation.Abstractions.Metrics.StorageUsage
 HackerOs.Simulation.Abstractions.Metrics.StorageUsage.QuotaBytes.get -> long?
 HackerOs.Simulation.Abstractions.Metrics.StorageUsage.QuotaBytes.init -> void
@@ -1113,6 +1134,7 @@ HackerOs.Simulation.Abstractions.Notifications.NotificationAction
 HackerOs.Simulation.Abstractions.Notifications.NotificationAction.Id.get -> string!
 HackerOs.Simulation.Abstractions.Notifications.NotificationAction.Label.get -> string!
 HackerOs.Simulation.Abstractions.Notifications.NotificationAction.NotificationAction(string! id, string! label) -> void
+HackerOs.Simulation.Abstractions.Notifications.NotificationAction.TryGetLaunchedApp(out string? appId) -> bool
 HackerOs.Simulation.Abstractions.Notifications.NotificationId
 HackerOs.Simulation.Abstractions.Notifications.NotificationId.NotificationId() -> void
 HackerOs.Simulation.Abstractions.Notifications.NotificationId.Value.get -> System.Guid
@@ -1966,6 +1988,9 @@ static HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway.Ins
 static HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.NeverStarted.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot!
 static HackerOs.Simulation.Abstractions.Metrics.CpuTimes.operator +(HackerOs.Simulation.Abstractions.Metrics.CpuTimes left, HackerOs.Simulation.Abstractions.Metrics.CpuTimes right) -> HackerOs.Simulation.Abstractions.Metrics.CpuTimes
 static HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters.Zero.get -> HackerOs.Simulation.Abstractions.Metrics.ProcessIoCounters
+static HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.IsInRootReserve(HackerOs.Simulation.Abstractions.Metrics.StorageCapacity capacity) -> bool
+static HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.IsLow(HackerOs.Simulation.Abstractions.Metrics.StorageCapacity capacity) -> bool
+static HackerOs.Simulation.Abstractions.Metrics.StorageSpacePolicy.ReserveBytes(long quotaBytes) -> long
 static HackerOs.Simulation.Abstractions.Network.SimulatedFileTypes.GetContentType(string? fileName) -> string!
 static HackerOs.Simulation.Abstractions.Network.SimulatedHttpBody.EncodeFormComponent(string! value) -> string!
 static HackerOs.Simulation.Abstractions.Network.SimulatedHttpBody.FormUrlEncoded(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>! fields) -> HackerOs.Simulation.Abstractions.Network.SimulatedHttpBody!
@@ -1996,6 +2021,7 @@ static HackerOs.Simulation.Abstractions.Network.SimulatedMediaTypes.IsJson(strin
 static HackerOs.Simulation.Abstractions.Network.SimulatedMediaTypes.IsText(string? contentType) -> bool
 static HackerOs.Simulation.Abstractions.Network.SimulatedPage.Error(int statusCode, string! message) -> HackerOs.Simulation.Abstractions.Network.SimulatedPage!
 static HackerOs.Simulation.Abstractions.Network.SimulatedPageTextFormatter.WriteTo(System.IO.TextWriter! writer, HackerOs.Simulation.Abstractions.Network.SimulatedPage! page) -> void
+static HackerOs.Simulation.Abstractions.Notifications.NotificationAction.LaunchApp(string! appId, string! label) -> HackerOs.Simulation.Abstractions.Notifications.NotificationAction!
 static HackerOs.Simulation.Abstractions.Notifications.NotificationId.FromGuid(System.Guid value) -> HackerOs.Simulation.Abstractions.Notifications.NotificationId
 static HackerOs.Simulation.Abstractions.Processes.AppInstanceId.FromGuid(System.Guid value) -> HackerOs.Simulation.Abstractions.Processes.AppInstanceId
 static HackerOs.Simulation.Abstractions.Processes.KernelMemoryCharge.None.get -> HackerOs.Simulation.Abstractions.Processes.KernelMemoryCharge!

@@ -228,6 +228,16 @@ HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.BrowserFileDownloader(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.DownloadFileFromStreamAsync(string! fileName, System.IO.Stream! stream) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Blazor.Interop.BrowserFilePicker
+HackerOs.AppSdk.Blazor.Interop.BrowserFilePicker.BrowserFilePicker(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+HackerOs.AppSdk.Blazor.Interop.BrowserFilePicker.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Blazor.Interop.BrowserFilePicker.PickAsync(string? accept = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile?>
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile.BrowserPickedFile(string! Name, byte[]! Content) -> void
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile.Content.get -> byte[]!
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile.Content.init -> void
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile.Name.get -> string!
+HackerOs.AppSdk.Blazor.Interop.BrowserPickedFile.Name.init -> void
 HackerOs.AppSdk.Blazor.IWindowAppEventTarget
 HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyActivatedAsync() -> System.Threading.Tasks.Task!
 HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyDeactivatedAsync() -> System.Threading.Tasks.Task!

@@ -5,6 +5,8 @@ HackerOs.Apps.Settings.AppDetailsPanel.AppId.get -> string!
 HackerOs.Apps.Settings.AppDetailsPanel.AppId.set -> void
 HackerOs.Apps.Settings.AppPermissionsPanel
 HackerOs.Apps.Settings.AppPermissionsPanel.AppPermissionsPanel() -> void
+HackerOs.Apps.Settings.BackupPanel
+HackerOs.Apps.Settings.BackupPanel.BackupPanel() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel
 HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
@@ -35,5 +37,6 @@ override HackerOs.Apps.Settings.SettingsWindow.OnAppInitializedAsync() -> System
 override HackerOs.Apps.Settings.SettingsWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.Settings.SettingsWindow.OnIntentReceivedAsync(HackerOs.App.Abstractions.AppIntentDelivery! intent) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.Settings.SettingsWindow.OnWindowActivatedAsync() -> System.Threading.Tasks.Task!
+~override HackerOs.Apps.Settings.BackupPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Apps.Settings.InstalledAppsPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Apps.Settings.SettingsWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

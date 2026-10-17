@@ -346,6 +346,12 @@
                     }
                 </div>
             </MudTabPanel>
+            @if (HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext))
+            {
+                <MudTabPanel Text="Backup" Icon="@Icons.Material.Filled.Backup">
+                    <BackupPanel />
+                </MudTabPanel>
+            }
 
             <MudTabPanel Text="About System" Icon="@Icons.Material.Filled.Info">
                 <div class="system-info-box">

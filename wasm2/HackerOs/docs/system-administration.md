@@ -9,7 +9,8 @@ services internes (ADR 0056 §8 à §11, ajusté par l'ADR 0060) :
 - administrer les capacités dangereuses (politique, décisions machine) ;
 - se connecter au serveur optionnel et synchroniser ;
 - redémarrer ou réinitialiser la machine ;
-- lire l'instantané brut du stockage.
+- lire l'instantané brut du stockage ;
+- sauvegarder et restaurer toute la machine (ADR 0099 §1).
 
 Paramètres et Diagnostic utilisent ces API et ne référencent plus Platform
 Core ni Infrastructure.Browser.
@@ -19,13 +20,13 @@ Core ni Infrastructure.Browser.
 | Couche | Fichiers |
 |---|---|
 | SDK (contrats, façades) | `Shared/HackerOs.AppSdk/Administration/` (`HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` et leurs contrats), `Shared/HackerOs.AppSdk/Settings/IAppSystemSettingsGateway.cs`, `SettingsDocumentStores.cs` |
-| Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
-| Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt), `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
-| Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |
+| Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AppSystemBackupGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
+| Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt, `RestartAfterAsync`), `Backup/SystemBackupService.cs`, `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
+| Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/BrowserSystemBackupDevice.cs` (export, téléchargement, sélecteur de l'hôte), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |
 | SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte), `[Obsolete]` depuis l'ADR 0065 : Diagnostic copie par `HackClipboard`, que l'OS recopie vers l'hôte ([`clipboard.md`](clipboard.md)) |
 
 `AppExecutionContextFactory` reçoit un `SystemAdministrationGatewayServices`
-(résolutions paresseuses) et crée, pour chaque instance, les cinq passerelles
+(résolutions paresseuses) et crée, pour chaque instance, les six passerelles
 avec les capacités et le principal de l'app. `AdministratorGate` appelle
 l'agent d'authentification de l'OS
 ([`admin-authentication-agent.md`](admin-authentication-agent.md)) : l'app ne
@@ -107,6 +108,14 @@ version, magasins, nombre d'enregistrements, taille estimée) et
 (ADR 0088 §4, [`asp-hack-site-data.md`](asp-hack-site-data.md)). Diagnostic les
 montre sous *Website databases*.
 
+### Sauvegarde (`system.backup`)
+
+`HackSystemBackup.CreateAsync` télécharge une archive `.hosbak` de toute la
+machine sur l'ordinateur hôte ; `RestoreAsync(Merge | Replace)` ouvre le
+sélecteur de l'hôte, valide l'archive, **puis** demande un administrateur,
+ferme la session, restaure et redémarre. Création et restauration vont dans
+`/var/log/auth.log`. Détails : [`system-backup.md`](system-backup.md).
+
 ## Décisions
 
 - Voir l'ADR 0060 : propriété `SystemPower` (pas `System`),
@@ -127,7 +136,10 @@ utilisateur simple puis écrite sous root en une édition, document inconnu ;
 capacités exigées ; refus de l'agent sans écriture ; décision machine et
 politique journalisées ; app système refusée avant toute demande ; serveur
 absent ; `Grants` en pull seulement ; redémarrage refusé ; réinitialisation
-dans l'ordre fermeture, effacement, redémarrage ; inspection du stockage.
+dans l'ordre fermeture, effacement, redémarrage ; inspection du stockage ;
+sauvegarde (capacité, hôte sans sauvegarde, refus de l'administrateur,
+sélecteur avant administrateur, ordre de la restauration, échec journalisé au
+démarrage suivant).
 
 ## Liste des tâches
 
