@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="DelimiterLength" xml:space="preserve">
+    <value>cut : le délimiteur doit être un caractère unique</value>
+  </data>
+  <data name="InvalidList" xml:space="preserve">
+    <value>cut : valeur de champ non valide « {0} »</value>
+  </data>
+  <data name="InvalidOption" xml:space="preserve">
+    <value>cut : option non valide -- « {0} »</value>
+  </data>
+  <data name="NoList" xml:space="preserve">
+    <value>cut : vous devez spécifier une liste d'octets, de caractères ou de champs</value>
+  </data>
+  <data name="OneListOnly" xml:space="preserve">
+    <value>cut : un seul type de liste peut être spécifié</value>
+  </data>
+  <data name="TryHelp" xml:space="preserve">
+    <value>Saisissez « cut --help » pour plus d'informations.</value>
+  </data>
+</root>

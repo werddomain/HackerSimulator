@@ -4,6 +4,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Htop;
 
@@ -54,7 +56,7 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
                     state.Color = false;
                     break;
                 default:
-                    await context.StandardError.WriteLineAsync($"htop: unrecognized option '{args[i]}'");
+                    await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["UnrecognizedOption", args[i]]);
                     return 1;
             }
         }
@@ -162,7 +164,7 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
                 state.User = state.User is null ? context.App.UserLoginName : null;
                 break;
             case "/":
-                state.Filter = await PromptAsync(screen, "Search: ", cancellationToken);
+                state.Filter = await PromptAsync(screen, context.App.GetLocalizer<Strings>()["SearchPrompt"], cancellationToken);
                 state.Selection = 0;
                 break;
             case "k" or "\u001b[20~":
@@ -171,11 +173,11 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
                     try
                     {
                         await target.KillAsync(cancellationToken);
-                        state.Message = $"Sent SIGKILL to {target.Id} ({target.ProcessName})";
+                        state.Message = context.App.GetLocalizer<Strings>()["Killed", target.Id, target.ProcessName];
                     }
                     catch (Exception exception) when (exception is UnauthorizedAccessException or InvalidOperationException or IOException)
                     {
-                        state.Message = $"kill {target.Id}: {ShellErrorText.Describe(exception)}";
+                        state.Message = $"kill {target.Id}: {CommandText.Describe(context, exception)}";
                     }
 
                     state.Refresh = true;
@@ -237,11 +239,12 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
         left.Add(Meter(state, "Swp", 0, "0K/0K", barWidth, Red));
 
         int running = snapshot.Processes.Count(p => p.StateCode == 'R');
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         List<string> right =
         [
-            $"{C(state, Label)}Tasks: {C(state, Bold)}{snapshot.Processes.Count}{C(state, Reset)}{C(state, Label)}, {C(state, Green)}{running}{C(state, Label)} running{C(state, Reset)}",
-            $"{C(state, Label)}Load average: {C(state, Bold)}{snapshot.LoadAverage.Replace(",", string.Empty, StringComparison.Ordinal)}{C(state, Reset)}",
-            $"{C(state, Label)}Uptime: {C(state, Bold)}{snapshot.Uptime:hh\\:mm\\:ss}{C(state, Reset)}"
+            $"{C(state, Label)}{text["Meter.Tasks"]} {C(state, Bold)}{snapshot.Processes.Count}{C(state, Reset)}{C(state, Label)}, {C(state, Green)}{running}{C(state, Label)} {text["Meter.Running"]}{C(state, Reset)}",
+            $"{C(state, Label)}{text["Meter.LoadAverage"]} {C(state, Bold)}{snapshot.LoadAverage.Replace(",", string.Empty, StringComparison.Ordinal)}{C(state, Reset)}",
+            $"{C(state, Label)}{text["Meter.Uptime"]} {C(state, Bold)}{snapshot.Uptime:hh\\:mm\\:ss}{C(state, Reset)}"
         ];
 
         for (int row = 0; row < Math.Max(left.Count, right.Count); row++)
@@ -286,7 +289,11 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
             lines.Add(C(state, Yellow) + message + C(state, Reset));
         }
 
-        string[] keys = ["F1/?", "Help", "/", "Search", "t", "Tree", "P/M/T", "SortBy", "u", "User", "k", "Kill", "q", "Quit"];
+        string[] keys =
+        [
+            "F1/?", text["Key.Help"], "/", text["Key.Search"], "t", text["Key.Tree"], "P/M/T", text["Key.SortBy"],
+            "u", text["Key.User"], "k", text["Key.Kill"], "q", text["Key.Quit"]
+        ];
         StringBuilder bar = new();
         for (int i = 0; i < keys.Length; i += 2)
         {

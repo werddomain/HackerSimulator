@@ -49,7 +49,7 @@ against the public SDK, without needing to touch platform internals.
 | [`platform-ui-library.md`](platform-ui-library.md) | Where MudBlazor is (and isn't) allowed, and the wrapper conventions. |
 | [`design-system.md`](design-system.md) | Visual tokens and design-system specification. |
 | [`theming.md`](theming.md) | Shared theme catalog, runtime scope, semantic tokens, persistence, and the checklist for adding a theme. |
-| [`localization.md`](localization.md) | Globalization/localization architecture. |
+| [`localization.md`](localization.md) | Globalization/localization architecture jamais réalisée ; remplacée par l'ADR 0104 et [`../localization.md`](../localization.md). |
 | [`accessibility.md`](accessibility.md) | WCAG 2.2 AA checklist and accessibility evidence. |
 | [`Human-test-needed-p2-GATE-003.md`](Human-test-needed-p2-GATE-003.md) | Manual accessibility and screenshot checks still required for gate `P2-GATE-003`. |
 | [`samples/service-app.md`](samples/service-app.md) | Worked example of a non-visual background service app. |

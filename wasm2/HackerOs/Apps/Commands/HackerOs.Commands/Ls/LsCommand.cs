@@ -1,6 +1,10 @@
+using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ls;
 
@@ -58,11 +62,11 @@ public sealed class LsCommand : TerminalAppBase
             {
                 if (listResult.Error?.Code == FileSystemErrorCode.PermissionDenied || listResult.Error?.Code == FileSystemErrorCode.CapabilityDenied)
                 {
-                    context.StandardError.WriteLine($"ls: cannot access '{rawPath}': Permission denied");
+                    context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["CannotAccess", rawPath, CommandText.Reason(context, Errno.PermissionDenied)]);
                 }
                 else
                 {
-                    context.StandardError.WriteLine($"ls: cannot access '{rawPath}': No such file or directory");
+                    context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["CannotAccess", rawPath, CommandText.Reason(context, Errno.NotFound)]);
                 }
                 exitCode = 1;
                 continue;
@@ -91,8 +95,8 @@ public sealed class LsCommand : TerminalAppBase
                     mode += item.Metadata.Permissions.Owner.HasFlag(FileSystemAccess.Write) ? "w" : "-";
                     mode += item.Metadata.Permissions.Owner.HasFlag(FileSystemAccess.Execute) ? "x" : "-";
                     long length = item.Metadata is FileMetadata fm ? fm.Length : 0;
-                    string size = length.ToString().PadLeft(8);
-                    string time = item.Metadata.Timestamps.ContentModifiedAtUtc.ToString("MMM dd HH:mm");
+                    string size = length.ToString(CultureInfo.InvariantCulture).PadLeft(8);
+                    string time = item.Metadata.Timestamps.ContentModifiedAtUtc.ToString("MMM dd HH:mm", CultureInfo.InvariantCulture);
                     string ownerStr = item.Metadata.OwnerId.PadRight(8);
                     context.StandardOutput.WriteLine($"{kindChar}{mode}  {ownerStr}  {size}  {time}  {item.Name.Value}");
                 }

@@ -4,7 +4,10 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.Network;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Curl;
 
@@ -50,6 +53,7 @@ public sealed class CurlCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         string? url = null;
         bool headersOnly = false;
@@ -117,7 +121,8 @@ public sealed class CurlCommand : TerminalAppBase
 
         if (url is null)
         {
-            context.StandardError.WriteLine("curl: no URL specified!\ncurl: try 'curl --help' for more information");
+            context.StandardError.WriteLine(text["NoUrl"]);
+            context.StandardError.WriteLine(text["TryHelp"]);
             return 1;
         }
 
@@ -129,7 +134,7 @@ public sealed class CurlCommand : TerminalAppBase
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
         {
-            context.StandardError.WriteLine($"curl: (3) URL using bad/illegal format or missing URL");
+            context.StandardError.WriteLine(text["BadUrl"]);
             return 3;
         }
 
@@ -143,7 +148,7 @@ public sealed class CurlCommand : TerminalAppBase
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                context.StandardError.WriteLine($"curl: (26) Failed to open/read local data: {ShellErrorText.Describe(exception)}");
+                context.StandardError.WriteLine(text["ReadDataFailed", CommandText.Describe(context, exception)]);
                 return 26;
             }
 
@@ -161,7 +166,7 @@ public sealed class CurlCommand : TerminalAppBase
         method ??= content is not null ? "POST" : headersOnly ? "HEAD" : "GET";
         if (verbose)
         {
-            context.StandardOutput.WriteLine($"*   Trying {uri.Host}:{uri.Port}...");
+            context.StandardOutput.WriteLine(text["Verbose.Trying", uri.Host, uri.Port]);
             context.StandardOutput.WriteLine($"> {method} {uri.PathAndQuery} HTTP/1.1");
             context.StandardOutput.WriteLine($"> Host: {uri.Host}");
             context.StandardOutput.WriteLine("> User-Agent: curl/7.88.1");
@@ -194,20 +199,20 @@ public sealed class CurlCommand : TerminalAppBase
         }
         catch (HackHttpRequestException exception)
         {
-            (int code, string text) = exception.NetworkError switch
+            (int code, string message) = exception.NetworkError switch
             {
-                HackNetworkError.HostNotFound => (6, $"Could not resolve host: {uri.Host}"),
-                HackNetworkError.TooManyRedirects => (47, "Maximum (10) redirects followed"),
-                _ => (7, $"Failed to connect to {uri.Host} port {uri.Port}: {exception.Message}")
+                HackNetworkError.HostNotFound => (6, text["ResolveFailed", uri.Host].Value),
+                HackNetworkError.TooManyRedirects => (47, text["TooManyRedirects"].Value),
+                _ => (7, text["ConnectFailed", uri.Host, uri.Port, exception.Message].Value)
             };
-            context.StandardError.WriteLine($"curl: ({code}) {text}");
+            context.StandardError.WriteLine($"curl: ({code}) {message}");
             return code;
         }
 
         if (verbose)
         {
             if (response.RedirectCount > 0)
-                context.StandardOutput.WriteLine($"* Followed {response.RedirectCount} redirect(s) to {response.RequestUri}");
+                context.StandardOutput.WriteLine(text["Verbose.Followed", response.RedirectCount, response.RequestUri]);
             context.StandardOutput.WriteLine($"< HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
             foreach (KeyValuePair<string, string> header in response.Headers)
             {
@@ -235,7 +240,7 @@ public sealed class CurlCommand : TerminalAppBase
 
         if (fail && response.StatusCode >= 400)
         {
-            context.StandardError.WriteLine($"curl: (22) The requested URL returned error: {response.StatusCode}");
+            context.StandardError.WriteLine(text["HttpError", response.StatusCode]);
             return 22;
         }
 
@@ -252,7 +257,7 @@ public sealed class CurlCommand : TerminalAppBase
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                context.StandardError.WriteLine($"curl: (23) Failure writing output to destination: {outputFile}: {ShellErrorText.Describe(exception)}");
+                context.StandardError.WriteLine(text["WriteFailed", outputFile, CommandText.Describe(context, exception)]);
                 return 23;
             }
 
@@ -262,9 +267,9 @@ public sealed class CurlCommand : TerminalAppBase
         // The real curl refuses to spray binary onto a terminal unless told to with "-o -".
         if (outputFile is null && response.ContentBytes.Length > 0 && response.ContentType is { } type && !SimulatedMediaTypes.IsText(type))
         {
-            context.StandardError.WriteLine("Warning: Binary output can mess up your terminal. Use \"--output -\" to tell");
-            context.StandardError.WriteLine("Warning: curl to output it to your terminal anyway, or consider \"--output");
-            context.StandardError.WriteLine("Warning: <FILE>\" to save to a file.");
+            context.StandardError.WriteLine(text["BinaryWarning.Line1"]);
+            context.StandardError.WriteLine(text["BinaryWarning.Line2"]);
+            context.StandardError.WriteLine(text["BinaryWarning.Line3"]);
             return 23;
         }
 

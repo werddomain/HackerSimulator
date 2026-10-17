@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotCreate" xml:space="preserve">
+    <value>cp : impossible de créer « {0} » : {1}</value>
+  </data>
+  <data name="CannotStat" xml:space="preserve">
+    <value>cp : impossible d'évaluer « {0} » : {1}</value>
+  </data>
+  <data name="CopyFailed" xml:space="preserve">
+    <value>cp : impossible de copier « {0} » vers « {1} » : {2}</value>
+  </data>
+  <data name="MissingDestination" xml:space="preserve">
+    <value>cp : opérande de fichier cible manquant après « {0} »</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>Échec de l'opération</value>
+  </data>
+</root>

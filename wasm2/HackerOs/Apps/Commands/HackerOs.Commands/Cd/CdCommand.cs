@@ -1,5 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Cd;
 
@@ -21,16 +24,17 @@ public sealed class CdCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("cd: no shell session");
+            await context.StandardError.WriteLineAsync(text["NoShell"]);
             return 1;
         }
 
         if (context.Arguments.Count > 1)
         {
-            await context.StandardError.WriteLineAsync("cd: too many arguments");
+            await context.StandardError.WriteLineAsync(text["TooManyArguments"]);
             return 1;
         }
 
@@ -41,7 +45,7 @@ public sealed class CdCommand : TerminalAppBase
         {
             if (!shell.Environment.TryGetValue("HOME", out string? home) || home.Length == 0)
             {
-                await context.StandardError.WriteLineAsync("cd: HOME not set");
+                await context.StandardError.WriteLineAsync(text["HomeNotSet"]);
                 return 1;
             }
 
@@ -51,7 +55,7 @@ public sealed class CdCommand : TerminalAppBase
         {
             if (!shell.Environment.TryGetValue("OLDPWD", out string? previous) || previous.Length == 0)
             {
-                await context.StandardError.WriteLineAsync("cd: OLDPWD not set");
+                await context.StandardError.WriteLineAsync(text["OldPwdNotSet"]);
                 return 1;
             }
 
@@ -69,7 +73,7 @@ public sealed class CdCommand : TerminalAppBase
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await context.StandardError.WriteLineAsync($"cd: {target}: {ShellErrorText.Describe(exception)}");
+            await context.StandardError.WriteLineAsync(CommandText.FileError(context, "cd", target, CommandText.Describe(context, exception)));
             return 1;
         }
 

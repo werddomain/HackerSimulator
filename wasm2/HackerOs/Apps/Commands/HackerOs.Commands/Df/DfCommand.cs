@@ -3,6 +3,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Df;
 
@@ -43,7 +45,7 @@ public sealed class DfCommand(AppManifest manifest) : TerminalAppBase(manifest)
                     case 'a': all = true; break;
                     case 'k' or 'P' or 'l': break;
                     default:
-                        await context.StandardError.WriteLineAsync($"df: invalid option -- '{flag}'");
+                        await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["InvalidOption", flag]);
                         return 1;
                 }
             }
