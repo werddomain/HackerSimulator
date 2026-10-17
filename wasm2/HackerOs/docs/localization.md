@@ -128,6 +128,10 @@ leurs textes voyagent dans `BuiltInApplications.json`.
    - App à fenêtre : `private IStringLocalizer<Strings> L => _l ??= AppContext.GetLocalizer<Strings>();`
      puis `@L["Clé"]`.
    - Commande : `IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();`.
+     Les raisons d'erreur de fichier à la glibc (« Aucun fichier ou dossier de ce
+     nom ») viennent de `CommandText.Reason`/`FileError`/`Describe`
+     (`HackerOs.Commands.Common`), et `ShellErrorText.Describe(exception, context)`
+     les donne en français pour une app tierce.
    - Composant de la plateforme : `@inject IStringLocalizer<Strings> L`.
    - Bibliothèque du SDK (`AppSdk.Blazor`, `FileView`, `Terminal`) : le
      contexte d'app reçu en cascade, `AppContext.GetLocalizer<Strings>()`, ou

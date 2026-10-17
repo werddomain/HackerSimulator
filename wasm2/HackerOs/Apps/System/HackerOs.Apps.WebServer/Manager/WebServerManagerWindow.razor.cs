@@ -162,7 +162,7 @@ public partial class WebServerManagerWindow
             return;
         }
 
-        _errors = [.. HackWebSiteFile.Validate(_editor.ToSite(), _editor.Scope)];
+        _errors = [.. HackWebSiteFile.Validate(_editor.ToSite(), _editor.Scope, AppContext)];
     }
 
     private async Task ValidateAsync()

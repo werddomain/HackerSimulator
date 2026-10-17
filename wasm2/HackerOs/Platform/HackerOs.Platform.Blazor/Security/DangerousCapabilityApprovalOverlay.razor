@@ -43,7 +43,7 @@
 
                 <h3 class="dca-section-title">@L["Approval.Capabilities"]</h3>
                 <ul class="dca-capabilities">
-                    @foreach (CapabilityDescription capability in request.Capabilities)
+                    @foreach (CapabilityDescription capability in request.Capabilities.Select(c => HackerOs.Platform.Core.Policy.CapabilityText.Localize(c, (L as HackerOs.AppSdk.Globalization.HackStringLocalizer)?.Culture)))
                     {
                         <li key="@capability.Capability" class="dca-capability">
                             <span class="dca-capability-title">@capability.Title</span>
