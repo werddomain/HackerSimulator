@@ -37,6 +37,7 @@ public sealed class EcosystemBootCoordinator
     private readonly SystemStartupSignal? _startup;
     private readonly IRemoteProcessHost? _remoteHost;
     private readonly IWorkerPoolStatus? _workers;
+    private readonly ServiceStartupCoordinator? _serviceStartup;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="logWriter">
@@ -84,7 +85,8 @@ public sealed class EcosystemBootCoordinator
         ResourceAccountingPlan? resourceAccounting = null,
         SystemStartupSignal? startup = null,
         IRemoteProcessHost? remoteHost = null,
-        IWorkerPoolStatus? workers = null)
+        IWorkerPoolStatus? workers = null,
+        ServiceStartupCoordinator? serviceStartup = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -104,6 +106,7 @@ public sealed class EcosystemBootCoordinator
         _startup = startup;
         _remoteHost = remoteHost;
         _workers = workers;
+        _serviceStartup = serviceStartup;
     }
 
     /// <summary>
@@ -187,6 +190,13 @@ public sealed class EcosystemBootCoordinator
             DiagnosticSeverity.Information,
             "kernel",
             $"boot: storage ready, policy revision {policyRevision}, {catalog.Count} apps in catalog, {users.Count} local users");
+
+        // ADR 0097 section 4: the system services start before the login screen, as hackeros-svc.
+        // A failure is logged and never blocks the boot.
+        if (_serviceStartup is not null)
+        {
+            await _serviceStartup.StartBootServicesAsync().ConfigureAwait(false);
+        }
 
         return new EcosystemBootResult(users, policyRevision, catalog.Count);
     }

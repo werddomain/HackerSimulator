@@ -742,6 +742,62 @@ internal static class WireCodec
     public static ServiceControlResult ReadServiceResult(JsonElement element) =>
         new((ServiceControlOutcome)element.GetInt32("oc"), element.GetOptionalString("ec"));
 
+    /// <summary>Writes a service's state (ADR 0097) for <c>systemctl status</c> in a worker.</summary>
+    public static void WriteServiceStatus(Utf8JsonWriter writer, ServiceStatusSnapshot status)
+    {
+        writer.WriteNumber("as", (int)status.ActiveState);
+        writer.WriteNumber("rs", (int)status.Result);
+        writer.WriteNumber("h", (int)status.Health);
+        if (status.StatusText is { } text)
+        {
+            writer.WriteString("st", text);
+        }
+
+        if (status.StateChangedAtUtc is { } since)
+        {
+            writer.WriteNumber("ts", since.ToUnixTimeMilliseconds());
+        }
+
+        if (status.MainPid is { } pid)
+        {
+            writer.WriteNumber("pid", pid);
+        }
+
+        if (status.ExitCode is { } exitCode)
+        {
+            writer.WriteNumber("xc", exitCode);
+        }
+    }
+
+    public static ServiceStatusSnapshot ReadServiceStatus(JsonElement element) => new(
+        (ServiceActiveState)element.GetInt32("as"),
+        (ServiceRunResult)element.GetInt32("rs"),
+        (ServiceHealth)element.GetInt32("h"),
+        element.GetOptionalString("st"),
+        element.GetOptional("ts") is { } since ? DateTimeOffset.FromUnixTimeMilliseconds(since.GetInt64()) : null,
+        element.GetOptional("pid") is { } pid ? pid.GetInt64() : null,
+        element.GetOptional("xc") is { } exitCode ? exitCode.GetInt32() : null);
+
+    /// <summary>Writes one <c>sd_notify</c>-like message of a service in a worker (ADR 0097, section 2).</summary>
+    public static void WriteServiceNotification(Utf8JsonWriter writer, ServiceNotification notification)
+    {
+        writer.WriteBoolean("r", notification.Ready);
+        if (notification.Health is { } health)
+        {
+            writer.WriteNumber("h", (int)health);
+        }
+
+        if (notification.StatusText is { } text)
+        {
+            writer.WriteString("st", text);
+        }
+    }
+
+    public static ServiceNotification ReadServiceNotification(JsonElement element) => new(
+        element.GetProperty("r").GetBoolean(),
+        element.GetOptional("h") is { } health ? (ServiceHealth)health.GetInt32() : null,
+        element.GetOptionalString("st"));
+
     public static void WriteDrives(Utf8JsonWriter writer, IReadOnlyList<HackDriveSnapshot> drives)
     {
         writer.WriteStartArray("dr");

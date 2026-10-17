@@ -227,6 +227,14 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// </remarks>
     public IAppConsoleGateway Console { get => Guarded(field); internal set; } = DetachedAppConsoleGateway.Instance;
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Bound by <c>AppLifecycleOrchestrator</c> when it starts a service (ADR 0097, section 2): the
+    /// messages reach the service's state table under this process's PID. Every other process keeps
+    /// the gateway that drops them.
+    /// </remarks>
+    public IAppServiceNotifyGateway ServiceNotify { get => Guarded(field); internal set; } = NullAppServiceNotifyGateway.Instance;
+
     /// <summary>
     /// Gets the kernel-side block of this instance's process (ADR 0069): stop request, killed flag and
     /// scheduler. It outlives the process, so leftover code of a killed process still finds it.

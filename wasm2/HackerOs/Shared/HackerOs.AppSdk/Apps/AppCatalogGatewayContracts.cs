@@ -88,4 +88,47 @@ public interface IAppManagementGateway
     /// <param name="cancellationToken">Cancels the authentication and the write.</param>
     ValueTask<IReadOnlyList<string>> ReinstallAsync(
         string appId, HackInstallScope scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells, without changing anything, what an uninstall of <paramref name="appId"/> would do
+    /// (ADR 0097, section 5): every app it removes and the running processes of those apps.
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<HackUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This app-management gateway cannot plan an uninstall.");
+
+    /// <summary>
+    /// Uninstalls like <see cref="UninstallAsync"/> and reports the processes it stopped, each
+    /// marked when it had to be forced after its grace period (ADR 0097, section 5).
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="scope">File to write.</param>
+    /// <param name="cancellationToken">Cancels the authentication and the write.</param>
+    async ValueTask<HackUninstallReport> UninstallWithReportAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        new(await UninstallAsync(appId, scope, cancellationToken).ConfigureAwait(false), []);
+}
+
+/// <summary>One running process of an app, as an uninstall lists it (ADR 0097, section 5).</summary>
+/// <param name="Pid">Process ID.</param>
+/// <param name="AppId">App the process runs.</param>
+/// <param name="Name">The app's name.</param>
+/// <param name="UserName">Login name of the user it runs as.</param>
+/// <param name="Forced">In a report: it did not finish its stop work within its grace period and was cut off.</param>
+public sealed record HackRunningProcessInfo(long Pid, string AppId, string Name, string UserName, bool Forced = false);
+
+/// <summary>What an uninstall would do (ADR 0097, section 5), for its confirmation dialog.</summary>
+/// <param name="AppIds">Every app it removes, dependents first, then the app itself.</param>
+/// <param name="RunningProcesses">The running processes of those apps, which the uninstall stops.</param>
+public sealed record HackUninstallPlan(IReadOnlyList<string> AppIds, IReadOnlyList<HackRunningProcessInfo> RunningProcesses);
+
+/// <summary>What an uninstall did (ADR 0097, section 5).</summary>
+/// <param name="AppIds">Every app uninstalled, dependents first.</param>
+/// <param name="StoppedProcesses">Every process it stopped; <see cref="HackRunningProcessInfo.Forced"/> marks the ones cut off.</param>
+public sealed record HackUninstallReport(IReadOnlyList<string> AppIds, IReadOnlyList<HackRunningProcessInfo> StoppedProcesses)
+{
+    /// <summary>Gets the stopped processes that had to be forced after their grace period.</summary>
+    public IReadOnlyList<HackRunningProcessInfo> ForcedProcesses => [.. StoppedProcesses.Where(static process => process.Forced)];
 }

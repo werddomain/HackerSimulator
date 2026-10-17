@@ -51,6 +51,18 @@ internal sealed class AppServiceControlGateway(
         return ToResult(result);
     }
 
+    public ValueTask<ServiceStatusSnapshot> GetStatusAsync(string serviceAppId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceAppId);
+        return ValueTask.FromResult(dispatcherProvider().GetServiceStatus(serviceAppId));
+    }
+
+    public ValueTask<ServiceControlResult> ResetFailedAsync(string serviceAppId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceAppId);
+        return ValueTask.FromResult(ToResult(dispatcherProvider().ResetFailedService(callerAppId, userId, serviceAppId, principal)));
+    }
+
     private static ServiceControlResult ToResult(ServiceControlDispatchResult result)
     {
         ThrowIfDenied(result);

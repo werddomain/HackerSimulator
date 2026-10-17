@@ -1,9 +1,11 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -327,18 +329,29 @@ public sealed class AppIntentDispatcher
             return denial;
         }
 
-        ServiceStartMode effectiveMode = await ServiceStartModeStore.ReadAsync(
-            _fileSystem,
-            principal.LoginName.Value,
-            targetAppId,
-            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
-            CancellationToken.None);
+        bool system = IsBootService(target!);
+        if (system && !principal.HasAuthority(AppAuthority.Administrator))
+        {
+            return AdministratorRequired();
+        }
+
+        ServiceStartMode effectiveMode = await ReadStartModeAsync(target!, principal, system);
         if (effectiveMode == ServiceStartMode.Disabled)
         {
             return new ServiceControlDispatchResult(ServiceControlDispatchStatus.ServiceDisabled, ErrorCode: "service.start.disabled");
         }
 
-        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(targetAppId, principal, []));
+        // A system service runs as hackeros-svc in the system scope whoever starts it, like
+        // `sudo systemctl start` of a system unit: the administrator's session does not own it.
+        AppLaunchRequest request = system
+            ? new AppLaunchRequest(
+                targetAppId,
+                ServiceAccount.CreatePrincipal(principal.InstallationId, principal.DeviceId, DateTimeOffset.UtcNow),
+                [],
+                Interactive: false,
+                SystemScope: true)
+            : new AppLaunchRequest(targetAppId, principal, []);
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(request);
         return launch.Status switch
         {
             AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting =>
@@ -351,10 +364,15 @@ public sealed class AppIntentDispatcher
     public async ValueTask<ServiceControlDispatchResult> StopServiceAsync(
         string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
     {
-        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
         if (denial is not null)
         {
             return denial;
+        }
+
+        if (IsBootService(target!) && !principal.HasAuthority(AppAuthority.Administrator))
+        {
+            return AdministratorRequired();
         }
 
         await _orchestrator.StopServiceAsync(targetAppId);
@@ -371,12 +389,7 @@ public sealed class AppIntentDispatcher
             return (denial, ServiceStartMode.Manual);
         }
 
-        ServiceStartMode mode = await ServiceStartModeStore.ReadAsync(
-            _fileSystem,
-            principal.LoginName.Value,
-            targetAppId,
-            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
-            CancellationToken.None);
+        ServiceStartMode mode = await ReadStartModeAsync(target!, principal, IsBootService(target!));
         return (new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded), mode);
     }
 
@@ -384,13 +397,66 @@ public sealed class AppIntentDispatcher
     public async ValueTask<ServiceControlDispatchResult> SetServiceStartModeAsync(
         string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal, ServiceStartMode mode)
     {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
+        if (denial is not null)
+        {
+            return denial;
+        }
+
+        if (IsBootService(target!))
+        {
+            // A system service's start mode lives in /etc, for every user: `sudo systemctl enable`.
+            if (!principal.HasAuthority(AppAuthority.Administrator))
+            {
+                return AdministratorRequired();
+            }
+
+            await ServiceStartModeStore.WriteSystemAsync(_fileSystem, targetAppId, mode, CancellationToken.None);
+        }
+        else
+        {
+            await ServiceStartModeStore.WriteAsync(_fileSystem, principal.LoginName.Value, targetAppId, mode, CancellationToken.None);
+        }
+
+        return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
+    }
+
+    /// <summary>Gets whether a service is a system service, started at boot as <c>hackeros-svc</c> (ADR 0097, section 4).</summary>
+    private bool IsBootService(AppManifest target) =>
+        _orchestrator.GetEffectiveStartup(target) == AppServiceStartup.Boot;
+
+    /// <summary>Reads a service's start mode from <c>/etc</c> (system service) or the user's <c>~/.config</c>.</summary>
+    private ValueTask<ServiceStartMode> ReadStartModeAsync(AppManifest target, AuthenticatedPrincipal principal, bool system)
+    {
+        ServiceStartMode fallback = target.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual;
+        return system
+            ? ServiceStartModeStore.ReadSystemAsync(_fileSystem, target.Id, fallback, CancellationToken.None)
+            : ServiceStartModeStore.ReadAsync(_fileSystem, principal.LoginName.Value, target.Id, fallback, CancellationToken.None);
+    }
+
+    private static ServiceControlDispatchResult AdministratorRequired() =>
+        new(ServiceControlDispatchStatus.CapabilityDenied, ErrorCode: "service.system.administrator-required");
+
+    /// <summary>
+    /// Reads one <see cref="AppKind.Service"/> app's state (ADR 0097). Needs no capability, like
+    /// <c>systemctl status</c>; an unknown app or one that is not a service reads as never started.
+    /// </summary>
+    public ServiceStatusSnapshot GetServiceStatus(string targetAppId) =>
+        _catalog.Manifests.TryGetValue(targetAppId, out AppManifest? manifest) && manifest.Kind == AppKind.Service
+            ? _orchestrator.GetServiceStatus(targetAppId)
+            : ServiceStatusSnapshot.NeverStarted;
+
+    /// <summary>Clears one <see cref="AppKind.Service"/> app's failed state on behalf of a caller; see <see cref="StartServiceAsync"/> for the authorization rule.</summary>
+    public ServiceControlDispatchResult ResetFailedService(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
+    {
         ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
         if (denial is not null)
         {
             return denial;
         }
 
-        await ServiceStartModeStore.WriteAsync(_fileSystem, principal.LoginName.Value, targetAppId, mode, CancellationToken.None);
+        _orchestrator.ResetFailedService(targetAppId);
         return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
     }
 

@@ -8,7 +8,8 @@ namespace HackerOs.Apps.Settings;
 
 /// <summary>
 /// Settings &gt; Installed Apps (ADR 0048 section 5): one row per catalog app with its install state,
-/// an Uninstall button with a confirmation listing the dependents, and Reinstall where the user may
+/// an Uninstall button with a confirmation listing the dependents and the processes it will stop
+/// (ADR 0097, section 5), and Reinstall where the user may
 /// change the scope that uninstalled it. System apps get a badge and no button.
 /// </summary>
 /// <remarks>
@@ -22,6 +23,7 @@ public partial class InstalledAppsPanel : IDisposable
 {
     private IReadOnlyList<HackAppInstallInfo>? _apps;
     private HackAppInstallInfo? _pending;
+    private HackUninstallPlan? _plan;
     private HackInstallScope _scope = HackInstallScope.User;
     private IAppCatalogGateway? _catalog;
     private bool _isBusy;
@@ -89,6 +91,21 @@ public partial class InstalledAppsPanel : IDisposable
     private IEnumerable<string> WebSitesIn(IReadOnlyList<string> closure) =>
         closure.Where(id => _apps?.FirstOrDefault(entry => entry.App.Id == id)?.App.Kind == HackerOs.App.Abstractions.AppKind.Web);
 
+    /// <summary>The result line after an uninstall: which processes were stopped, and which had to be forced.</summary>
+    private static string? DescribeStopped(HackUninstallReport report)
+    {
+        if (report.StoppedProcesses.Count == 0)
+        {
+            return null;
+        }
+
+        string stopped = string.Join(", ", report.StoppedProcesses.Select(static p => $"{p.Name} (PID {p.Pid})"));
+        IReadOnlyList<HackRunningProcessInfo> forced = report.ForcedProcesses;
+        return forced.Count == 0
+            ? $"Stopped: {stopped}."
+            : $"Stopped: {stopped}. Forced after their grace period: {string.Join(", ", forced.Select(static p => $"{p.Name} (PID {p.Pid})"))}.";
+    }
+
     private static string RowClass(HackAppInstallInfo entry) =>
         entry.App.IsSystemApp ? "is-system"
         : entry.State == HackAppInstallState.Installed ? "is-installed"
@@ -97,11 +114,21 @@ public partial class InstalledAppsPanel : IDisposable
     private string ScopeClass(HackInstallScope scope) =>
         scope == _scope ? "scope-option is-selected" : "scope-option";
 
-    private void AskUninstall(HackAppInstallInfo entry)
+    private async Task AskUninstall(HackAppInstallInfo entry)
     {
         _message = null;
         _pending = entry;
+        _plan = null;
         _scope = HackInstallScope.User;
+        try
+        {
+            // ADR 0097 section 5: the dialog names the processes the uninstall will stop.
+            _plan = await Context.AppManagement.PlanUninstallAsync(entry.App.Id, Context.CancellationToken);
+        }
+        catch (Exception exception) when (exception is NotSupportedException or AppGatewayAccessDeniedException or UnauthorizedAccessException)
+        {
+            _plan = null;
+        }
     }
 
     private void CancelUninstall()
@@ -109,6 +136,7 @@ public partial class InstalledAppsPanel : IDisposable
         if (!_isBusy)
         {
             _pending = null;
+            _plan = null;
         }
     }
 
@@ -120,10 +148,17 @@ public partial class InstalledAppsPanel : IDisposable
         }
 
         HackInstallScope scope = IsAdministrator ? _scope : HackInstallScope.User;
-        bool done = await RunAsync(() => Context.AppManagement.UninstallAsync(entry.App.Id, scope, Context.CancellationToken));
+        HackUninstallReport? report = null;
+        bool done = await RunAsync(async () =>
+        {
+            report = await Context.AppManagement.UninstallWithReportAsync(entry.App.Id, scope, Context.CancellationToken);
+            return report.AppIds;
+        });
         if (done)
         {
             _pending = null;
+            _plan = null;
+            _message = report is null ? null : DescribeStopped(report);
         }
     }
 

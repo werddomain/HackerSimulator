@@ -117,6 +117,15 @@ public sealed record AppManifest
     public bool AutoStart { get; init; }
 
     /// <summary>
+    /// Gets when an automatic <see cref="AppKind.Service"/> app starts (ADR 0097, section 4): after a
+    /// login (<see cref="AppServiceStartup.Login"/>, the default) or at boot
+    /// (<see cref="AppServiceStartup.Boot"/>, system apps only). <see langword="null"/> (omitted from
+    /// <c>manifest.json</c>) means <see cref="AppServiceStartup.Login"/>, so existing manifests keep
+    /// their exact bytes. Rejected by <see cref="AppManifestValidator"/> for every other kind.
+    /// </summary>
+    public AppServiceStartup? ServiceStartup { get; init; }
+
+    /// <summary>
     /// Gets whether this app participates in platform Back navigation
     /// (docs/mobile-interface-platform-plan.md §8, <c>MOB-012</c>) — a Desktop-only chrome Back
     /// button is shown for it, and the Mobile system navigation bar's triangle calls into it first.

@@ -234,6 +234,10 @@
     },
     "singleInstancePerUser": { "type": "boolean" },
     "autoStart": { "type": "boolean" },
+    "serviceStartup": {
+      "description": "When an automatic service starts (ADR 0097): after a login (default) or at boot (system apps only).",
+      "enum": ["login", "boot"]
+    },
     "supportsBack": { "type": "boolean" },
     "window": {
       "description": "Window sizes of a window app in CSS pixels (ADR 0095 §2). Omitted: 800x560, minimum 360x240, no maximum, resizable.",
