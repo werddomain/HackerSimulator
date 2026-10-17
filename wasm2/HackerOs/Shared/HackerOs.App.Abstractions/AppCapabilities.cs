@@ -106,11 +106,6 @@ public static class AppCapabilities
     public const string NetworkListenPrivileged = "network.listen.privileged";
 
     /// <summary>
-    /// Access the Game Domain engine, missions, hardware upgrades, and simulated security state.
-    /// </summary>
-    public const string GameplayDomainAccess = "gameplay.domain.access";
-
-    /// <summary>
     /// Reach real hosts outside the simulated network, via the optional server's proxy (ADR 0028),
     /// when a device is connected. Distinct from <see cref="NetworkSimulatedRead"/> so real network
     /// reach is independently auditable/grantable.
@@ -217,7 +212,6 @@ public static class AppCapabilities
             NetworkListenPrivileged,
             "Écouter un port privilégié",
             "Ouvrir un port inférieur à 1024, où l'on attend les vrais services de la machine (web, SSH...)."),
-        Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
         Normal(ShellControl, "Agir sur le shell qui a lancé la commande"),
         Dangerous(
             PermissionsManage,

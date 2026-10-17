@@ -218,8 +218,8 @@
 
   <PropertyGroup>
     <!-- Paths relative to the HackerOs root, forward slashes, compared case-insensitively. -->
-    <_HackerOsAppAllowedReferencePattern>(?i)^(Shared/HackerOs\.(App|Simulation|Theming|Game)\.Abstractions|Shared/HackerOs\.AppSdk(\.[^/]+)?|Platform/HackerOs\.Theming\.Blazor)/[^/]+\.csproj$|^Apps/.+\.csproj$</_HackerOsAppAllowedReferencePattern>
-    <_HackerOsSdkAllowedReferencePattern>(?i)^Shared/HackerOs\.((App|Simulation|Theming|Game)\.Abstractions|AppSdk(\.[^/]+)?)/[^/]+\.csproj$</_HackerOsSdkAllowedReferencePattern>
+    <_HackerOsAppAllowedReferencePattern>(?i)^(Shared/HackerOs\.(App|Simulation|Theming)\.Abstractions|Shared/HackerOs\.AppSdk(\.[^/]+)?|Platform/HackerOs\.Theming\.Blazor)/[^/]+\.csproj$|^Apps/.+\.csproj$</_HackerOsAppAllowedReferencePattern>
+    <_HackerOsSdkAllowedReferencePattern>(?i)^Shared/HackerOs\.((App|Simulation|Theming)\.Abstractions|AppSdk(\.[^/]+)?)/[^/]+\.csproj$</_HackerOsSdkAllowedReferencePattern>
   </PropertyGroup>
 
   <!-- Evaluation-time snapshot of this project's own ProjectReference items (see ValidateHackerOsSdkBoundary). -->

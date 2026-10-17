@@ -24,7 +24,7 @@ namespace HackerOs.Server.Contracts.Proxy;
 //   - Maximum request duration: 30 seconds
 //   - Maximum concurrent requests per device: 8
 //   - Simulated-domain hostnames (.hackeros.local, .sim) → 403 Proxy Forbidden
-//     (prevents gameplay from accidentally reaching this proxy — P5-PROXY-006)
+//     (prevents simulated-network traffic from accidentally reaching this proxy — P5-PROXY-006)
 // =============================================================================
 
 /// <summary>

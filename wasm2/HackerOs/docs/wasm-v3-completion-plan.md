@@ -194,7 +194,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 
 ### Chantiers
 - [x] `v3/1-adr` (ADR 0094 à 0106)
-- [ ] `v3/2-game-removal`
+- [x] `v3/2-game-removal`
 - [ ] `v3/3-window-model`
 - [ ] `v3/4-intents`
 - [ ] `v3/5-services`
