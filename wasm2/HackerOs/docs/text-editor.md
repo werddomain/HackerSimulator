@@ -71,7 +71,7 @@ TextEditorReplaceResult step = TextEditorFindEngine.Replace(
 // step.Content, step.Replaced, step.NextMatchStart (-1 s'il n'en reste plus)
 
 TextEditorReplaceAllResult all = TextEditorFindEngine.ReplaceAll(content, "cat", "dog", options);
-string summary = TextEditorFindEngine.DescribeReplacementCount(all.Count); // "12 replacements"
+string summary = TextEditorFindEngine.DescribeReplacementCount(all.Count, L); // "12 replacements", « 12 remplacements »
 ```
 
 `FindMatches(content, query)` sans options garde l'ancien comportement :
@@ -111,6 +111,17 @@ repris (`TakeAsync`) comme un **nouveau** tampon modifié, titré
 fichier d'origine sans que l'utilisateur choisisse où l'enregistrer. Fermer la
 fenêtre soi-même passe toujours par la question « Save changes? » et ne laisse
 pas de brouillon.
+
+## Langues (ADR 0104)
+
+Les menus, la barre de recherche, la barre d'état, les dialogues et les
+messages d'erreur viennent de `Resources/Strings.resx` / `Strings.fr.resx`
+(`AppContext.GetLocalizer<Strings>()`). `TextEditorDocument` reçoit le
+localiseur de la fenêtre pour ses titres (« Sans titre », « (récupéré) ») et
+`DescribeReplacementCount` le prend en paramètre ; sans localiseur, ils lisent
+la langue du processus courant (anglais hors d'une app, donc dans les tests
+unitaires). Les pluriels suivent la règle de la langue (0 et 1 au singulier en
+français).
 
 ## Décisions
 

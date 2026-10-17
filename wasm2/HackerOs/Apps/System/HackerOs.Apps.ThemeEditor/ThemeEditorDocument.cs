@@ -1,5 +1,7 @@
 using System.Text;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Theming.Abstractions;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.ThemeEditor;
 
@@ -15,9 +17,17 @@ public sealed class ThemeEditorDocument
     private bool _idEdited;
     private string _savedSnapshot;
 
+    // The editor's texts, for the default name and the problems that prevent saving (ADR 0104).
+    private readonly IStringLocalizer _text;
+
     /// <summary>Creates a new, empty theme over the HackerOS theme.</summary>
-    public ThemeEditorDocument()
+    /// <param name="text">
+    /// The editor's texts in the window's language; <see langword="null"/> reads them in the language of
+    /// the process running the code (English outside any app, as in unit tests).
+    /// </param>
+    public ThemeEditorDocument(IStringLocalizer? text = null)
     {
+        _text = text ?? HackLocalization.GetLocalizer<Strings>();
         Reset(WellKnownThemeIds.HackerOs);
         _savedSnapshot = Snapshot();
     }
@@ -129,7 +139,7 @@ public sealed class ThemeEditorDocument
         BaseThemeId = baseTheme.Id;
         ForDesktop = baseTheme.Platform == ThemePlatform.Desktop;
         ForMobile = baseTheme.Platform == ThemePlatform.Mobile;
-        Name = $"My {baseTheme.DisplayName}";
+        Name = _text["Document.DefaultName", baseTheme.DisplayName];
         Path = null;
         _savedSnapshot = Snapshot();
     }
@@ -174,26 +184,26 @@ public sealed class ThemeEditorDocument
         List<string> problems = [];
         if (!ThemeFile.IsValidId(Id))
         {
-            problems.Add("The id must be 1 to 64 lowercase letters, digits and dashes.");
+            problems.Add(_text["Problem.Id"]);
         }
         else if (ThemeCatalog.TryGet(Id, out _))
         {
-            problems.Add($"'{Id}' is a built-in theme id; choose another one.");
+            problems.Add(_text["Problem.BuiltInId", Id]);
         }
 
         if (string.IsNullOrWhiteSpace(Name) || Name.Length > ThemeFile.MaxNameLength || Name.Any(char.IsControl))
         {
-            problems.Add($"The name must have 1 to {ThemeFile.MaxNameLength} characters.");
+            problems.Add(_text["Problem.Name", ThemeFile.MaxNameLength]);
         }
 
         if (!ForDesktop && !ForMobile)
         {
-            problems.Add("Offer the theme on the desktop, on mobile, or both.");
+            problems.Add(_text["Problem.Platforms"]);
         }
 
         if (_errors.Count > 0)
         {
-            problems.Add($"{_errors.Count} token value(s) are invalid: {string.Join(", ", _errors.Keys)}.");
+            problems.Add(_text["Problem.Tokens", _errors.Count, string.Join(", ", _errors.Keys)]);
         }
 
         return problems;

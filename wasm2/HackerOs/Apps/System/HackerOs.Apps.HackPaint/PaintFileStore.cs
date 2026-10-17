@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.HackPaint;
 
@@ -14,7 +16,8 @@ public sealed record PaintFileReadResult(byte[]? Bytes, ImageFileHeader? Header,
 /// Reads and writes image files for Hack Paint through the app's filesystem gateway (ADR 0103 §1):
 /// the C# side owns every file access, the canvas module only decodes and encodes pixels. The
 /// gateway is the app's own (home folder) or one carrying the handle a file dialog issued for a
-/// file outside it, exactly as the Text Editor does.
+/// file outside it, exactly as the Text Editor does. Its messages are in the language of the process
+/// running the call (ADR 0104), English outside any app.
 /// </summary>
 public static class PaintFileStore
 {
@@ -41,7 +44,7 @@ public static class PaintFileStore
         if (handle.Entry.Metadata is FileMetadata metadata && metadata.Length > ImageFileFormat.MaxFileBytes)
         {
             return new PaintFileReadResult(null, null,
-                $"The file is too large ({metadata.Length / (1024 * 1024)} MiB). Hack Paint opens images up to {ImageFileFormat.MaxFileBytes / (1024 * 1024)} MiB.");
+                Text["Error.FileTooLarge", metadata.Length / (1024 * 1024), ImageFileFormat.MaxFileBytes / (1024 * 1024)]);
         }
 
         using MemoryStream buffer = new();
@@ -58,18 +61,18 @@ public static class PaintFileStore
         if (bytes.Length > ImageFileFormat.MaxFileBytes)
         {
             return new PaintFileReadResult(null, null,
-                $"The file is too large. Hack Paint opens images up to {ImageFileFormat.MaxFileBytes / (1024 * 1024)} MiB.");
+                Text["Error.FileTooLargeUnknownSize", ImageFileFormat.MaxFileBytes / (1024 * 1024)]);
         }
 
         if (!ImageFileFormat.TryReadHeader(bytes, out ImageFileHeader header))
         {
-            return new PaintFileReadResult(null, null, "This is not a PNG, JPEG, BMP, GIF or WebP image, or the file is damaged.");
+            return new PaintFileReadResult(null, null, Text["Error.NotAnImage"]);
         }
 
         if (header.Width > ImageFileFormat.MaxDimension || header.Height > ImageFileFormat.MaxDimension)
         {
             return new PaintFileReadResult(null, header,
-                $"The image is {header.Width} × {header.Height} pixels. Hack Paint edits images up to {ImageFileFormat.MaxDimension} × {ImageFileFormat.MaxDimension}.");
+                Text["Error.ImageTooLarge", header.Width, header.Height, ImageFileFormat.MaxDimension]);
         }
 
         return new PaintFileReadResult(bytes, header, null);
@@ -91,7 +94,7 @@ public static class PaintFileStore
         ArgumentNullException.ThrowIfNull(bytes);
         if (bytes.Length > ImageFileFormat.MaxFileBytes)
         {
-            return $"The encoded image is larger than {ImageFileFormat.MaxFileBytes / (1024 * 1024)} MiB.";
+            return Text["Error.EncodedTooLarge", ImageFileFormat.MaxFileBytes / (1024 * 1024)];
         }
 
         FileSystemMutationResult creation = await fileSystem.CreateAsync(
@@ -109,12 +112,15 @@ public static class PaintFileStore
         return written.Succeeded ? null : Describe(written.Transaction.Error?.Code);
     }
 
+    /// <summary>The texts in the language of the running process, read at each call.</summary>
+    private static IStringLocalizer<Strings> Text => HackLocalization.GetLocalizer<Strings>();
+
     private static string Describe(FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => "Permission denied.",
-        FileSystemErrorCode.NotFound => "File not found.",
-        FileSystemErrorCode.NotFile => "The path is not a regular file.",
-        null => "Unknown error.",
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Text["Error.PermissionDenied"],
+        FileSystemErrorCode.NotFound => Text["Error.NotFound"],
+        FileSystemErrorCode.NotFile => Text["Error.NotFile"],
+        null => Text["Error.Unknown"],
         _ => code.Value.ToString()
     };
 

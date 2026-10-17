@@ -14,7 +14,8 @@
     text-transform: uppercase;
 }
 
-.theme-docs code {
+/* ::deep: the documentation sentences are resource markup, rendered without the scope attribute. */
+.theme-docs ::deep code {
     font-family: var(--hos-font-mono, monospace);
     font-size: 0.8rem;
     color: var(--hos-accent-hover, #62e4aa);

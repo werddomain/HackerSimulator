@@ -1,10 +1,12 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Apps.HackPaint;
@@ -16,10 +18,6 @@ namespace HackerOs.Apps.HackPaint;
 /// </summary>
 public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowCloseGuard
 {
-    private const string AppName = "Hack Paint";
-    private static readonly FileDialogFilter ImageFilter = new(
-        "Images", [.. ImageFileFormat.OpenExtensions], ["image/png", "image/jpeg", "image/bmp", "image/gif", "image/webp"]);
-
     private readonly PaintCanvasState _state = new();
     private ElementReference _root;
     private ElementReference _canvas;
@@ -38,12 +36,23 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     private string? _error;
     private string? _busyMessage;
     private int _jpegQuality = 92;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>Hack Paint's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The "Images" filter of the Open dialog: every format Hack Paint decodes.</summary>
+    private FileDialogFilter ImageFilter => new(
+        L["Filter.Images"], [.. ImageFileFormat.OpenExtensions], ["image/png", "image/jpeg", "image/bmp", "image/gif", "image/webp"]);
+
+    /// <summary>The name shown for a document that has no file yet.</summary>
+    private string Untitled => L["Title.Untitled"];
 
     [Inject]
     private IJSRuntime JsRuntime { get; set; } = default!;
 
     /// <summary>Gets the window title: <c>name.png — Hack Paint</c>, prefixed with <c>*</c> while unsaved.</summary>
-    internal string WindowTitle => PaintTitle.Format(_path?.Value, _state.IsDirty);
+    internal string WindowTitle => PaintTitle.Format(_path?.Value, _state.IsDirty, Untitled);
 
     private bool IsBusy => _busyMessage is not null;
 
@@ -89,8 +98,8 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
 
         MessageBoxDialogResult answer = await MessageBox(
-            "Unsaved image",
-            $"Close {PaintTitle.FileName(_path?.Value)} and discard the changes?",
+            L["Dialog.Unsaved.Title"],
+            L["Dialog.Unsaved.Close", PaintTitle.FileName(_path?.Value, Untitled)],
             MessageBoxType.YesNo,
             cancellationToken);
         return answer.Result == MessageBoxResult.Yes;
@@ -121,9 +130,9 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
 
         OpenFileDialogResult result = await OpenFileAsync(new OpenFileDialogRequest
         {
-            Title = "Open Image",
+            Title = L["Dialog.Open.Title"],
             InitialDirectory = VirtualPath.Parse(CurrentDirectory()),
-            Filters = [ImageFilter, new FileDialogFilter("All files", [], [])],
+            Filters = [ImageFilter, new FileDialogFilter(L["Filter.AllFiles"], [], [])],
             RequestedAccess = SelectedFileAccess.ReadWrite
         });
         if (result.Status == FileDialogStatus.Selected && result.Resources.Count > 0)
@@ -149,14 +158,14 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     {
         SaveFileDialogResult result = await SaveFileAsync(new SaveFileDialogRequest
         {
-            Title = "Save Image",
+            Title = L["Dialog.Save.Title"],
             InitialDirectory = VirtualPath.Parse(CurrentDirectory()),
             SuggestedFileName = _path is { } path ? PaintTitle.FileName(path.Value) : "untitled.png",
             DefaultExtension = ".png",
             Filters =
             [
-                new FileDialogFilter("PNG image", [".png"], ["image/png"]),
-                new FileDialogFilter("JPEG image", [".jpg", ".jpeg"], ["image/jpeg"])
+                new FileDialogFilter(L["Filter.Png"], [".png"], ["image/png"]),
+                new FileDialogFilter(L["Filter.Jpeg"], [".jpg", ".jpeg"], ["image/jpeg"])
             ],
             ConfirmOverwrite = true
         });
@@ -170,14 +179,14 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     private async Task LoadAsync(VirtualPath path, IAppFileSystemGateway fileSystem)
     {
         _error = null;
-        _busyMessage = $"Opening {PaintTitle.FileName(path.Value)}…";
+        _busyMessage = L["Busy.Opening", PaintTitle.FileName(path.Value, Untitled)];
         StateHasChanged();
         try
         {
             PaintFileReadResult read = await PaintFileStore.ReadAsync(fileSystem, path, AppContext.CancellationToken);
             if (read.Error is not null || read.Bytes is null || read.Header is null)
             {
-                _error = $"Cannot open {path.Value}: {read.Error}";
+                _error = L["Error.Open", path.Value, read.Error ?? L["Error.Unknown"]];
                 return;
             }
 
@@ -185,7 +194,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
                 "decodeImage", AppContext.CancellationToken, read.Bytes, read.Header.MediaType, ImageFileFormat.MaxDimension);
             if (decoded.Error is not null || decoded.Pixels is null)
             {
-                _error = $"Cannot open {path.Value}: {decoded.Error}";
+                _error = L["Error.Open", path.Value, DescribeDecodeError(decoded)];
                 return;
             }
 
@@ -196,7 +205,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
         catch (Exception exception) when (exception is JSException or ArgumentException)
         {
-            _error = $"Cannot open {path.Value}: {exception.Message}";
+            _error = L["Error.Open", path.Value, exception.Message];
         }
         finally
         {
@@ -210,7 +219,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         _error = null;
         ImageFileKind kind = ImageFileFormat.SaveKindFor(path.Value);
         string mediaType = ImageFileFormat.MediaTypeOf(kind);
-        _busyMessage = $"Saving {PaintTitle.FileName(path.Value)}…";
+        _busyMessage = L["Busy.Saving", PaintTitle.FileName(path.Value, Untitled)];
         StateHasChanged();
         try
         {
@@ -219,7 +228,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
             string? failure = await PaintFileStore.WriteAsync(fileSystem, path, encoded, mediaType, AppContext.CancellationToken);
             if (failure is not null)
             {
-                _error = $"Cannot save {path.Value}: {failure}";
+                _error = L["Error.Save", path.Value, failure];
                 return;
             }
 
@@ -229,7 +238,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
         catch (JSException exception)
         {
-            _error = $"Cannot save {path.Value}: {exception.Message}";
+            _error = L["Error.Save", path.Value, exception.Message];
         }
         finally
         {
@@ -245,8 +254,8 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
 
         MessageBoxDialogResult answer = await MessageBox(
-            "Unsaved image",
-            $"Discard the changes to {PaintTitle.FileName(_path?.Value)}?",
+            L["Dialog.Unsaved.Title"],
+            L["Dialog.Unsaved.Discard", PaintTitle.FileName(_path?.Value, Untitled)],
             MessageBoxType.YesNo);
         return answer.Result == MessageBoxResult.Yes;
     }
@@ -396,20 +405,34 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
     }
 
-    /// <summary>Pixels decoded by the module, or why decoding failed.</summary>
+    /// <summary>Turns the module's decoding error code into a sentence in the app's language.</summary>
+    private string DescribeDecodeError(DecodedImage decoded) => decoded.Error switch
+    {
+        "too-large" => L["Error.DecodedTooLarge", decoded.Width, decoded.Height, ImageFileFormat.MaxDimension],
+        "decode-failed" => L["Error.DecodeFailed"],
+        _ => L["Error.Unknown"]
+    };
+
+    /// <summary>
+    /// Pixels decoded by the module, or why decoding failed: <c>decode-failed</c>, or <c>too-large</c>
+    /// with the image's own size in <see cref="Width"/> and <see cref="Height"/>.
+    /// </summary>
     private sealed record DecodedImage(int Width, int Height, byte[]? Pixels, string? Error);
 }
 
 /// <summary>Formats Hack Paint's window title from the document path and its saved state.</summary>
 internal static class PaintTitle
 {
-    /// <summary>Gets the file name of a path, or <c>Untitled</c>.</summary>
+    /// <summary>Gets the file name of a path, or <paramref name="untitled"/>.</summary>
     /// <param name="path">Document path or <see langword="null"/>.</param>
-    public static string FileName(string? path) =>
-        string.IsNullOrEmpty(path) ? "Untitled" : path[(path.LastIndexOf('/') + 1)..];
+    /// <param name="untitled">The name of a document without a file, in the app's language.</param>
+    public static string FileName(string? path, string untitled = "Untitled") =>
+        string.IsNullOrEmpty(path) ? untitled : path[(path.LastIndexOf('/') + 1)..];
 
-    /// <summary>Builds <c>[*]name — Hack Paint</c>.</summary>
+    /// <summary>Builds <c>[*]name — Hack Paint</c> (the product name is not translated).</summary>
     /// <param name="path">Document path or <see langword="null"/>.</param>
     /// <param name="dirty">Whether the image has unsaved changes.</param>
-    public static string Format(string? path, bool dirty) => $"{(dirty ? "*" : string.Empty)}{FileName(path)} — Hack Paint";
+    /// <param name="untitled">The name of a document without a file, in the app's language.</param>
+    public static string Format(string? path, bool dirty, string untitled = "Untitled") =>
+        $"{(dirty ? "*" : string.Empty)}{FileName(path, untitled)} — Hack Paint";
 }
