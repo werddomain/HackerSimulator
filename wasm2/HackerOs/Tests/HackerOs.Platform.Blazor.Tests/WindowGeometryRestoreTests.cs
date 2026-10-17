@@ -9,8 +9,9 @@ using static HackerOs.Platform.Blazor.Tests.WindowGeometryPersistenceTests;
 namespace HackerOs.Platform.Blazor.Tests;
 
 /// <summary>
-/// Verifies ADR 0116: app windows remember their size, position and maximized state, are corrected
-/// when the screen or the app's declared sizes changed, and never remember when the app opts out.
+/// Verifies ADR 0116 as amended by ADR 0122: app windows remember their size and maximized state (not
+/// their position), are corrected when the screen or the app's declared sizes changed, and never
+/// remember when the app opts out.
 /// </summary>
 public sealed class WindowGeometryRestoreTests
 {
@@ -19,7 +20,7 @@ public sealed class WindowGeometryRestoreTests
     private static readonly WindowBounds Screen = new(0, 0, 1280, 720);
 
     [Fact]
-    public async Task A_moved_and_resized_window_reopens_at_the_same_place()
+    public async Task A_resized_window_reopens_with_its_size_at_its_cascade_slot()
     {
         Desktop desktop = new();
         WindowId first = await desktop.OpenAsync();
@@ -29,11 +30,13 @@ public sealed class WindowGeometryRestoreTests
         await desktop.CloseAsync(first);
 
         Assert.Equal(
-            "# Window geometry of org.hackeros.test-window (ADR 0116)\nx=300\ny=120\nwidth=640\nheight=420\nmaximized=false\n",
+            "# Window size of org.hackeros.test-window (ADR 0116, ADR 0122)\nwidth=640\nheight=420\nmaximized=false\n",
             desktop.Settings.Files[StateFile]);
 
+        // ADR 0122: only the size comes back; the position is the cascade slot, as under GNOME.
         WindowId reopened = await desktop.OpenAsync();
-        Assert.Equal(new WindowBounds(300, 120, 640, 420), desktop.Get(reopened).Bounds);
+        WindowBounds slot = WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, Screen);
+        Assert.Equal(new WindowBounds(slot.X, slot.Y, 640, 420), desktop.Get(reopened).Bounds);
     }
 
     [Fact]
@@ -42,95 +45,112 @@ public sealed class WindowGeometryRestoreTests
         // Reloading the page recreates the runtime, the recorder and the coordinator.
         Desktop before = new();
         WindowId window = await before.OpenAsync();
-        before.Runtime.Apply(new MoveWindowCommand(window, 200, 90));
+        before.Runtime.Apply(new ResizeWindowCommand(window, new WindowBounds(48, 42, 700, 450)));
+        before.Runtime.Apply(new CompleteWindowResizeCommand(window));
         await before.Recorder.WhenIdleAsync();
 
         Desktop after = new(before.Settings);
         WindowId reopened = await after.OpenAsync();
 
-        Assert.Equal(200, after.Get(reopened).Bounds.X);
-        Assert.Equal(90, after.Get(reopened).Bounds.Y);
+        Assert.Equal(700, after.Get(reopened).Bounds.Width);
+        Assert.Equal(450, after.Get(reopened).Bounds.Height);
     }
 
     [Fact]
-    public async Task A_maximized_window_reopens_maximized_with_its_restore_geometry()
+    public async Task A_move_alone_writes_nothing()
+    {
+        Desktop desktop = new(debounce: TimeSpan.FromMilliseconds(10));
+        WindowId window = await desktop.OpenAsync();
+        desktop.Runtime.Apply(new MoveWindowCommand(window, 200, 90));
+        desktop.Runtime.Apply(new MoveWindowCommand(window, 400, 190));
+        await desktop.Recorder.WhenIdleAsync();
+
+        Assert.Equal(0, desktop.Settings.Writes);
+
+        // Closing still records the size, never the position.
+        await desktop.CloseAsync(window);
+        Assert.DoesNotContain("x=", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_maximized_window_reopens_maximized_with_its_restore_size()
     {
         Desktop desktop = new();
         WindowId window = await desktop.OpenAsync();
-        desktop.Runtime.Apply(new MoveWindowCommand(window, 150, 60));
         desktop.Runtime.Apply(new MaximizeWindowCommand(window));
         await desktop.CloseAsync(window);
 
-        Assert.EndsWith("x=150\ny=60\nwidth=800\nheight=560\nmaximized=true\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
+        Assert.EndsWith("width=800\nheight=560\nmaximized=true\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
 
         WindowRuntimeState reopened = desktop.Get(await desktop.OpenAsync());
         Assert.Equal(WindowVisualState.Maximized, reopened.VisualState);
         Assert.Equal(Screen, reopened.Bounds);
-        Assert.Equal(new WindowBounds(150, 60, 800, 560), reopened.RestoreBounds);
+        Assert.Equal(WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, Screen), reopened.RestoreBounds);
     }
 
     [Fact]
-    public async Task A_minimized_or_snapped_window_keeps_its_last_normal_geometry()
+    public async Task A_minimized_or_snapped_window_keeps_its_last_normal_size()
     {
         Desktop desktop = new();
         WindowId window = await desktop.OpenAsync();
-        desktop.Runtime.Apply(new MoveWindowCommand(window, 100, 100));
         desktop.Runtime.Apply(new ResizeWindowCommand(window, new WindowBounds(0, 0, 640, 720)));
         desktop.Runtime.Apply(new MinimizeWindowCommand(window));
         await desktop.CloseAsync(window);
 
-        Assert.EndsWith("x=100\ny=100\nwidth=800\nheight=560\nmaximized=false\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
+        Assert.EndsWith("width=800\nheight=560\nmaximized=false\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Moves_of_one_drag_are_grouped_into_one_write()
+    public async Task Resizes_of_one_drag_are_grouped_into_one_write()
     {
         Desktop desktop = new(debounce: TimeSpan.FromMilliseconds(50));
         WindowId window = await desktop.OpenAsync();
-        for (int x = 100; x < 200; x += 10)
+        await desktop.Recorder.WhenIdleAsync();
+        int writes = desktop.Settings.Writes;
+        for (int width = 600; width < 700; width += 10)
         {
-            desktop.Runtime.Apply(new MoveWindowCommand(window, x, 80));
+            desktop.Runtime.Apply(new ResizeWindowCommand(window, new WindowBounds(48, 42, width, 500)));
         }
 
         await desktop.Recorder.WhenIdleAsync();
 
-        Assert.Equal(1, desktop.Settings.Writes);
-        Assert.Contains("x=190\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
+        Assert.Equal(writes + 1, desktop.Settings.Writes);
+        Assert.Contains("width=690\n", desktop.Settings.Files[StateFile], StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task Opening_a_window_flushes_a_write_still_waiting_for_quiet()
     {
-        // A second window opened before the grouping delay elapsed still sees the first one's move.
+        // A second window opened before the grouping delay elapsed still sees the first one's resize.
         Desktop desktop = new(manifest: Manifest(null) with { SingleInstancePerUser = false }, debounce: TimeSpan.FromHours(1));
         WindowId first = await desktop.OpenAsync();
-        desktop.Runtime.Apply(new MoveWindowCommand(first, 250, 70));
+        desktop.Runtime.Apply(new ResizeWindowCommand(first, new WindowBounds(48, 42, 640, 400)));
 
         WindowId second = await desktop.OpenAsync();
 
-        Assert.Equal(new WindowBounds(278, 98, 800, 560), desktop.Get(second).Bounds);
-        Assert.Equal(1, desktop.Settings.Writes);
+        WindowBounds slot = WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 1, Screen);
+        Assert.Equal(new WindowBounds(slot.X, slot.Y, 640, 400), desktop.Get(second).Bounds);
     }
 
     [Fact]
-    public async Task An_app_that_opts_out_always_opens_at_its_cascade_slot()
+    public async Task An_app_that_opts_out_always_opens_with_its_declared_size()
     {
         Desktop desktop = new(manifest: Manifest(new WindowOptions { RememberGeometry = false }));
-        desktop.Settings.Files[StateFile] = "x=400\ny=300\nwidth=500\nheight=400\n";
+        desktop.Settings.Files[StateFile] = "width=500\nheight=400\n";
         WindowId window = await desktop.OpenAsync();
-        desktop.Runtime.Apply(new MoveWindowCommand(window, 10, 10));
+        desktop.Runtime.Apply(new ResizeWindowCommand(window, new WindowBounds(48, 42, 300, 300)));
         await desktop.CloseAsync(window);
 
         Assert.Equal(WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, Screen), desktop.Get(await desktop.OpenAsync()).Bounds);
-        Assert.Equal("x=400\ny=300\nwidth=500\nheight=400\n", desktop.Settings.Files[StateFile]);
+        Assert.Equal("width=500\nheight=400\n", desktop.Settings.Files[StateFile]);
         Assert.Equal(0, desktop.Settings.Writes);
     }
 
     [Fact]
-    public async Task An_invalid_file_opens_the_window_at_its_cascade_slot()
+    public async Task An_invalid_file_opens_the_window_with_its_declared_size()
     {
         Desktop desktop = new();
-        desktop.Settings.Files[StateFile] = "x=garbage\n";
+        desktop.Settings.Files[StateFile] = "width=garbage\n";
 
         WindowRuntimeState window = desktop.Get(await desktop.OpenAsync());
 
@@ -138,7 +158,7 @@ public sealed class WindowGeometryRestoreTests
     }
 
     [Fact]
-    public async Task A_second_window_of_the_same_app_opens_offset_from_the_saved_place()
+    public async Task A_file_written_before_adr_0122_keeps_its_size_and_drops_its_position()
     {
         Desktop desktop = new(manifest: Manifest(null) with { SingleInstancePerUser = false });
         desktop.Settings.Files[StateFile] = "x=200\ny=100\nwidth=600\nheight=400\n";
@@ -146,8 +166,10 @@ public sealed class WindowGeometryRestoreTests
         WindowId first = await desktop.OpenAsync();
         WindowId second = await desktop.OpenAsync();
 
-        Assert.Equal(new WindowBounds(200, 100, 600, 400), desktop.Get(first).Bounds);
-        Assert.Equal(new WindowBounds(228, 128, 600, 400), desktop.Get(second).Bounds);
+        WindowBounds slot0 = WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, Screen);
+        WindowBounds slot1 = WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 1, Screen);
+        Assert.Equal(new WindowBounds(slot0.X, slot0.Y, 600, 400), desktop.Get(first).Bounds);
+        Assert.Equal(new WindowBounds(slot1.X, slot1.Y, 600, 400), desktop.Get(second).Bounds);
     }
 
     [Fact]
@@ -165,29 +187,14 @@ public sealed class WindowGeometryRestoreTests
     }
 
     [Fact]
-    public void A_smaller_screen_brings_the_window_back_on_screen()
+    public void A_smaller_screen_shrinks_the_saved_size()
     {
-        // Saved on a 1920x1080 screen, reopened on 1024x600: the size shrinks and the title bar stays reachable.
-        WindowBounds bounds = WindowLaunchCoordinator.RestoredBounds(
-            WindowOptions.Default,
-            new WindowBounds(1500, 900, 1200, 800),
-            sameAppWindows: 0,
-            new WindowBounds(0, 0, 1024, 600));
+        // Saved on a 1920x1080 screen, reopened on 1024x600: the size shrinks to the work area.
+        WindowBounds workArea = new(0, 0, 1024, 600);
+        WindowBounds bounds = WindowLaunchCoordinator.RestoredBounds(WindowOptions.Default, 1200, 800, 0, workArea);
 
-        Assert.Equal(1024, bounds.Width);
-        Assert.Equal(600, bounds.Height);
-        Assert.Equal(1024 - WindowLaunchCoordinator.MinimumVisibleTitleBarWidth, bounds.X);
-        Assert.Equal(600 - 38, bounds.Y);
-    }
-
-    [Fact]
-    public void A_position_left_of_the_screen_keeps_part_of_the_title_bar_visible()
-    {
-        WindowBounds bounds = WindowLaunchCoordinator.RestoredBounds(
-            WindowOptions.Default, new WindowBounds(-2000, -50, 500, 400), 0, Screen);
-
-        Assert.Equal(-500 + WindowLaunchCoordinator.MinimumVisibleTitleBarWidth, bounds.X);
-        Assert.Equal(0, bounds.Y);
+        WindowBounds slot = WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, workArea);
+        Assert.Equal(new WindowBounds(slot.X, slot.Y, 1024, 600), bounds);
     }
 
     [Fact]
@@ -196,23 +203,23 @@ public sealed class WindowGeometryRestoreTests
         WindowOptions options = new() { DefaultWidth = 700, DefaultHeight = 500, MinWidth = 600, MinHeight = 450, MaxWidth = 900, MaxHeight = 650 };
 
         Assert.Equal(
-            new WindowBounds(10, 10, 600, 650),
-            WindowLaunchCoordinator.RestoredBounds(options, new WindowBounds(10, 10, 400, 1000), 0, Screen));
+            new WindowBounds(48, 42, 600, 650),
+            WindowLaunchCoordinator.RestoredBounds(options, 400, 1000, 0, Screen));
         Assert.Equal(
-            new WindowBounds(10, 10, 700, 500),
-            WindowLaunchCoordinator.RestoredBounds(options with { Resizable = false }, new WindowBounds(10, 10, 800, 600), 0, Screen));
+            new WindowBounds(48, 42, 700, 500),
+            WindowLaunchCoordinator.RestoredBounds(options with { Resizable = false }, 800, 600, 0, Screen));
     }
 
     [Fact]
     public async Task A_fixed_size_window_never_reopens_maximized()
     {
         Desktop desktop = new(manifest: Manifest(new WindowOptions { Resizable = false }));
-        desktop.Settings.Files[StateFile] = "x=20\ny=30\nwidth=800\nheight=560\nmaximized=true\n";
+        desktop.Settings.Files[StateFile] = "width=800\nheight=560\nmaximized=true\n";
 
         WindowRuntimeState window = desktop.Get(await desktop.OpenAsync());
 
         Assert.Equal(WindowVisualState.Normal, window.VisualState);
-        Assert.Equal(new WindowBounds(20, 30, 800, 560), window.Bounds);
+        Assert.Equal(WindowLaunchCoordinator.InitialBounds(WindowOptions.Default, 0, Screen), window.Bounds);
     }
 
     [Fact]

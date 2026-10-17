@@ -84,7 +84,7 @@ et `v3/8` dans `v3/base`.
 
 | Lacune | Origine | Effet |
 |---|---|---|
-| ~~La géométrie des fenêtres est enregistrée mais jamais relue : une fenêtre ne rouvre pas à sa dernière position.~~ Corrigé par `v3.1/2-window-geometry` (ADR 0116, [`window-geometry.md`](window-geometry.md)). | `v3/3` | Écart avec l'ADR 0095, résolu. |
+| ~~La géométrie des fenêtres est enregistrée mais jamais relue : une fenêtre ne rouvre pas à sa dernière position.~~ Corrigé par `v3.1/2-window-geometry` (ADR 0116 et 0122 : taille et état agrandi, pas la position ; [`window-geometry.md`](window-geometry.md)). | `v3/3` | Écart avec l'ADR 0095, résolu. |
 | Une touche pressée dans une iframe (navigateur, sites) reste dans l'iframe ; les raccourcis de l'OS n'y marchent pas. | `v3/3` | Choix d'implémentation, non validé. |
 | Pas de couche utilisateur pour les associations de fichiers et de schémas (`~/.config/hackeros/file-associations.json`) : seule `/etc/hackeros/file-associations.json` existe. | `v3/4` | Contredit une phrase de l'ADR 0096 ; question ouverte. « Afficher dans le dossier » demande la capacité `apps.launch`. |
 | `hackwebd` démarre à la connexion, pas au boot. | `v3/5` | Question ouverte ; un passage au boot demande son ADR. |

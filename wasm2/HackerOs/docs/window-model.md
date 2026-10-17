@@ -103,12 +103,12 @@ public override WindowOptions? Window => new()
   comme sur un vrai petit écran (`WindowRuntime.Constrain` garde le minimum).
 - Agrandir ignore le maximum. `Resizable = false` : pas de poignées, pas de bouton Agrandir, et
   les commandes clavier redimensionner, agrandir et ancrer ne font rien.
-- Géométrie retenue (ADR 0116, [`window-geometry.md`](window-geometry.md)) : taille, position et
-  état agrandi de chaque fenêtre d'app sont écrits dans
+- Taille retenue (ADR 0116 et 0122, [`window-geometry.md`](window-geometry.md)) : la taille et
+  l'état agrandi de chaque fenêtre d'app, pas sa position, sont écrits dans
   `~/.local/state/hackeros/windows/<appId>.config` et relus par
-  `WindowLaunchCoordinator.PresentAsync`, qui corrige la place pour l'écran et les tailles
-  déclarées du moment ; sans fichier, la fenêtre s'ouvre à sa place de cascade
-  (`InitialBounds`). `WindowOptions.RememberGeometry = false` refuse.
+  `WindowLaunchCoordinator.PresentAsync`, qui corrige la taille pour l'écran et les tailles
+  déclarées du moment ; la fenêtre s'ouvre toujours à sa place de cascade (`InitialBounds`).
+  `WindowOptions.RememberGeometry = false` refuse.
 - Le shell mobile ignore ces tailles.
 
 ## 3. Commandes clavier (ADR 0095 §3)
@@ -243,7 +243,7 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
 - **`/etc/hackeros/keybindings.config` livré en commentaires** : les valeurs actives viennent du
   code tant que personne n'écrit le fichier, comme les autres documents de l'OS.
 - **Ancrer ne garde pas de géométrie de restauration** : la fenêtre ancrée est une fenêtre normale.
-  La géométrie enregistrée (ADR 0116) ignore cette moitié d'écran et garde celle d'avant l'ancrage.
+  La taille enregistrée (ADR 0116, 0122) ignore cette moitié d'écran et garde celle d'avant l'ancrage.
 - **Touches dans une iframe** (navigateur, sites) : elles restent dans l'iframe, la page ne les voit
   pas ; il faut d'abord rendre le focus au bureau.
 - **Correction** : réduire une fenêtre en arrière-plan levait une exception dans `WindowRuntime`
