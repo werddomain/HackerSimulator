@@ -763,6 +763,15 @@ public static class EcosystemServiceCollectionExtensions
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
         services.AddScoped<HackerOs.Platform.Core.Appearance.ThemePreferenceService>();
+        // ADR 0103: user themes of /etc/hackeros/themes and ~/.config/hackeros/themes.
+        services.AddScoped<HackerOs.Platform.Core.Appearance.UserThemeCatalogService>(provider =>
+            new HackerOs.Platform.Core.Appearance.UserThemeCatalogService(
+                provider.GetRequiredService<IFileSystemService>(),
+                provider.GetRequiredService<ISessionService>(),
+                provider.GetRequiredService<ISimulationClock>(),
+                provider.GetRequiredService<IOsSettingsService>(),
+                provider.GetService<ITopicMessageBus>(),
+                provider.GetService<ILogger<HackerOs.Platform.Core.Appearance.UserThemeCatalogService>>()));
         services.AddScoped<WindowGeometryPersistence>();
         services.AddScoped<StartMenuPreferencesService>();
         // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see

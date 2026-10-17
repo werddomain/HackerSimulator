@@ -47,6 +47,8 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" IsSystemApp="true" />
+    <!-- ADR 0103 §2.1: the Theme Editor (system app on the public SDK). -->
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ThemeEditor\HackerOs.Apps.ThemeEditor.csproj" IsSystemApp="true" />
     <!-- ADR 0077/0080: hackwebd and Web Server Manager (system apps: hackwebd needs network.listen.privileged). -->
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.WebServer\HackerOs.Apps.WebServer.csproj" IsSystemApp="true" />
     <!-- ADR 0084: the sample Blazor site (http://blazor-sample.hack/), drawn by the browser's page area. -->
