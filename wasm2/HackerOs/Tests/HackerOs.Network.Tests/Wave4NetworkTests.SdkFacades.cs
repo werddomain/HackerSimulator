@@ -71,6 +71,22 @@ public sealed partial class Wave4NetworkTests
     }
 
     [Fact]
+    public async Task HackHttpClient_sends_an_explicit_cookie_header_to_a_simulated_site_without_storing_it()
+    {
+        EnterApp(new GrantAllCapabilityChecker());
+        using HackHttpClient client = new();
+        client.DefaultRequestHeaders["Cookie"] = "hackmail_session=user=agent";
+
+        HackHttpResponse inbox = await client.GetAsync("https://hackmail.com/inbox");
+
+        // The value keeps its own '=': only the first one splits name from value.
+        Assert.Equal("HackMail — Inbox", inbox.Page?.Title);
+        Assert.Equal(0, inbox.RedirectCount);
+        Assert.Empty(inbox.SetCookies);
+        Assert.Empty(client.Cookies.GetAllCookies());
+    }
+
+    [Fact]
     public async Task HackHttpClient_resolves_relative_uris_against_its_base_address()
     {
         EnterApp(new GrantAllCapabilityChecker());

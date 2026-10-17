@@ -44,6 +44,28 @@ public sealed class LocalNetworkTests
         Assert.StartsWith("wiki POST wiki.hack/form session=- body=a=1", post.Stdout, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [MemberData(nameof(Modes))]
+    public async Task A_cookie_header_given_to_curl_reaches_the_site_without_entering_the_jar(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+
+        ShellRun manual = await os.RunAsync("curl -i -H 'Cookie: session=manual; theme=dark' http://intranet.hack/hello").WaitAsync(TimeSpan.FromSeconds(20));
+        // The site sets session=agent then redirects to /: the typed cookie still wins on that hop.
+        ShellRun login = await os.RunAsync("curl -H 'Cookie: session=manual' http://intranet.hack/login").WaitAsync(TimeSpan.FromSeconds(20));
+        // A redirect to another host drops the typed cookie, as curl does.
+        ShellRun away = await os.RunAsync("curl -H 'Cookie: session=manual' http://intranet.hack/away").WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.True(manual.ExitCode == 0, manual.Stderr);
+        Assert.Contains("intranet GET intranet.hack/hello session=manual ", manual.Stdout, StringComparison.Ordinal);
+        // A request header stores nothing: the response does not echo it back as a Set-Cookie.
+        Assert.DoesNotContain("Set-Cookie", manual.Stdout, StringComparison.OrdinalIgnoreCase);
+        Assert.True(login.ExitCode == 0, login.Stderr);
+        Assert.StartsWith("intranet GET intranet.hack/ session=manual ", login.Stdout, StringComparison.Ordinal);
+        Assert.True(away.ExitCode == 0, away.Stderr);
+        Assert.StartsWith("wiki GET wiki.hack/ session=- ", away.Stdout, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Every_site_shares_the_one_web_worker_which_ends_with_the_last_site()
     {

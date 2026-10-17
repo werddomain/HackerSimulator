@@ -84,7 +84,9 @@ Comportement HTTP :
   308 gardent la méthode et le corps, comme un navigateur et `HttpClient`
   (ADR 0074 §1, [`http-bodies.md`](http-bodies.md)) ;
 - les cookies posés en route sont rangés dans le `HackCookieContainer` du client
-  (le navigateur en a un par fenêtre) ;
+  (le navigateur en a un par fenêtre) ; un en-tête `Cookie` mis dans
+  `DefaultRequestHeaders` est envoyé avec eux (il gagne sur un cookie de même
+  nom), sur l'hôte demandé seulement, et n'est jamais rangé (ADR 0089) ;
 - un statut d'erreur (404, 500) est une réponse, pas une exception ;
   `EnsureSuccessStatusCode` et `GetStringAsync` lèvent `HttpRequestException` ;
 - aucune réponse (hôte inconnu, hôte éteint, trop de redirections) lève

@@ -178,7 +178,8 @@ internal static class TestCommands
 
     /// <summary>
     /// A web app that answers every request with what it received (method, host, path, cookie,
-    /// body) and where it runs; <c>/login</c> sets a cookie and redirects to <c>/</c>.
+    /// body) and where it runs; <c>/login</c> sets a cookie and redirects to <c>/</c>, <c>/away</c>
+    /// redirects to the other site.
     /// </summary>
     public sealed class EchoSite(AppManifest manifest) : WebServerAppBase(manifest)
     {
@@ -189,6 +190,12 @@ internal static class TestCommands
             {
                 context.Response.SetCookie("session", "agent");
                 context.Response.Redirect("/");
+                return Task.CompletedTask;
+            }
+
+            if (request.Url.AbsolutePath == "/away")
+            {
+                context.Response.Redirect("http://wiki.hack/");
                 return Task.CompletedTask;
             }
 

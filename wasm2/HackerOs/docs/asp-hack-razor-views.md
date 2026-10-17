@@ -162,8 +162,9 @@ vérifiés ; `[IgnoreAntiforgeryToken]` dispense une action. Noms modifiables pa
 refuse les formulaires affichés avant (recharger la page).
 
 Dans l'OS, `curl` a un pot à cookies par exécution : `curl -d ... /Notes/Edit/1`
-sans jeton obtient `400`, comme un site ASP.NET. Le navigateur de l'OS garde
-les cookies entre la page et l'envoi du formulaire.
+sans jeton obtient `400`, comme un site ASP.NET ; `-H 'Cookie: .HackAntiforgery=…'`
+avec le jeton du formulaire rejoue un envoi à la main (ADR 0089). Le navigateur
+de l'OS garde les cookies entre la page et l'envoi du formulaire.
 
 ## `wwwroot` du projet
 
