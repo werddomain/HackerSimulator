@@ -227,7 +227,7 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
         }
 
-        FileHandlerResolution resolution = await _associations.ResolveAsync(intent);
+        FileHandlerResolution resolution = await _associations.ResolveAsync(intent, principal);
         switch (resolution.Status)
         {
             case FileHandlerResolutionStatus.ChooserRequired:
@@ -365,7 +365,7 @@ public sealed class AppIntentDispatcher
         }
 
         FileHandlerResolution resolution = await _associations.ResolveAsync(
-            new OpenFileIntent(parent, FileIntentAction.Open, DirectoryMediaType), cancellationToken).ConfigureAwait(false);
+            new OpenFileIntent(parent, FileIntentAction.Open, DirectoryMediaType), principal, cancellationToken).ConfigureAwait(false);
         if (resolution.Status == FileHandlerResolutionStatus.ChooserRequired)
         {
             return new AppIntentDispatchResult(AppIntentDispatchStatus.ChooserRequired, CandidateAppIds: resolution.CandidateAppIds, ErrorCode: "intent.reveal-file.chooser-required");
@@ -396,12 +396,12 @@ public sealed class AppIntentDispatcher
         }
 
         FileHandlerResolution resolution = await _associations.ResolveAsync(
-            new OpenFileIntent(intent.Path, FileIntentAction.Edit, intent.MediaType, intent.PreferredAppId));
+            new OpenFileIntent(intent.Path, FileIntentAction.Edit, intent.MediaType, intent.PreferredAppId), principal);
         bool fellBack = false;
         if (resolution.Status == FileHandlerResolutionStatus.NoHandler)
         {
             resolution = await _associations.ResolveAsync(
-                new OpenFileIntent(intent.Path, FileIntentAction.Open, intent.MediaType));
+                new OpenFileIntent(intent.Path, FileIntentAction.Open, intent.MediaType), principal);
             fellBack = true;
         }
 
@@ -457,7 +457,7 @@ public sealed class AppIntentDispatcher
         }
 
         FileHandlerResolution resolution = await _associations
-            .ResolveSchemeAsync(intent.Uri.Scheme, intent.PreferredAppId, cancellationToken)
+            .ResolveSchemeAsync(intent.Uri.Scheme, principal, intent.PreferredAppId, cancellationToken)
             .ConfigureAwait(false);
         switch (resolution.Status)
         {

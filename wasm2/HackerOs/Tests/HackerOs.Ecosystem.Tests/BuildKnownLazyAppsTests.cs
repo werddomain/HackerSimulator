@@ -12,11 +12,12 @@ public sealed class BuildKnownLazyAppsTests
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
         // 14 window apps (Theme Editor with ADR 0103), the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084), the Intranet
-        // sample (web/11) and 68 commands (stress joined with ADR 0070, nslookup with ADR 0074,
-        // ausearch with ADR 0100, xdg-open with ADR 0096, hackbackup with ADR 0099, localectl with ADR 0104).
-        Assert.Equal(85, catalog.Manifests.Count);
+        // sample (web/11) and 70 commands (stress joined with ADR 0070, nslookup with ADR 0074,
+        // ausearch with ADR 0100, xdg-open with ADR 0096, hackbackup with ADR 0099, localectl with ADR 0104,
+        // xdg-mime with ADR 0121, passwd with ADR 0120).
+        Assert.Equal(87, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
-        foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch", "xdg-open", "localectl" })
+        foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch", "xdg-open", "localectl", "xdg-mime" })
         {
             Assert.Contains($"org.hackeros.commands.{command}", catalog.Manifests.Keys);
         }
@@ -124,7 +125,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(68, commands.Length);
+        Assert.Equal(70, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

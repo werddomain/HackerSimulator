@@ -56,6 +56,8 @@ internal static class RemoteOps
     // App catalog, services, drives, intents, clipboard.
     public const string CatalogInstalled = "cat.installed";
     public const string CatalogHandlers = "cat.handlers";
+    public const string CatalogDefaults = "cat.defaults";
+    public const string CatalogSetDefault = "cat.setdef";
     public const string ServiceStart = "svc.start";
     public const string ServiceStop = "svc.stop";
     public const string ServiceGetMode = "svc.getmode";

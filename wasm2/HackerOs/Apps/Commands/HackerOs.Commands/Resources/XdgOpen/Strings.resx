@@ -13,7 +13,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Ambiguous" xml:space="preserve">
-    <value>several applications can open '{0}' ({1}) and none is the default; choose one in Settings &gt; File Associations, or run: launch &lt;app-id&gt; {2}</value>
+    <value>several applications can open '{0}' ({1}) and none is the default; choose one in Settings &gt; File Associations or with xdg-mime default &lt;app-id&gt; &lt;type&gt;, or run: launch &lt;app-id&gt; {2}</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>xdg-open: {0}</value>

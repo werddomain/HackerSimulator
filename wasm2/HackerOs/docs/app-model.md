@@ -504,7 +504,7 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 
 | Système | Non système (désinstallables) |
 |---|---|
-| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, Theme Editor (lit `/etc/hackeros/themes`, ADR 0103), et les 66 commandes (projet `HackerOs.Commands`, `xdg-open` comprise depuis `v3/4`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
+| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, Theme Editor (lit `/etc/hackeros/themes`, ADR 0103), et les 70 commandes (projet `HackerOs.Commands`, `xdg-open` comprise depuis `v3/4`, `xdg-mime` depuis `v3/4b`, `passwd` depuis `v3/8`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
 
 Effets du statut : une app système n'est pas désinstallable (voir
 [`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités
@@ -534,5 +534,6 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `rebuild/5-worker-processes` (ADR 0070) : `AppManifestAttribute.Execution`, `AppExecutionHost`, champ `execution` (schéma, liste blanche, validateur, fixture canonique), défauts par genre dans le mappeur, chaque commande et service déclare son hôte ou reçoit le défaut.
 - [x] `v3/6-sdk-versioning` (ADR 0098) : version du SDK écrite par le générateur et vérifiée au chargement, `HOSAPP0022`/`HOSAPP0023`, propriétaire unique d'une commande, empreintes des ressources et `AppAssetStore`, agrégation des apps en paquet, `HostAppCatalog`.
 - [x] `v3/4-intents` (ADR 0096) : intents déclarés reçus par l'app, schémas d'URI `x-scheme-handler/<schéma>`, commande `xdg-open`.
+- [x] `v3/4b` (ADR 0121) : associations de fichiers et de schémas propres à chaque utilisateur, commande `xdg-mime`.
 - [x] `v3/12-localization` (ADR 0104) : `AppManifest.<culture>.resx` → `localization/`, `HOSAPP0040`, propriété `localized` de `BuiltInApplications.json`, `AppCatalog.Localize`.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

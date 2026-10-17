@@ -10,7 +10,8 @@ namespace HackerOs.AppSdk.Apps;
 /// <c>AppCatalog</c> and <c>IAppEnablementRegistry</c>, which apps may no longer inject (ADR 0055).
 /// </summary>
 /// <remarks>
-/// Reading needs no capability; <see cref="LaunchAsync"/>, <see cref="OpenFileAsync"/>,
+/// Reading the catalog needs no capability; the default handlers need <c>file-associations.read</c>
+/// (and <c>filesystem.user-home.write</c> to change the user's own, ADR 0121); <see cref="LaunchAsync"/>, <see cref="OpenFileAsync"/>,
 /// <see cref="EditFileAsync"/>, <see cref="RevealFileAsync"/>, <see cref="OpenUriAsync(Uri, string?, CancellationToken)"/>
 /// and <see cref="SendIntentAsync"/> need <c>apps.launch</c>; <see cref="ShowSettingsAsync"/> needs none
 /// (ADR 0096). Every member targets the app running the current code (ambient context of
@@ -45,6 +46,61 @@ public static class HackApps
     {
         VirtualPath target = HackPath.Resolve(path, nameof(path));
         return await Gateway.GetHandlersAsync(target, null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the configured default handlers (ADR 0121): the user's own first, then the machine's.
+    /// The first row of a target and action is the one the OS uses.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>file-associations.read</c>.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static async Task<IReadOnlyList<HackFileAssociation>> GetDefaultHandlersAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await Gateway.GetDefaultHandlersAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
+
+    /// <summary>
+    /// Makes <paramref name="appId"/> the user's default for a file type or URI scheme (ADR 0121),
+    /// like <c>xdg-mime default</c>: written to <c>~/.config/hackeros/file-associations.json</c>,
+    /// it comes before the machine's default for this user only.
+    /// </summary>
+    /// <param name="target">Extension with its dot (<c>.md</c>) or media type (<c>text/markdown</c>, <c>x-scheme-handler/https</c>).</param>
+    /// <param name="appId">App that must declare the target and action in its manifest.</param>
+    /// <param name="action"><c>open</c> (default) or <c>edit</c>.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns><see cref="HackDefaultHandlerStatus.Changed"/>, or why nothing changed.</returns>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>file-associations.read</c> or <c>filesystem.user-home.write</c>.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static Task<HackDefaultHandlerStatus> SetDefaultHandlerAsync(
+        string target, string appId, string action = "open", CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return ChangeDefaultHandlerAsync(target, action, appId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Removes the user's own default for a file type or URI scheme (ADR 0121): the machine's
+    /// default, or the chooser, applies again.
+    /// </summary>
+    /// <param name="target">Extension with its dot or media type, as given to <see cref="SetDefaultHandlerAsync"/>.</param>
+    /// <param name="action"><c>open</c> (default) or <c>edit</c>.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>file-associations.read</c> or <c>filesystem.user-home.write</c>.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static Task<HackDefaultHandlerStatus> ResetDefaultHandlerAsync(
+        string target, string action = "open", CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        return ChangeDefaultHandlerAsync(target, action, null, cancellationToken);
     }
 
     /// <summary>Starts an installed app with arguments, like running it from the launcher.</summary>
@@ -270,6 +326,20 @@ public static class HackApps
         try
         {
             return await call(intents).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
+
+    private static async Task<HackDefaultHandlerStatus> ChangeDefaultHandlerAsync(
+        string target, string action, string? appId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(action);
+        try
+        {
+            return await Gateway.SetUserDefaultHandlerAsync(target, action, appId, cancellationToken).ConfigureAwait(false);
         }
         catch (AppGatewayAccessDeniedException exception)
         {

@@ -421,13 +421,13 @@
     <value>Application</value>
   </data>
   <data name="FileAssociations.Description" xml:space="preserve">
-    <value>Application par défaut de chaque extension, d'après les types de fichiers que déclarent les apps installées.</value>
+    <value>L'app qui ouvre chaque type de fichier et chaque lien pour vous. Votre choix est enregistré dans {0} et passe avant le défaut de la machine, dans {1}, pour vous seulement.</value>
   </data>
   <data name="FileAssociations.Empty" xml:space="preserve">
-    <value>Aucun gestionnaire de fichiers n'est enregistré pour l'instant.</value>
+    <value>Aucune app installée ne déclare de type de fichier.</value>
   </data>
   <data name="FileAssociations.Title" xml:space="preserve">
-    <value>Associations de fichiers</value>
+    <value>Applications par défaut</value>
   </data>
   <data name="Grants.Description" xml:space="preserve">
     <value>Autorisations de sécurité actives pour la session en cours.</value>
@@ -848,5 +848,149 @@
   </data>
   <data name="Tab.Synchronization" xml:space="preserve">
     <value>Synchronisation</value>
+  </data>
+  <data name="Tab.Users" xml:space="preserve">
+    <value>Utilisateurs</value>
+  </data>
+  <data name="Users.List.Title" xml:space="preserve">
+    <value>Comptes</value>
+  </data>
+  <data name="Users.List.Description" xml:space="preserve">
+    <value>Les comptes locaux de cette machine. P : mot de passe défini, NP : aucun mot de passe, L : compte désactivé, comme les montre {0} -S. Dans le terminal, {0} change votre mot de passe et {1} celui d'un autre compte.</value>
+  </data>
+  <data name="Users.List.Empty" xml:space="preserve">
+    <value>Aucun compte à afficher.</value>
+  </data>
+  <data name="Users.Badge.Administrator" xml:space="preserve">
+    <value>administrateur</value>
+  </data>
+  <data name="Users.Badge.You" xml:space="preserve">
+    <value>vous</value>
+  </data>
+  <data name="Users.State.Password" xml:space="preserve">
+    <value>Mot de passe défini</value>
+  </data>
+  <data name="Users.State.NoPassword" xml:space="preserve">
+    <value>Aucun mot de passe</value>
+  </data>
+  <data name="Users.State.Locked" xml:space="preserve">
+    <value>Compte désactivé</value>
+  </data>
+  <data name="Users.Own.Title" xml:space="preserve">
+    <value>Changer mon mot de passe</value>
+  </data>
+  <data name="Users.Own.Description" xml:space="preserve">
+    <value>Votre trousseau est re-chiffré avec le nouveau mot de passe : les secrets enregistrés restent lisibles.</value>
+  </data>
+  <data name="Users.Own.Submit" xml:space="preserve">
+    <value>Changer le mot de passe</value>
+  </data>
+  <data name="Users.Own.Done" xml:space="preserve">
+    <value>Mot de passe mis à jour.</value>
+  </data>
+  <data name="Users.Field.Current" xml:space="preserve">
+    <value>Mot de passe actuel</value>
+  </data>
+  <data name="Users.Field.New" xml:space="preserve">
+    <value>Nouveau mot de passe</value>
+  </data>
+  <data name="Users.Field.Confirm" xml:space="preserve">
+    <value>Confirmer le nouveau mot de passe</value>
+  </data>
+  <data name="Users.Field.Account" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="Users.Reset.Title" xml:space="preserve">
+    <value>Réinitialiser le mot de passe d'un autre compte</value>
+  </data>
+  <data name="Users.Reset.Description" xml:space="preserve">
+    <value>Un administrateur confirme dans la fenêtre de l'OS (capacité {1}). Le trousseau du compte ne s'ouvre pas avec le nouveau mot de passe : il est mis de côté sous {0} et ses secrets enregistrés sont perdus pour ce compte.</value>
+  </data>
+  <data name="Users.Reset.Submit" xml:space="preserve">
+    <value>Réinitialiser le mot de passe</value>
+  </data>
+  <data name="Users.Reset.Remove" xml:space="preserve">
+    <value>Retirer le mot de passe</value>
+  </data>
+  <data name="Users.Reset.Done" xml:space="preserve">
+    <value>Mot de passe de {0} réinitialisé.</value>
+  </data>
+  <data name="Users.Reset.Removed" xml:space="preserve">
+    <value>Mot de passe de {0} retiré : le compte s'ouvre sans mot de passe.</value>
+  </data>
+  <data name="Users.Error.CannotList" xml:space="preserve">
+    <value>Impossible de lire les comptes : {0}</value>
+  </data>
+  <data name="Users.Error.WrongCurrent" xml:space="preserve">
+    <value>Le mot de passe actuel est faux. Mot de passe inchangé.</value>
+  </data>
+  <data name="Users.Error.Failed" xml:space="preserve">
+    <value>Mot de passe inchangé : {0}</value>
+  </data>
+  <data name="Users.Error.TooShort" xml:space="preserve">
+    <value>Le mot de passe doit avoir au moins {0} caractères.</value>
+  </data>
+  <data name="Users.Error.Mismatch" xml:space="preserve">
+    <value>Les deux mots de passe ne correspondent pas.</value>
+  </data>
+  <data name="FileAssociations.Filter" xml:space="preserve">
+    <value>Filtrer par type ou par app</value>
+  </data>
+  <data name="FileAssociations.Column.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="FileAssociations.Column.Action" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="FileAssociations.Column.App" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="FileAssociations.Action.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="FileAssociations.Action.Edit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="FileAssociations.ChooseFor" xml:space="preserve">
+    <value>Application pour {1} {0}</value>
+  </data>
+  <data name="FileAssociations.SystemDefault" xml:space="preserve">
+    <value>Défaut du système ({0})</value>
+  </data>
+  <data name="FileAssociations.OnlyApp" xml:space="preserve">
+    <value>Seule app ({0})</value>
+  </data>
+  <data name="FileAssociations.AskEachTime" xml:space="preserve">
+    <value>Demander à chaque fois</value>
+  </data>
+  <data name="FileAssociations.Saved" xml:space="preserve">
+    <value>{1} ouvre maintenant {0} pour vous.</value>
+  </data>
+  <data name="FileAssociations.Saved.Reset" xml:space="preserve">
+    <value>{0} suit de nouveau le défaut du système.</value>
+  </data>
+  <data name="FileAssociations.Error.Read" xml:space="preserve">
+    <value>Les applications par défaut n'ont pas pu être lues : {0}</value>
+  </data>
+  <data name="FileAssociations.Error.Write" xml:space="preserve">
+    <value>Votre choix n'a pas pu être enregistré : {0}</value>
+  </data>
+  <data name="FileAssociations.Error.InvalidTarget" xml:space="preserve">
+    <value>{0} n'est pas un type de fichier valide.</value>
+  </data>
+  <data name="FileAssociations.Error.InvalidAction" xml:space="preserve">
+    <value>Cette action n'est pas prise en charge pour {0}.</value>
+  </data>
+  <data name="FileAssociations.Error.AppNotFound" xml:space="preserve">
+    <value>Cette app n'est plus installée.</value>
+  </data>
+  <data name="FileAssociations.Error.AppCannotHandle" xml:space="preserve">
+    <value>Cette app ne déclare pas {0}.</value>
+  </data>
+  <data name="FileAssociations.Error.FileInvalid" xml:space="preserve">
+    <value>~/.config/hackeros/file-associations.json n'est pas valide : corrigez-le ou supprimez-le, puis réessayez.</value>
+  </data>
+  <data name="FileAssociations.Error.WriteFailed" xml:space="preserve">
+    <value>~/.config/hackeros/file-associations.json n'a pas pu être écrit.</value>
   </data>
 </root>

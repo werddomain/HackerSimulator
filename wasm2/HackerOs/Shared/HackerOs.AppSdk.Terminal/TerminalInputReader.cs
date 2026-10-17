@@ -1,4 +1,5 @@
 using System.Text;
+using HackerOs.AppSdk;
 
 namespace HackerOs.AppSdk.Terminal;
 
@@ -9,13 +10,17 @@ namespace HackerOs.AppSdk.Terminal;
 /// as on Linux (<c>cat</c> then ends, a later read waits again). When the command line ends, the
 /// input it did not read goes back to the shell as type-ahead.
 /// </summary>
-public sealed class TerminalInputReader : TextReader
+public sealed class TerminalInputReader : TextReader, ITerminalInputMode
 {
     private readonly object _sync = new();
     private readonly StringBuilder _buffer = new();
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _endOfInput;
     private bool _closed;
+
+    /// <inheritdoc />
+    /// <remarks>The terminal's line discipline reads it for every key (ADR 0120); on by default.</remarks>
+    public bool EchoEnabled { get; set; } = true;
 
     /// <summary>Gets whether a command is waiting for input (the terminal may show it differently).</summary>
     public bool IsWaiting { get; private set; }
