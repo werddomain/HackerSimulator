@@ -433,6 +433,16 @@ un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
 l'app associée avec ce chemin : une app de document lit son fichier initial là
 (voir [`text-editor.md`](text-editor.md)).
 
+### Événements et tailles de fenêtre (ADR 0095)
+
+`WindowAppBase` reçoit les crochets `OnWindowActivated`, `OnWindowDeactivated`,
+`OnWindowStateChanged` et `OnWindowResized` (avec leurs versions `Async`) et
+l'état `IsWindowActive`, `WindowState`, `WindowSize`. Les types `HackWindowState`,
+`HackWindowSize` et `IWindowAppEventTarget` sont dans `HackerOs.AppSdk.Blazor` ;
+`WindowOptions` (tailles déclarées par `AppDefinition.Window`) est dans
+`HackerOs.App.Abstractions`. Aucune app n'injecte de service pour les recevoir :
+l'OS les appelle. Voir [`window-model.md`](window-model.md).
+
 ### API ajoutées après la phase 4 (ADR 0061 à 0065)
 
 Ces API suivent les mêmes règles (façade ou passerelle, capacité déclarée dans
