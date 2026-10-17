@@ -1,11 +1,11 @@
 # Suites de la phase 5 : limites, OOM killer, fenêtres en worker, hôte Server, isolation cross-origin
 
-**Statut :** plan proposé le 2026-10-17, **à valider par Benoit**. Aucun code n'est
-écrit. Benoit a demandé « plan d'abord, mais faire plus tard après la
-migration » : ce plan **s'exécute après la fin de la migration wasm v3**,
-planifiée dans un document séparé (fil « Plan : fin de la migration wasm v3 »).
-Aucun chantier ne commence avant que ce plan-là soit terminé, et les questions
-de la section 6 sont tranchées par Benoit avant l'écriture des ADR.
+**Statut :** plan **validé par Benoit le 2026-10-17** (réponses aux questions de
+la section 6). Aucun code n'est écrit. Benoit a demandé « plan d'abord, mais
+faire plus tard après la migration » : ce plan **s'exécute après la fin de la
+migration wasm v3** ([`wasm-v3-completion-plan.md`](wasm-v3-completion-plan.md),
+branche `v3/base`). Aucun chantier ne commence avant que ce plan-là soit
+terminé.
 
 Il reprend les points que [`execution-isolation-plan.md`](execution-isolation-plan.md)
 (phase 5, ADR 0066 à 0072) a laissés hors périmètre (sa section 7), ainsi que
@@ -20,8 +20,10 @@ ceux que les ADR de la phase 5 et la mise en œuvre des workers ont notés comme
 - **Sortir du fil principal ce qui y reste par nécessité** : services qui ont
   besoin des événements typés ou des abonnements de fichiers, apps tierces, et
   surtout la logique des **apps à fenêtre**.
-- Donner à **`HackerOs.Server`** les mesures et une isolation des processus, que
-  la phase 5 a coupées sur cet hôte « jusqu'à un ADR propre ».
+- Faire servir par **`HackerOs.Server`** le même OS en WebAssembly que
+  l'Ecosystem, et ne garder sur le serveur que son API (relais, synchronisation,
+  authentification) : les workers et les mesures y deviennent identiques aux
+  autres hôtes (décision de Benoit, question 7).
 - Étudier puis activer, en option, l'**isolation cross-origin** (COOP/COEP), qui
   ouvre `SharedArrayBuffer`, la mesure réelle de la mémoire par worker et des
   minuteries précises.
@@ -73,42 +75,45 @@ Ceux de la phase 5 restent, sauf le premier, que ce plan remplace en partie.
    utilisera cet écosystème (décision de Benoit du 2026-10-17) ; ce plan ne
    prévoit rien pour lui.
 
-## 4. Registre des décisions proposées
+## 4. Registre des décisions
 
-Chaque ligne devient une décision d'ADR une fois les questions de la section 6
-tranchées. Les numéros d'ADR sont attribués au moment de l'écriture (section 7).
+Décisions validées par Benoit le 2026-10-17 (section 6). Chacune devient une
+décision d'ADR dans `exec/0-adr` ; les numéros d'ADR sont attribués au moment
+de l'écriture (section 7).
 
-| # | Décision proposée | Question |
+| # | Décision | Question |
 |---|---|---|
 | 1 | Passerelles distantes pour `HackEvents` et `Watch` ; le service d'exemple et `hackwebd` passent en worker ; le pool charge à la demande l'assembly de n'importe quelle commande ou service, plus seulement `HackerOs.Commands.dll`. | — |
 | 2 | Limites par processus façon `setrlimit` : `RLIMIT_CPU` (`SIGXCPU` puis `SIGKILL`), une limite mémoire sur `VmRSS` mesuré, `RLIMIT_NOFILE`, `RLIMIT_NPROC`. Commande `ulimit` (intégrée au shell), `prlimit`, `/proc/<pid>/limits`, `/etc/security/limits.conf`. Héritées par les enfants. | Q1 |
-| 3 | OOM killer : quand la mémoire disponible du système simulé passe sous un seuil, l'OS choisit la victime par `oom_score` (résident + `oom_score_adj`), la tue et l'écrit dans le journal du noyau. Actif seulement avec la mémoire mesurée. | Q2, Q3 |
-| 4 | Garde du vrai navigateur : quand le tas du runtime principal ou d'un worker approche la limite réelle de la page, l'OOM killer agit même si `MemTotal` simulé n'est pas atteint. | Q2 |
-| 5 | Pas de quantum préemptif ; `nice` et `renice` règlent seulement l'ordre de la file du pool et le choix du worker. | Q4 |
-| 6 | Fenêtre « (Not responding) » : titre, fenêtre grisée et boîte « Attendre / Forcer à quitter » quand une fenêtre reste sans réponse, dès que le bureau peut se redessiner (fenêtre dont la logique est en worker, ou fin d'une longue tranche). | — |
-| 7 | Apps à fenêtre : d'abord un **processus de travail** déclaré par l'app (`AppDefinition`), qui tourne en worker et parle à sa fenêtre par un canal typé ; ensuite une preuve de faisabilité d'un **rendu Blazor dans un worker** dont les lots de rendu sont appliqués par le fil principal, façon serveur d'affichage. | Q5 |
-| 8 | `HackerOs.Server` : mesures sur un hôte multithread (tranches par thread, `idle` = cœurs × temps écoulé − somme des tranches), workers sur des threads dédiés qui réutilisent le protocole et la boucle locale des tests, `/proc/hackeros/workers`. | Q7 |
-| 9 | Isolation cross-origin optionnelle : en-têtes COOP/COEP envoyés par les hôtes et par le service worker de la PWA (donc hors ligne aussi), détection par `crossOriginIsolated`, repli exact sur le comportement actuel. | Q6 |
-| 10 | Avec l'isolation : tubes en anneaux de `SharedArrayBuffer` entre workers et fil principal, appels synchrones du worker vers l'OS (`Atomics.wait` dans le worker seulement), mémoire réelle par worker par `measureUserAgentSpecificMemory()`, minuteries à 5 µs. Pas de threads .NET WebAssembly. | Q6, Q8 |
+| 3 | OOM killer : quand la mémoire disponible du système simulé passe sous un seuil, l'OS choisit la victime par `oom_score` (résident + `oom_score_adj`), la tue et l'écrit dans le journal du noyau. **Désactivé par défaut** : il s'active dans `/etc` (réglage de l'OS simulé) et seulement si la mémoire est mesurée. `MemTotal` reste la valeur **simulée** du profil matériel ; l'occupation est mesurée, ou estimée au plus juste quand une mesure exacte manque (mémoire réelle par worker avec l'isolation de la décision 9). | Q2, Q3 |
+| 4 | Garde du vrai navigateur : quand le tas du runtime principal ou d'un worker approche la limite réelle de la page, l'OS avertit (journal, notification) ; si l'OOM killer est activé, il agit même si `MemTotal` simulé n'est pas atteint. | Q2, Q3 |
+| 5 | Pas de quantum imposé ; `nice` et `renice` règlent seulement l'ordre de la file du pool et le choix du worker. | Q4 |
+| 6 | Fenêtre sans réponse, comme dans un navigateur : titre « (Not responding) », fenêtre grisée et boîte **« L'application ne répond pas : Attendre \| Terminer l'application »**, dès que le bureau peut se redessiner (fenêtre dont la logique est en worker, ou fin d'une longue tranche). « Terminer l'application » suit l'escalade de l'ADR 0069. | Q3 |
+| 7 | Apps à fenêtre, en deux étapes. **Étape 1** (idée de Benoit, l'inverse de `Invoke` de WinForms) : une fonction du SDK exécute la charge lourde dans un worker, par exemple `await HackBackground.RunAsync(MyJobs.Compress, input, progress, ct)`. Le worker ayant sa propre mémoire, la tâche est une méthode **statique** (ou une classe de tâche) de l'assembly de l'app, avec une entrée et un résultat sérialisables, une progression et un jeton d'annulation ; un analyseur refuse au build une lambda qui capture des variables. La tâche a l'utilisateur et les droits de la fenêtre, apparaît dans `ps` comme enfant de l'app et peut être tuée sans fermer la fenêtre. **Étape 2** : essai de rendu Blazor dans un worker, lots de rendu appliqués par le fil principal façon serveur d'affichage ; rien n'est livré aux apps si l'essai échoue. | Q5 |
+| 8 | `HackerOs.Server` sert l'OS **en WebAssembly** (comme `test/test`) et garde côté serveur seulement son API (relais, synchronisation, authentification, ADR 0028) ; le mode Interactive Server de l'ADR 0027 et l'injection directe de l'ADR 0036 sont retirés. Les workers, les mesures et `/proc/hackeros` y deviennent ceux de l'Ecosystem. | Q7 |
+| 9 | Isolation cross-origin optionnelle, **active par défaut si l'audit passe** : en-têtes COOP/COEP envoyés par les hôtes et par le service worker de la PWA (donc hors ligne et sur un hébergement statique), `COEP: credentialless` là où le navigateur le permet, sinon `require-corp`, détection par `crossOriginIsolated`, repli exact sur le comportement actuel. | Q6 |
+| 10 | Avec l'isolation : tubes en anneaux de `SharedArrayBuffer` entre workers et fil principal, appels synchrones du worker vers l'OS (`Atomics.wait` dans le worker seulement), mémoire réelle par worker par `measureUserAgentSpecificMemory()`, minuteries à 5 µs. **Pas de threads .NET WebAssembly** (`WasmEnableThreads`). | Q6, Q8 |
 
 ## 5. Chantiers
 
 Branches `exec/<n>-<topic>`, chacune partant de la branche d'intégration en
-usage au moment de l'exécution, et sa PR la visant (question Q9). Les ADR de la
+usage au moment de l'exécution, et sa PR la visant (question Q9) ; le fil
+fusionne lui-même quand la build et les tests passent en local, jamais dans
+`main`. Les ADR de la
 phase sont écrits et acceptés avant le code (`exec/0-adr`), comme pour les
 phases précédentes.
 
 | Branche | Contenu | Dépend de |
 |---|---|---|
-| `exec/0-adr` | ADR des décisions 1 à 10, une fois les questions tranchées ; mise à jour de ce plan et de l'index. | fin de la migration wasm v3 |
+| `exec/0-adr` | ADR des décisions 1 à 10 ; mise à jour de ce plan et de l'index. | fin de la migration wasm v3 |
 | `exec/1-remote-gateways` | Décision 1 : passerelles distantes `HackEvents` (abonnement côté worker, livraison par message, désabonnement à la fin du processus) et `Watch` ; tests de parité pour ces deux passerelles ; service d'exemple et `hackwebd` en worker ; chargement à la demande de toute assembly d'app dans le pool ; une commande d'un projet d'exemple tiers exécutée en worker. | `0` |
 | `exec/2-process-limits` | Décision 2 : contrat de limites dans Simulation Abstractions, lecture de `/etc/security/limits.conf` (et `limits.d/`), héritage au `fork`, `ulimit` et `prlimit`, `/proc/<pid>/limits`, `SIGXCPU`, application stricte en worker et au mieux sur le fil principal, sortie 152 (`SIGXCPU`) et 137 ; erreur `EMFILE`/`EAGAIN` pour `NOFILE`/`NPROC` par les passerelles. | `0` |
-| `exec/3-oom-killer` | Décisions 3 et 4 : seuil de mémoire disponible, `oom_score`, `oom_score_adj` (fichier modifiable, `-1000` exempte, réservé à l'administrateur pour baisser), choix et mise à mort, ligne du noyau dans `/var/log/kern.log` et `syslog`, `dmesg`, notification à l'utilisateur pour une fenêtre tuée, garde du vrai navigateur, compteur `oom_kill` dans `/proc/vmstat`. | `2` |
-| `exec/4-not-responding-ui` | Décisions 5 et 6 : fenêtre « (Not responding) » et boîte « Attendre / Forcer à quitter », `nice`/`renice` et colonne « NI » de `ps`/`top`, ordre de la file du pool. | `0` |
-| `exec/5-window-worker-process` | Décision 7, premier volet : processus de travail d'une app à fenêtre (déclaration dans `AppDefinition`, lancement et arrêt liés à la fenêtre, canal typé, même identité et mêmes capacités que la fenêtre), exemple dans `Apps/Samples`, migration des traitements longs des apps de base qui s'y prêtent. | `1` |
-| `exec/6-remote-renderer-poc` | Décision 7, second volet : preuve de faisabilité d'un `Renderer` Blazor dans un worker, lots de rendu sérialisés vers le fil principal, événements du DOM renvoyés au worker ; mesure du coût. Résultat : un ADR « on y va » ou « on s'arrête ». Rien n'est livré aux apps si la preuve échoue. | `5` |
+| `exec/3-oom-killer` | Décisions 3 et 4 : réglage d'activation dans `/etc` (désactivé par défaut), seuil de mémoire disponible, `oom_score`, `oom_score_adj` (fichier modifiable, `-1000` exempte, réservé à l'administrateur pour baisser), choix et mise à mort, ligne du noyau dans `/var/log/kern.log` et `syslog`, `dmesg`, notification à l'utilisateur pour une fenêtre tuée, garde du vrai navigateur, compteur `oom_kill` dans `/proc/vmstat`. | `2` |
+| `exec/4-not-responding-ui` | Décisions 5 et 6 : fenêtre « (Not responding) » et boîte « L'application ne répond pas : Attendre \| Terminer l'application », `nice`/`renice` et colonne « NI » de `ps`/`top`, ordre de la file du pool. | `0` |
+| `exec/5-background-jobs` | Décision 7, étape 1 : `HackBackground.RunAsync` (méthode statique ou classe de tâche, entrée et résultat sérialisables, progression, annulation), analyseur qui refuse une lambda qui capture, processus enfant de l'app avec son identité et ses droits, repli sur le fil principal quand il n'y a pas de worker (tests, hôte sans workers), exemple dans `Apps/Samples`, migration des traitements longs des apps de base, guide et référence du SDK. | `1` |
+| `exec/6-remote-renderer-poc` | Décision 7, étape 2 : preuve de faisabilité d'un `Renderer` Blazor dans un worker, lots de rendu sérialisés vers le fil principal, événements du DOM renvoyés au worker ; mesure du coût. Résultat : un ADR « on y va » ou « on s'arrête ». Rien n'est livré aux apps si la preuve échoue. | `5` |
 | `exec/7-window-workers` | Seulement si `6` réussit : `AppExecutionHost.Dedicated` permis pour une fenêtre sans interop JavaScript propre, gestion du clavier, du focus et des dialogues, tests sur la Calculatrice. | `6` |
-| `exec/8-server-host` | Décision 8 : ADR propre à `HackerOs.Server`, mesures activées par défaut si le test de surcoût passe, workers sur threads, escalade sans étape 4 (un thread .NET ne se tue pas) et ce que l'OS affiche alors. | `1` |
+| `exec/8-server-wasm` | Décision 8 : `HackerOs.Server` sert l'OS en WebAssembly (rendu `InteractiveWebAssembly` ou fichiers publiés de l'Ecosystem, selon l'ADR), retrait du mode Interactive Server et de l'injection directe, l'OS appelle l'API du serveur par HTTP comme l'Ecosystem, `build/verify-hosts.sh` et `HackerOs.HostSmoke.Tests` adaptés (workers et `/proc/hackeros` présents sur cet hôte), docs d'hébergement à jour. | `0` |
 | `exec/9-cross-origin-isolation` | Décisions 9 et 10 : audit de compatibilité (iframes des sites ASP.Hack et du navigateur, fenêtres détachées, repli sur le réseau réel, workers de Monaco, téléchargements, PWA), en-têtes dans les trois hôtes et le service worker, repli, puis tubes partagés, appels synchrones, mémoire réelle par worker et minuteries. | `3`, `5` |
 | `exec/10-final` | Vérification de bout en bout, documents à jour (`system-metrics.md`, `task-manager.md`, `worker-processes.md`, `app-sdk.md`, `sdk-reference.md`, `linux-commands.md`, `virtual-proc-and-dev.md`, `building-and-testing.md`), index, cette liste. | tous |
 
@@ -116,12 +121,11 @@ Ordre :
 
 1. `exec/0-adr`.
 2. En parallèle : `exec/1-remote-gateways`, `exec/2-process-limits`,
-   `exec/4-not-responding-ui`.
-3. En parallèle : `exec/3-oom-killer`, `exec/5-window-worker-process`,
-   `exec/8-server-host`.
+   `exec/4-not-responding-ui`, `exec/8-server-wasm`.
+3. En parallèle : `exec/3-oom-killer`, `exec/5-background-jobs`.
 4. `exec/6-remote-renderer-poc`, puis `exec/7-window-workers` s'il est décidé.
-5. `exec/9-cross-origin-isolation` (il profite des limites et de la mesure
-   réelle par worker, et doit vérifier les fenêtres en worker s'il y en a).
+5. `exec/9-cross-origin-isolation` (il donne la mesure réelle par worker à
+   l'OOM killer, et doit vérifier les fenêtres en worker s'il y en a).
 6. `exec/10-final`.
 
 ### 5.1 Ce que chaque chantier fait pour les apps existantes
@@ -132,9 +136,9 @@ Ordre :
 | `exec/2-process-limits` | Chaque commande et service traite `EMFILE`/`EAGAIN` comme une erreur d'E/S ordinaire (message et code de sortie). Les commandes longues ont déjà `CheckpointAsync` (phase 5) : vérifier qu'une limite CPU les arrête proprement. |
 | `exec/3-oom-killer` | Les apps qui gardent un état (éditeurs, CodeEditor, explorateur, Paramètres) gardent leur brouillon de récupération quand elles sont tuées par l'OOM killer comme par « Force kill » ; les services système critiques reçoivent un `oom_score_adj` négatif dans leur définition. |
 | `exec/4-not-responding-ui` | Aucune modification d'app ; le gestionnaire de tâches et `top` affichent « NI ». |
-| `exec/5-window-worker-process` | Inventaire des traitements longs des apps à fenêtre (recherche du CodeEditor, zip et copies de l'explorateur, calculs de Hack Paint) ; chacun passe dans un processus de travail ou garde sa place avec la raison écrite. |
+| `exec/5-background-jobs` | Inventaire des traitements longs des apps à fenêtre (recherche du CodeEditor, zip et copies de l'explorateur, calculs de Hack Paint) ; chacun passe par `HackBackground.RunAsync` ou garde sa place avec la raison écrite. |
 | `exec/7-window-workers` | Inventaire des apps à fenêtre sans interop JavaScript propre ; celles qui passent les tests en worker changent d'`AppExecutionHost`, les autres gardent `MainThread` avec la raison. |
-| `exec/8-server-host` | Aucune modification d'app ; les tests de parité des commandes tournent aussi contre l'hôte Server. |
+| `exec/8-server-wasm` | Aucune modification d'app ; les apps qui utilisaient l'injection directe des services du serveur (ADR 0036) passent par l'API HTTP. |
 | `exec/9-cross-origin-isolation` | Chaque app qui charge une ressource externe (navigateur, CodeEditor) est vérifiée avec l'isolation activée ; ce qui casse est corrigé dans le chantier ou empêche d'activer l'isolation par défaut. |
 
 ### 5.2 Vérification des hôtes
@@ -143,71 +147,26 @@ Ordre :
 
 - un parcours avec des limites basses (`ulimit -t 1` puis `stress`, sortie 152) ;
 - un parcours de l'OOM killer avec une `MemTotal` simulée réduite ;
-- sur l'hôte Server, `/proc/hackeros/workers` présent et `kill -9` d'une boucle ;
+- sur l'hôte Server servi en WebAssembly, `/proc/hackeros/workers` présent et `kill -9` d'une boucle ;
 - un parcours de l'Ecosystem publié avec et sans isolation cross-origin, avec
   `crossOriginIsolated` vérifié dans la page.
 
-## 6. Questions ouvertes (à trancher par Benoit)
+## 6. Questions tranchées
 
-Chaque question a une recommandation (⭐). Un mot par question suffit.
+Posées à Benoit le 2026-10-17 dans le fil « Plan : suites de l'étape 5 », avec
+contexte et conséquences de chaque choix ; ses réponses (05:55 à 06:19 UTC) :
 
-**Q1. Limites sur le fil principal**
-- Au mieux ⭐ : `SIGTERM` puis l'escalade de l'ADR 0069 (jusqu'à l'étape 3) ;
-  `/proc/<pid>/limits` et la documentation disent que la limite n'est stricte
-  qu'en worker.
-- Déplacer : un processus qui reçoit une limite est relancé en worker quand il
-  le peut. Plus compliqué, et impossible pour une fenêtre.
-
-**Q2. Mémoire totale de l'OOM killer**
-- Simulée ⭐ : `MemTotal` du profil matériel simulé (comme aujourd'hui), plus la
-  garde du vrai navigateur (décision 4).
-- Réelle : la mémoire que le navigateur accorde à la page. Peu lisible et
-  différente d'une machine à l'autre.
-
-**Q3. OOM killer actif par défaut**
-- Oui quand la mémoire est mesurée ⭐ ; jamais quand elle est simulée (on ne tue
-  pas sur des valeurs inventées).
-- Non : désactivé tant que l'utilisateur ne l'active pas dans `/etc`.
-
-**Q4. Quantum imposé**
-- Non ⭐ : impossible à préempter sans threads ; `nice` ne règle que la file du
-  pool (décision 5).
-- Oui : couper une tranche par `CheckpointAsync` forcé. Ne marche que pour le
-  code qui appelle `CheckpointAsync`, donc trompeur.
-
-**Q5. Apps à fenêtre dans un worker**
-- Processus de travail d'abord, puis preuve de faisabilité du rendu ⭐ : la
-  décision d'aller plus loin se prend sur le résultat de la preuve.
-- Processus de travail seulement : on n'étudie pas le rendu en worker.
-- Rendu en worker directement : risqué, le format des lots de rendu de Blazor
-  côté serveur est interne au framework.
-
-**Q6. Isolation cross-origin**
-- Optionnelle, activée par défaut si l'audit passe ⭐ : en-têtes par le service
-  worker (fonctionne hors ligne et sur un hébergement statique qui ne permet pas
-  d'en-têtes), `COEP: credentialless` là où le navigateur le permet, sinon
-  `require-corp` ; repli exact quand `crossOriginIsolated` est faux.
-- Optionnelle, coupée par défaut : activée dans `appsettings.json` seulement.
-- Non : on reste sur `postMessage`.
-
-**Q7. Isolation sur l'hôte Server**
-- Threads d'abord ⭐ : même protocole, réutilise la boucle locale des tests ;
-  un thread bloqué ne peut pas être tué, l'OS l'affiche « Not responding » et
-  le journal propose de redémarrer l'hôte.
-- Processus enfants : un vrai `kill`, mais un exécutable de plus à publier et à
-  démarrer ; à reprendre dans un ADR séparé si les threads ne suffisent pas.
-
-**Q8. Threads .NET WebAssembly (`WasmEnableThreads`)**
-- Non ⭐ : Blazor ne les prend pas en charge et ils interdisent de bloquer le
-  fil principal ; `SharedArrayBuffer` sert seulement entre les workers et la
-  couche JavaScript de l'OS.
-- Étudier : une preuve de faisabilité dans le chantier 9.
-
-**Q9. Branches**
-- `exec/<n>-<topic>` depuis la branche d'intégration en usage à ce moment ⭐
-  (aujourd'hui `web/base`), PR vers elle, fusion par le fil quand la build et
-  les tests passent en local ; jamais dans `main`.
-- Une nouvelle branche d'intégration `exec/base`.
+| # | Question | Réponse de Benoit | Conséquence dans ce plan |
+|---|---|---|---|
+| Q1 | Limites d'un processus sur le fil principal | **Au mieux** | Stricte en worker ; sur le fil principal, demande d'arrêt puis escalade (ADR 0069), dit dans `/proc/<pid>/limits` et la documentation. |
+| Q2 | Mémoire totale de l'OOM killer | **Simulée (estimation si possible)** | `MemTotal` du profil simulé ; occupation mesurée ou estimée au plus juste (décision 3). |
+| Q3 | OOM killer actif par défaut | **Désactivé** ; ouvrir à la place une fenêtre comme les navigateurs : « L'application ne répond pas : Attendre \| Terminer l'application » | OOM killer à activer dans `/etc` ; boîte de la décision 6. |
+| Q4 | Quantum imposé | **Non** | Décision 5. |
+| Q5 | Apps à fenêtre dans un worker | Une fonction du SDK qui exécute la charge lourde dans un autre thread, l'inverse de `Invoke` ; puis **garder l'essai** de rendu en worker | Décision 7, chantiers `exec/5` et `exec/6`. |
+| Q6 | Isolation cross-origin | **Optionnelle, active par défaut si l'audit passe** | Décisions 9 et 10. |
+| Q7 | Isolation sur l'hôte Server | **Server = OS en WebAssembly + API** (Benoit pensait que le serveur hébergeait déjà un client WebAssembly) | Décision 8, chantier `exec/8-server-wasm` ; remplace les ADR 0027 et 0036. |
+| Q8 | Threads .NET WebAssembly | **Non** | Décision 10. |
+| Q9 | Branches | **`exec/<n>-<sujet>`** | Section 5. |
 
 ## 7. ADR à écrire
 
@@ -220,16 +179,16 @@ selon `docs/adr/`) :
 | Limites par processus | décision 2 | remplace le principe « mesurer, pas contraindre » de la phase 5 pour les limites, complète 0067, 0068, 0069 |
 | OOM killer | décisions 3 et 4 | remplace l'ADR 0068 §3 |
 | Priorité et fenêtre sans réponse | décisions 5 et 6 | complète l'ADR 0067 §4 |
-| Processus de travail des apps à fenêtre | décision 7, premier volet | complète l'ADR 0070 §1 |
-| Rendu de fenêtre dans un worker | décision 7, second volet, après la preuve | remplace l'ADR 0070 §1 (fenêtres) si on y va |
-| Mesures et workers sur `HackerOs.Server` | décision 8 | remplace l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
+| Tâches lourdes en arrière-plan (`HackBackground`) | décision 7, étape 1 | complète l'ADR 0070 §1 |
+| Rendu de fenêtre dans un worker | décision 7, étape 2, après l'essai | remplace l'ADR 0070 §1 (fenêtres) si on y va |
+| `HackerOs.Server` servi en WebAssembly | décision 8 | remplace l'ADR 0027 et l'ADR 0036 ; rend sans objet l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
 | Isolation cross-origin | décisions 9 et 10 | complète l'ADR 0072 §2 (tubes) et l'ADR 0068 (mémoire réelle par worker) |
 
 ## 8. Liste des tâches
 
 ### Préparation
 - [x] Écrire ce plan (2026-10-17, fil « Plan : suites de l'étape 5 »).
-- [ ] Faire valider le plan et trancher les questions Q1 à Q9 avec Benoit.
+- [x] Faire valider le plan et trancher les questions Q1 à Q9 avec Benoit (2026-10-17, section 6).
 - [ ] Attendre la fin de la migration wasm v3.
 - [ ] `exec/0-adr` : écrire et faire accepter les ADR de la section 7.
 
@@ -246,12 +205,12 @@ selon `docs/adr/`) :
 
 ### Fenêtres
 - [ ] « (Not responding) » et « Attendre / Forcer à quitter », `nice`/`renice`.
-- [ ] Processus de travail d'une app à fenêtre, exemple, migration des apps de base.
+- [ ] `HackBackground.RunAsync`, analyseur, exemple, migration des apps de base.
 - [ ] Preuve de faisabilité du rendu en worker et ADR de décision.
 - [ ] Fenêtres en worker (si décidé).
 
 ### Hôte Server
-- [ ] ADR de l'hôte, mesures, workers sur threads, `/proc/hackeros/workers`.
+- [ ] OS servi en WebAssembly, API seulement côté serveur, retrait d'Interactive Server, vérification des hôtes adaptée.
 
 ### Isolation cross-origin
 - [ ] Audit de compatibilité.
@@ -266,8 +225,8 @@ selon `docs/adr/`) :
 - Tout ce que planifie la migration wasm v3 (trimming, localisation, gabarits
   `dotnet new`, sauvegarde et restauration, etc.).
 - Le contenu de jeu, qui vivra dans un autre dépôt.
-- Plusieurs utilisateurs ou plusieurs circuits simultanés sur `HackerOs.Server`
-  (l'hôte reste mono-locataire, ADR 0027).
+- Plusieurs utilisateurs simultanés sur l'API de `HackerOs.Server`, au-delà de
+  ce qu'elle fait déjà.
 - Déplacer le shell (`hsh`) et ses scripts dans un worker (ADR 0072 §1 reste
   valable).
 - Compteurs de CPU et de mémoire persistants d'un démarrage à l'autre.
