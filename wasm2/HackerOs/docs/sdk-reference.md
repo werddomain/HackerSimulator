@@ -31,6 +31,12 @@ dépôt les consomme comme le décrit [`building-on-hackeros.md`](building-on-ha
 La promesse de compatibilité SemVer couvre les bibliothèques de cette page et
 `HackerOs.Theming.Blazor`, pas la plateforme (ADR 0114 §2).
 
+Cette page présente les API qu'une app utilise au quotidien ; elle n'est pas
+exhaustive. La liste complète et exacte de la surface publique 1.0 est le
+fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel),
+vérifié au build par l'analyseur d'API publique : un ajout va dans
+`PublicAPI.Unshipped.txt`, un retrait exige une ligne `*REMOVED*` (ADR 0114).
+
 | Projet | Espaces de noms | Pour |
 |---|---|---|
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
@@ -463,3 +469,4 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
 - [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).
 - [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).
+- [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

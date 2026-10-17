@@ -2,6 +2,9 @@
 
 **Statut :** proposé le 2026-10-17, **validé par Benoit le 2026-10-17**
 (réponses aux cinq questions, section 7). Le premier chantier est `v3/1-adr`.
+**Terminé le 2026-10-17** : les seize chantiers sont fusionnés dans `v3/base` ;
+le bilan, la vérification finale et ce qui reste ouvert sont dans
+[`wasm-v3-final-status.md`](wasm-v3-final-status.md).
 
 Ce plan termine ce que l'analyse d'origine
 [`doc/wasm/wasm-v3-migration-analyse.md`](../../../doc/wasm/wasm-v3-migration-analyse.md)
@@ -204,9 +207,9 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/8-settings-security` ([`sensitive-settings.md`](sensitive-settings.md))
 - [x] `v3/9-sync` ([`synchronization.md`](synchronization.md))
 - [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0108)
-- [ ] `v3/11-apps`
+- [x] `v3/11-apps` ([`hack-paint.md`](hack-paint.md), [`theme-editor.md`](theme-editor.md))
 - [x] `v3/12-localization` (ADR 0104, ADR 0111, [`localization.md`](localization.md))
 - [x] `v3/13-accessibility` ([`accessibility.md`](accessibility.md), ADR 0112)
 - [x] `v3/14-trimming` ([`trimmed-publish.md`](trimmed-publish.md), ADR 0113 ; assemblies HackerOS gardées entières)
 - [x] `v3/15-sdk-freeze` (ADR 0114, [`building-on-hackeros.md`](building-on-hackeros.md))
-- [ ] `v3/16-final`
+- [x] `v3/16-final` (bilan : [`wasm-v3-final-status.md`](wasm-v3-final-status.md))
