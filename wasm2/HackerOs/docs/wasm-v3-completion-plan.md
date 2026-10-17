@@ -201,7 +201,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [ ] `v3/6-sdk-versioning`
 - [ ] `v3/7-storage-backup`
 - [ ] `v3/8-settings-security`
-- [ ] `v3/9-sync`
+- [x] `v3/9-sync` ([`synchronization.md`](synchronization.md))
 - [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0108)
 - [ ] `v3/11-apps`
 - [ ] `v3/12-localization`

@@ -26,6 +26,8 @@ migration, en lecture seule.
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
 | Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |
 | Partage du presse-papiers avec l'hôte (clé `sharing`, ADR 0065, voir [`clipboard.md`](clipboard.md)) | `/etc/hackeros/clipboard.config` | `~/.config/hackeros/clipboard.config` |
+| Synchro périodique (ADR 0101 §4, voir [`synchronization.md`](synchronization.md)) | `/etc/hackeros/sync.config` (`intervalMinutes`, lu seulement ici) | `~/.config/hackeros/sync.config` (`paused`) |
+| Conflits de synchro en attente (ADR 0101 §2) | aucune | `~/.local/state/hackeros/sync-conflicts.json` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).
@@ -159,7 +161,10 @@ système demande l'approbation administrateur ; un refus affiche un message au
 lieu d'une erreur. L'apparence passe par `HackSettings.OpenSystemAsync`
 (chantier `4-sdk-system-admin`). « Synchroniser » pousse et tire le système de
 fichiers, tire les permissions, pousse et tire les associations, puis relit
-l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
+l'apparence. L'onglet « Synchronization » (ADR 0101) montre l'état de la
+synchro périodique, la suspend pour l'utilisateur (`paused` dans
+`~/.config/hackeros/sync.config`), lance un passage et liste les conflits en
+attente avec un bouton qui ouvre le dialogue de conflit. L'onglet « Installed Apps » écrit les fichiers `apps.config`
 (voir [`app-installation.md`](app-installation.md)).
 
 ## Migration

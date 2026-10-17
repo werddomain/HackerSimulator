@@ -366,6 +366,17 @@ public static class UnsupportedAdministrationGateways
 
         public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(Message);
+
+        public ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
     }
 
     private sealed class UnsupportedSystemPower : IAppSystemPowerGateway

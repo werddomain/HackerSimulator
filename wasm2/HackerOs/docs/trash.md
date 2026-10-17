@@ -41,6 +41,14 @@ DeletionDate=2026-10-10T14:03:27
   supprimé et l'erreur remonte.
 - Au listage, un `.trashinfo` sans élément est supprimé ; un élément sans
   `.trashinfo` est listé avec une origine inconnue.
+- Un élément supprimé sur un autre appareil arrive ici par la synchronisation
+  (ADR 0101 §1, [`synchronization.md`](synchronization.md)) : son `.trashinfo`
+  porte les clés d'extension `X-HackerOS-Origin=deleted-on-another-device` et
+  `X-HackerOS-Device=<appareil>`, que les autres implémentations ignorent.
+  `HackTrashItem.DeletedOnAnotherDevice` le dit aux apps. Mettre à la corbeille
+  est un renommage synchronisé ; vider la corbeille envoie les suppressions aux
+  autres appareils. Les éléments mis à la corbeille par la synchro restent sur
+  cet appareil.
 
 ### Corbeille de l'utilisateur effectif
 
@@ -130,7 +138,7 @@ Nouvelle commande système (`Trash/TrashCommand.cs`, id
 | Sous-commande | Effet |
 | --- | --- |
 | `trash put [-f] <fichier…>` | Comme `rm`, mais un dossier n'a pas besoin de `-r` (comme `trash-put`). `--permanent` est refusé. |
-| `trash list` | Une ligne par élément : `AAAA-MM-JJ hh:mm:ss  /chemin/d/origine`, plus ancien d'abord. Quand le nom dans la corbeille diffère du nom d'origine, il est ajouté entre crochets (`[rapport.2.txt]`) pour servir à `trash rm`. |
+| `trash list` | Une ligne par élément : `AAAA-MM-JJ hh:mm:ss  /chemin/d/origine`, plus ancien d'abord. Quand le nom dans la corbeille diffère du nom d'origine, il est ajouté entre crochets (`[rapport.2.txt]`) pour servir à `trash rm`. Un élément supprimé sur un autre appareil finit par `(deleted on another device)`. |
 | `trash restore <nom\|chemin d'origine> [destination]` | Cherche d'abord par nom, puis par chemin d'origine ; si plusieurs éléments viennent du même chemin, le plus récent. |
 | `trash rm <nom…>` | Suppression définitive d'éléments, par nom. |
 | `trash empty` | Vide la corbeille. |

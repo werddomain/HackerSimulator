@@ -21,7 +21,14 @@ public sealed record HackTrashItem(
     string? OriginalPath,
     DateTimeOffset? DeletedAt,
     bool IsDirectory,
-    long Length);
+    long Length)
+{
+    /// <summary>
+    /// Gets whether the synchronization put this element in the trash because it was deleted on
+    /// another device of the user (ADR 0101 section 1).
+    /// </summary>
+    public bool DeletedOnAnotherDevice { get; init; }
+}
 
 /// <summary>
 /// The user's trash, following the freedesktop.org Trash specification 1.0 (ADR 0052). Runs as the
@@ -166,7 +173,10 @@ public static class HackTrash
             VirtualPath path = VirtualPath.Parse(layout.FilesDirectory + "/" + name);
             long length = await MeasureAsync(gateway, path, metadata, cancellationToken).ConfigureAwait(false);
             items.Add(new HackTrashItem(
-                name, info?.OriginalPath, info?.DeletedAt, metadata.Kind == FileSystemEntryKind.Directory, length));
+                name, info?.OriginalPath, info?.DeletedAt, metadata.Kind == FileSystemEntryKind.Directory, length)
+            {
+                DeletedOnAnotherDevice = info?.DeletedOnAnotherDevice ?? false
+            });
         }
 
         items.Sort(static (left, right) =>

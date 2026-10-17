@@ -301,7 +301,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<IContentTransferClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
-            provider.GetRequiredService<ISyncRecordStateRepository>()));
+            provider.GetRequiredService<ISyncRecordStateRepository>(),
+            logger: provider.GetService<Microsoft.Extensions.Logging.ILogger<FileSystemSyncService>>()));
 
         // Grants domain sync (ADR 0031) — pull-only, applies server-issued grants into the durable
         // grant store. Not wired into live capability enforcement in this pass (see ADR 0031).
@@ -320,6 +321,21 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISyncClient>(),
             provider.GetRequiredService<ISyncCursorRepository>(),
             provider.GetRequiredService<ISyncRecordStateRepository>()));
+
+        // ADR 0101: periodic synchronization (started at login, idle without a server) and the
+        // state of the OS conflict dialog the shell renders.
+        services.AddScoped<SyncScheduler>(provider => new SyncScheduler(
+            provider.GetRequiredService<IFileSystemSyncService>(),
+            provider.GetRequiredService<IGrantsSyncService>(),
+            provider.GetRequiredService<IFileAssociationsSyncService>(),
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<ISessionService>(),
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<ITopicMessageBus>(),
+            logger: provider.GetService<Microsoft.Extensions.Logging.ILogger<SyncScheduler>>(),
+            events: provider.GetRequiredService<IEventBus>()));
+        services.AddScoped<SyncConflictCenter>(provider => new SyncConflictCenter(
+            provider.GetRequiredService<IFileSystemSyncService>()));
 
         // Admin re-authentication elevation (ADR 0042) — powers the terminal's `sudo` built-in and
         // the admin-approval prompt on a denied permission. Never touches ISessionService's own
@@ -531,7 +547,10 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IFileSystemSyncService>(),
                     () => provider.GetRequiredService<IGrantsSyncService>(),
                     () => provider.GetRequiredService<IFileAssociationsSyncService>(),
-                    () => provider.GetRequiredService<IProxyClient>()),
+                    () => provider.GetRequiredService<IProxyClient>(),
+                    () => provider.GetRequiredService<SyncScheduler>(),
+                    () => provider.GetRequiredService<SyncConflictCenter>(),
+                    () => provider.GetRequiredService<IOsSettingsService>()),
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
