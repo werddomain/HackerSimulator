@@ -58,10 +58,67 @@
                         <span class="diag-store-count">@store.RecordCount</span>
                     </button>
                 }
+
+                <div class="diag-sidebar-heading" title="Browser databases of web sites (hackweb.*), outside the OS database and files">Website databases</div>
+                @if (_sites.Count == 0)
+                {
+                    <div class="diag-sidebar-empty">@(_sitesError ?? "No site has a database yet.")</div>
+                }
+                @foreach (HackWebSiteDatabaseInfo entry in _sites)
+                {
+                    <button class="diag-store-item diag-site-item @(entry.Name == _selectedSiteName ? "active" : "")"
+                            @onclick="() => SelectSite(entry.Name)">
+                        <span>@entry.AppId</span>
+                        <span class="diag-store-count">@FormatSize(entry.SizeBytes)</span>
+                    </button>
+                }
             </aside>
 
             <main class="diag-content">
-                @if (SelectedStore is { } activeStore)
+                @if (SelectedSite is { } site)
+                {
+                    <div class="diag-store-header">
+                        <div class="diag-store-name">@site.Name (version @site.Version)</div>
+                        <div class="diag-store-purpose">
+                            Browser database of the web site <code>@site.AppId</code> (ADR 0088): IndexedDB of the host browser,
+                            not stored in the HackerOS files. @site.RecordCount records, about @FormatSize(site.SizeBytes).
+                        </div>
+                    </div>
+
+                    <div class="diag-table-wrapper">
+                        <table class="diag-table">
+                            <thead>
+                                <tr>
+                                    <th>Object store</th>
+                                    <th>Records</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (HackWebSiteDatabaseStoreInfo store in site.Stores)
+                                {
+                                    <tr>
+                                        <td class="diag-path-highlight">@store.Name</td>
+                                        <td>@store.RecordCount</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="diag-site-actions">
+                        @if (_confirmDelete)
+                        {
+                            <span class="diag-site-warning" role="alert">Delete every record of @site.AppId? The site starts again with an empty database.</span>
+                            <button class="diag-btn diag-btn-danger" @onclick="DeleteSiteAsync">Delete</button>
+                            <button class="diag-btn" @onclick="() => _confirmDelete = false">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="diag-btn diag-btn-danger" @onclick="() => _confirmDelete = true">🗑 Clear this database</button>
+                        }
+                    </div>
+                }
+                else if (SelectedStore is { } activeStore)
                 {
                     <div class="diag-store-header">
                         <div class="diag-store-name">@activeStore.Name (@activeStore.RecordCount records)</div>

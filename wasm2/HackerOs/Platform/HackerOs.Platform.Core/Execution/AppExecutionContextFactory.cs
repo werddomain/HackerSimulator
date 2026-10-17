@@ -49,6 +49,7 @@ public sealed class AppExecutionContextFactory
     private readonly SystemAdministrationGatewayServices? _administration;
     private readonly Clipboard.SystemClipboard _clipboard;
     private readonly Network.Local.LocalNetworkServices? _localNetwork;
+    private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -102,6 +103,10 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/> and
     /// <see cref="IAppExecutionContext.StorageDiagnostics"/>; <see langword="null"/> leaves them unsupported.
     /// </param>
+    /// <param name="webDatabases">
+    /// The browser databases of web sites behind <see cref="IAppExecutionContext.WebDatabase"/> and the
+    /// storage diagnostics (ADR 0088); <see langword="null"/> leaves sites without a database.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -123,7 +128,8 @@ public sealed class AppExecutionContextFactory
         SystemMetricsServices? metrics = null,
         Clipboard.SystemClipboard? clipboard = null,
         SystemAdministrationGatewayServices? administration = null,
-        Network.Local.LocalNetworkServices? localNetwork = null)
+        Network.Local.LocalNetworkServices? localNetwork = null,
+        WebData.IWebSiteDatabaseStore? webDatabases = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -146,6 +152,7 @@ public sealed class AppExecutionContextFactory
         _administration = administration;
         _clipboard = clipboard ?? new Clipboard.SystemClipboard();
         _localNetwork = localNetwork;
+        _webDatabases = webDatabases;
     }
 
     /// <summary>
@@ -249,7 +256,8 @@ public sealed class AppExecutionContextFactory
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
             new AppLoggingGateway(
                 _diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value,
-                isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true),
+                isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true,
+                isWebApp: manifest.Kind == AppKind.Web),
             clock,
             new AppProcessGateway(_processManager, capabilities, process.Pid),
             intents,
@@ -287,7 +295,9 @@ public sealed class AppExecutionContextFactory
             administration.SystemPower,
             administration.StorageDiagnostics,
             // ADR 0069: the process manager's block carries the stop request and the kill to the context.
-            (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid));
+            (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid),
+            // ADR 0088: hackweb.<app id>, for web apps only.
+            new WebData.AppWebDatabaseGateway(_webDatabases, manifest));
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
@@ -331,7 +341,7 @@ public sealed class AppExecutionContextFactory
             _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
             new AppServerConnectionGateway(_administration.Server, capabilities),
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
-            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities));
+            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases));
     }
 
     private sealed record AdministrationGateways(

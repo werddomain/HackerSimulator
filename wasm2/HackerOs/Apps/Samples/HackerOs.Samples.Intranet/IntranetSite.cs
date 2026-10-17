@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Web.Data;
 using HackerOs.AppSdk.Web.Hosting;
 using HackerOs.AppSdk.Web.Mvc;
 using HackerOs.Samples.Intranet.Board;
@@ -66,11 +67,17 @@ public sealed partial class IntranetSite : WebAppDefinition
         ArgumentNullException.ThrowIfNull(builder);
 
         // Services: singletons live as long as the site process; controllers get them by constructor.
+        // The notes live in the site's browser database hackweb.<id> (ADR 0088), not in the OS files.
+        builder.Services.AddHackWebDb(NoteStore.Configure);
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<NoteStore>();
         builder.Services.AddSingleton<TaskBoard>();
         builder.Services.AddSingleton<StaffDirectory>();
         builder.Services.AddSingleton<AnnouncementFeed>();
         builder.Json.SerializerOptions.TypeInfoResolverChain.Insert(0, IntranetJsonContext.Default);
+
+        // Debug log /var/log/hackweb/org.hackeros.samples.intranet.log: requests, ILogger<T> lines, errors.
+        builder.Logging.EnableDebugLog();
 
         HackWebApplication app = builder.Build();
 
@@ -86,11 +93,12 @@ public sealed partial class IntranetSite : WebAppDefinition
 
         // Endpoints: a minimal route, then every controller (attribute routes and the default route).
         DateTimeOffset startedAt = TimeProvider.System.GetUtcNow();
-        app.MapGet("/health", context =>
+        app.MapGet("/health", async context =>
         {
             NoteStore notes = context.RequestServices.GetRequiredService<NoteStore>();
             TaskBoard board = context.RequestServices.GetRequiredService<TaskBoard>();
-            return HackResults.Json(new SiteStatus("up", notes.Count, board.Count, startedAt), IntranetJsonContext.Default.SiteStatus);
+            int noteCount = await notes.CountAsync(context.RequestAborted);
+            return HackResults.Json(new SiteStatus("up", noteCount, board.Count, startedAt), IntranetJsonContext.Default.SiteStatus);
         });
         // The board's pages call it with the tab's cookies: the same session as the MVC pages.
         app.MapGet("/api/me", context =>

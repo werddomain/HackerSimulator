@@ -100,4 +100,36 @@ public static class HackStorageDiagnostics
             throw HackGatewayErrors.ToUnauthorized(exception);
         }
     }
+
+    /// <summary>Lists the browser databases of web sites (<c>hackweb.*</c>, ADR 0088).</summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>system.storage.inspect</c>.</exception>
+    /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
+    public static async Task<IReadOnlyList<HackWebSiteDatabaseInfo>> GetWebSiteDatabasesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await HackExecutionContext.Current.StorageDiagnostics.GetWebSiteDatabasesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
+
+    /// <summary>Deletes the browser database of a web site; it comes back empty on the site's next request.</summary>
+    /// <param name="databaseName">The <c>hackweb.*</c> name.</param>
+    /// <param name="cancellationToken">Cancels the deletion.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>system.storage.inspect</c>.</exception>
+    public static async Task DeleteWebSiteDatabaseAsync(string databaseName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await HackExecutionContext.Current.StorageDiagnostics.DeleteWebSiteDatabaseAsync(databaseName, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AppGatewayAccessDeniedException exception)
+        {
+            throw HackGatewayErrors.ToUnauthorized(exception);
+        }
+    }
 }

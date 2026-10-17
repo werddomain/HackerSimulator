@@ -5,7 +5,8 @@
     <h4>Installed Applications</h4>
     <p class="setting-desc">
         Uninstalling an app hides it everywhere, blocks every way to start it and stops its running
-        windows. Nothing is deleted: its settings and your files stay in place for a reinstall.
+        windows. Nothing is deleted: its settings and your files stay in place for a reinstall. Only a
+        website loses its browser database.
         The list lives in <code>~/.config/hackeros/apps.config</code> (for you) and
         <code>/etc/hackeros/apps.config</code> (for every user: an administrator must authenticate).
     </p>
@@ -67,6 +68,14 @@
                 }
 
                 <p>Running windows are closed. Settings and files are kept.</p>
+
+                @foreach (string siteId in WebSitesIn(_pending.UninstallClosure))
+                {
+                    <p class="apps-site-data">
+                        The website data of @NameOf(siteId) (its browser database <code>hackweb.@siteId</code>) is deleted:
+                        it is not in your files and cannot come back with a reinstall.
+                    </p>
+                }
 
                 @if (IsAdministrator && _scope == HackInstallScope.Machine)
                 {

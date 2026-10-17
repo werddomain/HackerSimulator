@@ -13,8 +13,9 @@ namespace HackerOs.Samples.Intranet.Controllers;
 public sealed class HomeController(AnnouncementFeed feed, NoteStore notes, TaskBoard board) : HackController
 {
     /// <summary><c>GET /</c>: news, counters and the visitor's name.</summary>
-    public IHackActionResult Index() =>
-        View(new HomeViewModel(feed.Latest, notes.Count, board.Count, IntranetSession.DisplayName(HttpContext)));
+    /// <param name="cancellationToken">Aborted with the request.</param>
+    public async Task<IHackActionResult> Index(CancellationToken cancellationToken) =>
+        View(new HomeViewModel(feed.Latest, await notes.CountAsync(cancellationToken), board.Count, IntranetSession.DisplayName(HttpContext)));
 
     /// <summary><c>GET /Home/Profile</c>: the form that chooses a display name.</summary>
     [HttpGet]

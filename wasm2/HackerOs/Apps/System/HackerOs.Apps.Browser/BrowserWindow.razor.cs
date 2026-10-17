@@ -113,6 +113,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private HtmlPageComposer _composer = default!;
     private PageBridgeHandler _bridge = default!;
     private PageStorage? _storage;
+    private FormHistory? _formHistory;
+    private string? _notice;
     private string _homeDirectory = "/";
 
     // ── Computed helpers ──────────────────────────────────────────────────
@@ -164,11 +166,15 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
             _homeDirectory = HackUser.Current.HomeDirectory;
             _storage = new PageStorage(new HackBrowserStorageFiles(), PageStorage.GetRoot(_homeDirectory),
                 message => _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Warning, message, "browser")));
+            // ADR 0088 §6: what the user types in forms, offered back by field name.
+            _formHistory = new FormHistory(new HackBrowserStorageFiles(), FormHistory.GetPath(_homeDirectory),
+                onError: message => _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Warning, message, "browser")));
         }
         catch (Exception exception) when (exception is InvalidOperationException or HackExecutionContextMissingException)
         {
-            // No user (a test host): pages get an in-memory storage only.
+            // No user (a test host): pages get an in-memory storage only, and no form history.
             _storage = null;
+            _formHistory = null;
         }
     }
 
@@ -801,6 +807,12 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
                     ? BridgeFetchReply.Fail("Failed to fetch")
                     : await _bridge.FetchAsync(session, fetch);
                 return JsonSerializer.Serialize(reply, PageBridgeJsonContext.Default.BridgeFetchReply);
+            case "formhistory":
+                BridgeFormHistoryRequest? field = JsonSerializer.Deserialize(payload, PageBridgeJsonContext.Default.BridgeFormHistoryRequest);
+                IReadOnlyList<string> values = _formHistory is null || field?.Name is not { Length: > 0 } name
+                    ? []
+                    : await _formHistory.SuggestAsync(name, session.CancellationToken);
+                return JsonSerializer.Serialize(new BridgeFormHistoryReply(values), PageBridgeJsonContext.Default.BridgeFormHistoryReply);
             case "resource":
                 BridgeResourceRequest? resource = JsonSerializer.Deserialize(payload, PageBridgeJsonContext.Default.BridgeResourceRequest);
                 BridgeResourceReply loaded = resource is null
@@ -857,11 +869,32 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
                     StateHasChanged();
                 });
                 return;
+            case "formhistory" when _formHistory is not null
+                                    && JsonSerializer.Deserialize(payload, PageBridgeJsonContext.Default.BridgeFormSubmitEvent) is { Fields: { } fields }:
+                // Before the navigation the same submission asks for: the next page already gets the values.
+                await _formHistory.RecordAsync(fields.Where(pair => pair.Length == 2).Select(pair => new KeyValuePair<string, string>(pair[0], pair[1])));
+                return;
             case "key" when JsonSerializer.Deserialize(payload, PageBridgeJsonContext.Default.BridgeKeyEvent) is { } key:
                 await InvokeAsync(() => HandleShortcutAsync(key));
                 return;
         }
     }
+
+    /// <summary>"Clear browsing data → Form history" (Ctrl+Shift+Delete, ADR 0088 §6).</summary>
+    private async Task ClearFormHistoryAsync()
+    {
+        if (_formHistory is null)
+        {
+            return;
+        }
+
+        await _formHistory.ClearAsync();
+        _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Log, $"Form history cleared ({_formHistory.Path}).", "browser"));
+        _notice = "Form history cleared: fields no longer suggest what you typed before.";
+        StateHasChanged();
+    }
+
+    private void DismissNotice() => _notice = null;
 
     private async Task NavigateFromPageAsync(PageSession session, BridgeNavigateEvent navigation)
     {
@@ -924,6 +957,10 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         else if (key.Ctrl && lower == "u")
         {
             await ToggleViewSourceAsync();
+        }
+        else if (key.Ctrl && key.Shift && key.Key == "Delete")
+        {
+            await ClearFormHistoryAsync();
         }
         else if (key.Alt && key.Key == "ArrowLeft")
         {

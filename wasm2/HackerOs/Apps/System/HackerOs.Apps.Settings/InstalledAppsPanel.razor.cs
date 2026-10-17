@@ -85,6 +85,10 @@ public partial class InstalledAppsPanel : IDisposable
     private string NameOf(string appId) =>
         _apps?.FirstOrDefault(entry => entry.App.Id == appId)?.App.Name ?? appId;
 
+    /// <summary>The web sites of an uninstall closure: their browser database is deleted with them (ADR 0088 §4).</summary>
+    private IEnumerable<string> WebSitesIn(IReadOnlyList<string> closure) =>
+        closure.Where(id => _apps?.FirstOrDefault(entry => entry.App.Id == id)?.App.Kind == HackerOs.App.Abstractions.AppKind.Web);
+
     private static string RowClass(HackAppInstallInfo entry) =>
         entry.App.IsSystemApp ? "is-system"
         : entry.State == HackAppInstallState.Installed ? "is-installed"

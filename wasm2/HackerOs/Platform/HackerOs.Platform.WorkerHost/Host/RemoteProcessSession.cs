@@ -524,6 +524,17 @@ internal sealed class RemoteProcessSession
                 }
 
                 return static _ => { };
+            case RemoteOps.LogSite:
+                try
+                {
+                    c.Logging.AppendToSiteDebugLog(a.GetString("m"));
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Same as LogFile: a line the OS refuses is dropped.
+                }
+
+                return static _ => { };
             case RemoteOps.NotificationPost:
                 c.Notifications.Post(
                     (HackerOs.Simulation.Abstractions.Notifications.NotificationSeverity)a.GetInt32("s"),
@@ -666,6 +677,21 @@ internal sealed class RemoteProcessSession
             case RemoteOps.ClipboardClear:
                 await c.Clipboard.ClearAsync(cancellationToken).ConfigureAwait(false);
                 return static _ => { };
+            case RemoteOps.WebDbOpen:
+                await c.WebDatabase.OpenAsync(
+                    JsonSerializer.Deserialize(a.GetString("j"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbSchemaDefinition)
+                        ?? throw new ArgumentException("No schema.", "j"),
+                    cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+            case RemoteOps.WebDbExecute:
+            {
+                IReadOnlyList<string?> results = await c.WebDatabase.ExecuteAsync(
+                    JsonSerializer.Deserialize(a.GetString("j"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbRequest)
+                        ?? throw new ArgumentException("No request.", "j"),
+                    cancellationToken).ConfigureAwait(false);
+                string json = JsonSerializer.Serialize([.. results], HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.ListString);
+                return writer => writer.WriteString("r", json);
+            }
             default:
                 throw new NotSupportedException($"Unknown remote operation '{operation}'.");
         }

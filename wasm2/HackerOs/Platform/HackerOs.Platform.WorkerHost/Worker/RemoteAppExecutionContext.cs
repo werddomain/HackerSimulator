@@ -65,6 +65,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Catalog = new RemoteCatalogGateway(channel);
         Drives = new RemoteDriveGateway(channel);
         Clipboard = new RemoteClipboardGateway(channel);
+        WebDatabase = new RemoteWebDatabaseGateway(channel, snapshot.Manifest.Id);
         Console = console;
     }
 
@@ -131,6 +132,8 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
     public IAppDriveGateway Drives { get; }
 
     public IAppClipboardGateway Clipboard { get; }
+
+    public HackerOs.AppSdk.WebData.IAppWebDatabaseGateway WebDatabase { get; }
 
     public IAppConsoleGateway Console { get; }
 

@@ -57,6 +57,14 @@
             </div>
         }
 
+        @if (_notice is not null)
+        {
+            <div class="page-alert" role="status">
+                <span class="page-alert-message">@_notice</span>
+                <button class="action-btn" @onclick="DismissNotice">OK</button>
+            </div>
+        }
+
         @if (_alertMessage is not null)
         {
             <div class="page-alert" role="alert">

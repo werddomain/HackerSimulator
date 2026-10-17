@@ -379,6 +379,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISessionService>(),
             provider.GetRequiredService<LogFileWriter>(),
             provider.GetRequiredService<IAuditLog>()));
+        // Browser databases of web sites, hackweb.<app id> (ADR 0088): IndexedDB of the host browser.
+        services.AddScoped<HackerOs.Infrastructure.Browser.WebData.WebSiteDatabaseInterop>();
+        services.AddScoped<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>(provider =>
+            new HackerOs.Ecosystem.WebData.IndexedDbWebSiteDatabaseStore(
+                provider.GetRequiredService<HackerOs.Infrastructure.Browser.WebData.WebSiteDatabaseInterop>()));
         // Raw storage snapshot behind HackStorageDiagnostics (ADR 0056 section 11).
         services.AddScoped<IStorageInspector>(provider =>
             new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
@@ -516,6 +521,8 @@ public static class EcosystemServiceCollectionExtensions
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,
             // HackSystem and HackStorageDiagnostics (ADR 0056 sections 8 to 11), all lazy.
             localNetwork: provider.GetRequiredService<LocalNetworkServices>(),
+            // HackWebDb (ADR 0088): hackweb.<app id> for web apps, and their listing in Diagnostic.
+            webDatabases: provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>(),
             administration: new SystemAdministrationGatewayServices(
                 () => provider.GetRequiredService<IOsSettingsService>(),
                 () => provider.GetRequiredService<AppPermissionAdministration>(),
@@ -591,7 +598,9 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ITopicMessageBus>(),
             provider.GetRequiredService<IEventBus>(),
-            provider.GetService<ILogger<AppInstallationService>>()));
+            provider.GetService<ILogger<AppInstallationService>>(),
+            // ADR 0088 section 4: uninstalling a web app deletes its browser database.
+            provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>()));
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
         // The headless shell hsh (ADR 0050): the terminal runs every line through it.
         services.AddScoped<ShellInterpreter>(provider => new ShellInterpreter(

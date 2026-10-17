@@ -8,7 +8,12 @@ namespace HackerOs.Samples.Intranet.Models;
 /// </summary>
 public sealed class Note
 {
-    /// <summary>Gets or sets the identifier given by <see cref="Services.NoteStore"/>.</summary>
+    /// <summary>
+    /// Gets or sets the identifier given by the key generator of the <c>notes</c> store
+    /// (<see cref="Services.NoteStore"/>). Not written when 0: IndexedDB numbers a record whose key
+    /// path is absent, and would take 0 as the key.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int Id { get; set; }
 
     /// <summary>Gets or sets the title (3 to 60 characters).</summary>

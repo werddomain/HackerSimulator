@@ -264,6 +264,14 @@ public interface IAppExecutionContext
     IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
 
     /// <summary>
+    /// Gets this instance's browser database, behind <c>HackWebDb</c> of the web SDK (ADR 0073 section 3,
+    /// ADR 0088): the IndexedDB database <c>hackweb.&lt;app id&gt;</c> of the host browser. Only an app of
+    /// kind <c>Web</c> gets a working one. Defaults to an unsupported gateway so existing implementations
+    /// keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    WebData.IAppWebDatabaseGateway WebDatabase => UnsupportedAppWebDatabaseGateway.Instance;
+
+    /// <summary>
     /// Gets the instance's standard streams (ADR 0064), behind <see cref="HackConsole"/>: the
     /// terminal, pipe or file of the shell that started it, or <c>/dev/null</c> when it was
     /// started from the desktop. Defaults to a detached console so existing implementations keep
@@ -372,6 +380,21 @@ public static class UnsupportedAdministrationGateways
         public ValueTask<HackStorageSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(Message);
     }
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.WebDatabase"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppWebDatabaseGateway : WebData.IAppWebDatabaseGateway
+{
+    public static UnsupportedAppWebDatabaseGateway Instance { get; } = new();
+
+    public string DatabaseName => throw Unsupported();
+
+    public ValueTask OpenAsync(WebData.HackWebDbSchemaDefinition schema, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask<IReadOnlyList<string?>> ExecuteAsync(WebData.HackWebDbRequest request, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    private static NotSupportedException Unsupported() =>
+        new("This IAppExecutionContext implementation does not provide a browser database (only web apps have one).");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Clipboard"/> for contexts that don't wire one up.</summary>

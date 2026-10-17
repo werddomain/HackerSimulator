@@ -607,6 +607,61 @@ function (boot) {
         return data;
     }
 
+    // ── Form history (ADR 0088 §6) ────────────────────────────────────────
+    // Text-like fields with a name are remembered when their form is submitted, and offered back in a
+    // <datalist> when a field of the same name gets the focus. Passwords, hidden fields and
+    // autocomplete="off" (field or form) are never sent to the browser.
+
+    const rememberedTypes = new Set(["text", "search", "email", "tel", "url", "number"]);
+    const suggestionLists = new Map();
+    let nextListId = 1;
+
+    function rememberable(element) {
+        if (!(element instanceof HTMLInputElement) || !rememberedTypes.has(element.type) || !element.name) {
+            return false;
+        }
+        const off = (node) => node && (node.getAttribute("autocomplete") || "").trim().toLowerCase() === "off";
+        return !off(element) && !off(element.form);
+    }
+
+    function rememberFields(form) {
+        const fields = [];
+        for (const element of Array.from(form.elements)) {
+            if (rememberable(element) && !element.disabled && element.value.trim() !== "") {
+                fields.push([element.name, element.value]);
+            }
+        }
+        if (fields.length > 0) {
+            emit("formhistory", { fields });
+        }
+    }
+
+    document.addEventListener("focusin", async (event) => {
+        const input = event.target;
+        if (!rememberable(input)) {
+            return;
+        }
+        const own = input.getAttribute("list");
+        if (own && !own.startsWith("hackos-form-history-")) {
+            return; // The page has its own suggestions.
+        }
+
+        let list = suggestionLists.get(input.name);
+        if (!list) {
+            list = document.createElement("datalist");
+            list.id = "hackos-form-history-" + nextListId++;
+            (document.body || document.documentElement).appendChild(list);
+            suggestionLists.set(input.name, list);
+            const reply = await request("formhistory", { name: input.name });
+            for (const value of reply.values || []) {
+                const option = document.createElement("option");
+                option.value = value;
+                list.appendChild(option);
+            }
+        }
+        nativeSetAttribute.call(input, "list", list.id);
+    }, true);
+
     async function submitForm(form, submitter) {
         const method = ((submitter && submitter.getAttribute("formmethod")) || form.getAttribute("method") || "get").toLowerCase();
         if (method === "dialog") {
@@ -616,6 +671,8 @@ function (boot) {
             }
             return;
         }
+
+        rememberFields(form);
 
         const actionAttribute = (submitter && submitter.getAttribute("formaction")) || form.getAttribute("action");
         const action = actionAttribute ? new URL(actionAttribute, document.baseURI).href : pageUrl;
@@ -729,7 +786,8 @@ function (boot) {
             || (event.ctrlKey && event.shiftKey && lower === "i")
             || (event.ctrlKey && !event.shiftKey && lower === "u")
             || (event.ctrlKey && !event.shiftKey && lower === "r")
-            || (event.altKey && (key === "ArrowLeft" || key === "ArrowRight"));
+            || (event.altKey && (key === "ArrowLeft" || key === "ArrowRight"))
+            || (event.ctrlKey && event.shiftKey && key === "Delete");
         if (handled) {
             event.preventDefault();
             emit("key", { key, ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey });

@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <!-- ILogger<T> of a site and its debug log /var/log/hackweb/<id>.log (ADR 0088 §5). -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.10" />
     <!-- Views (ADR 0076 §7, web/7): Razor components rendered to static HTML by HtmlRenderer. -->
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
   </ItemGroup>

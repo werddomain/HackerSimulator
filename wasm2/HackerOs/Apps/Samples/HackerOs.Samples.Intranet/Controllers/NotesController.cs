@@ -2,22 +2,28 @@ using HackerOs.AppSdk.Web.Antiforgery;
 using HackerOs.AppSdk.Web.Mvc;
 using HackerOs.Samples.Intranet.Models;
 using HackerOs.Samples.Intranet.Services;
+using Microsoft.Extensions.Logging;
 
 namespace HackerOs.Samples.Intranet.Controllers;
 
 /// <summary>
 /// The pages of the notes wiki: a classic MVC CRUD over HTML forms with anti-forgery tokens,
 /// validation messages and post/redirect/get. Its views are <c>.razor</c> components
-/// (<c>Views/Notes/</c>, ADR 0083) rendered to static HTML.
+/// (<c>Views/Notes/</c>, ADR 0083) rendered to static HTML. The notes live in the site's browser
+/// database (<see cref="NoteStore"/>, ADR 0088), and each change is written to the site's debug log
+/// (<c>/var/log/hackweb/org.hackeros.samples.intranet.log</c>) through <see cref="ILogger{TCategoryName}"/>.
 /// </summary>
-public sealed class NotesController(NoteStore store) : HackController
+public sealed class NotesController(NoteStore store, ILogger<NotesController> logger) : HackController
 {
     /// <summary><c>GET /Notes</c>: the list.</summary>
-    public IHackActionResult Index() => View(store.All());
+    /// <param name="cancellationToken">Aborted with the request.</param>
+    public async Task<IHackActionResult> Index(CancellationToken cancellationToken) => View(await store.AllAsync(cancellationToken));
 
     /// <summary><c>GET /Notes/Details/{id}</c>.</summary>
     /// <param name="id">The identifier.</param>
-    public IHackActionResult Details(int id) => store.Find(id) is Note note ? View(note) : NotFound();
+    /// <param name="cancellationToken">Aborted with the request.</param>
+    public async Task<IHackActionResult> Details(int id, CancellationToken cancellationToken) =>
+        await store.FindAsync(id, cancellationToken) is Note note ? View(note) : NotFound();
 
     /// <summary><c>GET /Notes/Create</c>: the empty form (the <c>Edit</c> view).</summary>
     [HttpGet]
@@ -27,29 +33,35 @@ public sealed class NotesController(NoteStore store) : HackController
     /// <param name="note">The posted form.</param>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IHackActionResult Create(Note note)
+    /// <param name="cancellationToken">Aborted with the request.</param>
+    public async Task<IHackActionResult> Create(Note note, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
+            logger.LogDebug("Note form refused: {ErrorCount} error(s)", ModelState.ErrorCount);
             return View("Edit", note);
         }
 
         note.Author = IntranetSession.DisplayName(HttpContext) ?? IntranetSession.Anonymous;
-        Note created = store.Add(note);
+        Note created = await store.AddAsync(note, cancellationToken);
+        logger.LogInformation("Note {NoteId} created by {Author}", created.Id, created.Author);
         return RedirectToAction(nameof(Details), new { id = created.Id });
     }
 
     /// <summary><c>GET /Notes/Edit/{id}</c>.</summary>
     /// <param name="id">The identifier.</param>
     [HttpGet]
-    public IHackActionResult Edit(int id) => store.Find(id) is Note note ? View(note) : NotFound();
+    /// <param name="cancellationToken">Aborted with the request.</param>
+    public async Task<IHackActionResult> Edit(int id, CancellationToken cancellationToken) =>
+        await store.FindAsync(id, cancellationToken) is Note note ? View(note) : NotFound();
 
     /// <summary><c>POST /Notes/Edit/{id}</c>: the form shown again with its errors, or the saved note.</summary>
     /// <param name="id">The identifier (route).</param>
     /// <param name="note">The posted form.</param>
+    /// <param name="cancellationToken">Aborted with the request.</param>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IHackActionResult Edit(int id, Note note)
+    public async Task<IHackActionResult> Edit(int id, Note note, CancellationToken cancellationToken)
     {
         note.Id = id;
         if (!ModelState.IsValid)
@@ -58,16 +70,27 @@ public sealed class NotesController(NoteStore store) : HackController
         }
 
         note.Author = IntranetSession.DisplayName(HttpContext) ?? IntranetSession.Anonymous;
-        return store.Update(note) is null ? NotFound() : RedirectToAction(nameof(Details), new { id });
+        if (await store.UpdateAsync(note, cancellationToken) is null)
+        {
+            return NotFound();
+        }
+
+        logger.LogInformation("Note {NoteId} updated by {Author}", id, note.Author);
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     /// <summary><c>POST /Notes/Delete/{id}</c>.</summary>
     /// <param name="id">The identifier.</param>
+    /// <param name="cancellationToken">Aborted with the request.</param>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IHackActionResult Delete(int id)
+    public async Task<IHackActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        store.Remove(id);
+        if (await store.RemoveAsync(id, cancellationToken))
+        {
+            logger.LogInformation("Note {NoteId} deleted", id);
+        }
+
         return RedirectToAction(nameof(Index));
     }
 }

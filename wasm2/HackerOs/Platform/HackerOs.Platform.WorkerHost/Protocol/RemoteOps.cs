@@ -30,6 +30,7 @@ internal static class RemoteOps
     // Logging, notifications: fire-and-forget.
     public const string Log = "log";
     public const string LogFile = "log.file";
+    public const string LogSite = "log.site";
     public const string NotificationPost = "notify.post";
 
     // Clock.
@@ -67,4 +68,8 @@ internal static class RemoteOps
     public const string ClipboardGetFiles = "clip.getfiles";
     public const string ClipboardSetFiles = "clip.setfiles";
     public const string ClipboardClear = "clip.clear";
+
+    // Browser database of a web site (IAppWebDatabaseGateway, ADR 0088): the schema or the batch as JSON.
+    public const string WebDbOpen = "wdb.open";
+    public const string WebDbExecute = "wdb.exec";
 }
