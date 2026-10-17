@@ -124,7 +124,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(67, commands.Length);
+        Assert.Equal(68, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

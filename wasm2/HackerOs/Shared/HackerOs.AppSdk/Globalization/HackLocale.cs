@@ -134,8 +134,12 @@ public static class HackLocale
         try
         {
             CultureInfo culture = CultureInfo.GetCultureInfo(name);
-            // ICU accepts any well-formed tag; a culture it knows nothing of has no English name of its own.
-            return culture.EnglishName.StartsWith("Unknown", StringComparison.Ordinal) ? null : culture;
+            // ICU accepts any well-formed tag: "zz-QQ" comes back with no ISO 639-2 language code, and
+            // "fr-ZZ" as "French (Unknown Region)". Neither is a locale glibc would have installed.
+            return culture.ThreeLetterISOLanguageName.Length == 0
+                   || culture.EnglishName.Contains("Unknown", StringComparison.Ordinal)
+                ? null
+                : culture;
         }
         catch (CultureNotFoundException)
         {

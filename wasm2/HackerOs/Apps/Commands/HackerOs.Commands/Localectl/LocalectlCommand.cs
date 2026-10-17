@@ -119,7 +119,7 @@ public sealed class LocalectlCommand : TerminalAppBase
         FileSystemError? failure = await SettingsTextFile.WriteAllAsync(context.App.FileSystem, s_localeFile, content, cancellationToken);
         if (failure is not null)
         {
-            await context.StandardError.WriteLineAsync(failure.Code == FileSystemErrorCode.PermissionDenied
+            await context.StandardError.WriteLineAsync(failure.Code is FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.AuthorityDenied
                 ? text["AccessDenied"]
                 : text["WriteFailed", failure.Code]);
             return 1;
