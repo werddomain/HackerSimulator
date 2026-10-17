@@ -165,6 +165,44 @@ internal sealed class NetworkTrafficMeter(
         }
     }
 
+    /// <summary>
+    /// Records one TCP segment or UDP datagram of an open socket (ADR 0102): the payload plus the
+    /// IPv4 and transport headers.
+    /// </summary>
+    /// <param name="payload">Payload bytes.</param>
+    /// <param name="outbound">Sent (<see langword="true"/>) or received.</param>
+    /// <param name="udp">UDP (8-byte header) rather than TCP (20 bytes).</param>
+    public void Segment(int payload, bool outbound, bool udp)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        int size = IpHeader + (udp ? UdpHeader : TcpHeader) + payload;
+        if (outbound)
+        {
+            Transmit(size, local: false);
+        }
+        else
+        {
+            Receive(size, local: false);
+        }
+    }
+
+    /// <summary>Records a connect that failed: the SYN (or first datagram) sent and one receive error.</summary>
+    /// <param name="udp">UDP rather than TCP.</param>
+    public void ConnectFailed(bool udp)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        Transmit(IpHeader + (udp ? UdpHeader : TcpHeader), local: false);
+        ReceiveError(local: false);
+    }
+
     private static int RequestSize(HackHttpRequest request)
     {
         StringBuilder head = new();

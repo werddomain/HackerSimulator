@@ -28,6 +28,7 @@ public sealed class DirectServerConnectionClientsTests : IDisposable
 {
     private readonly ServiceProvider _provider;
     private readonly FakeHttpMessageHandler _fakeHandler;
+    private readonly TcpEchoServer _echo = new();
 
     public DirectServerConnectionClientsTests()
     {
@@ -44,6 +45,13 @@ public sealed class DirectServerConnectionClientsTests : IDisposable
         services.AddSingleton<IProxyConnectionPinAccessor, ProxyConnectionPinAccessor>();
         services.AddSingleton<IProxyAddressResolver>(_ => new FakeProxyAddressResolver(IPAddress.Parse("93.184.216.34")));
         services.AddSingleton<IProxyTcpConnector, FakeProxyTcpConnector>();
+        // ADR 0102: the test app is granted by the server; TCP streams to port 7 land on a loopback echo.
+        services.AddSingleton(ProxyRelayPolicy.From(new ProxyOptions
+        {
+            GrantedApps = ["org.hackeros.test"],
+            Tcp = new ProxyPortOptions { AllowedPorts = [7] }
+        }));
+        services.AddSingleton<IProxyStreamConnector>(new LoopbackStreamConnector(_echo.Port));
 
         _fakeHandler = new FakeHttpMessageHandler(new ProxyConnectionPinAccessor());
         services.AddSingleton<IHttpClientFactory>(new FakeHttpClientFactory(_fakeHandler));
@@ -55,7 +63,11 @@ public sealed class DirectServerConnectionClientsTests : IDisposable
         _provider = services.BuildServiceProvider();
     }
 
-    public void Dispose() => _provider.Dispose();
+    public void Dispose()
+    {
+        _provider.Dispose();
+        _echo.Dispose();
+    }
 
     // ── DirectAccountClient ──────────────────────────────────────────────────
 
@@ -147,6 +159,34 @@ public sealed class DirectServerConnectionClientsTests : IDisposable
             client.ExecuteHttpRequestAsync(
                 new Uri("https://ignored.example"), accessToken, BuildProxyRequest("http://example.com:8080/"), CancellationToken.None));
         Assert.Contains("BLOCKED_PORT", ex.Message);
+    }
+
+    [Fact]
+    public async Task DirectProxyClient_OpenStream_UsesTheServerSocketInProcess()
+    {
+        (_, _, string accessToken) = await RegisterDeviceAndIssueTokenAsync();
+        var client = _provider.GetRequiredService<IProxyClient>();
+
+        await using IProxyStreamChannel channel = await client.OpenStreamAsync(
+            new Uri("https://ignored.example"), accessToken, ProxyProtocol.Tcp,
+            new ProxyStreamRequest("echo.example.com", 7, "org.hackeros.test"), CancellationToken.None);
+        await channel.SendAsync(System.Text.Encoding.ASCII.GetBytes("ping"));
+        byte[]? echoed = await channel.ReceiveAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal("ping", System.Text.Encoding.ASCII.GetString(echoed!));
+    }
+
+    [Fact]
+    public async Task DirectProxyClient_OpenStream_ForAnUngrantedApp_ThrowsProxyStreamException()
+    {
+        (_, _, string accessToken) = await RegisterDeviceAndIssueTokenAsync();
+        var client = _provider.GetRequiredService<IProxyClient>();
+
+        var ex = await Assert.ThrowsAsync<ProxyStreamException>(() => client.OpenStreamAsync(
+            new Uri("https://ignored.example"), accessToken, ProxyProtocol.Tcp,
+            new ProxyStreamRequest("echo.example.com", 7, "org.example.unknown"), CancellationToken.None));
+
+        Assert.Equal(ProxyErrorCode.GrantMissing, ex.ErrorCode);
     }
 
     [Fact]

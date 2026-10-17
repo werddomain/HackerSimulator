@@ -27,13 +27,16 @@ public sealed record HackPortProbeResult(int Port, HackPortState State, string? 
 public sealed record HackOsFingerprint(string Name, string Version, int Accuracy);
 
 /// <summary>
-/// TCP connection probes, the part of <c>System.Net.Sockets.TcpClient</c> a port scanner needs
-/// (ADR 0056, section 6). Needs <c>network.simulated.read</c>.
+/// TCP connections and probes, the parts of <c>System.Net.Sockets.TcpClient</c> an app and a port
+/// scanner need (ADR 0056 section 6, ADR 0102 §2). Probes need <c>network.simulated.read</c>, a
+/// connection <c>network.simulated.write</c>.
 /// </summary>
 /// <remarks>
 /// For a host outside the simulated network, an app holding <c>network.real.access</c> can probe
 /// <b>one</b> port through the optional server (ADR 0035); a range against a real host is never
-/// relayed and reports the host as not found.
+/// relayed and reports the host as not found. <see cref="ConnectAsync"/> reaches such a host
+/// through the server's relay, on the ports its operator allows; the simulated network carries no
+/// raw byte streams, so a simulated host refuses the connection.
 /// </remarks>
 public static class HackTcpClient
 {
@@ -57,6 +60,29 @@ public static class HackTcpClient
             .CallAsync(gateway => gateway.ProbeTcpAsync(hostNameOrAddress, firstPort, lastPort, cancellationToken))
             .ConfigureAwait(false);
         return HackNetworkErrorTranslator.UnwrapSocket(result);
+    }
+
+    /// <summary>
+    /// Connects to <paramref name="hostNameOrAddress"/>:<paramref name="port"/> and returns the
+    /// connection's stream, as <c>new TcpClient().ConnectAsync(host, port)</c> then
+    /// <c>GetStream()</c> do. Dispose the stream to close the connection.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="port"/> is not within 1–65535.</exception>
+    /// <exception cref="System.Net.Sockets.SocketException">
+    /// The host is unknown (no route to the real network), refused the connection, or is unreachable.
+    /// </exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public static async Task<HackNetworkStream> ConnectAsync(
+        string hostNameOrAddress, int port, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostNameOrAddress);
+        ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
+
+        HackNetworkResult<IHackSocket> result = await HackNetworkErrorTranslator
+            .CallAsync(gateway => gateway.ConnectTcpAsync(hostNameOrAddress, port, cancellationToken))
+            .ConfigureAwait(false);
+        return new HackNetworkStream(HackNetworkErrorTranslator.UnwrapSocket(result));
     }
 
     /// <summary>Guesses the operating system of a host from its TCP/IP stack (<c>nmap -O</c>).</summary>

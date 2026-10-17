@@ -149,7 +149,7 @@ Deux écarts au plan, décidés dans ces ADR : la sauvegarde est téléchargée 
 l'hôte au lieu d'être écrite dans `~` (une archive de l'OS dépasse la limite de
 16 Mio par fichier, ADR 0099 §1) ; il n'y a pas de client du domaine de synchro
 `app_catalog`, le choix d'apps de l'utilisateur voyageant déjà comme fichier de
-`~/.config` (ADR 0101 §3). Le prochain numéro libre est 0107.
+`~/.config` (ADR 0101 §3). Le prochain numéro libre est 0108 (0107 : ajustements du relais, `v3/10`).
 
 ## 5. Hors périmètre
 
@@ -202,7 +202,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [ ] `v3/7-storage-backup`
 - [ ] `v3/8-settings-security`
 - [ ] `v3/9-sync`
-- [ ] `v3/10-server-proxy`
+- [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0107)
 - [ ] `v3/11-apps`
 - [ ] `v3/12-localization`
 - [ ] `v3/13-accessibility`

@@ -170,7 +170,7 @@ Façades statiques existantes au début de la phase 4 :
 | `HackEnvironment` | arguments, répertoire courant, variables | [`process-environment.md`](process-environment.md) |
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
-| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
+| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`), sockets relayés (`v3/10`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
 | `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
 | `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |

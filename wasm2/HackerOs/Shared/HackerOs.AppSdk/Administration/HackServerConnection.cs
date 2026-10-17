@@ -147,6 +147,23 @@ public static class HackServerConnection
     public static Task<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
         Call(context, gateway => gateway.GetConflictsAsync(cancellationToken));
 
+    /// <summary>
+    /// Gets the network relay policy of the connected server (ADR 0102 §5): which ports and
+    /// networks apps holding <c>network.real.access</c> can reach through it, and its quotas.
+    /// </summary>
+    /// <returns>The policy, or <see langword="null"/> when the device is not connected.</returns>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackServerConnectionException">The server could not be reached.</exception>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default) =>
+        GetRelayPolicyAsync(HackExecutionContext.Current, cancellationToken);
+
+    /// <summary>Gets the relay policy through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public static Task<HackServerRelayPolicy?> GetRelayPolicyAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
+        Call(context, gateway => gateway.GetRelayPolicyAsync(cancellationToken));
+
     private static void ValidateCredentials(Uri serverUrl, string login, string password)
     {
         ArgumentNullException.ThrowIfNull(serverUrl);

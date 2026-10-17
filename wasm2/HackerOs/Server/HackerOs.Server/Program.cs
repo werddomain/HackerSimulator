@@ -18,7 +18,10 @@ using Scalar.AspNetCore;
 // fully when this server is not reachable. The server provides:
 //   1. Sync — record-level versioned push/pull with explicit conflict resolution.
 //   2. Identity — account registration, device management, token refresh.
-//   3. Proxy — server-side validated HTTP/TCP/UDP proxy for authorized apps.
+//   3. Network relay — server-side validated HTTP requests (with their bodies), a single-port
+//      TCP probe, and TCP/UDP streams over WebSockets, for apps the server grants
+//      network.real.access to (ADR 0035, ADR 0102). Its policy and quotas are the
+//      HackerOs:Proxy section of appsettings.json; risky settings are logged at startup.
 //
 // Security: The server never trusts any client-side claims. It validates
 // every request against its own stored device policy and capability grants.
@@ -67,6 +70,17 @@ builder.Services.AddSingleton<IServerDatabaseBackupService, ServerDatabaseBackup
 builder.Services.AddSingleton<IProxyAddressResolver, SystemProxyAddressResolver>();
 builder.Services.AddSingleton<IProxyConnectionPinAccessor, ProxyConnectionPinAccessor>();
 builder.Services.AddSingleton<IProxyTcpConnector, SocketProxyTcpConnector>();
+builder.Services.AddSingleton<IProxyStreamConnector, SocketProxyStreamConnector>();
+builder.Services.AddScoped<IProxyGrantAuthority, ProxyGrantAuthority>();
+
+// ── Network relay policy (ADR 0102 §5) ────────────────────────────────────────
+// HackerOs:Proxy is read once at startup; ProxyRelayPolicy fills the defaults the binder cannot
+// (it appends to lists initialized in code), and ProxyPolicyStartupReporter logs a warning per
+// setting that weakens them.
+builder.Services.AddOptions<ProxyOptions>().Bind(builder.Configuration.GetSection(ProxyOptions.SectionName));
+builder.Services.AddSingleton(provider =>
+    ProxyRelayPolicy.From(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProxyOptions>>().Value));
+builder.Services.AddHostedService<ProxyPolicyStartupReporter>();
 
 // ── HTTP client for proxy outbound requests ───────────────────────────────────
 // The proxy service uses a named client with strict socket timeouts.
@@ -191,6 +205,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+// TCP/UDP relay streams (ADR 0102 §2, §3) are WebSockets; ping the client so an idle stream's
+// carrier is not cut by intermediaries before the relay's own idle timeout.
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
@@ -220,7 +237,7 @@ using (var scope = app.Services.CreateScope())
 app.MapVersionEndpoints();    // GET /api/version, POST /api/version/check
 app.MapIdentityEndpoints();   // POST /api/account, POST /api/auth/login, ...
 app.MapSyncEndpoints();       // POST /api/sync/pull, POST /api/sync/push, ...
-app.MapProxyEndpoints();      // POST /api/proxy/http, GET /api/proxy/policy
+app.MapProxyEndpoints();      // POST /api/proxy/http, /tcp-probe; WS /api/proxy/tcp, /udp; GET /api/proxy/policy
 app.MapAdminEndpoints();      // GET /health, GET /api/account/data-summary, ...
 
 // ── Server-hosted Blazor UI (ADR 0027) ────────────────────────────────────────

@@ -50,8 +50,8 @@ une cible locale est servie par la table des ports de l'OS, sur `lo`, et un nom
 | Opération | Capacité | Sans la capacité |
 |---|---|---|
 | DNS, ping, `GET`, `HEAD`, sondage de ports, détection d'OS | `network.simulated.read` (normale) | `UnauthorizedAccessException` (interne : `AppGatewayAccessDeniedException`) |
-| `POST` et toute autre méthode HTTP | `network.simulated.write` (normale) | idem |
-| Repli sur le réseau réel | `network.real.access` (dangereuse) | aucun repli : « hôte introuvable » |
+| `POST` et toute autre méthode HTTP, socket TCP ou UDP (`ConnectAsync`) | `network.simulated.write` (normale) | idem |
+| Repli sur le réseau réel | `network.real.access` (dangereuse), vérifiée aussi par le serveur (ADR 0102 §4) | aucun repli : « hôte introuvable » |
 | Écouter un port (`HackHttpListener`) hors de ses `web.urls` | `network.listen` (normale), plus `network.listen.privileged` (dangereuse) sous 1024 | `UnauthorizedAccessException` |
 
 Les classements sont inchangés (ADR 0049). Une app système reçoit ses capacités
@@ -103,21 +103,37 @@ Comportement HTTP :
 
 L'OS ne tente le réseau réel que si l'hôte n'existe pas dans le réseau simulé,
 que l'app a `network.real.access`, que le serveur optionnel est connecté et que
-`EnsureAccessTokenAsync` rend un jeton. Ce que le proxy sait relayer ne change
-pas (ADR 0028, 0034, 0035) :
+`EnsureAccessTokenAsync` rend un jeton. Depuis `v3/10-server-proxy`
+(ADR 0102, 0107, [`server-network-relay.md`](server-network-relay.md)), le
+serveur vérifie aussi l'accord de son côté et relaie :
 
 | Appel | Relais réel |
 |---|---|
-| `GET` | requête du proxy avec corps (`IncludeBody`) |
-| `HEAD` | requête du proxy sans corps |
+| `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`… | requête du proxy avec le corps de la requête (taille et hash vérifiés) et celui de la réponse |
+| `HEAD` | requête du proxy sans corps de réponse |
 | `HackPing.SendAsync` | `HEAD` chronométré : un navigateur ne peut pas envoyer d'ICMP ; `Address` vaut `null` |
 | `HackTcpClient.ProbeAsync` sur **un seul** port | sondage TCP du proxy (ADR 0035) ; une plage n'est jamais relayée |
-| DNS, détection d'OS, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` | jamais : « hôte introuvable » |
+| `HackTcpClient.ConnectAsync` | flux TCP en WebSocket (`HackNetworkStream`) |
+| `HackUdpClient.ConnectAsync` | datagrammes UDP en WebSocket |
+| DNS, détection d'OS | jamais : « hôte introuvable » |
 
 Une erreur du proxy (`ServerConnectionException`, `HttpRequestException`)
 devient `HackNetworkError.ConnectionFailed` pour HTTP et le sondage, et
-`TimedOut` pour un ping. Sans serveur, rien ne signale son absence : le
-résultat est celui d'une machine sans passerelle par défaut.
+`TimedOut` pour un ping. Un refus à l'ouverture d'un socket devient l'erreur
+d'une vraie pile (`SocketException` : `ConnectionRefused`, `HostUnreachable`
+ou `HostNotFound`, table dans `server-network-relay.md`). Sans serveur, rien
+ne signale son absence : le résultat est celui d'une machine sans passerelle
+par défaut.
+
+### Sockets TCP et UDP
+
+`HackTcpClient.ConnectAsync(host, port)` rend un `HackNetworkStream`
+(`ReadAsync`, `WriteAsync`, `RemoteEndPoint`, `0` lu quand la cible a fermé) ;
+`HackUdpClient.ConnectAsync(host, port)` rend un socket UDP « connecté »
+(`SendAsync`, `ReceiveAsync` → `HackUdpReceiveResult`, 65 507 octets au
+plus). Les deux demandent `network.simulated.write`. Le réseau simulé n'a pas
+de flux bruts : un hôte qu'il connaît, ou cette machine, refuse la connexion.
+Les appels synchrones lèvent `NotSupportedException`.
 
 ## Apps migrées
 

@@ -65,6 +65,11 @@ toute demande d'identifiants.
 la synchronisation ne fait rien. Les erreurs réseau deviennent
 `HackServerConnectionException`.
 
+`GetRelayPolicyAsync` rend la politique du relais réseau du serveur connecté
+(`HackServerRelayPolicy` : ports, plages privées, quotas, flux ouverts, apps
+accordées, avertissements), ou `null` sans serveur ; Paramètres l'affiche
+dans sa section du serveur ([`server-network-relay.md`](server-network-relay.md)).
+
 ### Alimentation (`system.power`)
 
 `HackSystem.RebootAsync` et `HackSystem.FactoryResetAsync` demandent toujours
