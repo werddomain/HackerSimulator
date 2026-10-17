@@ -27,11 +27,11 @@ public sealed class WindowGeometryPersistenceTests
         WindowGeometryPersistence persistence = new(settings);
 
         Assert.Null(await persistence.RestoreAsync(AppId));
-        Assert.True(await persistence.SaveAsync(AppId, new SavedWindowGeometry(new WindowBounds(10.5, 20, 640, 480), IsMaximized: false)));
+        Assert.True(await persistence.SaveAsync(AppId, new SavedWindowGeometry(640, 480, IsMaximized: false)));
 
-        Assert.Equal(new SavedWindowGeometry(new WindowBounds(10.5, 20, 640, 480), false), await persistence.RestoreAsync(AppId));
+        Assert.Equal(new SavedWindowGeometry(640, 480, false), await persistence.RestoreAsync(AppId));
         Assert.Equal(
-            "# Window geometry of org.hackeros.files (ADR 0116)\nx=10.5\ny=20\nwidth=640\nheight=480\nmaximized=false\n",
+            "# Window size of org.hackeros.files (ADR 0116, ADR 0122)\nwidth=640\nheight=480\nmaximized=false\n",
             settings.Files["windows/org.hackeros.files.config"]);
     }
 
@@ -41,9 +41,9 @@ public sealed class WindowGeometryPersistenceTests
         FakeOsSettingsService settings = new();
         WindowGeometryPersistence persistence = new(settings);
 
-        await persistence.SaveAsync(AppId, new SavedWindowGeometry(new WindowBounds(30, 40, 900, 600), IsMaximized: true));
+        await persistence.SaveAsync(AppId, new SavedWindowGeometry(900, 600, IsMaximized: true));
 
-        Assert.Equal(new SavedWindowGeometry(new WindowBounds(30, 40, 900, 600), true), await persistence.RestoreAsync(AppId));
+        Assert.Equal(new SavedWindowGeometry(900, 600, true), await persistence.RestoreAsync(AppId));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class WindowGeometryPersistenceTests
     {
         FakeOsSettingsService settings = new();
         WindowGeometryPersistence persistence = new(settings);
-        SavedWindowGeometry geometry = new(new WindowBounds(0, 0, 400, 300), false);
+        SavedWindowGeometry geometry = new(400, 300, false);
 
         Assert.True(await persistence.SaveAsync(AppId, geometry));
         Assert.False(await persistence.SaveAsync(AppId, geometry));
@@ -62,7 +62,7 @@ public sealed class WindowGeometryPersistenceTests
     [InlineData("")]
     [InlineData("x=1\ny=2\nwidth=3\n")]
     [InlineData("x=1\ny=2\nwidth=-3\nheight=4\n")]
-    [InlineData("x=one\ny=2\nwidth=3\nheight=4\n")]
+    [InlineData("width=one\nheight=4\n")]
     [InlineData("maximized=true\n")]
     public void Partial_or_invalid_file_means_default_placement(string content)
     {
@@ -73,10 +73,11 @@ public sealed class WindowGeometryPersistenceTests
     [InlineData("x=1\ny=2\nwidth=3\nheight=4\n", false)]
     [InlineData("x=1\ny=2\nwidth=3\nheight=4\nmaximized=true\n", true)]
     [InlineData("x=1\ny=2\nwidth=3\nheight=4\nmaximized=yes\n", false)]
+    [InlineData("width=3\nheight=4\nmaximized=true\n", true)]
     public void Maximized_is_optional_and_only_a_literal_true_maximizes(string content, bool maximized)
     {
-        // ADR 0116 §2: files written before the fifth key still restore, as normal windows.
-        Assert.Equal(new SavedWindowGeometry(new WindowBounds(1, 2, 3, 4), maximized), WindowGeometrySettings.Parse(content));
+        // Files written before ADR 0122 (with x= and y=) still restore their size; the position is ignored.
+        Assert.Equal(new SavedWindowGeometry(3, 4, maximized), WindowGeometrySettings.Parse(content));
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class WindowGeometryPersistenceTests
         FakeOsSettingsService settings = new() { NoSession = true };
         WindowGeometryPersistence persistence = new(settings);
 
-        Assert.False(await persistence.SaveAsync(AppId, new SavedWindowGeometry(new WindowBounds(0, 0, 100, 100), false)));
+        Assert.False(await persistence.SaveAsync(AppId, new SavedWindowGeometry(100, 100, false)));
     }
 
     /// <summary>Whole-file part of <see cref="IOsSettingsService"/> over a dictionary keyed by relative path.</summary>

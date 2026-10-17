@@ -87,10 +87,10 @@ public sealed record WindowOptions
     public bool Resizable { get; init; }
 
     /// <summary>
-    /// Gets whether the OS remembers this window's size, position and maximized state between two
-    /// openings (ADR 0116). Defaults to <see langword="true"/>. An app that must always open at its
-    /// default place (a calculator, a wizard) sets it to <see langword="false"/>; its window then
-    /// always opens at its cascade slot with its declared default size.
+    /// Gets whether the OS remembers this window's size and maximized state between two openings
+    /// (ADR 0116; never its position, ADR 0122: the window always opens at its cascade slot, as under
+    /// GNOME). Defaults to <see langword="true"/>. An app that must always open at its declared size
+    /// (a calculator, a wizard) sets it to <see langword="false"/>.
     /// </summary>
     /// <remarks>
     /// The geometry is device-local state in <c>~/.local/state/hackeros/windows/&lt;appId&gt;.config</c>,

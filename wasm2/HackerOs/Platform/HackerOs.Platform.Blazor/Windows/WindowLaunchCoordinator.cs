@@ -12,12 +12,6 @@ public sealed class WindowLaunchCoordinator
     /// <summary>Offset between two windows of the same app, and between two cascade slots, in CSS pixels.</summary>
     public const double CascadeStep = 28;
 
-    /// <summary>Width of the title bar that must stay on screen when restoring a saved position (ADR 0116 §4).</summary>
-    public const double MinimumVisibleTitleBarWidth = 48;
-
-    /// <summary>Height of the default title bar (<c>--hos-titlebar-height</c>), kept inside the work area.</summary>
-    private const double TitleBarHeight = 38;
-
     private readonly WindowRuntime _windows;
     private readonly Func<AppManifest, string> _title;
     private readonly WindowGeometryRecorder? _geometry;
@@ -142,10 +136,10 @@ public sealed class WindowLaunchCoordinator
                 return true;
             }
 
-            int sameAppWindows = _windows.Windows.Count(window => window.AppId == manifest.Id);
+            int cascadeIndex = _windows.Windows.Count % 8;
             WindowBounds bounds = saved is null
-                ? InitialBounds(options, _windows.Windows.Count % 8, _windows.WorkArea)
-                : RestoredBounds(options, saved.Bounds, sameAppWindows, _windows.WorkArea);
+                ? InitialBounds(options, cascadeIndex, _windows.WorkArea)
+                : RestoredBounds(options, saved.Width, saved.Height, cascadeIndex, _windows.WorkArea);
             WindowRuntimeState state = new(
                 WindowId.FromGuid(Guid.NewGuid()),
                 manifest.Id,
@@ -216,41 +210,31 @@ public sealed class WindowLaunchCoordinator
     }
 
     /// <summary>
-    /// Places a window at its saved geometry (ADR 0116 §4), corrected for what may have changed since
-    /// it was written: the size is brought between the minimum and maximum the app declares
-    /// <em>today</em> (a fixed-size window takes its declared size), then shrunk to the work area without
-    /// going below the minimum; the position keeps at least <see cref="MinimumVisibleTitleBarWidth"/>
-    /// pixels of the title bar on screen horizontally and the top of the window inside the work area,
-    /// like a window manager that lost a monitor. A second window of the same app is offset by
-    /// <see cref="CascadeStep"/> per window already open, so it does not exactly cover the first.
+    /// Opens a window at its cascade slot with its saved size (ADR 0116 §4 as amended by ADR 0122:
+    /// size only, never the position, like a GTK app under GNOME), corrected for what may have changed
+    /// since it was written: the size is brought between the minimum and maximum the app declares
+    /// <em>today</em> (a fixed-size window takes its declared size), then shrunk to the work area
+    /// without going below the minimum.
     /// </summary>
-    /// <remarks>
-    /// <see cref="WindowRuntime"/> applies its own constraint afterwards and keeps a normal window
-    /// inside the work area, so the window always ends up fully reachable.
-    /// </remarks>
     /// <param name="options">Declared or default window options.</param>
-    /// <param name="saved">Normal bounds read from the state file.</param>
-    /// <param name="sameAppWindows">Windows of the same app already open.</param>
+    /// <param name="savedWidth">Normal width read from the state file.</param>
+    /// <param name="savedHeight">Normal height read from the state file.</param>
+    /// <param name="cascadeIndex">Cascade slot, 0 to 7.</param>
     /// <param name="workArea">Current desktop work area.</param>
-    public static WindowBounds RestoredBounds(WindowOptions options, WindowBounds saved, int sameAppWindows, WindowBounds workArea)
+    public static WindowBounds RestoredBounds(
+        WindowOptions options, double savedWidth, double savedHeight, int cascadeIndex, WindowBounds workArea)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentOutOfRangeException.ThrowIfNegative(sameAppWindows);
 
-        double width = options.Resizable ? saved.Width : options.DefaultWidth;
-        double height = options.Resizable ? saved.Height : options.DefaultHeight;
+        double width = options.Resizable ? savedWidth : options.DefaultWidth;
+        double height = options.Resizable ? savedHeight : options.DefaultHeight;
         width = Math.Max(options.MinWidth, Math.Min(width, options.MaxWidth ?? double.MaxValue));
         height = Math.Max(options.MinHeight, Math.Min(height, options.MaxHeight ?? double.MaxValue));
         width = Math.Max(options.MinWidth, Math.Min(width, workArea.Width));
         height = Math.Max(options.MinHeight, Math.Min(height, workArea.Height));
 
-        double offset = sameAppWindows * CascadeStep;
-        double minimumX = workArea.X - width + MinimumVisibleTitleBarWidth;
-        double maximumX = workArea.X + workArea.Width - MinimumVisibleTitleBarWidth;
-        double maximumY = Math.Max(workArea.Y, workArea.Y + workArea.Height - TitleBarHeight);
-        double x = Math.Clamp(saved.X + offset, minimumX, Math.Max(minimumX, maximumX));
-        double y = Math.Clamp(saved.Y + offset, workArea.Y, maximumY);
-        return new WindowBounds(x, y, width, height);
+        WindowBounds slot = InitialBounds(options, cascadeIndex, workArea);
+        return new WindowBounds(slot.X, slot.Y, width, height);
     }
 
     private bool FocusExisting(WindowOwnerId ownerInstanceId)

@@ -6,14 +6,15 @@ using Xunit.Abstractions;
 namespace HackerOs.UI.E2E.Tests;
 
 /// <summary>
-/// ADR 0116: a window moved and resized with the pointer reopens at the same place after being
-/// closed, and again after the page is reloaded and the user signs back in, because the geometry
-/// lives in <c>~/.local/state/hackeros/windows/&lt;appId&gt;.config</c> on the virtual disk.
+/// ADR 0116 as amended by ADR 0122: a window moved and resized with the pointer reopens with the
+/// same size, at its cascade slot (the position is not remembered, as under GNOME), after being
+/// closed, and again after the page is reloaded and the user signs back in, because the size lives
+/// in <c>~/.local/state/hackeros/windows/&lt;appId&gt;.config</c> on the virtual disk.
 /// </summary>
 public sealed class WindowGeometryRestoreTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task A_moved_and_resized_window_reopens_at_the_same_place_after_close_and_reload()
+    public async Task A_resized_window_reopens_with_its_size_after_close_and_reload()
     {
         string solutionDirectory = E2ESupport.FindSolutionDirectory();
         int port = E2ESupport.ReservePort();
@@ -53,14 +54,15 @@ public sealed class WindowGeometryRestoreTests(ITestOutputHelper output)
             await Assertions.Expect(window).ToHaveAttributeAsync("data-window-width", Format(opened.width + 80));
             (double x, double y, double width, double height) moved = await BoundsAsync(window);
             output.WriteLine($"[test] moved and resized to {moved}.");
+            (double x, double y, double width, double height) expected = (opened.x, opened.y, moved.width, moved.height);
 
             await window.Locator("button.chrome-button-close").ClickAsync();
             await Assertions.Expect(window).ToHaveCountAsync(0, new() { Timeout = 15000 });
 
             await E2ESupport.OpenAppAsync(page, "Text Editor", output);
             await Assertions.Expect(window).ToHaveCountAsync(1, new() { Timeout = 15000 });
-            Assert.Equal(moved, await BoundsAsync(window));
-            output.WriteLine("[test] the window reopened where it was closed.");
+            Assert.Equal(expected, await BoundsAsync(window));
+            output.WriteLine("[test] the window reopened with its size, at its cascade slot.");
 
             // Give the grouped write time to land, then reload: the session ends, the file stays.
             await page.WaitForTimeoutAsync(1500);
@@ -74,8 +76,8 @@ public sealed class WindowGeometryRestoreTests(ITestOutputHelper output)
 
             await E2ESupport.OpenAppAsync(page, "Text Editor", output);
             await Assertions.Expect(window).ToHaveCountAsync(1, new() { Timeout = 15000 });
-            Assert.Equal(moved, await BoundsAsync(window));
-            output.WriteLine("[test] the window reopened at the same place after a reload.");
+            Assert.Equal(expected, await BoundsAsync(window));
+            output.WriteLine("[test] the window reopened with the same size after a reload.");
 
             Assert.Empty(consoleErrors);
         }
