@@ -12,6 +12,9 @@ using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Ecosystem.Administration;
 using HackerOs.Platform.Core.Administration;
 using HackerOs.Platform.Core.Power;
+using HackerOs.Platform.Core.Backup;
+using HackerOs.Platform.Core.Storage;
+using HackerOs.Infrastructure.Browser.Storage;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core;
 using HackerOs.Platform.WorkerHost.Host;
@@ -408,6 +411,25 @@ public static class EcosystemServiceCollectionExtensions
         // Raw storage snapshot behind HackStorageDiagnostics (ADR 0056 section 11).
         services.AddScoped<IStorageInspector>(provider =>
             new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        // Whole-machine backup and restore behind HackSystemBackup (ADR 0099 section 1): IndexedDB
+        // export/import, download to the host and the host's file picker. Browser hosts only: the
+        // server-rendered host (ADR 0027) would carry the whole database over its circuit, so it
+        // leaves the gateway unsupported and Settings hides the page.
+        services.AddScoped<ISystemBackupDevice>(provider =>
+            new BrowserSystemBackupDevice(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddScoped<SystemBackupService>(provider => new SystemBackupService(
+            provider.GetRequiredService<ISystemBackupDevice>(),
+            provider.GetRequiredService<SystemPowerService>(),
+            provider.GetRequiredService<IAuditLog>()));
+        // Free space of the browser storage (ADR 0099 section 2): the low-space warning, the root
+        // reserve the filesystem enforces, and the real figures behind df.
+        services.AddScoped<IStorageCapacityProbe>(provider =>
+            new BrowserStorageManager(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
+        services.AddScoped<StorageSpaceMonitor>(provider => new StorageSpaceMonitor(
+            provider.GetRequiredService<IStorageCapacityProbe>(),
+            provider.GetRequiredService<INotificationQueue>(),
+            () => provider.GetRequiredService<ISessionService>().CurrentPrincipal));
+        services.AddScoped<IStorageSpaceGuard>(provider => provider.GetRequiredService<StorageSpaceMonitor>());
 
         // User keyring (ADR 0100 section 2): ~/.local/share/keyrings/login.keyring, sealed with
         // AES-GCM through Web Crypto, unlocked by the session service at login.
@@ -572,7 +594,8 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IOsSettingsService>()),
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
-                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>(),
+                OperatingSystem.IsBrowser() ? () => provider.GetRequiredService<SystemBackupService>() : null)));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
             new HackerOs.Platform.Core.Clipboard.SystemClipboard(
                 provider.GetRequiredService<IEventBus>(),

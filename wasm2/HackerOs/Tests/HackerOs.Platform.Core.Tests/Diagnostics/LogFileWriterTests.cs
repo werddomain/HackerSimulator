@@ -306,6 +306,30 @@ public sealed class LogFileWriterTests
         Assert.False(write.Succeeded);
     }
 
+    [Fact]
+    public async Task Lines_refused_for_lack_of_space_are_counted_then_reported_once_space_returns()
+    {
+        LogTestFileSystem fs = await LogTestFileSystem.CreateAsync();
+        FullDiskFileSystem disk = new(fs.Service) { IsFull = true };
+        LogFileWriter writer = new(fs.Clock);
+        await writer.AttachAsync(disk);
+
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "one");
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "two");
+        await writer.FlushAsync();
+        Assert.Equal(2, writer.PendingNoSpaceLoss);
+
+        disk.IsFull = false;
+        writer.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", "three");
+        await writer.FlushAsync();
+
+        string[] lines = await fs.ReadLinesAsync("/var/log/syslog");
+        Assert.Equal(0, writer.PendingNoSpaceLoss);
+        Assert.Single(lines, line => line.EndsWith("WARN  logging: 2 lines lost (No space left on device)", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.EndsWith("kernel: three", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.EndsWith("kernel: one", StringComparison.Ordinal));
+    }
+
     private sealed class EmptySource : IFileSystemContentSource
     {
         public FileSystemContentDescriptor Descriptor { get; } = FileSystemContentDescriptor.Text();
@@ -314,6 +338,29 @@ public sealed class LogFileWriterTests
 
         public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(string.Empty)));
+    }
+
+    /// <summary>A filesystem that refuses every write with <c>ENOSPC</c> while <see cref="IsFull"/>.</summary>
+    private sealed class FullDiskFileSystem(IFileSystemService inner) : IFileSystemService
+    {
+        public bool IsFull { get; set; }
+
+        public string ProviderId => inner.ProviderId;
+
+        public ValueTask<FileSystemMutationResult> WriteAsync(FileSystemWriteRequest request, IFileSystemContentSource content, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) =>
+            IsFull
+                ? ValueTask.FromResult(new FileSystemMutationResult(FileSystemTransactionResult.Rejected(
+                    Guid.NewGuid(), new FileSystemError(FileSystemOperation.Write, FileSystemErrorCode.NoSpace, request.Path))))
+                : inner.WriteAsync(request, content, context, cancellationToken);
+
+        public ValueTask<FileSystemMutationResult> CreateAsync(FileSystemCreateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.CreateAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(FileSystemReadRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.ReadAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemDirectorySnapshot>> EnumerateAsync(FileSystemEnumerateRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.EnumerateAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> MoveAsync(FileSystemMoveRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.MoveAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> CopyAsync(FileSystemCopyRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.CopyAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> DeleteAsync(FileSystemDeleteRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.DeleteAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemResult<FileSystemEntrySnapshot>> StatAsync(FileSystemStatRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.StatAsync(request, context, cancellationToken);
+        public ValueTask<FileSystemMutationResult> SetPermissionsAsync(FileSystemSetPermissionsRequest request, FileSystemAuthorizationContext context, CancellationToken cancellationToken = default) => inner.SetPermissionsAsync(request, context, cancellationToken);
     }
 
     /// <summary>A filesystem whose writes never complete and ignore cancellation, like a JS call on a dead circuit.</summary>

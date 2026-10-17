@@ -227,6 +227,7 @@ public sealed class MkdirCommand : TerminalAppBase
     {
         FileSystemErrorCode.AlreadyExists => "File exists",
         FileSystemErrorCode.NotFound => "No such file or directory",
+        FileSystemErrorCode.NoSpace => "No space left on device",
         FileSystemErrorCode.NotDirectory => "Not a directory",
         FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied => "Permission denied",
         null => "Operation failed",

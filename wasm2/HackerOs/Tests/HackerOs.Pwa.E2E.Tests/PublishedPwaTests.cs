@@ -10,7 +10,8 @@ namespace HackerOs.Pwa.E2E.Tests;
 /// described by <c>docs/integration-audit-remediation.md</c> Wave C / <c>P2-PWA-007</c>:
 /// first online visit, installability, service-worker activation, server-unavailable
 /// reload, real browser-offline reload, file/settings persistence, update-waiting/safe
-/// activation, and release-asset consistency (P2-ACC-015 / P2-ACC-016).
+/// activation, and release-asset consistency (P2-ACC-015 / P2-ACC-016), plus the
+/// corrupted-cache recovery of ADR 0099 §3, online and offline.
 ///
 /// Browser-support policy: Chromium only (same as every other Playwright suite in this
 /// repo, launched with <c>Channel = "chrome"</c>). Firefox/Safari are not covered by
@@ -206,45 +207,96 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
     }
 
     /// <summary>
-    /// Documents actual behavior rather than an assumed one: the service worker's cache-first
-    /// fetch handler (service-worker.published.js) performs no runtime integrity re-check —
-    /// integrity is only verified once, at `install` time — so a cache entry corrupted after
-    /// activation is served as-is. This proves that observed reality instead of asserting an
-    /// unimplemented "corrupt-cache recovery" behavior.
+    /// ADR 0099 §3, online: a boot resource damaged inside the service worker's cache fails
+    /// Blazor's integrity check; index.html's boot guard asks the worker (RESET_CACHE) to
+    /// refill its cache from the server and reloads once; the app then boots and the cache
+    /// holds the genuine bytes again. Replaces the former test that only proved corrupted
+    /// bytes were served as they were.
     /// </summary>
     [Fact]
-    public async Task Corrupting_a_cached_asset_offline_serves_the_corrupted_bytes_verbatim()
+    public async Task Corrupted_boot_resource_in_the_cache_is_downloaded_again_and_the_app_boots_after_one_reload()
     {
         int port = PublishedAppHost.ReservePort();
         await using PublishedAppHost host = new();
         await host.StartAsync(fixture.V1WwwrootPath, port);
 
         using IPlaywright playwright = await Playwright.CreateAsync();
-        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright, 
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright,
             new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
         await using IBrowserContext context = await browser.NewContextAsync();
         IPage page = await context.NewPageAsync();
+        PwaTestSupport.AttachDiagnostics(page);
 
         await PwaTestSupport.NavigateWhenReadyAsync(page, host.Address);
         await PwaTestSupport.WaitForServiceWorkerControllerAsync(page);
-        string version = await PwaTestSupport.GetAssetsManifestVersionAsync(page);
-        string cacheName = $"hackeros-cache-{version}";
+        await PwaTestSupport.WaitForOnboardingAsync(page);
+        string cacheName = $"hackeros-cache-{await PwaTestSupport.GetAssetsManifestVersionAsync(page)}";
+        string damagedUrl = await PwaTestSupport.CorruptCachedBootResourceAsync(page, cacheName);
 
-        await page.EvaluateAsync(
-            """
-            async (cacheName) => {
-                const cache = await caches.open(cacheName);
-                await cache.put('manifest.webmanifest', new Response('CORRUPTED-BY-TEST', { status: 200, headers: { 'Content-Type': 'application/manifest+json' } }));
-            }
-            """,
-            cacheName);
+        int loads = 0;
+        void OnLoad(object? _, IPage _1) => Interlocked.Increment(ref loads);
+        page.Load += OnLoad;
+        try
+        {
+            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await PwaTestSupport.WaitForOnboardingAsync(page, timeoutMs: 60000);
+        }
+        finally
+        {
+            page.Load -= OnLoad;
+        }
+
+        // Our reload, then exactly one recovery reload.
+        Assert.Equal(2, loads);
+        Assert.True(await PwaTestSupport.GetCachedLengthAsync(page, cacheName, damagedUrl) > PwaTestSupport.CorruptedBody.Length);
+        Assert.Equal([cacheName], await PwaTestSupport.GetCacheKeysAsync(page));
+        // A successful boot clears the one-reload guard again.
+        Assert.Null(await page.EvaluateAsync<string?>("() => sessionStorage.getItem('hackeros.bootRecovery')"));
+    }
+
+    /// <summary>
+    /// ADR 0099 §3, offline: the same damaged cache cannot be repaired without the server, so
+    /// the worker keeps it untouched and the boot-error screen tells the user to reconnect
+    /// once; after reconnecting, Retry repairs the cache and the app boots.
+    /// Playwright's offline emulation does not reach the service worker's own fetches, so the
+    /// origin server is stopped as well (the worker then really cannot reach it).
+    /// </summary>
+    [Fact]
+    public async Task Corrupted_cache_offline_asks_to_reconnect_once_and_recovers_when_back_online()
+    {
+        int port = PublishedAppHost.ReservePort();
+        await using PublishedAppHost host = new();
+        await host.StartAsync(fixture.V1WwwrootPath, port);
+
+        using IPlaywright playwright = await Playwright.CreateAsync();
+        await using IBrowser browser = await ChromiumLauncher.LaunchAsync(playwright,
+            new BrowserTypeLaunchOptions { Channel = "chrome", Headless = true });
+        await using IBrowserContext context = await browser.NewContextAsync();
+        IPage page = await context.NewPageAsync();
+        PwaTestSupport.AttachDiagnostics(page);
+
+        await PwaTestSupport.NavigateWhenReadyAsync(page, host.Address);
+        await PwaTestSupport.WaitForServiceWorkerControllerAsync(page);
+        await PwaTestSupport.WaitForOnboardingAsync(page);
+        string cacheName = $"hackeros-cache-{await PwaTestSupport.GetAssetsManifestVersionAsync(page)}";
+        string damagedUrl = await PwaTestSupport.CorruptCachedBootResourceAsync(page, cacheName);
 
         await context.SetOfflineAsync(true);
-        // Fetch from inside the page (not page.APIRequest, which uses Playwright's own HTTP
-        // client and is never intercepted by the service worker) so the request actually
-        // goes through the SW's cache-first onFetch handler.
-        string body = await page.EvaluateAsync<string>(
-            "async () => (await fetch('manifest.webmanifest')).text()");
-        Assert.Equal("CORRUPTED-BY-TEST", body);
+        await host.StopAsync();
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+
+        ILocator bootError = page.Locator("#hackeros-boot-error[data-state='offline']");
+        await bootError.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
+        await Assertions.Expect(bootError.Locator(".boot-error-offline")).ToBeVisibleAsync();
+        await Assertions.Expect(bootError.Locator(".boot-error-offline")).ToContainTextAsync("Reconnect");
+        // Nothing was thrown away while offline: the shell can still explain the failure.
+        Assert.Equal(PwaTestSupport.CorruptedBody.Length, await PwaTestSupport.GetCachedLengthAsync(page, cacheName, damagedUrl));
+
+        await host.StartAsync(fixture.V1WwwrootPath, port);
+        await context.SetOfflineAsync(false);
+        await bootError.GetByRole(AriaRole.Button, new() { Name = "Retry" }).ClickAsync();
+
+        await PwaTestSupport.WaitForOnboardingAsync(page, timeoutMs: 60000);
+        Assert.True(await PwaTestSupport.GetCachedLengthAsync(page, cacheName, damagedUrl) > PwaTestSupport.CorruptedBody.Length);
     }
 }

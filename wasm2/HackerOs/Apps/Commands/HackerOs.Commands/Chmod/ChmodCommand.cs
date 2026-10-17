@@ -277,6 +277,7 @@ public sealed class ChmodCommand : TerminalAppBase
     {
         FileSystemErrorCode.PermissionDenied => "Operation not permitted",
         FileSystemErrorCode.NotFound => "No such file or directory",
+        FileSystemErrorCode.NoSpace => "No space left on device",
         null => "Operation failed",
         _ => code.Value.ToString()
     };

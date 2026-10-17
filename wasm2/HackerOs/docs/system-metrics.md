@@ -109,7 +109,7 @@ persistés.
 | `ProcFileSystemProvider` + `ProcMetricsSources` | `Platform.Core/FileSystem/Virtual` | rend les fichiers |
 | `AppDriveGateway` | `Platform.Core/Execution` | `statfs` de l'OS derrière `HackDriveInfo` |
 | `IndexedDbInteropAdapter` | `Infrastructure.Browser/Interop` | chronomètre chaque transaction et la signale à `hda` |
-| `IndexedDbStorageUsageProvider` | `Infrastructure.Browser/FileSystem` | espace occupé (contenu dédupliqué) et quota (`navigator.storage.estimate()`) |
+| `IndexedDbStorageUsageProvider` | `Infrastructure.Browser/FileSystem` | espace occupé et quota réels du navigateur (`navigator.storage.estimate()`, ADR 0099 §2) ; sans quota connu, contenu dédupliqué |
 
 Branchement : `EcosystemServiceCollectionExtensions` enregistre les compteurs en
 `Scoped` (une instance par machine, comme le gestionnaire de processus), les
@@ -238,9 +238,11 @@ parce que le routeur le contient.
 
 - **taille** : `StorageCapacityBytes`, ramenée au quota du navigateur quand il
   est plus petit ;
-- **occupé** : somme des longueurs des contenus distincts référencés par une
-  entrée de fichier (deux fichiers identiques comptent une fois, comme leurs
-  blocs dédupliqués) ;
+- **occupé** : depuis l'ADR 0099 §2, tout ce que l'origine stocke d'après
+  `navigator.storage.estimate()` (fichiers, comptes, réglages, bases des
+  sites). Quand le navigateur ne donne pas de quota, c'est encore la somme des
+  longueurs des contenus distincts référencés par une entrée de fichier (deux
+  fichiers identiques comptent une fois, comme leurs blocs dédupliqués) ;
 - **libre** : taille − occupé, jamais négatif.
 
 Aucune capacité n'est demandée, comme `df`.
@@ -284,6 +286,10 @@ seuls le propriétaire et l'autorité `System` le lisent.
 - **`HackDriveInfo` lit ses valeurs une fois.** Le navigateur ne répond qu'en
   asynchrone ; `GetDrivesAsync` rend des instances figées, à redemander pour des
   valeurs fraîches.
+- **Chiffres réels du navigateur (ADR 0099 §2).** `df` montre l'utilisé et
+  le quota de `navigator.storage.estimate()` ; la réserve de root et l'alerte
+  d'espace faible utilisent les mêmes chiffres
+  ([`system-backup.md`](system-backup.md#espace-de-stockage-adr-0099-2)).
 - **Espace occupé sans les blocs orphelins.** Les blocs en attente de nettoyage
   ne sont plus référencés par aucun fichier et ne sont pas comptés.
 

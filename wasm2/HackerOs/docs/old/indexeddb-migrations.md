@@ -12,7 +12,14 @@ The upgrade transaction is aborted when the selected targets are missing, duplic
 
 ## Current Fixtures
 
-Schema version `0` is the browser-defined state where the database does not yet exist. The `0 -> 1` fixture is represented by an empty database and the version-one step creates all canonical stores and indexes. There are no historical published schema versions yet.
+> **Superseded (2026-10-17, ADR 0099 section 4).** The text below described the state before
+> any version was released. Upgrade fixtures now live in `Tests/fixtures/indexeddb/`
+> (`hackeros-v2.json`, `hackeros-v3.json`), are produced by booting the OS of an old commit, and
+> are replayed by `HackerOs.UI.E2E.Tests.IndexedDbUpgradeFixtureTests`. Version 1 has no fixture:
+> it never existed in any commit of the repository (the root commit `fdca68e` already declares
+> version 2). Procedure and rule: [`building-and-testing.md`](../building-and-testing.md#fixtures-de-montée-de-version-indexeddb).
+
+Schema version `0` is the browser-defined state where the database does not yet exist. The `0 -> 1` fixture is represented by an empty database and the version-one step creates all canonical stores and indexes. ~~There are no historical published schema versions yet.~~ (Historical versions 2 and 3 now exist; see the note above.)
 
 When version `2` is introduced, its change must include:
 

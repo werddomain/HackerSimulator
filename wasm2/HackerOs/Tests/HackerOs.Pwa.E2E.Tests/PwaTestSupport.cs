@@ -118,6 +118,41 @@ internal static class PwaTestSupport
         }
     }
 
+    /// <summary>Body written over a cached boot resource by <see cref="CorruptCachedBootResourceAsync"/>.</summary>
+    public const string CorruptedBody = "CORRUPTED-BY-TEST";
+
+    /// <summary>Waits for the onboarding form, the first view of a booted OS with no profile yet.</summary>
+    public static Task WaitForOnboardingAsync(IPage page, float timeoutMs = 20000) =>
+        page.GetByLabel("Login name").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeoutMs });
+
+    /// <summary>
+    /// Overwrites <c>System.Private.CoreLib.*.wasm</c> (needed by every boot) in the service
+    /// worker's release cache, as a damaged disk or an interrupted write would, and returns its URL.
+    /// </summary>
+    public static Task<string> CorruptCachedBootResourceAsync(IPage page, string cacheName) =>
+        page.EvaluateAsync<string>(
+            """
+            async ([cacheName, body]) => {
+                const cache = await caches.open(cacheName);
+                const target = (await cache.keys()).find(r => /System\.Private\.CoreLib\.[^/]*\.wasm$/.test(r.url));
+                await cache.put(target, new Response(body, { headers: { 'Content-Type': 'application/wasm' } }));
+                return target.url;
+            }
+            """,
+            new object[] { cacheName, CorruptedBody });
+
+    /// <summary>Byte length of <paramref name="url"/> in the given cache, or -1 when it is absent.</summary>
+    public static Task<int> GetCachedLengthAsync(IPage page, string cacheName, string url) =>
+        page.EvaluateAsync<int>(
+            """
+            async ([cacheName, url]) => {
+                const response = await (await caches.open(cacheName)).match(url);
+                return response ? (await response.arrayBuffer()).byteLength : -1;
+            }
+            """,
+            new object[] { cacheName, url });
+
     public static Task<string[]> GetCacheKeysAsync(IPage page) =>
         page.EvaluateAsync<string[]>("async () => await caches.keys()");
 

@@ -102,7 +102,20 @@ public enum FileSystemErrorCode
     ProviderUnavailable = 1700,
 
     /// <summary>The provider failed without exposing infrastructure details.</summary>
-    ProviderFailure = 1701
+    ProviderFailure = 1701,
+
+    /// <summary>
+    /// The storage is full, or the free space left is reserved for the administrator and the
+    /// system (ADR 0099, section 2): Linux <c>ENOSPC</c>, "No space left on device". Nothing of
+    /// the operation was committed.
+    /// </summary>
+    NoSpace = 1800,
+
+    /// <summary>
+    /// The content exceeds the largest file the storage accepts, 16 MiB (ADR 0094): Linux
+    /// <c>EFBIG</c>, "File too large". Nothing of the operation was committed.
+    /// </summary>
+    FileTooLarge = 1801
 }
 
 /// <summary>Describes one unsuccessful filesystem operation.</summary>

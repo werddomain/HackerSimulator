@@ -59,6 +59,102 @@ body {
     content: var(--blazor-load-percentage-text, "Loading");
 }
 
+/* ADR 0099 §3: fatal boot-error screen of index.html (damaged PWA cache). The boot guard
+   adds .hackeros-boot-failed to <html> and sets data-state on the panel. Blazor's own
+   error bar and the progress ring are hidden: the panel explains the failure instead. */
+.hackeros-boot-failed .loading-progress,
+.hackeros-boot-failed .loading-progress-text,
+.hackeros-boot-failed #blazor-error-ui {
+    display: none !important;
+}
+
+#hackeros-boot-error {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.75rem;
+    box-sizing: border-box;
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    color: var(--hos-text-primary, #f4f7f8);
+    font-family: var(--hos-font-mono, "Cascadia Mono", Consolas, monospace);
+    line-height: 1.5;
+}
+
+#hackeros-boot-error[hidden] {
+    display: none;
+}
+
+#hackeros-boot-error h1 {
+    margin: 0 0 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 0.25rem solid #ff5f56;
+    font-size: 1.35rem;
+    letter-spacing: 0.04em;
+}
+
+#hackeros-boot-error h1::before {
+    content: "[ boot ] ";
+    color: #ff5f56;
+}
+
+#hackeros-boot-error p {
+    display: none;
+    margin: 0;
+}
+
+#hackeros-boot-error[data-state="repairing"] .boot-error-repairing,
+#hackeros-boot-error[data-state="offline"] .boot-error-offline,
+#hackeros-boot-error[data-state="failed"] .boot-error-failed {
+    display: block;
+}
+
+#hackeros-boot-error[data-state="repairing"] .boot-error-repairing::after {
+    content: " _";
+    animation: hackeros-boot-cursor 1s steps(1) infinite;
+}
+
+#hackeros-boot-error .boot-error-detail:not(:empty) {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    overflow-wrap: anywhere;
+    background: #172025;
+    color: var(--hos-text-secondary, #a8bac4);
+    font-size: 0.8rem;
+}
+
+#hackeros-boot-error .boot-error-retry {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--hos-accent, #42d392);
+    background: transparent;
+    color: var(--hos-accent, #42d392);
+    font: inherit;
+    cursor: pointer;
+}
+
+#hackeros-boot-error .boot-error-retry:hover,
+#hackeros-boot-error .boot-error-retry:focus-visible {
+    background: var(--hos-accent, #42d392);
+    color: #101417;
+    outline: none;
+}
+
+#hackeros-boot-error[data-state="repairing"] .boot-error-retry {
+    display: none;
+}
+
+@keyframes hackeros-boot-cursor {
+    50% {
+        opacity: 0;
+    }
+}
+
 /* SettingsWindow sets TabHeaderClass="hos-tab-header" because Blazor CSS
    isolation cannot reliably reach MudTabs' generated header. Values still
    come from the shared ThemeScope; this rule owns no palette. */

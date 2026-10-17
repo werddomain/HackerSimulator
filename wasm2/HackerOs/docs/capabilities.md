@@ -45,6 +45,7 @@ classement.
 | `server.connection.manage` | **dangereuse** (`HackServerConnection`, ADR 0056 §10 ; déclarée par Paramètres) |
 | `system.power` | **dangereuse** (`HackSystem` : redémarrage, réinitialisation, ADR 0056 §11 ; déclarée par Paramètres) |
 | `system.storage.inspect` | **dangereuse** (`HackStorageDiagnostics`, ADR 0056 §11 ; déclarée par Diagnostic, seule app non système de la base à demander une approbation au premier lancement) |
+| `system.backup` | **dangereuse** (`HackSystemBackup` : sauvegarder et restaurer toute la machine, ADR 0099 §1 ; déclarée par Paramètres, et par `hackbackup` qui exige `sudo`, voir [`system-backup.md`](system-backup.md)) |
 | `shell.host` | **dangereuse** (ADR 0056 §7 : héberger un shell dont les commandes agissent avec leurs propres droits, voir [`shell-host.md`](shell-host.md)) |
 | `keyring.read-all` | **dangereuse** (ADR 0100 §2 : lire les entrées du trousseau de toutes les apps, pour un gestionnaire de mots de passe ; voir [`sensitive-settings.md`](sensitive-settings.md)). Phrase de risque : « Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés. » |
 
@@ -126,3 +127,4 @@ clé inconnue.
   [`dangerous-capability-approval.md`](dangerous-capability-approval.md)) : `security.config`,
   `app-permissions.config`, `IDangerousCapabilityGate` au lancement, fenêtre
   spéciale, mode texte du terminal, `auth.log`, vue Permissions des Paramètres.
+- [x] `v3/7-storage-backup` : capacité dangereuse `system.backup` (ADR 0099).

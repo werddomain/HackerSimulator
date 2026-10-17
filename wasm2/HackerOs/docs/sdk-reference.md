@@ -89,6 +89,7 @@ Détails : [`app-model.md`](app-model.md).
 | `ServerConnectionManage` | `server.connection.manage` | **dangereuse** | `HackServerConnection` |
 | `SystemPower` | `system.power` | **dangereuse** | `HackSystem` (avec un administrateur) |
 | `SystemStorageInspect` | `system.storage.inspect` | **dangereuse** | `HackStorageDiagnostics` |
+| `SystemBackup` | `system.backup` | **dangereuse** | `HackSystemBackup` (avec un administrateur) |
 
 Une capacité dangereuse d'une app non système n'est accordée qu'après
 approbation d'un administrateur. Détails : [`capabilities.md`](capabilities.md),
@@ -118,7 +119,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Environment` | Derrière `HackEnvironment`. |
 | `Network`, `Drives`, `Clipboard`, `ShellHost`, `Services` | Derrière les façades du même domaine. |
 | `Console` | Derrière `HackConsole` (ADR 0064). |
-| `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics` | Derrière les façades d'administration. |
+| `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics`, `SystemBackup` | Derrière les façades d'administration. |
 | `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
 | `Keyring` | Trousseau de connexion de l'utilisateur (`IAppKeyringGateway`, ADR 0100 §2) ; derrière `HackKeyring`. Toujours verrouillé hors d'une session avec mot de passe. |
 | `PermissionErrors` | Événement `PermissionDenied` à chaque refus de permission. |
@@ -153,6 +154,14 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 
 Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 `.system.*`), puis les bits de mode du fichier.
+
+Limites de stockage (ADR 0094 §1, ADR 0099 §2) : `HackIOException.ErrorCode`
+porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
+
+| Code (`FileSystemErrorCode`) | Errno | Quand | Message du shell |
+|---|---|---|---|
+| `NoSpace` (1800) | `ENOSPC` | Le navigateur refuse l'écriture (quota atteint), ou il reste moins que la réserve de root et l'appelant n'est pas administrateur | `No space left on device` |
+| `FileTooLarge` (1801) | `EFBIG` | Le contenu dépasse 16 Mio (taille maximale d'un fichier) | `File too large` |
 
 ### Paramètres (`HackerOs.AppSdk.Settings`)
 
@@ -244,6 +253,7 @@ et [`clipboard.md`](clipboard.md).
 | `HackServerConnection` | `GetStateAsync`, `ConnectAsync`, `CreateAccountAsync`, `DisconnectAsync`, `SyncAsync`, `GetConflictsAsync`, `GetRelayPolicyAsync`, `ShowConflictsAsync`, `GetSyncStatusAsync` (`HackSyncStatus`), `SetSyncPausedAsync`, `SyncNowAsync` ([`synchronization.md`](synchronization.md)) | `server.connection.manage` |
 | `HackSystem` | `RebootAsync`, `FactoryResetAsync` | `system.power` + administrateur |
 | `HackStorageDiagnostics` | `GetSnapshotAsync`, `GetWebSiteDatabasesAsync`, `DeleteWebSiteDatabaseAsync` (bases `hackweb.*` des sites, ADR 0088 §4) | `system.storage.inspect` |
+| `HackSystemBackup` | `IsSupported`, `IsSupportedFor(context)`, `CreateAsync` → `HackBackupInfo(FileName, SizeBytes, RecordCount, CreatedAtUtc)`, `RestoreAsync(HackBackupRestoreMode.Merge \| Replace)` → `HackBackupInfo?` (`null` : sélecteur fermé) ; `HackBackupInvalidException` pour une archive refusée (ADR 0099 §1, [`system-backup.md`](system-backup.md)) | `system.backup` + administrateur |
 
 Détails : [`system-administration.md`](system-administration.md),
 [`admin-authentication-agent.md`](admin-authentication-agent.md).
@@ -355,6 +365,7 @@ annulation.
 | `HackLineChart` (`.Charts`) | Graphique SVG : `Series` (`HackChartSeries(Name, Values)`), `Title`, `Capacity`, `Maximum`, `MinimumScale`, `ValueFormatter`, `Filled`, `ShowLegend`, `TimeSpanLabel`, `Size`, `Class` ; couleurs `--hos-chart-series-0..7` | [`task-manager.md`](task-manager.md) |
 | `SettingOriginBadge` (`.Settings`) | Badge d'origine d'un paramètre (défaut, système, utilisateur, verrouillé) | [`settings-files.md`](settings-files.md) |
 | `BrowserFileDownloader` (`.Interop`) | `DownloadFileFromStreamAsync(fileName, stream)` : télécharger vers le vrai disque | [`file-explorer.md`](file-explorer.md) |
+| `BrowserFilePicker` (`.Interop`) | `PickAsync(accept)` → `BrowserPickedFile(Name, Content)` ou `null` : ouvrir un fichier du vrai disque ; seulement juste après un clic ou une touche (sinon `InvalidOperationException`) | [`system-backup.md`](system-backup.md) |
 | `BrowserClipboard` (`.Interop`) | `[Obsolete]` (ADR 0065) : utiliser `HackClipboard.SetTextAsync`, recopié vers l'hôte | [`clipboard.md`](clipboard.md) |
 | `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceContent` (`.Display`) | Fenêtres détachées du navigateur hôte (ADR 0078) : `OpenAsync(DisplaySurfaceOptions)` → `DisplaySurfaceOpenResult` (`Opened`, `Blocked`, `Unavailable`), `Surfaces`, `SurfacesChanged`, `CloseAllAsync` ; surface `Id`, `Title`, `Width`, `Height`, `HasFocus`, `State`, `Changed`, `SetTitleAsync`, `FocusAsync`, `CloseAsync` ; `<DisplaySurfaceContent Surface="…">` y dessine son contenu (`Surface` facultatif : sans surface ouverte, le contenu reste en place) | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
@@ -418,7 +429,7 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 32 capacités.
+- [x] Types de définition d'une app et table complète des 35 capacités (`keyring.read-all` ajoutée par `v3/8`, `system.backup` par `v3/7`).
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.
@@ -429,3 +440,4 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
 - [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
 - [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
+- [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).

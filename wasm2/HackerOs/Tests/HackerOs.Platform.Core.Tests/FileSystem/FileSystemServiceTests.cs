@@ -3,6 +3,7 @@ using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Metrics;
 
 namespace HackerOs.Platform.Core.Tests.FileSystem;
 
@@ -76,12 +77,48 @@ public sealed class FileSystemServiceTests
         await result.Value!.DisposeAsync();
     }
 
+    [Fact]
+    public async Task In_the_root_reserve_a_users_write_fails_with_no_space_and_asks_for_a_new_measure()
+    {
+        FullGuard guard = new();
+        ServiceFixture fixture = await ServiceFixture.CreateAsync(guard);
+
+        FileSystemMutationResult result = await fixture.WriteFileAsync(fixture.UserContext(AppCapabilities.FileSystemUserHomeWrite));
+
+        Assert.Equal(FileSystemErrorCode.NoSpace, result.Transaction.Error?.Code);
+        Assert.Equal(1, guard.Refreshes);
+    }
+
+    [Fact]
+    public async Task In_the_root_reserve_the_system_and_root_keep_writing()
+    {
+        FullGuard guard = new();
+        ServiceFixture fixture = await ServiceFixture.CreateAsync(guard);
+
+        FileSystemMutationResult system = await fixture.WriteFileAsync(fixture.SystemContext);
+
+        Assert.True(system.Succeeded);
+        Assert.Equal(1, guard.Refreshes);
+    }
+
+    [Fact]
+    public async Task Outside_the_reserve_a_users_write_succeeds_and_asks_for_a_new_measure()
+    {
+        FullGuard guard = new() { IsRootReserveReached = false };
+        ServiceFixture fixture = await ServiceFixture.CreateAsync(guard);
+
+        FileSystemMutationResult result = await fixture.WriteFileAsync(fixture.UserContext(AppCapabilities.FileSystemUserHomeWrite));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, guard.Refreshes);
+    }
+
     private sealed class ServiceFixture
     {
         private int _entryId = 1;
         private int _transactionId = 100;
 
-        private ServiceFixture()
+        private ServiceFixture(IStorageSpaceGuard? spaceGuard)
         {
             Now = new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero);
             Repository = new InMemoryFileSystemRepository(
@@ -99,7 +136,8 @@ public sealed class FileSystemServiceTests
                 new FileSystemPathResolver(router),
                 new FileSystemAuthorizer(),
                 new InMemoryTopicMessageBus(new CapabilityGrantRepository()),
-                () => new Guid(_transactionId++, 0, 0, new byte[8]));
+                () => new Guid(_transactionId++, 0, 0, new byte[8]),
+                spaceGuard: spaceGuard);
         }
 
         internal DateTimeOffset Now { get; }
@@ -107,9 +145,9 @@ public sealed class FileSystemServiceTests
         internal FileSystemService Service { get; }
         internal FileSystemAuthorizationContext SystemContext { get; }
 
-        internal static async Task<ServiceFixture> CreateAsync()
+        internal static async Task<ServiceFixture> CreateAsync(IStorageSpaceGuard? spaceGuard = null)
         {
-            ServiceFixture fixture = new();
+            ServiceFixture fixture = new(spaceGuard);
             FileSystemMutationResult home = await fixture.Repository.CreateAsync(
                 CreateDirectory("/home", 1),
                 fixture.SystemContext);
@@ -132,6 +170,18 @@ public sealed class FileSystemServiceTests
                 fixture.SystemContext)).Value!;
             await fixture.Repository.CreateAsync(CreateDirectory("/etc", root.Metadata.Revision), fixture.SystemContext);
             return fixture;
+        }
+
+        /// <summary>Overwrites <c>/home/user/file.txt</c> through the service.</summary>
+        internal async Task<FileSystemMutationResult> WriteFileAsync(FileSystemAuthorizationContext context)
+        {
+            FileSystemEntrySnapshot file = (await Repository.StatAsync(
+                new FileSystemStatRequest(VirtualPath.Parse("/home/user/file.txt")),
+                SystemContext)).Value!;
+            return await Service.WriteAsync(
+                new FileSystemWriteRequest(VirtualPath.Parse("/home/user/file.txt"), file.Metadata.Revision),
+                new BytesSource([1, 2, 3]),
+                context);
         }
 
         internal FileSystemAuthorizationContext UserContext(
@@ -167,6 +217,16 @@ public sealed class FileSystemServiceTests
                 FileSystemEntryKind.Directory,
                 FileSystemPermissions.FromMode(0x01FF),
                 parentRevision);
+    }
+
+    /// <summary>Free-space state of the reserve tests; counts the measures the service asked for.</summary>
+    private sealed class FullGuard : IStorageSpaceGuard
+    {
+        public bool IsRootReserveReached { get; init; } = true;
+
+        public int Refreshes { get; private set; }
+
+        public void RequestRefresh() => Refreshes++;
     }
 
     private sealed class FixedTimeProvider : TimeProvider
