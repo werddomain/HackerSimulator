@@ -429,7 +429,7 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 33 capacités (`system.backup` ajoutée par `v3/7`).
+- [x] Types de définition d'une app et table complète des 35 capacités (`keyring.read-all` ajoutée par `v3/8`, `system.backup` par `v3/7`).
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.
