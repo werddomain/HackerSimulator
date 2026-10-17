@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Hackbackup;
 
@@ -25,24 +27,24 @@ namespace HackerOs.Commands.Hackbackup;
 /// </remarks>
 public sealed class HackbackupCommand(AppManifest manifest) : TerminalAppBase(manifest)
 {
-    private const string Usage = "usage: hackbackup create | restore [--merge|--replace]";
-
     /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
+        string usage = text["Usage"];
         IReadOnlyList<string> args = context.Arguments;
         if (args.Count == 0 || args[0] is "-h" or "--help" or "help")
         {
-            await (args.Count == 0 ? context.StandardError : context.StandardOutput).WriteLineAsync(Usage);
+            await (args.Count == 0 ? context.StandardError : context.StandardOutput).WriteLineAsync(usage);
             return args.Count == 0 ? 2 : 0;
         }
 
         string verb = args[0];
         if (verb is not ("create" or "restore"))
         {
-            await context.StandardError.WriteLineAsync($"hackbackup: unknown command '{verb}'");
-            await context.StandardError.WriteLineAsync(Usage);
+            await context.StandardError.WriteLineAsync(text["UnknownCommand", verb]);
+            await context.StandardError.WriteLineAsync(usage);
             return 2;
         }
 
@@ -58,8 +60,8 @@ public sealed class HackbackupCommand(AppManifest manifest) : TerminalAppBase(ma
                     mode = HackBackupRestoreMode.Replace;
                     break;
                 default:
-                    await context.StandardError.WriteLineAsync($"hackbackup: invalid option '{option}'");
-                    await context.StandardError.WriteLineAsync(Usage);
+                    await context.StandardError.WriteLineAsync(text["InvalidOption", option]);
+                    await context.StandardError.WriteLineAsync(usage);
                     return 2;
             }
         }
@@ -67,13 +69,13 @@ public sealed class HackbackupCommand(AppManifest manifest) : TerminalAppBase(ma
         if (!context.App.IsRootElevated)
         {
             await context.StandardError.WriteLineAsync(
-                $"hackbackup: must be run as root (try: sudo hackbackup {string.Join(' ', args)})");
+                text["RootRequired", string.Join(' ', args)]);
             return 1;
         }
 
         if (!HackSystemBackup.IsSupportedFor(context.App))
         {
-            await context.StandardError.WriteLineAsync("hackbackup: this HackerOS host cannot back up the machine");
+            await context.StandardError.WriteLineAsync(text["Unsupported"]);
             return 1;
         }
 
@@ -85,46 +87,47 @@ public sealed class HackbackupCommand(AppManifest manifest) : TerminalAppBase(ma
         }
         catch (HackBackupInvalidException exception)
         {
-            await context.StandardError.WriteLineAsync($"hackbackup: not a usable backup: {exception.Message}");
+            await context.StandardError.WriteLineAsync(text["InvalidBackup", exception.Message]);
             return 1;
         }
         catch (InvalidOperationException exception) when (verb == "restore")
         {
             // The browser refused to open its file picker without a fresh user gesture.
             await context.StandardError.WriteLineAsync($"hackbackup: {exception.Message}");
-            await context.StandardError.WriteLineAsync("hackbackup: use Settings > Backup > Restore... instead");
+            await context.StandardError.WriteLineAsync(text["UseSettings"]);
             return 1;
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or IOException)
         {
-            await context.StandardError.WriteLineAsync($"hackbackup: {ShellErrorText.Describe(exception)}");
+            await context.StandardError.WriteLineAsync($"hackbackup: {CommandText.Describe(context, exception)}");
             return 1;
         }
     }
 
     private static async Task<int> CreateAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
-        await context.StandardOutput.WriteLineAsync("hackbackup: exporting the whole machine...");
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
+        await context.StandardOutput.WriteLineAsync(text["Exporting"]);
         HackBackupInfo backup = await HackSystemBackup.CreateAsync(context.App, cancellationToken);
-        await context.StandardOutput.WriteLineAsync(string.Create(
-            CultureInfo.InvariantCulture,
-            $"hackbackup: {backup.FileName} ({CommandIO.HumanSize(backup.SizeBytes)}, {backup.RecordCount} records) downloaded to the host computer"));
+        await context.StandardOutput.WriteLineAsync(text[
+            "Downloaded", backup.FileName, CommandIO.HumanSize(backup.SizeBytes), backup.RecordCount.ToString(CultureInfo.InvariantCulture)]);
         return 0;
     }
 
     private static async Task<int> RestoreAsync(TerminalExecutionContext context, HackBackupRestoreMode mode, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         string modeName = mode == HackBackupRestoreMode.Replace ? "replace" : "merge";
-        await context.StandardOutput.WriteLineAsync($"hackbackup: choose the backup in the browser's file dialog ({modeName})...");
+        await context.StandardOutput.WriteLineAsync(text["ChooseFile", modeName]);
         HackBackupInfo? restored = await HackSystemBackup.RestoreAsync(context.App, mode, cancellationToken);
         if (restored is null)
         {
-            await context.StandardError.WriteLineAsync("hackbackup: no file chosen; nothing was restored");
+            await context.StandardError.WriteLineAsync(text["NoFileChosen"]);
             return 1;
         }
 
         // Normally unreachable: the session ends and the machine restarts during the restore.
-        await context.StandardOutput.WriteLineAsync($"hackbackup: {restored.FileName} restored ({modeName}); restarting");
+        await context.StandardOutput.WriteLineAsync(text["Restored", restored.FileName, modeName]);
         return 0;
     }
 }

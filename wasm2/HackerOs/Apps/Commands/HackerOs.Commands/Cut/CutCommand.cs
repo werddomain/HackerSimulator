@@ -2,6 +2,8 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Cut;
 
@@ -18,6 +20,7 @@ public sealed class CutCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         string? fieldList = null, charList = null;
         string delimiter = "\t";
         string? outputDelimiter = null;
@@ -55,13 +58,13 @@ public sealed class CutCommand(AppManifest manifest) : TerminalAppBase(manifest)
                 delimiter = Value("-d") ?? "\t";
                 if (delimiter.Length != 1)
                 {
-                    await context.StandardError.WriteLineAsync("cut: the delimiter must be a single character");
+                    await context.StandardError.WriteLineAsync(text["DelimiterLength"]);
                     return 1;
                 }
             }
             else if (arg.StartsWith('-') && arg.Length > 1)
             {
-                await context.StandardError.WriteLineAsync($"cut: invalid option -- '{arg.TrimStart('-')}'");
+                await context.StandardError.WriteLineAsync(text["InvalidOption", arg.TrimStart('-')]);
                 return 1;
             }
             else
@@ -73,16 +76,16 @@ public sealed class CutCommand(AppManifest manifest) : TerminalAppBase(manifest)
         if ((fieldList is null) == (charList is null))
         {
             await context.StandardError.WriteLineAsync(fieldList is null
-                ? "cut: you must specify a list of bytes, characters, or fields"
-                : "cut: only one type of list may be specified");
-            await context.StandardError.WriteLineAsync("Try 'cut --help' for more information.");
+                ? text["NoList"]
+                : text["OneListOnly"]);
+            await context.StandardError.WriteLineAsync(text["TryHelp"]);
             return 1;
         }
 
         List<(int From, int To)>? ranges = ParseList(fieldList ?? charList!);
         if (ranges is null)
         {
-            await context.StandardError.WriteLineAsync($"cut: invalid field value '{fieldList ?? charList}'");
+            await context.StandardError.WriteLineAsync(text["InvalidList", fieldList ?? charList ?? string.Empty]);
             return 1;
         }
 
