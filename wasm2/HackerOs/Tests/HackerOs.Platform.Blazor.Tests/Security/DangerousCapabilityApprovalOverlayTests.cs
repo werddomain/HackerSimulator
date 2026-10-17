@@ -1,3 +1,4 @@
+using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Icons;
 using HackerOs.Platform.Blazor.Security;
@@ -32,7 +33,8 @@ public sealed class DangerousCapabilityApprovalOverlayTests
         Assert.Contains("1.2.0", html, StringComparison.Ordinal);
         foreach (string capability in new[] { AppCapabilities.NetworkRealAccess, AppCapabilities.ProcessManage })
         {
-            CapabilityDescription description = AppCapabilities.Describe(capability);
+            // The texts are translated (ADR 0104): English before any session language.
+            CapabilityDescription description = CapabilityText.Describe(capability, language: null);
             Assert.Contains(capability, html, StringComparison.Ordinal);
             Assert.Contains(description.Title, text, StringComparison.Ordinal);
             Assert.Contains(description.RiskDescription!, text, StringComparison.Ordinal);
@@ -58,6 +60,7 @@ public sealed class DangerousCapabilityApprovalOverlayTests
         Assert.Contains("App non système", text, StringComparison.Ordinal);
         Assert.Contains("Nom d'administrateur", text, StringComparison.Ordinal);
         Assert.Contains("Mot de passe", text, StringComparison.Ordinal);
+        Assert.Contains(CapabilityText.Describe(AppCapabilities.NetworkRealAccess, new CultureInfo("fr")).Title, text, StringComparison.Ordinal);
         Assert.Contains(">Refuser</button>", text, StringComparison.Ordinal);
         Assert.Contains("Autoriser", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Administrator authorization required", text, StringComparison.Ordinal);
