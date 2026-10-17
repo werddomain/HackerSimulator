@@ -81,6 +81,21 @@ public sealed class TextEditorApp : AppDefinition
 - `[AppManifest(Execution = …)]` devient `execution`, toujours écrit, résolu
   (jamais `default`) : voir la section suivante.
 
+### Intents et schémas d'URI (ADR 0096)
+
+- `Intents` (`AppIntentDeclarationManifest(IntentId, PayloadSchemaAssetPath)`)
+  déclare les intents que l'app **reçoit**. Un identifiant libre doit être bien
+  formé (`domaine.inversé.nom.vN`, `AppIntentIds.IsWellFormed`) ; le
+  répartiteur route vers les apps installées et activées qui le déclarent, au
+  lieu de répondre `intent.unknown`. Déclarer
+  `org.hackeros.intent.show-app-settings.v1` signifie « j'ai ma propre page de
+  réglages » : l'app est lancée avec `--show-settings`.
+- Un schéma d'URI est un type de média `x-scheme-handler/<schéma>` dans
+  `FileHandlers`, comme sous freedesktop :
+  `new("x-scheme-handler/https", [], ["open"])`. Le navigateur déclare `http` et
+  `https`.
+- Le schéma du manifeste ne change pas. Détails : [`app-intents.md`](app-intents.md).
+
 ### Hôte d'exécution (ADR 0070)
 
 L'attribut `[AppManifest]` dit **où** l'OS exécute l'app, par sa propriété
@@ -466,7 +481,7 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 
 | Système | Non système (désinstallables) |
 |---|---|
-| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, et les 62 commandes (projet `HackerOs.Commands`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
+| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, Theme Editor (lit `/etc/hackeros/themes`, ADR 0103), et les 66 commandes (projet `HackerOs.Commands`, `xdg-open` comprise depuis `v3/4`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
 
 Effets du statut : une app système n'est pas désinstallable (voir
 [`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités
@@ -495,4 +510,5 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `rebuild/2-app-uninstall` (ADR 0048 §2-6) : désinstallation par `apps.config`, voir [`app-installation.md`](app-installation.md).
 - [x] `rebuild/5-worker-processes` (ADR 0070) : `AppManifestAttribute.Execution`, `AppExecutionHost`, champ `execution` (schéma, liste blanche, validateur, fixture canonique), défauts par genre dans le mappeur, chaque commande et service déclare son hôte ou reçoit le défaut.
 - [x] `v3/6-sdk-versioning` (ADR 0098) : version du SDK écrite par le générateur et vérifiée au chargement, `HOSAPP0022`/`HOSAPP0023`, propriétaire unique d'une commande, empreintes des ressources et `AppAssetStore`, agrégation des apps en paquet, `HostAppCatalog`.
+- [x] `v3/4-intents` (ADR 0096) : intents déclarés reçus par l'app, schémas d'URI `x-scheme-handler/<schéma>`, commande `xdg-open`.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

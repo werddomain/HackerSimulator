@@ -39,10 +39,14 @@ const HackerOs.App.Abstractions.AppCapabilities.ShellHost = "shell.host" -> stri
 const HackerOs.App.Abstractions.AppCapabilities.SystemPower = "system.power" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemStorageInspect = "system.storage.inspect" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.WindowsManage = "windows.manage" -> string!
+const HackerOs.App.Abstractions.AppIntentIds.EditFile = "org.hackeros.intent.edit-file.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.ExecuteCommand = "org.hackeros.intent.execute-command.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.LaunchApp = "org.hackeros.intent.launch-app.v1" -> string!
+const HackerOs.App.Abstractions.AppIntentIds.MaxCustomPayloadBytes = 65536 -> int
 const HackerOs.App.Abstractions.AppIntentIds.OpenFile = "org.hackeros.intent.open-file.v1" -> string!
+const HackerOs.App.Abstractions.AppIntentIds.OpenUri = "org.hackeros.intent.open-uri.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.RevealFile = "org.hackeros.intent.reveal-file.v1" -> string!
+const HackerOs.App.Abstractions.AppIntentIds.SchemeHandlerMediaTypePrefix = "x-scheme-handler/" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.ShowAppSettings = "org.hackeros.intent.show-app-settings.v1" -> string!
 const HackerOs.App.Abstractions.AppPlatformId.MaximumLength = 32 -> int
 const HackerOs.App.Abstractions.BuiltInApplicationsJsonSerializer.ResourceName = "HackerOs.BuiltInApplications.json" -> string!
@@ -124,6 +128,16 @@ HackerOs.App.Abstractions.AppIntentDeclarationManifest.IntentId.get -> string!
 HackerOs.App.Abstractions.AppIntentDeclarationManifest.IntentId.init -> void
 HackerOs.App.Abstractions.AppIntentDeclarationManifest.PayloadSchemaAssetPath.get -> string?
 HackerOs.App.Abstractions.AppIntentDeclarationManifest.PayloadSchemaAssetPath.init -> void
+HackerOs.App.Abstractions.AppIntentDelivery
+HackerOs.App.Abstractions.AppIntentDelivery.AppIntentDelivery(string! IntentId, string? PayloadJson = null, string? SenderAppId = null) -> void
+HackerOs.App.Abstractions.AppIntentDelivery.Arguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.App.Abstractions.AppIntentDelivery.Arguments.init -> void
+HackerOs.App.Abstractions.AppIntentDelivery.IntentId.get -> string!
+HackerOs.App.Abstractions.AppIntentDelivery.IntentId.init -> void
+HackerOs.App.Abstractions.AppIntentDelivery.PayloadJson.get -> string?
+HackerOs.App.Abstractions.AppIntentDelivery.PayloadJson.init -> void
+HackerOs.App.Abstractions.AppIntentDelivery.SenderAppId.get -> string?
+HackerOs.App.Abstractions.AppIntentDelivery.SenderAppId.init -> void
 HackerOs.App.Abstractions.AppIntentIds
 HackerOs.App.Abstractions.AppIntentRequest
 HackerOs.App.Abstractions.AppIntentRequest.AppIntentRequest(System.Guid RequestId, string! CallerAppId, string! UserId, HackerOs.App.Abstractions.IAppIntent! Intent) -> void
@@ -385,6 +399,25 @@ HackerOs.App.Abstractions.CapabilityDescription.Title.init -> void
 HackerOs.App.Abstractions.CapabilityRisk
 HackerOs.App.Abstractions.CapabilityRisk.Dangerous = 1 -> HackerOs.App.Abstractions.CapabilityRisk
 HackerOs.App.Abstractions.CapabilityRisk.Normal = 0 -> HackerOs.App.Abstractions.CapabilityRisk
+HackerOs.App.Abstractions.CustomIntent
+HackerOs.App.Abstractions.CustomIntent.CustomIntent(string! IntentId, string? PayloadJson = null, string? TargetAppId = null, bool RememberChoice = false) -> void
+HackerOs.App.Abstractions.CustomIntent.IntentId.get -> string!
+HackerOs.App.Abstractions.CustomIntent.IntentId.init -> void
+HackerOs.App.Abstractions.CustomIntent.PayloadJson.get -> string?
+HackerOs.App.Abstractions.CustomIntent.PayloadJson.init -> void
+HackerOs.App.Abstractions.CustomIntent.RememberChoice.get -> bool
+HackerOs.App.Abstractions.CustomIntent.RememberChoice.init -> void
+HackerOs.App.Abstractions.CustomIntent.TargetAppId.get -> string?
+HackerOs.App.Abstractions.CustomIntent.TargetAppId.init -> void
+HackerOs.App.Abstractions.EditFileIntent
+HackerOs.App.Abstractions.EditFileIntent.EditFileIntent(HackerOs.App.Abstractions.VirtualPath Path, string? MediaType = null, string? PreferredAppId = null) -> void
+HackerOs.App.Abstractions.EditFileIntent.IntentId.get -> string!
+HackerOs.App.Abstractions.EditFileIntent.MediaType.get -> string?
+HackerOs.App.Abstractions.EditFileIntent.MediaType.init -> void
+HackerOs.App.Abstractions.EditFileIntent.Path.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.App.Abstractions.EditFileIntent.Path.init -> void
+HackerOs.App.Abstractions.EditFileIntent.PreferredAppId.get -> string?
+HackerOs.App.Abstractions.EditFileIntent.PreferredAppId.init -> void
 HackerOs.App.Abstractions.ExecuteCommandIntent
 HackerOs.App.Abstractions.ExecuteCommandIntent.CommandLine.get -> string!
 HackerOs.App.Abstractions.ExecuteCommandIntent.CommandLine.init -> void
@@ -473,6 +506,13 @@ HackerOs.App.Abstractions.OpenFileIntent.Path.get -> HackerOs.App.Abstractions.V
 HackerOs.App.Abstractions.OpenFileIntent.Path.init -> void
 HackerOs.App.Abstractions.OpenFileIntent.PreferredAppId.get -> string?
 HackerOs.App.Abstractions.OpenFileIntent.PreferredAppId.init -> void
+HackerOs.App.Abstractions.OpenUriIntent
+HackerOs.App.Abstractions.OpenUriIntent.IntentId.get -> string!
+HackerOs.App.Abstractions.OpenUriIntent.OpenUriIntent(System.Uri! Uri, string? PreferredAppId = null) -> void
+HackerOs.App.Abstractions.OpenUriIntent.PreferredAppId.get -> string?
+HackerOs.App.Abstractions.OpenUriIntent.PreferredAppId.init -> void
+HackerOs.App.Abstractions.OpenUriIntent.Uri.get -> System.Uri!
+HackerOs.App.Abstractions.OpenUriIntent.Uri.init -> void
 HackerOs.App.Abstractions.OsCompatibilityManifest
 HackerOs.App.Abstractions.OsCompatibilityManifest.MaximumVersion.get -> string?
 HackerOs.App.Abstractions.OsCompatibilityManifest.MaximumVersion.init -> void
@@ -780,6 +820,8 @@ static HackerOs.App.Abstractions.AppExecutionHosts.IsWorker(HackerOs.App.Abstrac
 static HackerOs.App.Abstractions.AppExecutionHosts.Of(HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.App.Abstractions.AppExecutionHost
 static HackerOs.App.Abstractions.AppExecutionHosts.Resolve(HackerOs.App.Abstractions.AppKind kind, HackerOs.App.Abstractions.AppExecutionHost? declared) -> HackerOs.App.Abstractions.AppExecutionHost
 static HackerOs.App.Abstractions.AppImage.Empty.get -> HackerOs.App.Abstractions.AppImage!
+static HackerOs.App.Abstractions.AppIntentIds.IsBuiltIn(string! intentId) -> bool
+static HackerOs.App.Abstractions.AppIntentIds.IsWellFormed(string? intentId) -> bool
 static HackerOs.App.Abstractions.AppManifestJsonSerializer.DeserializeStrict(string! json) -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.App.Abstractions.AppManifestJsonSerializer.NormalizeOptionalCollections(HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.App.Abstractions.AppManifestJsonSerializer.SerializeCanonical(HackerOs.App.Abstractions.AppManifest! manifest) -> string!

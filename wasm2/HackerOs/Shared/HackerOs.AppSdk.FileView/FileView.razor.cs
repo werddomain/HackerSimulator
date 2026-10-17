@@ -36,6 +36,9 @@ public partial class FileView : IAsyncDisposable
     private DotNetObjectReference<FileView>? _pasteCallbacks;
     private bool _pasteTargetAttached;
     private ElementReference _rootElement;
+
+    /// <summary>Item to scroll into view and focus after the next render (<see cref="RevealAsync"/>).</summary>
+    private string? _pendingReveal;
     private FileSystemDirectorySnapshot? _lastSnapshot;
 
     /// <summary>Scoped filesystem access supplied by the host app. Required.</summary>
@@ -259,6 +262,13 @@ public partial class FileView : IAsyncDisposable
             _pasteCallbacks ??= DotNetObjectReference.Create(this);
             _pasteTargetAttached = await module.InvokeAsync<bool>("attachPasteTarget", _rootElement, _pasteCallbacks);
         }
+
+        if (_pendingReveal is { } reveal && JavaScript is not null)
+        {
+            _pendingReveal = null;
+            IJSObjectReference module = await EnsureJsModuleAsync();
+            await module.InvokeAsync<bool>("revealItem", _rootElement, reveal);
+        }
     }
 
     private void ApplyCutPaths()
@@ -328,6 +338,42 @@ public partial class FileView : IAsyncDisposable
 
     /// <summary>Clears the current selection.</summary>
     public void ClearSelect() => ChangeSelection([]);
+
+    /// <summary>
+    /// Shows one item (ADR 0096, section 1, the file manager's half of <c>RevealFileIntent</c>):
+    /// navigates to its parent folder when needed, selects it alone and scrolls it into view once
+    /// rendered, giving it the keyboard focus.
+    /// </summary>
+    /// <param name="path">Absolute path of the file or folder to show.</param>
+    /// <param name="cancellationToken">Cancels the navigation.</param>
+    /// <returns><see langword="true"/> when the item exists in its folder and is now selected.</returns>
+    /// <exception cref="InvalidOperationException">The parent folder cannot be listed.</exception>
+    public async Task<bool> RevealAsync(VirtualPath path, CancellationToken cancellationToken = default)
+    {
+        int separator = path.Value.LastIndexOf('/');
+        if (path.Value == "/" || separator < 0)
+        {
+            return false;
+        }
+
+        VirtualPath parent = separator == 0 ? VirtualPath.Parse("/") : VirtualPath.Parse(path.Value[..separator]);
+        if (CurrentDirectory != parent)
+        {
+            await NavigateAsync(parent, cancellationToken);
+        }
+
+        string name = path.Value[(separator + 1)..];
+        FileViewItem? match = _items.Find(item => string.Equals(item.FileName, name, StringComparison.Ordinal));
+        if (match is null)
+        {
+            return false;
+        }
+
+        ChangeSelection([match]);
+        _pendingReveal = match.FullPath.Value;
+        StateHasChanged();
+        return true;
+    }
 
     /// <summary>Selects the item with the given file name, if present in the current directory.</summary>
     public void SelectByName(string fileName)

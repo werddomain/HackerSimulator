@@ -1,5 +1,8 @@
+using HackerOs.App.Abstractions;
+using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Settings;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Theming.Abstractions;
@@ -41,7 +44,9 @@ public partial class SettingsWindow : IAsyncDisposable
 
     private const string ResetConfirmPhrase = "RESET";
 
+    private const string ThemeEditorAppId = "org.hackeros.theme-editor";
     private HackSettingsDocument? _appearance;
+    private UserThemeLibraryResult _userThemes = UserThemeLibraryResult.Empty;
     private ThemePreferences _appearanceSettings = ThemePreferences.Default;
     private SettingLayer _targetLayer = SettingLayer.User;
     private bool _isSavingAppearance;
@@ -67,10 +72,22 @@ public partial class SettingsWindow : IAsyncDisposable
     private HackSyncStatus _syncStatus = HackSyncStatus.Inactive;
     private IReadOnlyList<HackSyncConflict> _conflicts = [];
 
+    /// <summary>Index of the "Application" tab, the last one (ADR 0096 §4).</summary>
+    private const int AppPageTabIndex = 7;
+
+    /// <summary>Prefix of the argument naming the app whose page to show (<c>--app=&lt;id&gt;</c>).</summary>
+    internal const string AppArgumentPrefix = "--app=";
+
+    private int _activeTab;
+    private string? _appPageId;
+
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
 
+    // A user theme takes the accent behavior of its base theme (ADR 0103).
     private bool CurrentDesktopThemeSupportsAccent =>
-        ThemeCatalog.TryGet(_appearanceSettings.DesktopThemeId, out ThemeDefinition? theme)
+        ThemeCatalog.TryGet(
+            ResolvedTheme.Resolve(_appearanceSettings.DesktopThemeId, ThemePlatform.Desktop, _userThemes.Themes).BaseThemeId,
+            out ThemeDefinition? theme)
         && theme is { SupportsAccentColor: true };
 
     private bool CanSubmitConnection =>
@@ -81,7 +98,9 @@ public partial class SettingsWindow : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAppInitializedAsync()
     {
+        ShowAppPage(LaunchArguments);
         await OpenAppearanceAsync();
+        await RefreshUserThemesAsync();
 
         IReadOnlyList<HackAppInfo> apps = await HackApps.GetInstalledAsync(AppContext.CancellationToken);
         _fileHandlers = [.. apps
@@ -90,6 +109,72 @@ public partial class SettingsWindow : IAsyncDisposable
             .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
 
         await RefreshConnectionAsync();
+    }
+
+    /// <summary>
+    /// Settings is a single instance: another app's <c>ShowAppSettingsIntent</c> reaches the open
+    /// window here with <c>--app=&lt;id&gt;</c> (ADR 0096, sections 4 and 5).
+    /// </summary>
+    protected override Task OnIntentReceivedAsync(AppIntentDelivery intent)
+    {
+        ShowAppPage(intent.Arguments);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the "Application" tab on the app named by <c>--app=&lt;id&gt;</c>, when an argument names one.</summary>
+    private void ShowAppPage(IReadOnlyList<string> arguments)
+    {
+        if (ReadAppArgument(arguments) is { } appId)
+        {
+            _appPageId = appId;
+            _activeTab = AppPageTabIndex;
+        }
+    }
+
+    /// <summary>Reads <c>--app=&lt;id&gt;</c> from Settings' command line; the last one wins, an empty id is ignored.</summary>
+    internal static string? ReadAppArgument(IReadOnlyList<string> arguments) =>
+        arguments
+            .Where(static argument => argument.StartsWith(AppArgumentPrefix, StringComparison.Ordinal))
+            .Select(static argument => argument[AppArgumentPrefix.Length..].Trim())
+            .LastOrDefault(static id => id.Length > 0);
+    /// <summary>Re-reads the user themes when the window comes back to the front (after the Theme Editor saved one).</summary>
+    protected override Task OnWindowActivatedAsync() => RefreshUserThemesAsync();
+
+    /// <summary>
+    /// Reads the user themes of <c>/etc/hackeros/themes</c> and <c>~/.config/hackeros/themes</c>
+    /// (ADR 0103 §2.2) with the SDK's file API; a missing folder simply means no theme.
+    /// </summary>
+    private async Task RefreshUserThemesAsync()
+    {
+        try
+        {
+            _userThemes = await UserThemeLibrary.LoadAsync(
+                async (directory, token) => await HackDirectory.GetFilesAsync(directory, "*" + ThemeFile.Extension, cancellationToken: token),
+                (path, token) => HackFile.ReadAllTextAsync(path, token),
+                HackUser.Describe(AppContext).HomeDirectory,
+                AppContext.CancellationToken);
+        }
+        catch (Exception exception) when (exception is HackIOException or HackUnauthorizedAccessException)
+        {
+            _userThemes = UserThemeLibraryResult.Empty;
+        }
+    }
+
+    /// <summary>User themes offered on a form factor, in catalog order.</summary>
+    private IEnumerable<UserTheme> UserThemesFor(ThemePlatform platform) =>
+        _userThemes.Themes.Where(theme => theme.Supports(platform));
+
+    /// <summary>Starts the Theme Editor, on a theme file when one is given.</summary>
+    private async Task OpenThemeEditorAsync(string? themePath)
+    {
+        try
+        {
+            await HackApps.LaunchAsync(ThemeEditorAppId, themePath is null ? [] : [themePath], AppContext.CancellationToken);
+        }
+        catch (Exception exception) when (exception is HackAppLaunchException or HackUnauthorizedAccessException)
+        {
+            _appearanceMessage = exception.Message;
+        }
     }
 
     /// <inheritdoc />

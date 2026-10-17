@@ -255,6 +255,46 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// <inheritdoc />
     public HackStopRequestedEventArgs? StopRequest { get; private set; }
 
+    /// <inheritdoc />
+    /// <remarks>Set by <c>AppLifecycleOrchestrator</c> from the launch request (ADR 0096, section 5).</remarks>
+    public AppIntentDelivery? Intent { get; internal set; }
+
+    /// <inheritdoc />
+    public event EventHandler<AppIntentDelivery>? IntentReceived;
+
+    /// <summary>Gets whether some code of the app listens for <see cref="IntentReceived"/> (a worker session forwards it).</summary>
+    internal bool HasIntentListeners => IntentReceived is not null;
+
+    /// <summary>
+    /// Hands an intent to this running instance (ADR 0096, section 5): the second activation of a
+    /// single-instance app. Runs the handlers inside the app's ambient context, like the stop
+    /// request; a handler that throws is logged and does not keep the others from running.
+    /// </summary>
+    /// <param name="delivery">The intent and its activation arguments.</param>
+    internal void DeliverIntent(AppIntentDelivery delivery)
+    {
+        ArgumentNullException.ThrowIfNull(delivery);
+        if (Control.IsKilled || IntentReceived is not { } handlers)
+        {
+            return;
+        }
+
+        using IDisposable scope = HackExecutionContext.Enter(this);
+        foreach (EventHandler<AppIntentDelivery> handler in handlers.GetInvocationList().Cast<EventHandler<AppIntentDelivery>>())
+        {
+            try
+            {
+                handler(this, delivery);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logging.Log(
+                    HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                    $"An IntentReceived handler threw {exception.GetType().Name}: {exception.Message}");
+            }
+        }
+    }
+
     /// <summary>
     /// Every OS gateway refuses a killed process (ADR 0069, section 3): its leftover code is cut off,
     /// like the threads of a Linux process after <c>SIGKILL</c>. Identity, the token and the

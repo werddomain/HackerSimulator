@@ -62,18 +62,45 @@ public sealed class FileAssociationResolver
     /// <summary>Resolves an <see cref="OpenFileIntent"/> to a target app, or to a chooser/failure outcome.</summary>
     /// <param name="intent">Intent describing the target file, action, and any explicit preference.</param>
     /// <param name="cancellationToken">Cancels the read of the association document.</param>
-    public async ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, CancellationToken cancellationToken = default)
+    public ValueTask<FileHandlerResolution> ResolveAsync(OpenFileIntent intent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(intent);
+        return ResolveCoreAsync(
+            GetExtension(intent.Path),
+            intent.MediaType,
+            intent.Action == FileIntentAction.Edit ? "edit" : "open",
+            intent.PreferredAppId,
+            cancellationToken);
+    }
 
-        string? extension = GetExtension(intent.Path);
-        string action = intent.Action == FileIntentAction.Edit ? "edit" : "open";
+    /// <summary>
+    /// Resolves the handler of one URI scheme (ADR 0096, section 3): the media type
+    /// <c>x-scheme-handler/&lt;scheme&gt;</c> with the <c>open</c> action, with the same precedence as a
+    /// file (explicit preference, configured default, sole candidate, chooser).
+    /// </summary>
+    /// <param name="scheme">URI scheme, e.g. <c>https</c>; compared case-insensitively.</param>
+    /// <param name="preferredAppId">Explicit preferred handler, when the caller already chose one.</param>
+    /// <param name="cancellationToken">Cancels the read of the association document.</param>
+    public ValueTask<FileHandlerResolution> ResolveSchemeAsync(
+        string scheme, string? preferredAppId = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(scheme);
+        return ResolveCoreAsync(
+            extension: null,
+            AppIntentIds.SchemeHandlerMediaTypePrefix + scheme.ToLowerInvariant(),
+            "open",
+            preferredAppId,
+            cancellationToken);
+    }
 
-        if (intent.PreferredAppId is { } preferredAppId)
+    private async ValueTask<FileHandlerResolution> ResolveCoreAsync(
+        string? extension, string? mediaType, string action, string? preferredAppId, CancellationToken cancellationToken)
+    {
+        if (preferredAppId is not null)
         {
             bool valid = _enablement.IsEnabled(preferredAppId)
                 && _catalog.Manifests.TryGetValue(preferredAppId, out AppManifest? preferredManifest)
-                && HandlesFile(preferredManifest, extension, intent.MediaType, action);
+                && HandlesFile(preferredManifest, extension, mediaType, action);
             return valid
                 ? new FileHandlerResolution(FileHandlerResolutionStatus.ExplicitTarget, preferredAppId, [preferredAppId])
                 : new FileHandlerResolution(FileHandlerResolutionStatus.TargetInvalid, null, []);
@@ -83,7 +110,7 @@ public sealed class FileAssociationResolver
         // routine user operation, so the OS reads it as itself.
         string content = await FileAssociationSettingsDocuments.ReadAsync(_settings, cancellationToken).ConfigureAwait(false);
         FileAssociationIndex index = FileAssociationIndex.Build(content);
-        if (index.TryGetDefault(extension, intent.MediaType, action, out FileAssociationEntry entry)
+        if (index.TryGetDefault(extension, mediaType, action, out FileAssociationEntry entry)
             && _enablement.IsEnabled(entry.AppId)
             && _catalog.Manifests.ContainsKey(entry.AppId))
         {
@@ -93,7 +120,7 @@ public sealed class FileAssociationResolver
         string[] candidates = [.. _catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Window
                 && _enablement.IsEnabled(manifest.Id)
-                && HandlesFile(manifest, extension, intent.MediaType, action))
+                && HandlesFile(manifest, extension, mediaType, action))
             .Select(manifest => manifest.Id)
             .OrderBy(id => id, StringComparer.Ordinal)];
 

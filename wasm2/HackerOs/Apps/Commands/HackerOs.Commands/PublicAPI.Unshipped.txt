@@ -257,6 +257,10 @@ HackerOs.Commands.Whoami.WhoamiApp
 HackerOs.Commands.Whoami.WhoamiApp.WhoamiApp() -> void
 HackerOs.Commands.Whoami.WhoamiCommand
 HackerOs.Commands.Whoami.WhoamiCommand.WhoamiCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.XdgOpen.XdgOpenApp
+HackerOs.Commands.XdgOpen.XdgOpenApp.XdgOpenApp() -> void
+HackerOs.Commands.XdgOpen.XdgOpenCommand
+HackerOs.Commands.XdgOpen.XdgOpenCommand.XdgOpenCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.Zip.ZipApp
 HackerOs.Commands.Zip.ZipApp.ZipApp() -> void
 HackerOs.Commands.Zip.ZipCommand
@@ -965,6 +969,17 @@ override HackerOs.Commands.Whoami.WhoamiApp.PublisherId.get -> string!
 override HackerOs.Commands.Whoami.WhoamiApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Whoami.WhoamiApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Whoami.WhoamiCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Description.get -> string!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Id.get -> string!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.XdgOpen.XdgOpenApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Name.get -> string!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.PublisherId.get -> string!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.XdgOpen.XdgOpenApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.XdgOpen.XdgOpenCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.Zip.ZipApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.Zip.ZipApp.Description.get -> string!
 override HackerOs.Commands.Zip.ZipApp.EntryPoint.get -> System.Type!

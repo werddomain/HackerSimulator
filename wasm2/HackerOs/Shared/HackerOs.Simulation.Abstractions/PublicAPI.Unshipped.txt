@@ -539,13 +539,32 @@ HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome.Faulted = 3 -
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome.NoHandler = 2 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome.Opened = 0 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult
-HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.AppIntentOpenFileResult(HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome Outcome, System.Collections.Generic.IReadOnlyList<string!>? CandidateAppIds = null, string? ErrorCode = null) -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.AppIntentOpenFileResult(HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome Outcome, System.Collections.Generic.IReadOnlyList<string!>? CandidateAppIds = null, string? ErrorCode = null, bool FellBackToOpen = false) -> void
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.CandidateAppIds.get -> System.Collections.Generic.IReadOnlyList<string!>?
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.CandidateAppIds.init -> void
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.ErrorCode.get -> string?
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.ErrorCode.init -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.FellBackToOpen.get -> bool
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.FellBackToOpen.init -> void
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.Outcome.get -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileOutcome
 HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult.Outcome.init -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.AccessDenied = 4 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.ChooserRequired = 1 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.Disabled = 5 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.Dispatched = 0 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.Faulted = 7 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.Invalid = 6 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.NoHandler = 2 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome.NotFound = 3 -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.AppIntentResult(HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome Outcome, System.Collections.Generic.IReadOnlyList<string!>? CandidateAppIds = null, string? ErrorCode = null) -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.CandidateAppIds.get -> System.Collections.Generic.IReadOnlyList<string!>?
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.CandidateAppIds.init -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.ErrorCode.get -> string?
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.ErrorCode.init -> void
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.Outcome.get -> HackerOs.Simulation.Abstractions.Gateways.AppIntentOutcome
+HackerOs.Simulation.Abstractions.Gateways.AppIntentResult.Outcome.init -> void
 HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs
 HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs.AppPermissionErrorEventArgs(HackerOs.Simulation.Abstractions.FileSystem.FileSystemError! error) -> void
 HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs.Error.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemError!
@@ -585,8 +604,13 @@ HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.StatAsync(Hacker
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.WithSelectedHandle(HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle! handle) -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.WriteAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemWriteRequest! request, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemContentSource! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway
+HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.EditFileAsync(HackerOs.App.Abstractions.VirtualPath path, string? mediaType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.LaunchAsync(string! appId, System.Collections.Generic.IReadOnlyList<string!>! arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentLaunchResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.OpenFileAsync(HackerOs.App.Abstractions.VirtualPath path, string? mediaType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentOpenFileResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.OpenUriAsync(System.Uri! uri, string? preferredAppId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.RevealFileAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.SendIntentAsync(string! intentId, string? payloadJson, string? targetAppId = null, bool rememberChoice = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway.ShowAppSettingsAsync(string! appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Gateways.AppIntentResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppLoggingGateway
 HackerOs.Simulation.Abstractions.Gateways.IAppLoggingGateway.AppendToLogFile(string! relativePath, string! line) -> void
 HackerOs.Simulation.Abstractions.Gateways.IAppLoggingGateway.AppendToSiteDebugLog(string! line) -> void
@@ -2005,6 +2029,7 @@ static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppUser(
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForAppUserDevice(string! appId, string! userId, string! installationId, string! documentId = "settings") -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey.ForOsAdmin(string! documentId) -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Simulation.Abstractions.Settings.SettingsDocumentPathFactory.GetProjectionPath(HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey key) -> HackerOs.App.Abstractions.VirtualPath
+static HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher.ForDirectories(HackerOs.Simulation.Abstractions.FileSystem.IAppFileSystemWatchGateway! watch, System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.VirtualPath>! directories, System.Func<System.Threading.Tasks.ValueTask>! onChanged) -> HackerOs.Simulation.Abstractions.Settings.SettingsFilesWatcher!
 static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.Apply(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema, string? publicContent, string? privateContent, System.Collections.Generic.IReadOnlyList<(HackerOs.Simulation.Abstractions.Settings.SettingFieldDeclaration! Field, string? Value)>! edits) -> (string? Public, string? Private)
 static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.GetPrivatePath(string! publicPath) -> string!
 static HackerOs.Simulation.Abstractions.Settings.SettingsPrivateFiles.HasPrivateFields(HackerOs.Simulation.Abstractions.Settings.SettingsSchema! schema) -> bool

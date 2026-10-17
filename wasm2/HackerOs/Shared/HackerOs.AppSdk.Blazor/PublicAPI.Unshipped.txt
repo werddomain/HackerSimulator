@@ -20,6 +20,34 @@ HackerOs.AppSdk.Blazor.AppBackSource
 HackerOs.AppSdk.Blazor.AppBackSource.DesktopChromeButton = 1 -> HackerOs.AppSdk.Blazor.AppBackSource
 HackerOs.AppSdk.Blazor.AppBackSource.KeyboardShortcut = 2 -> HackerOs.AppSdk.Blazor.AppBackSource
 HackerOs.AppSdk.Blazor.AppBackSource.SystemNavigationBar = 0 -> HackerOs.AppSdk.Blazor.AppBackSource
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Candidates.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Blazor.AppChooserOption!>!
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Candidates.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Content.get -> string!
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Content.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.OfferAlwaysUse.get -> bool
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.OfferAlwaysUse.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Title.get -> string!
+HackerOs.AppSdk.Blazor.AppChooserDialogRequest.Title.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogResult
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.AlwaysUse.get -> bool
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.AlwaysUse.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.AppChooserDialogResult(HackerOs.AppSdk.Blazor.AppChooserStatus Status, string? AppId, bool AlwaysUse) -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.AppId.get -> string?
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.AppId.init -> void
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.Status.get -> HackerOs.AppSdk.Blazor.AppChooserStatus
+HackerOs.AppSdk.Blazor.AppChooserDialogResult.Status.init -> void
+HackerOs.AppSdk.Blazor.AppChooserOption
+HackerOs.AppSdk.Blazor.AppChooserOption.AppChooserOption(string! AppId, string! Name, string? Description = null) -> void
+HackerOs.AppSdk.Blazor.AppChooserOption.AppId.get -> string!
+HackerOs.AppSdk.Blazor.AppChooserOption.AppId.init -> void
+HackerOs.AppSdk.Blazor.AppChooserOption.Description.get -> string?
+HackerOs.AppSdk.Blazor.AppChooserOption.Description.init -> void
+HackerOs.AppSdk.Blazor.AppChooserOption.Name.get -> string!
+HackerOs.AppSdk.Blazor.AppChooserOption.Name.init -> void
+HackerOs.AppSdk.Blazor.AppChooserStatus
+HackerOs.AppSdk.Blazor.AppChooserStatus.Cancelled = 1 -> HackerOs.AppSdk.Blazor.AppChooserStatus
+HackerOs.AppSdk.Blazor.AppChooserStatus.Selected = 0 -> HackerOs.AppSdk.Blazor.AppChooserStatus
 HackerOs.AppSdk.Blazor.Charts.HackChartGeometry
 HackerOs.AppSdk.Blazor.Charts.HackChartSeries
 HackerOs.AppSdk.Blazor.Charts.HackChartSeries.HackChartSeries(string! Name, System.Collections.Generic.IReadOnlyList<double>! Values) -> void
@@ -184,6 +212,7 @@ HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBack.get -> bool
 HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBackChanged -> System.Action?
 HackerOs.AppSdk.Blazor.IAppBackHandler.NavigateBackAsync(HackerOs.AppSdk.Blazor.AppBackRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppBackResult!>
 HackerOs.AppSdk.Blazor.IDialogService
+HackerOs.AppSdk.Blazor.IDialogService.ChooseAppAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.AppChooserDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppChooserDialogResult!>
 HackerOs.AppSdk.Blazor.IDialogService.CredentialPromptAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.CredentialPromptDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.CredentialPromptDialogResult!>
 HackerOs.AppSdk.Blazor.IDialogService.MessageBoxAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.MessageBoxDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.MessageBoxDialogResult!>
 HackerOs.AppSdk.Blazor.IDialogService.TextInputAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.TextInputDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.TextInputDialogResult!>
@@ -338,6 +367,7 @@ HackerOs.AppSdk.Blazor.TextInputStatus.Submitted = 0 -> HackerOs.AppSdk.Blazor.T
 HackerOs.AppSdk.Blazor.WindowAppBase
 HackerOs.AppSdk.Blazor.WindowAppBase.AppContext.get -> HackerOs.AppSdk.IAppExecutionContext!
 HackerOs.AppSdk.Blazor.WindowAppBase.AppContext.set -> void
+HackerOs.AppSdk.Blazor.WindowAppBase.ChooseAppAsync(System.Collections.Generic.IReadOnlyList<string!>! appIds, string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Blazor.AppChooserDialogResult!>!
 HackerOs.AppSdk.Blazor.WindowAppBase.Dialogs.get -> HackerOs.AppSdk.Blazor.IDialogService!
 HackerOs.AppSdk.Blazor.WindowAppBase.Dialogs.set -> void
 HackerOs.AppSdk.Blazor.WindowAppBase.ElevationVerifier.get -> HackerOs.App.Abstractions.Policy.IAdminElevationVerifier?
@@ -347,11 +377,13 @@ HackerOs.AppSdk.Blazor.WindowAppBase.FileDialogs.set -> void
 HackerOs.AppSdk.Blazor.WindowAppBase.IsWindowActive.get -> bool
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchArguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchFile.get -> HackerOs.App.Abstractions.VirtualPath?
+HackerOs.AppSdk.Blazor.WindowAppBase.LaunchIntent.get -> HackerOs.App.Abstractions.AppIntentDelivery?
 HackerOs.AppSdk.Blazor.WindowAppBase.Manifest.get -> HackerOs.App.Abstractions.AppManifest!
 HackerOs.AppSdk.Blazor.WindowAppBase.MessageBox(string! title, string! content, HackerOs.AppSdk.Blazor.MessageBoxType dialogType = HackerOs.AppSdk.Blazor.MessageBoxType.Ok, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.MessageBoxDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.OpenFileAsync(HackerOs.AppSdk.Blazor.OpenFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.OpenFileDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.SaveFileAsync(HackerOs.AppSdk.Blazor.SaveFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SaveFileDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.SelectFolderAsync(HackerOs.AppSdk.Blazor.SelectFolderDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SelectFolderDialogResult!>
+HackerOs.AppSdk.Blazor.WindowAppBase.SendIntentAsync(string! intentId, string? payloadJson = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 HackerOs.AppSdk.Blazor.WindowAppBase.TextInput(string! title, string! content, string? defaultValue = null, string? placeholder = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.TextInputDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.TrackDisplaySurface(HackerOs.AppSdk.Blazor.Display.IDisplaySurface! surface) -> System.IDisposable!
 HackerOs.AppSdk.Blazor.WindowAppBase.WindowAppBase() -> void
@@ -417,6 +449,7 @@ virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppInitializedAsync() -> System.T
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppParametersSet() -> void
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppParametersSetAsync() -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnIntentReceivedAsync(HackerOs.App.Abstractions.AppIntentDelivery! intent) -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnPermissionErrorRaised(HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs! e) -> void
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowActivated() -> void
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowActivatedAsync() -> System.Threading.Tasks.Task!

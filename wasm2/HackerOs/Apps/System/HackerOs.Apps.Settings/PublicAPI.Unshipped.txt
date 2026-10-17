@@ -1,9 +1,15 @@
 #nullable enable
+HackerOs.Apps.Settings.AppDetailsPanel
+HackerOs.Apps.Settings.AppDetailsPanel.AppDetailsPanel() -> void
+HackerOs.Apps.Settings.AppDetailsPanel.AppId.get -> string!
+HackerOs.Apps.Settings.AppDetailsPanel.AppId.set -> void
 HackerOs.Apps.Settings.AppPermissionsPanel
 HackerOs.Apps.Settings.AppPermissionsPanel.AppPermissionsPanel() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel
 HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
+HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.get -> string?
+HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.set -> void
 HackerOs.Apps.Settings.ServerRelayPolicyPanel
 HackerOs.Apps.Settings.ServerRelayPolicyPanel.ServerRelayPolicyPanel() -> void
 HackerOs.Apps.Settings.SettingsApp
@@ -27,5 +33,7 @@ override HackerOs.Apps.Settings.SettingsApp.Resources.get -> HackerOs.App.Abstra
 override HackerOs.Apps.Settings.SettingsApp.SingleInstancePerUser.get -> bool
 override HackerOs.Apps.Settings.SettingsWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Apps.Settings.SettingsWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
+override HackerOs.Apps.Settings.SettingsWindow.OnIntentReceivedAsync(HackerOs.App.Abstractions.AppIntentDelivery! intent) -> System.Threading.Tasks.Task!
+override HackerOs.Apps.Settings.SettingsWindow.OnWindowActivatedAsync() -> System.Threading.Tasks.Task!
 ~override HackerOs.Apps.Settings.InstalledAppsPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Apps.Settings.SettingsWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

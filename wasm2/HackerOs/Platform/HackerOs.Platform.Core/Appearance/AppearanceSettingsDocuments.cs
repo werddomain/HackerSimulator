@@ -24,23 +24,25 @@ public static class AppearanceSettingsDocuments
     /// <summary>Key of the animations switch.</summary>
     public const string AnimationsKey = "animationsEnabled";
 
-    /// <summary>Gets the declared schema; theme and accent ids are closed sets from <see cref="ThemeCatalog"/>.</summary>
+    /// <summary>Gets the declared schema; theme ids are open (built-in or user themes, ADR 0103), accent ids a closed set from <see cref="ThemeCatalog"/>.</summary>
     public static SettingsSchema Schema { get; } = new(
         schemaVersion: 2,
         fields:
         [
+            // Theme ids are open strings since ADR 0103: a user theme of /etc/hackeros/themes or
+            // ~/.config/hackeros/themes may be selected by its id. The shell resolves an id that
+            // names no theme (or a theme of the other form factor) to the default theme
+            // (ResolvedTheme.Resolve), as a desktop does with a deleted theme.
             new SettingFieldDeclaration(
                 DesktopThemeKey,
-                SettingValueType.Enum,
+                SettingValueType.String,
                 ThemePreferences.Default.DesktopThemeId,
-                SettingSensitivity.Public,
-                [.. ThemeCatalog.DesktopThemes.Select(static theme => theme.Id)]),
+                SettingSensitivity.Public),
             new SettingFieldDeclaration(
                 MobileThemeKey,
-                SettingValueType.Enum,
+                SettingValueType.String,
                 ThemePreferences.Default.MobileThemeId,
-                SettingSensitivity.Public,
-                [.. ThemeCatalog.MobileThemes.Select(static theme => theme.Id)]),
+                SettingSensitivity.Public),
             new SettingFieldDeclaration(
                 AccentKey,
                 SettingValueType.Enum,

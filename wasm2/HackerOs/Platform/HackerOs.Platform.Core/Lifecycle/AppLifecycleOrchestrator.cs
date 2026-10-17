@@ -274,6 +274,26 @@ public sealed class AppLifecycleOrchestrator
             : (null, loaded.Detail ?? $"The app '{appId}' is not available in this host.");
     }
 
+    /// <summary>
+    /// Hands a second activation to the running single instance (ADR 0096, section 5), like a
+    /// <c>GApplication</c> that receives the command line of a second launch: the request's intent,
+    /// or its arguments as a <see cref="AppIntentIds.LaunchApp"/> activation. A plain launch with no
+    /// arguments only focuses the instance.
+    /// </summary>
+    private void DeliverToRunningInstance(ProcessRecord existing, AppLaunchRequest request)
+    {
+        AppIntentDelivery? delivery = request.Intent
+            ?? (request.Arguments.Count > 0
+                ? new AppIntentDelivery(AppIntentIds.LaunchApp) { Arguments = [.. request.Arguments] }
+                : null);
+        if (delivery is not null
+            && TryGetRunningInstance(existing.Pid, out _, out IAppExecutionContext? running)
+            && running is AppExecutionContext concrete)
+        {
+            concrete.DeliverIntent(delivery);
+        }
+    }
+
     /// <summary>Attempts to resolve the active descriptor and context for a running process.</summary>
     public bool TryGetRunningInstance(ProcessId pid, [NotNullWhen(true)] out AppDescriptor? descriptor, [NotNullWhen(true)] out IAppExecutionContext? context)
     {
@@ -366,6 +386,7 @@ public sealed class AppLifecycleOrchestrator
             || descriptor.Manifest.Kind is AppKind.Service or AppKind.Web;
         if (isImplicitlySingleton && _processManager.TryGetSingleton(request.AppId, out ProcessRecord existing))
         {
+            DeliverToRunningInstance(existing, request);
             return new AppLaunchResult(AppLaunchStatus.FocusedExisting, existing);
         }
 
@@ -449,6 +470,11 @@ public sealed class AppLifecycleOrchestrator
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
             isRootElevated, oneShotElevation);
         request.ProcessStarted?.Invoke(process);
+        if (context is AppExecutionContext withIntent)
+        {
+            withIntent.Intent = request.Intent;
+        }
+
         if (descriptor.Manifest.Kind != AppKind.Terminal
             && context is AppExecutionContext concrete
             && (request.StandardInput is not null || request.StandardOutput is not null || request.StandardError is not null))

@@ -131,6 +131,14 @@ l'utilisateur (`~/.hackeros/aliases`) reste dans le shell.
 | `kill [-SIG] pid\|%job` | `org.hackeros.commands.kill` | `process.manage`, `shell.control` | ADR 0064 : `%n` passe par `IShellSession.KillJob`. ADR 0069 : sans option (ou `-15`, `-TERM`), `SIGTERM` — la cible reçoit `StopRequested` (raison `Terminated`, échéance à 5 s simulées), puis son jeton est annulé, et elle est tuée si elle ne s'est pas terminée ; `-9`/`-KILL` tue tout de suite, sans `StopRequested`. Une commande tuée sort avec `137`, une commande qui s'arrête sur son jeton avec `130`. |
 | `which nom…`, `watch cmd` | `org.hackeros.commands.which`, `…watch` | `shell.control` | ADR 0064 : liste des commandes du shell ; `watch` relance la ligne par `IShellSession.RunAsync`. |
 
+Ouvrir un fichier, un dossier ou une URI depuis le shell passe par
+`xdg-open` (ADR 0096 §3, [`linux-commands.md`](linux-commands.md)) : la
+commande n'a pas besoin du shell (`shell.control`), elle envoie un
+`OpenFileIntent` ou un `OpenUriIntent` avec `apps.launch` et rend la main
+(codes 0, 1, 3, 4 de freedesktop). Un `ExecuteCommandIntent` qui lance
+`xdg-open` se comporte de même. `launch <app-id> [args]` reste le moyen
+d'ouvrir une app précise.
+
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
 `IShellSession.SetVariable` et `UnsetVariable` lèvent `ArgumentException`
 sinon.

@@ -43,6 +43,16 @@ public sealed record CredentialPromptPresentation(
     CredentialPromptDialogRequest Request)
     : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
 
+/// <summary>Describes an active app-chooser presentation (ADR 0096, section 5).</summary>
+public sealed record AppChooserPresentation(
+    Guid Id,
+    string AppId,
+    Guid AppInstanceId,
+    ProcessId ProcessId,
+    string UserId,
+    AppChooserDialogRequest Request)
+    : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
+
 /// <summary>
 /// Coordinates basic modal dialogs (MessageBox, TextInput) for applications,
 /// delegating file-system dialogs to <see cref="IFileDialogService"/>.
@@ -162,6 +172,35 @@ public sealed class DialogCoordinator : IDialogService, IDisposable
                 id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, request),
             static () => new CredentialPromptDialogResult(CredentialPromptStatus.Cancelled, null, null),
             cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public ValueTask<AppChooserDialogResult> ChooseAppAsync(
+        IAppExecutionContext context,
+        AppChooserDialogRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(request);
+
+        Guid id = Guid.NewGuid();
+        return Enqueue<AppChooserDialogResult>(
+            new AppChooserPresentation(
+                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, request),
+            static () => new AppChooserDialogResult(AppChooserStatus.Cancelled, null, false),
+            cancellationToken);
+    }
+
+    /// <summary>Completes the active app-chooser request with the picked app; refuses an app that was not offered.</summary>
+    public bool SelectApp(Guid requestId, string appId, bool alwaysUse)
+    {
+        if (FindActive(requestId) is not AppChooserPresentation chooser
+            || !chooser.Request.Candidates.Any(option => string.Equals(option.AppId, appId, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        return Complete(requestId, new AppChooserDialogResult(AppChooserStatus.Selected, appId, alwaysUse));
     }
 
     /// <summary>Completes the active credential-prompt request with the submitted login/password.</summary>

@@ -137,3 +137,63 @@
     opacity: 0.8;
     flex-shrink: 0;
 }
+
+/* ADR 0103 §1: document title, busy state and file errors. */
+.paint-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.3rem 0.75rem;
+    border-bottom: 1px solid var(--hos-border-subtle, #27343a);
+    background: var(--hos-bg-base, #101417);
+    font-family: var(--hos-font-mono, monospace);
+    font-size: 0.82rem;
+}
+
+.paint-title {
+    color: var(--hos-text-primary, #f4f7f8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.paint-busy {
+    color: var(--hos-accent, #42d392);
+    animation: paint-busy-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes paint-busy-pulse {
+    50% { opacity: 0.45; }
+}
+
+.paint-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--hos-error, #ff8f87);
+    background: color-mix(in srgb, var(--hos-error, #ff8f87) 14%, var(--hos-bg-base, #101417));
+    color: var(--hos-error, #ff8f87);
+    font-size: 0.85rem;
+}
+
+.quality-input {
+    width: 4.2rem;
+    padding: 0.2rem 0.35rem;
+    border: 1px solid var(--hos-border, #3a4b53);
+    border-radius: var(--hos-radius-sm, 0.25rem);
+    background: var(--hos-bg-base, #101417);
+    color: var(--hos-text-primary, #f4f7f8);
+}
+
+.paint-statusbar #paint-path {
+    margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .paint-busy { animation: none; }
+}

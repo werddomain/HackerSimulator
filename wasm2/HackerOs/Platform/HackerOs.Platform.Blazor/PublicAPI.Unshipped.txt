@@ -9,6 +9,16 @@ HackerOs.Platform.Blazor.Components.HackComponentHost.HackComponentHost(HackerOs
 HackerOs.Platform.Blazor.Components.HackComponentHost.ResolveAsync(string! contract, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Blazor.Components.HackComponentResolution!>!
 HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof
 HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof.PlatformComplexControlsProof() -> void
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.AppChooserDialog() -> void
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.DialogCoordinator!
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.Coordinator.set -> void
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.Presentation.get -> HackerOs.Platform.Blazor.Dialogs.AppChooserPresentation!
+HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.Presentation.set -> void
+HackerOs.Platform.Blazor.Dialogs.AppChooserPresentation
+HackerOs.Platform.Blazor.Dialogs.AppChooserPresentation.AppChooserPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, HackerOs.AppSdk.Blazor.AppChooserDialogRequest! Request) -> void
+HackerOs.Platform.Blazor.Dialogs.AppChooserPresentation.Request.get -> HackerOs.AppSdk.Blazor.AppChooserDialogRequest!
+HackerOs.Platform.Blazor.Dialogs.AppChooserPresentation.Request.init -> void
 HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog
 HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.DialogCoordinator!
 HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog.Coordinator.set -> void
@@ -24,12 +34,14 @@ HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ActiveRequest.get -> HackerOs
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ActiveRequestFor(System.Guid appInstanceId) -> HackerOs.Platform.Blazor.Dialogs.DialogPresentation?
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Cancel(System.Guid requestId) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Changed -> System.Action?
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ChooseAppAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.AppChooserDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppChooserDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.CredentialPromptAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.CredentialPromptDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.CredentialPromptDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.DialogCoordinator(HackerOs.AppSdk.Blazor.IFileDialogService! fileDialogs) -> void
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Dispose() -> void
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.MessageBoxAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.MessageBoxDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.MessageBoxDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.OpenFileAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.OpenFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.OpenFileDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SaveFileAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.SaveFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SaveFileDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectApp(System.Guid requestId, string! appId, bool alwaysUse) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectCredentialPrompt(System.Guid requestId, string! loginName, string! password) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectFolderAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.SelectFolderDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SelectFolderDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectMessageBox(System.Guid requestId, HackerOs.AppSdk.Blazor.MessageBoxResult result) -> bool
@@ -462,6 +474,7 @@ HackerOs.Platform.Blazor.Windows.WindowMenuState.Y.init -> void
 HackerOs.Platform.Blazor._Imports
 HackerOs.Platform.Blazor._Imports.Execute() -> void
 HackerOs.Platform.Blazor._Imports._Imports() -> void
+override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.OnParametersSet() -> void
 override HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.OnParametersSet() -> void
 override HackerOs.Platform.Blazor.Dialogs.TextInputDialog.OnInitialized() -> void
@@ -489,6 +502,7 @@ static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(HackerO
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.InitialBounds(HackerOs.App.Abstractions.WindowOptions! options, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ToConstraints(HackerOs.App.Abstractions.WindowOptions! options) -> HackerOs.Windowing.Abstractions.WindowConstraints!
 ~override HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.MessageBoxDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -28,4 +28,8 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.Theming.Abstractions\HackerOs.Theming.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HackerOs.Apps.Settings.Tests" />
+  </ItemGroup>
+
 </Project>

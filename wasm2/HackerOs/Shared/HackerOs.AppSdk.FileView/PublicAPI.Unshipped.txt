@@ -193,6 +193,7 @@ HackerOs.AppSdk.FileView.FileView.RefreshAsync(System.Threading.CancellationToke
 HackerOs.AppSdk.FileView.FileView.RefreshFilter() -> void
 HackerOs.AppSdk.FileView.FileView.Renamed -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs!>?
 HackerOs.AppSdk.FileView.FileView.Renaming -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.RevealAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 HackerOs.AppSdk.FileView.FileView.SelectByName(string! fileName) -> void
 HackerOs.AppSdk.FileView.FileView.SelectedItem.get -> HackerOs.AppSdk.FileView.FileViewItem?
 HackerOs.AppSdk.FileView.FileView.SelectedItems.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!

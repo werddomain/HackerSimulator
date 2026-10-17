@@ -65,4 +65,42 @@ public sealed class FakeAppIntentGateway : IAppIntentGateway
             : new AppIntentOpenFileResult(AppIntentOpenFileOutcome.Opened);
         return ValueTask.FromResult(result);
     }
+
+    /// <summary>Every intent of ADR 0096 received (edit, reveal, URI, settings, app-defined), in call order, as "kind:target".</summary>
+    public List<string> IntentRequests { get; } = [];
+
+    /// <summary>Result returned by the ADR 0096 members; <see cref="AppIntentOutcome.Dispatched"/> by default.</summary>
+    public AppIntentResult NextIntentResult { get; set; } = new(AppIntentOutcome.Dispatched);
+
+    public ValueTask<AppIntentOpenFileResult> EditFileAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default)
+    {
+        IntentRequests.Add($"edit:{path.Value}");
+        return ValueTask.FromResult(new AppIntentOpenFileResult(AppIntentOpenFileOutcome.Opened));
+    }
+
+    public ValueTask<AppIntentResult> RevealFileAsync(VirtualPath path, CancellationToken cancellationToken = default)
+    {
+        IntentRequests.Add($"reveal:{path.Value}");
+        return ValueTask.FromResult(NextIntentResult);
+    }
+
+    public ValueTask<AppIntentResult> OpenUriAsync(Uri uri, string? preferredAppId = null, CancellationToken cancellationToken = default)
+    {
+        IntentRequests.Add($"uri:{uri.OriginalString}");
+        return ValueTask.FromResult(NextIntentResult);
+    }
+
+    public ValueTask<AppIntentResult> ShowAppSettingsAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        IntentRequests.Add($"settings:{appId}");
+        return ValueTask.FromResult(NextIntentResult);
+    }
+
+    public ValueTask<AppIntentResult> SendIntentAsync(
+        string intentId, string? payloadJson, string? targetAppId = null, bool rememberChoice = false, CancellationToken cancellationToken = default)
+    {
+        IntentRequests.Add($"send:{intentId}:{targetAppId}:{rememberChoice}");
+        return ValueTask.FromResult(NextIntentResult);
+    }
 }

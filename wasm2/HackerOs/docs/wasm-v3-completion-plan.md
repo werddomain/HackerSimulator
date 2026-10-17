@@ -196,7 +196,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/1-adr` (ADR 0094 à 0106)
 - [x] `v3/2-game-removal`
 - [x] `v3/3-window-model` ([`window-model.md`](window-model.md))
-- [ ] `v3/4-intents`
+- [x] `v3/4-intents` ([`app-intents.md`](app-intents.md))
 - [x] `v3/5-services` (ADR 0097, ajusté par l'ADR 0107)
 - [x] `v3/6-sdk-versioning` (ADR 0098 §1-7, [`sdk-packages.md`](sdk-packages.md))
 - [ ] `v3/7-storage-backup`

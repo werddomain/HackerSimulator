@@ -72,7 +72,7 @@ Détails : [`app-model.md`](app-model.md).
 | `FileSystemUserSelectedRead` / `Write` | `filesystem.user-selected.read` / `.write` | normale | fichiers choisis par l'utilisateur |
 | `FileSystemUserHomeRead` / `Write` | `filesystem.user-home.read` / `.write` | normale | dossier personnel |
 | `FileSystemSystemRead` / `Write` | `filesystem.system.read` / `.write` | **dangereuse** | tout le reste (`/etc`, `/var`, `/proc`…) ; écrire `/etc`, `/bin`, `/var` exige aussi un administrateur |
-| `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync` |
+| `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `SendIntentAsync` |
 | `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement` |
 | `DialogFileOpen`, `DialogFileSave`, `DialogFolderSelect` | `dialogs.file-open`, `.file-save`, `.folder-select` | normale | dialogues de fichiers (fenêtres seulement) |
 | `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers |
@@ -118,7 +118,8 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Events` | Bus d'événements : sujets de l'app (`Publish(topic, payload)`, `Subscribe`, `SubscribeChannel`, `RegisterSharedChannel`) et événements de la plateforme (`Subscribe<TEvent>`). |
 | `Clock` | Temps simulé : `UtcNow`, `CurrentTick`, `DelayAsync`, `Schedule`. |
 | `Processes` | Processus de l'app et des autres (`OwnProcess`, `ListProcesses`, `StopAsync`, `Kill`). Préférer `HackProcess`. |
-| `Intents`, `Catalog`, `AppManagement` | Derrière `HackApps` et `HackAppManagement`. |
+| `Intents`, `Catalog`, `AppManagement` | Derrière `HackApps` et `HackAppManagement`. `IAppIntentGateway` : `LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowAppSettingsAsync`, `SendIntentAsync` → `AppIntentResult` (`AppIntentOutcome`, ADR 0096). |
+| `Intent`, `IntentReceived` | Intent qui a lancé l'instance (`AppIntentDelivery` : `IntentId`, `PayloadJson`, `SenderAppId`, `Arguments`) ; événement levé quand l'OS remet un intent ou une seconde activation à l'instance déjà ouverte (ADR 0096 §5). Voir [`app-intents.md`](app-intents.md). |
 | `Environment` | Derrière `HackEnvironment`. |
 | `Network`, `Drives`, `Clipboard`, `ShellHost`, `Services` | Derrière les façades du même domaine. |
 | `Console` | Derrière `HackConsole` (ADR 0064). |
@@ -180,7 +181,7 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `Changed` ; `HackAppInfo`, `HackOpenFileResult`, `HackAppLaunchException` | lecture : aucune ; lancement : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2) |
+| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `EditFileAsync(path)`, `RevealFileAsync(path)`, `OpenUriAsync(uri, appId)`, `ShowSettingsAsync(appId)`, `SendIntentAsync(intentId, payloadJson, targetAppId, rememberChoice)`, `Changed` ; `HackAppInfo` (avec `Capabilities`), `HackOpenFileResult` (`FellBackToOpen`), `HackIntentResult` (`HackIntentStatus`), `HackAppLaunchException` | lecture et `ShowSettingsAsync` : aucune ; le reste : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2), [`app-intents.md`](app-intents.md) |
 | `HackBrowser` | `OpenAsync(url)`, `OpenDetachedAsync(url)` (fenêtre détachée, ADR 0078) ; `AppId`, `DetachedArgument` (`--detached`) | `apps.launch` | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackAppManagement` | `GetAllAsync`, `UninstallAsync`, `ReinstallAsync` ; `HackInstallScope`, `HackAppInstallState` | `apps.manage` | [`app-installation.md`](app-installation.md) |
 
@@ -256,11 +257,11 @@ Détails : [`system-administration.md`](system-administration.md),
 
 | Classe | Projet | À surcharger | Document |
 |---|---|---|---|
-| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée), crochets de fenêtre `OnWindowActivated[Async]`, `OnWindowDeactivated[Async]`, `OnWindowStateChanged[Async]`, `OnWindowResized[Async]`, état `IsWindowActive`, `WindowState`, `WindowSize`, `TrackDisplaySurface` (ADR 0095, [`window-model.md`](window-model.md)) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchFile`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
+| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée), crochets de fenêtre `OnWindowActivated[Async]`, `OnWindowDeactivated[Async]`, `OnWindowStateChanged[Async]`, `OnWindowResized[Async]`, état `IsWindowActive`, `WindowState`, `WindowSize`, `TrackDisplaySurface` (ADR 0095, [`window-model.md`](window-model.md)), `OnIntentReceivedAsync(AppIntentDelivery)` (ADR 0096 §5) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchIntent`, `LaunchFile`, `SendIntentAsync` (affiche le sélecteur si plusieurs apps répondent), `ChooseAppAsync`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
 | `HackComponentBase` | `AppSdk.Blazor` | Composant enfant d'une fenêtre qui appelle `Hack*` | [`hack-file-api.md`](hack-file-api.md) |
 | `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen` | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
 | `WebAppDefinition` | `AppSdk.Web` | Classe `[AppManifest]` `partial` d'un site : `Urls`, `Configure(HackWebApplicationBuilder)` (services, middlewares, `MapControllers`, `MapGet`...) ; le build génère l'`EntryPoint` (`<Nom>WebHost : HackWebHost`) et la table de routes des contrôleurs (`HackController`, `HackApiController`) | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
-| `ServiceAppBase` | `AppSdk` | `OnStartAsync(context, token)` (le service est `activating` jusqu'à son retour, puis `active`, ADR 0107), `RunCoreAsync(context, sessionCancellationToken)`, `ReportHealth(HackServiceHealth, status)` (santé et texte de `systemctl status`, ADR 0097 §2), `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`) | [guide §5](sdk-developer-guide.md#5-un-service) |
+| `ServiceAppBase` | `AppSdk` | `OnStartAsync(context, token)` (le service est `activating` jusqu'à son retour, puis `active`, ADR 0107), `RunCoreAsync(context, sessionCancellationToken)`, `ReportHealth(HackServiceHealth, status)` (santé et texte de `systemctl status`, ADR 0097 §2), `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`), `OnIntentReceivedAsync(AppIntentDelivery, token)` (ADR 0096 §5) | [guide §5](sdk-developer-guide.md#5-un-service) |
 
 Interfaces qu'un composant fenêtré peut implémenter :
 
@@ -346,7 +347,8 @@ Guide : [`asp-hack-site-data.md`](asp-hack-site-data.md).
 | `SelectFolderDialogRequest` → `SelectFolderDialogResult` | `Title`, `InitialDirectory`, `AllowCreateFolder` |
 | `MessageBoxDialogRequest` → `MessageBoxDialogResult` | `Title`, `Content`, `DialogType` (`MessageBoxType`) ; résultat `MessageBoxResult` |
 | `TextInputDialogRequest` → `TextInputDialogResult` | `Title`, `Content`, `DefaultValue`, `Placeholder` ; résultat `Status` (`TextInputStatus`) et `Value` |
-| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync` en plus |
+| `AppChooserDialogRequest` → `AppChooserDialogResult` | Sélecteur « Ouvrir avec » (ADR 0096) : `Title`, `Content`, `Candidates` (`AppChooserOption(AppId, Name, Description)`), `OfferAlwaysUse` ; résultat `Status` (`AppChooserStatus`), `AppId`, `AlwaysUse` |
+| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync` et `ChooseAppAsync` en plus |
 
 `FileDialogStatus.Selected` indique un choix ; tout autre statut est une
 annulation.
@@ -379,7 +381,7 @@ Détails : [`blazor-sites.md`](blazor-sites.md).
 
 | Type | Rôle |
 |---|---|
-| `FileView` | Liste de fichiers. Paramètres : `FileSystem`, `Watch`, `Intents`, `InitialDirectory`, `Mode` (`FileViewMode`), `FolderActivation`, `IconProvider`, `ContextMenuProviders`, `AllowMultiSelect`, `AllowDragDrop`, `Columns`, `Filter`, `CanPaste`, `CutPaths`, rappels `DeleteRequested`, `DropRequested`, `ClipboardRequested`. Méthodes `NavigateAsync`, `RefreshAsync` ; propriétés `CurrentDirectory`, `Items`, `SelectedItem(s)` ; événements `Navigating`, `OnPathChange`, `Opening`, `Opened`, `Renaming`, `Renamed`, `Creating`, `Created`, `Deleting`, `Deleted`, `Moving`, `Moved`, `Copying`, `Copied`, `SelectionChanging`, `SelectionChanged`, `ContextMenuOpening` (les formes `-ing` sont annulables). |
+| `FileView` | Liste de fichiers. Paramètres : `FileSystem`, `Watch`, `Intents`, `InitialDirectory`, `Mode` (`FileViewMode`), `FolderActivation`, `IconProvider`, `ContextMenuProviders`, `AllowMultiSelect`, `AllowDragDrop`, `Columns`, `Filter`, `CanPaste`, `CutPaths`, rappels `DeleteRequested`, `DropRequested`, `ClipboardRequested`. Méthodes `NavigateAsync`, `RefreshAsync`, `RevealAsync(path)` (ouvre le dossier parent, sélectionne l'élément et le fait défiler, ADR 0096 §1) ; propriétés `CurrentDirectory`, `Items`, `SelectedItem(s)` ; événements `Navigating`, `OnPathChange`, `Opening`, `Opened`, `Renaming`, `Renamed`, `Creating`, `Created`, `Deleting`, `Deleted`, `Moving`, `Moved`, `Copying`, `Copied`, `SelectionChanging`, `SelectionChanged`, `ContextMenuOpening` (les formes `-ing` sont annulables). |
 | `FileViewTree`, `FileViewBreadcrumb`, `FileViewDropZone`, `FileViewContextMenu` | Arbre de dossiers, fil d'Ariane, zone de dépôt, menu contextuel. |
 | `IFileViewContextMenuProvider`, `IShellIconProvider`, `ShellIcon` | Extensions : entrées de menu, icônes. |
 | `FileTransfer` | `CopyAsync`, `MoveAsync`, `TransferAsync`, `ImportAsync` (fichiers de l'hôte), `MoveToTrashAsync`, `GetCopyName` ; conflits de noms à la Nautilus. |
@@ -400,6 +402,24 @@ Détails : [`file-explorer.md`](file-explorer.md).
 | `HackerIcon` (`AppSdk.Icons`) | `Library` (`IconLibrary` : `Bootstrap`, `FontAwesome`, `Lucide`, `SimpleIcons`), `Name`, `Icon`, `Size`, `Title` ; voir [`old/icon-library.md`](old/icon-library.md). |
 | `VirtualKeyboard`, `VirtualKeyboardHost` (`AppSdk.VirtualKeyboard`) | `Options` (`VirtualKeyboardOptions` : rangées modificateurs, symboles, flèches, libellés), `OnKeyPressed` (`VirtualKeyPressedEvent`), `IsKeyboardVisible`, `ChildContent`. |
 
+## Thèmes (`HackerOs.Theming.Abstractions`)
+
+Pour lire ou écrire un thème utilisateur (ADR 0103, détail dans
+[`theme-editor.md`](theme-editor.md)) :
+
+| Type | Membres |
+|---|---|
+| `ThemeTokenCatalog` | `All`, `InGroup(ThemeTokenGroup)`, `TryGet(name, out ThemeTokenDefinition)` : les 68 jetons `--hos-*` modifiables |
+| `ThemeTokenDefinition` | `Name`, `Type` (`Color`, `Length`, `Duration`, `FontFamily`, `Number`), `Group`, `Label`, `Description`, `Example`, `RgbCompanion` |
+| `ThemeTokenValidator` | `TryValidate(type ou nom, valeur, out normalisée, out erreur)`, `TryGetRgbTriplet`, `ToHexColor` |
+| `ThemeFile` | `Parse(texte, origine, chemin)` → `ThemeFileParseResult` (thème + diagnostics), `Serialize(UserTheme)`, `IsValidId`, `Extension` (`.theme`), `MediaType` |
+| `UserTheme` | `Id`, `Name`, `BaseThemeId`, `Platforms`, `Tokens`, `Origin`, `SourcePath`, `Supports`, `ToCssProperties` |
+| `UserThemeLibrary` | `SystemDirectory`, `GetUserDirectory(home)`, `GetUserThemePath(home, id)`, `Build`, `LoadAsync(listFiles, readFile, home)` |
+| `ResolvedTheme` | `Resolve(id, plateforme, thèmes)` → `BaseThemeId`, `UserTheme`, `IsFallback` |
+
+`ThemeScope` et `ThemePreview` (`HackerOs.Theming.Blazor`) prennent un
+paramètre `Tokens` appliqué par-dessus le thème de base.
+
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
@@ -412,3 +432,5 @@ Détails : [`file-explorer.md`](file-explorer.md).
 - [x] Sites web ASP.Hack : démarrage, requête, contrôleurs, vues, anti-falsification, liens des sites Blazor (`web/11`).
 - [x] Base `HackWebDb`, journal de débogage d'un site, passerelle `WebDatabase`, bases des sites dans `HackStorageDiagnostics` (`web/12`).
 - [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
+- [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
+- [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).

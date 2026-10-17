@@ -48,9 +48,17 @@ public sealed class BrowserApp : AppDefinition
     ];
 
     /// <inheritdoc />
-    /// <remarks>Opening an <c>.html</c> file shows it as <c>file://</c> (ADR 0075 §4).</remarks>
+    /// <remarks>
+    /// Opening an <c>.html</c> file shows it as <c>file://</c> (ADR 0075 §4). The browser is also the
+    /// handler of <c>http:</c> and <c>https:</c> links, declared as freedesktop does with the media
+    /// types <c>x-scheme-handler/&lt;scheme&gt;</c> (<c>OpenUriIntent</c>, <c>xdg-open</c>, ADR 0096 §3).
+    /// </remarks>
     public override IReadOnlyList<FileHandler> FileHandlers =>
-        [new("text/html", [".html", ".htm"], ["open"])];
+    [
+        new("text/html", [".html", ".htm"], ["open"]),
+        new("x-scheme-handler/http", [], ["open"]),
+        new("x-scheme-handler/https", [], ["open"])
+    ];
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

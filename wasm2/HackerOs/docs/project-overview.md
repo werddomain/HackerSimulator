@@ -102,7 +102,7 @@ navigateur est ici.
 
 | Dossier | Contenu |
 |---|---|
-| `Apps/System/` | Les 13 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
+| `Apps/System/` | Les 14 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint ([`hack-paint.md`](hack-paint.md)), Theme Editor ([`theme-editor.md`](theme-editor.md)), Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
 | `Apps/Commands/HackerOs.Commands` | Les 63 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 14 qui touchent le shell ou l'écran (ADR 0070). |
 | `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme, site Blazor, site ASP.Hack complet) ; elles ne sont pas installées dans l'hôte, sauf les deux sites `HackerOs.Samples.BlazorSite` (`http://blazor-sample.hack/`, ADR 0084) et `HackerOs.Samples.Intranet` (`http://intranet.hack/`, ADR 0087, [guide ASP.Hack](asp-hack-developer-guide.md)), apps cachées installées pour que le navigateur puisse les servir. |
 
@@ -149,7 +149,7 @@ Les emplacements à connaître :
 |---|---|
 | `/home/<login>` | Dossier personnel ; `~/.config/<appId>/` paramètres de l'app, `~/.local/share/Trash` corbeille, `~/.local/share/keyrings/login.keyring` trousseau chiffré (ADR 0100). |
 | `/root` | Dossier de `root` (processus lancés par `sudo`). |
-| `/etc/hackeros/` | Configuration de l'OS : `apps.config`, `security.config`, `app-permissions.config`, `appearance.config`, `policy.config`, `ui-platform-preference.config`, `file-associations.json`. |
+| `/etc/hackeros/` | Configuration de l'OS : `apps.config`, `security.config`, `app-permissions.config`, `appearance.config`, `policy.config`, `ui-platform-preference.config`, `file-associations.json` ; `themes/` (thèmes `.theme` de toute la machine, ADR 0103). |
 | `/etc/<appId>/` | Couche système des paramètres d'une app, avec la section `[locked]` ; clés sensibles dans `<doc>.private.config` (`0600`, ADR 0100). |
 | `/etc/environment`, `/etc/hostname` | Environnement de connexion et nom de machine. |
 | `/var/log/` | `syslog`, `auth.log`, `audit.log` (écritures sous `/etc`, `/bin`, `/var`, ADR 0100), `apps/<appId>.log`, avec rotation. |

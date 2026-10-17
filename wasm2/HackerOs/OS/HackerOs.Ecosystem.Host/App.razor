@@ -21,9 +21,11 @@
 @inject WebCryptoPasswordHasher PasswordHasher
 @inject UiPlatformPreferenceService PlatformPreference
 @inject ThemePreferenceService ThemePreference
+@inject UserThemeCatalogService UserThemes
 @inject HackerOs.Platform.Core.Clipboard.HostClipboardBridge HostClipboard
 
-<ThemeScope ThemeId="@ActiveThemeId"
+<ThemeScope ThemeId="@ActiveTheme.BaseThemeId"
+            Tokens="@ActiveTheme.UserTheme?.Tokens"
             Platform="@ActiveThemePlatform"
             AccentId="@ThemePreference.Current.AccentId"
             AnimationsEnabled="@ThemePreference.Current.AnimationsEnabled">
@@ -211,6 +213,12 @@
         : ThemePreference.Current.DesktopThemeId;
 
     /// <summary>
+    /// The built-in theme to render and the user theme tokens over it (ADR 0103): an id naming no
+    /// theme, or a theme of the other form factor, falls back to the form factor's default.
+    /// </summary>
+    private ResolvedTheme ActiveTheme => UserThemes.Resolve(ActiveThemeId, ActiveThemePlatform);
+
+    /// <summary>
     /// ADR 0071, section 2: once the desktop is shown (the session is open and its startup apps were
     /// launched by the login), the system is started; Web Workers warm up behind it, when idle.
     /// </summary>
@@ -226,6 +234,7 @@
     {
         PlatformPreference.Changed += OnPlatformPreferenceChanged;
         ThemePreference.Changed += OnThemePreferenceChanged;
+        UserThemes.Changed += OnThemePreferenceChanged;
 
         // Boot creates/reconciles canonical settings documents. Preferences are then loaded before
         // a user can reach a desktop, so the saved theme never depends on opening Settings first.
@@ -241,6 +250,7 @@
     {
         PlatformPreference.Changed -= OnPlatformPreferenceChanged;
         ThemePreference.Changed -= OnThemePreferenceChanged;
+        UserThemes.Changed -= OnThemePreferenceChanged;
     }
 
     private async Task InitializeAsync()
@@ -272,6 +282,7 @@
         {
             await PlatformPreference.InitializeAsync();
             await ThemePreference.InitializeAsync();
+            await UserThemes.InitializeAsync();
             // Shares clipboard text with the real machine (ADR 0065); never fails the boot.
             await HostClipboard.StartAsync();
         }
