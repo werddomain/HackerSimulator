@@ -41,22 +41,36 @@ public sealed class FileSystemPathResolver(IFileSystemMountRouter router) : IFil
 
             string[] segments = remainingPath.Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
             bool restarted = false;
+            IReadOnlyList<FileSystemEntrySnapshot>? walked =
+                await TryWalkAsync(remainingPath, segments, context, cancellationToken);
 
             for (int index = 0; index < segments.Length; index++)
             {
                 VirtualPath candidate = BuildPath(segments, index + 1);
-                FileSystemMountResolution route = _router.Resolve(candidate);
                 FileSystemResult<FileSystemEntrySnapshot> stat;
-                try
+                if (walked is not null)
                 {
-                    stat = await route.Mount.Provider.StatAsync(
-                        new FileSystemStatRequest(candidate, FileSystemLinkBehavior.NoFollow),
-                        context,
-                        cancellationToken);
+                    // The walk stops before the first missing component, exactly where a
+                    // per-prefix lstat would have reported NotFound.
+                    stat = index < walked.Count
+                        ? FileSystemResult<FileSystemEntrySnapshot>.Success(walked[index])
+                        : FileSystemResult<FileSystemEntrySnapshot>.Failure(
+                            new FileSystemError(FileSystemOperation.Stat, FileSystemErrorCode.NotFound, candidate));
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                else
                 {
-                    return Failure(operation, FileSystemErrorCode.Cancelled, candidate);
+                    FileSystemMountResolution route = _router.Resolve(candidate);
+                    try
+                    {
+                        stat = await route.Mount.Provider.StatAsync(
+                            new FileSystemStatRequest(candidate, FileSystemLinkBehavior.NoFollow),
+                            context,
+                            cancellationToken);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        return Failure(operation, FileSystemErrorCode.Cancelled, candidate);
+                    }
                 }
 
                 if (!stat.Succeeded)
@@ -115,6 +129,50 @@ public sealed class FileSystemPathResolver(IFileSystemMountRouter router) : IFil
                 return FileSystemResult<FileSystemPathResolution>.Success(
                     new FileSystemPathResolution(remainingPath, followedCount));
             }
+        }
+    }
+
+    /// <summary>
+    /// Stats every component of <paramref name="path"/> in one provider request when all its
+    /// prefixes live on one mount whose provider can walk a path (<see cref="IFileSystemPathWalkProvider"/>).
+    /// Returns <see langword="null"/> when that is not possible or the walk failed: the caller
+    /// then stats each prefix, which reports any error exactly as before.
+    /// </summary>
+    private async ValueTask<IReadOnlyList<FileSystemEntrySnapshot>?> TryWalkAsync(
+        VirtualPath path,
+        string[] segments,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken)
+    {
+        // One component is one stat either way.
+        if (segments.Length < 2)
+        {
+            return null;
+        }
+
+        FileSystemMount mount = _router.Resolve(path).Mount;
+        if (mount.Provider is not IFileSystemPathWalkProvider walker)
+        {
+            return null;
+        }
+
+        for (int count = 1; count < segments.Length; count++)
+        {
+            if (!ReferenceEquals(_router.Resolve(BuildPath(segments, count)).Mount, mount))
+            {
+                return null;
+            }
+        }
+
+        try
+        {
+            FileSystemResult<IReadOnlyList<FileSystemEntrySnapshot>> walk =
+                await walker.StatComponentsAsync(path, context, cancellationToken);
+            return walk.Succeeded ? walk.Value : null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return null;
         }
     }
 

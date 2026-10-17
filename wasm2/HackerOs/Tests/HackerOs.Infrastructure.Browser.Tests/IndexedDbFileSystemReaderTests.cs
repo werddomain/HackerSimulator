@@ -29,37 +29,60 @@ public sealed class IndexedDbFileSystemReaderTests
     }
 
     [Fact]
-    public async Task ResolveAsync_FollowsCompoundDirectoryLinks()
+    public async Task ResolveAsync_WalksCompoundPathInOneTransaction()
     {
         ScriptedJsObjectReference module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One(Link(RootId, "home", HomeId)),
-            One(Entry(HomeId, FileSystemEntryKind.Directory)),
-            One(Link(HomeId, "user", UserId)),
-            One(Entry(UserId, FileSystemEntryKind.Directory)));
+            One($"[{Entry(HomeId, FileSystemEntryKind.Directory)},{Entry(UserId, FileSystemEntryKind.Directory)}]"));
         await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module));
 
         IndexedDbFileSystemEntryRecord? result = await reader.ResolveAsync(VirtualPath.Parse("/home/user"));
 
         Assert.Equal(UserId, result?.Id);
-        IndexedDbOperation homeLookup = Operation(module.ExecuteInvocations[1]);
-        Assert.Equal(new object[] { RootId, "home" }, Assert.IsType<object[]>(homeLookup.Key));
-        IndexedDbOperation userLookup = Operation(module.ExecuteInvocations[3]);
-        Assert.Equal(new object[] { HomeId, "user" }, Assert.IsType<object[]>(userLookup.Key));
+        IndexedDbOperation walk = Operation(Assert.Single(module.ExecuteInvocations));
+        Assert.Equal("resolvePath", walk.Kind);
+        Assert.Equal("fsEntries", walk.ObjectStoreName);
+        Assert.Equal("fsLinks", walk.ReferenceObjectStoreName);
+        Assert.Equal(RootId, walk.Key);
+        Assert.Equal(["home", "user"], Assert.IsType<string[]>(walk.Query));
     }
 
     [Fact]
-    public async Task ResolveAsync_MissingLinkStopsWithoutEntryRead()
+    public async Task ResolveAsync_MissingComponentResolvesToNull()
     {
-        ScriptedJsObjectReference module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One("null"));
+        // Only "/home" exists: the walk stops before the missing name.
+        ScriptedJsObjectReference module = new(One($"[{Entry(HomeId, FileSystemEntryKind.Directory)}]"));
         await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module));
 
-        IndexedDbFileSystemEntryRecord? result = await reader.ResolveAsync(VirtualPath.Parse("/missing/child"));
+        IndexedDbFileSystemEntryRecord? result = await reader.ResolveAsync(VirtualPath.Parse("/home/missing"));
 
         Assert.Null(result);
-        Assert.Equal(2, module.ExecuteInvocations.Count);
+        Assert.Single(module.ExecuteInvocations);
+    }
+
+    [Fact]
+    public async Task ResolveComponentsAsync_ReturnsEachExistingComponentInOrder()
+    {
+        ScriptedJsObjectReference module = new(One($"[{Entry(HomeId, FileSystemEntryKind.Directory)}]"));
+        await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module));
+
+        IReadOnlyList<IndexedDbFileSystemEntryRecord> components =
+            await reader.ResolveComponentsAsync(VirtualPath.Parse("/home/missing/deeper"));
+
+        Assert.Equal([HomeId], components.Select(component => component.Id));
+        Assert.Equal(["home", "missing", "deeper"], Assert.IsType<string[]>(Operation(Assert.Single(module.ExecuteInvocations)).Query));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_LinkToMissingEntryReportsCorruption()
+    {
+        ScriptedJsObjectReference module = new(One($$"""[{"danglingLink":"home","entryId":"{{HomeId}}"}]"""));
+        await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module));
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+            await reader.ResolveAsync(VirtualPath.Parse("/home/user")));
+
+        Assert.Contains("'home'", error.Message, StringComparison.Ordinal);
+        Assert.Contains(HomeId, error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -127,11 +150,13 @@ public sealed class IndexedDbFileSystemReaderTests
         RecordingDisk disk = new();
         ScriptedJsObjectReference module = new(
             One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One("null"));
+            One("[]"));
         await using IndexedDbFileSystemReader reader = new(new FakeJsRuntime(module), disk);
 
-        await reader.ResolveAsync(VirtualPath.Parse("/missing"));
+        await reader.ResolveAsync(VirtualPath.Parse("/"));
+        await reader.ResolveAsync(VirtualPath.Parse("/missing/child"));
 
+        // One request per transaction, however deep the walk: a path lookup is one metadata read.
         Assert.Equal(2, disk.Begun);
         Assert.Equal(
             [(BlockIoDirection.Read, 4096L, true), (BlockIoDirection.Read, 4096L, true)],

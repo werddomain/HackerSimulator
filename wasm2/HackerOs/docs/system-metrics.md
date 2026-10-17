@@ -191,7 +191,11 @@ et la termine :
 - taille : les octets du fichier pour le contenu, un bloc de 4 Kio pour une
   transaction de métadonnées (la taille d'une mise à jour d'inode sous Linux) ;
 - une transaction en échec compte dans le temps occupé, pas dans les requêtes
-  terminées.
+  terminées ;
+- la recherche d'un chemin est une seule transaction quelle que soit sa
+  profondeur (opération `resolvePath`, ADR 0090), donc une seule lecture, comme
+  un noyau dont le cache des entrées de répertoire évite de relire chaque
+  préfixe.
 
 `BlockDeviceStatistics` tient `io_ticks` (temps avec au moins une requête en
 vol) et `time_in_queue` (temps pondéré par la profondeur de file) comme le
