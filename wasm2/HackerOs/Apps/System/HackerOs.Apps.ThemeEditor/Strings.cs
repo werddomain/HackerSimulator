@@ -41,6 +41,14 @@ internal sealed class Strings
         return index < 0 ? (text, string.Empty) : (text[..index], text[(index + 3)..]);
     }
 
+    /// <summary>
+    /// The language a localizer reads, for the texts of <c>HackerOs.Theming.Abstractions</c> (token
+    /// labels and descriptions, validation reasons, theme file warnings), which take a culture
+    /// instead of a localizer; <see langword="null"/> (English) for any other localizer.
+    /// </summary>
+    /// <param name="text">The localizer of the window or component.</param>
+    internal static CultureInfo? CultureOf(IStringLocalizer text) => text is HackStringLocalizer hack ? hack.Culture : null;
+
     /// <summary>The name of a token group (tab title, documentation heading); an unknown group keeps its enum name.</summary>
     /// <param name="text">The localizer to read from.</param>
     /// <param name="group">The token group.</param>

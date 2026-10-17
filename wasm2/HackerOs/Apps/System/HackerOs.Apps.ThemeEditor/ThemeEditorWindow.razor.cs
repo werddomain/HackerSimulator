@@ -242,7 +242,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         ThemeFileParseResult parsed = ThemeFile.Parse(content, ThemeOrigin.User, path.Value);
         if (parsed.Theme is null)
         {
-            Show(L["Message.OpenFailed", path.Value, string.Join(" ", parsed.Diagnostics.Where(static d => d.IsError).Select(static d => d.Message))], isError: true);
+            Show(L["Message.OpenFailed", path.Value, string.Join(" ", parsed.Diagnostics.Where(static d => d.IsError).Select(d => d.GetMessage(Strings.CultureOf(L))))], isError: true);
             return;
         }
 
@@ -254,7 +254,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         int warnings = parsed.Diagnostics.Count(static d => !d.IsError);
         Show(warnings == 0
                 ? L["Message.Opened", path.Value]
-                : L["Message.OpenedWithWarnings", path.Value, warnings, string.Join(" ", parsed.Diagnostics.Select(static d => d.ToString()))],
+                : L["Message.OpenedWithWarnings", path.Value, warnings, string.Join(" ", parsed.Diagnostics.Select(d => d.ToString(Strings.CultureOf(L))))],
             isError: warnings > 0);
     }
 

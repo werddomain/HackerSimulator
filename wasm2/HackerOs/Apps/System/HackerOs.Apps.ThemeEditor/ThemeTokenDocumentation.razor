@@ -45,10 +45,10 @@ platforms = desktop, mobile
                     @foreach (ThemeTokenDefinition token in ThemeTokenCatalog.InGroup(group))
                     {
                         <tr>
-                            <td><code>@token.Name</code><span class="docs-label">@token.Label</span></td>
+                            <td><code>@token.Name</code><span class="docs-label">@token.GetLabel(Strings.CultureOf(L))</span></td>
                             <td>@Strings.TypeLabel(L, token.Type)</td>
                             <td>
-                                @token.Description
+                                @token.GetDescription(Strings.CultureOf(L))
                                 @if (token.RgbCompanion is { } companion)
                                 {
                                     <span class="docs-companion">@AlsoSets.Before<code>@companion</code>@AlsoSets.After</span>

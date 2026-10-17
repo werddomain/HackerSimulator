@@ -160,3 +160,8 @@ static HackerOs.Theming.Abstractions.UserThemeLibrary.GetUserDirectory(string! h
 static HackerOs.Theming.Abstractions.UserThemeLibrary.GetUserThemePath(string! homeDirectory, string! themeId) -> string!
 static HackerOs.Theming.Abstractions.UserThemeLibrary.LoadAsync(System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!>! listFiles, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string!>!>! readFile, string? homeDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Theming.Abstractions.UserThemeLibraryResult!>!
 static HackerOs.Theming.Abstractions.UserThemeLibraryResult.Empty.get -> HackerOs.Theming.Abstractions.UserThemeLibraryResult!
+HackerOs.Theming.Abstractions.ThemeFileDiagnostic.GetMessage(System.Globalization.CultureInfo? culture) -> string!
+HackerOs.Theming.Abstractions.ThemeFileDiagnostic.ToString(System.Globalization.CultureInfo? culture) -> string!
+HackerOs.Theming.Abstractions.ThemeTokenDefinition.GetDescription(System.Globalization.CultureInfo? culture) -> string!
+HackerOs.Theming.Abstractions.ThemeTokenDefinition.GetLabel(System.Globalization.CultureInfo? culture) -> string!
+static HackerOs.Theming.Abstractions.ThemeTokenValidator.TryValidate(HackerOs.Theming.Abstractions.ThemeTokenType type, string? value, System.Globalization.CultureInfo? culture, out string! normalized, out string? error) -> bool

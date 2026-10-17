@@ -110,7 +110,7 @@ public sealed class ThemeEditorDocument
         }
 
         _values[tokenName] = value;
-        if (ThemeTokenValidator.TryValidate(token.Type, value, out _, out string? error))
+        if (ThemeTokenValidator.TryValidate(token.Type, value, Strings.CultureOf(_text), out _, out string? error))
         {
             _errors.Remove(tokenName);
         }
