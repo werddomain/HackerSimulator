@@ -66,7 +66,7 @@ public sealed partial class HackProcess
     /// <param name="timeout">Grace period; <see cref="DefaultTerminateTimeout"/> (5 s) when <see langword="null"/>.</param>
     /// <param name="cancellationToken">Cancels the wait (the process is still stopped).</param>
     /// <returns><see langword="true"/> when the process ended by itself, <see langword="false"/> when it had to be killed.</returns>
-    /// <exception cref="HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
+    /// <exception cref="HackerOs.AppSdk.IO.HackUnauthorizedAccessException">It is another process and this app lacks <c>process.manage</c>.</exception>
     /// <exception cref="InvalidOperationException">The process has already exited.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
     public Task<bool> TerminateAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>

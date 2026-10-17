@@ -48,8 +48,10 @@ public sealed class FileSystemSyncService(
     private List<string> _unresolvedConflicts = [];
     private HashSet<Guid> _conflictedRecordIds = [];
 
+    /// <inheritdoc />
     public IReadOnlyList<string> UnresolvedConflicts => _unresolvedConflicts;
 
+    /// <inheritdoc />
     public async Task PushAsync(CancellationToken cancellationToken = default)
     {
         AuthenticatedPrincipal? principal = session.CurrentPrincipal;
@@ -166,6 +168,7 @@ public sealed class FileSystemSyncService(
         _conflictedRecordIds = conflicted;
     }
 
+    /// <inheritdoc />
     public async Task PullAsync(CancellationToken cancellationToken = default)
     {
         AuthenticatedPrincipal? principal = session.CurrentPrincipal;

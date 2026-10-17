@@ -20,7 +20,7 @@ public sealed class HackControllerContext : HackActionContext
 /// <summary>
 /// Base of every ASP.Hack controller (ASP.NET's <c>ControllerBase</c>, ADR 0076 §3): the request,
 /// the model state, URL helpers and the methods that build results (<see cref="Ok()"/>,
-/// <see cref="NotFound()"/>, <see cref="CreatedAtAction"/>...). Derive from <see cref="HackController"/>
+/// <see cref="NotFound()"/>, <see cref="CreatedAtAction{TValues}(string, TValues, object)"/>...). Derive from <see cref="HackController"/>
 /// for pages or <see cref="HackApiController"/> for an HTTP API.
 /// </summary>
 /// <remarks>

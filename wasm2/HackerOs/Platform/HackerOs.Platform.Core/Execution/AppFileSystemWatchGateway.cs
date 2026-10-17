@@ -9,7 +9,7 @@ namespace HackerOs.Platform.Core.Execution;
 
 /// <summary>
 /// Provides one app instance's authorized directory-change watch access, reusing the same
-/// filesystem-read authorization <see cref="IFileSystemService.StatAsync"/> already applies — watching a
+/// filesystem-read authorization <see cref="IFileSystemProvider.StatAsync"/> already applies — watching a
 /// directory never reveals more than reading it already would, and no new capability identifier is
 /// introduced. See <c>docs/Global-FileView-And-MessagingSystem/MessagingSystem.md</c> (<c>MSG-013</c>).
 /// </summary>

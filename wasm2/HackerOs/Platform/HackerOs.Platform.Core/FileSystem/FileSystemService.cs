@@ -684,7 +684,6 @@ public sealed class FileSystemService : IFileSystemService
     private static VirtualPath Combine(VirtualPath parent, FileSystemEntryName name) =>
         VirtualPath.Parse(parent.Value == "/" ? $"/{name.Value}" : $"{parent.Value}/{name.Value}");
 
-    /// <summary>Publishes one change notification for <paramref name="affectedPath"/> to its parent directory's topic.</summary>
     /// <summary>
     /// Gets the process an operation is charged to: its PID when I/O accounting is on and the
     /// caller is a process (system operations outside any process are not charged).
@@ -704,6 +703,7 @@ public sealed class FileSystemService : IFileSystemService
             new ReadCountingStream(handle.Content, read => accounting.RecordRead(pid, read, fromStorage)));
     }
 
+    /// <summary>Publishes one change notification for <paramref name="affectedPath"/> to its parent directory's topic.</summary>
     private void PublishChange(
         VirtualPath affectedPath,
         FileSystemEntryKind entryKind,

@@ -102,6 +102,7 @@ public interface IPersistentCapabilityGrantRepository
     /// <param name="constraints">Optional structured resource constraints.</param>
     /// <param name="isRevoked">Whether the imported grant is currently revoked.</param>
     /// <param name="actingAuthority">Authority of the principal requesting the mutation.</param>
+    /// <param name="cancellationToken">Cancels the durable write.</param>
     /// <returns>The mutation result.</returns>
     ValueTask<CapabilityGrantMutationResult> ImportAsync(
         CapabilityGrantId id,

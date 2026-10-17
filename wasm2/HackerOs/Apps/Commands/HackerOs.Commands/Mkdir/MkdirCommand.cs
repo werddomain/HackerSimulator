@@ -16,6 +16,7 @@ public sealed class MkdirCommand : TerminalAppBase
     /// <summary>Mode of a new directory (<c>0755</c>, the result of <c>0777</c> under umask <c>022</c>).</summary>
     private static readonly FileSystemPermissions DirectoryMode = FileSystemPermissions.FromMode(0b111_101_101);
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public MkdirCommand(AppManifest manifest) : base(manifest) { }
 
     /// <summary>Parses the options, then creates every operand in order; exit status 1 if any failed.</summary>

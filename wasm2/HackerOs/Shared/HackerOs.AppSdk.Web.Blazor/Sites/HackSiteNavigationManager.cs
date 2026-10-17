@@ -4,7 +4,7 @@ namespace HackerOs.AppSdk.Web.Blazor.Sites;
 
 /// <summary>
 /// The <see cref="NavigationManager"/> of a Blazor site (ADR 0084, section 5): the address of the
-/// browser tab, not of HackerOS. <see cref="NavigationManager.NavigateTo(string)"/> within the site
+/// browser tab, not of HackerOS. <see cref="NavigationManager.NavigateTo(string, bool)"/> within the site
 /// changes the tab's address without a request (like <c>history.pushState</c>); outside it, or with
 /// <c>forceLoad</c>, the browser navigates. A site gets it from the cascading <see cref="HackWebSite"/>
 /// (<c>Site.Navigation</c>) and must not inject Blazor's own <see cref="NavigationManager"/>, which is
@@ -20,7 +20,7 @@ public sealed class HackSiteNavigationManager : NavigationManager
         Initialize(baseUri, uri);
     }
 
-    /// <summary>Raised by <see cref="NavigateTo(string)"/>: the view decides whether the tab changes address or document.</summary>
+    /// <summary>Raised by <see cref="NavigationManager.NavigateTo(string, bool)"/> and its overloads: the view decides whether the tab changes address or document.</summary>
     public event Action<string, NavigationOptions>? NavigationRequested;
 
     /// <inheritdoc />

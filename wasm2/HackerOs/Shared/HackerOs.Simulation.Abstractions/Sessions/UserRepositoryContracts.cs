@@ -12,6 +12,7 @@ public interface ILocalUserRepository
     /// <param name="primaryGroupId">The user's primary group.</param>
     /// <param name="additionalGroupIds">Additional groups the user belongs to; defaults to none.</param>
     /// <param name="credential">Optional local password credential.</param>
+    /// <param name="cancellationToken">Cancels the write to the user store.</param>
     /// <returns>The newly created user record.</returns>
     /// <exception cref="InvalidOperationException">The login name is already in use.</exception>
     ValueTask<LocalUser> CreateUserAsync(

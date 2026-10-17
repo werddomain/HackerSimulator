@@ -22,7 +22,7 @@ public static class HackBrowser
     /// <param name="cancellationToken">Cancels the launch.</param>
     /// <exception cref="ArgumentException"><paramref name="url"/> is empty.</exception>
     /// <exception cref="HackAppLaunchException">The Browser is not installed or failed to start.</exception>
-    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>apps.launch</c>.</exception>
+    /// <exception cref="HackerOs.AppSdk.IO.HackUnauthorizedAccessException">This app lacks <c>apps.launch</c>.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
     public static Task OpenAsync(string url, CancellationToken cancellationToken = default)
     {
@@ -41,7 +41,7 @@ public static class HackBrowser
     /// <param name="cancellationToken">Cancels the launch.</param>
     /// <exception cref="ArgumentException"><paramref name="url"/> is empty.</exception>
     /// <exception cref="HackAppLaunchException">The Browser is not installed or failed to start.</exception>
-    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>apps.launch</c>.</exception>
+    /// <exception cref="HackerOs.AppSdk.IO.HackUnauthorizedAccessException">This app lacks <c>apps.launch</c>.</exception>
     /// <exception cref="HackExecutionContextMissingException">No app context is active.</exception>
     public static Task OpenDetachedAsync(string url, CancellationToken cancellationToken = default)
     {

@@ -25,4 +25,14 @@ public sealed record AppDescriptorLoadResult(AppDescriptorLoadStatus Status, str
 }
 
 /// <summary>Descriptor availability states exposed to the trusted lifecycle.</summary>
-public enum AppDescriptorLoadStatus { Available, NotDeclared, Unavailable }
+public enum AppDescriptorLoadStatus
+{
+    /// <summary>The app's descriptor (and its assembly) is loaded and it can be launched.</summary>
+    Available,
+
+    /// <summary>The host build does not declare the app, so there is nothing to load.</summary>
+    NotDeclared,
+
+    /// <summary>The app is declared but its asset could not be loaded; the failure is recoverable.</summary>
+    Unavailable,
+}

@@ -36,6 +36,7 @@ public sealed class FileAssociationsSyncService(
 {
     private static readonly Guid RecordId = ComputeRecordId(FileAssociationSettingsDocuments.Key);
 
+    /// <inheritdoc />
     public async Task PushAsync(CancellationToken cancellationToken = default)
     {
         ServerConnectionState? state = await connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
@@ -91,6 +92,7 @@ public sealed class FileAssociationsSyncService(
             .ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task PullAsync(CancellationToken cancellationToken = default)
     {
         ServerConnectionState? state = await connection.GetStateAsync(cancellationToken).ConfigureAwait(false);

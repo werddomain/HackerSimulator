@@ -10,8 +10,10 @@ namespace HackerOs.Commands.Launch;
 /// </summary>
 public sealed class LaunchCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public LaunchCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

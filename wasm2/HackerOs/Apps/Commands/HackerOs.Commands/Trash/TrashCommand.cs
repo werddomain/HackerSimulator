@@ -27,6 +27,7 @@ public sealed class TrashCommand : TerminalAppBase
         "       trash rm <name...>\n" +
         "       trash empty";
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public TrashCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />

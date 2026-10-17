@@ -22,7 +22,7 @@ namespace HackerOs.AppSdk.FileView;
 /// </summary>
 public partial class FileView : IAsyncDisposable
 {
-    /// <summary>The custom <c>DataTransfer</c> MIME type <see cref="FileView.razor.js"/> reads/writes drag payloads under.</summary>
+    /// <summary>The custom <c>DataTransfer</c> MIME type <c>FileView.razor.js</c> reads/writes drag payloads under.</summary>
     internal const string DragMimeType = "application/vnd.hackeros.file-drag+json";
 
     private readonly List<FileViewItem> _items = [];
@@ -97,7 +97,7 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public bool AllowMultiSelect { get; set; } = true;
 
-    /// <summary>Whether drag & drop is enabled. Defaults to <see langword="true"/>.</summary>
+    /// <summary>Whether drag &amp; drop is enabled. Defaults to <see langword="true"/>.</summary>
     [Parameter]
     public bool AllowDragDrop { get; set; } = true;
 
@@ -715,7 +715,7 @@ public partial class FileView : IAsyncDisposable
     /// Starts a native HTML5 drag for <paramref name="item"/> (drag-drop, <c>FV-006</c>): if <paramref name="item"/>
     /// isn't already selected it becomes the sole selection (matching common OS behavior — dragging an
     /// unselected row drags just that row), then the resulting selection is serialized onto the native
-    /// <c>DataTransfer</c> via <see cref="FileView.razor.js"/>.
+    /// <c>DataTransfer</c> via <c>FileView.razor.js</c>.
     /// </summary>
     internal async Task OnItemDragStartAsync(FileViewItem item, DragEventArgs args)
     {

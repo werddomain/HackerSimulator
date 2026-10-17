@@ -9,6 +9,13 @@ namespace HackerOs.App.Abstractions;
 /// </summary>
 public static class AppManifestJsonSerializer
 {
+    /// <summary>
+    /// Serializes a manifest in canonical form: camelCase, compact, null members omitted, enums as
+    /// strings, and unordered collections (icon paths, settings fields, ...) sorted ordinally, so the
+    /// same manifest always produces byte-identical JSON (one trailing newline included).
+    /// </summary>
+    /// <param name="manifest">The manifest to serialize.</param>
+    /// <returns>The canonical JSON text.</returns>
     public static string SerializeCanonical(AppManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -16,6 +23,13 @@ public static class AppManifestJsonSerializer
         return JsonSerializer.Serialize(canonical, AppManifestJsonSerializerContext.Default.AppManifest) + "\n";
     }
 
+    /// <summary>
+    /// Deserializes a manifest, rejecting any duplicate or unknown property at every level before
+    /// binding, so a typo in a manifest fails loudly instead of being silently ignored.
+    /// </summary>
+    /// <param name="json">The manifest JSON.</param>
+    /// <returns>The deserialized manifest.</returns>
+    /// <exception cref="JsonException">The JSON is malformed, has a duplicate or unknown property, or deserializes to null.</exception>
     public static AppManifest DeserializeStrict(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -246,6 +260,10 @@ public static class AppManifestJsonSerializer
     }
 }
 
+/// <summary>
+/// Source-generated (trim- and AOT-safe) JSON metadata for <see cref="AppManifest"/> and every type it
+/// contains: camelCase names, null members omitted, enums as strings.
+/// </summary>
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

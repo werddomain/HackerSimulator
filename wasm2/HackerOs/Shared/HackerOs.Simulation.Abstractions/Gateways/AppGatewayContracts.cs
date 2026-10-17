@@ -146,9 +146,9 @@ public interface IAppFileSystemGateway
 /// </summary>
 /// <remarks>
 /// Per <c>docs/adr/0038-emitter-authorized-topic-messaging.md</c>, this gateway has two lanes.
-/// <see cref="Subscribe{TEvent}"/>/<see cref="Publish{TEvent}"/> are the kernel lane: any app may still
+/// <see cref="Subscribe{TEvent}(Action{TEvent})"/>/<see cref="Publish{TEvent}(TEvent)"/> are the kernel lane: any app may still
 /// subscribe to a trusted platform lifecycle event type (read access was never the security problem),
-/// but <see cref="Publish{TEvent}"/> no longer forwards to the underlying bus for app-facing callers —
+/// but <see cref="Publish{TEvent}(TEvent)"/> no longer forwards to the underlying bus for app-facing callers —
 /// no CLR event type is currently allow-listed for app-initiated publish, since the one app that
 /// previously used it (<c>SampleTickerService</c>) migrated to the topic lane below. The topic-bus
 /// members (<see cref="Subscribe{TPayload}(TopicName, Action{TopicMessage{TPayload}})"/>,

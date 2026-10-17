@@ -11,10 +11,14 @@ namespace HackerOs.Platform.Core.Network.Websites;
 /// </summary>
 public sealed class DarknetMarketController : SimulatedWebsiteControllerBase
 {
+    /// <inheritdoc/>
     public override string PrimaryHostname => "darknet.market";
+    /// <inheritdoc/>
     public override string Theme           => "darknet";
+    /// <inheritdoc/>
     public override string SiteName        => "DarkNet Market";
 
+    /// <summary>Registers the routes: <c>/</c> and <c>/marketplace</c> (the product grid) and <c>/account</c>.</summary>
     public DarknetMarketController()
     {
         Get("/",            _ => SimulatedHttpResponse.Ok(BuildHomePage()));

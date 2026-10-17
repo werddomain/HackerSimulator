@@ -32,6 +32,7 @@ public sealed class TextEditorDocument
     // The last-known filesystem revision, or null if this is a new (unsaved) buffer.
     private long? _loadedRevision;
 
+    /// <summary>Creates an empty, unsaved "Untitled" buffer in the <see cref="TextEditorLoadState.New"/> state.</summary>
     public TextEditorDocument()
     {
         Title = "Untitled";

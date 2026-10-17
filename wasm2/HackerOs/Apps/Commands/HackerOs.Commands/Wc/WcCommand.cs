@@ -10,8 +10,10 @@ namespace HackerOs.Commands.Wc;
 /// </summary>
 public sealed class WcCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public WcCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
