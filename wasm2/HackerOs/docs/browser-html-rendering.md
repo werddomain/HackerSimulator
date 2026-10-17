@@ -115,6 +115,7 @@ Une réponse qui arrive après que l'onglet a changé de page est jetée.
 | `document.URL`, `document.referrer` | L'URL réelle de la page, pas `about:srcdoc`. |
 | `console.*`, erreurs non gérées | Onglet Console des outils de développement. |
 | `alert` | Bannière au-dessus de la page ; `confirm` renvoie `false`, `prompt` `null`. |
+| Saisie semi-automatique | À l'envoi d'un formulaire, les champs texte nommés (ni mot de passe, ni caché, ni `autocomplete="off"`, ni numéro de carte) vont dans `~/.local/share/hackeros/browser/form-history.json` ; au focus d'un champ, ses valeurs passées sont proposées par une `<datalist>` ; `Ctrl+Maj+Suppr` efface l'historique (ADR 0088 §6, [`asp-hack-site-data.md`](asp-hack-site-data.md#saisie-semi-automatique)). |
 | `WebSocket`, `EventSource`, `window.open`, géolocalisation | Refusés. |
 | Éléments ajoutés après coup (`img.src = …`, `appendChild`) | Chargés par le navigateur à la demande. |
 
@@ -185,6 +186,9 @@ page y est recréée et son pont continue de parler à ce navigateur.
   page web avec CSS, script, `fetch` et cookie ; sandbox vérifié ; onglet
   Network ; vue source ; XHR et formulaire `POST` ; site local `file://` avec
   `localStorage`, `fetch` CORS, lien et retour ; page d'erreur DNS.
+- `Tests/HackerOs.Apps.Browser.Tests/FormHistoryTests.cs` et
+  `Tests/HackerOs.UI.E2E.Tests/BrowserSiteDataTests.cs` : historique de
+  formulaires (fichier, limites, `<datalist>` dans Chromium).
 - `Tests/HackerOs.UI.E2E.Tests/BrowserHomePageTests.cs` : hors mode démo, le
   navigateur s'ouvre sur HackerSearch et une recherche tapée dans la barre
   d'adresse affiche ses résultats (ADR 0085 : le catalogue réseau par défaut

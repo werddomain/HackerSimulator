@@ -129,6 +129,7 @@ Benoit a retenu toutes les recommandations, avec une précision sur la question 
 | `web/9-blazor-sites` | Sites Blazor interactifs dessinés dans la zone de page du navigateur, navigation par URL, sans capacité `filesystem.*`. | `4`, `6` |
 | `web/10-detached-window` | Fenêtre détachée pilotée par l'instance principale (lien d'affichage), pour les pages HTML d'abord. | `4` |
 | `web/11-sample-final` | App exemple « Intranet » (pages, API REST, JS, Blazor), guide `asp-hack-developer-guide.md`, `sdk-reference.md`, vérification finale. | tous |
+| `web/12-site-data` | Ajouté après la clôture (ADR 0087 §4) : base `HackWebDb` d'un site, journaux de débogage `/var/log/hackweb/<id>.log`, saisie semi-automatique du navigateur (ADR 0073 §3, ADR 0088). | `11` |
 
 Ordre : `2` ; puis `3` et `4` en parallèle ; puis `5`, `6` et `10` ; puis `7`
 et `9` ; puis `8` ; puis `11`.
@@ -166,4 +167,5 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [x] `web/8-cshtml-views` ([`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md), ADR 0086 : preuve réussie, pas de moteur interprété)
 - [x] `web/9-blazor-sites` ([`blazor-sites.md`](blazor-sites.md), ADR 0084)
 - [x] `web/10-detached-window` ([`detached-display-windows.md`](detached-display-windows.md), ADR 0081)
-- [x] `web/11-sample-final` ([`asp-hack-developer-guide.md`](asp-hack-developer-guide.md), ADR 0087 : exemple Intranet, liens `target` des sites Blazor, vues compilables dans une app livrée, `TryValidateModel` ; la base `HackWebDb` de l'ADR 0073 §3, les journaux de débogage d'un site et la saisie semi-automatique restent à faire)
+- [x] `web/11-sample-final` ([`asp-hack-developer-guide.md`](asp-hack-developer-guide.md), ADR 0087 : exemple Intranet, liens `target` des sites Blazor, vues compilables dans une app livrée, `TryValidateModel` ; la base `HackWebDb` de l'ADR 0073 §3, les journaux de débogage d'un site et la saisie semi-automatique sont faits par `web/12`)
+- [x] `web/12-site-data` ([`asp-hack-site-data.md`](asp-hack-site-data.md), ADR 0088 : base `hackweb.<id>` par une passerelle de l'OS, Diagnostic et désinstallation, `ILogger<T>` vers `/var/log/hackweb/<id>.log`, historique de formulaires du navigateur ; l'Intranet garde ses notes dans sa base)

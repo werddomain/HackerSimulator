@@ -29,6 +29,7 @@ gestionnaire de tâches et `netstat -tlnp`.
 | Site Blazor interactif | `web/9`, [`blazor-sites.md`](blazor-sites.md) | `Board/` sous `/board` |
 | Fenêtre détachée | `web/10`, [`detached-display-windows.md`](detached-display-windows.md) | bouton `⧉` du navigateur, sur n'importe quelle page |
 | Sites statiques sans code | `web/5`, [`static-sites.md`](static-sites.md) | (autre sorte de site : fichiers de l'utilisateur servis par `hackwebd`) |
+| Base du site, journal de débogage, saisie semi-automatique | `web/12`, [`asp-hack-site-data.md`](asp-hack-site-data.md) | notes dans la base IndexedDB `hackweb.org.hackeros.samples.intranet`, `ILogger<NotesController>`, titres proposés par le navigateur |
 
 ## Visiter l'exemple
 
@@ -41,7 +42,7 @@ l'OS et taper `intranet.hack`.
 | `/` | Annonces, compteurs, état du site | vue `.cshtml` dans un layout `.razor` ; `health.js` appelle `/health` par `fetch` |
 | `/Home/Profile` | Choix d'un nom | `Html.BeginForm`, `TextBoxFor`, validation, jeton anti-falsification, nom gardé en session |
 | `/People` | Annuaire | recherche faite par le serveur (`?q=`), puis filtrée par `people.js` sur `/api/people` à chaque touche |
-| `/Notes` | Wiki d'équipe | vues `.razor`, partial `_NoteCard`, création/édition/suppression par formulaires (post/redirect/get), étoile qui épingle par `PATCH /api/notes/{id}` |
+| `/Notes` | Wiki d'équipe | vues `.razor`, partial `_NoteCard`, création/édition/suppression par formulaires (post/redirect/get), étoile qui épingle par `PATCH /api/notes/{id}` ; notes gardées dans la base du site (`HackWebDb`), qui survivent à l'arrêt du site et au redémarrage |
 | `/board` | Tableau de tâches | site Blazor dessiné par le navigateur : ajouter, déplacer, supprimer une carte sans recharger, lien vers `/board/tasks/{id}` |
 | `/api/notes`, `/api/people`, `/api/tasks`, `/api/me`, `/health` | JSON | API REST complète (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, problèmes RFC 9457) |
 
@@ -184,22 +185,29 @@ public override void Configure(HackWebApplicationBuilder builder)
 formulaire.
 
 ```csharp
-public sealed class NotesController(NoteStore store) : HackController
+public sealed class NotesController(NoteStore store, ILogger<NotesController> logger) : HackController
 {
-    public IHackActionResult Index() => View(store.All());                    // Views/Notes/Index.razor
+    public async Task<IHackActionResult> Index(CancellationToken cancellationToken) =>
+        View(await store.AllAsync(cancellationToken));                       // Views/Notes/Index.razor
 
     [HttpGet]
     public IHackActionResult Create() => View("Edit", new Note());
 
     [HttpPost, ValidateAntiForgeryToken]
-    public IHackActionResult Create(Note note)
+    public async Task<IHackActionResult> Create(Note note, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid) { return View("Edit", note); }               // ré-affiché avec ses erreurs
-        Note created = store.Add(note);
+        Note created = await store.AddAsync(note, cancellationToken);         // base IndexedDB du site
+        logger.LogInformation("Note {NoteId} created", created.Id);           // /var/log/hackweb/<id>.log
         return RedirectToAction(nameof(Details), new { id = created.Id });   // post/redirect/get
     }
 }
 ```
+
+- Une action peut être asynchrone (`Task<IHackActionResult>`, `Task<T>` pour
+  une API) ; un paramètre `CancellationToken` reçoit `RequestAborted`. Le
+  suffixe `Async` d'un nom de méthode est retiré du nom de l'action, comme dans
+  ASP.NET Core.
 
 - Une action sans route d'attribut suit la route conventionnelle :
   `/Notes/Edit/4` → `NotesController.Edit(4)`. Deux actions du même nom se
@@ -369,7 +377,12 @@ Trois niveaux, tous dans l'exemple :
    `web`.
 3. **Dans Chromium** (`Tests/HackerOs.UI.E2E.Tests/BrowserIntranetTests`) : le
    navigateur de l'OS parcourt l'exemple (scripts, formulaire, session, tableau
-   Blazor, retour par `target="_top"`).
+   Blazor, retour par `target="_top"`). `BrowserSiteDataTests` y vérifie la
+   base IndexedDB du site, la saisie semi-automatique, le journal de débogage
+   et le Diagnostic.
+
+En mémoire, `HackWebDb` est une base en mémoire propre à l'application : les
+tests n'ont rien à configurer ([`asp-hack-site-data.md`](asp-hack-site-data.md#hors-de-hackeros-et-dans-les-tests)).
 
 ## 10. Installer le site dans l'OS
 
@@ -390,17 +403,18 @@ manifestes et les assemblies paresseuses (`BuildKnownLazyAppsTests`,
 | Ce que répond le serveur | `curl -i`, vue source du navigateur (`Ctrl+U`) |
 | Requêtes et erreurs des scripts | `F12` : onglets Network et Console |
 | Exception du serveur | `UseExceptionPage()` l'affiche ; sinon `500` nu et une ligne dans le journal de l'OS |
+| Traces du site | `builder.Logging.EnableDebugLog()`, puis `tail /var/log/hackweb/<id>.log` : requêtes, `ILogger<T>`, exceptions |
+| Contenu de la base du site | app « IndexedDB Diagnostic », rubrique *Website databases* (magasins, nombre d'enregistrements, taille ; effacement) |
 | Page Blazor qui plante | « Aw, Snap! » du navigateur ; le processus de rendu finit en défaut, l'OS continue |
-| Redémarrer le site | `kill` du processus : la requête suivante le redémarre (sessions et données en mémoire perdues) |
+| Redémarrer le site | `kill` du processus : la requête suivante le redémarre (sessions et données en mémoire perdues, base `HackWebDb` conservée) |
 
 ## Limites connues
 
-- **Données.** La base d'un site par IndexedDB (`HackWebDb`, ADR 0073 §3) n'est
-  pas encore réalisée (ADR 0087 §4) : les données de l'exemple vivent en
-  mémoire du processus du site et reviennent à leur état initial quand le site
-  s'arrête.
-- Pas de journaux de débogage d'un site dans `/var/log/hackweb/<id>.log` ni de
-  saisie semi-automatique des formulaires (ADR 0073 §3, non réalisés).
+- **Données.** Les notes de l'exemple sont dans sa base `HackWebDb` (ADR 0088) ;
+  les cartes du tableau, les annonces et l'annuaire restent en mémoire du
+  processus du site et reviennent à leur état initial quand il s'arrête.
+- Les formulaires d'un site Blazor n'ont pas la saisie semi-automatique du
+  navigateur (ADR 0088 §6).
 - Pas de tag helpers, de Razor Pages (`@page` dans un `.cshtml`), de `TempData`
   ni de `ViewBag` ; pas d'environnements `Development`/`Production`.
 - Les requêtes `Site.Http` des pages Blazor n'apparaissent pas dans l'onglet
@@ -420,4 +434,5 @@ manifestes et les assemblies paresseuses (`BuildKnownLazyAppsTests`,
 - [x] `TryValidateModel` sur les contrôleurs (ADR 0087 §3).
 - [x] Exemple installé dans l'Ecosystem et `test/test`, tests de l'Ecosystem mis à jour.
 - [x] Tests en mémoire (`HackerOs.Samples.Intranet.Tests`) et E2E Chromium (`BrowserIntranetTests`).
+- [x] `web/12` : notes de l'exemple dans `HackWebDb`, journal de débogage, filtre `GET /api/notes?author=` par l'index `byAuthor` ([`asp-hack-site-data.md`](asp-hack-site-data.md)).
 - [x] Ce guide, `sdk-reference.md`, ADR 0087, plan, index et documents de la phase mis à jour.

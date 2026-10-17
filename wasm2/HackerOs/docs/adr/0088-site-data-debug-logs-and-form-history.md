@@ -66,18 +66,21 @@ builder.Services.AddHackWebDb(db => db
 
 public sealed class NotesController(HackWebDb db) : HackController
 {
-    public async Task<HackActionResult> Index() =>
-        View(await db.Store<Note>("notes").GetAllAsync());
+    public async Task<IHackActionResult> Index(CancellationToken cancellationToken) =>
+        View(await db.Store<Note>("notes").GetAllAsync(cancellationToken: cancellationToken));
 }
 ```
 
 Les types sont lus et écrits avec les options JSON du site (`builder.Json`), donc avec son
-contexte généré pour un publish trimé. L'hôte d'un test peut enregistrer
-`HackWebDbInMemoryBackend` à la place de la passerelle.
+contexte généré pour un publish trimé ; les valeurs simples (`string`, nombres, `bool`) n'ont pas
+besoin d'y figurer. L'hôte d'un test peut enregistrer `HackWebDbInMemoryBackend` à la place de la
+passerelle ; un site construit hors de HackerOS sans passerelle reçoit une base en mémoire
+(`hackweb.in-memory`), si bien que ses tests unitaires tournent sans rien configurer.
 
 ### 4. Taille, liste et effacement
 
-- Le Diagnostic (`system.storage.inspect`) liste les bases des sites : nom, app, version, magasins,
+- Le Diagnostic (`system.storage.inspect`, capacité dangereuse qu'un administrateur approuve)
+  liste les bases des sites : nom, app, version, magasins,
   nombre d'enregistrements et taille (octets UTF-8 du JSON des enregistrements, estimation comme
   celle que Chromium affiche par origine). Il peut en supprimer une ; le site la recrée vide, avec
   son schéma, à sa requête suivante.
@@ -95,8 +98,9 @@ Un site active son journal dans `Configure` : `builder.Logging.EnableDebugLog()`
 dans `/var/log/hackweb/<id>.log` par une nouvelle méthode de la passerelle de journaux,
 `AppendToSiteDebugLog`, réservée aux apps `Web` : le rédacteur de journaux de l'OS écrit le fichier
 (ADR 0045), avec la même rotation (1 Mio × 5), en `system:system 0644`. Sans
-`EnableDebugLog`, `ILogger<T>` existe mais n'écrit rien. Le journal d'app habituel
-(`/var/log/apps/<id>.log`) garde les erreurs du site, journal activé ou non.
+`EnableDebugLog`, `ILogger<T>` existe mais n'écrit rien. Un retour à la ligne dans un message est
+échappé (`\n`), comme pour les journaux de `hackwebd`, pour qu'une ligne ne puisse pas en imiter une
+autre.
 
 ### 6. Saisie semi-automatique du navigateur
 
