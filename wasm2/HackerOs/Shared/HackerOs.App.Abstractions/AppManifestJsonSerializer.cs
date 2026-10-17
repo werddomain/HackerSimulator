@@ -232,7 +232,7 @@ public static class AppManifestJsonSerializer
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
                 case "window":
-                    ValidateObject(property.Value, $"{path}.window", ["defaultWidth", "defaultHeight", "minWidth", "minHeight", "maxWidth", "maxHeight", "resizable"]);
+                    ValidateObject(property.Value, $"{path}.window", ["defaultWidth", "defaultHeight", "minWidth", "minHeight", "maxWidth", "maxHeight", "resizable", "rememberGeometry"]);
                     break;
                 case "web":
                     ValidateObject(property.Value, $"{path}.web", ["urls", "blazor"]);

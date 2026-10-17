@@ -132,6 +132,7 @@
     "minWidth": 300,
     "minHeight": 400,
     "maxWidth": 640,
-    "resizable": false
+    "resizable": false,
+    "rememberGeometry": false
   }
 }

@@ -53,6 +53,21 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void RememberGeometry_is_written_only_when_an_app_opts_out()
+    {
+        // ADR 0116 §1: the default (true) leaves manifests byte-identical; false is written and read back.
+        AppManifest manifest = CreateManifest() with { Window = new WindowOptions { DefaultWidth = 420 } };
+        string remembered = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        string optedOut = AppManifestJsonSerializer.SerializeCanonical(manifest with { Window = manifest.Window with { RememberGeometry = false } });
+
+        Assert.DoesNotContain("rememberGeometry", remembered, StringComparison.Ordinal);
+        Assert.Contains("\"resizable\":true,\"rememberGeometry\":false}", optedOut, StringComparison.Ordinal);
+        Assert.True(AppManifestJsonSerializer.DeserializeStrict(remembered).Window!.RememberGeometry);
+        Assert.False(AppManifestJsonSerializer.DeserializeStrict(optedOut).Window!.RememberGeometry);
+        Assert.Equal(manifest.Window with { RememberGeometry = false }, AppManifestJsonSerializer.DeserializeStrict(optedOut).Window);
+    }
+
+    [Fact]
     public void ServiceStartup_round_trips_and_is_omitted_for_a_manifest_written_before_ADR_0097()
     {
         AppManifest manifest = CreateManifest() with
