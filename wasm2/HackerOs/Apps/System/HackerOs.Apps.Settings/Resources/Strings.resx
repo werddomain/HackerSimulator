@@ -849,4 +849,88 @@
   <data name="Tab.Synchronization" xml:space="preserve">
     <value>Synchronization</value>
   </data>
+  <data name="Tab.Users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Users.List.Title" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="Users.List.Description" xml:space="preserve">
+    <value>The local accounts of this machine. P: password set, NP: no password, L: account disabled, as {0} -S shows them. In the terminal, {0} changes your password and {1} another account's.</value>
+  </data>
+  <data name="Users.List.Empty" xml:space="preserve">
+    <value>No account to show.</value>
+  </data>
+  <data name="Users.Badge.Administrator" xml:space="preserve">
+    <value>administrator</value>
+  </data>
+  <data name="Users.Badge.You" xml:space="preserve">
+    <value>you</value>
+  </data>
+  <data name="Users.State.Password" xml:space="preserve">
+    <value>Password set</value>
+  </data>
+  <data name="Users.State.NoPassword" xml:space="preserve">
+    <value>No password</value>
+  </data>
+  <data name="Users.State.Locked" xml:space="preserve">
+    <value>Account disabled</value>
+  </data>
+  <data name="Users.Own.Title" xml:space="preserve">
+    <value>Change my password</value>
+  </data>
+  <data name="Users.Own.Description" xml:space="preserve">
+    <value>Your keyring is re-sealed with the new password: saved secrets stay readable.</value>
+  </data>
+  <data name="Users.Own.Submit" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Users.Own.Done" xml:space="preserve">
+    <value>Password updated.</value>
+  </data>
+  <data name="Users.Field.Current" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="Users.Field.New" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="Users.Field.Confirm" xml:space="preserve">
+    <value>Confirm the new password</value>
+  </data>
+  <data name="Users.Field.Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Users.Reset.Title" xml:space="preserve">
+    <value>Reset another account's password</value>
+  </data>
+  <data name="Users.Reset.Description" xml:space="preserve">
+    <value>An administrator confirms in the OS window (capability {1}). The account's keyring cannot be opened with the new password: it is set aside as {0} and its saved secrets are lost for that account.</value>
+  </data>
+  <data name="Users.Reset.Submit" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Users.Reset.Remove" xml:space="preserve">
+    <value>Remove password</value>
+  </data>
+  <data name="Users.Reset.Done" xml:space="preserve">
+    <value>Password of {0} reset.</value>
+  </data>
+  <data name="Users.Reset.Removed" xml:space="preserve">
+    <value>Password of {0} removed: the account opens without one.</value>
+  </data>
+  <data name="Users.Error.CannotList" xml:space="preserve">
+    <value>Cannot read the accounts: {0}</value>
+  </data>
+  <data name="Users.Error.WrongCurrent" xml:space="preserve">
+    <value>The current password is wrong. Password unchanged.</value>
+  </data>
+  <data name="Users.Error.Failed" xml:space="preserve">
+    <value>Password unchanged: {0}</value>
+  </data>
+  <data name="Users.Error.TooShort" xml:space="preserve">
+    <value>The password must have at least {0} characters.</value>
+  </data>
+  <data name="Users.Error.Mismatch" xml:space="preserve">
+    <value>The two passwords do not match.</value>
+  </data>
 </root>

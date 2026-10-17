@@ -42,6 +42,12 @@
   <data name="Admin.Reboot" xml:space="preserve">
     <value>Redémarrer cette machine</value>
   </data>
+  <data name="Admin.RemovePassword" xml:space="preserve">
+    <value>Retirer le mot de passe du compte {0} (son trousseau sera mis de côté)</value>
+  </data>
+  <data name="Admin.ResetPassword" xml:space="preserve">
+    <value>Réinitialiser le mot de passe du compte {0} (son trousseau sera mis de côté)</value>
+  </data>
   <data name="Admin.RestoreMerge" xml:space="preserve">
     <value>Fusionner la sauvegarde « {0} » dans cette machine et la redémarrer</value>
   </data>
@@ -197,6 +203,12 @@
   </data>
   <data name="Capability.keyring.read-all.Title" xml:space="preserve">
     <value>Lire tout le trousseau</value>
+  </data>
+  <data name="Capability.users.manage.Risk" xml:space="preserve">
+    <value>Réinitialiser ou retirer le mot de passe d'un autre compte, et donc ouvrir sa session.</value>
+  </data>
+  <data name="Capability.users.manage.Title" xml:space="preserve">
+    <value>Gérer les mots de passe des comptes</value>
   </data>
   <data name="Capability.network.listen.Title" xml:space="preserve">
     <value>Écouter un port réseau</value>

@@ -56,6 +56,21 @@ public interface ILocalUserRepository
         LocalUserId id,
         AppAuthority authority,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces one user's password credential, as <c>passwd</c> rewrites <c>/etc/shadow</c>
+    /// (ADR 0120). <see langword="null"/> removes the password. Callers verify who may do it.
+    /// </summary>
+    /// <param name="id">The user to change.</param>
+    /// <param name="credential">The new credential, or <see langword="null"/> for no password.</param>
+    /// <param name="cancellationToken">Cancels the write to the user store.</param>
+    /// <returns>The updated user record.</returns>
+    /// <exception cref="NotSupportedException">The store cannot change credentials (the default).</exception>
+    ValueTask<LocalUser> SetCredentialAsync(
+        LocalUserId id,
+        LocalPasswordCredential? credential,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This user store cannot change passwords.");
 }
 
 /// <summary>Stores local user groups, per ADR 0013.</summary>

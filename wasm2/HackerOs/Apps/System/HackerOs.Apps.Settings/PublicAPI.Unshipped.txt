@@ -1,1 +1,5 @@
 #nullable enable
+HackerOs.Apps.Settings.UsersPanel
+HackerOs.Apps.Settings.UsersPanel.UsersPanel() -> void
+override HackerOs.Apps.Settings.UsersPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
+~override HackerOs.Apps.Settings.UsersPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

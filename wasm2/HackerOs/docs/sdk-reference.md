@@ -98,6 +98,7 @@ Détails : [`app-model.md`](app-model.md).
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
 | `KeyringReadAll` | `keyring.read-all` | **dangereuse** | `HackKeyring` sur les entrées des autres apps |
+| `UsersManage` | `users.manage` | **dangereuse** | `HackUserAccounts.ResetPasswordAsync` / `RemovePasswordAsync` (ADR 0120) |
 | `PermissionsManage` | `permissions.manage` | **dangereuse** | `HackPermissionAdministration` |
 | `ServerConnectionManage` | `server.connection.manage` | **dangereuse** | `HackServerConnection` |
 | `SystemPower` | `system.power` | **dangereuse** | `HackSystem` (avec un administrateur) |
@@ -197,6 +198,14 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 | `HackKeyringEntry` | `AppId`, `Id`, `Label`, `UpdatedAtUtc` (jamais le secret) | — | [`sensitive-settings.md`](sensitive-settings.md) |
 | `HackKeyringLockedException` | Trousseau verrouillé | — | [`sensitive-settings.md`](sensitive-settings.md) |
 
+### Comptes et mots de passe (`HackerOs.AppSdk.Administration`)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackUserAccounts` | `ListAsync`, `ChangePasswordAsync([context,] courant, nouveau)`, `ResetPasswordAsync([context,] login, nouveau)`, `RemovePasswordAsync([context,] login)`, `ValidateNewPassword`, `MinimumPasswordLength` (8), `MaximumPasswordLength` (256) | aucune pour lister et changer son propre mot de passe ; `users.manage` (dangereuse) et un administrateur pour un autre compte | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackUserAccount` | `LoginName`, `DisplayName`, `Authority`, `IsEnabled`, `HasPassword`, `UpdatedAtUtc`, `IsCurrentUser`, `IsAdministrator` (jamais le hachage) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+| `IAppUserAccountsGateway` | passerelle derrière `HackUserAccounts` (`IAppExecutionContext.UserAccounts`, membre par défaut non pris en charge) | — | [ADR 0120](adr/0120-passwd-and-administrator-password-reset.md) |
+
 ### Apps (`HackerOs.AppSdk.Apps`)
 
 | API | Membres | Capacité | Document |
@@ -289,7 +298,7 @@ Détails : [`system-administration.md`](system-administration.md),
 |---|---|---|---|
 | `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée), crochets de fenêtre `OnWindowActivated[Async]`, `OnWindowDeactivated[Async]`, `OnWindowStateChanged[Async]`, `OnWindowResized[Async]`, état `IsWindowActive`, `WindowState`, `WindowSize`, `TrackDisplaySurface` (ADR 0095, [`window-model.md`](window-model.md)), `OnIntentReceivedAsync(AppIntentDelivery)` (ADR 0096 §5) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchIntent`, `LaunchFile`, `SendIntentAsync` (affiche le sélecteur si plusieurs apps répondent), `ChooseAppAsync`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
 | `HackComponentBase` | `AppSdk.Blazor` | Composant enfant d'une fenêtre qui appelle `Hack*` | [`hack-file-api.md`](hack-file-api.md) |
-| `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen` | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
+| `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen`, et `ReadSecretLineAsync(invite)` qui lit une ligne écho coupé comme `getpass(3)` quand l'entrée est un terminal (`ITerminalInputMode.EchoEnabled`, ADR 0120) | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
 | `WebAppDefinition` | `AppSdk.Web` | Classe `[AppManifest]` `partial` d'un site : `Urls`, `Configure(HackWebApplicationBuilder)` (services, middlewares, `MapControllers`, `MapGet`...) ; le build génère l'`EntryPoint` (`<Nom>WebHost : HackWebHost`) et la table de routes des contrôleurs (`HackController`, `HackApiController`) | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
 | `ServiceAppBase` | `AppSdk` | `OnStartAsync(context, token)` (le service est `activating` jusqu'à son retour, puis `active`, ADR 0107), `RunCoreAsync(context, sessionCancellationToken)`, `ReportHealth(HackServiceHealth, status)` (santé et texte de `systemctl status`, ADR 0097 §2), `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`), `OnIntentReceivedAsync(AppIntentDelivery, token)` (ADR 0096 §5) | [guide §5](sdk-developer-guide.md#5-un-service) |
 
@@ -456,7 +465,7 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 35 capacités (`keyring.read-all` ajoutée par `v3/8`, `system.backup` par `v3/7`).
+- [x] Types de définition d'une app et table complète des 36 capacités (`keyring.read-all` ajoutée par `v3/8`, `system.backup` par `v3/7`, `users.manage` par la suite de `v3/8`, ADR 0120).
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.
@@ -465,6 +474,7 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Sites web ASP.Hack : démarrage, requête, contrôleurs, vues, anti-falsification, liens des sites Blazor (`web/11`).
 - [x] Base `HackWebDb`, journal de débogage d'un site, passerelle `WebDatabase`, bases des sites dans `HackStorageDiagnostics` (`web/12`).
 - [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
+- [x] `HackUserAccounts`, `users.manage`, `ITerminalInputMode` et `ReadSecretLineAsync` (`passwd`, ADR 0120).
 - [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
 - [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
 - [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).

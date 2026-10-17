@@ -47,6 +47,7 @@ classement.
 | `system.storage.inspect` | **dangereuse** (`HackStorageDiagnostics`, ADR 0056 §11 ; déclarée par Diagnostic, seule app non système de la base à demander une approbation au premier lancement) |
 | `system.backup` | **dangereuse** (`HackSystemBackup` : sauvegarder et restaurer toute la machine, ADR 0099 §1 ; déclarée par Paramètres, et par `hackbackup` qui exige `sudo`, voir [`system-backup.md`](system-backup.md)) |
 | `shell.host` | **dangereuse** (ADR 0056 §7 : héberger un shell dont les commandes agissent avec leurs propres droits, voir [`shell-host.md`](shell-host.md)) |
+| `users.manage` | **dangereuse** (ADR 0120 : réinitialiser ou retirer le mot de passe d'un autre compte par `HackUserAccounts`, avec un administrateur ; déclarée par Paramètres et `passwd` ; voir [`sensitive-settings.md`](sensitive-settings.md)). Phrase de risque : « Réinitialiser ou retirer le mot de passe d'un autre compte, et donc ouvrir sa session. » Changer son propre mot de passe n'en demande aucune. |
 | `keyring.read-all` | **dangereuse** (ADR 0100 §2 : lire les entrées du trousseau de toutes les apps, pour un gestionnaire de mots de passe ; voir [`sensitive-settings.md`](sensitive-settings.md)). Phrase de risque : « Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés. » |
 
 Les phrases de risque sont celles de la table de l'ADR 0049.
