@@ -139,28 +139,29 @@ public sealed class AppCatalogTests
     [Fact]
     public void Build_moves_an_app_built_for_another_sdk_to_rejected_without_failing()
     {
-        AppManifest current = CreateManifest("org.hackeros.files");
-        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("0.9.0-preview.9") };
-        AppManifest otherMajor = CreateManifest("org.hackeros.legacy") with { SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0") };
+        AppManifest current = CreateManifest("org.hackeros.files") with { SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0") };
+        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("1.9.0") };
+        AppManifest otherMajor = CreateManifest("org.hackeros.legacy") with { SdkCompatibility = new AppSdkCompatibilityManifest("0.9.0-preview.1") };
 
-        AppCatalogBuildResult result = AppCatalog.Build([current, newer, otherMajor], [], SemanticVersion.Parse("0.9.0-preview.2"));
+        AppCatalogBuildResult result = AppCatalog.Build([current, newer, otherMajor], [], SemanticVersion.Parse("1.2.0"));
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
         Assert.Equal(["org.hackeros.files"], result.Catalog!.Manifests.Keys);
         Assert.Equal(["org.hackeros.legacy", "org.hackeros.newer"], result.Catalog.Rejected.Select(item => item.AppId));
         Assert.All(result.Catalog.Rejected, item => Assert.Equal("catalog.sdk.incompatible", item.Code));
-        Assert.Contains("0.9.0-preview.9", result.Catalog.Rejected[1].Message);
+        Assert.Contains("1.9.0", result.Catalog.Rejected[1].Message);
     }
 
     [Fact]
     public void Build_rejects_the_dependents_of_a_refused_app_and_keeps_optional_ones()
     {
-        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("0.9.0-preview.9") };
-        AppManifest needs = CreateManifest("org.hackeros.needs", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0")]);
-        AppManifest needsNeeds = CreateManifest("org.hackeros.needs-needs", dependencies: [new AppDependencyManifest("org.hackeros.needs", "1.0.0")]);
-        AppManifest optional = CreateManifest("org.hackeros.optional", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0", Optional: true)]);
+        AppSdkCompatibilityManifest sdk1 = new("1.0.0");
+        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("1.9.0") };
+        AppManifest needs = CreateManifest("org.hackeros.needs", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0")]) with { SdkCompatibility = sdk1 };
+        AppManifest needsNeeds = CreateManifest("org.hackeros.needs-needs", dependencies: [new AppDependencyManifest("org.hackeros.needs", "1.0.0")]) with { SdkCompatibility = sdk1 };
+        AppManifest optional = CreateManifest("org.hackeros.optional", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0", Optional: true)]) with { SdkCompatibility = sdk1 };
 
-        AppCatalogBuildResult result = AppCatalog.Build([newer, needs, needsNeeds, optional], ["org.hackeros.needs"], SemanticVersion.Parse("0.9.0-preview.2"));
+        AppCatalogBuildResult result = AppCatalog.Build([newer, needs, needsNeeds, optional], ["org.hackeros.needs"], SemanticVersion.Parse("1.2.0"));
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
         Assert.Equal(["org.hackeros.optional"], result.Catalog!.Manifests.Keys);
