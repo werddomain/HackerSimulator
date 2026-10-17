@@ -1,0 +1,5 @@
+{
+  "name": "clear",
+  "description": "Efface l'écran du terminal",
+  "terminalUsage": "clear"
+}

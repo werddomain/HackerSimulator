@@ -13,7 +13,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="CannotResolve" xml:space="preserve">
-    <value>ping: impossible de résoudre « {0} » : Nom ou service inconnu</value>
+    <value>ping : impossible de résoudre « {0} » : Nom ou service inconnu</value>
   </data>
   <data name="Header" xml:space="preserve">
     <value>PING {0} 56(84) octets de données.</value>
@@ -37,6 +37,6 @@
     <value>De {0} icmp_seq={1} Hôte de destination injoignable</value>
   </data>
   <data name="Usage" xml:space="preserve">
-    <value>ping: utilisation : ping &lt;nom-d-hôte|ip&gt;</value>
+    <value>ping : utilisation : ping &lt;nom-d-hôte|ip&gt;</value>
   </data>
 </root>

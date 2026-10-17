@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
 
 namespace HackerOs.Commands.Wc;
@@ -50,7 +51,7 @@ public sealed class WcCommand : TerminalAppBase
                 var res = await context.App.FileSystem.ReadAsync(req, cancellationToken);
                 if (!res.Succeeded || res.Value is null)
                 {
-                    context.StandardError.WriteLine($"wc: {file}: No such file or directory");
+                    context.StandardError.WriteLine(CommandText.FileError(context, "wc", file, CommandText.Reason(context, Errno.NotFound)));
                     continue;
                 }
 

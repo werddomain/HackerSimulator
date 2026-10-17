@@ -184,6 +184,34 @@ public sealed class NanoCommandTests
         Assert.False(terminal.Entered);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_InAFrenchProcess_DrawsTheBarsInFrench()
+    {
+        TestFileSystemGateway fileSystem = new("hello", "/home/user/sample.txt");
+        TestFullScreenTerminal terminal = new(new TerminalKeyEvent(TerminalKey.Character, "x", Control: true));
+        TerminalExecutionContext context = new(
+            new StubAppExecutionContext(AppDefinitionMapper.ToManifest(new NanoApp()), fileSystem)
+            {
+                // ADR 0104: what LANG=fr_FR.UTF-8 resolves to for the process.
+                Culture = System.Globalization.CultureInfo.GetCultureInfo("fr")
+            },
+            ["sample.txt"],
+            new StringReader(string.Empty),
+            new StringWriter(),
+            new StringWriter(),
+            "/home/user",
+            new Dictionary<string, string>(),
+            terminal);
+
+        int exitCode = await new NanoCommand(AppDefinitionMapper.ToManifest(new NanoApp())).ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        TerminalScreenFrame first = terminal.Frames[0];
+        Assert.Contains(first.Lines, line => line.Contains("[ 1 lignes lues ]"));
+        Assert.Contains(first.Lines, line => line.Contains("Quitter") && line.Contains("Sauver"));
+        Assert.Equal("Éditeur Nano, /home/user/sample.txt", first.AccessibleLabel);
+    }
+
     private static TerminalExecutionContext CreateContext(
         IAppFileSystemGateway fileSystem,
         IFullScreenTerminalSession? terminal,
@@ -217,6 +245,9 @@ public sealed class NanoCommandTests
         public IAppLoggingGateway Logging => throw new NotSupportedException();
         public IAppClockGateway Clock => throw new NotSupportedException();
         public IAppProcessGateway Processes => throw new NotSupportedException();
+
+        /// <summary>The language of the process; English unless a test sets it (ADR 0104).</summary>
+        public System.Globalization.CultureInfo Culture { get; init; } = HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage;
     }
 
     private sealed class TestFullScreenTerminal(params TerminalKeyEvent[] keys) : IFullScreenTerminalSession

@@ -1,0 +1,5 @@
+{
+  "name": "which",
+  "description": "Localise une commande",
+  "terminalUsage": "which [-a] nom..."
+}

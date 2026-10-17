@@ -1,0 +1,5 @@
+{
+  "name": "mv",
+  "description": "Déplace ou renomme des fichiers et des dossiers",
+  "terminalUsage": "mv <source...> <destination>"
+}

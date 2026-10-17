@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Wget;
 
@@ -20,6 +22,7 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
         string? output = null, prefix = null;
         bool quiet = false, headers = false, spider = false;
         List<string> urls = [];
@@ -42,8 +45,8 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
                     }
                     else if (arg.StartsWith('-'))
                     {
-                        await context.StandardError.WriteLineAsync($"wget: unrecognized option '{arg}'");
-                        await context.StandardError.WriteLineAsync("Usage: wget [OPTION]... [URL]...");
+                        await context.StandardError.WriteLineAsync(messages["UnrecognizedOption", arg]);
+                        await context.StandardError.WriteLineAsync(messages["Usage"]);
                         return 2;
                     }
                     else
@@ -57,8 +60,8 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
 
         if (urls.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("wget: missing URL");
-            await context.StandardError.WriteLineAsync("Usage: wget [OPTION]... [URL]...");
+            await context.StandardError.WriteLineAsync(messages["MissingUrl"]);
+            await context.StandardError.WriteLineAsync(messages["Usage"]);
             return 1;
         }
 
@@ -71,14 +74,14 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
             string address = text.Contains("://", StringComparison.Ordinal) ? text : "http://" + text;
             if (!Uri.TryCreate(address, UriKind.Absolute, out Uri? uri))
             {
-                await log.WriteLineAsync($"{text}: Invalid URL.");
+                await log.WriteLineAsync(messages["InvalidUrl", text]);
                 status = 1;
                 continue;
             }
 
             DateTimeOffset started = context.App.Clock.UtcNow;
             await log.WriteLineAsync($"--{started:yyyy-MM-dd HH:mm:ss}--  {uri.AbsoluteUri}");
-            await log.WriteLineAsync($"Resolving {uri.Host} ({uri.Host})... ");
+            await log.WriteLineAsync(messages["Resolving", uri.Host]);
             HackHttpResponse response;
             try
             {
@@ -89,20 +92,20 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
             catch (HackHttpRequestException exception)
             {
                 await log.WriteLineAsync(exception.NetworkError == HackNetworkError.HostNotFound
-                    ? $"wget: unable to resolve host address '{uri.Host}'"
-                    : $"Connecting to {uri.Host}|:{uri.Port}... failed: {exception.Message}.");
+                    ? messages["CannotResolve", uri.Host]
+                    : messages["ConnectFailed", uri.Host, uri.Port, exception.Message]);
                 status = 4;
                 continue;
             }
             catch (UnauthorizedAccessException exception)
             {
-                await context.StandardError.WriteLineAsync($"wget: {exception.Message}");
+                await context.StandardError.WriteLineAsync(messages["Error", exception.Message]);
                 status = 4;
                 continue;
             }
 
-            await log.WriteLineAsync($"Connecting to {uri.Host}|:{uri.Port}... connected.");
-            await log.WriteLineAsync($"HTTP request sent, awaiting response... {response.StatusCode} {response.ReasonPhrase}");
+            await log.WriteLineAsync(messages["Connected", uri.Host, uri.Port]);
+            await log.WriteLineAsync(messages["RequestSent", response.StatusCode, response.ReasonPhrase]);
             if (headers)
             {
                 await log.WriteLineAsync($"  HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}");
@@ -114,17 +117,17 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
 
             if (!response.IsSuccessStatusCode)
             {
-                await log.WriteLineAsync($"{started:yyyy-MM-dd HH:mm:ss} ERROR {response.StatusCode}: {response.ReasonPhrase}.");
+                await log.WriteLineAsync(messages["HttpError", started.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), response.StatusCode, response.ReasonPhrase]);
                 await log.WriteLineAsync();
                 status = 8;
                 continue;
             }
 
             string type = response.Headers.FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Value ?? "text/html";
-            await log.WriteLineAsync($"Length: {response.ContentBytes.Length} ({CommandIO.HumanSize(response.ContentBytes.Length)}) [{type}]");
+            await log.WriteLineAsync(messages["Length", response.ContentBytes.Length, CommandIO.HumanSize(response.ContentBytes.Length), type]);
             if (spider)
             {
-                await log.WriteLineAsync("Remote file exists.");
+                await log.WriteLineAsync(messages["RemoteExists"]);
                 await log.WriteLineAsync();
                 continue;
             }
@@ -143,19 +146,20 @@ public sealed class WgetCommand(AppManifest manifest) : TerminalAppBase(manifest
                     await HackDirectory.CreateDirectoryAsync(prefix, cancellationToken);
                 }
 
-                await log.WriteLineAsync($"Saving to: '{target}'");
+                await log.WriteLineAsync(messages["SavingTo", target]);
                 await log.WriteLineAsync();
                 await HackFile.WriteAllBytesAsync(target, response.ContentBytes, cancellationToken);
                 string bar = new('=', 38);
                 await log.WriteLineAsync($"{HackPath.GetFileName(target),-20} 100%[{bar}>] {CommandIO.HumanSize(response.ContentBytes.Length),7}  --.-KB/s    in 0s");
                 await log.WriteLineAsync();
-                await log.WriteLineAsync(string.Create(CultureInfo.InvariantCulture,
-                    $"{context.App.Clock.UtcNow:yyyy-MM-dd HH:mm:ss} ({CommandIO.HumanSize(response.ContentBytes.Length)}B/s) - '{target}' saved [{response.ContentBytes.Length}/{response.ContentBytes.Length}]"));
+                await log.WriteLineAsync(messages["Saved",
+                    context.App.Clock.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    CommandIO.HumanSize(response.ContentBytes.Length), target, response.ContentBytes.Length]);
                 await log.WriteLineAsync();
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"wget: {ShellErrorText.Describe(exception)}");
+                await context.StandardError.WriteLineAsync(messages["Error", CommandText.Describe(context, exception)]);
                 status = 3;
             }
         }

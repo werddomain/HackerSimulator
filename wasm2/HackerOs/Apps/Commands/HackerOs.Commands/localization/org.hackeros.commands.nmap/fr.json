@@ -1,0 +1,5 @@
+{
+  "name": "nmap",
+  "description": "Cartographe réseau simulé : analyse les ports des hôtes simulés",
+  "terminalUsage": "nmap [-p <plage>] [-sV] [-O] <cible>"
+}

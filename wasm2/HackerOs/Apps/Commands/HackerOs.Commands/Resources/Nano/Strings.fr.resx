@@ -61,10 +61,10 @@
     <value>  ^O  Écrire : enregistre en demandant le nom du fichier (changez-le pour enregistrer sous)</value>
   </data>
   <data name="NoFullScreen" xml:space="preserve">
-    <value>nano: ce terminal ne permet pas l'édition en plein écran</value>
+    <value>nano : ce terminal ne permet pas l'édition en plein écran</value>
   </data>
   <data name="OpenFailed" xml:space="preserve">
-    <value>nano: {0} : {1}</value>
+    <value>nano : {0} : {1}</value>
   </data>
   <data name="Prompt.FileName" xml:space="preserve">
     <value>Nom du fichier à écrire : </value>
@@ -94,7 +94,7 @@
     <value>Aide</value>
   </data>
   <data name="Shortcut.LineStart" xml:space="preserve">
-    <value>Début ligne</value>
+    <value>Déb. ligne</value>
   </data>
   <data name="Shortcut.Location" xml:space="preserve">
     <value>Position</value>
@@ -109,7 +109,7 @@
     <value>Page préc.</value>
   </data>
   <data name="Shortcut.Save" xml:space="preserve">
-    <value>Enregistrer</value>
+    <value>Sauver</value>
   </data>
   <data name="Shortcut.Search" xml:space="preserve">
     <value>Rechercher</value>

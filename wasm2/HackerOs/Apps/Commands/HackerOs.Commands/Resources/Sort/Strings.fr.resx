@@ -13,12 +13,12 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Disorder" xml:space="preserve">
-    <value>sort: -:{0} : désordre : {1}</value>
+    <value>sort : -:{0} : désordre : {1}</value>
   </data>
   <data name="InvalidOption" xml:space="preserve">
-    <value>sort: option invalide -- « {0} »</value>
+    <value>sort : option invalide -- « {0} »</value>
   </data>
   <data name="OpenFailed" xml:space="preserve">
-    <value>sort: échec d'ouverture : {0} : {1}</value>
+    <value>sort : échec d'ouverture : {0} : {1}</value>
   </data>
 </root>

@@ -1,0 +1,5 @@
+{
+  "name": "basename",
+  "description": "Retire le dossier et le suffixe des noms de fichiers",
+  "terminalUsage": "basename nom [suffixe] | basename -a [-s suffixe] nom..."
+}

@@ -13,7 +13,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Error" xml:space="preserve">
-    <value>printf: {0}</value>
+    <value>printf : {0}</value>
   </data>
   <data name="InvalidConversion" xml:space="preserve">
     <value>%{0} : spécification de conversion invalide</value>
@@ -22,6 +22,6 @@
     <value>{0} : nombre invalide</value>
   </data>
   <data name="Usage" xml:space="preserve">
-    <value>printf: utilisation : printf format [arguments]</value>
+    <value>printf : utilisation : printf format [arguments]</value>
   </data>
 </root>

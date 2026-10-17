@@ -84,7 +84,7 @@ public sealed class MkdirCommand : TerminalAppBase
             }
             catch (FormatException)
             {
-                context.StandardError.WriteLine(text["CannotCreate", path, text["Reason.InvalidArgument"]]);
+                context.StandardError.WriteLine(text["CannotCreate", path, CommandText.Reason(context, Errno.InvalidArgument)]);
                 status = 1;
                 continue;
             }
@@ -117,7 +117,7 @@ public sealed class MkdirCommand : TerminalAppBase
             new FileSystemStatRequest(VirtualPath.Parse(parentPath)), cancellationToken);
         if (!parentStat.Succeeded || parentStat.Value is null)
         {
-            context.StandardError.WriteLine(Text(context)["CannotCreate", operand, Text(context)["Reason.NotFound"]]);
+            context.StandardError.WriteLine(Text(context)["CannotCreate", operand, CommandText.Reason(context, Errno.NotFound)]);
             return false;
         }
 
@@ -154,7 +154,7 @@ public sealed class MkdirCommand : TerminalAppBase
                 if (stat.Value.Metadata.Kind != FileSystemEntryKind.Directory)
                 {
                     IStringLocalizer<Strings> text = Text(context);
-                    string reason = isTarget ? text["Reason.FileExists"] : text["Reason.NotDirectory"];
+                    string reason = isTarget ? CommandText.Reason(context, Errno.FileExists) : CommandText.Reason(context, Errno.NotDirectory);
                     context.StandardError.WriteLine(text["CannotCreate", operand, reason]);
                     return false;
                 }
@@ -171,7 +171,7 @@ public sealed class MkdirCommand : TerminalAppBase
                     new FileSystemStatRequest(VirtualPath.Parse(parent)), cancellationToken);
                 if (!parentStat.Succeeded || parentStat.Value is null)
                 {
-                    context.StandardError.WriteLine(Text(context)["CannotCreate", operand, Text(context)["Reason.NotFound"]]);
+                    context.StandardError.WriteLine(Text(context)["CannotCreate", operand, CommandText.Reason(context, Errno.NotFound)]);
                     return false;
                 }
 
@@ -215,7 +215,7 @@ public sealed class MkdirCommand : TerminalAppBase
         if (!result.Succeeded)
         {
             IStringLocalizer<Strings> text = Text(context);
-            context.StandardError.WriteLine(text["CannotCreate", operand, Describe(text, result.Transaction.Error?.Code)]);
+            context.StandardError.WriteLine(text["CannotCreate", operand, Describe(context, text, result.Transaction.Error?.Code)]);
             return false;
         }
 
@@ -231,13 +231,13 @@ public sealed class MkdirCommand : TerminalAppBase
     private static IStringLocalizer<Strings> Text(TerminalExecutionContext context) => context.App.GetLocalizer<Strings>();
 
     /// <summary>The <c>strerror</c> text for the usual failures, translated like glibc's; other codes keep their name.</summary>
-    private static string Describe(IStringLocalizer<Strings> text, FileSystemErrorCode? code) => code switch
+    private static string Describe(TerminalExecutionContext context, IStringLocalizer<Strings> text, FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.AlreadyExists => text["Reason.FileExists"],
-        FileSystemErrorCode.NotFound => text["Reason.NotFound"],
-        FileSystemErrorCode.NoSpace => text["Reason.NoSpace"],
-        FileSystemErrorCode.NotDirectory => text["Reason.NotDirectory"],
-        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied => text["Reason.PermissionDenied"],
+        FileSystemErrorCode.AlreadyExists => CommandText.Reason(context, Errno.FileExists),
+        FileSystemErrorCode.NotFound => CommandText.Reason(context, Errno.NotFound),
+        FileSystemErrorCode.NoSpace => CommandText.Reason(context, Errno.NoSpace),
+        FileSystemErrorCode.NotDirectory => CommandText.Reason(context, Errno.NotDirectory),
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied => CommandText.Reason(context, Errno.PermissionDenied),
         null => text["Reason.Failed"],
         _ => code.Value.ToString(),
     };

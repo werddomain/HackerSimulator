@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.AppSdk.Globalization;
@@ -75,7 +76,7 @@ public sealed class RmCommand : TerminalAppBase
                     return true;
                 }
 
-                context.StandardError.WriteLine(text["CannotRemove", target, text["Reason.NotFound"]]);
+                context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
                 return false;
             }
 
@@ -85,7 +86,7 @@ public sealed class RmCommand : TerminalAppBase
 
         if (entryStat.Value.Metadata.Kind == FileSystemEntryKind.Directory && !options.Recursive)
         {
-            context.StandardError.WriteLine(text["CannotRemove", target, text["Reason.IsDirectory"]]);
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.IsDirectory)]);
             return false;
         }
 
@@ -106,12 +107,12 @@ public sealed class RmCommand : TerminalAppBase
         catch (HackFileNotFoundException)
         {
             // Vanished between our stat and the move: same outcome as a missing operand.
-            context.StandardError.WriteLine(text["CannotRemove", target, text["Reason.NotFound"]]);
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
             return false;
         }
         catch (UnauthorizedAccessException)
         {
-            context.StandardError.WriteLine(text["CannotRemove", target, text["Reason.PermissionDenied"]]);
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.PermissionDenied)]);
             return false;
         }
         catch (IOException exception)
@@ -134,7 +135,7 @@ public sealed class RmCommand : TerminalAppBase
             new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(resolved))), cancellationToken);
         if (!parentStat.Succeeded || parentStat.Value is null)
         {
-            context.StandardError.WriteLine(text["CannotRemove", target, text["Reason.NotFound"]]);
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
             return false;
         }
 
@@ -152,7 +153,7 @@ public sealed class RmCommand : TerminalAppBase
 
         FileSystemErrorCode? code = result.Transaction.Error?.Code;
         string reason = code is FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied
-            ? text["Reason.PermissionDenied"]
+            ? CommandText.Reason(context, Errno.PermissionDenied)
             : code?.ToString() ?? text["Reason.Unknown"];
         context.StandardError.WriteLine(text["CannotRemove", target, reason]);
         return false;

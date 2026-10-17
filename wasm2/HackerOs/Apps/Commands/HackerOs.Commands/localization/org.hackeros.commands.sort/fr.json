@@ -1,0 +1,5 @@
+{
+  "name": "sort",
+  "description": "Trie les lignes de fichiers texte",
+  "terminalUsage": "sort [-rnhVfbuc] [-k N[,M]] [-t sép] [-o fichier] [fichier...]"
+}

@@ -165,7 +165,7 @@ public sealed class SortCommand : TerminalAppBase
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                context.StandardError.WriteLine(messages["OpenFailed", output, ShellErrorText.Describe(exception)]);
+                context.StandardError.WriteLine(messages["OpenFailed", output, CommandText.Describe(context, exception)]);
                 return 2;
             }
 

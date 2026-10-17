@@ -1,0 +1,5 @@
+{
+  "name": "head",
+  "description": "Affiche le début des fichiers",
+  "terminalUsage": "head [-n [-]nombre | -nombre] [-c octets] [-qv] [fichier...]"
+}

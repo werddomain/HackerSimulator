@@ -1,0 +1,5 @@
+{
+  "name": "trash",
+  "description": "Gère la Corbeille : put, list, restore, rm, empty",
+  "terminalUsage": "trash put|list|restore|rm|empty [arguments...]"
+}

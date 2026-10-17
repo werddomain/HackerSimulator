@@ -1,0 +1,5 @@
+{
+  "name": "read",
+  "description": "Lit une ligne de l'entrée standard dans des variables du shell",
+  "terminalUsage": "read [-r] [-p invite] [-s] [-n nombre] [-t secondes] [-d délim] [nom...]"
+}

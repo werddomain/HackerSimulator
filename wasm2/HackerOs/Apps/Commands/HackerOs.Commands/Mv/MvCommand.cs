@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.AppSdk.Globalization;
 using Microsoft.Extensions.Localization;
@@ -44,7 +45,7 @@ public sealed class MvCommand : TerminalAppBase
                 new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(srcPath))), cancellationToken);
             if (!srcStat.Succeeded || srcStat.Value is null || !srcParentStat.Succeeded || srcParentStat.Value is null)
             {
-                context.StandardError.WriteLine(text["CannotStat", src, text["Reason.NotFound"]]);
+                context.StandardError.WriteLine(text["CannotStat", src, CommandText.Reason(context, Errno.NotFound)]);
                 status = 1;
                 continue;
             }
@@ -53,7 +54,7 @@ public sealed class MvCommand : TerminalAppBase
                 new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(destPath))), cancellationToken);
             if (!destParentStat.Succeeded || destParentStat.Value is null)
             {
-                context.StandardError.WriteLine(text["CannotMove", src, dest, text["Reason.NotFound"]]);
+                context.StandardError.WriteLine(text["CannotMove", src, dest, CommandText.Reason(context, Errno.NotFound)]);
                 status = 1;
                 continue;
             }

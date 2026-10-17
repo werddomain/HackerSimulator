@@ -24,7 +24,4 @@
   <data name="Reason.Failed" xml:space="preserve">
     <value>Operation failed</value>
   </data>
-  <data name="Reason.NotFound" xml:space="preserve">
-    <value>No such file or directory</value>
-  </data>
 </root>

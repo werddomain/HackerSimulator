@@ -24,15 +24,6 @@
   <data name="MissingOperand" xml:space="preserve">
     <value>rm: missing operand</value>
   </data>
-  <data name="Reason.IsDirectory" xml:space="preserve">
-    <value>Is a directory</value>
-  </data>
-  <data name="Reason.NotFound" xml:space="preserve">
-    <value>No such file or directory</value>
-  </data>
-  <data name="Reason.PermissionDenied" xml:space="preserve">
-    <value>Permission denied</value>
-  </data>
   <data name="Reason.Unknown" xml:space="preserve">
     <value>unknown error</value>
   </data>

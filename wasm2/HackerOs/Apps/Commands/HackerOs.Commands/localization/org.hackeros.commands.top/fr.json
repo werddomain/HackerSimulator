@@ -1,0 +1,5 @@
+{
+  "name": "top",
+  "description": "Affiche les processus qui utilisent le plus de CPU, actualisés en direct",
+  "terminalUsage": "top [-b] [-n itérations] [-d secondes] [-u utilisateur]"
+}

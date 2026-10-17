@@ -13,15 +13,15 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="InvalidIdentifier" xml:space="preserve">
-    <value>read: « {0} » : identifiant invalide</value>
+    <value>read : « {0} » : identifiant invalide</value>
   </data>
   <data name="InvalidOption" xml:space="preserve">
-    <value>read: {0} : option invalide</value>
+    <value>read : {0} : option invalide</value>
   </data>
   <data name="NoShell" xml:space="preserve">
-    <value>read: aucune session de shell</value>
+    <value>read : aucune session de shell</value>
   </data>
   <data name="Usage" xml:space="preserve">
-    <value>read: utilisation : read [-r] [-p invite] [-n nombre] [-t délai] [-d délim] [nom ...]</value>
+    <value>read : utilisation : read [-r] [-p invite] [-n nombre] [-t délai] [-d délim] [nom ...]</value>
   </data>
 </root>

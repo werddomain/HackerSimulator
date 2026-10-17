@@ -1,0 +1,5 @@
+{
+  "name": "whoami",
+  "description": "Affiche le nom de l'utilisateur effectif",
+  "terminalUsage": "whoami"
+}

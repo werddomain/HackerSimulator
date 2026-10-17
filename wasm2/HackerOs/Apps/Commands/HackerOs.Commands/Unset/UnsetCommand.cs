@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Unset;
 
@@ -20,10 +22,11 @@ public sealed class UnsetCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("unset: no shell session");
+            await context.StandardError.WriteLineAsync(text["NoShell"]);
             return 1;
         }
 
@@ -36,7 +39,7 @@ public sealed class UnsetCommand : TerminalAppBase
             }
             catch (ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"unset: `{name}': not a valid identifier");
+                await context.StandardError.WriteLineAsync(text["InvalidIdentifier", name]);
                 status = 1;
             }
         }

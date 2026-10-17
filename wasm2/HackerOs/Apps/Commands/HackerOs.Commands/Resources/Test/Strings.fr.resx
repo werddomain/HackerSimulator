@@ -16,13 +16,13 @@
     <value>argument attendu</value>
   </data>
   <data name="Error" xml:space="preserve">
-    <value>{0}: {1}</value>
+    <value>{0} : {1}</value>
   </data>
   <data name="IntegerExpected" xml:space="preserve">
     <value>{0} : nombre entier attendu</value>
   </data>
   <data name="MissingBracket" xml:space="preserve">
-    <value>[: « ] » manquant</value>
+    <value>[ : « ] » manquant</value>
   </data>
   <data name="ParenthesisExpected" xml:space="preserve">
     <value>« ) » attendu</value>

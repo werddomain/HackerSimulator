@@ -1,0 +1,5 @@
+{
+  "name": "sudo",
+  "description": "Exécute une commande en tant que superutilisateur",
+  "terminalUsage": "sudo <commande> [arguments...]"
+}

@@ -3,6 +3,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.XdgOpen;
 
@@ -19,8 +21,6 @@ namespace HackerOs.Commands.XdgOpen;
 /// </remarks>
 public sealed partial class XdgOpenCommand : TerminalAppBase
 {
-    private const string Usage = "usage: xdg-open { file | URL }";
-
     public XdgOpenCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />
@@ -28,18 +28,19 @@ public sealed partial class XdgOpenCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Arguments.Count != 1 || string.IsNullOrWhiteSpace(context.Arguments[0]))
         {
-            context.StandardError.WriteLine($"xdg-open: {(context.Arguments.Count > 1 ? "unexpected argument" : "no file or URL given")}");
-            context.StandardError.WriteLine(Usage);
+            context.StandardError.WriteLine(text["Error", text[context.Arguments.Count > 1 ? "UnexpectedArgument" : "NoTarget"]]);
+            context.StandardError.WriteLine(text["Usage"]);
             return 1;
         }
 
         string target = context.Arguments[0];
         if (target is "--help" or "-h")
         {
-            context.StandardOutput.WriteLine(Usage);
+            context.StandardOutput.WriteLine(text["Usage"]);
             return 0;
         }
 
@@ -51,13 +52,14 @@ public sealed partial class XdgOpenCommand : TerminalAppBase
         }
         catch (AppGatewayAccessDeniedException exception)
         {
-            context.StandardError.WriteLine($"xdg-open: {exception.Message}");
+            context.StandardError.WriteLine(text["Error", exception.Message]);
             return 4;
         }
     }
 
     private static async Task<int> OpenPathAsync(TerminalExecutionContext context, string target, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         VirtualPath path;
         try
         {
@@ -65,14 +67,14 @@ public sealed partial class XdgOpenCommand : TerminalAppBase
         }
         catch (Exception exception) when (exception is ArgumentException or FormatException)
         {
-            context.StandardError.WriteLine($"xdg-open: invalid path '{target}'");
+            context.StandardError.WriteLine(text["Error", text["InvalidPath", target]]);
             return 1;
         }
 
         bool isDirectory = await HackDirectory.ExistsAsync(path.Value, cancellationToken);
         if (!isDirectory && !await HackFile.ExistsAsync(path.Value, cancellationToken))
         {
-            context.StandardError.WriteLine($"xdg-open: file '{target}' does not exist");
+            context.StandardError.WriteLine(text["Error", text["FileMissing", target]]);
             return 4;
         }
 
@@ -82,34 +84,34 @@ public sealed partial class XdgOpenCommand : TerminalAppBase
         return result.Outcome switch
         {
             AppIntentOpenFileOutcome.Opened => 0,
-            AppIntentOpenFileOutcome.NoHandler => Fail(context, 3, $"no application can open '{target}'"),
+            AppIntentOpenFileOutcome.NoHandler => Fail(context, 3, text["NoHandler", target]),
             AppIntentOpenFileOutcome.ChooserRequired => Fail(
                 context, 4,
-                $"several applications can open '{target}' ({string.Join(", ", result.CandidateAppIds ?? [])}) and none is the default; " +
-                "choose one in Settings > File Associations, or run: launch <app-id> " + path.Value),
-            _ => Fail(context, 4, $"'{target}' could not be opened ({result.ErrorCode})")
+                text["Ambiguous", target, string.Join(", ", result.CandidateAppIds ?? []), path.Value]),
+            _ => Fail(context, 4, text["OpenFailed", target, result.ErrorCode ?? string.Empty])
         };
     }
 
     private static async Task<int> OpenUriAsync(TerminalExecutionContext context, Uri uri, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         AppIntentResult result = await context.App.Intents.OpenUriAsync(uri, cancellationToken: cancellationToken);
         return result.Outcome switch
         {
             AppIntentOutcome.Dispatched => 0,
-            AppIntentOutcome.NoHandler => Fail(context, 3, $"no application handles '{uri.Scheme}:' URIs"),
-            AppIntentOutcome.NotFound => Fail(context, 4, $"file '{uri.LocalPath}' does not exist"),
+            AppIntentOutcome.NoHandler => Fail(context, 3, text["NoSchemeHandler", uri.Scheme]),
+            AppIntentOutcome.NotFound => Fail(context, 4, text["FileMissing", uri.LocalPath]),
             AppIntentOutcome.ChooserRequired => Fail(
                 context, 4,
-                $"several applications handle '{uri.Scheme}:' URIs ({string.Join(", ", result.CandidateAppIds ?? [])}) and none is the default"),
-            AppIntentOutcome.Invalid => Fail(context, 1, $"invalid URI '{uri.OriginalString}'"),
-            _ => Fail(context, 4, $"'{uri.OriginalString}' could not be opened ({result.ErrorCode})")
+                text["SchemeAmbiguous", uri.Scheme, string.Join(", ", result.CandidateAppIds ?? [])]),
+            AppIntentOutcome.Invalid => Fail(context, 1, text["InvalidUri", uri.OriginalString]),
+            _ => Fail(context, 4, text["OpenFailed", uri.OriginalString, result.ErrorCode ?? string.Empty])
         };
     }
 
     private static int Fail(TerminalExecutionContext context, int exitCode, string message)
     {
-        context.StandardError.WriteLine($"xdg-open: {message}");
+        context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["Error", message]);
         return exitCode;
     }
 

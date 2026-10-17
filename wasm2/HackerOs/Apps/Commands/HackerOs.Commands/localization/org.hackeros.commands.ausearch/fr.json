@@ -1,0 +1,5 @@
+{
+  "name": "ausearch",
+  "description": "Recherche dans le journal d'audit du système de fichiers",
+  "terminalUsage": "ausearch [-f chemin] [-ua utilisateur] [-c comm] [--success yes|no] [-if fichier]"
+}

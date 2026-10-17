@@ -50,6 +50,6 @@
 Démarrage de Nmap 7.94 ( https://nmap.org ) le {0:yyyy-MM-dd HH:mm} UTC</value>
   </data>
   <data name="Usage" xml:space="preserve">
-    <value>nmap: utilisation : nmap [-p &lt;plage-de-ports&gt;] [-sV] [-O] &lt;cible&gt;</value>
+    <value>nmap : utilisation : nmap [-p &lt;plage-de-ports&gt;] [-sV] [-O] &lt;cible&gt;</value>
   </data>
 </root>
