@@ -18,6 +18,7 @@ using HackerOs.Simulation.Abstractions;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
 
@@ -338,24 +339,641 @@ public sealed class AppIntentDispatcherTests
         Assert.NotNull(result.Process);
     }
 
+    // ---- ADR 0096, section 1: RevealFileIntent ----
+
     [Fact]
-    public async Task Reveal_file_and_show_settings_intents_dispatch_without_requiring_any_capability()
+    public async Task Reveal_file_requires_apps_launch()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/alice/Documents")));
+
+        Assert.Equal(AppIntentDispatchStatus.CapabilityDenied, result.Status);
+        Assert.Equal("intent.capability-denied", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Reveal_file_opens_the_parent_folder_in_the_folder_handler_with_select()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/alice/Documents")));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.file-explorer", result.Process!.AppId);
+        Assert.Equal(["/home/alice", "--select=/home/alice/Documents"], Arguments(result));
+        Assert.Equal(AppIntentIds.RevealFile, result.Context!.Intent!.IntentId);
+        Assert.Equal("org.hackeros.shell", result.Context.Intent.SenderAppId);
+    }
+
+    [Fact]
+    public async Task Reveal_file_of_a_missing_path_is_not_found()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/alice/missing.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.reveal-file.not-found", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Reveal_file_in_a_folder_the_user_cannot_read_is_denied()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        // Bob's home is 0700: Alice cannot traverse it, like on Linux.
+        await fixture.SeedHomeAsync("bob");
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/bob/Documents")));
+
+        Assert.Equal(AppIntentDispatchStatus.AccessDenied, result.Status);
+        Assert.Equal("intent.reveal-file.denied", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Reveal_file_with_several_folder_handlers_and_no_default_requires_a_chooser()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.test.files-a"), DirectoryHandlerManifest("org.test.files-b"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/alice/Documents")));
+
+        Assert.Equal(AppIntentDispatchStatus.ChooserRequired, result.Status);
+        Assert.Equal("intent.reveal-file.chooser-required", result.ErrorCode);
+        Assert.Equal(["org.test.files-a", "org.test.files-b"], result.CandidateAppIds!.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Reveal_file_without_a_folder_handler_has_no_handler()
     {
         Fixture fixture = new(NotepadManifest());
         AuthenticatedPrincipal principal = await fixture.LoginAsync();
-        AppIntentRequest reveal = new(
-            Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(),
-            new RevealFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
-        AppIntentRequest showSettings = new(
-            Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(),
-            new ShowAppSettingsIntent("org.hackeros.notepad"));
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
 
-        AppIntentDispatchResult revealResult = await fixture.Dispatcher.DispatchAsync(reveal, principal);
-        AppIntentDispatchResult settingsResult = await fixture.Dispatcher.DispatchAsync(showSettings, principal);
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new RevealFileIntent(VirtualPath.Parse("/home/alice/Documents")));
 
-        Assert.Equal(AppIntentDispatchStatus.Dispatched, revealResult.Status);
-        Assert.Equal(AppIntentDispatchStatus.Dispatched, settingsResult.Status);
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.reveal-file.no-handler", result.ErrorCode);
     }
+
+    // ---- ADR 0096, section 2: EditFileIntent ----
+
+    [Fact]
+    public async Task Edit_file_requires_apps_launch()
+    {
+        Fixture fixture = new(NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.CapabilityDenied, result.Status);
+    }
+
+    [Fact]
+    public async Task Edit_file_launches_the_edit_handler_with_the_path()
+    {
+        Fixture fixture = new(NotepadManifest(), ViewerManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
+
+        // The viewer only opens .txt: the only edit handler wins without a chooser.
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.notepad", result.Process!.AppId);
+        Assert.False(result.FellBackToOpen);
+        Assert.Equal(["/home/alice/notes.txt"], Arguments(result));
+        Assert.Equal(AppIntentIds.EditFile, result.Context!.Intent!.IntentId);
+    }
+
+    [Fact]
+    public async Task Edit_file_falls_back_to_open_when_no_app_declares_edit()
+    {
+        Fixture fixture = new(ViewerManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.test.viewer", result.Process!.AppId);
+        Assert.True(result.FellBackToOpen);
+    }
+
+    [Fact]
+    public async Task Edit_file_with_several_edit_handlers_requires_a_chooser()
+    {
+        Fixture fixture = new(NotepadManifest(), TextEditorManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.ChooserRequired, result.Status);
+        Assert.Equal("intent.edit-file.chooser-required", result.ErrorCode);
+        Assert.Equal(2, result.CandidateAppIds!.Count);
+    }
+
+    [Fact]
+    public async Task Edit_file_honors_a_preferred_handler()
+    {
+        Fixture fixture = new(NotepadManifest(), TextEditorManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(
+            principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt"), PreferredAppId: "org.hackeros.texteditor"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.texteditor", result.Process!.AppId);
+    }
+
+    [Fact]
+    public async Task Edit_file_with_a_preferred_app_that_cannot_handle_it_is_target_invalid()
+    {
+        Fixture fixture = new(NotepadManifest(), EchoManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(
+            principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt"), PreferredAppId: "org.hackeros.echo"));
+
+        Assert.Equal(AppIntentDispatchStatus.TargetInvalid, result.Status);
+        Assert.Equal("intent.edit-file.target-invalid", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Edit_file_without_any_handler_has_no_handler()
+    {
+        Fixture fixture = new(EchoManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new EditFileIntent(VirtualPath.Parse("/home/alice/notes.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.edit-file.no-handler", result.ErrorCode);
+    }
+
+    // ---- ADR 0096, section 3: OpenUriIntent ----
+
+    [Fact]
+    public async Task Open_uri_requires_apps_launch()
+    {
+        Fixture fixture = new(BrowserManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("https://example.hackeros/")));
+
+        Assert.Equal(AppIntentDispatchStatus.CapabilityDenied, result.Status);
+    }
+
+    [Fact]
+    public async Task Open_uri_launches_the_default_scheme_handler_with_the_uri()
+    {
+        // The seeded file-associations.json names the browser for x-scheme-handler/http and https.
+        Fixture fixture = new(BrowserManifest(), SchemeHandlerManifest("org.test.other-browser", "https"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("https://example.hackeros/page?q=1")));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.browser", result.Process!.AppId);
+        Assert.Equal(["https://example.hackeros/page?q=1"], Arguments(result));
+        Assert.Equal(AppIntentIds.OpenUri, result.Context!.Intent!.IntentId);
+    }
+
+    [Fact]
+    public async Task Open_uri_honors_a_preferred_handler()
+    {
+        Fixture fixture = new(BrowserManifest(), SchemeHandlerManifest("org.test.other-browser", "https"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(
+            principal, new OpenUriIntent(new Uri("https://example.hackeros/"), PreferredAppId: "org.test.other-browser"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.test.other-browser", result.Process!.AppId);
+    }
+
+    [Fact]
+    public async Task Open_uri_with_a_preferred_app_that_does_not_handle_the_scheme_is_target_invalid()
+    {
+        Fixture fixture = new(BrowserManifest(), NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(
+            principal, new OpenUriIntent(new Uri("https://example.hackeros/"), PreferredAppId: "org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.TargetInvalid, result.Status);
+        Assert.Equal("intent.open-uri.target-invalid", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Open_uri_with_several_scheme_handlers_and_no_default_requires_a_chooser()
+    {
+        Fixture fixture = new(SchemeHandlerManifest("org.test.gopher-a", "gopher"), SchemeHandlerManifest("org.test.gopher-b", "gopher"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("gopher://hole.hackeros/")));
+
+        Assert.Equal(AppIntentDispatchStatus.ChooserRequired, result.Status);
+        Assert.Equal("intent.open-uri.chooser-required", result.ErrorCode);
+        Assert.Equal(2, result.CandidateAppIds!.Count);
+    }
+
+    [Fact]
+    public async Task Open_uri_of_a_scheme_nobody_handles_has_no_handler()
+    {
+        Fixture fixture = new(BrowserManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("nope://thing")));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.open-uri.no-handler", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Open_uri_of_a_relative_uri_is_invalid()
+    {
+        Fixture fixture = new(BrowserManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("docs/page.html", UriKind.Relative)));
+
+        Assert.Equal(AppIntentDispatchStatus.Invalid, result.Status);
+        Assert.Equal("intent.open-uri.invalid", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Open_uri_of_a_file_uri_opens_the_file()
+    {
+        Fixture fixture = new(NotepadManifest(), BrowserManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new OpenUriIntent(new Uri("file:///home/alice/my%20notes.txt")));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.notepad", result.Process!.AppId);
+        Assert.Equal(["/home/alice/my notes.txt"], Arguments(result));
+    }
+
+    // ---- ADR 0096, section 4: ShowAppSettingsIntent ----
+
+    [Fact]
+    public async Task Show_settings_opens_the_settings_app_on_the_app_page_without_any_capability()
+    {
+        Fixture fixture = new(NotepadManifest(), SettingsManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new ShowAppSettingsIntent("org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal(AppIntentDispatcher.SettingsAppId, result.Process!.AppId);
+        Assert.Equal(["--app=org.hackeros.notepad"], Arguments(result));
+    }
+
+    [Fact]
+    public async Task Show_settings_launches_an_app_that_declares_its_own_settings_page()
+    {
+        AppManifest notepad = NotepadManifest() with { Intents = [new AppIntentDeclarationManifest(AppIntentIds.ShowAppSettings)] };
+        Fixture fixture = new(notepad, SettingsManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new ShowAppSettingsIntent("org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.hackeros.notepad", result.Process!.AppId);
+        Assert.Equal(["--show-settings"], Arguments(result));
+    }
+
+    [Fact]
+    public async Task Show_settings_of_an_unknown_app_is_not_found()
+    {
+        Fixture fixture = new(SettingsManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new ShowAppSettingsIntent("org.nope.app"));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.show-settings.not-found", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Show_settings_of_a_disabled_app_is_refused()
+    {
+        Fixture fixture = new(NotepadManifest(), SettingsManifest());
+        fixture.Enablement.MarkDisabled(["org.hackeros.notepad"]);
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new ShowAppSettingsIntent("org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.Disabled, result.Status);
+        Assert.Equal("intent.show-settings.disabled", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Show_settings_without_the_settings_app_reports_it()
+    {
+        Fixture fixture = new(NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new ShowAppSettingsIntent("org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.show-settings.no-settings-app", result.ErrorCode);
+    }
+
+    // ---- ADR 0096, section 5: app-defined intents ----
+
+    private const string ShareIntent = "org.test.intent.share.v1";
+
+    [Fact]
+    public async Task Custom_intent_with_a_malformed_id_is_invalid()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent("Share"));
+
+        Assert.Equal(AppIntentDispatchStatus.Invalid, result.Status);
+        Assert.Equal("intent.custom.invalid-id", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_cannot_carry_a_built_in_id()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(AppIntentIds.OpenFile));
+
+        Assert.Equal(AppIntentDispatchStatus.Invalid, result.Status);
+        Assert.Equal("intent.custom.reserved-id", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_requires_apps_launch()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent));
+
+        Assert.Equal(AppIntentDispatchStatus.CapabilityDenied, result.Status);
+        Assert.Equal("intent.capability-denied", result.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData("[1, 2]")]
+    [InlineData("\"text\"")]
+    [InlineData("{ not json")]
+    public async Task Custom_intent_payload_must_be_a_json_object(string payload)
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, payload));
+
+        Assert.Equal(AppIntentDispatchStatus.Invalid, result.Status);
+        Assert.Equal("intent.custom.payload-invalid", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_payload_is_limited_to_64_KiB()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        string payload = "{\"text\":\"" + new string('x', AppIntentIds.MaxCustomPayloadBytes) + "\"}";
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, payload));
+
+        Assert.Equal(AppIntentDispatchStatus.Invalid, result.Status);
+        Assert.Equal("intent.custom.payload-too-large", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_nobody_declares_is_unknown()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent("org.test.intent.nobody.v1"));
+
+        Assert.Equal(AppIntentDispatchStatus.NotFound, result.Status);
+        Assert.Equal("intent.unknown", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_declared_by_one_app_launches_it_with_the_payload()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, "{\"text\":\"hi\"}"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, result.Status);
+        Assert.Equal("org.test.receiver-a", result.Process!.AppId);
+        AppIntentDelivery delivery = result.Context!.Intent!;
+        Assert.Equal(ShareIntent, delivery.IntentId);
+        Assert.Equal("{\"text\":\"hi\"}", delivery.PayloadJson);
+        Assert.Equal("org.hackeros.shell", delivery.SenderAppId);
+    }
+
+    [Fact]
+    public async Task Custom_intent_of_a_disabled_app_is_not_routed_to_it()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"));
+        fixture.Enablement.MarkDisabled(["org.test.receiver-a"]);
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent));
+
+        Assert.Equal("intent.unknown", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_declared_by_several_apps_requires_a_chooser()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-b"), ReceiverManifest("org.test.receiver-a"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent));
+
+        Assert.Equal(AppIntentDispatchStatus.ChooserRequired, result.Status);
+        Assert.Equal("intent.custom.chooser-required", result.ErrorCode);
+        Assert.Equal(["org.test.receiver-a", "org.test.receiver-b"], result.CandidateAppIds);
+    }
+
+    [Fact]
+    public async Task Custom_intent_to_an_app_that_does_not_declare_it_is_target_invalid()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"), NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult result = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, TargetAppId: "org.hackeros.notepad"));
+
+        Assert.Equal(AppIntentDispatchStatus.TargetInvalid, result.Status);
+        Assert.Equal("intent.custom.target-invalid", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Custom_intent_always_use_is_remembered_in_intents_config()
+    {
+        Fixture fixture = new(ReceiverManifest("org.test.receiver-a"), ReceiverManifest("org.test.receiver-b"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentDispatchResult chosen = await fixture.DispatchAsync(
+            principal, new CustomIntent(ShareIntent, TargetAppId: "org.test.receiver-b", RememberChoice: true));
+        AppIntentDispatchResult next = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, chosen.Status);
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, next.Status);
+        Assert.Equal("org.test.receiver-b", next.Process!.AppId);
+        Assert.Equal("org.test.receiver-b", await IntentChoiceStore.ReadAsync(fixture.FileSystem, principal, ShareIntent, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Custom_intent_to_a_running_single_instance_is_delivered_through_intent_received()
+    {
+        Fixture fixture = new(ReceiverServiceManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        AppIntentDispatchResult first = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, "{\"n\":1}"));
+        List<AppIntentDelivery> received = [];
+        first.Context!.IntentReceived += (_, delivery) => received.Add(delivery);
+
+        AppIntentDispatchResult second = await fixture.DispatchAsync(principal, new CustomIntent(ShareIntent, "{\"n\":2}"));
+
+        Assert.Equal(AppIntentDispatchStatus.Dispatched, second.Status);
+        Assert.Equal(first.Process!.Pid, second.Process!.Pid);
+        AppIntentDelivery delivery = Assert.Single(received);
+        Assert.Equal("{\"n\":2}", delivery.PayloadJson);
+        await fixture.Orchestrator.StopAllAsync(ProcessExitReason.Shutdown);
+    }
+
+    // ---- ADR 0096: the app-facing gateway's outcomes ----
+
+    [Fact]
+    public async Task The_gateway_maps_each_new_intent_outcome()
+    {
+        Fixture fixture = new(DirectoryHandlerManifest("org.hackeros.file-explorer"), BrowserManifest(),
+            ReceiverManifest("org.test.receiver-a"), ReceiverManifest("org.test.receiver-b"));
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+        await fixture.SeedHomeAsync("bob");
+        IAppIntentGateway gateway = fixture.Gateway(principal);
+
+        Assert.Equal(AppIntentOutcome.Dispatched, (await gateway.RevealFileAsync(VirtualPath.Parse("/home/alice/Documents"))).Outcome);
+        Assert.Equal(AppIntentOutcome.NotFound, (await gateway.RevealFileAsync(VirtualPath.Parse("/home/alice/nope"))).Outcome);
+        Assert.Equal(AppIntentOutcome.AccessDenied, (await gateway.RevealFileAsync(VirtualPath.Parse("/home/bob/Documents"))).Outcome);
+        Assert.Equal(AppIntentOutcome.Dispatched, (await gateway.OpenUriAsync(new Uri("https://example.hackeros/"))).Outcome);
+        Assert.Equal(AppIntentOutcome.NoHandler, (await gateway.OpenUriAsync(new Uri("nope://x"))).Outcome);
+        Assert.Equal(AppIntentOutcome.NotFound, (await gateway.ShowAppSettingsAsync("org.nope.app")).Outcome);
+        Assert.Equal(AppIntentOutcome.NoHandler, (await gateway.SendIntentAsync("org.test.intent.nobody.v1", null)).Outcome);
+        Assert.Equal(AppIntentOutcome.Invalid, (await gateway.SendIntentAsync(ShareIntent, "[]")).Outcome);
+        AppIntentResult chooser = await gateway.SendIntentAsync(ShareIntent, null);
+        Assert.Equal(AppIntentOutcome.ChooserRequired, chooser.Outcome);
+        Assert.Equal(["org.test.receiver-a", "org.test.receiver-b"], chooser.CandidateAppIds);
+    }
+
+    [Fact]
+    public async Task The_gateway_throws_when_the_caller_lacks_apps_launch()
+    {
+        Fixture fixture = new(BrowserManifest(), NotepadManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        IAppIntentGateway gateway = fixture.Gateway(principal);
+
+        await Assert.ThrowsAsync<AppGatewayAccessDeniedException>(() => gateway.OpenUriAsync(new Uri("https://example.hackeros/")).AsTask());
+        await Assert.ThrowsAsync<AppGatewayAccessDeniedException>(() => gateway.EditFileAsync(VirtualPath.Parse("/home/alice/notes.txt")).AsTask());
+    }
+
+    [Fact]
+    public async Task The_gateway_reports_an_edit_that_fell_back_to_open()
+    {
+        Fixture fixture = new(ViewerManifest());
+        AuthenticatedPrincipal principal = await fixture.LoginAsync();
+        fixture.Grant("org.hackeros.shell", principal, AppCapabilities.AppsLaunch);
+
+        AppIntentOpenFileResult result = await fixture.Gateway(principal).EditFileAsync(VirtualPath.Parse("/home/alice/notes.txt"));
+
+        Assert.Equal(AppIntentOpenFileOutcome.Opened, result.Outcome);
+        Assert.True(result.FellBackToOpen);
+    }
+
+    private static string[] Arguments(AppIntentDispatchResult result) =>
+        [.. result.Context!.Environment.GetCommandLineArgs().Skip(1)];
+
+    private static AppManifest ViewerManifest() => WindowManifest("org.test.viewer") with
+    {
+        FileHandlers = [new FileHandlerManifest("text/plain", [".txt"], ["open"])]
+    };
+
+    private static AppManifest BrowserManifest() => WindowManifest("org.hackeros.browser") with
+    {
+        FileHandlers =
+        [
+            new FileHandlerManifest("x-scheme-handler/http", [], ["open"]),
+            new FileHandlerManifest("x-scheme-handler/https", [], ["open"])
+        ]
+    };
+
+    private static AppManifest SchemeHandlerManifest(string appId, string scheme) => WindowManifest(appId) with
+    {
+        FileHandlers = [new FileHandlerManifest($"x-scheme-handler/{scheme}", [], ["open"])]
+    };
+
+    private static AppManifest SettingsManifest() => WindowManifest(AppIntentDispatcher.SettingsAppId);
+
+    private static AppManifest ReceiverManifest(string appId) => WindowManifest(appId) with
+    {
+        Intents = [new AppIntentDeclarationManifest(ShareIntent)]
+    };
+
+    private static AppManifest ReceiverServiceManifest() => WaiterServiceManifest() with
+    {
+        Intents = [new AppIntentDeclarationManifest(ShareIntent)]
+    };
+
+    private static AppManifest WindowManifest(string appId) => new()
+    {
+        Id = appId,
+        Name = appId,
+        Version = "1.0.0",
+        PublisherId = "org.hackeros",
+        Description = "A Window app for ADR 0096 tests.",
+        Kind = AppKind.Window,
+        EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", $"{appId}.EntryPoint"),
+        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
+        Resources = AppResourceProfileManifest.None
+    };
 
     private static AppManifest EchoManifest() => new()
     {
@@ -557,6 +1175,8 @@ public sealed class AppIntentDispatcherTests
                 router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             FileSystemSeeder seeder = new(fileSystem, timeProvider);
+            FileSystem = fileSystem;
+            _seeder = seeder;
 
             InMemoryLocalUserRepository users = new(() => _now);
             InMemoryLocalGroupRepository groups = new();
@@ -610,12 +1230,17 @@ public sealed class AppIntentDispatcherTests
             }
 
             AppEnablementRegistry enablement = new(catalog);
+            Enablement = enablement;
             Orchestrator = new AppLifecycleOrchestrator(catalog, descriptors, enablement, Manager, Grants, contextFactory);
             FileAssociationResolver resolver = new(catalog, enablement, Settings);
             Dispatcher = new AppIntentDispatcher(Orchestrator, catalog, enablement, resolver, Grants, fileSystem);
         }
 
+        private readonly FileSystemSeeder _seeder;
+
         internal LocalSessionService Session { get; }
+        internal FileSystemService FileSystem { get; }
+        internal AppEnablementRegistry Enablement { get; }
         internal InMemoryProcessManager Manager { get; }
         internal CapabilityGrantRepository Grants { get; }
         internal IOsSettingsService Settings { get; }
@@ -625,6 +1250,17 @@ public sealed class AppIntentDispatcherTests
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");
 
         internal Task<AuthenticatedPrincipal> LoginAsAdministratorAsync() => Session.LoginAsync(LocalLoginName.Parse("root"), "hunter2");
+
+        /// <summary>Creates another user's 0700 home, as the login seeding does.</summary>
+        internal ValueTask SeedHomeAsync(string login) => _seeder.SeedAsync(login, Guid.NewGuid().ToString());
+
+        /// <summary>The intents gateway the shell's context would get.</summary>
+        internal IAppIntentGateway Gateway(AuthenticatedPrincipal principal) =>
+            new AppIntentGateway(() => Dispatcher, "org.hackeros.shell", principal.UserId.ToString(), principal);
+
+        /// <summary>Dispatches <paramref name="intent"/> on behalf of the shell for <paramref name="principal"/>.</summary>
+        internal Task<AppIntentDispatchResult> DispatchAsync(AuthenticatedPrincipal principal, IAppIntent intent) =>
+            Dispatcher.DispatchAsync(new AppIntentRequest(Guid.NewGuid(), "org.hackeros.shell", principal.UserId.ToString(), intent), principal).AsTask();
 
         internal void Grant(string appId, AuthenticatedPrincipal principal, string capability) =>
             Grants.Grant(appId, principal.UserId.ToString(), capability, CapabilityGrantSource.UserApproval, AppAuthority.Administrator);

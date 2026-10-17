@@ -68,6 +68,41 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Clipboard = new RemoteClipboardGateway(channel);
         WebDatabase = new RemoteWebDatabaseGateway(channel, snapshot.Manifest.Id);
         Console = console;
+        Intent = snapshot.Intent;
+    }
+
+    /// <inheritdoc />
+    public AppIntentDelivery? Intent { get; }
+
+    /// <inheritdoc />
+    public event EventHandler<AppIntentDelivery>? IntentReceived;
+
+    /// <summary>
+    /// Raises <see cref="IntentReceived"/> for an intent the OS handed to this running process
+    /// (ADR 0096, section 5), inside its ambient context. A handler that throws does not keep the
+    /// others from running.
+    /// </summary>
+    public void DeliverIntent(AppIntentDelivery delivery)
+    {
+        if (IntentReceived is not { } handlers)
+        {
+            return;
+        }
+
+        using IDisposable scope = HackExecutionContext.Enter(this);
+        foreach (EventHandler<AppIntentDelivery> handler in handlers.GetInvocationList().Cast<EventHandler<AppIntentDelivery>>())
+        {
+            try
+            {
+                handler(this, delivery);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logging.Log(
+                    HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                    $"An IntentReceived handler threw {exception.GetType().Name}: {exception.Message}");
+            }
+        }
     }
 
     public AppManifest Manifest { get; }
@@ -196,4 +231,5 @@ internal sealed record RemoteProcessSnapshot(
     string CurrentDirectory,
     IReadOnlyDictionary<string, string> Variables,
     string EnvironmentUserName,
-    string MachineName);
+    string MachineName,
+    AppIntentDelivery? Intent = null);

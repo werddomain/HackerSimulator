@@ -101,6 +101,10 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
             WireCodec.WriteStrings(writer, "caps", context.GrantedCapabilities.Order(StringComparer.Ordinal));
             writer.WriteString("s", context.SessionId.Value.ToString("N"));
             WireCodec.WriteProcess(writer, "pr", context.Processes.OwnProcess);
+            if (context.Intent is { } intent)
+            {
+                WireCodec.WriteIntentDelivery(writer, "it", intent);
+            }
             writer.WriteEndObject();
 
             writer.WriteStartObject("env");

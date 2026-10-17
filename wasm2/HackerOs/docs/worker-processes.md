@@ -35,7 +35,7 @@ fil principal.
 | Commande | `pool` | `pool`, `dedicated`, `mainThread` |
 | Service | `dedicated` | `dedicated`, `pool`, `mainThread` |
 
-Les 63 commandes de `HackerOs.Commands` : 49 en `pool`, 14 en `mainThread`
+Les 66 commandes de `HackerOs.Commands` : 52 en `pool`, 14 en `mainThread`
 avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
 demande un mot de passe à l'agent d'authentification ; `nano`, `top`, `htop`,
@@ -220,7 +220,7 @@ d'arrêt).
 
 - `Tests/HackerOs.Platform.WorkerHost.Tests` (OS complet sans interface, workers
   en boucle locale) :
-  - `CommandParityTests` : **les 63 commandes intégrées** exécutées dans les
+  - `CommandParityTests` : **les 66 commandes intégrées** (`nslookup`, `ausearch` et `xdg-open` comprises) exécutées dans les
     deux modes (fil principal, worker) avec la même sortie, le même code et le
     même arbre de fichiers (`HACKEROS_PARITY_DUMP` pour inspecter) ;
   - `WorkerPoolTests` : démarrage avant / après la fin du boot, worker prêt
@@ -251,5 +251,6 @@ d'arrêt).
 - [x] Commandes : hôte déclaré ou défaut ; service d'exemple en `MainThread` (raison en commentaire).
 - [x] Serveur : ligne d'information ; `test/test` comme l'Ecosystem.
 - [x] Tests de parité des 63 commandes, tests du pool et de l'escalade.
+- [x] `v3/4-intents` : les intents de l'ADR 0096 (`int.edit`, `int.reveal`, `int.uri`, `int.settings`, `int.send`) et la remise d'un intent à un processus en cours (message `intent`, `IntentReceived`) traversent la frontière du worker ; parité de `xdg-open`.
 - [x] Vérification des trois hôtes (`build/verify-hosts.sh`).
 - [x] Documentation et ADR 0072.

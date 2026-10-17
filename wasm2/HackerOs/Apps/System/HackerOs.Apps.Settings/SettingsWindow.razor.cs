@@ -1,3 +1,4 @@
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Settings;
@@ -67,6 +68,15 @@ public partial class SettingsWindow : IAsyncDisposable
     private HackSyncStatus _syncStatus = HackSyncStatus.Inactive;
     private IReadOnlyList<HackSyncConflict> _conflicts = [];
 
+    /// <summary>Index of the "Application" tab, the last one (ADR 0096 §4).</summary>
+    private const int AppPageTabIndex = 7;
+
+    /// <summary>Prefix of the argument naming the app whose page to show (<c>--app=&lt;id&gt;</c>).</summary>
+    internal const string AppArgumentPrefix = "--app=";
+
+    private int _activeTab;
+    private string? _appPageId;
+
     private bool IsConfirmed => string.Equals(_confirmText, ResetConfirmPhrase, StringComparison.Ordinal);
 
     private bool CurrentDesktopThemeSupportsAccent =>
@@ -81,6 +91,7 @@ public partial class SettingsWindow : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAppInitializedAsync()
     {
+        ShowAppPage(LaunchArguments);
         await OpenAppearanceAsync();
 
         IReadOnlyList<HackAppInfo> apps = await HackApps.GetInstalledAsync(AppContext.CancellationToken);
@@ -91,6 +102,33 @@ public partial class SettingsWindow : IAsyncDisposable
 
         await RefreshConnectionAsync();
     }
+
+    /// <summary>
+    /// Settings is a single instance: another app's <c>ShowAppSettingsIntent</c> reaches the open
+    /// window here with <c>--app=&lt;id&gt;</c> (ADR 0096, sections 4 and 5).
+    /// </summary>
+    protected override Task OnIntentReceivedAsync(AppIntentDelivery intent)
+    {
+        ShowAppPage(intent.Arguments);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the "Application" tab on the app named by <c>--app=&lt;id&gt;</c>, when an argument names one.</summary>
+    private void ShowAppPage(IReadOnlyList<string> arguments)
+    {
+        if (ReadAppArgument(arguments) is { } appId)
+        {
+            _appPageId = appId;
+            _activeTab = AppPageTabIndex;
+        }
+    }
+
+    /// <summary>Reads <c>--app=&lt;id&gt;</c> from Settings' command line; the last one wins, an empty id is ignored.</summary>
+    internal static string? ReadAppArgument(IReadOnlyList<string> arguments) =>
+        arguments
+            .Where(static argument => argument.StartsWith(AppArgumentPrefix, StringComparison.Ordinal))
+            .Select(static argument => argument[AppArgumentPrefix.Length..].Trim())
+            .LastOrDefault(static id => id.Length > 0);
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

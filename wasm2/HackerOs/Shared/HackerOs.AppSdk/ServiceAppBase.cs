@@ -78,6 +78,7 @@ public abstract class ServiceAppBase : AppBase
         // ADR 0069: the OS's stop request (kill, End task, logout...) runs OnStoppingAsync right
         // away, before the token is cancelled, and the OS waits for it within the grace period.
         context.StopRequested += OnStopRequested;
+        context.IntentReceived += OnIntentReceived;
         return RunInScopeAsync(context, sessionCancellationToken);
     }
 
@@ -144,6 +145,26 @@ public abstract class ServiceAppBase : AppBase
         finally
         {
             context.StopRequested -= OnStopRequested;
+            context.IntentReceived -= OnIntentReceived;
+        }
+    }
+
+    /// <summary>
+    /// Runs <see cref="OnIntentReceivedAsync"/> for an intent the OS handed to the running service
+    /// (ADR 0096, section 5). The OS raises the event inside the service's ambient context; a fault is
+    /// logged, never thrown at the sender.
+    /// </summary>
+    private async void OnIntentReceived(object? sender, AppIntentDelivery intent)
+    {
+        try
+        {
+            await OnIntentReceivedAsync(intent, _context?.CancellationToken ?? CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _context?.Logging.Log(
+                HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                $"OnIntentReceivedAsync threw {exception.GetType().Name}: {exception.Message}");
         }
     }
 
@@ -191,4 +212,16 @@ public abstract class ServiceAppBase : AppBase
     protected virtual ValueTask OnStoppingAsync(
         ServiceStopReason reason,
         CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Handles an intent the OS hands to the running service instead of starting a second one
+    /// (ADR 0096, section 5): an app-defined intent it declares (<c>Intents</c> of the manifest), with
+    /// its payload, or a launch with arguments. The intent that started the service is
+    /// <see cref="IAppExecutionContext.Intent"/>, read in <see cref="RunCoreAsync"/>.
+    /// </summary>
+    /// <param name="intent">Identifier, payload, sender and arguments.</param>
+    /// <param name="cancellationToken">The service's process token.</param>
+    /// <returns>A task representing the handling.</returns>
+    protected virtual Task OnIntentReceivedAsync(AppIntentDelivery intent, CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }

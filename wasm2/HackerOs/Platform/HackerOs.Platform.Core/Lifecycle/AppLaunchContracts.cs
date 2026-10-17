@@ -66,6 +66,11 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// Whether the process belongs to the system rather than to the login session (ADR 0097, section 4):
 /// a service started at boot under the service account, which a logout does not stop.
 /// </param>
+/// <param name="Intent">
+/// The intent this launch carries (ADR 0096, section 5): the new process reads it as
+/// <see cref="IAppExecutionContext.Intent"/>; a running single instance receives it through
+/// <see cref="IAppExecutionContext.IntentReceived"/> instead of a second process.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -83,7 +88,8 @@ public sealed record AppLaunchRequest(
     IShellSession? Shell = null,
     string? CommandName = null,
     Action<ProcessRecord>? ProcessStarted = null,
-    bool SystemScope = false);
+    bool SystemScope = false,
+    AppIntentDelivery? Intent = null);
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

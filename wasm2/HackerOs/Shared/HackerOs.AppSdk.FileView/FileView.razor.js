@@ -194,6 +194,20 @@ export function attachPasteTarget(element, callbacks) {
     return true;
 }
 
+// Reveal (ADR 0096, section 1): scrolls the row/tile/node for `path` to the middle of its scroller,
+// then focuses it without scrolling again, so "Show in folder" lands on a visible, selected item.
+export function revealItem(containerEl, path) {
+    for (const el of containerEl.querySelectorAll('[data-item-path]')) {
+        if (el.getAttribute('data-item-path') === path) {
+            el.scrollIntoView({ block: 'center', inline: 'nearest' });
+            el.focus({ preventScroll: true });
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Roving-tabindex keyboard navigation (FV-011): moves real DOM focus to the row/tile/node for `path`
 // after an arrow key changes the active item. Every renderer tags its row's root element with
 // data-item-path, so this one lookup works across Details/Icons/Tree without knowing which mode is active.

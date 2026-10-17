@@ -213,6 +213,47 @@ public sealed record CredentialPromptDialogResult(
     string? LoginName,
     string? Password);
 
+/// <summary>One app offered by the app chooser (ADR 0096, section 5).</summary>
+/// <param name="AppId">App ID returned when the user picks it.</param>
+/// <param name="Name">Display name.</param>
+/// <param name="Description">One-line description, when the app has one.</param>
+public sealed record AppChooserOption(string AppId, string Name, string? Description = null);
+
+/// <summary>
+/// Configures the app chooser, the "Open with" dialog of the OS (ADR 0096, section 5): which app
+/// handles a file, a URI or an app-defined intent when several can and none is the default.
+/// </summary>
+public sealed record AppChooserDialogRequest
+{
+    /// <summary>Gets the dialog title; "Open with" when empty.</summary>
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>Gets the sentence above the list, e.g. what is being opened.</summary>
+    public string Content { get; init; } = string.Empty;
+
+    /// <summary>Gets the apps to choose from, in display order.</summary>
+    public IReadOnlyList<AppChooserOption> Candidates { get; init; } = [];
+
+    /// <summary>Gets whether the dialog offers "Always use this app".</summary>
+    public bool OfferAlwaysUse { get; init; } = true;
+}
+
+/// <summary>Describes whether the user picked an app or cancelled the chooser.</summary>
+public enum AppChooserStatus
+{
+    /// <summary>The user picked an app.</summary>
+    Selected,
+
+    /// <summary>The user cancelled the chooser.</summary>
+    Cancelled
+}
+
+/// <summary>Contains the result of the app chooser.</summary>
+/// <param name="Status">Dialog outcome.</param>
+/// <param name="AppId">The picked app, or null if cancelled.</param>
+/// <param name="AlwaysUse">Whether the user ticked "Always use this app".</param>
+public sealed record AppChooserDialogResult(AppChooserStatus Status, string? AppId, bool AlwaysUse);
+
 /// <summary>
 /// Displays modal system dialogs (including file dialogs, message boxes, and text inputs) on behalf of a window app.
 /// </summary>
@@ -235,4 +276,14 @@ public interface IDialogService : IFileDialogService
         IAppExecutionContext context,
         CredentialPromptDialogRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Displays the app chooser scoped to the requesting app instance (ADR 0096, section 5). The
+    /// default answers "cancelled", for hosts written before the chooser existed.
+    /// </summary>
+    ValueTask<AppChooserDialogResult> ChooseAppAsync(
+        IAppExecutionContext context,
+        AppChooserDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new AppChooserDialogResult(AppChooserStatus.Cancelled, null, false));
 }

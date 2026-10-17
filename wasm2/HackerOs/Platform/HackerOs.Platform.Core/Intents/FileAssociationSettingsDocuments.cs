@@ -29,10 +29,14 @@ public static class FileAssociationSettingsDocuments
     /// Gets the built-in content used while the file is absent or invalid: it makes
     /// <c>org.hackeros.file-explorer</c> the default handler for <c>inode/directory</c> (`INT-009`),
     /// so directory-open intents resolve to a <see cref="FileHandlerResolutionStatus.ConfiguredDefault"/>
-    /// out of the box instead of falling through to the chooser.
+    /// out of the box instead of falling through to the chooser, and <c>org.hackeros.browser</c> the
+    /// default web browser, <c>x-scheme-handler/http</c> and <c>https</c> (ADR 0096, section 3).
     /// </summary>
     public const string DefaultContent =
-        "{\"schemaVersion\":1,\"associations\":[{\"mediaType\":\"inode/directory\",\"appId\":\"org.hackeros.file-explorer\",\"actions\":[\"open\"]}]}";
+        "{\"schemaVersion\":1,\"associations\":[" +
+        "{\"mediaType\":\"inode/directory\",\"appId\":\"org.hackeros.file-explorer\",\"actions\":[\"open\"]}," +
+        "{\"mediaType\":\"x-scheme-handler/http\",\"appId\":\"org.hackeros.browser\",\"actions\":[\"open\"]}," +
+        "{\"mediaType\":\"x-scheme-handler/https\",\"appId\":\"org.hackeros.browser\",\"actions\":[\"open\"]}]}";
 
     /// <summary>Reads the effective document (the file, or <see cref="DefaultContent"/>).</summary>
     /// <param name="settings">OS settings service.</param>

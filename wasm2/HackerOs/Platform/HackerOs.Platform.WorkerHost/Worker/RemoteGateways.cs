@@ -576,6 +576,7 @@ internal sealed class RemoteCatalogGateway(RemoteProcessChannel channel) : IAppC
                 writer.WriteString("mt", mediaType);
             }
         }, cancellationToken).ConfigureAwait(false));
+
 }
 
 /// <summary><see cref="IAppServiceControlGateway"/> in a worker (<c>systemctl</c>).</summary>
@@ -643,6 +644,55 @@ internal sealed class RemoteIntentGateway(RemoteProcessChannel channel) : IAppIn
             if (mediaType is not null)
             {
                 writer.WriteString("mt", mediaType);
+            }
+        }, cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<AppIntentOpenFileResult> EditFileAsync(VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadOpenFileResult(await channel.CallAsync(RemoteOps.IntentEditFile, writer =>
+        {
+            writer.WriteString("p", path.Value);
+            if (mediaType is not null)
+            {
+                writer.WriteString("mt", mediaType);
+            }
+        }, cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<AppIntentResult> RevealFileAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadIntentResult(await channel.CallAsync(
+            RemoteOps.IntentReveal, writer => writer.WriteString("p", path.Value), cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<AppIntentResult> OpenUriAsync(Uri uri, string? preferredAppId = null, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadIntentResult(await channel.CallAsync(RemoteOps.IntentOpenUri, writer =>
+        {
+            writer.WriteString("u", uri.OriginalString);
+            if (preferredAppId is not null)
+            {
+                writer.WriteString("app", preferredAppId);
+            }
+        }, cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<AppIntentResult> ShowAppSettingsAsync(string appId, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadIntentResult(await channel.CallAsync(
+            RemoteOps.IntentShowSettings, writer => writer.WriteString("id", appId), cancellationToken).ConfigureAwait(false));
+
+    public async ValueTask<AppIntentResult> SendIntentAsync(
+        string intentId, string? payloadJson, string? targetAppId = null, bool rememberChoice = false, CancellationToken cancellationToken = default) =>
+        WireCodec.ReadIntentResult(await channel.CallAsync(RemoteOps.IntentSend, writer =>
+        {
+            writer.WriteString("id", intentId);
+            if (payloadJson is not null)
+            {
+                writer.WriteString("pl", payloadJson);
+            }
+
+            if (targetAppId is not null)
+            {
+                writer.WriteString("app", targetAppId);
+            }
+
+            if (rememberChoice)
+            {
+                writer.WriteBoolean("rm", true);
             }
         }, cancellationToken).ConfigureAwait(false));
 }

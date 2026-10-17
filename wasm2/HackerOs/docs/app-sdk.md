@@ -228,6 +228,9 @@ HackOpenFileResult opened = await HackApps.OpenFileAsync("~/notes.md");   // Ope
 - `LaunchAsync` et `OpenFileAsync` passent par `IAppIntentGateway`
   (`apps.launch`). Échec : `HackAppLaunchException` (app inconnue,
   désinstallée, ou erreur au démarrage).
+- `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync` et
+  `SendIntentAsync` (ADR 0096, chantier `v3/4`) passent aussi par
+  `IAppIntentGateway` ; voir [`app-intents.md`](app-intents.md).
 - `HackApps.Changed` (ou `AppContext.Catalog.Changed`, à préférer quand on se
   désabonne dans `Dispose`, hors contexte ambiant) signale une installation ou
   une désinstallation ; les gestionnaires s'exécutent dans le contexte de

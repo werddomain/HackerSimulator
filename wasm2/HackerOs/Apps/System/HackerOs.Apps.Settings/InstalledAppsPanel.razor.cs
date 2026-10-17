@@ -37,13 +37,22 @@ public partial class InstalledAppsPanel : IDisposable
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
 
+    /// <summary>
+    /// Gets or sets the one app to show, on its page in Settings (ADR 0096, section 4): only its row,
+    /// whatever its kind, without the tab's introduction. <see langword="null"/> lists every app.
+    /// </summary>
+    [Parameter]
+    public string? OnlyAppId { get; set; }
+
     /// <summary>Window apps, sorted by name. Services are managed from System Monitor's Services tab.</summary>
-    private IReadOnlyList<HackAppInstallInfo> Applications => [.. (_apps ?? [])
-        .Where(static entry => entry.App.Kind == AppKind.Window)];
+    private IReadOnlyList<HackAppInstallInfo> Applications => OnlyAppId is { } only
+        ? [.. (_apps ?? []).Where(entry => entry.App.Id == only)]
+        : [.. (_apps ?? []).Where(static entry => entry.App.Kind == AppKind.Window)];
 
     /// <summary>Terminal commands, sorted by name; all are system apps on the Ecosystem host.</summary>
-    private IReadOnlyList<HackAppInstallInfo> Commands => [.. (_apps ?? [])
-        .Where(static entry => entry.App.Kind == AppKind.Terminal)];
+    private IReadOnlyList<HackAppInstallInfo> Commands => OnlyAppId is not null
+        ? []
+        : [.. (_apps ?? []).Where(static entry => entry.App.Kind == AppKind.Terminal)];
 
     /// <summary>Only an administrator is offered "for all users" (ADR 0048 section 3); the OS still asks for their password.</summary>
     private bool IsAdministrator => HackUser.Describe(Context).IsAdministrator;

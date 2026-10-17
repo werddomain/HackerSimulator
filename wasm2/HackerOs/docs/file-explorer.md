@@ -116,6 +116,21 @@ Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 Le curseur indique l'opération pendant le survol : déplacer, copier avec Ctrl ou
 pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
 
+### Ligne de commande et « Afficher dans le dossier » (ADR 0039, ADR 0096 §1)
+
+| Arguments | Effet |
+|---|---|
+| aucun | Ouvre le dossier personnel. |
+| `<dossier>` | Ouvre ce dossier (ouverture d'un `inode/directory`, `xdg-open ~/Documents`). |
+| `<parent> --select=<chemin>` | Ouvre `<parent>`, sélectionne l'élément et le fait défiler jusqu'à lui : c'est ce qu'envoie `RevealFileIntent` (`HackApps.RevealFileAsync`), l'équivalent de `org.freedesktop.FileManager1.ShowItems`. |
+| `--select=<chemin>` seul | Ouvre le dossier parent de `<chemin>` et le sélectionne. |
+
+Un argument relatif ou mal formé est ignoré. L'explorateur n'est pas à
+instance unique : chaque demande ouvre une fenêtre, comme Nautilus lancé avec un
+chemin. `FileView.RevealAsync(path)` fait le
+travail : navigation vers le parent, sélection, puis `revealItem` de
+`FileView.razor.js` (`scrollIntoView` puis focus).
+
 ## Décisions clés
 
 - **Un presse-papiers par session, dans Platform Core.** Comme la sélection
@@ -158,6 +173,7 @@ pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
   sur le fond, remise à `DropRequested`, fichiers de l'hôte, raccourcis,
   éléments coupés, fil d'Ariane.
 - `Tests/HackerOs.AppSdk.Tests/IO/HackDirectoryTests.cs` : `HackDirectory.CopyAsync`.
+- `Tests/HackerOs.Apps.FileExplorer.Tests/FileExplorerLaunchArgumentsTests.cs` : dossier, `--select`, parent déduit, arguments ignorés (`v3/4`).
 
 ## Liste des tâches du chantier `rebuild/4-file-explorer`
 
@@ -169,3 +185,9 @@ pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
 - [x] `FileViewBreadcrumb` et `FileViewDropZone` ; écouteurs natifs et fichiers de l'hôte dans `FileView.razor.js`.
 - [x] Explorateur : barre d'outils Cut/Copy/Paste, fil d'Ariane, dépôts sur Home, Trash et la vue Corbeille, fenêtre de conflit, notification des échecs, envoi par `FileTransfer`.
 - [x] Tests, ce document, `app-sdk.md`, `hack-file-api.md`, `trash.md`, plan et index.
+
+## Tâches du chantier `v3/4-intents`
+
+- [x] L'explorateur ouvre le dossier passé en argument (il ouvrait toujours le dossier personnel).
+- [x] `--select=<chemin>` : sélection et défilement (`FileView.RevealAsync`, `revealItem`).
+- [x] Tests et ce document.
