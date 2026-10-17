@@ -430,7 +430,7 @@ hôtes (`Program.cs`) ; les services de l'OS lisent donc
 
 | Système | Non système (désinstallables) |
 |---|---|
-| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, et les 66 commandes (projet `HackerOs.Commands`, `xdg-open` comprise depuis `v3/4`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
+| Terminal, File Explorer, Settings, Text Editor, Code Editor (depuis `rebuild/4-sdk-shell-host` : son terminal héberge un shell, ADR 0056 §7), System Monitor, Error Log Viewer, Theme Editor (lit `/etc/hackeros/themes`, ADR 0103), et les 66 commandes (projet `HackerOs.Commands`, `xdg-open` comprise depuis `v3/4`) | Browser, Calculator, Diagnostic, HackPaint, Icon Viewer |
 
 Effets du statut : une app système n'est pas désinstallable (voir
 [`app-installation.md`](app-installation.md), ADR 0048 §2-6) ; ses capacités

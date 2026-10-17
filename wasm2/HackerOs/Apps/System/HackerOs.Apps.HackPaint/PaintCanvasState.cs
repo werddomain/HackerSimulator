@@ -8,9 +8,11 @@ namespace HackerOs.Apps.HackPaint;
 public sealed class PaintCanvasState
 {
     private const int MaxHistory = 20;
-    private sealed record CanvasSnapshot(int Width, int Height, byte[] Buffer);
+    private sealed record CanvasSnapshot(int Width, int Height, byte[] Buffer, long Id);
     private readonly List<CanvasSnapshot> _history = [];
     private int _historyIndex = -1;
+    private long _nextSnapshotId;
+    private long _savedSnapshotId = -1;
 
     public PaintCanvasState() => NewDocument(800, 600);
 
@@ -27,6 +29,15 @@ public sealed class PaintCanvasState
     public bool CanUndo => _historyIndex > 0;
     public bool CanRedo => _historyIndex >= 0 && _historyIndex < _history.Count - 1;
 
+    /// <summary>
+    /// Gets whether the displayed image differs from the last one opened or saved. Undoing back to
+    /// the saved image makes the document clean again, as in a real editor.
+    /// </summary>
+    public bool IsDirty => _historyIndex >= 0 && _history[_historyIndex].Id != _savedSnapshotId;
+
+    /// <summary>Records the displayed image as the saved one (after Open or Save).</summary>
+    public void MarkSaved() => _savedSnapshotId = _history[_historyIndex].Id;
+
     /// <summary>Creates a new bounded image and resets history to that image.</summary>
     public void NewDocument(int width, int height, byte r = 255, byte g = 255, byte b = 255, byte a = 255)
     {
@@ -38,15 +49,17 @@ public sealed class PaintCanvasState
         _history.Clear();
         _historyIndex = -1;
         Commit(Width, Height, CreateBlankBuffer(Width, Height, r, g, b, a));
+        MarkSaved();
     }
 
-    /// <summary>Imports an already-decoded RGBA image after validating its size.</summary>
+    /// <summary>Imports an already-decoded RGBA image after validating its size; it becomes the saved image.</summary>
     public void ReplaceDocument(int width, int height, byte[] pixelRgba)
     {
         ValidateBuffer(width, height, pixelRgba);
         _history.Clear();
         _historyIndex = -1;
         Commit(width, height, pixelRgba);
+        MarkSaved();
     }
 
     /// <summary>Returns a defensive copy so callers cannot mutate history.</summary>
@@ -124,7 +137,7 @@ public sealed class PaintCanvasState
     {
         ValidateBuffer(width, height, pixels);
         if (_historyIndex < _history.Count - 1) _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
-        _history.Add(new CanvasSnapshot(width, height, pixels.ToArray()));
+        _history.Add(new CanvasSnapshot(width, height, pixels.ToArray(), _nextSnapshotId++));
         if (_history.Count > MaxHistory) _history.RemoveAt(0);
         _historyIndex = _history.Count - 1;
         Apply(_historyIndex);

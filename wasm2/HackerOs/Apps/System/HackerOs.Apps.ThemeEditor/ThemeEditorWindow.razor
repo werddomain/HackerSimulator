@@ -1,0 +1,127 @@
+@using HackerOs.AppSdk.Blazor
+@using MudBlazor
+@inherits WindowAppBase
+@implements IWindowCloseGuard
+
+<div class="theme-editor">
+    <header class="editor-toolbar" role="toolbar" aria-label="Theme Editor">
+        <span class="editor-title" id="theme-editor-title">@WindowTitle</span>
+        <div class="toolbar-group">
+            <label class="toolbar-label" for="theme-new-base">New from</label>
+            <select id="theme-new-base" class="toolbar-select" @bind="_newBaseThemeId">
+                @foreach (ThemeDefinition theme in ThemeCatalog.AllThemes)
+                {
+                    <option value="@theme.Id">@theme.DisplayName</option>
+                }
+            </select>
+            <button type="button" id="theme-btn-new" class="toolbar-button" disabled="@_busy" @onclick="NewAsync">New</button>
+            <button type="button" id="theme-btn-open" class="toolbar-button" disabled="@_busy" @onclick="OpenAsync">Open…</button>
+            <button type="button" id="theme-btn-save" class="toolbar-button is-primary" disabled="@_busy" @onclick="SaveAsync">Save</button>
+            <button type="button" id="theme-btn-export" class="toolbar-button" disabled="@_busy" @onclick="ExportAsync">Export…</button>
+        </div>
+        <div class="toolbar-group">
+            <button type="button" id="theme-btn-use-desktop" class="toolbar-button" disabled="@(_busy || !_document.ForDesktop)" @onclick="() => UseAsync(ThemePlatform.Desktop)">Use on desktop</button>
+            <button type="button" id="theme-btn-use-mobile" class="toolbar-button" disabled="@(_busy || !_document.ForMobile)" @onclick="() => UseAsync(ThemePlatform.Mobile)">Use on mobile</button>
+        </div>
+    </header>
+
+    @if (_message is not null)
+    {
+        <div class="editor-message @(_messageIsError ? "is-error" : "is-info")" role="@(_messageIsError ? "alert" : "status")">
+            <span>@_message</span>
+            <button type="button" class="link-button" @onclick="() => _message = null">Dismiss</button>
+        </div>
+    }
+
+    <div class="editor-body">
+        <aside class="editor-sidebar" aria-label="Theme identity">
+            <section class="sidebar-section">
+                <h3>Theme</h3>
+                <label for="theme-name">Name</label>
+                <input id="theme-name" class="field" maxlength="80" value="@_document.Name" @onchange="OnNameChanged" />
+                <label for="theme-id">Id (file name)</label>
+                <input id="theme-id" class="field mono" maxlength="64" value="@_document.Id" @onchange="OnIdChanged" />
+                <label for="theme-base">Base theme</label>
+                <select id="theme-base" class="field" value="@_document.BaseThemeId" @onchange="OnBaseChanged">
+                    @foreach (ThemeDefinition theme in ThemeCatalog.AllThemes)
+                    {
+                        <option value="@theme.Id">@theme.DisplayName (@ThemeFile.FormatPlatform(theme.Platform))</option>
+                    }
+                </select>
+                <fieldset class="platforms">
+                    <legend>Offered on</legend>
+                    <label><input type="checkbox" checked="@_document.ForDesktop" @onchange="OnDesktopChanged" /> Desktop</label>
+                    <label><input type="checkbox" checked="@_document.ForMobile" @onchange="OnMobileChanged" /> Mobile</label>
+                </fieldset>
+                <p class="sidebar-hint">@_document.TokenCount token(s) set. Missing tokens keep the value of the base theme.</p>
+                <p class="sidebar-hint mono">@(_document.Path ?? SavePathHint)</p>
+            </section>
+
+            <section class="sidebar-section">
+                <h3>Installed themes</h3>
+                @if (_library.Themes.Count == 0)
+                {
+                    <p class="sidebar-hint">No theme in ~/.config/hackeros/themes or /etc/hackeros/themes yet.</p>
+                }
+                <ul class="theme-list">
+                    @foreach (UserTheme theme in _library.Themes)
+                    {
+                        <li>
+                            <button type="button" class="theme-entry @(theme.SourcePath == _document.Path ? "is-current" : "")" @onclick="() => OpenInstalledAsync(theme)">
+                                <span class="theme-entry-name">@theme.Name</span>
+                                <span class="theme-entry-meta">@theme.Id · @(theme.Origin == ThemeOrigin.System ? "/etc" : "~")</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+                @if (_library.Diagnostics.Count > 0)
+                {
+                    <details class="diagnostics">
+                        <summary>@_library.Diagnostics.Count warning(s) in theme files</summary>
+                        <ul>
+                            @foreach (ThemeFileDiagnostic diagnostic in _library.Diagnostics)
+                            {
+                                <li class="mono">@diagnostic</li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </section>
+        </aside>
+
+        <main class="editor-tokens" aria-label="Tokens">
+            <MudTabs Elevation="0" ApplyEffectsToContainer="true" KeepPanelsAlive="false" Class="token-tabs" TabPanelsClass="token-panel">
+                @foreach (ThemeTokenGroup group in Enum.GetValues<ThemeTokenGroup>())
+                {
+                    <MudTabPanel Text="@GroupLabel(group)">
+                        <p class="group-intro">@GroupIntro(group)</p>
+                        <div class="token-grid">
+                            @foreach (ThemeTokenDefinition token in ThemeTokenCatalog.InGroup(group))
+                            {
+                                <ThemeTokenField @key="token.Name"
+                                                 Token="token"
+                                                 Value="@_document.GetValue(token.Name)"
+                                                 Error="@_document.GetError(token.Name)"
+                                                 ValueChanged="value => OnTokenChanged(token.Name, value)" />
+                            }
+                        </div>
+                    </MudTabPanel>
+                }
+                <MudTabPanel Text="Documentation">
+                    <ThemeTokenDocumentation />
+                </MudTabPanel>
+            </MudTabs>
+        </main>
+
+        <aside class="editor-preview" aria-label="Preview">
+            <div class="preview-switch" role="group" aria-label="Previewed form factor">
+                <button type="button" class="toolbar-button @(_previewPlatform == ThemePlatform.Desktop ? "is-active" : "")" aria-pressed="@(_previewPlatform == ThemePlatform.Desktop ? "true" : "false")" @onclick="() => _previewPlatform = ThemePlatform.Desktop">Desktop</button>
+                <button type="button" class="toolbar-button @(_previewPlatform == ThemePlatform.Mobile ? "is-active" : "")" aria-pressed="@(_previewPlatform == ThemePlatform.Mobile ? "true" : "false")" @onclick="() => _previewPlatform = ThemePlatform.Mobile">Mobile</button>
+            </div>
+            <ThemeEditorPreview BaseThemeId="@_document.BaseThemeId"
+                                Platform="@_previewPlatform"
+                                Tokens="@_document.ValidTokens"
+                                ThemeName="@(string.IsNullOrWhiteSpace(_document.Name) ? "Untitled" : _document.Name)" />
+        </aside>
+    </div>
+</div>

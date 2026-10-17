@@ -58,6 +58,24 @@
                                 <span class="theme-option-label">@theme.DisplayName</span>
                             </button>
                         }
+                        @foreach (UserTheme theme in UserThemesFor(ThemePlatform.Desktop))
+                        {
+                            <div class="user-theme-option">
+                                <button type="button"
+                                        class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
+                                        aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
+                                        disabled="@IsBlocked(DesktopThemeKey)"
+                                        @onclick="() => ChangeDesktopTheme(theme.Id)">
+                                    <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Desktop, _userThemes.Themes).BaseThemeId"
+                                                  Tokens="@theme.Tokens"
+                                                  Title="@theme.Name"
+                                                  AccentId="@_appearanceSettings.AccentId"
+                                                  AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                    <span class="theme-option-label">@theme.Name <span class="theme-origin">@(theme.Origin == ThemeOrigin.System ? "/etc" : "~")</span></span>
+                                </button>
+                                <button type="button" class="btn-link edit-theme" @onclick="() => OpenThemeEditorAsync(theme.SourcePath)">Edit</button>
+                            </div>
+                        }
                     </div>
                 </div>
                 <div class="setting-group">
@@ -77,7 +95,37 @@
                                 <span class="theme-option-label">@theme.DisplayName</span>
                             </button>
                         }
+                        @foreach (UserTheme theme in UserThemesFor(ThemePlatform.Mobile))
+                        {
+                            <div class="user-theme-option">
+                                <button type="button"
+                                        class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
+                                        aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
+                                        disabled="@IsBlocked(MobileThemeKey)"
+                                        @onclick="() => ChangeMobileTheme(theme.Id)">
+                                    <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Mobile, _userThemes.Themes).BaseThemeId"
+                                                  Tokens="@theme.Tokens"
+                                                  Title="@theme.Name"
+                                                  AccentId="@_appearanceSettings.AccentId"
+                                                  AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                    <span class="theme-option-label">@theme.Name <span class="theme-origin">@(theme.Origin == ThemeOrigin.System ? "/etc" : "~")</span></span>
+                                </button>
+                                <button type="button" class="btn-link edit-theme" @onclick="() => OpenThemeEditorAsync(theme.SourcePath)">Edit</button>
+                            </div>
+                        }
                     </div>
+                </div>
+                <div class="setting-group">
+                    <h4>Your themes</h4>
+                    <p class="setting-desc">
+                        Themes made of verified design tokens, saved in <code>~/.config/hackeros/themes/</code>
+                        (yours) or <code>/etc/hackeros/themes/</code> (installed for every user). They appear above with the built-in themes.
+                    </p>
+                    @if (_userThemes.Diagnostics.Count > 0)
+                    {
+                        <p class="setting-desc theme-warnings">@_userThemes.Diagnostics.Count warning(s) in theme files; open the Theme Editor for details.</p>
+                    }
+                    <button type="button" class="btn-secondary" id="settings-open-theme-editor" @onclick="() => OpenThemeEditorAsync(null)">Open the Theme Editor</button>
                 </div>
                 @if (CurrentDesktopThemeSupportsAccent)
                 {

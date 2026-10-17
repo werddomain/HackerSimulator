@@ -459,3 +459,42 @@
     font-size: 11px;
     color: var(--hos-text-secondary, #a8bac4);
 }
+
+/* User themes (ADR 0103): a theme card plus an Edit link opening the Theme Editor. */
+.user-theme-option {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.user-theme-option .theme-option {
+    width: 100%;
+}
+
+.theme-origin {
+    margin-left: 0.35rem;
+    font-family: var(--hos-font-mono, monospace);
+    font-size: 0.72rem;
+    color: var(--hos-text-muted, #6f838d);
+}
+
+.btn-link {
+    justify-self: start;
+    padding: 0.1rem 0.25rem;
+    border: 0;
+    background: none;
+    color: var(--hos-accent, #42d392);
+    font: inherit;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.btn-link:focus-visible {
+    outline: 2px solid var(--hos-focus-ring, #42d392);
+    outline-offset: 2px;
+}
+
+.theme-warnings {
+    color: var(--hos-warning, #e0ad50);
+}

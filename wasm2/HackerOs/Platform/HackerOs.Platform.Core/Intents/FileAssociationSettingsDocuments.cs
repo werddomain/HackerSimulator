@@ -29,14 +29,23 @@ public static class FileAssociationSettingsDocuments
     /// Gets the built-in content used while the file is absent or invalid: it makes
     /// <c>org.hackeros.file-explorer</c> the default handler for <c>inode/directory</c> (`INT-009`),
     /// so directory-open intents resolve to a <see cref="FileHandlerResolutionStatus.ConfiguredDefault"/>
-    /// out of the box instead of falling through to the chooser, and <c>org.hackeros.browser</c> the
-    /// default web browser, <c>x-scheme-handler/http</c> and <c>https</c> (ADR 0096, section 3).
+    /// out of the box instead of falling through to the chooser, <c>org.hackeros.browser</c> the
+    /// default web browser, <c>x-scheme-handler/http</c> and <c>https</c> (ADR 0096, section 3), and
+    /// <c>org.hackeros.hack-paint</c> the default handler of <c>edit</c> for the images it reads
+    /// (ADR 0103 §1), so "Edit" keeps opening Hack Paint once another app can also open images.
     /// </summary>
     public const string DefaultContent =
         "{\"schemaVersion\":1,\"associations\":[" +
         "{\"mediaType\":\"inode/directory\",\"appId\":\"org.hackeros.file-explorer\",\"actions\":[\"open\"]}," +
         "{\"mediaType\":\"x-scheme-handler/http\",\"appId\":\"org.hackeros.browser\",\"actions\":[\"open\"]}," +
-        "{\"mediaType\":\"x-scheme-handler/https\",\"appId\":\"org.hackeros.browser\",\"actions\":[\"open\"]}]}";
+        "{\"mediaType\":\"x-scheme-handler/https\",\"appId\":\"org.hackeros.browser\",\"actions\":[\"open\"]}," +
+        "{\"extension\":\".png\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}," +
+        "{\"extension\":\".jpg\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}," +
+        "{\"extension\":\".jpeg\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}," +
+        "{\"extension\":\".bmp\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}," +
+        "{\"extension\":\".gif\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}," +
+        "{\"extension\":\".webp\",\"appId\":\"org.hackeros.hack-paint\",\"actions\":[\"edit\"]}" +
+        "]}";
 
     /// <summary>Reads the effective document (the file, or <see cref="DefaultContent"/>).</summary>
     /// <param name="settings">OS settings service.</param>

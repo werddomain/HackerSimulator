@@ -11,10 +11,10 @@ public sealed class BuildKnownLazyAppsTests
     {
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
-        // 13 window apps, the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084), the Intranet
+        // 14 window apps (Theme Editor with ADR 0103), the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084), the Intranet
         // sample (web/11) and 66 commands (stress joined with ADR 0070, nslookup with ADR 0074,
         // ausearch with ADR 0100, xdg-open with ADR 0096).
-        Assert.Equal(82, catalog.Manifests.Count);
+        Assert.Equal(83, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
         foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch", "xdg-open" })
         {
@@ -52,7 +52,7 @@ public sealed class BuildKnownLazyAppsTests
             manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
         // One assembly per window app, the two sample sites, plus the single HackerOs.Commands assembly (ADR 0051).
-        Assert.Equal(16, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Equal(17, BuildKnownLazyAssemblies.Names.Count);
         Assert.Contains("HackerOs.Samples.BlazorSite.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Samples.Intranet.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Commands.dll", BuildKnownLazyAssemblies.Names);
@@ -103,6 +103,8 @@ public sealed class BuildKnownLazyAppsTests
             "org.hackeros.system-monitor",
             "org.hackeros.terminal",
             "org.hackeros.text-editor",
+            // ADR 0103 §2: reads /etc/hackeros/themes (filesystem.system.read).
+            "org.hackeros.theme-editor",
             "org.hackeros.web-server-manager",
         ];
         string[] uninstallable =
