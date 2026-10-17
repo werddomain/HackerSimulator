@@ -178,7 +178,7 @@ leurs textes voyagent dans `BuiltInApplications.json`.
 - [x] Catalogue, lanceur, titre des fenêtres, `IAppCatalogGateway` localisés.
 - [x] Shell : builtins et `help` dans la langue du processus.
 - [x] Commande `localectl`.
-- [ ] Panneau Langue de Paramètres.
-- [ ] Traduction de la plateforme (bureau, barre des tâches, lanceur, dialogues, connexion).
-- [ ] Traduction des apps système et des commandes.
-- [ ] Tests : parité des `.resx`, `HackLocale`, générateur, E2E en français.
+- [x] Panneau Langue de Paramètres.
+- [x] Traduction de la plateforme (bureau, barre des tâches, lanceur, dialogues, connexion).
+- [x] Traduction des apps système et des commandes.
+- [x] Tests : parité des `.resx`, `HackLocale`, générateur, E2E en français.
