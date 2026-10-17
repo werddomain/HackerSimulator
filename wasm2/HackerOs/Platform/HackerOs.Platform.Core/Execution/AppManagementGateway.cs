@@ -38,6 +38,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     private readonly bool _isRootElevated;
     private readonly IFileSystemService _fileSystem;
     private readonly ISimulationClock _clock;
+    private readonly Func<AppAssetStore>? _assets;
 
     /// <summary>Creates the gateway for one app instance.</summary>
     public AppManagementGateway(
@@ -49,8 +50,10 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         AuthenticatedPrincipal principal,
         bool isRootElevated,
         IFileSystemService fileSystem,
-        ISimulationClock clock)
+        ISimulationClock clock,
+        Func<AppAssetStore>? assets = null)
     {
+        _assets = assets;
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _installation = installation ?? throw new ArgumentNullException(nameof(installation));
         _agent = agent;
@@ -68,13 +71,30 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         _capabilities.Require(AppCapabilities.AppsManage);
         cancellationToken.ThrowIfCancellationRequested();
         IAppInstallationService installation = _installation();
-        IReadOnlyList<HackAppInstallInfo> all = [.. _catalog.Manifests.Values
-            .OrderBy(manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(manifest => manifest.Id, StringComparer.Ordinal)
+        AppAssetStore? assets = _assets?.Invoke();
+        IEnumerable<HackAppInstallInfo> loaded = _catalog.Manifests.Values
             .Select(manifest => new HackAppInstallInfo(
                 HackAppInfo.FromManifest(manifest, _catalog.IsSystemApp(manifest.Id)),
-                ToPublic(installation.GetState(manifest.Id)),
-                installation.GetUninstallClosure(manifest.Id)))];
+                assets is not null && assets.IsDamaged(manifest.Id)
+                    ? HackAppInstallState.Damaged
+                    : ToPublic(installation.GetState(manifest.Id)),
+                installation.GetUninstallClosure(manifest.Id))
+            {
+                Problem = assets is not null && assets.Damaged.TryGetValue(manifest.Id, out AppIntegrityProblem? problem)
+                    ? $"Asset '{problem.AssetPath}' does not match its manifest: {problem.Reason}."
+                    : null
+            });
+        // ADR 0098 §3: apps the OS refused to load are listed too, as incompatible, with the reason.
+        IEnumerable<HackAppInstallInfo> refused = _catalog.Rejected.Select(rejection => new HackAppInstallInfo(
+            HackAppInfo.FromManifest(rejection.Manifest, _catalog.IsSystemApp(rejection.AppId)),
+            HackAppInstallState.Incompatible,
+            [])
+        {
+            Problem = rejection.Message
+        });
+        IReadOnlyList<HackAppInstallInfo> all = [.. loaded.Concat(refused)
+            .OrderBy(entry => entry.App.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.App.Id, StringComparer.Ordinal)];
         return ValueTask.FromResult(all);
     }
 

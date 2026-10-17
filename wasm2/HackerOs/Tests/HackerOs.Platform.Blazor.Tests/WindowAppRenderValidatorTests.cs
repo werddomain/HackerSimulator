@@ -91,7 +91,7 @@ public sealed class WindowAppRenderValidatorTests
             EntryPoint = new AppEntryPointManifest(
                 typeof(TestWindowApp).Namespace!,
                 nameof(TestWindowApp)),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None,
         };

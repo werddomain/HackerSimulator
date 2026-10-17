@@ -443,6 +443,13 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<EcosystemBootCoordinator>();
 
         services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
+        // ADR 0098 §5: assets checked against their manifest hash at first read. The WebAssembly host
+        // registers its _content/ source first; a host without one serves no asset.
+        services.TryAddSingleton<IAppAssetSource>(NoAppAssetSource.Instance);
+        services.AddSingleton<AppAssetStore>(provider => new AppAssetStore(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppAssetSource>(),
+            provider.GetService<ILogger<AppAssetStore>>()));
         services.AddSingleton<AppEnablementRegistry>(provider =>
             new AppEnablementRegistry(provider.GetRequiredService<AppCatalog>()));
         services.AddSingleton<IAppEnablementRegistry>(provider =>
@@ -503,7 +510,8 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IAppEnablementRegistry>(),
                 () => provider.GetRequiredService<FileAssociationResolver>(),
                 () => provider.GetRequiredService<IAppInstallationService>(),
-                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>()),
+                () => provider.GetRequiredService<IAdministratorAuthenticationAgent>(),
+                () => provider.GetRequiredService<AppAssetStore>()),
             // Lazy for the same reason: ShellInterpreter depends on the orchestrator (ADR 0056 section 7).
             shellHostProvider: () => provider.GetRequiredService<ShellHostService>(),
             // ADR 0057: traffic counters for /proc/net/dev and /proc/<pid>/io, and HackDriveInfo.

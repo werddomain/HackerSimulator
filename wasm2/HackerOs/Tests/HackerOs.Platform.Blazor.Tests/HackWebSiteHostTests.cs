@@ -171,7 +171,7 @@ public sealed class HackWebSiteHostTests
         Description = "A site.",
         Kind = AppKind.Web,
         EntryPoint = new AppEntryPointManifest(AssemblyName, typeof(TestRoot).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Web = new WebAppManifest([url], new WebBlazorManifest(AssemblyName, (root ?? typeof(TestRoot)).FullName!))

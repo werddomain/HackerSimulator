@@ -21,7 +21,7 @@ internal static class HackTestHost
         Description = "Hack* file API contract test application.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.AppSdk.Tests", "TestIoApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

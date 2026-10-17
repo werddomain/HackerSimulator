@@ -31,7 +31,7 @@ public sealed class SampleTickerServiceTests
         Description = "Deterministic status and ticker background service for HackerOS sessions",
         Kind = AppKind.Service,
         EntryPoint = new AppEntryPointManifest("HackerOs.Samples.ServiceApp.dll", "HackerOs.Samples.ServiceApp.SampleTickerService"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
         Capabilities = ["notifications.post"],
         Resources = new AppResourceProfileManifest(0.01, 0.05, 0.02, 0.05, 0.0, 0.0, 0.0, 0.0),

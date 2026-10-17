@@ -41,6 +41,28 @@ public sealed class SecondCommandApp : ValidCommandApp
     public override TerminalCommand? Terminal => new("second", "second");
 }
 
+/// <summary>Another app declaring the command name of <see cref="ValidCommandApp"/> as an alias (ADR 0098 §4).</summary>
+public sealed class SameCommandApp : ValidCommandApp
+{
+    public override string Id => "org.hackeros.tests.same-command";
+    public override TerminalCommand? Terminal => new("same", "same", ["valid"]);
+}
+
+/// <summary>An app declaring a name the shell runs itself (ADR 0098 §4).</summary>
+public sealed class BuiltinNameApp : ValidCommandApp
+{
+    public override string Id => "org.hackeros.tests.builtin-name";
+    public override TerminalCommand? Terminal => new("eval", "eval");
+}
+
+/// <summary>An app declaring a wwwroot asset (ADR 0098 §5).</summary>
+public sealed class AssetApp : ValidCommandApp
+{
+    public override string Id => "org.hackeros.tests.asset";
+    public override TerminalCommand? Terminal => new("asset", "asset");
+    public override IReadOnlyList<AssetManifest> Assets => [new("data/table.json", AssetKind.Data, "")];
+}
+
 /// <summary>Same id as <see cref="ValidCommandApp"/>.</summary>
 public sealed class DuplicateIdApp : ValidCommandApp;
 

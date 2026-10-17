@@ -93,6 +93,13 @@ public abstract class AppDefinition
     /// </summary>
     public virtual AppSettingsSchemaManifest? Settings => null;
 
+    /// <summary>
+    /// Gets the App SDK range the app supports, or <see langword="null"/> (the default) to let the
+    /// manifest generator write the SDK version the app is compiled against as the minimum, with no
+    /// maximum (ADR 0098 §3). Declare a range only to narrow it, e.g. a maximum for a known break.
+    /// </summary>
+    public virtual AppSdkCompatibilityManifest? SdkCompatibility => null;
+
     /// <summary>Gets dependencies on other application packages.</summary>
     public virtual IReadOnlyList<AppDependencyManifest> Dependencies => [];
 

@@ -748,7 +748,7 @@ public sealed partial class ShellInterpreterTests
             Description = "Hosts the shell.",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", "org.hackeros.terminal.EntryPoint"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = [.. FileCapabilities, AppCapabilities.AppsLaunch]
@@ -763,7 +763,7 @@ public sealed partial class ShellInterpreterTests
             Description = $"Test command {name}.",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(TCommand).FullName!),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Hidden, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = FileCapabilities,

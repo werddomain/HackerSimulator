@@ -234,7 +234,8 @@ public sealed class AppExecutionContextFactory
                 principal,
                 isRootElevated,
                 _fileSystem,
-                _clock);
+                _clock,
+                _appCatalog.Assets);
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
         AppFileSystemGateway fileSystem = new(
@@ -400,12 +401,14 @@ public sealed class AppExecutionContextFactory
 /// <param name="FileAssociations">Resolves "Open with" candidates; <see langword="null"/> leaves <c>GetHandlersAsync</c> unsupported.</param>
 /// <param name="Installation">Uninstall/reinstall service; <see langword="null"/> leaves <c>AppManagement</c> unsupported and <c>Changed</c> silent.</param>
 /// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every machine-scope change.</param>
+/// <param name="Assets">Asset integrity checks (ADR 0098 §5): Settings lists the apps it found damaged; <see langword="null"/> reports none.</param>
 public sealed record AppCatalogGatewayServices(
     AppCatalog Catalog,
     Lifecycle.IAppEnablementRegistry Enablement,
     Func<Intents.FileAssociationResolver>? FileAssociations = null,
     Func<Apps.IAppInstallationService>? Installation = null,
-    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null,
+    Func<Apps.AppAssetStore>? Assets = null);
 
 /// <summary>
 /// Services behind the measurements of ADR 0057 that the factory hands to each context.

@@ -90,7 +90,9 @@ public partial class InstalledAppsPanel : IDisposable
         closure.Where(id => _apps?.FirstOrDefault(entry => entry.App.Id == id)?.App.Kind == HackerOs.App.Abstractions.AppKind.Web);
 
     private static string RowClass(HackAppInstallInfo entry) =>
-        entry.App.IsSystemApp ? "is-system"
+        entry.State == HackAppInstallState.Incompatible ? "is-incompatible"
+        : entry.State == HackAppInstallState.Damaged ? "is-damaged"
+        : entry.App.IsSystemApp ? "is-system"
         : entry.State == HackAppInstallState.Installed ? "is-installed"
         : "is-uninstalled";
 

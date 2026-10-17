@@ -160,6 +160,8 @@
       <_HackerOsManifestDependency Include="@(ReferencePath->'%(FullPath)')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifest.json" Condition="Exists('$(MSBuildProjectDirectory)/manifest.json')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifests/*.json" />
+      <!-- ADR 0098 §5: declared assets are hashed from wwwroot/, so an edited asset reruns the generator. -->
+      <_HackerOsAssetFile Include="$(MSBuildProjectDirectory)/wwwroot/**" />
     </ItemGroup>
     <WriteLinesToFile File="$(_HackerOsManifestDependencies)"
                       Lines="@(_HackerOsManifestDependency)"
@@ -178,7 +180,7 @@
           AfterTargets="CopyFilesToOutputDirectory"
           DependsOnTargets="_HackerOsResolveManifestGenerator"
           Condition="'$(HackerOsAppProject)' == 'true'"
-          Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(MSBuildThisFileFullPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest)"
+          Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(MSBuildThisFileFullPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest);@(_HackerOsAssetFile)"
           Outputs="$(_HackerOsManifestStamp)">
     <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; generate --assembly &quot;$(TargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --dependencies &quot;$(_HackerOsManifestDependencies)&quot; --stamp &quot;$(_HackerOsManifestStamp)&quot;"
           StandardOutputImportance="low"

@@ -129,9 +129,21 @@
             <div class="app-identity">
                 <span class="app-name">@app.Name</span>
                 <span class="app-meta">@app.PublisherId · v@(app.Version)</span>
+                @if (entry.Problem is { } problem)
+                {
+                    <span class="app-problem">@problem</span>
+                }
             </div>
             <div class="app-actions">
-                @if (app.IsSystemApp)
+                @if (entry.State == HackAppInstallState.Incompatible)
+                {
+                    <span class="app-badge app-badge-incompatible" title="This app was built for another version of the App SDK and cannot run">Incompatible</span>
+                }
+                else if (entry.State == HackAppInstallState.Damaged)
+                {
+                    <span class="app-badge app-badge-damaged" title="A file of this app does not match its manifest">Damaged</span>
+                }
+                else if (app.IsSystemApp)
                 {
                     <span class="app-badge app-badge-system" title="System apps cannot be uninstalled">System</span>
                 }

@@ -142,6 +142,7 @@ public sealed class EcosystemBootCoordinator
         await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
         WriteResourceAccountingNotices();
         WriteWorkerNotice();
+        WriteCatalogNotices();
 
         // After the canonical database/root is ready, these subsystem checks use
         // independent object-store transactions and can safely progress together.
@@ -189,6 +190,29 @@ public sealed class EcosystemBootCoordinator
             $"boot: storage ready, policy revision {policyRevision}, {catalog.Count} apps in catalog, {users.Count} local users");
 
         return new EcosystemBootResult(users, policyRevision, catalog.Count);
+    }
+
+    /// <summary>
+    /// Writes to <c>/var/log/syslog</c> what the catalog refused or adjusted (ADR 0098 §3, §4): one
+    /// warning per app built for an incompatible App SDK (<c>catalog.sdk.incompatible</c>, or a
+    /// dependency so refused) and per command name an app lost to another (<c>catalog.command.duplicate</c>).
+    /// </summary>
+    private void WriteCatalogNotices()
+    {
+        if (_logWriter is null)
+        {
+            return;
+        }
+
+        foreach (AppCatalogRejection rejection in _selectedCatalog.Rejected)
+        {
+            _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "catalog", $"{rejection.Code}: {rejection.Message}");
+        }
+
+        foreach (AppCatalogError warning in _selectedCatalog.Warnings)
+        {
+            _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "catalog", $"{warning.Code}: {warning.Message}");
+        }
     }
 
     /// <summary>Writes the resource-accounting decisions of ADR 0066 to <c>/var/log/syslog</c>, like boot parameters in <c>dmesg</c>.</summary>
