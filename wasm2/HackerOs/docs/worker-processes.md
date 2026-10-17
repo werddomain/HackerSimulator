@@ -35,7 +35,7 @@ fil principal.
 | Commande | `pool` | `pool`, `dedicated`, `mainThread` |
 | Service | `dedicated` | `dedicated`, `pool`, `mainThread` |
 
-Les 66 commandes de `HackerOs.Commands` : 52 en `pool`, 14 en `mainThread`
+Les 67 commandes de `HackerOs.Commands` : 52 en `pool`, 15 en `mainThread`
 avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
 demande un mot de passe à l'agent d'authentification ; `hackbackup` ouvre
@@ -221,7 +221,7 @@ d'arrêt).
 
 - `Tests/HackerOs.Platform.WorkerHost.Tests` (OS complet sans interface, workers
   en boucle locale) :
-  - `CommandParityTests` : **les 66 commandes intégrées** (`nslookup`, `ausearch` et `xdg-open` comprises) exécutées dans les
+  - `CommandParityTests` : **les 67 commandes intégrées** (`nslookup`, `ausearch`, `xdg-open` et `hackbackup` comprises) exécutées dans les
     deux modes (fil principal, worker) avec la même sortie, le même code et le
     même arbre de fichiers (`HACKEROS_PARITY_DUMP` pour inspecter) ;
   - `WorkerPoolTests` : démarrage avant / après la fin du boot, worker prêt

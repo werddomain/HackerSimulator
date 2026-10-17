@@ -106,7 +106,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(66, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(67, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]
