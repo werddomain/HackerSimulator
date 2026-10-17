@@ -250,7 +250,8 @@
         "minHeight": { "type": "integer", "minimum": 1 },
         "maxWidth": { "type": "integer", "minimum": 1 },
         "maxHeight": { "type": "integer", "minimum": 1 },
-        "resizable": { "type": "boolean" }
+        "resizable": { "type": "boolean" },
+        "rememberGeometry": { "description": "Whether the OS remembers the window size, position and maximized state (ADR 0116). Omitted: true.", "type": "boolean" }
       }
     },
     "execution": { "enum": ["mainThread", "pool", "dedicated", "web"] },

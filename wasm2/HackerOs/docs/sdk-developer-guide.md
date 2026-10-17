@@ -319,7 +319,10 @@ protected override Task OnAppAfterRenderAsync(bool firstRender) =>
 ```
 
 Sans déclaration, la fenêtre fait 800×560 avec un minimum de 360×240.
-`Resizable = false` retire les poignées et le bouton Agrandir. Détails, ordre
+`Resizable = false` retire les poignées et le bouton Agrandir. L'OS retient la
+taille, la position et l'état agrandi de la fenêtre d'une ouverture à l'autre ;
+`RememberGeometry = false` (SDK 1.1) la fait toujours s'ouvrir à sa place par
+défaut ([`window-geometry.md`](window-geometry.md)). Détails, ordre
 des crochets et raccourcis clavier du gestionnaire de fenêtres :
 [`window-model.md`](window-model.md).
 

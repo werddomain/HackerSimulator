@@ -17,8 +17,8 @@ public sealed class AppWindowGatewayFactoryTests
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
         WindowLaunchCoordinator coordinator = new(runtime);
         AppManifest manifest = CreateManifest();
-        coordinator.Present(manifest, CreateProcess());
-        coordinator.Present(manifest, CreateProcess());
+        await coordinator.PresentAsync(manifest, CreateProcess());
+        await coordinator.PresentAsync(manifest, CreateProcess());
         WindowRuntimeState[] windows = [.. runtime.Windows];
         AppWindowGatewayFactory factory = new(runtime, coordinator);
         IAppWindowGateway first = factory.Create(windows[0].Id, manifest);
@@ -37,7 +37,7 @@ public sealed class AppWindowGatewayFactoryTests
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
         WindowLaunchCoordinator coordinator = new(runtime);
         AppManifest manifest = CreateManifest();
-        coordinator.Present(manifest, CreateProcess());
+        await coordinator.PresentAsync(manifest, CreateProcess());
         WindowId windowId = Assert.Single(runtime.Windows).Id;
         IAppWindowGateway gateway = new AppWindowGatewayFactory(runtime, coordinator).Create(windowId, manifest);
 
@@ -54,7 +54,7 @@ public sealed class AppWindowGatewayFactoryTests
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
         WindowLaunchCoordinator coordinator = new(runtime);
         AppManifest manifest = CreateManifest();
-        coordinator.Present(manifest, CreateProcess());
+        await coordinator.PresentAsync(manifest, CreateProcess());
         WindowId windowId = Assert.Single(runtime.Windows).Id;
         IAppWindowGateway gateway = new AppWindowGatewayFactory(runtime).Create(windowId, manifest);
         runtime.Apply(new ForceWindowCloseCommand(windowId));
@@ -72,7 +72,7 @@ public sealed class AppWindowGatewayFactoryTests
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
         WindowLaunchCoordinator coordinator = new(runtime);
         AppManifest manifest = CreateManifest();
-        coordinator.Present(manifest, CreateProcess());
+        await coordinator.PresentAsync(manifest, CreateProcess());
         WindowId windowId = Assert.Single(runtime.Windows).Id;
         IAppWindowGateway gateway = new AppWindowGatewayFactory(runtime).Create(windowId, manifest);
 

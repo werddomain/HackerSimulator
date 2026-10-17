@@ -2,6 +2,7 @@ using System.Globalization;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Windowing.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace HackerOs.Platform.Blazor.Windows;
 
@@ -26,12 +27,12 @@ public static class WindowGeometrySettings
     }
 
     /// <summary>
-    /// Parses a geometry file (<c>x=</c>, <c>y=</c>, <c>width=</c>, <c>height=</c>, invariant culture).
-    /// Returns <see langword="null"/> for an empty, partial or invalid file: a bad state file only
-    /// means the window opens at its default place.
+    /// Parses a geometry file (<c>x=</c>, <c>y=</c>, <c>width=</c>, <c>height=</c>, invariant culture,
+    /// plus the optional <c>maximized=</c> of ADR 0116 §2). Returns <see langword="null"/> for an
+    /// empty, partial or invalid file: a bad state file only means the window opens at its default place.
     /// </summary>
     /// <param name="content">File content, or <see langword="null"/> when absent.</param>
-    public static WindowBounds? Parse(string? content)
+    public static SavedWindowGeometry? Parse(string? content)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -39,10 +40,20 @@ public static class WindowGeometrySettings
         }
 
         Dictionary<string, double> values = new(StringComparer.Ordinal);
+        bool maximized = false;
         foreach (ConfigLine line in ConfigDocumentLines.Parse(content))
         {
-            if (line.Kind == ConfigLineKind.KeyValue && line.Group is null && line.Key is { } key
-                && double.TryParse(line.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number)
+            if (line.Kind != ConfigLineKind.KeyValue || line.Group is not null || line.Key is not { } key)
+            {
+                continue;
+            }
+
+            if (key == "maximized")
+            {
+                // Anything but a literal "true" keeps the window normal: a typo never maximizes it.
+                maximized = string.Equals(line.Value?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+            }
+            else if (double.TryParse(line.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number)
                 && double.IsFinite(number))
             {
                 values[key] = number;
@@ -53,61 +64,113 @@ public static class WindowGeometrySettings
             && values.TryGetValue("y", out double y)
             && values.TryGetValue("width", out double width) && width > 0
             && values.TryGetValue("height", out double height) && height > 0
-            ? new WindowBounds(x, y, width, height)
+            ? new SavedWindowGeometry(new WindowBounds(x, y, width, height), maximized)
             : null;
     }
 
     /// <summary>Serializes geometry in the format read by <see cref="Parse"/>.</summary>
-    /// <param name="bounds">Window bounds to save.</param>
-    public static string Serialize(WindowBounds bounds) =>
-        string.Create(
+    /// <param name="appId">App the geometry belongs to, named in the header comment.</param>
+    /// <param name="geometry">Normal (restore) bounds and maximized state to save.</param>
+    public static string Serialize(string appId, SavedWindowGeometry geometry)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        WindowBounds bounds = geometry.Bounds;
+        return string.Create(
             CultureInfo.InvariantCulture,
-            $"x={bounds.X}\ny={bounds.Y}\nwidth={bounds.Width}\nheight={bounds.Height}\n");
+            $"# Window geometry of {appId} (ADR 0116)\nx={bounds.X}\ny={bounds.Y}\nwidth={bounds.Width}\nheight={bounds.Height}\nmaximized={(geometry.IsMaximized ? "true" : "false")}\n");
+    }
 }
 
-/// <summary>Persists and restores eligible window geometry without volatile app state.</summary>
-public sealed class WindowGeometryPersistence(IOsSettingsService settings)
+/// <summary>
+/// Geometry the window manager remembers for one app (ADR 0116 §2): the <em>normal</em> bounds (never
+/// the maximized or snapped ones, so a maximized window keeps its restore geometry, as under X11) and
+/// whether the window was maximized.
+/// </summary>
+/// <param name="Bounds">Normal window bounds in CSS pixels.</param>
+/// <param name="IsMaximized">Whether the window was maximized when the geometry was saved.</param>
+public sealed record SavedWindowGeometry(WindowBounds Bounds, bool IsMaximized);
+
+/// <summary>
+/// Reads and writes the window geometry state file of an app through <see cref="IOsSettingsService"/>,
+/// under the identity of the signed-in user (ADR 0044 §10, ADR 0116).
+/// </summary>
+public sealed class WindowGeometryPersistence
 {
-    private readonly IOsSettingsService _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+    private readonly IOsSettingsService _settings;
+    private readonly ILogger? _logger;
+
+    /// <summary>Creates the persistence over the OS settings service.</summary>
+    /// <param name="settings">Whole-file access to user settings and state files.</param>
+    public WindowGeometryPersistence(IOsSettingsService settings)
+        : this(settings, logger: null)
+    {
+    }
+
+    /// <summary>Creates the persistence with a logger for writes that fail (geometry stays best effort).</summary>
+    /// <param name="settings">Whole-file access to user settings and state files.</param>
+    /// <param name="logger">Receives a warning when a state file cannot be read or written.</param>
+    public WindowGeometryPersistence(IOsSettingsService settings, ILogger<WindowGeometryPersistence>? logger)
+    {
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _logger = logger;
+    }
 
     /// <summary>Reads saved geometry, returning <see langword="null"/> for a clean profile or an unreadable file.</summary>
     /// <param name="appId">App whose window is restored.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
-    public async ValueTask<WindowBounds?> RestoreAsync(string appId, CancellationToken cancellationToken = default)
+    public async ValueTask<SavedWindowGeometry?> RestoreAsync(string appId, CancellationToken cancellationToken = default)
     {
-        string? content = await _settings
-            .ReadFileAsync(WindowGeometrySettings.GetFile(appId), cancellationToken)
-            .ConfigureAwait(false);
-        return WindowGeometrySettings.Parse(content);
+        try
+        {
+            string? content = await _settings
+                .ReadFileAsync(WindowGeometrySettings.GetFile(appId), cancellationToken)
+                .ConfigureAwait(false);
+            return WindowGeometrySettings.Parse(content);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException or IOException)
+        {
+            // No session or an unreadable file: the window opens at its cascade slot.
+            _logger?.LogWarning("window geometry of {AppId} could not be read: {Error}", appId, exception.Message);
+            return null;
+        }
     }
 
-    /// <summary>Saves geometry when persistence is explicitly eligible.</summary>
+    /// <summary>
+    /// Saves geometry when it differs from the file's current content, so closing a window that did
+    /// not move does not rewrite the file and wake file watchers (ADR 0116 §3).
+    /// </summary>
     /// <param name="appId">App whose window is saved.</param>
-    /// <param name="bounds">Current window bounds.</param>
-    /// <param name="isEligible">Whether the window opted into geometry persistence.</param>
+    /// <param name="geometry">Normal bounds and maximized state.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns><see langword="true"/> when the file was written.</returns>
     public async ValueTask<bool> SaveAsync(
         string appId,
-        WindowBounds bounds,
-        bool isEligible,
+        SavedWindowGeometry geometry,
         CancellationToken cancellationToken = default)
     {
-        if (!isEligible || bounds.Width <= 0 || bounds.Height <= 0)
+        ArgumentNullException.ThrowIfNull(geometry);
+        if (geometry.Bounds.Width <= 0 || geometry.Bounds.Height <= 0)
         {
             return false;
         }
 
         try
         {
-            await _settings
-                .WriteFileAsync(WindowGeometrySettings.GetFile(appId), WindowGeometrySettings.Serialize(bounds), cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+            OsSettingsFile file = WindowGeometrySettings.GetFile(appId);
+            string content = WindowGeometrySettings.Serialize(appId, geometry);
+            string? current = await _settings.ReadFileAsync(file, cancellationToken).ConfigureAwait(false);
+            if (string.Equals(current, content, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            await _settings.WriteFileAsync(file, content, cancellationToken: cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException or IOException)
         {
             // No session, or a home the user cannot write: geometry is best effort.
+            _logger?.LogWarning("window geometry of {AppId} could not be saved: {Error}", appId, exception.Message);
             return false;
         }
     }

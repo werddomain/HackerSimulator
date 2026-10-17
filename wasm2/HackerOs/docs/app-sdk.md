@@ -456,8 +456,8 @@ l'app associée avec ce chemin : une app de document lit son fichier initial là
 `OnWindowStateChanged` et `OnWindowResized` (avec leurs versions `Async`) et
 l'état `IsWindowActive`, `WindowState`, `WindowSize`. Les types `HackWindowState`,
 `HackWindowSize` et `IWindowAppEventTarget` sont dans `HackerOs.AppSdk.Blazor` ;
-`WindowOptions` (tailles déclarées par `AppDefinition.Window`) est dans
-`HackerOs.App.Abstractions`. Aucune app n'injecte de service pour les recevoir :
+`WindowOptions` (tailles déclarées par `AppDefinition.Window`, et depuis le SDK 1.1
+`RememberGeometry`, ADR 0116) est dans `HackerOs.App.Abstractions`. Aucune app n'injecte de service pour les recevoir :
 l'OS les appelle. Voir [`window-model.md`](window-model.md).
 
 ### Titre de fenêtre (ADR 0117, ADR 0123, SDK 1.1)

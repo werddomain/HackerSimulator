@@ -1,1 +1,4 @@
 #nullable enable
+HackerOs.App.Abstractions.WindowOptions.RememberGeometry.get -> bool
+HackerOs.App.Abstractions.WindowOptions.RememberGeometry.init -> void
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableBoolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool?>
