@@ -66,8 +66,7 @@ internal sealed class IndexedDbFileContentRepository : IAsyncDisposable
                 length = checked(length + read);
                 if (length > _policy.MaxFileSizeBytes)
                 {
-                    throw new InvalidDataException(
-                        $"File content exceeds the {_policy.MaxFileSizeBytes}-byte browser limit.");
+                    throw new FileContentTooLargeException(_policy.MaxFileSizeBytes);
                 }
 
                 hash.AppendData(buffer, 0, read);
@@ -249,3 +248,22 @@ public sealed record IndexedDbFileContentCleanupResult(
     int CandidateHashes,
     int DeletedChunks,
     int RetainedReferencedHashes);
+
+/// <summary>
+/// The content being stored exceeds <see cref="Schema.FileContentStoragePolicy.MaxFileSizeBytes"/>
+/// (16 MiB, ADR 0094); the provider reports it as <c>FileSystemErrorCode.FileTooLarge</c>
+/// (<c>EFBIG</c>). Nothing was written: the limit is checked before any chunk is stored.
+/// </summary>
+internal sealed class FileContentTooLargeException : IOException
+{
+    /// <summary>Creates the failure for a limit of <paramref name="maxFileSizeBytes"/>.</summary>
+    /// <param name="maxFileSizeBytes">The largest accepted file, in bytes.</param>
+    public FileContentTooLargeException(long maxFileSizeBytes)
+        : base($"File content exceeds the {maxFileSizeBytes}-byte browser limit.")
+    {
+        MaxFileSizeBytes = maxFileSizeBytes;
+    }
+
+    /// <summary>Gets the largest accepted file, in bytes.</summary>
+    public long MaxFileSizeBytes { get; }
+}

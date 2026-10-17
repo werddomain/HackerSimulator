@@ -44,6 +44,11 @@ namespace HackerOs.Platform.Core.Diagnostics;
 /// screen even if the filesystem never becomes available.
 /// </para>
 /// <para>
+/// <b>No space left.</b> When the storage is full (<c>ENOSPC</c>, ADR 0099 section 2), the lines of
+/// the failed batch are abandoned and counted; the first flush that can write again adds one
+/// <c>WARN logging: &lt;n&gt; lines lost (No space left on device)</c> line to <c>syslog</c>.
+/// </para>
+/// <para>
 /// <b>No recursion.</b> A failed write is never logged to a file: it is noted once per failing file
 /// in the in-memory sink under the <c>logging</c> category, and noted again only after that file has
 /// been written successfully in between.
@@ -76,6 +81,7 @@ public sealed class LogFileWriter : IAsyncDisposable
     private Attachment? _attachment;
     private IDisposable? _periodicFlush;
     private long _droppedSinceLastFlush;
+    private long _lostToNoSpace;
     private long _totalDropped;
     private int _flushRequested;
     private bool _disposed;
@@ -110,6 +116,9 @@ public sealed class LogFileWriter : IAsyncDisposable
 
     /// <summary>Gets the number of lines currently waiting to be written.</summary>
     public int PendingCount => _queue.Reader.Count;
+
+    /// <summary>Gets the number of lines abandoned because the storage was full and not yet reported in <c>syslog</c>.</summary>
+    public long PendingNoSpaceLoss => Interlocked.Read(ref _lostToNoSpace);
 
     /// <summary>Gets the number of lines dropped because the queue was full, since the writer started.</summary>
     public long TotalDropped => Interlocked.Read(ref _totalDropped);
@@ -213,10 +222,16 @@ public sealed class LogFileWriter : IAsyncDisposable
         await attachment.FlushGate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
-            List<(LogFileTarget Target, List<string> Lines)> batches = DrainQueue();
+            List<(LogFileTarget Target, List<string> Lines)> batches = DrainQueue(out long reportedLoss);
             foreach ((LogFileTarget target, List<string> lines) in batches)
             {
-                await WriteBatchAsync(attachment.FileSystem, target, lines, linked.Token).ConfigureAwait(false);
+                // The "lines lost" warning stands for reportedLoss lines: if it is lost too, they all are again.
+                long carried = target.Path == LogFileTarget.Syslog.Path ? reportedLoss : 0;
+                await WriteBatchAsync(attachment.FileSystem, target, lines, carried, linked.Token).ConfigureAwait(false);
+                if (carried > 0)
+                {
+                    reportedLoss = 0;
+                }
             }
         }
         finally
@@ -312,17 +327,35 @@ public sealed class LogFileWriter : IAsyncDisposable
     }
 
     /// <summary>Reads every waiting line, grouped by file in first-seen order.</summary>
-    private List<(LogFileTarget Target, List<string> Lines)> DrainQueue()
+    private List<(LogFileTarget Target, List<string> Lines)> DrainQueue(out long reportedLoss)
     {
         List<(LogFileTarget Target, List<string> Lines)> batches = [];
         Dictionary<VirtualPath, List<string>> byPath = [];
 
-        long dropped = Interlocked.Exchange(ref _droppedSinceLastFlush, 0);
-        if (dropped > 0)
+        reportedLoss = Interlocked.Exchange(ref _lostToNoSpace, 0);
+        if (reportedLoss > 0)
         {
             List<string> syslog = [];
             byPath[LogFileTarget.Syslog.Path] = syslog;
             batches.Add((LogFileTarget.Syslog, syslog));
+            syslog.Add(LogLineFormat.Format(
+                _clock.UtcNow,
+                DiagnosticSeverity.Warning,
+                LoggingCategory,
+                null,
+                $"{reportedLoss} lines lost (No space left on device)"));
+        }
+
+        long dropped = Interlocked.Exchange(ref _droppedSinceLastFlush, 0);
+        if (dropped > 0)
+        {
+            if (!byPath.TryGetValue(LogFileTarget.Syslog.Path, out List<string>? syslog))
+            {
+                syslog = [];
+                byPath[LogFileTarget.Syslog.Path] = syslog;
+                batches.Add((LogFileTarget.Syslog, syslog));
+            }
+
             syslog.Add(LogLineFormat.Format(
                 _clock.UtcNow,
                 DiagnosticSeverity.Warning,
@@ -350,6 +383,7 @@ public sealed class LogFileWriter : IAsyncDisposable
         IFileSystemService fileSystem,
         LogFileTarget target,
         List<string> lines,
+        long carriedLoss,
         CancellationToken cancellationToken)
     {
         StringBuilder text = new();
@@ -366,6 +400,12 @@ public sealed class LogFileWriter : IAsyncDisposable
             {
                 _failingTargets.Remove(target.Path.Value);
             }
+        }
+        catch (LogStorageFullException)
+        {
+            // ENOSPC: abandon the batch and count it; the warning line itself is not a lost log line.
+            long lost = carriedLoss > 0 ? lines.Count - 1 + carriedLoss : lines.Count;
+            Interlocked.Add(ref _lostToNoSpace, lost);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -427,7 +467,9 @@ public sealed class LogFileWriter : IAsyncDisposable
                 continue;
             }
 
-            throw new InvalidOperationException($"write rejected ({code})");
+            throw code == FileSystemErrorCode.NoSpace
+                ? new LogStorageFullException()
+                : new InvalidOperationException($"write rejected ({code})");
         }
     }
 
@@ -500,7 +542,9 @@ public sealed class LogFileWriter : IAsyncDisposable
                 cancellationToken).ConfigureAwait(false);
             if (!created.Succeeded && created.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
             {
-                throw new InvalidOperationException($"create rejected ({created.Transaction.Error?.Code})");
+                throw created.Transaction.Error?.Code == FileSystemErrorCode.NoSpace
+                    ? new LogStorageFullException()
+                    : new InvalidOperationException($"create rejected ({created.Transaction.Error?.Code})");
             }
 
             existing = created.Entry
@@ -543,7 +587,9 @@ public sealed class LogFileWriter : IAsyncDisposable
             cancellationToken).ConfigureAwait(false);
         if (!created.Succeeded && created.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
         {
-            throw new InvalidOperationException($"mkdir {directory.Value} rejected ({created.Transaction.Error?.Code})");
+            throw created.Transaction.Error?.Code == FileSystemErrorCode.NoSpace
+                ? new LogStorageFullException()
+                : new InvalidOperationException($"mkdir {directory.Value} rejected ({created.Transaction.Error?.Code})");
         }
     }
 
@@ -596,7 +642,9 @@ public sealed class LogFileWriter : IAsyncDisposable
     {
         if (!result.Succeeded)
         {
-            throw new InvalidOperationException($"{step} rejected ({result.Transaction.Error?.Code})");
+            throw result.Transaction.Error?.Code == FileSystemErrorCode.NoSpace
+                ? new LogStorageFullException()
+                : new InvalidOperationException($"{step} rejected ({result.Transaction.Error?.Code})");
         }
     }
 
@@ -678,3 +726,6 @@ public sealed class LogFileWriter : IAsyncDisposable
         public void Abandon() => _abandoned.Cancel();
     }
 }
+
+/// <summary>A log append was refused with <see cref="FileSystemErrorCode.NoSpace"/>: the batch is counted as lost.</summary>
+internal sealed class LogStorageFullException() : IOException("No space left on device");

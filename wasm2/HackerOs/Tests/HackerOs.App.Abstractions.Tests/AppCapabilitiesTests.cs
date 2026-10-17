@@ -69,6 +69,7 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.ServerConnectionManage, CapabilityRisk.Dangerous },
         { AppCapabilities.SystemPower, CapabilityRisk.Dangerous },
         { AppCapabilities.SystemStorageInspect, CapabilityRisk.Dangerous },
+        { AppCapabilities.SystemBackup, CapabilityRisk.Dangerous },
         { AppCapabilities.ShellHost, CapabilityRisk.Dangerous },
         { AppCapabilities.KeyringReadAll, CapabilityRisk.Dangerous },
     };

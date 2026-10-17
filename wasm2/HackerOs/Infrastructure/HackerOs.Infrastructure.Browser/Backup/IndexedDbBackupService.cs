@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,8 +10,17 @@ using Microsoft.JSInterop;
 namespace HackerOs.Infrastructure.Browser.Backup;
 
 /// <summary>Exports and atomically restores validated HackerOS IndexedDB backups.</summary>
+/// <remarks>
+/// The backup is the whole OS database as one JSON document (<c>formatVersion: 1</c>, schema
+/// version, every store, SHA-256 of the payload). ADR 0099 section 1 ships it as a gzip archive
+/// with the <see cref="ArchiveExtension"/> extension (<see cref="ExportArchiveAsync"/>,
+/// <see cref="ReadArchive"/>); restoring accepts the plain JSON too.
+/// </remarks>
 public sealed class IndexedDbBackupService : IAsyncDisposable
 {
+    /// <summary>File extension of a compressed OS backup (ADR 0099 section 1).</summary>
+    public const string ArchiveExtension = ".hosbak";
+
     private const int FormatVersion = 1;
     private const string TransactionBoundary = "BackupRestore";
     private readonly IndexedDbInteropAdapter _adapter;
@@ -45,6 +55,65 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
         return envelope.ToJsonString();
     }
 
+    /// <summary>
+    /// Exports the database like <see cref="ExportAsync"/> and compresses the JSON with gzip, the
+    /// <c>.hosbak</c> archive downloaded to the host (ADR 0099 section 1).
+    /// </summary>
+    public async ValueTask<byte[]> ExportArchiveAsync(CancellationToken cancellationToken = default)
+    {
+        string json = await ExportAsync(cancellationToken).ConfigureAwait(false);
+        using MemoryStream output = new();
+        using (GZipStream gzip = new(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            gzip.Write(bytes, 0, bytes.Length);
+        }
+
+        return output.ToArray();
+    }
+
+    /// <summary>
+    /// Reads the backup JSON out of an archive: a gzip <c>.hosbak</c> is decompressed, anything
+    /// else is read as the plain UTF-8 JSON of <see cref="ExportAsync"/>.
+    /// </summary>
+    /// <param name="archive">Bytes of the file the user picked.</param>
+    /// <exception cref="IndexedDbBackupValidationException">The gzip stream is damaged.</exception>
+    public static string ReadArchive(byte[] archive)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        if (archive.Length < 2 || archive[0] != 0x1F || archive[1] != 0x8B)
+        {
+            return Encoding.UTF8.GetString(archive);
+        }
+
+        try
+        {
+            using GZipStream gzip = new(new MemoryStream(archive, writable: false), CompressionMode.Decompress);
+            using StreamReader reader = new(gzip, Encoding.UTF8);
+            return reader.ReadToEnd();
+        }
+        catch (Exception exception) when (exception is InvalidDataException or IOException or DecoderFallbackException)
+        {
+            throw new IndexedDbBackupValidationException("Backup archive is damaged (invalid gzip data).", exception);
+        }
+    }
+
+    /// <summary>
+    /// Validates a backup completely (format, schema version, stores, identities, SHA-256) without
+    /// touching the database, so a caller can refuse a bad archive before stopping the session.
+    /// </summary>
+    /// <param name="backupJson">The backup JSON.</param>
+    /// <exception cref="IndexedDbBackupValidationException">The backup is malformed, incompatible or corrupt.</exception>
+    public static IndexedDbBackupSummary Inspect(string backupJson)
+    {
+        ValidatedBackup backup = Validate(backupJson);
+        return new IndexedDbBackupSummary(
+            backup.CreatedAtUtc,
+            HackerOsIndexedDbSchema.CurrentVersion,
+            backup.RecordCount,
+            backup.Stores.ToDictionary(store => store.Name, store => store.Records.GetArrayLength(), StringComparer.Ordinal));
+    }
+
     /// <summary>Validates a backup completely, then restores it using the explicitly selected mode.</summary>
     public async ValueTask<IndexedDbRestoreResult> RestoreAsync(
         string backupJson,
@@ -64,27 +133,20 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
                 .Select(store => new IndexedDbOperation("clear", store.Name)));
         }
 
+        // Replace writes into emptied stores; merge overwrites the records with the same key and
+        // keeps every other one (ADR 0099 section 1). Either way it is one transaction.
         foreach ((string storeName, JsonElement records) in backup.Stores)
         {
-            string kind = mode == IndexedDbRestoreMode.Replace ? "put" : "addIfAbsentOrEqual";
             operations.AddRange(records.EnumerateArray().Select(record =>
-                new IndexedDbOperation(kind, storeName, Value: record.Clone(), FailureCode: "backup.merge-conflict")));
+                new IndexedDbOperation("put", storeName, Value: record.Clone())));
         }
 
         await _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken).ConfigureAwait(false);
-        try
-        {
-            await _adapter.ExecuteAsync(
-                TransactionBoundary,
-                IndexedDbTransactionMode.ReadWrite,
-                operations,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (JSException exception) when (exception.Message.Contains("backup.merge-conflict", StringComparison.Ordinal))
-        {
-            throw new IndexedDbBackupValidationException(
-                "Merge found an existing record with different content; no records were changed.", exception);
-        }
+        await _adapter.ExecuteAsync(
+            TransactionBoundary,
+            IndexedDbTransactionMode.ReadWrite,
+            operations,
+            cancellationToken).ConfigureAwait(false);
 
         return new IndexedDbRestoreResult(mode, backup.RecordCount);
     }
@@ -94,7 +156,12 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
 
     private static ValidatedBackup Validate(string backupJson)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(backupJson);
+        ArgumentNullException.ThrowIfNull(backupJson);
+        if (string.IsNullOrWhiteSpace(backupJson))
+        {
+            throw new IndexedDbBackupValidationException("The file is empty or is not a HackerOS backup.");
+        }
+
         JsonObject envelope;
         try
         {
@@ -111,9 +178,15 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
         int schemaVersion = RequiredInt(envelope, "databaseSchemaVersion");
         string createdAt = RequiredString(envelope, "createdAtUtc");
         string expectedHash = RequiredString(envelope, "sha256");
+        if (schemaVersion != HackerOsIndexedDbSchema.CurrentVersion)
+        {
+            // ADR 0099 section 1: a backup of another schema version is refused with a clear message.
+            throw new IndexedDbBackupValidationException(
+                $"This backup uses database schema version {schemaVersion}; this HackerOS uses version {HackerOsIndexedDbSchema.CurrentVersion}. It cannot be restored here.");
+        }
+
         if (formatVersion != FormatVersion
             || databaseName != HackerOsIndexedDbSchema.DatabaseName
-            || schemaVersion != HackerOsIndexedDbSchema.CurrentVersion
             || !DateTimeOffset.TryParse(createdAt, out DateTimeOffset createdAtUtc)
             || expectedHash.Length != 64)
         {
@@ -147,7 +220,7 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
             throw new IndexedDbBackupValidationException("Backup SHA-256 integrity validation failed.");
         }
 
-        return new ValidatedBackup(stores, stores.Sum(store => store.Records.GetArrayLength()));
+        return new ValidatedBackup(stores, stores.Sum(store => store.Records.GetArrayLength()), createdAtUtc);
     }
 
     private static void ValidateRecordIdentities(IndexedDbObjectStoreDefinition definition, JsonElement records)
@@ -219,18 +292,30 @@ public sealed class IndexedDbBackupService : IAsyncDisposable
 
     private sealed record ValidatedBackup(
         IReadOnlyList<(string Name, JsonElement Records)> Stores,
-        int RecordCount);
+        int RecordCount,
+        DateTimeOffset CreatedAtUtc);
 }
 
 /// <summary>Selects explicit non-destructive merge or destructive replacement restore semantics.</summary>
 public enum IndexedDbRestoreMode
 {
-    /// <summary>Adds missing records and aborts atomically on a different existing record.</summary>
+    /// <summary>Writes every backup record over the record with the same key and keeps the others.</summary>
     Merge = 1,
 
     /// <summary>Clears all stores and writes the validated backup in one transaction.</summary>
     Replace = 2
 }
+
+/// <summary>What a validated backup holds, read before restoring it.</summary>
+/// <param name="CreatedAtUtc">When the backup was exported.</param>
+/// <param name="SchemaVersion">IndexedDB schema version of the backup (always the current one once validated).</param>
+/// <param name="RecordCount">Records in every store.</param>
+/// <param name="StoreRecordCounts">Records per store name.</param>
+public sealed record IndexedDbBackupSummary(
+    DateTimeOffset CreatedAtUtc,
+    int SchemaVersion,
+    int RecordCount,
+    IReadOnlyDictionary<string, int> StoreRecordCounts);
 
 /// <summary>Reports the completed restore mode and number of backup records processed.</summary>
 public sealed record IndexedDbRestoreResult(IndexedDbRestoreMode Mode, int RecordCount);

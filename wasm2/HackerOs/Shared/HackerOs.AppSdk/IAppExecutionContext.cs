@@ -269,6 +269,13 @@ public interface IAppExecutionContext
     IAppStorageDiagnosticsGateway StorageDiagnostics => UnsupportedAdministrationGateways.StorageDiagnostics;
 
     /// <summary>
+    /// Gets this instance's whole-machine backup gateway, behind <see cref="HackSystemBackup"/>
+    /// (ADR 0099, section 1; capability <c>system.backup</c> plus an administrator). Defaults to an
+    /// unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppSystemBackupGateway SystemBackup => UnsupportedAdministrationGateways.SystemBackup;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -338,6 +345,9 @@ public static class UnsupportedAdministrationGateways
 
     /// <summary>Unsupported <see cref="IAppStorageDiagnosticsGateway"/>.</summary>
     public static IAppStorageDiagnosticsGateway StorageDiagnostics { get; } = new UnsupportedStorageDiagnostics();
+
+    /// <summary>Unsupported <see cref="IAppSystemBackupGateway"/>.</summary>
+    public static IAppSystemBackupGateway SystemBackup { get; } = new UnsupportedSystemBackup();
 
     private sealed class UnsupportedSystemSettings : IAppSystemSettingsGateway
     {
@@ -420,6 +430,17 @@ public static class UnsupportedAdministrationGateways
         public ValueTask RebootAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
 
         public ValueTask FactoryResetAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+    }
+
+    private sealed class UnsupportedSystemBackup : IAppSystemBackupGateway
+    {
+        public bool IsSupported => false;
+
+        public ValueTask<HackBackupInfo> CreateAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackBackupInfo?> RestoreAsync(HackBackupRestoreMode mode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
     }
 
     private sealed class UnsupportedStorageDiagnostics : IAppStorageDiagnosticsGateway

@@ -5,10 +5,13 @@ using Microsoft.JSInterop;
 namespace HackerOs.Infrastructure.Browser.FileSystem;
 
 /// <summary>
-/// Browser <see cref="IStorageUsageProvider"/> behind <c>HackDriveInfo</c> (ADR 0057 section 7):
-/// the used space is what the deduplicated IndexedDB content store keeps for live files, and the
-/// quota comes from <c>navigator.storage.estimate()</c> through <see cref="BrowserStorageManager"/>.
-/// Only infrastructure code calls the browser here, never an app (ADR 0055).
+/// Browser <see cref="IStorageUsageProvider"/> behind <c>HackDriveInfo</c> and <c>df</c>. Since
+/// ADR 0099 (section 2) both figures are the browser's real ones from
+/// <c>navigator.storage.estimate()</c> through <see cref="BrowserStorageManager"/>: the origin's
+/// usage and its quota, so <c>df</c> agrees with the low-space warning and the root reserve. A
+/// browser that cannot tell falls back to ADR 0057 section 7: the bytes the deduplicated IndexedDB
+/// content store keeps for live files, with no quota. Only infrastructure code calls the browser
+/// here, never an app (ADR 0055).
 /// </summary>
 public sealed class IndexedDbStorageUsageProvider : IStorageUsageProvider, IAsyncDisposable
 {
@@ -27,20 +30,14 @@ public sealed class IndexedDbStorageUsageProvider : IStorageUsageProvider, IAsyn
     /// <inheritdoc />
     public async ValueTask<StorageUsage> GetUsageAsync(CancellationToken cancellationToken = default)
     {
-        long used = await _fileSystem.MeasureStoredContentBytesAsync(cancellationToken).ConfigureAwait(false);
-        long? quota;
-        try
+        if (await _storage.GetCapacityAsync(cancellationToken).ConfigureAwait(false) is { } capacity)
         {
-            BrowserStorageStatus status = await _storage.GetStatusAsync(cancellationToken).ConfigureAwait(false);
-            quota = status.QuotaBytes > 0 ? status.QuotaBytes : null;
-        }
-        catch (JSException)
-        {
-            // A browser without the StorageManager API: the disk keeps its configured size.
-            quota = null;
+            return new StorageUsage(capacity.UsageBytes, capacity.QuotaBytes);
         }
 
-        return new StorageUsage(used, quota);
+        // A browser without the StorageManager API: the disk keeps its configured size.
+        long used = await _fileSystem.MeasureStoredContentBytesAsync(cancellationToken).ConfigureAwait(false);
+        return new StorageUsage(used, null);
     }
 
     /// <inheritdoc />

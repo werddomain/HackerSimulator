@@ -80,6 +80,26 @@ public sealed class SystemPowerService
         await _device.RestartAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Flushes, ends the session, runs <paramref name="whileStopped"/> with no process left, then
+    /// restarts the machine: the shape of a restore from backup (ADR 0099, section 1). The caller
+    /// audits the operation itself. Restarts even when <paramref name="whileStopped"/> throws.
+    /// </summary>
+    /// <param name="whileStopped">Work done between the end of the session and the restart.</param>
+    public async Task RestartAfterAsync(Func<Task> whileStopped)
+    {
+        ArgumentNullException.ThrowIfNull(whileStopped);
+        await ShutdownAsync().ConfigureAwait(false);
+        try
+        {
+            await whileStopped().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _device.RestartAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
     private async Task ShutdownAsync()
     {
         await FlushAsync().ConfigureAwait(false);

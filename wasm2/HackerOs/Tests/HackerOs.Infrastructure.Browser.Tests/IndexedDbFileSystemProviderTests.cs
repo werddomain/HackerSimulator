@@ -156,6 +156,41 @@ public sealed class IndexedDbFileSystemProviderTests
     }
 
     [Fact]
+    public async Task WriteAsync_QuotaExceededReturnsNoSpaceAndCommitsNothing()
+    {
+        // The chunk transaction fails with QuotaExceededError (ADR 0099 section 2): no metadata
+        // transaction follows, so the file keeps its previous content.
+        ScriptedModule module = new(
+            Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 4)),
+            ScriptedModule.QuotaExceeded);
+        await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
+
+        FileSystemMutationResult result = await provider.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/file.txt"), 4),
+            new TextSource("hello"),
+            Context());
+
+        Assert.Equal(FileSystemTransactionStatus.Rejected, result.Transaction.Status);
+        Assert.Equal(FileSystemErrorCode.NoSpace, result.Transaction.Error?.Code);
+        Assert.Equal(2, module.ExecuteArguments.Count);
+    }
+
+    [Fact]
+    public async Task WriteAsync_ContentOverSixteenMebibytesReturnsFileTooLargeBeforeAnyWrite()
+    {
+        ScriptedModule module = new(Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 4)));
+        await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
+
+        FileSystemMutationResult result = await provider.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/big.bin"), 4),
+            new TextSource(new string('x', (16 * 1024 * 1024) + 1)),
+            Context());
+
+        Assert.Equal(FileSystemErrorCode.FileTooLarge, result.Transaction.Error?.Code);
+        Assert.Single(module.ExecuteArguments);
+    }
+
+    [Fact]
     public async Task CreateAsync_CommitsAtomicBatchAndInheritsParentGroup()
     {
         ScriptedModule module = new(
@@ -434,9 +469,12 @@ public sealed class IndexedDbFileSystemProviderTests
             object?[]? args) => ValueTask.FromResult((TValue)module);
     }
 
-    private sealed class ScriptedModule(params JsonElement[][] results) : IJSObjectReference
+    private sealed class ScriptedModule(params JsonElement[]?[] results) : IJSObjectReference
     {
-        private readonly Queue<JsonElement[]> _results = new(results);
+        /// <summary>A scripted result that makes the transaction fail like a full browser storage.</summary>
+        public static readonly JsonElement[]? QuotaExceeded = null;
+
+        private readonly Queue<JsonElement[]?> _results = new(results);
 
         public List<object?[]> ExecuteArguments { get; } = [];
 
@@ -453,7 +491,9 @@ public sealed class IndexedDbFileSystemProviderTests
             if (identifier == "executeTransaction")
             {
                 ExecuteArguments.Add(args ?? []);
-                return ValueTask.FromResult((TValue)(object)_results.Dequeue());
+                JsonElement[] result = _results.Dequeue()
+                    ?? throw new JSException("QuotaExceededError: The quota has been exceeded.");
+                return ValueTask.FromResult((TValue)(object)result);
             }
 
             return ValueTask.FromResult(default(TValue)!);

@@ -20,6 +20,8 @@ public static class ShellErrorText
         UnauthorizedAccessException => "Permission denied",
         HackFileNotFoundException or HackDirectoryNotFoundException => "No such file or directory",
         HackIOException { ErrorCode: FileSystemErrorCode.NotDirectory } => "Not a directory",
+        HackIOException { ErrorCode: FileSystemErrorCode.NoSpace } => "No space left on device",
+        HackIOException { ErrorCode: FileSystemErrorCode.FileTooLarge } => "File too large",
         ArgumentException => "Invalid path",
         _ => exception.Message
     };

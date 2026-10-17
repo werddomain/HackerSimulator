@@ -101,8 +101,9 @@ public sealed class AppExecutionContextFactory
     /// <param name="administration">
     /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
     /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
-    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/> and
-    /// <see cref="IAppExecutionContext.StorageDiagnostics"/>; <see langword="null"/> leaves them unsupported.
+    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/>,
+    /// <see cref="IAppExecutionContext.StorageDiagnostics"/> and <see cref="IAppExecutionContext.SystemBackup"/>
+    /// (ADR 0099); <see langword="null"/> leaves them unsupported.
     /// </param>
     /// <param name="webDatabases">
     /// The browser databases of web sites behind <see cref="IAppExecutionContext.WebDatabase"/> and the
@@ -313,6 +314,10 @@ public sealed class AppExecutionContextFactory
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
         administration.SystemSettings?.BindAmbientContext(context);
+        if (administration.SystemBackup is not null)
+        {
+            context.SystemBackup = administration.SystemBackup;
+        }
 
         if (_shellHostProvider is not null)
         {
@@ -341,7 +346,7 @@ public sealed class AppExecutionContextFactory
     {
         if (_administration is null)
         {
-            return new AdministrationGateways(null, null, null, null, null);
+            return new AdministrationGateways(null, null, null, null, null, null);
         }
 
         AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated);
@@ -350,7 +355,8 @@ public sealed class AppExecutionContextFactory
             _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
             new AppServerConnectionGateway(_administration.Server, capabilities),
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
-            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases));
+            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases),
+            new AppSystemBackupGateway(_administration.Backup, capabilities, gate));
     }
 
     private sealed record AdministrationGateways(
@@ -358,7 +364,8 @@ public sealed class AppExecutionContextFactory
         AppPermissionAdministrationGateway? Permissions,
         AppServerConnectionGateway? ServerConnection,
         AppSystemPowerGateway? SystemPower,
-        AppStorageDiagnosticsGateway? StorageDiagnostics);
+        AppStorageDiagnosticsGateway? StorageDiagnostics,
+        AppSystemBackupGateway? SystemBackup);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {
