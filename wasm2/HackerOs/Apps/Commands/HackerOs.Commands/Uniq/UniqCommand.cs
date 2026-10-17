@@ -3,6 +3,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Uniq;
 
@@ -17,6 +19,7 @@ public sealed class UniqCommand(AppManifest manifest) : TerminalAppBase(manifest
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         (List<string> options, List<string> operands) = CommandIO.SplitArguments(context.Arguments);
         bool count = false, repeated = false, unique = false, ignoreCase = false;
         foreach (char flag in options.SelectMany(option => option.TrimStart('-')))
@@ -28,7 +31,7 @@ public sealed class UniqCommand(AppManifest manifest) : TerminalAppBase(manifest
                 case 'u': unique = true; break;
                 case 'i': ignoreCase = true; break;
                 default:
-                    await context.StandardError.WriteLineAsync($"uniq: invalid option -- '{flag}'");
+                    await context.StandardError.WriteLineAsync(text["InvalidOption", flag]);
                     return 1;
             }
         }
@@ -60,7 +63,7 @@ public sealed class UniqCommand(AppManifest manifest) : TerminalAppBase(manifest
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"uniq: {operands[1]}: {ShellErrorText.Describe(exception)}");
+                await context.StandardError.WriteLineAsync(CommandText.FileError(context, "uniq", operands[1], CommandText.Describe(context, exception)));
                 return 1;
             }
         }

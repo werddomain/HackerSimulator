@@ -1,0 +1,5 @@
+{
+  "name": "alias",
+  "description": "Définit ou affiche les alias de commandes",
+  "terminalUsage": "alias [nom[=valeur]]"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "rm",
+  "description": "Déplace des fichiers ou des dossiers vers la Corbeille, ou les supprime définitivement",
+  "terminalUsage": "rm [-r|-R] [-f] [--permanent] <fichier...>"
+}

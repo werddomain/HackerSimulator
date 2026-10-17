@@ -18,6 +18,9 @@
   <data name="Errno.FileTooLarge" xml:space="preserve">
     <value>Fichier trop volumineux</value>
   </data>
+  <data name="Errno.InvalidArgument" xml:space="preserve">
+    <value>Argument invalide</value>
+  </data>
   <data name="Errno.InvalidPath" xml:space="preserve">
     <value>Chemin non valide</value>
   </data>

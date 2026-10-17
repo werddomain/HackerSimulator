@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Seq;
 
@@ -16,6 +18,7 @@ public sealed class SeqCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
         string separator = "\n";
         bool equalWidth = false;
         List<string> numbers = [];
@@ -43,7 +46,7 @@ public sealed class SeqCommand(AppManifest manifest) : TerminalAppBase(manifest)
 
         if (numbers.Count is 0 or > 3)
         {
-            await context.StandardError.WriteLineAsync(numbers.Count == 0 ? "seq: missing operand" : $"seq: extra operand '{numbers[3]}'");
+            await context.StandardError.WriteLineAsync(numbers.Count == 0 ? messages["MissingOperand"] : messages["ExtraOperand", numbers[3]]);
             return 1;
         }
 
@@ -52,7 +55,7 @@ public sealed class SeqCommand(AppManifest manifest) : TerminalAppBase(manifest)
         {
             if (!decimal.TryParse(numbers[i], NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]))
             {
-                await context.StandardError.WriteLineAsync($"seq: invalid floating point argument: '{numbers[i]}'");
+                await context.StandardError.WriteLineAsync(messages["InvalidArgument", numbers[i]]);
                 return 1;
             }
         }
@@ -62,7 +65,7 @@ public sealed class SeqCommand(AppManifest manifest) : TerminalAppBase(manifest)
         decimal last = values[^1];
         if (step == 0)
         {
-            await context.StandardError.WriteLineAsync("seq: invalid Zero increment value: '0'");
+            await context.StandardError.WriteLineAsync(messages["ZeroIncrement"]);
             return 1;
         }
 

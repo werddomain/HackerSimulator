@@ -43,6 +43,22 @@ public sealed class LocalizationShellTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Commands_m_to_z_follow_LANG(bool workers)
+    {
+        await using OsFixture os = await OsFixture.CreateAsync(workers);
+
+        ShellRun mkdir = await os.RunAsync("LANG=fr_FR.UTF-8 mkdir");
+        ShellRun rm = await os.RunAsync("LANG=fr_FR.UTF-8 rm ghost.txt");
+        ShellRun english = await os.RunAsync("rm ghost.txt");
+
+        Assert.Contains("mkdir : opérande manquant", mkdir.Stderr, StringComparison.Ordinal);
+        Assert.Contains("rm : impossible de supprimer « ghost.txt » : Aucun fichier ou dossier de ce nom", rm.Stderr, StringComparison.Ordinal);
+        Assert.Contains("rm: cannot remove 'ghost.txt': No such file or directory", english.Stderr, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Localectl_shows_the_system_locale_and_only_root_may_change_it(bool workers)
     {
         await using OsFixture os = await OsFixture.CreateAsync(workers);

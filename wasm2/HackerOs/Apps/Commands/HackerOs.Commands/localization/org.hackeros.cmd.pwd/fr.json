@@ -1,0 +1,5 @@
+{
+  "name": "pwd",
+  "description": "Affiche le nom du dossier de travail courant",
+  "terminalUsage": "pwd"
+}

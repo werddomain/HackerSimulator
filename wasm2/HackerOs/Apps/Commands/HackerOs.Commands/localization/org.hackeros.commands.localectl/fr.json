@@ -1,0 +1,5 @@
+{
+  "name": "localectl",
+  "description": "Consulte ou modifie la locale du système",
+  "terminalUsage": "localectl [status | list-locales | set-locale VARIABLE=LOCALE...]"
+}

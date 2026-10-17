@@ -42,7 +42,10 @@ internal enum Errno
     NotPermitted,
 
     /// <summary><c>EOPNOTSUPP</c>: "Operation not supported".</summary>
-    NotSupported
+    NotSupported,
+
+    /// <summary><c>EINVAL</c>: "Invalid argument".</summary>
+    InvalidArgument
 }
 
 /// <summary>
@@ -69,7 +72,8 @@ internal static class CommandText
         ["Directory not empty"] = Errno.NotEmpty,
         ["Invalid path"] = Errno.InvalidPath,
         ["Operation not permitted"] = Errno.NotPermitted,
-        ["Operation not supported"] = Errno.NotSupported
+        ["Operation not supported"] = Errno.NotSupported,
+        ["Invalid argument"] = Errno.InvalidArgument
     };
 
     /// <summary>Gets the localizer of the shared texts for the command's process.</summary>

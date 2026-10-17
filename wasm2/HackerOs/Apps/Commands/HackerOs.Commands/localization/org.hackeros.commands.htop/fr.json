@@ -1,0 +1,5 @@
+{
+  "name": "htop",
+  "description": "Visionneuse interactive de processus avec jauges, tri et kill",
+  "terminalUsage": "htop [-d dixièmes] [-u utilisateur]"
+}

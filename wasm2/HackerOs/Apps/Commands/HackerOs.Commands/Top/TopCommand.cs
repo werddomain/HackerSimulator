@@ -4,6 +4,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Top;
 
@@ -21,6 +23,8 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Only the messages are translated: the summary and the table stay English for scripts (ADR 0104, section 5).
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
         bool batch = false;
         int? iterations = null;
         double delay = 3;
@@ -45,8 +49,8 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
                         break;
                     }
 
-                    await context.StandardError.WriteLineAsync($"top: unknown option '{arg}'");
-                    await context.StandardError.WriteLineAsync("Usage: top -b [-n iterations] [-d delay] [-u user] [-o field]");
+                    await context.StandardError.WriteLineAsync(messages["UnknownOption", arg]);
+                    await context.StandardError.WriteLineAsync(messages["Usage"]);
                     return 1;
             }
         }

@@ -1,0 +1,5 @@
+{
+  "name": "curl",
+  "description": "Transfert de données par URL simulé : récupère le contenu des sites web simulés",
+  "terminalUsage": "curl [-I] [-v] [-L] [-s] [-f] [-o fichier|-O] [-H en-tête] [-X <méthode>] [-d <données>] <url>"
+}

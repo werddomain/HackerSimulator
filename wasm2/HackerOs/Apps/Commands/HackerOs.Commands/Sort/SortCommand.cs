@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Sort;
 
@@ -24,6 +26,7 @@ public sealed class SortCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
 
         bool reverse = false, numeric = false, human = false, version = false, ignoreCase = false, blanks = false, unique = false, check = false;
         char? separator = null;
@@ -67,7 +70,7 @@ public sealed class SortCommand : TerminalAppBase
                         case 'g': numeric = true; break;
                         case 's' or 'd' or 'i' or 'M' or 'R': break;
                         default:
-                            context.StandardError.WriteLine($"sort: invalid option -- '{flag}'");
+                            context.StandardError.WriteLine(messages["InvalidOption", flag]);
                             return 2;
                     }
                 }
@@ -130,7 +133,7 @@ public sealed class SortCommand : TerminalAppBase
             {
                 if (Compare(lines[index - 1], lines[index]) > 0)
                 {
-                    context.StandardError.WriteLine($"sort: -:{index + 1}: disorder: {lines[index]}");
+                    context.StandardError.WriteLine(messages["Disorder", index + 1, lines[index]]);
                     return 1;
                 }
             }
@@ -162,7 +165,7 @@ public sealed class SortCommand : TerminalAppBase
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                context.StandardError.WriteLine($"sort: open failed: {output}: {ShellErrorText.Describe(exception)}");
+                context.StandardError.WriteLine(messages["OpenFailed", output, CommandText.Describe(context, exception)]);
                 return 2;
             }
 

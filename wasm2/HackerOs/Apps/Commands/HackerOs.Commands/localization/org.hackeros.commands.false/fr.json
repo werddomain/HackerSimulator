@@ -1,0 +1,5 @@
+{
+  "name": "false",
+  "description": "Ne fait rien, avec un code d'échec",
+  "terminalUsage": "false"
+}

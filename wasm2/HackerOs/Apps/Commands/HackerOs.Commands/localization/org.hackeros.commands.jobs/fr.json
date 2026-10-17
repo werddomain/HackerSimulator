@@ -1,0 +1,5 @@
+{
+  "name": "jobs",
+  "description": "Liste les tâches d'arrière-plan du shell",
+  "terminalUsage": "jobs [-l] [-p] [-r] [-s]"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "echo",
+  "description": "Écrit les arguments sur la sortie standard",
+  "terminalUsage": "echo [chaîne ...]"
+}

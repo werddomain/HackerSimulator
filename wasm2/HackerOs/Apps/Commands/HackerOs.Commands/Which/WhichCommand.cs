@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Which;
 
@@ -16,7 +18,7 @@ public sealed class WhichCommand(AppManifest manifest) : TerminalAppBase(manifes
         ArgumentNullException.ThrowIfNull(context);
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("which: no shell session");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoShell"]);
             return 1;
         }
 

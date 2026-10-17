@@ -1,0 +1,5 @@
+{
+  "name": "df",
+  "description": "Indique l'espace disque utilisé par les systèmes de fichiers",
+  "terminalUsage": "df [-h] [-k] [-T] [-i]"
+}

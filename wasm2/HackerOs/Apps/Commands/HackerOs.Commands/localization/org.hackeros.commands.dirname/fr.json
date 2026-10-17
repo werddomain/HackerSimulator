@@ -1,0 +1,5 @@
+{
+  "name": "dirname",
+  "description": "Retire le dernier composant des noms de fichiers",
+  "terminalUsage": "dirname nom..."
+}

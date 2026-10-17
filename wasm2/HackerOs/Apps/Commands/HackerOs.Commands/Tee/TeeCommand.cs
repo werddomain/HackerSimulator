@@ -2,6 +2,7 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
+using HackerOs.Commands.Common;
 
 namespace HackerOs.Commands.Tee;
 
@@ -48,7 +49,7 @@ public sealed class TeeCommand(AppManifest manifest) : TerminalAppBase(manifest)
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"tee: {file}: {ShellErrorText.Describe(exception)}");
+                await context.StandardError.WriteLineAsync(CommandText.FileError(context, "tee", file, CommandText.Describe(context, exception)));
                 status = 1;
             }
         }
@@ -77,7 +78,7 @@ public sealed class TeeCommand(AppManifest manifest) : TerminalAppBase(manifest)
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
-                    await context.StandardError.WriteLineAsync($"tee: {name}: {ShellErrorText.Describe(exception)}");
+                    await context.StandardError.WriteLineAsync(CommandText.FileError(context, "tee", name, CommandText.Describe(context, exception)));
                     status = 1;
                 }
             }

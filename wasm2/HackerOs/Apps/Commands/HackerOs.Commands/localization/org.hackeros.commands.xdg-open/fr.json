@@ -1,0 +1,5 @@
+{
+  "name": "xdg-open",
+  "description": "Ouvre un fichier, un dossier ou une URI dans l'application préférée de l'utilisateur",
+  "terminalUsage": "xdg-open <fichier|dossier|URI>"
+}

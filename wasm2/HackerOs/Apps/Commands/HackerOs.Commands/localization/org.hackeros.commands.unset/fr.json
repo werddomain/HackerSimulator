@@ -1,0 +1,5 @@
+{
+  "name": "unset",
+  "description": "Retire des variables d'environnement du shell",
+  "terminalUsage": "unset NOM..."
+}

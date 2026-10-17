@@ -1,0 +1,5 @@
+{
+  "name": "ls",
+  "description": "Liste le contenu des dossiers",
+  "terminalUsage": "ls [-a] [-l] [chemin ...]"
+}

@@ -3,6 +3,8 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ps;
 
@@ -39,7 +41,8 @@ public sealed class PsCommand : TerminalAppBase
             await context.App.FileSystem.EnumerateAsync(new FileSystemEnumerateRequest(ProcRoot), cancellationToken);
         if (!listing.Succeeded || listing.Value is null)
         {
-            context.StandardError.WriteLine($"ps: cannot read /proc: {listing.Error?.Code}");
+            // The table below stays English for scripts (ADR 0104, section 5); only this message is translated.
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["CannotReadProc", listing.Error?.Code.ToString() ?? string.Empty]);
             return 1;
         }
 
