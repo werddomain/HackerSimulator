@@ -169,7 +169,8 @@ l'hôte au lieu d'être écrite dans `~` (une archive de l'OS dépasse la limite
   que le chantier vient tard, une fois les API stables, et qu'il ajoute un test
   E2E sur la publication trimmée.
 - **Tests sans CI** : la porte est locale (section 3, principe 6). Les suites
-  PWA ne tournent pas en conteneur (pas d'IPv6).
+  PWA tournent en conteneur depuis `v3/7` : sans IPv6, leur harnais se replie
+  sur `127.0.0.2` ([`building-and-testing.md`](building-and-testing.md)).
 
 ## 7. Décisions (questions du 2026-10-17)
 

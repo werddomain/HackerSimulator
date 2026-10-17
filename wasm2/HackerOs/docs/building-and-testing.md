@@ -239,10 +239,19 @@ journaux, processus, intentions, environnement, shell). Exemple : voir le
     dans `~/.config/hackeros` n'est pas instantanée : environ 2 s avant
     `web/15`, 235 ms depuis, voir
     [`filesystem-path-lookup.md`](filesystem-path-lookup.md)) ;
-  - `HackerOs.Pwa.E2E.Tests` : 0/5, le conteneur n'a pas d'IPv6 et la suite
-    se lie volontairement à `[::1]` (le service worker refuse
-    `127.0.0.1` et `localhost`) : `SocketException : Address family not
-    supported by protocol`.
+  - `HackerOs.Pwa.E2E.Tests` : la suite se lie à `[::1]` (le service worker
+    refuse `127.0.0.1` et `localhost`) ; sans IPv6 elle se replie depuis
+    `v3/7-storage-backup` sur `127.0.0.2`, adresse de bouclage et contexte
+    sécurisé que le filtre d'`index.html` laisse passer (avant : 0/5,
+    `SocketException : Address family not supported by protocol`). Elle
+    compte 6 tests : le test qui vérifiait que des octets corrompus du cache
+    étaient servis tels quels est remplacé par deux tests de récupération du
+    cache (en ligne, hors ligne puis reconnexion), voir
+    [`pwa-cache-recovery.md`](pwa-cache-recovery.md). État au 2026-10-17 :
+    6/6 seule ; `Reload_fully_offline_boots_the_app_and_preserves_a_saved_file`
+    a échoué une fois (bouton « Download » resté désactivé) pendant qu'une
+    autre suite Playwright tournait en parallèle, puis est passé seul
+    ([`old/common-pitfalls.md`](old/common-pitfalls.md) §6).
 - Phase 5 : chaque PR `rebuild/5-*` colle la sortie de
   `build/verify-hosts.sh` ([Vérifier les trois hôtes](#vérifier-les-trois-hôtes)).
 - Un test de `AppInstallationService` est instable (environ une fois sur
