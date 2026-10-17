@@ -60,6 +60,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `df` | `-h -T -a` | Disques de `HackDriveInfo` (`/dev/hda` sur `/`) ; `-a` ajoute les pseudo-systèmes de `/proc/mounts`. |
 | `zip` | `-r -q -j -d -0…-9` | Vraie archive deflate lisible par tout outil zip ; met à jour une archive existante ; les modes Unix sont stockés dans les attributs externes. |
 | `unzip` | `-l -t -p -o -n -q -j`, `-d DOSSIER`, `[MOTIFS]` | Restaure les modes (`+x`) ; refuse une entrée qui sortirait du dossier (`../`, « zip slip ») ; ne remplace pas un fichier sans `-o`. |
+| `xdg-open` | `FICHIER`, `DOSSIER` ou `URI` (un seul argument) | Comme freedesktop (ADR 0096 §3) : un chemin s'ouvre avec son association (un dossier dans le gestionnaire de fichiers, `inode/directory`), une URI avec le gestionnaire de son schéma (`x-scheme-handler/<schéma>`, le navigateur pour `http`/`https`, le fichier pour `file://`). Rend la main dès l'envoi. Codes de `xdg-open` : 0 envoyé, 1 ligne de commande, 3 aucune app, 4 fichier absent ou échec ; plusieurs apps sans défaut donnent 4 et la liste des candidates (un terminal n'a pas de sélecteur et l'OS ne devine pas). `apps.launch`. |
 
 ## Processus et services
 
@@ -111,7 +112,8 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`) avec les passerelles factices.
-- `Tests/HackerOs.Ecosystem.Tests` : 81 apps intégrées dont 65 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `ausearch` par `v3/8-settings-security`).
+- `Tests/HackerOs.Commands.Tests/XdgOpenCommandTests.cs` : chemin relatif, dossier, fichier absent, aucune app, plusieurs apps, URI, schéma inconnu, ligne de commande, refus (`v3/4`). Le scénario de parité (`CommandParityTests`) compare la commande dans un Web Worker et sur le fil principal.
+- `Tests/HackerOs.Ecosystem.Tests` : 82 apps intégrées dont 66 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`).
 - `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch`.
 
 ## Liste des tâches
@@ -127,5 +129,6 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.
 - [x] `ausearch` (`v3/8-settings-security`, ADR 0100).
+- [x] `xdg-open` (`v3/4-intents`, ADR 0096).
 - [x] Tests et documentation.
 - [x] ADR 0069 (`rebuild/5-graceful-stop`) : `find`, `grep` (et `grep -r`), `du`, `zip`, `unzip`, `locate` appellent `HackProcess.CheckpointAsync` dans leurs boucles ; `kill` envoie `Terminated`.
