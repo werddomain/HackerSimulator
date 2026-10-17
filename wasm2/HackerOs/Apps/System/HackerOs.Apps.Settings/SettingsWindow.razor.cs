@@ -56,7 +56,6 @@ public partial class SettingsWindow : IAsyncDisposable
     private SettingLayer _targetLayer = SettingLayer.User;
     private bool _isSavingAppearance;
     private string? _appearanceMessage;
-    private List<(string Extension, string AppName)> _fileHandlers = [];
 
     private bool _isResetDialogOpen;
     private bool _isResetting;
@@ -126,12 +125,6 @@ public partial class SettingsWindow : IAsyncDisposable
         ShowAppPage(LaunchArguments);
         await OpenAppearanceAsync();
         await RefreshUserThemesAsync();
-
-        IReadOnlyList<HackAppInfo> apps = await HackApps.GetInstalledAsync(AppContext.CancellationToken);
-        _fileHandlers = [.. apps
-            .SelectMany(app => app.FileHandlers.SelectMany(handler =>
-                handler.Extensions.Select(extension => (Extension: extension, AppName: app.Name))))
-            .OrderBy(entry => entry.Extension, StringComparer.OrdinalIgnoreCase)];
 
         await RefreshConnectionAsync();
     }

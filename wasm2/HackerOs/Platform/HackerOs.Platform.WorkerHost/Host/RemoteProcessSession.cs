@@ -645,6 +645,17 @@ internal sealed class RemoteProcessSession
                 var apps = await c.Catalog.GetHandlersAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteApps(writer, apps);
             }
+            case RemoteOps.CatalogDefaults:
+            {
+                var associations = await c.Catalog.GetDefaultHandlersAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteAssociations(writer, associations);
+            }
+            case RemoteOps.CatalogSetDefault:
+            {
+                HackerOs.AppSdk.Apps.HackDefaultHandlerStatus status = await c.Catalog.SetUserDefaultHandlerAsync(
+                    a.GetString("t"), a.GetString("a"), a.GetOptionalString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => writer.WriteNumber("s", (int)status);
+            }
             case RemoteOps.ServiceStart:
                 return ServiceResult(await c.Services.StartAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
             case RemoteOps.ServiceStop:

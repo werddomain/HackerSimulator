@@ -256,7 +256,8 @@ public sealed class AppExecutionContextFactory
         AppClockGateway clock = new(_clock);
         AppCatalogGateway? catalogGateway = _appCatalog is null
             ? null
-            : new AppCatalogGateway(_appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation);
+            : new AppCatalogGateway(
+                _appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation, principal, capabilities);
         AppManagementGateway? managementGateway = _appCatalog?.Installation is null
             ? null
             : new AppManagementGateway(

@@ -81,7 +81,7 @@ relevé sur `v3/base` depuis `v3/12`. Sans IPv6, la suite se replie sur
 |---|---|---|
 | La géométrie des fenêtres est enregistrée mais jamais relue : une fenêtre ne rouvre pas à sa dernière position. | `v3/3` | Écart avec l'ADR 0095. |
 | Une touche pressée dans une iframe (navigateur, sites) reste dans l'iframe ; les raccourcis de l'OS n'y marchent pas. | `v3/3` | Choix d'implémentation, non validé. |
-| Pas de couche utilisateur pour les associations de fichiers et de schémas (`~/.config/hackeros/file-associations.json`) : seule `/etc/hackeros/file-associations.json` existe. | `v3/4` | Contredit une phrase de l'ADR 0096 ; question ouverte. « Afficher dans le dossier » demande la capacité `apps.launch`. |
+| ~~Pas de couche utilisateur pour les associations de fichiers et de schémas.~~ Comblée par `v3/4b` (ADR 0121, [`user-file-associations.md`](user-file-associations.md)). « Afficher dans le dossier » demande la capacité `apps.launch`. | `v3/4` | Fermée pour les associations. |
 | `hackwebd` démarre à la connexion, pas au boot. | `v3/5` | Question ouverte ; un passage au boot demande son ADR. |
 | `hackbackup` exige `sudo` ; une restauration en mode fusion redémarre aussi la machine ; pas de fixture IndexedDB v1 (jamais commitée). | `v3/7` | Documenté dans [`system-backup.md`](system-backup.md). |
 | Pas de commande `passwd` ni de réinitialisation d'un mot de passe par un administrateur ; les points d'entrée du trousseau sont prêts. | `v3/8` | Question ouverte (défaut : plus tard). |

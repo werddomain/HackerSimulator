@@ -638,7 +638,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<FileAssociationResolver>(provider => new FileAssociationResolver(
             provider.GetRequiredService<AppCatalog>(),
             provider.GetRequiredService<IAppEnablementRegistry>(),
-            provider.GetRequiredService<IOsSettingsService>()));
+            provider.GetRequiredService<IOsSettingsService>(),
+            provider.GetRequiredService<IFileSystemService>()));
 
         // Simulated network (ADR 0085, replacing ADR 0034's smoke-test-only seed): the default
         // hosts and sites (hackersearch.net is the Browser's home page) plus the .hackeros

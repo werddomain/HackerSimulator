@@ -629,7 +629,7 @@ public sealed partial class ShellInterpreterTests
             ShellHost = new ShellHostService(Interpreter, Manager, new FakeElevationService(Tickets));
             Dispatcher = new AppIntentDispatcher(
                 _orchestrator, catalog, enablement,
-                new FileAssociationResolver(catalog, enablement, new OsSettingsService(fileSystem, _sessions, clock)),
+                new FileAssociationResolver(catalog, enablement, new OsSettingsService(fileSystem, _sessions, clock), fileSystem),
                 _grants, fileSystem);
         }
 

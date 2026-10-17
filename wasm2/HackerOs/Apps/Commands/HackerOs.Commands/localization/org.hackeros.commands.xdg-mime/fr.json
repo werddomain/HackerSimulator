@@ -1,0 +1,5 @@
+{
+  "name": "xdg-mime",
+  "description": "Consulte et choisit les applications par défaut de l'utilisateur pour les types de fichiers et les schémas d'URI",
+  "terminalUsage": "xdg-mime query { default <type> | filetype <fichier> } | default <id-app> <type>..."
+}
