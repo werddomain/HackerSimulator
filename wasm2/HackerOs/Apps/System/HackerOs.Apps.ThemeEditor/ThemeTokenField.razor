@@ -2,7 +2,7 @@
 @* One editable theme token (ADR 0103 §2.1): a typed input, its validation message and its help. *@
 <div class="token-field @(Error is null ? "" : "has-error") @(Value is null ? "is-inherited" : "is-set")">
     <div class="token-head">
-        <label class="token-label" for="@InputId">@Token.Label</label>
+        <label class="token-label" for="@InputId">@Token.GetLabel(Strings.CultureOf(L))</label>
         <code class="token-name">@Token.Name</code>
         <span class="token-type">@Strings.TypeLabel(L, Token.Type)</span>
     </div>
@@ -11,7 +11,7 @@
         {
             <input type="color"
                    class="token-swatch"
-                   aria-label="@L["Field.Pick", Token.Label]"
+                   aria-label="@L["Field.Pick", Token.GetLabel(Strings.CultureOf(L))]"
                    value="@(ThemeTokenValidator.ToHexColor(Value ?? Token.Example) ?? "#000000")"
                    @onchange="OnPickedAsync" />
         }
@@ -33,7 +33,7 @@
         }
         else
         {
-            <span>@Token.Description</span>
+            <span>@Token.GetDescription(Strings.CultureOf(L))</span>
         }
     </p>
 </div>

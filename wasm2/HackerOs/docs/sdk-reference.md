@@ -418,9 +418,10 @@ Pour lire ou écrire un thème utilisateur (ADR 0103, détail dans
 | Type | Membres |
 |---|---|
 | `ThemeTokenCatalog` | `All`, `InGroup(ThemeTokenGroup)`, `TryGet(name, out ThemeTokenDefinition)` : les 68 jetons `--hos-*` modifiables |
-| `ThemeTokenDefinition` | `Name`, `Type` (`Color`, `Length`, `Duration`, `FontFamily`, `Number`), `Group`, `Label`, `Description`, `Example`, `RgbCompanion` |
-| `ThemeTokenValidator` | `TryValidate(type ou nom, valeur, out normalisée, out erreur)`, `TryGetRgbTriplet`, `ToHexColor` |
+| `ThemeTokenDefinition` | `Name`, `Type` (`Color`, `Length`, `Duration`, `FontFamily`, `Number`), `Group`, `Label`, `Description` (anglais), `GetLabel(culture)`, `GetDescription(culture)`, `Example`, `RgbCompanion` |
+| `ThemeTokenValidator` | `TryValidate(type ou nom, valeur, out normalisée, out erreur)`, `TryValidate(type, valeur, culture, out normalisée, out erreur)`, `TryGetRgbTriplet`, `ToHexColor` |
 | `ThemeFile` | `Parse(texte, origine, chemin)` → `ThemeFileParseResult` (thème + diagnostics), `Serialize(UserTheme)`, `IsValidId`, `Extension` (`.theme`), `MediaType` |
+| `ThemeFileDiagnostic` | `Line`, `Message` (anglais), `IsError`, `Path`, `GetMessage(culture)`, `ToString(culture)` |
 | `UserTheme` | `Id`, `Name`, `BaseThemeId`, `Platforms`, `Tokens`, `Origin`, `SourcePath`, `Supports`, `ToCssProperties` |
 | `UserThemeLibrary` | `SystemDirectory`, `GetUserDirectory(home)`, `GetUserThemePath(home, id)`, `Build`, `LoadAsync(listFiles, readFile, home)` |
 | `ResolvedTheme` | `Resolve(id, plateforme, thèmes)` → `BaseThemeId`, `UserTheme`, `IsFallback` |

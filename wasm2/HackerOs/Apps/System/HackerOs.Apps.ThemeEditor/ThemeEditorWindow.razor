@@ -81,7 +81,7 @@
                         <ul>
                             @foreach (ThemeFileDiagnostic diagnostic in _library.Diagnostics)
                             {
-                                <li class="mono">@diagnostic</li>
+                                <li class="mono">@diagnostic.ToString(Strings.CultureOf(L))</li>
                             }
                         </ul>
                     </details>

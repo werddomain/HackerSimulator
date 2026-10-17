@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace HackerOs.Theming.Abstractions;
 
 /// <summary>
@@ -48,8 +50,8 @@ public enum ThemeTokenGroup
 /// <param name="Name">CSS custom property name, such as <c>--hos-accent</c>.</param>
 /// <param name="Type">Value grammar enforced when a theme file is read.</param>
 /// <param name="Group">Editor group.</param>
-/// <param name="Label">Short human-readable label.</param>
-/// <param name="Description">What the token changes on screen; used by the editor's help and documentation.</param>
+/// <param name="Label">Short human-readable label, in English; <see cref="GetLabel"/> translates it.</param>
+/// <param name="Description">What the token changes on screen, in English (used by the editor's help and documentation); <see cref="GetDescription"/> translates it.</param>
 /// <param name="Example">A valid sample value.</param>
 /// <param name="RgbCompanion">
 /// Name of a companion token holding the same color as an <c>r, g, b</c> triplet (for
@@ -63,4 +65,38 @@ public sealed record ThemeTokenDefinition(
     string Label,
     string Description,
     string Example,
-    string? RgbCompanion = null);
+    string? RgbCompanion = null)
+{
+    /// <summary>
+    /// Gets the label in a language (ADR 0104). <see cref="Label"/> stays the English text; the
+    /// translation is looked up by token name, so a token unknown to the resources keeps its
+    /// English label.
+    /// </summary>
+    /// <param name="culture">
+    /// Language of the reader: an app passes <c>AppContext.Culture</c>, the platform
+    /// <c>SessionLocaleService.Culture</c>; <see langword="null"/> returns <see cref="Label"/>.
+    /// </param>
+    public string GetLabel(CultureInfo? culture) =>
+        culture is null ? Label : Strings.Get($"{ResourceKey}.Label", culture) ?? Label;
+
+    /// <summary>Gets the description in a language (ADR 0104); see <see cref="GetLabel"/>.</summary>
+    /// <param name="culture">Language of the reader; <see langword="null"/> returns <see cref="Description"/>.</param>
+    public string GetDescription(CultureInfo? culture) =>
+        culture is null ? Description : Strings.Get($"{ResourceKey}.Description", culture) ?? Description;
+
+    /// <summary>
+    /// Gets the resource key prefix of the token: <c>--hos-bg-base</c> becomes <c>Token.BgBase</c>.
+    /// The CSS name itself is never translated.
+    /// </summary>
+    internal string ResourceKey => GetResourceKey(Name);
+
+    /// <summary>Converts a token name to its resource key prefix.</summary>
+    /// <param name="name">CSS custom property name.</param>
+    internal static string GetResourceKey(string name)
+    {
+        string bare = name.StartsWith("--hos-", StringComparison.Ordinal) ? name[6..] : name.TrimStart('-');
+        return "Token." + string.Concat(bare
+            .Split('-', StringSplitOptions.RemoveEmptyEntries)
+            .Select(static part => char.ToUpperInvariant(part[0]) + part[1..]));
+    }
+}

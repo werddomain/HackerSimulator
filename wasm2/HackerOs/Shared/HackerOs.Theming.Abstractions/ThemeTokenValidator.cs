@@ -37,21 +37,68 @@ public static partial class ThemeTokenValidator
     /// <param name="type">Token type.</param>
     /// <param name="value">Raw value from a theme file or the editor.</param>
     /// <param name="normalized">The trimmed value when valid.</param>
+    /// <param name="error">A short reason in English when invalid, for the warning or the editor.</param>
+    /// <returns><see langword="true"/> when the value is acceptable for <paramref name="type"/>.</returns>
+    public static bool TryValidate(ThemeTokenType type, string? value, out string normalized, out string? error) =>
+        TryValidate(type, value, culture: null, out normalized, out error);
+
+    /// <summary>Validates and normalizes (trims) one value for a token type, explaining a refusal in a language.</summary>
+    /// <param name="type">Token type.</param>
+    /// <param name="value">Raw value from a theme file or the editor.</param>
+    /// <param name="culture">
+    /// Language of <paramref name="error"/> (ADR 0104): an app passes <c>AppContext.Culture</c>;
+    /// <see langword="null"/> reads English.
+    /// </param>
+    /// <param name="normalized">The trimmed value when valid.</param>
     /// <param name="error">A short reason when invalid, for the warning or the editor.</param>
     /// <returns><see langword="true"/> when the value is acceptable for <paramref name="type"/>.</returns>
-    public static bool TryValidate(ThemeTokenType type, string? value, out string normalized, out string? error)
+    public static bool TryValidate(ThemeTokenType type, string? value, CultureInfo? culture, out string normalized, out string? error)
+    {
+        bool valid = Check(type, value, out normalized, out ThemeText? reason);
+        error = reason?.Format(culture);
+        return valid;
+    }
+
+    /// <summary>Validates one value for a named token of <see cref="ThemeTokenCatalog"/>.</summary>
+    /// <param name="tokenName">Token name.</param>
+    /// <param name="value">Raw value.</param>
+    /// <param name="normalized">The trimmed value when valid.</param>
+    /// <param name="error">Why the token or value was refused, in English.</param>
+    /// <returns><see langword="true"/> when the token is known and the value valid.</returns>
+    public static bool TryValidate(string tokenName, string? value, out string normalized, out string? error)
+    {
+        bool valid = Check(tokenName, value, out normalized, out ThemeText? reason);
+        error = reason?.Format(null);
+        return valid;
+    }
+
+    /// <summary>Validates one value for a named token, keeping the reason translatable (for file diagnostics).</summary>
+    internal static bool Check(string tokenName, string? value, out string normalized, out ThemeText? error)
+    {
+        if (!ThemeTokenCatalog.TryGet(tokenName, out ThemeTokenDefinition? token))
+        {
+            normalized = string.Empty;
+            error = new ThemeText("Validator.UnknownToken", tokenName);
+            return false;
+        }
+
+        return Check(token.Type, value, out normalized, out error);
+    }
+
+    // The checks themselves; the reason stays a resource key until someone shows it.
+    private static bool Check(ThemeTokenType type, string? value, out string normalized, out ThemeText? error)
     {
         normalized = (value ?? string.Empty).Trim();
         error = null;
         if (normalized.Length == 0)
         {
-            error = "The value is empty.";
+            error = new ThemeText("Validator.Empty");
             return false;
         }
 
         if (normalized.Length > MaxValueLength)
         {
-            error = $"The value is longer than {MaxValueLength} characters.";
+            error = new ThemeText("Validator.TooLong", MaxValueLength);
             return false;
         }
 
@@ -67,36 +114,10 @@ public static partial class ThemeTokenValidator
 
         if (!valid)
         {
-            error = type switch
-            {
-                ThemeTokenType.Color => "Expected a color such as #39ff14, rgb(57 255 20) or a color name.",
-                ThemeTokenType.Length => "Expected a length such as 0.5rem, 12px or 50%.",
-                ThemeTokenType.Duration => "Expected a duration such as 150ms or 0.2s, optionally followed by ease, linear, ease-in, ease-out or ease-in-out.",
-                ThemeTokenType.FontFamily => "Expected font names separated by commas, such as \"Fira Code\", monospace.",
-                ThemeTokenType.Number => "Expected a number such as 600 or 0.8.",
-                _ => "Unknown token type."
-            };
+            error = new ThemeText(Enum.IsDefined(type) ? $"Validator.Expected.{type}" : "Validator.UnknownType");
         }
 
         return valid;
-    }
-
-    /// <summary>Validates one value for a named token of <see cref="ThemeTokenCatalog"/>.</summary>
-    /// <param name="tokenName">Token name.</param>
-    /// <param name="value">Raw value.</param>
-    /// <param name="normalized">The trimmed value when valid.</param>
-    /// <param name="error">Why the token or value was refused.</param>
-    /// <returns><see langword="true"/> when the token is known and the value valid.</returns>
-    public static bool TryValidate(string tokenName, string? value, out string normalized, out string? error)
-    {
-        if (!ThemeTokenCatalog.TryGet(tokenName, out ThemeTokenDefinition? token))
-        {
-            normalized = string.Empty;
-            error = $"Unknown token '{tokenName}'.";
-            return false;
-        }
-
-        return TryValidate(token.Type, value, out normalized, out error);
     }
 
     /// <summary>

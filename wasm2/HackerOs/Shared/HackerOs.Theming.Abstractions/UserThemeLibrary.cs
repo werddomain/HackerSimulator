@@ -72,16 +72,16 @@ public static class UserThemeLibrary
 
             if (ThemeCatalog.TryGet(theme.Id, out _))
             {
-                diagnostics.Add(new(null, $"The id '{theme.Id}' is a built-in theme; this file is ignored.", IsError: true, file.Path));
+                diagnostics.Add(ThemeFileDiagnostic.Create(null, new ThemeText("Library.BuiltInId", theme.Id), isError: true, file.Path));
                 continue;
             }
 
             if (themes.FirstOrDefault(existing => existing.Id == theme.Id) is { } previous)
             {
-                diagnostics.Add(new(
+                diagnostics.Add(ThemeFileDiagnostic.Create(
                     null,
-                    $"The id '{theme.Id}' is already used by {previous.SourcePath}; this file is ignored.",
-                    IsError: true,
+                    new ThemeText("Library.IdInUse", theme.Id, previous.SourcePath),
+                    isError: true,
                     file.Path));
                 continue;
             }
@@ -138,7 +138,7 @@ public static class UserThemeLibrary
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    diagnostics.Add(new(null, $"Cannot read the file: {exception.Message}", IsError: true, path));
+                    diagnostics.Add(ThemeFileDiagnostic.Create(null, new ThemeText("Library.Unreadable", exception.Message), isError: true, path));
                 }
             }
         }

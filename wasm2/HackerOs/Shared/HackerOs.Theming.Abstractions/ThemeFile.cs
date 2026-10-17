@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -5,14 +6,46 @@ namespace HackerOs.Theming.Abstractions;
 
 /// <summary>One warning or error found while reading a <c>.theme</c> file.</summary>
 /// <param name="Line">1-based line number, or <see langword="null"/> for the whole file.</param>
-/// <param name="Message">Human-readable reason.</param>
+/// <param name="Message">Human-readable reason, in English; <see cref="GetMessage"/> translates it.</param>
 /// <param name="IsError"><see langword="true"/> when the whole theme is refused; otherwise the line is ignored.</param>
 /// <param name="Path">File path, when known.</param>
 public sealed record ThemeFileDiagnostic(int? Line, string Message, bool IsError, string? Path = null)
 {
+    /// <summary>
+    /// The reason as a resource key and arguments, when the diagnostic was produced by this package,
+    /// so it can be shown in the reader's language; <see langword="null"/> for a diagnostic created
+    /// with a plain <see cref="Message"/>.
+    /// </summary>
+    internal ThemeText? Text { get; init; }
+
+    /// <summary>Gets the reason in a language (ADR 0104).</summary>
+    /// <param name="culture">
+    /// Language of the reader: an app passes <c>AppContext.Culture</c>, the platform
+    /// <c>SessionLocaleService.Culture</c>; <see langword="null"/> returns <see cref="Message"/>.
+    /// </param>
+    public string GetMessage(CultureInfo? culture) => culture is null || Text is null ? Message : Text.Format(culture);
+
+    /// <summary>
+    /// Formats the diagnostic as <c>path:line: warning: reason</c> in a language, for display. The
+    /// invariant <see cref="ToString()"/> stays English: it is the form written to the logs.
+    /// </summary>
+    /// <param name="culture">Language of the reader; <see langword="null"/> gives <see cref="ToString()"/>.</param>
+    public string ToString(CultureInfo? culture) => culture is null
+        ? ToString()
+        : Format(
+            Path ?? Strings.Format(culture, "Diagnostic.NoPath"),
+            Strings.Format(culture, IsError ? "Diagnostic.Error" : "Diagnostic.Warning"),
+            GetMessage(culture));
+
     /// <inheritdoc />
-    public override string ToString() =>
-        $"{Path ?? "theme"}{(Line is { } line ? $":{line}" : string.Empty)}: {(IsError ? "error" : "warning")}: {Message}";
+    public override string ToString() => Format(Path ?? "theme", IsError ? "error" : "warning", Message);
+
+    /// <summary>Creates a diagnostic whose reason is a translatable text; <see cref="Message"/> holds its English form.</summary>
+    internal static ThemeFileDiagnostic Create(int? line, ThemeText text, bool isError, string? path) =>
+        new(line, text.Format(null), isError, path) { Text = text };
+
+    private string Format(string path, string severity, string message) =>
+        $"{path}{(Line is { } line ? $":{line}" : string.Empty)}: {severity}: {message}";
 }
 
 /// <summary>Result of <see cref="ThemeFile.Parse"/>.</summary>
@@ -59,16 +92,17 @@ public static partial class ThemeFile
     {
         ArgumentNullException.ThrowIfNull(content);
         List<ThemeFileDiagnostic> diagnostics = [];
-        void Warn(int? line, string message) => diagnostics.Add(new(line, message, IsError: false, path));
-        ThemeFileParseResult Fail(int? line, string message)
+        void Warn(int? line, string key, params object?[] arguments) =>
+            diagnostics.Add(ThemeFileDiagnostic.Create(line, new ThemeText(key, arguments), isError: false, path));
+        ThemeFileParseResult Fail(string key, params object?[] arguments)
         {
-            diagnostics.Add(new(line, message, IsError: true, path));
+            diagnostics.Add(ThemeFileDiagnostic.Create(null, new ThemeText(key, arguments), isError: true, path));
             return new ThemeFileParseResult(null, diagnostics);
         }
 
         if (Encoding.UTF8.GetByteCount(content) > MaxFileBytes)
         {
-            return Fail(null, $"The file is larger than {MaxFileBytes / 1024} KiB.");
+            return Fail("File.TooLarge", MaxFileBytes / 1024);
         }
 
         string? id = null;
@@ -92,7 +126,7 @@ public static partial class ThemeFile
             {
                 if (line[^1] != ']')
                 {
-                    Warn(lineNumber, "Malformed section header; line ignored.");
+                    Warn(lineNumber, "File.MalformedSection");
                     section = null;
                     continue;
                 }
@@ -100,7 +134,7 @@ public static partial class ThemeFile
                 section = line[1..^1].Trim().ToLowerInvariant();
                 if (section is not (ThemeSection or TokensSection))
                 {
-                    Warn(lineNumber, $"Unknown section [{section}]; its lines are ignored.");
+                    Warn(lineNumber, "File.UnknownSection", section);
                 }
 
                 continue;
@@ -109,7 +143,7 @@ public static partial class ThemeFile
             int equals = line.IndexOf('=');
             if (equals <= 0)
             {
-                Warn(lineNumber, "Expected 'key = value'; line ignored.");
+                Warn(lineNumber, "File.ExpectedKeyValue");
                 continue;
             }
 
@@ -124,28 +158,28 @@ public static partial class ThemeFile
                         case "name": name = value; break;
                         case "base": baseThemeId = value; break;
                         case "platforms": platformsValue = value; platformsLine = lineNumber; break;
-                        default: Warn(lineNumber, $"Unknown key '{key}' in [theme]; ignored."); break;
+                        default: Warn(lineNumber, "File.UnknownKey", key); break;
                     }
 
                     break;
                 case TokensSection:
-                    if (!ThemeTokenValidator.TryValidate(key, value, out string normalized, out string? error))
+                    if (!ThemeTokenValidator.Check(key, value, out string normalized, out ThemeText? error))
                     {
-                        Warn(lineNumber, $"{error} Token '{key}' ignored.");
+                        Warn(lineNumber, "File.TokenIgnored", error, key);
                         break;
                     }
 
                     int existing = tokens.FindIndex(pair => pair.Key == key);
                     if (existing >= 0)
                     {
-                        Warn(lineNumber, $"Token '{key}' is set twice; the last value wins.");
+                        Warn(lineNumber, "File.TokenTwice", key);
                         tokens.RemoveAt(existing);
                     }
 
                     tokens.Add(new(key, normalized));
                     break;
                 case null:
-                    Warn(lineNumber, "Key outside of any section; line ignored.");
+                    Warn(lineNumber, "File.KeyOutsideSection");
                     break;
                 default:
                     // Unknown section, already reported on its header.
@@ -155,21 +189,19 @@ public static partial class ThemeFile
 
         if (!IsValidId(id))
         {
-            return Fail(null, id is null
-                ? "Missing 'id' in [theme]."
-                : $"Invalid id '{id}': use 1 to 64 lowercase letters, digits and dashes.");
+            return id is null ? Fail("File.MissingId") : Fail("File.InvalidId", id);
         }
 
         if (string.IsNullOrWhiteSpace(name) || name.Length > MaxNameLength || name.Any(char.IsControl))
         {
-            return Fail(null, $"Missing or invalid 'name' in [theme] (1 to {MaxNameLength} characters).");
+            return Fail("File.InvalidName", MaxNameLength);
         }
 
         if (!ThemeCatalog.TryGet(baseThemeId, out ThemeDefinition? baseTheme))
         {
-            return Fail(null, baseThemeId is null
-                ? "Missing 'base' in [theme]."
-                : $"Unknown base theme '{baseThemeId}': use a built-in theme such as {WellKnownThemeIds.HackerOs}.");
+            return baseThemeId is null
+                ? Fail("File.MissingBase")
+                : Fail("File.UnknownBase", baseThemeId, WellKnownThemeIds.HackerOs);
         }
 
         List<ThemePlatform> platforms = [];
@@ -189,7 +221,7 @@ public static partial class ThemeFile
                 };
                 if (platform is null)
                 {
-                    Warn(platformsLine, $"Unknown platform '{part}'; use desktop or mobile.");
+                    Warn(platformsLine, "File.UnknownPlatform", part);
                 }
                 else if (!platforms.Contains(platform.Value))
                 {
@@ -199,7 +231,7 @@ public static partial class ThemeFile
 
             if (platforms.Count == 0)
             {
-                Warn(platformsLine, $"No valid platform; the base theme's ({FormatPlatform(baseTheme.Platform)}) is used.");
+                Warn(platformsLine, "File.NoPlatform", FormatPlatform(baseTheme.Platform));
                 platforms.Add(baseTheme.Platform);
             }
         }
