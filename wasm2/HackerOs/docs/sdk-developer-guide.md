@@ -484,6 +484,27 @@ demande l'arrêt (ADR 0069), avant l'annulation du jeton :
 `Logout`, `Shutdown` ou `Disabled` sinon. C'est là qu'un service qui tient un
 état termine ou annule son opération en cours.
 
+États et santé (ADR 0097, ADR 0107) : le service est `activating` tant que
+`OnStartAsync(context, token)` (facultatif : ouvrir un port, charger un cache)
+n'est pas revenu, puis `active`. Un démarrage de plus de 30 s le fait tuer en
+`failed (Result: timeout)`. Une exception non gérée, un code de sortie non nul
+ou un `kill -9` le laissent `failed` avec la raison, jusqu'au prochain
+démarrage ou à `systemctl reset-failed`. Pendant qu'il tourne, il peut dire
+qu'il va mal sans s'arrêter :
+
+```csharp
+ReportHealth(HackServiceHealth.Degraded, "database unreachable");
+```
+
+Démarrage automatique (`AutoStart => true`, mode `Automatic`) : après chaque
+connexion, sous l'utilisateur ; arrêté à la déconnexion. Une **app système**
+peut déclarer `public override AppServiceStartup? ServiceStartup =>
+AppServiceStartup.Boot;` : elle démarre alors à la fin du boot, avant l'écran
+de connexion, sous le compte `hackeros-svc` (maison `/var/lib/hackeros-svc`),
+continue après la déconnexion et ne s'arrête qu'à l'extinction. Une autre app
+qui demande `Boot` démarre à la connexion, avec un avertissement dans
+`/var/log/syslog`.
+
 Le service apparaît dans l'onglet Services du gestionnaire de tâches et dans
 `/proc`. Il communique avec les autres apps par les sujets du bus
 d'événements (`context.Events.Publish(topic, payload)` dans son propre espace

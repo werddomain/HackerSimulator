@@ -117,6 +117,13 @@ public interface IAppInstallationService
 
 - `GetUninstallClosure(appId)` : les apps qui en dépendent (dépendants d'abord)
   puis l'app elle-même ; la boîte de confirmation les liste.
+- `PlanUninstallAsync(appId)` (ADR 0097 §5) : la fermeture et les processus
+  actifs qu'elle arrêtera (`AppProcessInfo` : PID, app, nom, utilisateur), sans
+  rien changer. Paramètres les liste dans la confirmation (« These processes
+  will be stopped »). Le résultat de `UninstallAsync` donne
+  `StoppedProcesses`, avec `Forced` pour ceux tués après leur délai ; chacun est
+  écrit dans `/var/log/syslog`. Dans le SDK : `HackAppManagement.PlanUninstallAsync`
+  et `UninstallWithReportAsync` (`HackUninstallPlan`, `HackUninstallReport`).
 - `UninstallAsync` écrit toute la fermeture dans le fichier de la portée.
   Refus : `apps.app.system:<id>`, `apps.closure.system-app:<id système>`,
   `apps.app.not-found:<id>`, `apps.session.required`.

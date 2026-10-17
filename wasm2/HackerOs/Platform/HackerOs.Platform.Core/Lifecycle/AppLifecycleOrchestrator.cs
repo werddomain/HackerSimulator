@@ -47,6 +47,7 @@ public sealed class AppLifecycleOrchestrator
     private readonly IDangerousCapabilityGate? _dangerousCapabilityGate;
     private readonly LoginEnvironmentProvider? _loginEnvironment;
     private readonly IRemoteProcessHost? _remoteHost;
+    private readonly ISimulationClock? _clock;
     private readonly ILogger _logger;
     private readonly ServiceStateTable _serviceStates;
     private readonly object _sync = new();
@@ -142,6 +143,7 @@ public sealed class AppLifecycleOrchestrator
         _loginEnvironment = loginEnvironment;
         _remoteHost = remoteHost;
         _logger = (ILogger?)logger ?? NullLogger.Instance;
+        _clock = clock;
         _serviceStates = new ServiceStateTable(clock is null ? static () => DateTimeOffset.UtcNow : () => clock.UtcNow);
         _serviceStates.Failed += OnServiceFailed;
         _eventBus?.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
@@ -1327,7 +1329,8 @@ public sealed class AppLifecycleOrchestrator
             return;
         }
 
-        await Task.Delay(timeout).ConfigureAwait(false);
+        // Simulated time when the OS has a clock (a paused simulation does not time a start out).
+        await (_clock?.DelayAsync(timeout) ?? Task.Delay(timeout)).ConfigureAwait(false);
         if (_serviceStates.IsActivating(appId, pid) && _processManager.TryGetActive(pid, out _))
         {
             _logger.LogWarning("{Unit}: start operation timed out. Terminating.", UnitNameOf(appId));
@@ -1365,14 +1368,16 @@ public sealed class AppLifecycleOrchestrator
             // Expected once the process token is cancelled. StopInstanceAsync (logout, shutdown,
             // disable) unregisters the instance first and ends the process itself; a SIGTERM from
             // another process (kill, End task, ADR 0069) leaves it registered: the service ended by
-            // honoring its token, so it completes within its grace period.
+            // honoring its token, so it completes within its grace period. So does a service whose
+            // scope was cancelled under it (the session root at logout, the system scope at
+            // shutdown): its unit must not stay active with no code running (ADR 0097).
             bool stoppedByEcosystem;
             lock (_sync)
             {
                 stoppedByEcosystem = !_running.ContainsKey(pid);
             }
 
-            if (!stoppedByEcosystem && context.StopRequest is not null && _processManager.TryGetActive(pid, out _))
+            if (!stoppedByEcosystem && _processManager.TryGetActive(pid, out _))
             {
                 try
                 {

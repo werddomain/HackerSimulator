@@ -53,6 +53,26 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void ServiceStartup_round_trips_and_is_omitted_for_a_manifest_written_before_ADR_0097()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Service,
+            FileHandlers = [],
+            Components = null,
+            ServiceStartup = AppServiceStartup.Boot
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        string legacy = AppManifestJsonSerializer.SerializeCanonical(manifest with { ServiceStartup = null });
+
+        Assert.Contains("\"serviceStartup\":\"boot\"", json, StringComparison.Ordinal);
+        Assert.Equal(AppServiceStartup.Boot, AppManifestJsonSerializer.DeserializeStrict(json).ServiceStartup);
+        Assert.DoesNotContain("serviceStartup", legacy, StringComparison.Ordinal);
+        Assert.Null(AppManifestJsonSerializer.DeserializeStrict(legacy).ServiceStartup);
+    }
+
+    [Fact]
     public void Components_round_trip_and_are_omitted_when_none()
     {
         AppManifest manifest = CreateManifest();

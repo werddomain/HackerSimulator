@@ -169,6 +169,35 @@ public sealed class AppIntentDispatcherTests
     }
 
     [Fact]
+    public async Task A_system_service_is_controlled_by_an_administrator_only_and_runs_as_the_service_account()
+    {
+        AppManifest boot = WaiterServiceManifest() with { ServiceStartup = AppServiceStartup.Boot };
+        Fixture user = new(["org.hackeros.waiter"], EchoManifest(), boot);
+        AuthenticatedPrincipal alice = await user.LoginAsync();
+        ServiceControlDispatchResult refusedStart = await user.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", alice.UserId.ToString(), "org.hackeros.waiter", alice);
+        ServiceControlDispatchResult refusedMode = await user.Dispatcher.SetServiceStartModeAsync(
+            "org.hackeros.echo", alice.UserId.ToString(), "org.hackeros.waiter", alice, ServiceStartMode.Disabled);
+
+        Fixture admin = new(["org.hackeros.waiter"], EchoManifest(), boot);
+        AuthenticatedPrincipal root = await admin.LoginAsAdministratorAsync();
+        ServiceControlDispatchResult started = await admin.Dispatcher.StartServiceAsync(
+            "org.hackeros.echo", root.UserId.ToString(), "org.hackeros.waiter", root);
+        ServiceControlDispatchResult setMode = await admin.Dispatcher.SetServiceStartModeAsync(
+            "org.hackeros.echo", root.UserId.ToString(), "org.hackeros.waiter", root, ServiceStartMode.Manual);
+        (_, ServiceStartMode mode) = await admin.Dispatcher.GetServiceStartModeAsync(
+            "org.hackeros.echo", root.UserId.ToString(), "org.hackeros.waiter", root);
+
+        Assert.Equal("service.system.administrator-required", refusedStart.ErrorCode);
+        Assert.Equal("service.system.administrator-required", refusedMode.ErrorCode);
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, started.Status);
+        Assert.True(admin.Manager.TryGetSingleton("org.hackeros.waiter", out ProcessRecord process));
+        Assert.Equal(HackerOs.Platform.Core.Sessions.ServiceAccount.UserId, process.UserId);
+        Assert.Equal(ServiceControlDispatchStatus.Succeeded, setMode.Status);
+        Assert.Equal(ServiceStartMode.Manual, mode);
+    }
+
+    [Fact]
     public async Task Execute_command_intent_resolves_a_terminal_app_by_its_command_name_and_runs_it()
     {
         Fixture fixture = new(EchoManifest());
@@ -509,6 +538,12 @@ public sealed class AppIntentDispatcherTests
         private readonly LocalLoginName _aliceLoginName;
 
         internal Fixture(params AppManifest[] manifests)
+            : this([], manifests)
+        {
+        }
+
+        /// <summary>A kernel whose host declared <paramref name="systemAppIds"/> system apps (ADR 0048).</summary>
+        internal Fixture(IReadOnlyCollection<string> systemAppIds, params AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -533,6 +568,9 @@ public sealed class AppIntentDispatcherTests
             users.CreateUser(
                 _aliceLoginName, "Alice", AppAuthority.User, group.Id,
                 credential: LocalPasswordHasher.Create("hunter2", iterations: 100));
+            users.CreateUser(
+                LocalLoginName.Parse("root"), "Root", AppAuthority.Administrator, group.Id,
+                credential: LocalPasswordHasher.Create("hunter2", iterations: 100));
 
             Session = new LocalSessionService(
                 users, seeder, eventBus, auditLog,
@@ -546,7 +584,7 @@ public sealed class AppIntentDispatcherTests
             AppExecutionContextFactory contextFactory = new(
                 Grants, fileSystem, eventBus, topicBus, notifications, diagnostics, clock, Manager);
 
-            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
+            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests, systemAppIds);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
             AppCatalog catalog = catalogResult.Catalog!;
 
@@ -585,6 +623,8 @@ public sealed class AppIntentDispatcherTests
         internal AppIntentDispatcher Dispatcher { get; }
 
         internal Task<AuthenticatedPrincipal> LoginAsync() => Session.LoginAsync(_aliceLoginName, "hunter2");
+
+        internal Task<AuthenticatedPrincipal> LoginAsAdministratorAsync() => Session.LoginAsync(LocalLoginName.Parse("root"), "hunter2");
 
         internal void Grant(string appId, AuthenticatedPrincipal principal, string capability) =>
             Grants.Grant(appId, principal.UserId.ToString(), capability, CapabilityGrantSource.UserApproval, AppAuthority.Administrator);

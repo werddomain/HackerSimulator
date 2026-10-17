@@ -46,6 +46,16 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_accepts_serviceStartup_only_on_a_service()
+    {
+        AppManifest window = CreateValidManifest() with { ServiceStartup = AppServiceStartup.Boot };
+        AppManifest invalid = CreateValidManifest() with { Kind = AppKind.Service, ServiceStartup = (AppServiceStartup)42 };
+
+        Assert.Contains(AppManifestValidator.Validate(window).Errors, error => error.Code == "manifest.serviceStartup.forbidden");
+        Assert.Contains(AppManifestValidator.Validate(invalid).Errors, error => error.Code == "manifest.serviceStartup.invalid");
+    }
+
+    [Fact]
     public void Validate_accepts_supportsBack_for_window_apps()
     {
         AppManifest manifest = CreateValidManifest() with { SupportsBack = true };

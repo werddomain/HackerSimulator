@@ -172,6 +172,9 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
             return AppInstallationResult.Failed("apps.session.required");
         }
 
+        // Taken before the edit: the file watcher may apply the new file (and stop them) before
+        // the reload below, which then has nothing left to stop (ADR 0097, section 5).
+        IReadOnlyList<AppProcessInfo> runningBefore = _orchestrator.GetRunningProcesses(closure);
         await EditAsync(gateway, path, content => AppsConfigDocument.MarkUninstalled(content, closure, defaultContent), createIfMissing: true, cancellationToken)
             .ConfigureAwait(false);
         foreach (string uninstalled in closure)
@@ -179,7 +182,14 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
             _logger.LogInformation("apps: {AppId} uninstalled (scope={Scope}, by={User})", uninstalled, ScopeName(scope), ActorName());
         }
 
-        IReadOnlyList<AppProcessInfo> stopped = await ReloadCoreAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AppProcessInfo> reloaded = await ReloadCoreAsync(cancellationToken).ConfigureAwait(false);
+        HashSet<long> reported = [.. reloaded.Select(process => process.Pid)];
+        IReadOnlyList<AppProcessInfo> stopped =
+        [
+            .. reloaded,
+            .. runningBefore.Where(process => !reported.Contains(process.Pid)
+                && !_orchestrator.TryGetRunningInstance(ProcessId.FromInt64(process.Pid), out _, out _))
+        ];
         foreach (AppProcessInfo process in stopped)
         {
             _logger.LogInformation(

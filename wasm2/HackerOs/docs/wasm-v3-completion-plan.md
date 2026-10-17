@@ -197,7 +197,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/2-game-removal`
 - [x] `v3/3-window-model` ([`window-model.md`](window-model.md))
 - [ ] `v3/4-intents`
-- [ ] `v3/5-services`
+- [x] `v3/5-services` (ADR 0097, ajusté par l'ADR 0107)
 - [ ] `v3/6-sdk-versioning`
 - [ ] `v3/7-storage-backup`
 - [ ] `v3/8-settings-security`
