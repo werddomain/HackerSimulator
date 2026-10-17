@@ -64,7 +64,6 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.NetworkRealAccess, CapabilityRisk.Dangerous },
         { AppCapabilities.NetworkListen, CapabilityRisk.Normal },
         { AppCapabilities.NetworkListenPrivileged, CapabilityRisk.Dangerous },
-        { AppCapabilities.GameplayDomainAccess, CapabilityRisk.Normal },
         { AppCapabilities.ShellControl, CapabilityRisk.Normal },
         { AppCapabilities.PermissionsManage, CapabilityRisk.Dangerous },
         { AppCapabilities.ServerConnectionManage, CapabilityRisk.Dangerous },

@@ -82,7 +82,6 @@ Détails : [`app-model.md`](app-model.md).
 | `NetworkRealAccess` | `network.real.access` | **dangereuse** | vrai réseau par le serveur relais |
 | `NetworkListen` | `network.listen` | normale | `HackHttpListener` sur un préfixe hors de son manifeste |
 | `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
-| `GameplayDomainAccess` | `gameplay.domain.access` | normale | moteur de jeu ; à retirer, le jeu vit dans un autre dépôt ([ADR 0092](adr/0092-game-in-a-separate-repository.md)) |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
 | `PermissionsManage` | `permissions.manage` | **dangereuse** | `HackPermissionAdministration` |
@@ -385,7 +384,7 @@ Détails : [`file-explorer.md`](file-explorer.md).
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 32 capacités.
+- [x] Types de définition d'une app et table complète des 31 capacités.
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.

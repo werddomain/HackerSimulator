@@ -41,8 +41,8 @@ est pas une : seul l'emplacement sous `Shared/` compte.
 
 | Projet | Peut référencer | Sinon |
 |---|---|---|
-| Projet d'app (`HackerOsAppProject=true`, tout projet sous `Apps/`) | `Shared/HackerOs.{App,Simulation,Theming,Game}.Abstractions`, les bibliothèques SDK, `Platform/HackerOs.Theming.Blazor`, un autre projet sous `Apps/` | `HOSAPP0030` |
-| Bibliothèque SDK | les quatre `*.Abstractions` ci-dessus, une autre bibliothèque SDK | `HOSSDK0001` |
+| Projet d'app (`HackerOsAppProject=true`, tout projet sous `Apps/`) | `Shared/HackerOs.{App,Simulation,Theming}.Abstractions`, les bibliothèques SDK, `Platform/HackerOs.Theming.Blazor`, un autre projet sous `Apps/` | `HOSAPP0030` |
+| Bibliothèque SDK | les trois `*.Abstractions` ci-dessus, une autre bibliothèque SDK | `HOSSDK0001` |
 
 Seules les références **directes** du projet comptent : une référence
 transitive est vérifiée dans le projet qui la déclare. Les `PackageReference`
