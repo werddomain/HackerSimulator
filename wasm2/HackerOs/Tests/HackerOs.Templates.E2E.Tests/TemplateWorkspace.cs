@@ -24,6 +24,12 @@ public sealed class TemplateWorkspace : IAsyncLifetime
     /// <summary>Gets the local feed.</summary>
     public string Feed { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// Gets the feed of app packages compiled against earlier SDK versions and never rebuilt
+    /// (<c>Tests/fixtures/sdk-compat/packages</c>, ADR 0114).
+    /// </summary>
+    public string FixtureFeed => Path.Combine(RepositoryRoot, "Tests", "fixtures", "sdk-compat", "packages");
+
     /// <inheritdoc />
     public async Task InitializeAsync()
     {
@@ -42,10 +48,12 @@ public sealed class TemplateWorkspace : IAsyncLifetime
               <packageSources>
                 <clear />
                 <add key="hackeros-local" value="{Feed}" />
+                <add key="hackeros-sdk-fixtures" value="{FixtureFeed}" />
                 <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
               </packageSources>
               <packageSourceMapping>
                 <packageSource key="hackeros-local"><package pattern="HackerOs.*" /></packageSource>
+                <packageSource key="hackeros-sdk-fixtures"><package pattern="Contoso.*" /></packageSource>
                 <packageSource key="nuget.org"><package pattern="*" /></packageSource>
               </packageSourceMapping>
             </configuration>

@@ -208,5 +208,5 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/12-localization` (ADR 0104, ADR 0111, [`localization.md`](localization.md))
 - [x] `v3/13-accessibility` ([`accessibility.md`](accessibility.md), ADR 0112)
 - [x] `v3/14-trimming` ([`trimmed-publish.md`](trimmed-publish.md), ADR 0113 ; assemblies HackerOS gardées entières)
-- [ ] `v3/15-sdk-freeze`
+- [x] `v3/15-sdk-freeze` (ADR 0114, [`building-on-hackeros.md`](building-on-hackeros.md))
 - [ ] `v3/16-final`

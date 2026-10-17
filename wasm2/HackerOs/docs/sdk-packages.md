@@ -9,18 +9,22 @@ Tout ce qui est publié porte une seule version, sort en paquets NuGet dans un
 flux **local** (`artifacts/local-nupkg`, jamais nuget.org), et cinq modèles
 `dotnet new` créent les projets.
 
+Le guide pas à pas d'un dépôt tiers (disposition, hôte, tests, montée de
+version) est [`building-on-hackeros.md`](building-on-hackeros.md).
+
 Les vérifications faites au chargement (version du SDK, commandes en double,
 empreintes des ressources, ADR 0098 §3 à §5) sont décrites dans
 [`app-model.md`](app-model.md#version-du-sdk-commandes-intégrité-adr-0098-3-5).
 
 ## Version unique
 
-- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui
-  `0.9.0-preview.1`), importé par `Directory.Build.props` : chaque projet de la
-  solution porte ce `Version`.
-- Jusqu'au gel du SDK 1.0 (chantier `v3/15`) : `0.9.0-preview.<n>`, `n` augmenté
-  de un par chaque chantier qui change une API publiée. Ensuite SemVer
-  (ADR 0019).
+- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.0.0`),
+  importé par `Directory.Build.props` : chaque projet de la solution porte ce
+  `Version`.
+- Avant le gel : `0.9.0-preview.<n>`. Depuis le gel du SDK 1.0 (chantier
+  `v3/15`, [ADR 0114](adr/0114-sdk-1-0-freeze.md)) : SemVer (ADR 0019),
+  correctif sans changement d'API, mineure pour un ajout, majeure pour une
+  rupture du SDK (voir « Gel du SDK 1.0 »).
 - `HackerOsSdk.Version` (`HackerOs.App.Abstractions`) est cette version à
   l'exécution (version informative de l'assembly, sans métadonnées `+sha`).
   Le générateur l'écrit comme `sdkCompatibility.minimumVersion` de chaque app ;
@@ -33,9 +37,8 @@ Un projet est publié quand il importe `Platform/Packaging.props` ;
 `Directory.Build.props` rend tous les autres non empaquetables. `Packaging.props`
 apporte les métadonnées communes (auteur, licence, dépôt, SourceLink, symboles
 `.snupkg`, documentation XML) et l'**analyseur d'API publique** : chaque
-bibliothèque liste sa surface dans `PublicAPI.Shipped.txt` /
-`PublicAPI.Unshipped.txt` (tout est encore « Unshipped » jusqu'au gel,
-ADR 0098 §8). Les avertissements de documentation XML sont des erreurs
+bibliothèque liste sa surface dans `PublicAPI.Shipped.txt` (la 1.0, gelée) et
+`PublicAPI.Unshipped.txt` (ce qui a changé depuis, voir « Gel du SDK 1.0 »). Les avertissements de documentation XML sont des erreurs
 (`TreatWarningsAsErrors`), donc chaque membre public est documenté.
 
 | Paquets | Contenu |
@@ -181,11 +184,60 @@ Les points d'entrée des modèles de commande et de service ont le constructeur
 `(AppManifest manifest)` par lequel l'OS démarre une app, plus un constructeur
 sans paramètre pour les tests unitaires.
 
+## Gel du SDK 1.0
+
+[ADR 0098](adr/0098-sdk-versions-packages-and-manifest-checks.md) §8 et
+[ADR 0114](adr/0114-sdk-1-0-freeze.md) :
+
+- Toute la surface des 39 bibliothèques est dans `PublicAPI.Shipped.txt` ;
+  chaque `PublicAPI.Unshipped.txt` ne contient que `#nullable enable`.
+- Après le gel, un ajout va dans `Unshipped` (`RS0016`, la correction
+  `dotnet format analyzers <csproj> --diagnostics RS0016 --severity info`
+  l'écrit) ; un retrait ou un changement est refusé (`RS0017`) tant qu'il n'est
+  pas écrit `*REMOVED*<ligne>` dans `Unshipped`. Une publication verse
+  `Unshipped` dans `Shipped` et choisit la version d'après son contenu.
+- **Promesse** : une app compilée contre `1.x` tourne sur tout OS `1.y`
+  (y ≥ x). Elle couvre ce qu'une app compile : les trois `*.Abstractions`
+  publiés, `HackerOs.AppSdk*`, `HackerOs.Theming.Blazor`, le contrat de build de
+  `HackerOs.App.Build` et le format du manifeste. La plateforme, l'hôte et les
+  types publics des apps de base suivent la même version **sans** cette
+  promesse : une mineure peut y casser un hôte (jamais une app), et chaque
+  rupture est listée ci-dessous.
+- Les trois API `[Obsolete]` (`BrowserClipboard`,
+  `IAppClipboardGateway.Get/SetFileReferencesAsync`) ont été retirées avant le
+  gel : la 1.0 n'en contient aucune.
+- Une app compilée en `0.9.0-preview.*` est refusée par l'OS 1.0 (autre
+  majeure) : elle doit être reconstruite.
+
+### Ruptures hors SDK
+
+Ruptures d'API publique de la plateforme, de l'hôte ou des apps de base, par
+version. Aucune depuis la 1.0.0.
+
+| Version | Paquet | Rupture | Que faire |
+|---|---|---|---|
+| — | — | — | — |
+
+### App de compatibilité
+
+`Tests/fixtures/sdk-compat` garde `packages/Contoso.Sdk1Compat.1.0.0.nupkg`,
+une app (fenêtre `com.contoso.sdk1-window`, commande `sdk1-compat`) compilée une
+fois contre les paquets `1.0.0` par `produce-fixture.sh`, hors du dépôt, et
+**jamais reconstruite**. Les tests la chargent dans l'OS courant ; à une 2.0,
+une app `2.0.0` s'y ajoute et celle de la 1.0 devient un test de refus.
+
+```bash
+build/pack-local.sh
+Tests/fixtures/sdk-compat/produce-fixture.sh     # seulement pour une nouvelle majeure
+```
+
 ## Tests
 
 | Où | Quoi |
 |---|---|
 | `Tests/HackerOs.Templates.E2E.Tests` | empaquette tout (`pack-local`, ou le flux de `HACKEROS_LOCAL_FEED`), installe les modèles dans un `DOTNET_CLI_HOME` isolé, génère et compile chaque modèle d'app hors du dépôt avec un cache NuGet isolé (manifeste, genre, version minimale du SDK vérifiés) ; puis génère un hôte, y ajoute une app fenêtrée et une commande générées, le compile (catalogue agrégé vérifié), le lance, crée le profil dans Chromium, ouvre l'app (`Clicked 0 times` puis `1`) et exécute `hello Morpheus` dans le terminal (`Hello, Morpheus!`). |
+| `Tests/HackerOs.Templates.E2E.Tests` (`A_host_runs_an_app_package_compiled_against_SDK_1_0_0`) | un hôte généré, avec `PackageReference` vers l'app de compatibilité 1.0.0 (source `hackeros-sdk-fixtures`), démarre dans Chromium ; la fenêtre enregistre et relit un fichier, `sdk1-compat still binds` s'exécute dans le terminal (ADR 0114 §4) |
+| `Tests/HackerOs.SdkCompatibility.Tests` | l'app de compatibilité 1.0.0 : admise par le catalogue courant, chaque type et membre HackerOS qu'elle référence existe, chaque méthode compile contre le SDK courant (JIT), la commande tourne (ADR 0114 §4) |
 | `Tests/HackerOs.App.Abstractions.Tests` (`HackerOsSdkTests`) | lecture de la version, compatibilité des plages |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | version du SDK lue dans la référence, empreintes et `HOSAPP0023`, `HOSAPP0022`, app plus récente que le SDK de l'hôte (`HOSAPP0021`) |
 | `Tests/HackerOs.Platform.Core.Tests` | `AppCatalog` (refus, cascade des dépendances, propriétaire des commandes), `AppAssetStore`, `ShellCommandResolver` |
@@ -197,7 +249,8 @@ Vérifié à la main aussi : une app qui ajoute la référence
 ## Décisions
 
 - **Une seule version** pour tout, plutôt qu'une version par paquet : le SDK, la
-  plateforme et les apps évoluent ensemble jusqu'au gel.
+  plateforme et les apps évoluent ensemble ; depuis le gel, la promesse SemVer
+  ne couvre que le SDK (ADR 0114 §2).
 - **Le même `HackerOs.Apps.targets`** dans le dépôt et dans le paquet, avec un
   interrupteur `HackerOsBuildFromPackage`, pour qu'aucune règle ne diverge.
 - **Frontière des paquets vérifiée sur les références résolues** (directes et
@@ -224,4 +277,5 @@ Vérifié à la main aussi : une app qui ajoute la référence
 - [x] `HackerOs.Ecosystem.Host` extrait, `AddHackerOsBrowserHost`, `HostAppCatalog`, jetons de design déplacés, trois hôtes mis à jour.
 - [x] `build/pack-local.sh` / `.ps1`, `build/nuget.config.sample`.
 - [x] Cinq modèles et leur test de bout en bout.
+- [x] Gel du SDK 1.0 (`v3/15`, ADR 0114) : tout en `Shipped`, version `1.0.0`, API obsolètes retirées, app de compatibilité et ses tests, guide [`building-on-hackeros.md`](building-on-hackeros.md).
 - [x] Documentation (ce fichier, `app-model`, `app-sdk`, `sdk-reference`, `sdk-developer-guide`, `building-and-testing`, `project-overview`, mesure des ressources, notes des documents archivés) et index.

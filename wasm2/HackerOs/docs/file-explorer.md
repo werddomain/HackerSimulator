@@ -68,8 +68,9 @@ file:///home/benoit/rapport.txt
 file:///home/benoit/Documents
 ```
 
-`IAppClipboardGateway.GetFileReferencesAsync` et `SetFileReferencesAsync` restent,
-marqués `[Obsolete]`, comme formes de « copier » (ADR 0056 §12).
+`IAppClipboardGateway.GetFileReferencesAsync` et `SetFileReferencesAsync`, anciennes
+formes de « copier » marquées `[Obsolete]` par l'ADR 0056 §12, sont retirées au gel
+du SDK 1.0 (ADR 0114 §3).
 
 ### Transferts (`FileTransfer`)
 

@@ -126,7 +126,7 @@ public static class AppDefinitionInspector
 
     /// <summary>
     /// Gets the App SDK version the assembly was compiled against (ADR 0098 §3), e.g.
-    /// <c>0.9.0-preview.1</c>: the informational version of the <c>HackerOs.App.Abstractions.dll</c>
+    /// <c>1.0.0</c>: the informational version of the <c>HackerOs.App.Abstractions.dll</c>
     /// found first in <paramref name="candidatePaths"/> (the app's dependency list, as MSBuild
     /// resolved it), read from its metadata without loading it. The tool shares its own copy of that
     /// assembly with the app (one <c>AppDefinition</c> type identity), so the loaded copy can be a

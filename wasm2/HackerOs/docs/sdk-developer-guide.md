@@ -74,7 +74,7 @@ produit dans `artifacts/local-nupkg`, un `nuget.config` (modèle
 projet :
 
 ```bash
-dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.0.9.0-preview.1.nupkg
+dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.1.0.0.nupkg
 dotnet new hackeros-window -n Contoso.Notes --appId com.contoso.notes
 dotnet new hackeros-host -n Contoso.Os          # un hôte qui lance tout l'OS
 ```
@@ -83,6 +83,9 @@ Le projet référence `HackerOs.AppSdk*` et `HackerOs.App.Build`
 (`PrivateAssets="all"`), qui apporte la génération du manifeste, le générateur
 de routes ASP.Hack et la règle de frontière sur les paquets (`HOSAPP0030`).
 Un hôte ajoute l'app par une `ProjectReference` ou une `PackageReference`.
+Le guide complet d'un dépôt tiers (disposition, version épinglée, hôte, tests,
+publication, montée de version, ce que la promesse du SDK 1.0 couvre) est
+[`building-on-hackeros.md`](building-on-hackeros.md).
 
 ## 2. Décrire l'app : `AppDefinition`
 
@@ -700,5 +703,6 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Installation dans l'hôte et test unitaire d'une commande.
 - [x] Compiler les exemples et exécuter le test contre `rebuild/base`.
 - [x] Construire une app ou un hôte depuis un autre dépôt avec les paquets locaux et les modèles (v3/6).
+- [x] Guide complet du dépôt tiers, SDK 1.0 (`v3/15`, ADR 0114) : [`building-on-hackeros.md`](building-on-hackeros.md).
 - [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).
 - [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).

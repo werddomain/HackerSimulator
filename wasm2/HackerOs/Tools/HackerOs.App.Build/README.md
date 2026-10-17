@@ -5,7 +5,7 @@ génération du `manifest.json`, règles de frontière du SDK (HOSAPP0030), gén
 et agrégation des paquets d'applications par un hôte.
 
 ```xml
-<PackageReference Include="HackerOs.App.Build" Version="0.9.0-preview.1" PrivateAssets="all" />
+<PackageReference Include="HackerOs.App.Build" Version="1.0.0" PrivateAssets="all" />
 ```
 
 Un hôte ajoute `<HackerOsAppHost>true</HackerOsAppHost>`. Publié avec `PublishTrimmed=true`, il garde

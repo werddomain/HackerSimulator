@@ -391,15 +391,15 @@ string? text = await HackClipboard.GetTextAsync();
   `x-special/gnome-copied-files`, lisible aussi en texte (les chemins).
 - **Capacités** `clipboard.read` (lecture) et `clipboard.write` (écriture,
   vidage), normales. `Changed` ne demande aucune capacité.
-- `GetFileReferencesAsync` / `SetFileReferencesAsync` : `[Obsolete]`, formes de
-  « copier ». L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
+- `GetFileReferencesAsync` / `SetFileReferencesAsync`, anciennes formes de
+  « copier », sont retirées au gel du SDK 1.0 (ADR 0114 §3). L'ancienne classe en mémoire `AppClipboardGateway` du SDK est
   supprimée (la vraie est dans Platform Core).
 - Passerelle : `IAppClipboardGateway Clipboard` (`AppClipboardGateway`, Platform Core).
 - **Partage avec la vraie machine** (ADR 0065) : le texte copié par une app part
   aussi vers le presse-papiers de l'hôte, et un collage de l'hôte devient
   l'entrée courante, selon la clé `sharing` de `/etc/hackeros/clipboard.config`.
-  Une app ne parle jamais à `navigator.clipboard` ; `BrowserClipboard` est
-  `[Obsolete]`. Voir [`clipboard.md`](clipboard.md).
+  Une app ne parle jamais à `navigator.clipboard` ; `BrowserClipboard` a été
+  retiré au gel du SDK 1.0 (ADR 0114 §3). Voir [`clipboard.md`](clipboard.md).
 - `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
   (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
   [`file-explorer.md`](file-explorer.md).
@@ -473,7 +473,7 @@ le `[AppManifest]`) ; leur détail est dans la
 | `IFullScreenTerminalSession` (`TerminalExecutionContext.FullScreen`), `TerminalInputReader` | Écran alternatif (`nano`, `top`, `htop`) et entrée standard du terminal | — | [`terminal-emulator.md`](terminal-emulator.md) |
 | `HackFile.CreateSymbolicLinkAsync` | `ln -s` | droits du chemin | [`hack-file-api.md`](hack-file-api.md) |
 | `AppDefinition.Components` (`AppComponent`), `HackEmbeddedComponent<T>`, `HackEmbeddableComponent`, `HackComponentContracts`, `IHackTerminal` | Composant d'une app affiché par une autre, par contrat (`hackeros.terminal`) | celles de l'app qui affiche le composant (CodeEditor déclare `shell.host` pour le terminal embarqué) | [`embedded-components.md`](embedded-components.md) |
-| `HackClipboard` partagé avec l'hôte ; `BrowserClipboard` `[Obsolete]` | Le texte copié part vers la vraie machine selon `clipboard.config` | `clipboard.read`, `clipboard.write` | [`clipboard.md`](clipboard.md) |
+| `HackClipboard` partagé avec l'hôte (`BrowserClipboard` retiré en 1.0) | Le texte copié part vers la vraie machine selon `clipboard.config` | `clipboard.read`, `clipboard.write` | [`clipboard.md`](clipboard.md) |
 
 Aucune de ces API ne donne accès à un service interne : les apps qui les
 utilisent (Terminal, CodeEditor, Diagnostic, FileExplorer, `HackerOs.Commands`)
@@ -525,8 +525,9 @@ commandes Linux, presse-papiers partagé avec l'hôte) :
   qu'elle appelle (par exemple `systemctl` : `services.manage` ; `htop` :
   `process.manage` ; `jobs`, `read`, `watch` : `shell.control` ; Terminal et
   CodeEditor : `shell.host`).
-- Aucun appel d'API `[Obsolete]` (`BrowserClipboard`,
-  `Get/SetFileReferencesAsync`) dans `Apps/`.
+- Aucun appel d'API `[Obsolete]` dans `Apps/` ; depuis le gel du SDK 1.0, le
+  SDK n'en contient plus (`BrowserClipboard`, `Get/SetFileReferencesAsync`
+  retirés, ADR 0114 §3).
 - Corrigé : la copie du terminal (Ctrl+C sur une sélection, Ctrl+Shift+C)
   écrivait `navigator.clipboard` directement, hors du presse-papiers de l'OS et
   sans respecter `clipboard.config` (ADR 0065). Elle lève désormais un vrai
