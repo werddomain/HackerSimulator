@@ -106,7 +106,8 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
         await WriteAsync(
             text["Prompt.Dangerous.Request", app.Terminal?.Name ?? app.Name, app.Id, app.PublisherId, app.Version],
             HackPromptLineKind.Warning).ConfigureAwait(false);
-        foreach (CapabilityDescription capability in request.Capabilities)
+        foreach (CapabilityDescription capability in request.Capabilities.Select(description =>
+                     HackerOs.Platform.Core.Policy.CapabilityText.Localize(description, _language())))
         {
             await WriteAsync($"  - {capability.Title} [{capability.Capability}]", HackPromptLineKind.Warning).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(capability.RiskDescription))

@@ -43,15 +43,23 @@ internal sealed class AppPermissionAdministrationGateway : IAppPermissionAdminis
     {
         _capabilities.Require(AppCapabilities.PermissionsManage);
         IReadOnlyList<AppPermissionOverview> overview = await _administration().GetOverviewAsync(cancellationToken).ConfigureAwait(false);
+        // The Settings app shows these texts: they follow its process's language (ADR 0104).
+        System.Globalization.CultureInfo language = _gate.Language;
         return [.. overview.Select(app => new HackAppPermissionInfo(
             app.Manifest.Id,
             app.Manifest.Name,
             app.IsSystemApp,
-            [.. app.Capabilities.Select(status => new HackCapabilityPermissionInfo(
+            [.. app.Capabilities.Select(status => Describe(status, language))]))];
+
+        static HackCapabilityPermissionInfo Describe(DangerousCapabilityStatus status, System.Globalization.CultureInfo language)
+        {
+            CapabilityDescription description = CapabilityText.Localize(status.Description, language);
+            return new HackCapabilityPermissionInfo(
                 status.Capability,
-                status.Description.Title,
-                status.Description.RiskDescription ?? string.Empty,
-                ToPublic(status.State)))]))];
+                description.Title,
+                description.RiskDescription ?? string.Empty,
+                ToPublic(status.State));
+        }
     }
 
     /// <inheritdoc />
@@ -84,7 +92,7 @@ internal sealed class AppPermissionAdministrationGateway : IAppPermissionAdminis
             _ => "Admin.Decision.Ask"
         };
         string admin = await _gate.AuthenticateAsync(
-            _gate.Text[textKey, AppCapabilities.Describe(capability).Title, capability, appId],
+            _gate.Text[textKey, CapabilityText.Describe(capability, _gate.Language).Title, capability, appId],
             "permissions.machine-decision",
             AppPermissionsDocument.MachineFile.Resolve(null).Value,
             cancellationToken).ConfigureAwait(false);

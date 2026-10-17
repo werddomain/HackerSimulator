@@ -100,7 +100,33 @@ public sealed partial class ShellInterpreterTests
         HackCredentialRequest request = Assert.Single(prompt.Requests);
         Assert.Equal("Autorisation administrateur requise", request.Title);
         Assert.Equal("Exécuter en tant que root : amroot", request.Description);
-        Assert.Equal(["Désolé, essayez de nouveau."], prompt.Lines);
+        Assert.Equal(["Désolé, veuillez réessayer."], prompt.Lines);
+    }
+
+    [Fact]
+    public void Every_catalog_capability_is_described_in_english_and_in_french()
+    {
+        CultureInfo french = CultureInfo.GetCultureInfo("fr");
+        LocalizerProbe probe = new(Strings.For(HackLocale.DefaultLanguage));
+
+        foreach (string capability in AppCapabilities.All)
+        {
+            Assert.True(probe.Has($"Capability.{capability}.Title"), capability);
+            Assert.Equal(AppCapabilities.IsDangerous(capability), probe.Has($"Capability.{capability}.Risk"));
+        }
+
+        CapabilityDescription english = HackerOs.Platform.Core.Policy.CapabilityText.Describe(AppCapabilities.ShellHost, null);
+        CapabilityDescription inFrench = HackerOs.Platform.Core.Policy.CapabilityText.Describe(AppCapabilities.ShellHost, french);
+        Assert.Equal("Host a shell", english.Title);
+        Assert.Equal("Run commands on your behalf, with the rights of those commands.", english.RiskDescription);
+        Assert.Equal("Héberger un shell", inFrench.Title);
+        Assert.Equal(CapabilityRisk.Dangerous, inFrench.Risk);
+        Assert.Null(HackerOs.Platform.Core.Policy.CapabilityText.Describe(AppCapabilities.ClipboardRead, french).RiskDescription);
+    }
+
+    private sealed class LocalizerProbe(Microsoft.Extensions.Localization.IStringLocalizer text)
+    {
+        public bool Has(string key) => !text[key].ResourceNotFound;
     }
 
     [Fact]

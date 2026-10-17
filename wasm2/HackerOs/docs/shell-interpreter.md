@@ -261,6 +261,14 @@ sinon `Dispatched` avec le code de sortie (une erreur de syntaxe donne
 - Un script est un processus `hsh` séparé, pas une fonction du shell
   appelant : ses `cd` et `exit` restent chez lui.
 - Les built-ins spéciaux sont réduits au strict nécessaire (ADR 0051 amendé).
+- Langue des messages (ADR 0104) : comme bash avec gettext, les diagnostics
+  (`commande introuvable`, erreurs de syntaxe, d'expansion, `type`, jobs, `sudo`)
+  suivent `LC_ALL` > `LC_MESSAGES` > `LANG` de la session, relus à chaque ligne
+  (`ShellText`, clés `Shell.*`, `Syntax.*`, `Arithmetic.*`, `Errno.*` des
+  `Strings` de Platform Core). Les préfixes `hsh: ` / `sudo: `, les noms et les
+  chemins ne sont pas traduits. `ShellSyntaxError.Message` et les messages
+  d'exception restent en anglais (journaux, appelants) ; `TextKey` /
+  `TextArguments` portent le texte à traduire.
 
 ## Tests
 

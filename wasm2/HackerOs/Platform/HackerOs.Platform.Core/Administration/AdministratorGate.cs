@@ -48,6 +48,9 @@ internal sealed class AdministratorGate
     /// <summary>Gets the core's texts in the calling process's language, for the operation descriptions.</summary>
     public Microsoft.Extensions.Localization.IStringLocalizer Text => Strings.For(_language());
 
+    /// <summary>Gets the calling process's language, for texts built outside <see cref="Text"/> (capability titles).</summary>
+    public System.Globalization.CultureInfo Language => _language();
+
     /// <summary>Asks an administrator to authorize one operation; returns the administrator's login.</summary>
     /// <param name="operation">The operation in plain words, shown in the prompt.</param>
     /// <param name="action">Stable operation id written to <c>/var/log/auth.log</c>.</param>

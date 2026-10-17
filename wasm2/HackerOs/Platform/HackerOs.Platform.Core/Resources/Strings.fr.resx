@@ -129,6 +129,159 @@
   <data name="Builtin.wait" xml:space="preserve">
     <value>Attendre les tâches en arrière-plan (commande interne du shell)</value>
   </data>
+  <data name="Capability.apps.launch.Title" xml:space="preserve">
+    <value>Lancer d'autres applications</value>
+  </data>
+  <data name="Capability.apps.manage.Risk" xml:space="preserve">
+    <value>Installer, désinstaller ou réinstaller des applications.</value>
+  </data>
+  <data name="Capability.apps.manage.Title" xml:space="preserve">
+    <value>Gérer les applications</value>
+  </data>
+  <data name="Capability.clipboard.read.Title" xml:space="preserve">
+    <value>Lire le presse-papiers</value>
+  </data>
+  <data name="Capability.clipboard.write.Title" xml:space="preserve">
+    <value>Écrire dans le presse-papiers</value>
+  </data>
+  <data name="Capability.dialogs.file-open.Title" xml:space="preserve">
+    <value>Afficher la boîte « Ouvrir un fichier »</value>
+  </data>
+  <data name="Capability.dialogs.file-save.Title" xml:space="preserve">
+    <value>Afficher la boîte « Enregistrer sous »</value>
+  </data>
+  <data name="Capability.dialogs.folder-select.Title" xml:space="preserve">
+    <value>Afficher la boîte « Choisir un dossier »</value>
+  </data>
+  <data name="Capability.file-associations.read.Title" xml:space="preserve">
+    <value>Lire les associations de fichiers</value>
+  </data>
+  <data name="Capability.file-associations.write.Risk" xml:space="preserve">
+    <value>Choisir quelle app ouvre chaque type de fichier pour toute la machine.</value>
+  </data>
+  <data name="Capability.file-associations.write.Title" xml:space="preserve">
+    <value>Modifier les associations de fichiers</value>
+  </data>
+  <data name="Capability.filesystem.private.read.Title" xml:space="preserve">
+    <value>Lire ses données privées</value>
+  </data>
+  <data name="Capability.filesystem.private.write.Title" xml:space="preserve">
+    <value>Écrire ses données privées</value>
+  </data>
+  <data name="Capability.filesystem.system.read.Risk" xml:space="preserve">
+    <value>Lire des fichiers hors du dossier personnel, dont la configuration du système.</value>
+  </data>
+  <data name="Capability.filesystem.system.read.Title" xml:space="preserve">
+    <value>Lire les fichiers du système</value>
+  </data>
+  <data name="Capability.filesystem.system.write.Risk" xml:space="preserve">
+    <value>Modifier des fichiers du système, dont /etc et les paramètres de toutes les apps.</value>
+  </data>
+  <data name="Capability.filesystem.system.write.Title" xml:space="preserve">
+    <value>Modifier les fichiers du système</value>
+  </data>
+  <data name="Capability.filesystem.user-home.read.Title" xml:space="preserve">
+    <value>Lire le dossier personnel</value>
+  </data>
+  <data name="Capability.filesystem.user-home.write.Title" xml:space="preserve">
+    <value>Écrire dans le dossier personnel</value>
+  </data>
+  <data name="Capability.filesystem.user-selected.read.Title" xml:space="preserve">
+    <value>Lire les fichiers choisis par l'utilisateur</value>
+  </data>
+  <data name="Capability.filesystem.user-selected.write.Title" xml:space="preserve">
+    <value>Écrire les fichiers choisis par l'utilisateur</value>
+  </data>
+  <data name="Capability.keyring.read-all.Risk" xml:space="preserve">
+    <value>Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés.</value>
+  </data>
+  <data name="Capability.keyring.read-all.Title" xml:space="preserve">
+    <value>Lire tout le trousseau</value>
+  </data>
+  <data name="Capability.network.listen.Title" xml:space="preserve">
+    <value>Écouter un port réseau</value>
+  </data>
+  <data name="Capability.network.listen.privileged.Risk" xml:space="preserve">
+    <value>Ouvrir un port inférieur à 1024, où l'on attend les vrais services de la machine (web, SSH...).</value>
+  </data>
+  <data name="Capability.network.listen.privileged.Title" xml:space="preserve">
+    <value>Écouter un port privilégié</value>
+  </data>
+  <data name="Capability.network.real.access.Risk" xml:space="preserve">
+    <value>Joindre de vrais serveurs sur Internet par le serveur relais.</value>
+  </data>
+  <data name="Capability.network.real.access.Title" xml:space="preserve">
+    <value>Accéder au vrai réseau</value>
+  </data>
+  <data name="Capability.network.simulated.read.Title" xml:space="preserve">
+    <value>Consulter le réseau simulé</value>
+  </data>
+  <data name="Capability.network.simulated.write.Title" xml:space="preserve">
+    <value>Modifier le réseau simulé</value>
+  </data>
+  <data name="Capability.notifications.post.Title" xml:space="preserve">
+    <value>Afficher des notifications</value>
+  </data>
+  <data name="Capability.permissions.manage.Risk" xml:space="preserve">
+    <value>Accorder ou retirer à d'autres apps des permissions dangereuses.</value>
+  </data>
+  <data name="Capability.permissions.manage.Title" xml:space="preserve">
+    <value>Administrer les permissions</value>
+  </data>
+  <data name="Capability.process.list.Title" xml:space="preserve">
+    <value>Lister les processus</value>
+  </data>
+  <data name="Capability.process.manage.Risk" xml:space="preserve">
+    <value>Arrêter les processus d'autres applications.</value>
+  </data>
+  <data name="Capability.process.manage.Title" xml:space="preserve">
+    <value>Gérer les processus</value>
+  </data>
+  <data name="Capability.server.connection.manage.Risk" xml:space="preserve">
+    <value>Connecter cette machine à un serveur et y envoyer vos fichiers et permissions.</value>
+  </data>
+  <data name="Capability.server.connection.manage.Title" xml:space="preserve">
+    <value>Gérer la connexion au serveur</value>
+  </data>
+  <data name="Capability.services.manage.Risk" xml:space="preserve">
+    <value>Démarrer, arrêter et configurer les services du système.</value>
+  </data>
+  <data name="Capability.services.manage.Title" xml:space="preserve">
+    <value>Gérer les services</value>
+  </data>
+  <data name="Capability.shell.control.Title" xml:space="preserve">
+    <value>Agir sur le shell qui a lancé la commande</value>
+  </data>
+  <data name="Capability.shell.host.Risk" xml:space="preserve">
+    <value>Exécuter des commandes en votre nom, avec les droits de ces commandes.</value>
+  </data>
+  <data name="Capability.shell.host.Title" xml:space="preserve">
+    <value>Héberger un shell</value>
+  </data>
+  <data name="Capability.system.backup.Risk" xml:space="preserve">
+    <value>Copier sur l'ordinateur hôte tous les fichiers et comptes de la machine, ou les remplacer par une sauvegarde.</value>
+  </data>
+  <data name="Capability.system.backup.Title" xml:space="preserve">
+    <value>Sauvegarder et restaurer la machine</value>
+  </data>
+  <data name="Capability.system.power.Risk" xml:space="preserve">
+    <value>Redémarrer ou effacer entièrement cette machine.</value>
+  </data>
+  <data name="Capability.system.power.Title" xml:space="preserve">
+    <value>Redémarrer ou réinitialiser la machine</value>
+  </data>
+  <data name="Capability.system.storage.inspect.Risk" xml:space="preserve">
+    <value>Lire le stockage brut de la machine, y compris les fichiers de tous les utilisateurs.</value>
+  </data>
+  <data name="Capability.system.storage.inspect.Title" xml:space="preserve">
+    <value>Inspecter le stockage brut</value>
+  </data>
+  <data name="Capability.windows.manage.Risk" xml:space="preserve">
+    <value>Lire, déplacer ou fermer les fenêtres d'autres applications.</value>
+  </data>
+  <data name="Capability.windows.manage.Title" xml:space="preserve">
+    <value>Gérer les fenêtres</value>
+  </data>
   <data name="Errno.FileTooLarge" xml:space="preserve">
     <value>Fichier trop volumineux</value>
   </data>
@@ -217,10 +370,19 @@ Annuler : décider au prochain lancement.</value>
     <value>Permission refusée — demander une approbation ?</value>
   </data>
   <data name="Prompt.SorryTryAgain" xml:space="preserve">
-    <value>Désolé, essayez de nouveau.</value>
+    <value>Désolé, veuillez réessayer.</value>
   </data>
   <data name="Prompt.Sudo.Title" xml:space="preserve">
     <value>Autorisation administrateur requise</value>
+  </data>
+  <data name="Relay.Warning.AllowAllPorts" xml:space="preserve">
+    <value>HackerOs:Proxy:AllowAllPorts est activé : le relais atteint tous les ports TCP et UDP.</value>
+  </data>
+  <data name="Relay.Warning.AllowPrivateNetworks" xml:space="preserve">
+    <value>HackerOs:Proxy:AllowPrivateNetworks est activé : le relais atteint les réseaux privés de la machine du serveur (le loopback et les métadonnées du cloud restent bloqués).</value>
+  </data>
+  <data name="Relay.Warning.QuotasDisabled" xml:space="preserve">
+    <value>HackerOs:Proxy:Quotas:Enabled est désactivé : aucune limite de taille, de requêtes simultanées, de sockets ni d'inactivité ne s'applique.</value>
   </data>
   <data name="Shell.AliasNotSimple" xml:space="preserve">
     <value>alias {0} : seule une commande simple peut servir d'alias</value>

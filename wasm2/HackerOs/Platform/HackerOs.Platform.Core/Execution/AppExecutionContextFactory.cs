@@ -360,7 +360,7 @@ public sealed class AppExecutionContextFactory
         return new AdministrationGateways(
             _administration.Settings is { } settings ? new AppSystemSettingsGateway(settings, fileSystem) : null,
             _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
-            new AppServerConnectionGateway(_administration.Server, capabilities),
+            new AppServerConnectionGateway(_administration.Server, capabilities, language),
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
             new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases),
             new AppSystemBackupGateway(_administration.Backup, capabilities, gate));
