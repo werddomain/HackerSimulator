@@ -26,14 +26,14 @@ public sealed class SettingsApp : AppDefinition
 
     /// <inheritdoc />
     public override string Description =>
-        "System control panel for user preferences, appearance, file associations, capabilities, backup, and device configuration";
+        "System control panel for user preferences, appearance, language, file associations, capabilities, backup, and device configuration";
 
     /// <inheritdoc />
     public override string Category => "system";
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.FileAssociationsRead, AppCapabilities.FileAssociationsWrite, AppCapabilities.ProcessList, AppCapabilities.ServicesManage, AppCapabilities.AppsManage, AppCapabilities.PermissionsManage, AppCapabilities.ServerConnectionManage, AppCapabilities.SystemPower, AppCapabilities.SystemBackup];
+        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.FileAssociationsRead, AppCapabilities.FileAssociationsWrite, AppCapabilities.ProcessList, AppCapabilities.ServicesManage, AppCapabilities.AppsManage, AppCapabilities.PermissionsManage, AppCapabilities.ServerConnectionManage, AppCapabilities.SystemPower, AppCapabilities.SystemBackup];
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;

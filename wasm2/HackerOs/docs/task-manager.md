@@ -288,7 +288,17 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
   (`ProcFilesTests`), différences et historique (`SystemMetricsTests`), tri,
   filtre, sélection et « End task » (`ProcessTableTests`), « End task » en
   `SIGTERM` 5 s et « Force kill » en `SIGKILL`, sélection signalée ensemble
-  (`EndTaskTests`), unités (`UnitsTests`), manifeste (`SystemMonitorWindowTests`).
+  (`EndTaskTests`), unités (`UnitsTests`), manifeste (`SystemMonitorWindowTests`),
+  textes anglais et français et unités françaises (`SystemMonitorLocalizationTests`).
+
+## Langues (ADR 0104)
+
+Les textes de l'app sont dans `Resources/Strings.resx` (anglais) et
+`Strings.fr.resx` (français), lus avec `AppContext.GetLocalizer<Strings>()`.
+Les nombres suivent `AppContext.FormatCulture` : `Units` a des surcharges qui
+prennent une culture (`1,5 Mio`, `12,5 %`, `2 j 03:14:15` en français) ; les
+surcharges sans culture restent invariantes. Les noms et valeurs lus dans
+`/proc` (champs de `status`, états systemd) ne sont pas traduits.
 
 ## Liste des tâches du chantier `rebuild/4-task-manager`
 

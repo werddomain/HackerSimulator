@@ -1,6 +1,8 @@
 using System.Globalization;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Apps.SystemMonitor.Metrics;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -13,6 +15,16 @@ namespace HackerOs.Apps.SystemMonitor.Tabs;
 public partial class PerformanceTab
 {
     private bool _perCore;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The tab's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
+
+    /// <summary>The charts' value formatter: a percentage in the process's locale.</summary>
+    private string FormatPercent(double value) => Units.Percent(value, Formats);
 
     /// <summary>Gets or sets the live measurements.</summary>
     [Parameter, EditorRequired]
@@ -31,21 +43,21 @@ public partial class PerformanceTab
     /// <summary>Gets the Web Workers (ADR 0071, section 5), shown next to the cores; none on a host without them.</summary>
     private ProcWorkers? Workers => Metrics.Latest?.Workers;
 
-    private static string RoleText(ProcWorker worker) => worker.Role switch
+    private string RoleText(ProcWorker worker) => worker.Role switch
     {
-        "pool" => worker.Core is { } core ? $"core {core}" : "pool",
-        "overflow" => "overflow core",
-        "dedicated" => "dedicated",
-        "ready" => "ready",
+        "pool" => worker.Core is { } core ? L["Perf.Role.Core", core] : L["Perf.Role.Pool"],
+        "overflow" => L["Perf.Role.Overflow"],
+        "dedicated" => L["Perf.Role.Dedicated"],
+        "ready" => L["Perf.Role.Ready"],
         string other => other
     };
 
-    private static string StateText(ProcWorker worker) => worker.State switch
+    private string StateText(ProcWorker worker) => worker.State switch
     {
-        "not-responding" => "Not responding",
-        "running" => "Running",
-        "idle" => "Idle",
-        "starting" => "Starting…",
+        "not-responding" => L["Processes.NotResponding"],
+        "running" => L["Perf.WorkerState.Running"],
+        "idle" => L["Perf.WorkerState.Idle"],
+        "starting" => L["Perf.WorkerState.Starting"],
         string other => other
     };
 

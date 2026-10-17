@@ -1,5 +1,9 @@
+using System.Globalization;
+using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -13,6 +17,23 @@ public partial class ProcessDetailPanel
     private IReadOnlyDictionary<string, string>? _environment;
     private long? _environmentPid;
     private bool _loadingEnvironment;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers and dates shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
+
+    /// <summary>The kind of the process (window app, command, service, site), translated.</summary>
+    private string KindLabel => Process.Kind switch
+    {
+        AppKind.Window => L["Kind.Window"],
+        AppKind.Terminal => L["Kind.Terminal"],
+        AppKind.Service => L["Kind.Service"],
+        AppKind.Web => L["Kind.Web"],
+        _ => Process.Kind.ToString()
+    };
 
     /// <summary>Gets or sets the process shown (refreshed every second by the window).</summary>
     [Parameter, EditorRequired]

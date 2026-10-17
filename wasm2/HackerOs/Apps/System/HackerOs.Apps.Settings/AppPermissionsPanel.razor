@@ -8,28 +8,27 @@
 <div class="permissions-panel">
     @if (!_isAvailable)
     {
-        <p class="setting-desc">Les permissions des applications ne sont pas disponibles sur cet hôte.</p>
+        <p class="setting-desc">@L["Permissions.Unavailable"]</p>
     }
     else
     {
         <section class="setting-group permissions-policy">
-            <h4>Capacités dangereuses des apps non système</h4>
+            <h4>@L["Permissions.Policy.Title"]</h4>
             <p class="setting-desc">
-                Politique de <code>/etc/hackeros/security.config</code>. Chaque changement demande un administrateur
-                et prend effet au prochain lancement de l'app.
+                @LocalizedMarkup.Format(L["Permissions.Policy.Description"], LocalizedMarkup.Code("/etc/hackeros/security.config"))
             </p>
-            <div class="policy-options" role="radiogroup" aria-label="Politique des capacités dangereuses">
+            <div class="policy-options" role="radiogroup" aria-label="@L["Permissions.Policy.AriaLabel"]">
                 <button type="button" role="radio" class="@PolicyClass(HackDangerousCapabilityPolicy.Prompt)"
                         aria-checked="@(_policy == HackDangerousCapabilityPolicy.Prompt ? "true" : "false")"
                         disabled="@_isBusy"
                         @onclick="() => ChangePolicyAsync(HackDangerousCapabilityPolicy.Prompt)">
-                    Demander à un administrateur
+                    @L["Permissions.Policy.Prompt"]
                 </button>
                 <button type="button" role="radio" class="@PolicyClass(HackDangerousCapabilityPolicy.Block)"
                         aria-checked="@(_policy == HackDangerousCapabilityPolicy.Block ? "true" : "false")"
                         disabled="@_isBusy"
                         @onclick="() => ChangePolicyAsync(HackDangerousCapabilityPolicy.Block)">
-                    Toujours bloquer
+                    @L["Permissions.Policy.Block"]
                 </button>
             </div>
         </section>
@@ -41,7 +40,7 @@
 
         @if (_overview.Count == 0)
         {
-            <p class="setting-desc">Aucune application installée ne déclare de capacité dangereuse.</p>
+            <p class="setting-desc">@L["Permissions.Empty"]</p>
         }
 
         @foreach (HackAppPermissionInfo app in _overview)
@@ -51,7 +50,7 @@
                     <span class="permissions-app-name">@app.AppName</span>
                     <code class="permissions-app-id">@app.AppId</code>
                     <span class="@(app.IsSystemApp ? "app-kind-badge system" : "app-kind-badge")">
-                        @(app.IsSystemApp ? "App système" : "App non système")
+                        @(app.IsSystemApp ? L["Permissions.SystemApp"] : L["Permissions.NonSystemApp"])
                     </span>
                 </header>
                 <ul class="permissions-capabilities">
@@ -70,22 +69,22 @@
                                     @if (capability.State == HackPermissionState.DeniedByUser)
                                     {
                                         <button type="button" class="btn-secondary" disabled="@_isBusy"
-                                                @onclick="() => RemoveOwnDenialAsync(app, capability)">Retirer mon refus</button>
+                                                @onclick="() => RemoveOwnDenialAsync(app, capability)">@L["Permissions.RemoveDenial"]</button>
                                     }
                                     @if (capability.State is not HackPermissionState.Allowed and not HackPermissionState.BlockedByPolicy)
                                     {
                                         <button type="button" class="btn-danger" disabled="@_isBusy"
-                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Allow)">Autoriser pour la machine</button>
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Allow)">@L["Permissions.AllowMachine"]</button>
                                     }
                                     @if (capability.State == HackPermissionState.Allowed)
                                     {
                                         <button type="button" class="btn-secondary" disabled="@_isBusy"
-                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Deny)">Révoquer</button>
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Deny)">@L["Permissions.Revoke"]</button>
                                     }
                                     @if (capability.State == HackPermissionState.DeniedByAdministrator)
                                     {
                                         <button type="button" class="btn-secondary" disabled="@_isBusy"
-                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Ask)">Redemander au lancement</button>
+                                                @onclick="() => SetMachineDecisionAsync(app, capability, HackPermissionDecision.Ask)">@L["Permissions.AskAgain"]</button>
                                     }
                                 </div>
                             }

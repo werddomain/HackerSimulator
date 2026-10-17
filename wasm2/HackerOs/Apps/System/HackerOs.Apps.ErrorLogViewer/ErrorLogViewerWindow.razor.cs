@@ -1,7 +1,9 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.ErrorLogViewer;
 
@@ -23,6 +25,10 @@ public partial class ErrorLogViewerWindow
     private List<LogSource> _sources = [];
     private List<LogRow> _rows = [];
     private string? _errorMessage;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The viewer's texts in the language of its own process (ADR 0104); the log lines themselves stay as written.</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <summary>Gets or sets the selected source path; empty shows every log.</summary>
     private string SelectedPath { get; set; } = string.Empty;
@@ -41,8 +47,8 @@ public partial class ErrorLogViewerWindow
         {
             int files = _contents.Count(pair => pair.Value.Error is null);
             int unparsed = _contents.Values.Sum(static content => content.UnparsedLineCount);
-            string text = $"{_rows.Count} entries from {files} file(s)";
-            return unparsed > 0 ? $"{text} · {unparsed} unparsed line(s)" : text;
+            string text = L["Status.Entries", _rows.Count, files];
+            return unparsed > 0 ? L["Status.Unparsed", text, unparsed] : text;
         }
     }
 
@@ -90,7 +96,7 @@ public partial class ErrorLogViewerWindow
         FileSystemError? failure = _contents.Values.Select(static content => content.Error).FirstOrDefault(static error => error is not null);
         if (failure is not null && failure.Code != FileSystemErrorCode.NotFound)
         {
-            _errorMessage = $"Could not read {failure.Path?.Value ?? "a log file"}: {failure.Code}.";
+            _errorMessage = L["Error.CannotRead", failure.Path?.Value ?? L["Error.ALogFile"].Value, failure.Code];
         }
     }
 
@@ -175,9 +181,9 @@ public partial class ErrorLogViewerWindow
         _errorMessage = result.Transaction.Error?.Code switch
         {
             FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.AuthorityDenied or FileSystemErrorCode.CapabilityDenied =>
-                $"Truncating {source.Path.Value} needs administrator approval. Approve the request, then press Truncate again.",
-            FileSystemErrorCode code => $"Could not truncate {source.Path.Value}: {code}.",
-            null => $"Could not truncate {source.Path.Value}."
+                L["Error.TruncateNeedsAdmin", source.Path.Value].Value,
+            FileSystemErrorCode code => L["Error.CannotTruncateCode", source.Path.Value, code].Value,
+            null => L["Error.CannotTruncate", source.Path.Value].Value
         };
     }
 

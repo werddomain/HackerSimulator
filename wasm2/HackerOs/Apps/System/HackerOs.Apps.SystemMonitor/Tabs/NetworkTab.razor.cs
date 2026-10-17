@@ -1,5 +1,8 @@
+using System.Globalization;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Apps.SystemMonitor.Metrics;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -10,7 +13,18 @@ namespace HackerOs.Apps.SystemMonitor.Tabs;
 /// </summary>
 public partial class NetworkTab
 {
+    private IStringLocalizer<Strings>? _localizer;
+
     /// <summary>Gets or sets the live measurements.</summary>
     [Parameter, EditorRequired]
     public SystemMetrics Metrics { get; set; } = default!;
+
+    /// <summary>The tab's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
+
+    /// <summary>The throughput chart's value formatter, in the process's locale.</summary>
+    private string FormatRate(double value) => Units.Rate(value, Formats);
 }

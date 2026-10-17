@@ -1,8 +1,10 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.ServiceProcess;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -23,6 +25,10 @@ public partial class ServicesTab
     private bool _refreshing;
     private bool _hasManagerState = true;
     private string? _message;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The tab's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <summary>Gets or sets the processes of the last refresh, by PID, for the live status.</summary>
     [Parameter, EditorRequired]
@@ -80,7 +86,8 @@ public partial class ServicesTab
         }
     }
 
-    private async Task RunAsync(HackServiceController service, Func<CancellationToken, Task> action, string verb)
+    /// <summary>Runs one action on a service; <paramref name="deniedKey"/> names the message shown when it is refused.</summary>
+    private async Task RunAsync(HackServiceController service, Func<CancellationToken, Task> action, string deniedKey)
     {
         _busy = true;
         try
@@ -90,7 +97,7 @@ public partial class ServicesTab
         }
         catch (HackUnauthorizedAccessException)
         {
-            _message = $"Cannot {verb} {service.DisplayName}: this needs services.manage.";
+            _message = L[deniedKey, service.DisplayName];
         }
         catch (InvalidOperationException exception)
         {
@@ -108,7 +115,7 @@ public partial class ServicesTab
     {
         if (value is string text && Enum.TryParse(text, out ServiceStartMode mode))
         {
-            await RunAsync(service, cancellationToken => service.SetStartTypeAsync(mode, cancellationToken), "configure");
+            await RunAsync(service, cancellationToken => service.SetStartTypeAsync(mode, cancellationToken), "Services.Error.Configure");
         }
     }
 
@@ -135,16 +142,26 @@ public partial class ServicesTab
     private HackProcess? FindProcess(HackServiceController service) =>
         Processes.Values.FirstOrDefault(process => string.Equals(process.AppId, service.ServiceName, StringComparison.Ordinal));
 
-    private static string StateText(HackServiceController service, HackServiceActiveState state) => state switch
+    private string StateText(HackServiceController service, HackServiceActiveState state) => state switch
     {
-        HackServiceActiveState.Active => "Running",
-        HackServiceActiveState.Activating => "Starting",
-        HackServiceActiveState.Deactivating => "Stopping",
-        HackServiceActiveState.Failed => $"Failed ({HackServiceStates.ToSystemdName(service.Result)})",
-        _ => "Stopped"
+        HackServiceActiveState.Active => L["Services.State.Running"],
+        HackServiceActiveState.Activating => L["Services.State.Starting"],
+        HackServiceActiveState.Deactivating => L["Services.State.Stopping"],
+        HackServiceActiveState.Failed => L["Services.State.Failed", HackServiceStates.ToSystemdName(service.Result)],
+        _ => L["Services.State.Stopped"]
     };
 
-    private static string StateTitle(HackServiceController service, HackServiceActiveState state)
+    /// <summary>A start mode as shown in the list (the option's value stays the enum name).</summary>
+    private string StartModeLabel(ServiceStartMode mode) => mode switch
+    {
+        ServiceStartMode.Automatic => L["StartMode.Automatic"],
+        ServiceStartMode.Manual => L["StartMode.Manual"],
+        ServiceStartMode.Disabled => L["StartMode.Disabled"],
+        _ => mode.ToString()
+    };
+
+    /// <summary>The state's tooltip: systemd's own words (<c>failed (Result: exit-code, status=1)</c>), then since when.</summary>
+    private string StateTitle(HackServiceController service, HackServiceActiveState state)
     {
         string text = $"{HackServiceStates.ToSystemdName(state)}";
         if (state == HackServiceActiveState.Failed)
@@ -152,14 +169,16 @@ public partial class ServicesTab
             text += $" (Result: {HackServiceStates.ToSystemdName(service.Result)}{(service.ExitCode is { } code ? $", status={code}" : string.Empty)})";
         }
 
-        return service.ActiveStateChangedAt is { } since ? $"{text} since {since:yyyy-MM-dd HH:mm:ss} UTC" : text;
+        return service.ActiveStateChangedAt is { } since
+            ? L["Services.Since", text, since.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)]
+            : text;
     }
 
-    private static string HealthText(HackServiceHealth health) => health switch
+    private string HealthText(HackServiceHealth health) => health switch
     {
-        HackServiceHealth.Healthy => "Healthy",
-        HackServiceHealth.Degraded => "Degraded",
-        HackServiceHealth.Unhealthy => "Unhealthy",
-        _ => "Unknown"
+        HackServiceHealth.Healthy => L["Services.Health.Healthy"],
+        HackServiceHealth.Degraded => L["Services.Health.Degraded"],
+        HackServiceHealth.Unhealthy => L["Services.Health.Unhealthy"],
+        _ => L["Services.Health.Unknown"]
     };
 }

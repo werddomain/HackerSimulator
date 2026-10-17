@@ -1,0 +1,804 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About.Architecture" xml:space="preserve">
+    <value>Architecture :</value>
+  </data>
+  <data name="About.ArchitectureValue" xml:space="preserve">
+    <value>Noyau C# / CSS isolé / MudBlazor</value>
+  </data>
+  <data name="About.Authority" xml:space="preserve">
+    <value>Autorité :</value>
+  </data>
+  <data name="About.Authority.Administrator" xml:space="preserve">
+    <value>Administrateur</value>
+  </data>
+  <data name="About.Authority.System" xml:space="preserve">
+    <value>Système</value>
+  </data>
+  <data name="About.Authority.User" xml:space="preserve">
+    <value>Utilisateur</value>
+  </data>
+  <data name="About.OsVersion" xml:space="preserve">
+    <value>Version du système :</value>
+  </data>
+  <data name="About.Runtime" xml:space="preserve">
+    <value>Environnement d'exécution :</value>
+  </data>
+  <data name="About.UserId" xml:space="preserve">
+    <value>Identifiant utilisateur :</value>
+  </data>
+  <data name="Appearance.Accent.AriaLabel" xml:space="preserve">
+    <value>Couleurs d'accent HackerOS</value>
+  </data>
+  <data name="Appearance.Accent.Description" xml:space="preserve">
+    <value>Les couleurs d'accent ne sont proposées, volontairement, que pour le thème HackerOS.</value>
+  </data>
+  <data name="Appearance.Accent.Title" xml:space="preserve">
+    <value>Couleur d'accent HackerOS</value>
+  </data>
+  <data name="Appearance.Animations.Label" xml:space="preserve">
+    <value>Activer les transitions et les micro-animations du bureau</value>
+  </data>
+  <data name="Appearance.Animations.Title" xml:space="preserve">
+    <value>Animations</value>
+  </data>
+  <data name="Appearance.DesktopTheme.AriaLabel" xml:space="preserve">
+    <value>Thèmes du bureau</value>
+  </data>
+  <data name="Appearance.DesktopTheme.Description" xml:space="preserve">
+    <value>Appliqué au bureau, aux fenêtres, à la barre des tâches et au menu Démarrer.</value>
+  </data>
+  <data name="Appearance.DesktopTheme.Title" xml:space="preserve">
+    <value>Thème du bureau</value>
+  </data>
+  <data name="Appearance.EditTheme" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Appearance.Error.AdminRequired" xml:space="preserve">
+    <value>Changer le défaut du système demande l'approbation d'un administrateur. Approuvez la demande, puis appliquez de nouveau.</value>
+  </data>
+  <data name="Appearance.Error.CannotRead" xml:space="preserve">
+    <value>Les réglages d'apparence ne peuvent pas être lus : {0}</value>
+  </data>
+  <data name="Appearance.Error.CannotSave" xml:space="preserve">
+    <value>Impossible d'enregistrer le fichier de réglages : {0}</value>
+  </data>
+  <data name="Appearance.Layer.AriaLabel" xml:space="preserve">
+    <value>Niveau des réglages</value>
+  </data>
+  <data name="Appearance.Layer.Description" xml:space="preserve">
+    <value>Vos choix sont enregistrés dans {0}. Le réglage par défaut de tous les utilisateurs se trouve dans {1} et demande l'approbation d'un administrateur.</value>
+  </data>
+  <data name="Appearance.Layer.System" xml:space="preserve">
+    <value>Tous les utilisateurs (défaut du système)</value>
+  </data>
+  <data name="Appearance.Layer.Title" xml:space="preserve">
+    <value>Appliquer les changements à</value>
+  </data>
+  <data name="Appearance.Layer.User" xml:space="preserve">
+    <value>Moi seulement</value>
+  </data>
+  <data name="Appearance.MobileTheme.AriaLabel" xml:space="preserve">
+    <value>Thèmes mobiles</value>
+  </data>
+  <data name="Appearance.MobileTheme.Description" xml:space="preserve">
+    <value>Enregistré séparément et appliqué quand l'interface mobile est active.</value>
+  </data>
+  <data name="Appearance.MobileTheme.Title" xml:space="preserve">
+    <value>Thème mobile</value>
+  </data>
+  <data name="Appearance.OpenThemeEditor" xml:space="preserve">
+    <value>Ouvrir l'Éditeur de thèmes</value>
+  </data>
+  <data name="Appearance.SaveAsSystemDefault" xml:space="preserve">
+    <value>Enregistrer l'apparence actuelle comme défaut du système</value>
+  </data>
+  <data name="Appearance.SavedAsSystemDefault" xml:space="preserve">
+    <value>Enregistré comme défaut pour tous les utilisateurs.</value>
+  </data>
+  <data name="Appearance.UserThemes.Description" xml:space="preserve">
+    <value>Thèmes faits de jetons de design vérifiés, enregistrés dans {0} (les vôtres) ou {1} (installés pour tous les utilisateurs). Ils apparaissent ci-dessus avec les thèmes intégrés.</value>
+  </data>
+  <data name="Appearance.UserThemes.Title" xml:space="preserve">
+    <value>Vos thèmes</value>
+  </data>
+  <data name="Appearance.UserThemes.Warnings" xml:space="preserve">
+    <value>{0} avertissement(s) dans les fichiers de thème ; ouvrez l'Éditeur de thèmes pour les détails.</value>
+  </data>
+  <data name="Apps.Commands" xml:space="preserve">
+    <value>Commandes du terminal ({0}) : elles font partie du système et sont toujours installées</value>
+  </data>
+  <data name="Apps.Description" xml:space="preserve">
+    <value>Désinstaller une app la masque partout, bloque tous les moyens de la lancer et ferme ses fenêtres ouvertes. Rien n'est supprimé : ses réglages et vos fichiers restent en place pour une réinstallation. Seul un site web perd sa base de données du navigateur. La liste se trouve dans {0} (pour vous) et {1} (pour tous les utilisateurs : un administrateur doit s'authentifier).</value>
+  </data>
+  <data name="Apps.Error.CannotWrite" xml:space="preserve">
+    <value>Impossible d'écrire apps.config : {0}</value>
+  </data>
+  <data name="Apps.Error.NoAdmin" xml:space="preserve">
+    <value>Aucun administrateur ne s'est authentifié : /etc/hackeros/apps.config n'a pas été modifié.</value>
+  </data>
+  <data name="Apps.Error.NotAllowed" xml:space="preserve">
+    <value>Paramètres n'a pas le droit de gérer les apps (capacité apps.manage).</value>
+  </data>
+  <data name="Apps.InstallationTitle" xml:space="preserve">
+    <value>Installation</value>
+  </data>
+  <data name="Apps.Loading" xml:space="preserve">
+    <value>Chargement des applications…</value>
+  </data>
+  <data name="Apps.ProcessItem" xml:space="preserve">
+    <value>{0} (PID {1})</value>
+  </data>
+  <data name="Apps.Reinstall" xml:space="preserve">
+    <value>Réinstaller</value>
+  </data>
+  <data name="Apps.Scope.Machine" xml:space="preserve">
+    <value>Pour tous les utilisateurs</value>
+  </data>
+  <data name="Apps.Scope.User" xml:space="preserve">
+    <value>Pour moi seulement</value>
+  </data>
+  <data name="Apps.Stopped" xml:space="preserve">
+    <value>Arrêtés : {0}.</value>
+  </data>
+  <data name="Apps.StoppedAndForced" xml:space="preserve">
+    <value>Arrêtés : {0}. Forcés après leur délai de grâce : {1}.</value>
+  </data>
+  <data name="Apps.SystemBadge" xml:space="preserve">
+    <value>Système</value>
+  </data>
+  <data name="Apps.SystemBadge.Title" xml:space="preserve">
+    <value>Les apps système ne peuvent pas être désinstallées</value>
+  </data>
+  <data name="Apps.Title" xml:space="preserve">
+    <value>Applications installées</value>
+  </data>
+  <data name="Apps.Uninstall" xml:space="preserve">
+    <value>Désinstaller</value>
+  </data>
+  <data name="Apps.Uninstall.AdminWillAuthenticate" xml:space="preserve">
+    <value>Le système demandera à un administrateur de s'authentifier.</value>
+  </data>
+  <data name="Apps.Uninstall.Dependents" xml:space="preserve">
+    <value>Ces apps en dépendent et seront aussi désinstallées :</value>
+  </data>
+  <data name="Apps.Uninstall.ForYouOnly" xml:space="preserve">
+    <value>La désinstallation ne concerne que vous.</value>
+  </data>
+  <data name="Apps.Uninstall.GracePeriod" xml:space="preserve">
+    <value>Chacun est prié de s'arrêter et dispose de quelques secondes pour enregistrer son travail avant d'être forcé. Les réglages et les fichiers sont conservés.</value>
+  </data>
+  <data name="Apps.Uninstall.NothingRunning" xml:space="preserve">
+    <value>Rien n'en est en cours d'exécution. Les réglages et les fichiers sont conservés.</value>
+  </data>
+  <data name="Apps.Uninstall.Processes" xml:space="preserve">
+    <value>Ces processus seront arrêtés :</value>
+  </data>
+  <data name="Apps.Uninstall.ScopeAriaLabel" xml:space="preserve">
+    <value>Désinstaller pour</value>
+  </data>
+  <data name="Apps.Uninstall.SiteData" xml:space="preserve">
+    <value>Les données du site web {0} (sa base de données du navigateur {1}) sont supprimées : elles ne sont pas dans vos fichiers et ne reviendront pas avec une réinstallation.</value>
+  </data>
+  <data name="Apps.Uninstall.Title" xml:space="preserve">
+    <value>Désinstaller {0} ?</value>
+  </data>
+  <data name="Apps.Uninstalled" xml:space="preserve">
+    <value>Désinstallée</value>
+  </data>
+  <data name="Apps.UninstalledByAdmin" xml:space="preserve">
+    <value>Désinstallée par l'administrateur</value>
+  </data>
+  <data name="Apps.UninstalledForAll" xml:space="preserve">
+    <value>Désinstallée pour tous les utilisateurs</value>
+  </data>
+  <data name="Apps.Uninstalling" xml:space="preserve">
+    <value>Désinstallation…</value>
+  </data>
+  <data name="Backup.Create" xml:space="preserve">
+    <value>Créer une sauvegarde</value>
+  </data>
+  <data name="Backup.Create.Description" xml:space="preserve">
+    <value>Une sauvegarde contient {0} : les fichiers de chaque utilisateur, {1}, les comptes et les empreintes de leurs mots de passe. Elle est téléchargée sur votre ordinateur sous la forme d'une seule archive {2}, jamais gardée dans HackerOS, comme une sauvegarde sur un disque externe. Un administrateur doit confirmer avec son mot de passe. Depuis un terminal : {3}.</value>
+  </data>
+  <data name="Backup.Create.Everything" xml:space="preserve">
+    <value>tout</value>
+  </data>
+  <data name="Backup.Create.Title" xml:space="preserve">
+    <value>Sauvegarder cette machine</value>
+  </data>
+  <data name="Backup.Creating" xml:space="preserve">
+    <value>Sauvegarde…</value>
+  </data>
+  <data name="Backup.Error.Failed" xml:space="preserve">
+    <value>Échec de la sauvegarde : {0}</value>
+  </data>
+  <data name="Backup.Error.Invalid" xml:space="preserve">
+    <value>Ce fichier ne peut pas être restauré : {0}</value>
+  </data>
+  <data name="Backup.Error.RestoreFailed" xml:space="preserve">
+    <value>Échec de la restauration : {0}</value>
+  </data>
+  <data name="Backup.Mode.AriaLabel" xml:space="preserve">
+    <value>Mode de restauration</value>
+  </data>
+  <data name="Backup.Mode.Merge" xml:space="preserve">
+    <value>Fusionner</value>
+  </data>
+  <data name="Backup.Mode.Merge.Description" xml:space="preserve">
+    <value>Les enregistrements de la sauvegarde remplacent les mêmes ici ; tout le reste est conservé.</value>
+  </data>
+  <data name="Backup.Mode.Replace" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
+  <data name="Backup.Mode.Replace.Description" xml:space="preserve">
+    <value>Cette machine devient exactement la sauvegarde : tout ce qui est plus récent est perdu.</value>
+  </data>
+  <data name="Backup.Restore" xml:space="preserve">
+    <value>Restaurer…</value>
+  </data>
+  <data name="Backup.Restore.Description" xml:space="preserve">
+    <value>Choisissez une archive {0} sur votre ordinateur. HackerOS la vérifie d'abord : une archive d'une autre version de la base de données, ou endommagée, est refusée et rien ne change. Ensuite, un administrateur confirme, tous les processus s'arrêtent, la sauvegarde est écrite et HackerOS redémarre. Depuis un terminal : {1} ou {2}.</value>
+  </data>
+  <data name="Backup.Restore.Title" xml:space="preserve">
+    <value>Restaurer une sauvegarde</value>
+  </data>
+  <data name="Backup.Restoring" xml:space="preserve">
+    <value>Restauration…</value>
+  </data>
+  <data name="Backup.Result" xml:space="preserve">
+    <value>Téléchargé : {0} ({1}, {2} enregistrements).</value>
+  </data>
+  <data name="Backup.Size.Bytes" xml:space="preserve">
+    <value>{0} o</value>
+  </data>
+  <data name="Backup.Size.KiB" xml:space="preserve">
+    <value>{0} Kio</value>
+  </data>
+  <data name="Backup.Size.MiB" xml:space="preserve">
+    <value>{0} Mio</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Common.Loading" xml:space="preserve">
+    <value>Chargement…</value>
+  </data>
+  <data name="Danger.Description" xml:space="preserve">
+    <value>Remet HackerOS dans son état d'usine. La base de données locale est définitivement effacée (comptes, fichiers, sessions et réglages) et votre compte retrouve sa configuration par défaut. Cette action est irréversible. Un administrateur doit confirmer avec son mot de passe.</value>
+  </data>
+  <data name="Danger.Title" xml:space="preserve">
+    <value>Zone dangereuse</value>
+  </data>
+  <data name="Details.Capabilities" xml:space="preserve">
+    <value>Capacités</value>
+  </data>
+  <data name="Details.CapabilitiesDescription" xml:space="preserve">
+    <value>Déclarées dans son manifeste. Les capacités dangereuses demandent aussi la décision d'un administrateur (onglet Permissions).</value>
+  </data>
+  <data name="Details.FileTypes" xml:space="preserve">
+    <value>Types de fichiers et liens</value>
+  </data>
+  <data name="Details.Kind.Service" xml:space="preserve">
+    <value>service</value>
+  </data>
+  <data name="Details.Kind.Terminal" xml:space="preserve">
+    <value>commande</value>
+  </data>
+  <data name="Details.Kind.Web" xml:space="preserve">
+    <value>site web</value>
+  </data>
+  <data name="Details.Kind.Window" xml:space="preserve">
+    <value>app à fenêtre</value>
+  </data>
+  <data name="Details.Links" xml:space="preserve">
+    <value>liens {0}</value>
+  </data>
+  <data name="Details.NoCapability" xml:space="preserve">
+    <value>Cette app ne déclare aucune capacité.</value>
+  </data>
+  <data name="Details.NotFound" xml:space="preserve">
+    <value>Aucune app installée n'a l'identifiant « {0} ».</value>
+  </data>
+  <data name="Details.Permission.Allowed" xml:space="preserve">
+    <value>autorisée</value>
+  </data>
+  <data name="Details.Permission.Pending" xml:space="preserve">
+    <value>en attente</value>
+  </data>
+  <data name="Details.Permission.Refused" xml:space="preserve">
+    <value>refusée ({0})</value>
+  </data>
+  <data name="Details.Permission.System" xml:space="preserve">
+    <value>système</value>
+  </data>
+  <data name="Details.Pid" xml:space="preserve">
+    <value> (pid {0})</value>
+  </data>
+  <data name="Details.ReadingService" xml:space="preserve">
+    <value>Lecture de l'état du service…</value>
+  </data>
+  <data name="Details.Service" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="Details.ServiceError" xml:space="preserve">
+    <value>L'état du service ne peut pas être lu : {0}</value>
+  </data>
+  <data name="Details.ServiceStarted" xml:space="preserve">
+    <value>Service démarré.</value>
+  </data>
+  <data name="Details.ServiceStatus.Running" xml:space="preserve">
+    <value>En marche</value>
+  </data>
+  <data name="Details.ServiceStatus.StartPending" xml:space="preserve">
+    <value>Démarrage</value>
+  </data>
+  <data name="Details.ServiceStatus.StopPending" xml:space="preserve">
+    <value>Arrêt en cours</value>
+  </data>
+  <data name="Details.ServiceStatus.Stopped" xml:space="preserve">
+    <value>Arrêté</value>
+  </data>
+  <data name="Details.ServiceStopped" xml:space="preserve">
+    <value>Service arrêté.</value>
+  </data>
+  <data name="Details.ServiceUnavailable" xml:space="preserve">
+    <value>Le service n'est pas disponible pour cet utilisateur.</value>
+  </data>
+  <data name="Details.Start" xml:space="preserve">
+    <value>Démarrer</value>
+  </data>
+  <data name="Details.StartMode" xml:space="preserve">
+    <value>Mode de démarrage</value>
+  </data>
+  <data name="Details.StartModeSet" xml:space="preserve">
+    <value>Mode de démarrage : {0}.</value>
+  </data>
+  <data name="Details.State" xml:space="preserve">
+    <value>État :</value>
+  </data>
+  <data name="Details.Stop" xml:space="preserve">
+    <value>Arrêter</value>
+  </data>
+  <data name="Details.Title" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="FileAssociations.Description" xml:space="preserve">
+    <value>Application par défaut de chaque extension, d'après les types de fichiers que déclarent les apps installées.</value>
+  </data>
+  <data name="FileAssociations.Empty" xml:space="preserve">
+    <value>Aucun gestionnaire de fichiers n'est enregistré pour l'instant.</value>
+  </data>
+  <data name="FileAssociations.Title" xml:space="preserve">
+    <value>Associations de fichiers</value>
+  </data>
+  <data name="Grants.Description" xml:space="preserve">
+    <value>Autorisations de sécurité actives pour la session en cours.</value>
+  </data>
+  <data name="Grants.Title" xml:space="preserve">
+    <value>Capacités accordées à l'application</value>
+  </data>
+  <data name="Header.Title" xml:space="preserve">
+    <value>Paramètres système de HackerOS</value>
+  </data>
+  <data name="Language.Choice.AriaLabel" xml:space="preserve">
+    <value>Langue de vos sessions</value>
+  </data>
+  <data name="Language.Choice.Description" xml:space="preserve">
+    <value>Choisissez la langue et les formats régionaux (dates, nombres) de vos sessions.</value>
+  </data>
+  <data name="Language.Choice.Title" xml:space="preserve">
+    <value>Votre langue</value>
+  </data>
+  <data name="Language.Error.CannotRead" xml:space="preserve">
+    <value>Impossible de lire {0} : {1}</value>
+  </data>
+  <data name="Language.Error.CannotRemove" xml:space="preserve">
+    <value>Impossible de supprimer {0} : {1}</value>
+  </data>
+  <data name="Language.Error.CannotSave" xml:space="preserve">
+    <value>Impossible d'enregistrer {0} : {1}</value>
+  </data>
+  <data name="Language.Error.Unknown" xml:space="preserve">
+    <value>Locale inconnue : {0}</value>
+  </data>
+  <data name="Language.FollowSystem" xml:space="preserve">
+    <value>Suivre la langue du système</value>
+  </data>
+  <data name="Language.FollowSystem.Detail" xml:space="preserve">
+    <value>Actuellement {0}</value>
+  </data>
+  <data name="Language.Locale.Posix" xml:space="preserve">
+    <value>POSIX (C), sans traduction</value>
+  </data>
+  <data name="Language.NextSignIn" xml:space="preserve">
+    <value>Le changement prendra effet à votre prochaine connexion.</value>
+  </data>
+  <data name="Language.Pending" xml:space="preserve">
+    <value>À votre prochaine connexion : {0}</value>
+  </data>
+  <data name="Language.Saved.FollowSystem" xml:space="preserve">
+    <value>Enregistré : vous suivez la langue du système ({0}).</value>
+  </data>
+  <data name="Language.Saved.Locale" xml:space="preserve">
+    <value>Enregistré : {0}.</value>
+  </data>
+  <data name="Language.Session.Description" xml:space="preserve">
+    <value>HackerOS parle la langue de votre locale, comme Linux : la variable {0} dont chaque processus hérite à votre connexion. Votre choix ci-dessous est enregistré dans {1} et s'applique au bureau et à toutes les apps à votre prochaine connexion.</value>
+  </data>
+  <data name="Language.Session.Formats" xml:space="preserve">
+    <value>Formats</value>
+  </data>
+  <data name="Language.Session.Language" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="Language.Session.Title" xml:space="preserve">
+    <value>Cette session</value>
+  </data>
+  <data name="Language.System.Description" xml:space="preserve">
+    <value>Lue dans {0}. C'est la langue de l'écran de connexion et de tous les comptes qui n'ont pas fait leur propre choix. Seul un administrateur peut la changer, depuis un terminal : {1}.</value>
+  </data>
+  <data name="Language.System.Title" xml:space="preserve">
+    <value>Langue du système</value>
+  </data>
+  <data name="Language.System.Unset" xml:space="preserve">
+    <value>non définie ({0} par défaut)</value>
+  </data>
+  <data name="Language.Unset" xml:space="preserve">
+    <value>non définie</value>
+  </data>
+  <data name="Permissions.AllowMachine" xml:space="preserve">
+    <value>Autoriser pour la machine</value>
+  </data>
+  <data name="Permissions.AskAgain" xml:space="preserve">
+    <value>Redemander au lancement</value>
+  </data>
+  <data name="Permissions.Empty" xml:space="preserve">
+    <value>Aucune application installée ne déclare de capacité dangereuse.</value>
+  </data>
+  <data name="Permissions.Error.CannotSave" xml:space="preserve">
+    <value>La décision n'a pas pu être enregistrée : {0}</value>
+  </data>
+  <data name="Permissions.Error.NotConfirmed" xml:space="preserve">
+    <value>Aucun administrateur n'a confirmé : rien n'a été modifié.</value>
+  </data>
+  <data name="Permissions.Message.DecisionSaved" xml:space="preserve">
+    <value>{0} : décision enregistrée, effective au prochain lancement.</value>
+  </data>
+  <data name="Permissions.Message.DenialRemoved" xml:space="preserve">
+    <value>{0} : votre refus est retiré, la question reviendra au prochain lancement.</value>
+  </data>
+  <data name="Permissions.Message.PolicyBlock" xml:space="preserve">
+    <value>Politique : toujours bloquer.</value>
+  </data>
+  <data name="Permissions.Message.PolicyPrompt" xml:space="preserve">
+    <value>Politique : demander à un administrateur.</value>
+  </data>
+  <data name="Permissions.NonSystemApp" xml:space="preserve">
+    <value>App non système</value>
+  </data>
+  <data name="Permissions.Policy.AriaLabel" xml:space="preserve">
+    <value>Politique des capacités dangereuses</value>
+  </data>
+  <data name="Permissions.Policy.Block" xml:space="preserve">
+    <value>Toujours bloquer</value>
+  </data>
+  <data name="Permissions.Policy.Description" xml:space="preserve">
+    <value>Politique de {0}. Chaque changement demande un administrateur et prend effet au prochain lancement de l'app.</value>
+  </data>
+  <data name="Permissions.Policy.Prompt" xml:space="preserve">
+    <value>Demander à un administrateur</value>
+  </data>
+  <data name="Permissions.Policy.Title" xml:space="preserve">
+    <value>Capacités dangereuses des apps non système</value>
+  </data>
+  <data name="Permissions.RemoveDenial" xml:space="preserve">
+    <value>Retirer mon refus</value>
+  </data>
+  <data name="Permissions.Revoke" xml:space="preserve">
+    <value>Révoquer</value>
+  </data>
+  <data name="Permissions.State.Allowed" xml:space="preserve">
+    <value>Autorisée</value>
+  </data>
+  <data name="Permissions.State.BlockedByPolicy" xml:space="preserve">
+    <value>Bloquée par la politique</value>
+  </data>
+  <data name="Permissions.State.DeniedByAdministrator" xml:space="preserve">
+    <value>Refusée par l'administrateur</value>
+  </data>
+  <data name="Permissions.State.DeniedByUser" xml:space="preserve">
+    <value>Refusée par vous</value>
+  </data>
+  <data name="Permissions.State.Pending" xml:space="preserve">
+    <value>En attente</value>
+  </data>
+  <data name="Permissions.State.System" xml:space="preserve">
+    <value>Système</value>
+  </data>
+  <data name="Permissions.SystemApp" xml:space="preserve">
+    <value>App système</value>
+  </data>
+  <data name="Permissions.Unavailable" xml:space="preserve">
+    <value>Les permissions des applications ne sont pas disponibles sur cet hôte.</value>
+  </data>
+  <data name="Relay.AllPorts" xml:space="preserve">
+    <value>Tous les ports</value>
+  </data>
+  <data name="Relay.AriaLabel" xml:space="preserve">
+    <value>Politique du relais réseau</value>
+  </data>
+  <data name="Relay.Blocked" xml:space="preserve">
+    <value>Bloqués</value>
+  </data>
+  <data name="Relay.Disabled" xml:space="preserve">
+    <value>Désactivés</value>
+  </data>
+  <data name="Relay.GrantedApps" xml:space="preserve">
+    <value>Apps autorisées</value>
+  </data>
+  <data name="Relay.HttpPorts" xml:space="preserve">
+    <value>Ports HTTP</value>
+  </data>
+  <data name="Relay.Loading" xml:space="preserve">
+    <value>Lecture de la politique de relais du serveur…</value>
+  </data>
+  <data name="Relay.Off" xml:space="preserve">
+    <value>L'opérateur du serveur a désactivé le relais : les apps n'ont aucun accès au vrai réseau.</value>
+  </data>
+  <data name="Relay.PrivateNetworks" xml:space="preserve">
+    <value>Réseaux privés</value>
+  </data>
+  <data name="Relay.Quotas" xml:space="preserve">
+    <value>Quotas</value>
+  </data>
+  <data name="Relay.QuotasValue" xml:space="preserve">
+    <value>{0} requêtes, {1}/{2} sockets ouverts, corps jusqu'à {3} Mio, sockets inactifs fermés après {4} s</value>
+  </data>
+  <data name="Relay.Reachable" xml:space="preserve">
+    <value>Accessibles</value>
+  </data>
+  <data name="Relay.TcpPorts" xml:space="preserve">
+    <value>Ports TCP</value>
+  </data>
+  <data name="Relay.Title" xml:space="preserve">
+    <value>Relais réseau</value>
+  </data>
+  <data name="Relay.UdpPorts" xml:space="preserve">
+    <value>Ports UDP</value>
+  </data>
+  <data name="Relay.Unavailable" xml:space="preserve">
+    <value>La politique de relais n'est pas disponible sur cet hôte.</value>
+  </data>
+  <data name="Reset.Button" xml:space="preserve">
+    <value>Rétablir les paramètres d'usine</value>
+  </data>
+  <data name="Reset.Dialog.Accounts" xml:space="preserve">
+    <value>Tous les comptes et toutes les sessions des utilisateurs locaux</value>
+  </data>
+  <data name="Reset.Dialog.Confirm" xml:space="preserve">
+    <value>Tapez {0} pour confirmer :</value>
+  </data>
+  <data name="Reset.Dialog.Files" xml:space="preserve">
+    <value>Tous les fichiers et dossiers</value>
+  </data>
+  <data name="Reset.Dialog.Grants" xml:space="preserve">
+    <value>Toutes les capacités accordées et l'historique d'audit</value>
+  </data>
+  <data name="Reset.Dialog.Intro" xml:space="preserve">
+    <value>Toute la base de données locale de HackerOS sera définitivement supprimée, dont :</value>
+  </data>
+  <data name="Reset.Dialog.Restart" xml:space="preserve">
+    <value>HackerOS redémarrera ensuite comme s'il venait d'être installé.</value>
+  </data>
+  <data name="Reset.Dialog.Settings" xml:space="preserve">
+    <value>Tous les réglages des applications et des comptes (remis par défaut)</value>
+  </data>
+  <data name="Reset.Error.Failed" xml:space="preserve">
+    <value>Échec de la réinitialisation : {0}</value>
+  </data>
+  <data name="Reset.Error.NotConfirmed" xml:space="preserve">
+    <value>Aucun administrateur n'a confirmé la réinitialisation : rien n'a été effacé.</value>
+  </data>
+  <data name="Reset.Resetting" xml:space="preserve">
+    <value>Réinitialisation…</value>
+  </data>
+  <data name="Restart.Button" xml:space="preserve">
+    <value>Redémarrer HackerOS</value>
+  </data>
+  <data name="Restart.Description" xml:space="preserve">
+    <value>Écrit les journaux sur le disque, arrête tous les processus et redémarre HackerOS, comme {0}. Un administrateur doit confirmer avec son mot de passe.</value>
+  </data>
+  <data name="Restart.Error.NotConfirmed" xml:space="preserve">
+    <value>Aucun administrateur n'a confirmé le redémarrage : rien n'a été fait.</value>
+  </data>
+  <data name="Restart.Restarting" xml:space="preserve">
+    <value>Redémarrage…</value>
+  </data>
+  <data name="Restart.Title" xml:space="preserve">
+    <value>Redémarrer</value>
+  </data>
+  <data name="Server.Account" xml:space="preserve">
+    <value>Compte :</value>
+  </data>
+  <data name="Server.ConflictCount" xml:space="preserve">
+    <value>{0} fichier(s) en conflit de synchronisation non résolu</value>
+  </data>
+  <data name="Server.Connected" xml:space="preserve">
+    <value>Connecté</value>
+  </data>
+  <data name="Server.Connecting" xml:space="preserve">
+    <value>Connexion…</value>
+  </data>
+  <data name="Server.CreateAccount" xml:space="preserve">
+    <value>Créer un compte</value>
+  </data>
+  <data name="Server.Description" xml:space="preserve">
+    <value>Connecter un appareil à un serveur HackerOS facultatif donne aux apps un vrai accès au réseau, comme {0}/{1} dans le Terminal, par le relais du serveur. Le stockage local reste la référence dans tous les cas : la connexion n'est jamais nécessaire pour un usage normal.</value>
+  </data>
+  <data name="Server.Disconnect" xml:space="preserve">
+    <value>Se déconnecter</value>
+  </data>
+  <data name="Server.Error.Unavailable" xml:space="preserve">
+    <value>La connexion au serveur n'est pas disponible : {0}</value>
+  </data>
+  <data name="Server.Files" xml:space="preserve">
+    <value>Fichiers :</value>
+  </data>
+  <data name="Server.LogIn" xml:space="preserve">
+    <value>Se connecter</value>
+  </data>
+  <data name="Server.NotConnected" xml:space="preserve">
+    <value>Non connecté</value>
+  </data>
+  <data name="Server.Password" xml:space="preserve">
+    <value>Mot de passe</value>
+  </data>
+  <data name="Server.Server" xml:space="preserve">
+    <value>Serveur :</value>
+  </data>
+  <data name="Server.Status" xml:space="preserve">
+    <value>État :</value>
+  </data>
+  <data name="Server.Sync" xml:space="preserve">
+    <value>Synchro :</value>
+  </data>
+  <data name="Server.Title" xml:space="preserve">
+    <value>Serveur facultatif</value>
+  </data>
+  <data name="Server.Url" xml:space="preserve">
+    <value>URL du serveur</value>
+  </data>
+  <data name="Server.Username" xml:space="preserve">
+    <value>Nom d'utilisateur</value>
+  </data>
+  <data name="StartMode.Automatic" xml:space="preserve">
+    <value>Automatique</value>
+  </data>
+  <data name="StartMode.Disabled" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
+  <data name="StartMode.Manual" xml:space="preserve">
+    <value>Manuel</value>
+  </data>
+  <data name="Sync.Automatic" xml:space="preserve">
+    <value>Synchro automatique :</value>
+  </data>
+  <data name="Sync.Conflicts.Description" xml:space="preserve">
+    <value>Ces fichiers ont changé ici et sur un autre appareil. Ils restent tels quels ici et ne sont ni envoyés ni remplacés tant que vous n'avez pas choisi la version à garder.</value>
+  </data>
+  <data name="Sync.Conflicts.None" xml:space="preserve">
+    <value>Aucun conflit : chaque fichier synchronisé est identique sur vos autres appareils.</value>
+  </data>
+  <data name="Sync.Conflicts.Resolve" xml:space="preserve">
+    <value>Résoudre…</value>
+  </data>
+  <data name="Sync.Conflicts.Since" xml:space="preserve">
+    <value>depuis le {0}</value>
+  </data>
+  <data name="Sync.Conflicts.Title" xml:space="preserve">
+    <value>Conflits</value>
+  </data>
+  <data name="Sync.Description" xml:space="preserve">
+    <value>Tant que cet appareil est connecté à un serveur, votre dossier personnel, vos associations de fichiers et vos capacités accordées se synchronisent d'eux-mêmes {0}, à votre connexion et quelques secondes après chaque modification d'un fichier. Un fichier supprimé sur un autre appareil arrive ici dans votre Corbeille, pour pouvoir être restauré.</value>
+  </data>
+  <data name="Sync.Error.CannotChange" xml:space="preserve">
+    <value>Impossible de modifier le réglage : {0}</value>
+  </data>
+  <data name="Sync.Interval.Minute" xml:space="preserve">
+    <value>chaque minute</value>
+  </data>
+  <data name="Sync.Interval.Minutes" xml:space="preserve">
+    <value>toutes les {0} minutes</value>
+  </data>
+  <data name="Sync.Last" xml:space="preserve">
+    <value>Dernière synchro :</value>
+  </data>
+  <data name="Sync.LastDetail" xml:space="preserve">
+    <value>{0} ({1} envoyé(s), {2} reçu(s))</value>
+  </data>
+  <data name="Sync.LastError" xml:space="preserve">
+    <value>Dernière erreur :</value>
+  </data>
+  <data name="Sync.LastSynced" xml:space="preserve">
+    <value>Dernière synchro à {0}</value>
+  </data>
+  <data name="Sync.LastSyncedWithConflicts" xml:space="preserve">
+    <value>Dernière synchro à {0} ({1} conflit(s) de fichier)</value>
+  </data>
+  <data name="Sync.Never" xml:space="preserve">
+    <value>jamais</value>
+  </data>
+  <data name="Sync.Now" xml:space="preserve">
+    <value>Synchroniser maintenant</value>
+  </data>
+  <data name="Sync.Pause" xml:space="preserve">
+    <value>Suspendre ma synchronisation sur cet appareil (la synchro manuelle fonctionne toujours)</value>
+  </data>
+  <data name="Sync.State.Inactive" xml:space="preserve">
+    <value>inactive</value>
+  </data>
+  <data name="Sync.State.Off" xml:space="preserve">
+    <value>désactivée (pas connecté à un serveur)</value>
+  </data>
+  <data name="Sync.State.Paused" xml:space="preserve">
+    <value>en pause</value>
+  </data>
+  <data name="Sync.State.Running" xml:space="preserve">
+    <value>en marche</value>
+  </data>
+  <data name="Sync.State.WaitingForServer" xml:space="preserve">
+    <value>en attente du serveur</value>
+  </data>
+  <data name="Sync.Syncing" xml:space="preserve">
+    <value>Synchronisation…</value>
+  </data>
+  <data name="Sync.Title" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+  <data name="Tab.About" xml:space="preserve">
+    <value>À propos du système</value>
+  </data>
+  <data name="Tab.Appearance" xml:space="preserve">
+    <value>Apparence</value>
+  </data>
+  <data name="Tab.Application" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="Tab.Backup" xml:space="preserve">
+    <value>Sauvegarde</value>
+  </data>
+  <data name="Tab.CapabilityGrants" xml:space="preserve">
+    <value>Capacités accordées</value>
+  </data>
+  <data name="Tab.FileAssociations" xml:space="preserve">
+    <value>Associations de fichiers</value>
+  </data>
+  <data name="Tab.InstalledApps" xml:space="preserve">
+    <value>Applications installées</value>
+  </data>
+  <data name="Tab.Language" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="Tab.Permissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="Tab.ServerConnection" xml:space="preserve">
+    <value>Connexion au serveur</value>
+  </data>
+  <data name="Tab.Synchronization" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+</root>

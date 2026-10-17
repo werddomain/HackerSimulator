@@ -1,7 +1,9 @@
 using System.Globalization;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
@@ -34,6 +36,14 @@ public partial class BackupPanel
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
 
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the Settings process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale, ADR 0104).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
+
     private string ModeClass(HackBackupRestoreMode mode) =>
         mode == _mode ? "restore-mode is-selected" : "restore-mode";
 
@@ -52,7 +62,7 @@ public partial class BackupPanel
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or IOException or InvalidOperationException)
         {
-            _error = $"Backup failed: {exception.Message}";
+            _error = L["Backup.Error.Failed", exception.Message];
         }
         finally
         {
@@ -76,11 +86,11 @@ public partial class BackupPanel
         }
         catch (HackBackupInvalidException exception)
         {
-            _error = $"This file cannot be restored: {exception.Message}";
+            _error = L["Backup.Error.Invalid", exception.Message];
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or IOException or InvalidOperationException)
         {
-            _error = $"Restore failed: {exception.Message}";
+            _error = L["Backup.Error.RestoreFailed", exception.Message];
         }
         catch (OperationCanceledException) when (Context.CancellationToken.IsCancellationRequested)
         {
@@ -92,10 +102,11 @@ public partial class BackupPanel
         }
     }
 
-    private static string FormatSize(long bytes) => bytes switch
+    /// <summary>A size in binary units, with the unit symbols and decimal separator of the process's locale.</summary>
+    private string FormatSize(long bytes) => bytes switch
     {
-        < 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
-        < 1024 * 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0:0.#} KiB"),
-        _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024.0):0.#} MiB")
+        < 1024 => L["Backup.Size.Bytes", bytes.ToString(Formats)],
+        < 1024 * 1024 => L["Backup.Size.KiB", (bytes / 1024.0).ToString("0.#", Formats)],
+        _ => L["Backup.Size.MiB", (bytes / (1024.0 * 1024.0)).ToString("0.#", Formats)]
     };
 }

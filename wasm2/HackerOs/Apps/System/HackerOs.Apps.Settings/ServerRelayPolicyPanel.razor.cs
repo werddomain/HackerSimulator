@@ -1,5 +1,7 @@
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
@@ -21,6 +23,11 @@ public sealed partial class ServerRelayPolicyPanel
 
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the Settings process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -46,11 +53,15 @@ public sealed partial class ServerRelayPolicyPanel
 
     /// <summary>Formats a port list; an empty list means every port.</summary>
     private string Ports(IReadOnlyList<int> ports) =>
-        _policy is { AllowAllPorts: true } || ports.Count == 0 ? "All ports" : string.Join(", ", ports);
+        _policy is { AllowAllPorts: true } || ports.Count == 0 ? L["Relay.AllPorts"] : string.Join(", ", ports);
 
-    private static string Quotas(HackServerRelayPolicy policy) =>
+    private string Quotas(HackServerRelayPolicy policy) =>
         policy.QuotasEnabled
-            ? $"{policy.MaxConcurrentRequests} requests, {policy.OpenStreams}/{policy.MaxStreams} sockets open, " +
-              $"bodies up to {policy.MaxResponseBytes / (1024 * 1024)} MiB, idle sockets closed after {policy.StreamIdleTimeout.TotalSeconds:0} s"
-            : "Disabled";
+            ? L["Relay.QuotasValue",
+                policy.MaxConcurrentRequests,
+                policy.OpenStreams,
+                policy.MaxStreams,
+                policy.MaxResponseBytes / (1024 * 1024),
+                policy.StreamIdleTimeout.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture)]
+            : L["Relay.Disabled"];
 }
